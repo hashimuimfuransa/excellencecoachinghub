@@ -1,0 +1,17 @@
+Options -MultiViews
+RewriteEngine On
+
+# Handle static assets - don't rewrite if file exists
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Handle directories - don't rewrite if directory exists
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Don't rewrite static assets
+RewriteRule ^static/ - [L]
+RewriteRule \.(js|css|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|ico|json)$ - [L]
+
+# Rewrite everything else to index.html
+RewriteRule ^ index.html [QSA,L]

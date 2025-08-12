@@ -1,0 +1,14 @@
+{
+  "name": "excellence-coaching-hub",
+  "version": "1.0.0",
+  "description": "Excellence Coaching Hub - Full Stack Application",
+  "scripts": {
+    "build": "node vercel-build.js",
+    "vercel-build": "node vercel-build.js",
+    "start": "cd frontend && npm start"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  }
+}

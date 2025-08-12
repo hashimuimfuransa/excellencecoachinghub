@@ -1,0 +1,11 @@
+{
+  "buildCommand": "node vercel-build.js",
+  "outputDirectory": "frontend/build",
+  "installCommand": "echo 'Custom install in build command'",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

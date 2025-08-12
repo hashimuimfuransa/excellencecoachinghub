@@ -99,7 +99,11 @@ const assessmentSchema = new Schema<IAssessmentDocument>({
   },
   type: {
     type: String,
+<<<<<<< HEAD
     enum: ['quiz', 'assignment', 'final', 'exam', 'project', 'homework'],
+=======
+    enum: ['quiz', 'assignment', 'final'],
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
     required: true
   },
   status: {

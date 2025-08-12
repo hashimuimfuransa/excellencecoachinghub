@@ -24,8 +24,12 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+<<<<<<< HEAD
   DialogActions,
   Paper
+=======
+  DialogActions
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 } from '@mui/material';
 import {
   Add,
@@ -40,10 +44,14 @@ import {
   Schedule,
   People,
   Grade,
+<<<<<<< HEAD
   Analytics,
   CloudUpload,
   AutoAwesome,
   Description
+=======
+  Analytics
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { assessmentService, IAssessment } from '../../services/assessmentService';
@@ -65,11 +73,14 @@ const TeacherAssessmentManagement: React.FC = () => {
   const [menuAnchor, setMenuAnchor] = useState<{ [key: string]: HTMLElement | null }>({});
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedAssessment, setSelectedAssessment] = useState<IAssessment | null>(null);
+<<<<<<< HEAD
   
   // Upload states
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
   // Load assessments
   useEffect(() => {
@@ -101,7 +112,11 @@ const TeacherAssessmentManagement: React.FC = () => {
       if (filters.search) {
         filteredAssessments = response.assessments.filter(assessment =>
           assessment.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+<<<<<<< HEAD
           (typeof assessment.course === 'string' ? assessment.course : assessment.course.title).toLowerCase().includes(filters.search.toLowerCase())
+=======
+          assessment.course.title.toLowerCase().includes(filters.search.toLowerCase())
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
         );
       }
 
@@ -170,6 +185,7 @@ const TeacherAssessmentManagement: React.FC = () => {
     }
   };
 
+<<<<<<< HEAD
   // Handle upload to existing assessment
   const handleUploadClick = (assessment: IAssessment) => {
     setSelectedAssessment(assessment);
@@ -231,6 +247,8 @@ const TeacherAssessmentManagement: React.FC = () => {
     }
   };
 
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   // Get type icon
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -383,7 +401,11 @@ const TeacherAssessmentManagement: React.FC = () => {
                           {assessment.title}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" noWrap>
+<<<<<<< HEAD
                           {typeof assessment.course === 'string' ? assessment.course : assessment.course.title}
+=======
+                          {assessment.course.title}
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
                         </Typography>
                       </Box>
                       <IconButton
@@ -442,7 +464,11 @@ const TeacherAssessmentManagement: React.FC = () => {
                   </CardContent>
 
                   {/* Actions */}
+<<<<<<< HEAD
                   <Box sx={{ p: 2, pt: 0, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+=======
+                  <Box sx={{ p: 2, pt: 0, display: 'flex', gap: 1 }}>
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
                     <Button
                       size="small"
                       variant="outlined"
@@ -458,6 +484,7 @@ const TeacherAssessmentManagement: React.FC = () => {
                     >
                       Submissions
                     </Button>
+<<<<<<< HEAD
                     <Button
                       size="small"
                       variant="outlined"
@@ -475,6 +502,8 @@ const TeacherAssessmentManagement: React.FC = () => {
                       <AutoAwesome sx={{ fontSize: 16, mr: 0.5 }} />
                       AI Upload
                     </Button>
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
                   </Box>
 
                   {/* Menu */}
@@ -491,10 +520,13 @@ const TeacherAssessmentManagement: React.FC = () => {
                       <Edit sx={{ mr: 1 }} />
                       Edit
                     </MenuItem>
+<<<<<<< HEAD
                     <MenuItem onClick={() => { handleUploadClick(assessment); handleMenuClose(assessment._id); }}>
                       <CloudUpload sx={{ mr: 1 }} />
                       Add Questions (AI)
                     </MenuItem>
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
                     <MenuItem onClick={() => { handleTogglePublish(assessment); handleMenuClose(assessment._id); }}>
                       {assessment.isPublished ? <UnpublishedOutlined sx={{ mr: 1 }} /> : <Publish sx={{ mr: 1 }} />}
                       {assessment.isPublished ? 'Unpublish' : 'Publish'}
@@ -552,6 +584,7 @@ const TeacherAssessmentManagement: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+<<<<<<< HEAD
 
       {/* Upload Questions Dialog */}
       <Dialog open={uploadDialogOpen} onClose={() => setUploadDialogOpen(false)} maxWidth="sm" fullWidth>
@@ -658,6 +691,8 @@ const TeacherAssessmentManagement: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
     </Container>
   );
 };

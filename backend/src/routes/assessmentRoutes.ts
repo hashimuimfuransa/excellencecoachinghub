@@ -3,11 +3,17 @@ import { body, param } from 'express-validator';
 import { protect as auth } from '../middleware/auth';
 import { authorizeRoles } from '../middleware/roleAuth';
 import { validateRequest } from '../middleware/validateRequest';
+<<<<<<< HEAD
 import { upload } from '../utils/fileUpload';
 
 // Import controllers
 import assessmentController from '../controllers/assessmentController';
 import { addQuestionsFromDocument } from '../controllers/assessmentController';
+=======
+
+// Import controllers
+import assessmentController from '../controllers/assessmentController';
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 import studentAssessmentController from '../controllers/studentAssessmentController';
 
 const router = express.Router();
@@ -19,6 +25,7 @@ const assessmentValidation = [
     .withMessage('Title is required')
     .isLength({ max: 200 })
     .withMessage('Title cannot exceed 200 characters'),
+<<<<<<< HEAD
   body('course')
     .optional()
     .isMongoId()
@@ -34,6 +41,13 @@ const assessmentValidation = [
       }
       return true;
     }),
+=======
+  body('courseId')
+    .notEmpty()
+    .withMessage('Course ID is required')
+    .isMongoId()
+    .withMessage('Invalid course ID'),
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   body('type')
     .isIn(['quiz', 'assignment', 'exam', 'project', 'homework'])
     .withMessage('Invalid assessment type'),
@@ -80,7 +94,10 @@ router.post(
   '/',
   auth,
   authorizeRoles(['teacher']),
+<<<<<<< HEAD
   upload.single('document'), // Add file upload middleware
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   assessmentValidation,
   validateRequest,
   assessmentController.createAssessment
@@ -120,6 +137,7 @@ router.delete(
   assessmentController.deleteAssessment
 );
 
+<<<<<<< HEAD
 router.post(
   '/:id/add-questions',
   auth,
@@ -133,6 +151,8 @@ router.post(
   addQuestionsFromDocument
 );
 
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 router.patch(
   '/:id/publish',
   auth,

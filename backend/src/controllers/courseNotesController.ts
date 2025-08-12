@@ -2,7 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 import { CourseNotes } from '../models/CourseNotes';
 import { ReadingProgress } from '../models/ReadingProgress';
 import { Course } from '../models/Course';
+<<<<<<< HEAD
 import { UserProgress } from '../models/UserProgress';
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 import { aiService } from '../services/aiService';
 import { validationResult } from 'express-validator';
 
@@ -163,12 +166,21 @@ export const getCourseNotesById = async (req: Request, res: Response, next: Next
 
     // For students, check if they're enrolled and if notes are published
     if (userRole === 'student') {
+<<<<<<< HEAD
       const enrollment = await UserProgress.findOne({ 
         user: userId, 
         course: courseNotes.course._id
       });
       
       if (!enrollment) {
+=======
+      const course = await Course.findOne({ 
+        _id: courseNotes.course._id, 
+        enrolledStudents: userId 
+      });
+      
+      if (!course) {
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
         res.status(403).json({
           success: false,
           error: 'You are not enrolled in this course'
@@ -323,6 +335,7 @@ export const getCourseNotesByCourse = async (req: Request, res: Response, next: 
   try {
     const { courseId } = req.params;
     const studentId = req.user?.id;
+<<<<<<< HEAD
     
     console.log(`🔍 getCourseNotesByCourse called - Course: ${courseId}, Student: ${studentId}`);
 
@@ -335,6 +348,16 @@ export const getCourseNotesByCourse = async (req: Request, res: Response, next: 
     console.log(`🔍 Enrollment check for student ${studentId} in course ${courseId}: ${enrollment ? 'FOUND' : 'NOT FOUND'}`);
     
     if (!enrollment) {
+=======
+
+    // Check if student is enrolled
+    const course = await Course.findOne({ 
+      _id: courseId, 
+      enrolledStudents: studentId 
+    });
+    
+    if (!course) {
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
       res.status(403).json({
         success: false,
         error: 'You are not enrolled in this course'
@@ -342,6 +365,7 @@ export const getCourseNotesByCourse = async (req: Request, res: Response, next: 
       return;
     }
 
+<<<<<<< HEAD
     // Get course details
     const course = await Course.findById(courseId);
     if (!course) {
@@ -368,6 +392,10 @@ export const getCourseNotesByCourse = async (req: Request, res: Response, next: 
       .sort({ chapter: 1 });
       console.log(`📚 Fallback query returned ${courseNotes.length} notes for course ${courseId}`);
     }
+=======
+    // Get published notes in progressive order
+    const courseNotes = await CourseNotes.getProgressiveOrder(courseId);
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
     // Get student's progress for each chapter
     const notesWithProgress = await Promise.all(
@@ -392,8 +420,11 @@ export const getCourseNotesByCourse = async (req: Request, res: Response, next: 
       })
     );
 
+<<<<<<< HEAD
     console.log(`📤 Returning ${notesWithProgress.length} course notes to student`);
     
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
     res.status(200).json({
       success: true,
       data: { courseNotes: notesWithProgress }
@@ -456,6 +487,7 @@ export const generateQuizFromNotes = async (req: Request, res: Response, next: N
   }
 };
 
+<<<<<<< HEAD
 // Create course notes from uploaded materials (Teacher only)
 export const createNotesFromMaterials = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -526,6 +558,8 @@ export const createNotesFromMaterials = async (req: Request, res: Response, next
   }
 };
 
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 export default {
   createCourseNotes,
   getTeacherCourseNotes,
@@ -534,6 +568,10 @@ export default {
   deleteCourseNotes,
   togglePublishCourseNotes,
   getCourseNotesByCourse,
+<<<<<<< HEAD
   generateQuizFromNotes,
   createNotesFromMaterials
+=======
+  generateQuizFromNotes
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 };

@@ -17,7 +17,10 @@ import { useAuth } from '../../store/AuthContext';
 import { liveSessionService, ILiveSession } from '../../services/liveSessionService';
 
 import LiveClass from '../../components/Video/LiveClass';
+<<<<<<< HEAD
 import VideoSessionWrapper from '../../components/Video/VideoSessionWrapper';
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
 
 
@@ -97,7 +100,11 @@ const StudentLiveSessionRoom: React.FC = () => {
         <Alert severity="error" sx={{ mb: 2 }}>
           {error || 'Session not found'}
         </Alert>
+<<<<<<< HEAD
         <Button onClick={() => navigate('/dashboard/student/live-sessions')}>
+=======
+        <Button onClick={() => navigate('/dashboard/teacher/live-sessions')}>
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
           Back to Sessions
         </Button>
       </Box>
@@ -107,6 +114,7 @@ const StudentLiveSessionRoom: React.FC = () => {
   // If in video room, show the 100ms LiveClass component
   if (inVideoRoom) {
     return (
+<<<<<<< HEAD
       <VideoSessionWrapper>
         <LiveClass
           sessionId={sessionId}
@@ -114,6 +122,13 @@ const StudentLiveSessionRoom: React.FC = () => {
           onLeave={handleLeaveVideoRoom}
         />
       </VideoSessionWrapper>
+=======
+      <LiveClass
+        sessionId={sessionId}
+        userRole="student"
+        onLeave={handleLeaveVideoRoom}
+      />
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
     );
   }
 

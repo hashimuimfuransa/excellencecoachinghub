@@ -122,6 +122,7 @@ export const progressService = {
       console.warn('Failed to get course progress:', error);
       return null;
     }
+<<<<<<< HEAD
   },
 
   // Check if section is completed
@@ -144,5 +145,7 @@ export const progressService = {
       console.error('Failed to mark section as completed:', error);
       throw new Error(error.message || 'Failed to mark section as completed');
     }
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   }
 };

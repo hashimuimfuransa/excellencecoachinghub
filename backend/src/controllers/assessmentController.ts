@@ -5,8 +5,11 @@ import { Course } from '../models/Course';
 import { User } from '../models/User';
 import { validationResult } from 'express-validator';
 import { aiService } from '../services/aiService';
+<<<<<<< HEAD
 import { uploadFile } from '../utils/fileUpload';
 import DocumentParser from '../utils/documentParser';
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
 // Extend Request interface to include user
 declare global {
@@ -41,7 +44,10 @@ export const createAssessment = async (req: Request, res: Response, next: NextFu
       title,
       description,
       courseId,
+<<<<<<< HEAD
       course,
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
       type,
       questions,
       timeLimit,
@@ -59,6 +65,7 @@ export const createAssessment = async (req: Request, res: Response, next: NextFu
       requireProctoring,
       passingScore,
       gradingRubric,
+<<<<<<< HEAD
       attachments,
       totalPoints
     } = req.body;
@@ -69,6 +76,14 @@ export const createAssessment = async (req: Request, res: Response, next: NextFu
     // Verify course exists and teacher has access
     const courseDoc = await Course.findById(finalCourseId);
     if (!courseDoc) {
+=======
+      attachments
+    } = req.body;
+
+    // Verify course exists and teacher has access
+    const course = await Course.findById(courseId);
+    if (!course) {
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
       res.status(404).json({
         success: false,
         error: 'Course not found'
@@ -76,7 +91,11 @@ export const createAssessment = async (req: Request, res: Response, next: NextFu
       return;
     }
 
+<<<<<<< HEAD
     if (courseDoc.instructor.toString() !== teacherId) {
+=======
+    if (course.instructor.toString() !== teacherId) {
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
       res.status(403).json({
         success: false,
         error: 'You do not have permission to create assessments for this course'
@@ -84,6 +103,7 @@ export const createAssessment = async (req: Request, res: Response, next: NextFu
       return;
     }
 
+<<<<<<< HEAD
     // Handle document upload and extraction
     let extractedQuestions: any[] = [];
     let documentUrl: string | undefined;
@@ -144,14 +164,23 @@ export const createAssessment = async (req: Request, res: Response, next: NextFu
       allQuestions.reduce((sum, q) => sum + (q.points || 10), 0) || 
       100; // Default to 100 if no questions
 
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
     // Create assessment
     const assessment = new Assessment({
       title,
       description,
+<<<<<<< HEAD
       course: finalCourseId,
       instructor: teacherId,
       type,
       questions: allQuestions,
+=======
+      course: courseId,
+      instructor: teacherId,
+      type,
+      questions: questions || [],
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
       timeLimit,
       attempts: attempts || 1,
       dueDate: dueDate ? new Date(dueDate) : undefined,
@@ -165,6 +194,7 @@ export const createAssessment = async (req: Request, res: Response, next: NextFu
       showResultsImmediately: showResultsImmediately !== false,
       showCorrectAnswers: showCorrectAnswers !== false,
       requireProctoring: requireProctoring || false,
+<<<<<<< HEAD
       passingScore: passingScore || 70,
       totalPoints: calculatedTotalPoints,
       gradingRubric,
@@ -173,6 +203,11 @@ export const createAssessment = async (req: Request, res: Response, next: NextFu
       ...(documentUrl && { documentUrl }),
       ...(documentType && { documentType }),
       ...(extractedQuestions.length > 0 && { extractedQuestions })
+=======
+      passingScore,
+      gradingRubric,
+      attachments: attachments || []
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
     });
 
     await assessment.save();
@@ -183,12 +218,17 @@ export const createAssessment = async (req: Request, res: Response, next: NextFu
 
     res.status(201).json({
       success: true,
+<<<<<<< HEAD
       data: { 
         assessment,
         extractedQuestions: extractedQuestions.length,
         documentProcessed: !!req.file
       },
       message: `Assessment created successfully${extractedQuestions.length > 0 ? ` with ${extractedQuestions.length} questions extracted from document` : ''}`
+=======
+      data: { assessment },
+      message: 'Assessment created successfully'
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
     });
   } catch (error) {
     next(error);
@@ -403,6 +443,7 @@ export const togglePublishAssessment = async (req: Request, res: Response, next:
   }
 };
 
+<<<<<<< HEAD
 // Add questions from document to existing assessment
 export const addQuestionsFromDocument = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -525,6 +566,8 @@ export const addQuestionsFromDocument = async (req: Request, res: Response, next
   }
 };
 
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 // Get assessment submissions (Teacher only)
 export const getAssessmentSubmissions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {

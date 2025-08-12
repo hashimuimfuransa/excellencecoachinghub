@@ -22,6 +22,7 @@ import {
   Avatar,
   IconButton,
   Tabs,
+<<<<<<< HEAD
   Tab,
   Paper,
   Stack,
@@ -32,6 +33,9 @@ import {
   useTheme,
   alpha,
   styled
+=======
+  Tab
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 } from '@mui/material';
 import {
   School,
@@ -42,6 +46,7 @@ import {
   Search,
   FilterList,
   BookmarkBorder,
+<<<<<<< HEAD
   Bookmark,
   TrendingUp,
   EmojiEvents,
@@ -55,11 +60,15 @@ import {
   Psychology,
   Explore,
   LocalLibrary
+=======
+  Bookmark
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 } from '@mui/icons-material';
 import { courseService, ICourse } from '../../services/courseService';
 import { enrollmentService, IEnrollment } from '../../services/enrollmentService';
 import { useAuth } from '../../hooks/useAuth';
 import { getCourseImageUrl } from '../../utils/courseImageGenerator';
+<<<<<<< HEAD
 import LearningTips from '../../components/Student/LearningTips';
 import HelpButton from '../../components/Student/HelpButton';
 
@@ -142,6 +151,8 @@ const StyledLinearProgress = styled(LinearProgress)(({ theme }) => ({
     background: `linear-gradient(90deg, ${theme.palette.success.main}, ${theme.palette.success.light})`,
   },
 }));
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -166,7 +177,10 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other })
 const StudentCourses: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+<<<<<<< HEAD
   const theme = useTheme();
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
   // State management
   const [tabValue, setTabValue] = useState(0);
@@ -177,7 +191,10 @@ const StudentCourses: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+<<<<<<< HEAD
   const [showWelcome, setShowWelcome] = useState(true);
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
   // Load courses
   const loadCourses = async () => {
@@ -194,6 +211,7 @@ const StudentCourses: React.FC = () => {
         setEnrolledCourses(coursesResponse.courses);
         setEnrollments(enrollmentsResponse.enrollments);
       } else {
+<<<<<<< HEAD
         // Load available courses and enrollments
         const [coursesResponse, enrollmentsResponse] = await Promise.allSettled([
           courseService.getPublicCourses({
@@ -210,6 +228,15 @@ const StudentCourses: React.FC = () => {
         if (enrollmentsResponse.status === 'fulfilled') {
           setEnrollments(enrollmentsResponse.value.enrollments);
         }
+=======
+        // Load available courses
+        const coursesResponse = await courseService.getPublicCourses({
+          search: searchTerm,
+          category: categoryFilter,
+          limit: 20
+        });
+        setAvailableCourses(coursesResponse.courses);
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load courses');
@@ -228,6 +255,7 @@ const StudentCourses: React.FC = () => {
   };
 
   const handleEnroll = async (courseId: string) => {
+<<<<<<< HEAD
     // Check if already enrolled
     const isAlreadyEnrolled = enrollments.some(e => e.course?._id === courseId || e.course === courseId);
     if (isAlreadyEnrolled) {
@@ -246,6 +274,14 @@ const StudentCourses: React.FC = () => {
       setError(err.message || 'Failed to enroll in course');
     } finally {
       setLoading(false);
+=======
+    try {
+      await enrollmentService.enrollInCourse(courseId);
+      // Refresh courses
+      loadCourses();
+    } catch (err: any) {
+      setError(err.message || 'Failed to enroll in course');
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
     }
   };
 
@@ -254,6 +290,7 @@ const StudentCourses: React.FC = () => {
     return enrollment?.progress || 0;
   };
 
+<<<<<<< HEAD
   // Helper function to get progress color
   const getProgressColor = (progress: number) => {
     if (progress >= 80) return 'success';
@@ -428,11 +465,39 @@ const StudentCourses: React.FC = () => {
             {error}
           </Alert>
         </Zoom>
+=======
+  return (
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      {/* Header */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          My Courses
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Manage your enrolled courses and discover new learning opportunities
+        </Typography>
+      </Box>
+
+      {/* Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs value={tabValue} onChange={handleTabChange}>
+          <Tab label="Enrolled Courses" />
+          <Tab label="Browse Courses" />
+        </Tabs>
+      </Box>
+
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
       )}
 
       {/* Enrolled Courses Tab */}
       <TabPanel value={tabValue} index={0}>
         {loading ? (
+<<<<<<< HEAD
           <Box display="flex" flexDirection="column" alignItems="center" py={8}>
             <CircularProgress size={60} thickness={4} />
             <Typography variant="h6" sx={{ mt: 2, color: 'text.secondary' }}>
@@ -611,11 +676,83 @@ const StudentCourses: React.FC = () => {
               })}
             </Grid>
           </>
+=======
+          <Box display="flex" justifyContent="center" py={4}>
+            <CircularProgress />
+          </Box>
+        ) : enrolledCourses.length === 0 ? (
+          <Box textAlign="center" py={8}>
+            <School sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+            <Typography variant="h6" gutterBottom>
+              No Enrolled Courses
+            </Typography>
+            <Typography variant="body2" color="text.secondary" mb={3}>
+              Start your learning journey by enrolling in a course
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={() => setTabValue(1)}
+              startIcon={<School />}
+            >
+              Browse Courses
+            </Button>
+          </Box>
+        ) : (
+          <Grid container spacing={3}>
+            {enrolledCourses.map((course) => {
+              const progress = getEnrollmentProgress(course._id);
+              return (
+                <Grid item xs={12} sm={6} md={4} key={course._id}>
+                  <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <CardMedia
+                      component="img"
+                      height="140"
+                      image={getCourseImageUrl(course)}
+                      alt={course.title}
+                    />
+                    <CardContent sx={{ flexGrow: 1 }}>
+                      <Typography variant="h6" gutterBottom noWrap>
+                        {course.title}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        {course.instructor?.firstName} {course.instructor?.lastName}
+                      </Typography>
+                      
+                      <Box sx={{ mb: 2 }}>
+                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                          <Typography variant="body2">Progress</Typography>
+                          <Typography variant="body2">{Math.round(progress)}%</Typography>
+                        </Box>
+                        <LinearProgress variant="determinate" value={progress} />
+                      </Box>
+
+                      <Box display="flex" gap={1} mb={2}>
+                        <Chip label={course.category} size="small" />
+                        <Chip label={course.level} size="small" variant="outlined" />
+                      </Box>
+                    </CardContent>
+                    <Box sx={{ p: 2, pt: 0 }}>
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        startIcon={<PlayArrow />}
+                        onClick={() => navigate(`/dashboard/student/course-content/${course._id}`)}
+                      >
+                        Continue Learning
+                      </Button>
+                    </Box>
+                  </Card>
+                </Grid>
+              );
+            })}
+          </Grid>
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
         )}
       </TabPanel>
 
       {/* Browse Courses Tab */}
       <TabPanel value={tabValue} index={1}>
+<<<<<<< HEAD
         {/* Header */}
         <Box sx={{ mb: 4, textAlign: 'center' }}>
           <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main', mb: 1 }}>
@@ -934,6 +1071,95 @@ const StudentCourses: React.FC = () => {
 
       {/* Floating Help Button */}
       <HelpButton />
+=======
+        {/* Filters */}
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              placeholder="Search courses..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <FormControl fullWidth>
+              <InputLabel>Category</InputLabel>
+              <Select
+                value={categoryFilter}
+                label="Category"
+                onChange={(e) => setCategoryFilter(e.target.value)}
+              >
+                <MenuItem value="">All Categories</MenuItem>
+                <MenuItem value="Programming">Programming</MenuItem>
+                <MenuItem value="Design">Design</MenuItem>
+                <MenuItem value="Business">Business</MenuItem>
+                <MenuItem value="Marketing">Marketing</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+        </Grid>
+
+        {loading ? (
+          <Box display="flex" justifyContent="center" py={4}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <Grid container spacing={3}>
+            {availableCourses.map((course) => (
+              <Grid item xs={12} sm={6} md={4} key={course._id}>
+                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <CardMedia
+                    component="img"
+                    height="140"
+                    image={getCourseImageUrl(course)}
+                    alt={course.title}
+                  />
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Typography variant="h6" gutterBottom noWrap>
+                      {course.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      {course.instructor?.firstName} {course.instructor?.lastName}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 2 }} noWrap>
+                      {course.description}
+                    </Typography>
+
+                    <Box display="flex" gap={1} mb={2}>
+                      <Chip label={course.category} size="small" />
+                      <Chip label={course.level} size="small" variant="outlined" />
+                    </Box>
+
+                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                      <Typography variant="h6" color="primary">
+                        ${course.price}
+                      </Typography>
+                      <Box display="flex" alignItems="center">
+                        <Star sx={{ color: 'gold', fontSize: 16, mr: 0.5 }} />
+                        <Typography variant="body2">4.5</Typography>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                  <Box sx={{ p: 2, pt: 0 }}>
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      onClick={() => handleEnroll(course._id)}
+                    >
+                      Enroll Now
+                    </Button>
+                  </Box>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        )}
+      </TabPanel>
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
     </Container>
   );
 };

@@ -6,9 +6,13 @@ import {
   generateLearningRecommendations,
   analyzeStudentPerformance,
   generateCourseContent,
+<<<<<<< HEAD
   getAIServiceStatus,
   generateSectionQuiz,
   evaluateQuizAnswers
+=======
+  getAIServiceStatus
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 } from '../controllers/aiController';
 import { protect } from '../middleware/auth';
 import { authorizeRoles } from '../middleware/roleAuth';
@@ -130,6 +134,7 @@ router.post('/generate-course',
   generateCourseContent
 );
 
+<<<<<<< HEAD
 // Generate section quiz (Students can generate quizzes for their enrolled courses)
 router.post('/generate-section-quiz',
   authorizeRoles(['student', 'teacher', 'admin']),
@@ -187,4 +192,6 @@ router.post('/evaluate-quiz-answers',
   evaluateQuizAnswers
 );
 
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 export default router;

@@ -204,6 +204,7 @@ const StudentDashboard: React.FC = () => {
 
       // Calculate stats
       const totalCourses = coursesData.courses?.length || 0;
+<<<<<<< HEAD
       const enrollments: IEnrollment[] = enrollmentsData.enrollments || [];
       const completedCourses = enrollments.filter(
         (enrollment) => enrollment.progress >= 100
@@ -212,6 +213,16 @@ const StudentDashboard: React.FC = () => {
         ? Math.round(
             enrollments.reduce(
               (sum, enrollment) => sum + (enrollment.progress || 0),
+=======
+      const enrollments = enrollmentsData.enrollments || [];
+      const completedCourses = enrollments.filter(
+        (enrollment: IEnrollment) => enrollment.progress >= 100
+      ).length;
+      const averageProgress = enrollments.length > 0
+        ? Math.round(
+            enrollments.reduce<number>(
+              (sum: number, enrollment: IEnrollment) => sum + (enrollment.progress || 0),
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
               0
             ) / enrollments.length
           )
@@ -236,12 +247,15 @@ const StudentDashboard: React.FC = () => {
         stats
       });
 
+<<<<<<< HEAD
       // Check if student has no enrolled courses - redirect to course enrollment
       if (totalCourses === 0 && enrollments.length === 0) {
         navigate('/courses');
         return;
       }
 
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
       // Check if all requests failed
       const allFailed = [
         coursesResult,
@@ -339,6 +353,7 @@ const StudentDashboard: React.FC = () => {
             mx: { xs: 'auto', sm: 0 }
           }}
         >
+<<<<<<< HEAD
           {dashboardData.stats.totalCourses === 0 
             ? "Ready to start learning? Explore our courses and begin your journey!"
             : "Continue your learning journey and achieve your goals."
@@ -386,6 +401,10 @@ const StudentDashboard: React.FC = () => {
             </Stack>
           </Box>
         )}
+=======
+          Continue your learning journey and achieve your goals.
+        </Typography>
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
       </Box>
 
       {/* Stats Cards */}

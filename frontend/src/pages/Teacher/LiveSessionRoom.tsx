@@ -17,7 +17,10 @@ import { useAuth } from '../../store/AuthContext';
 import { liveSessionService, ILiveSession } from '../../services/liveSessionService';
 
 import LiveClass from '../../components/Video/LiveClass';
+<<<<<<< HEAD
 import VideoSessionWrapper from '../../components/Video/VideoSessionWrapper';
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
 
 
@@ -107,6 +110,7 @@ const LiveSessionRoom: React.FC = () => {
   // If in video room, show the 100ms LiveClass component
   if (inVideoRoom) {
     return (
+<<<<<<< HEAD
       <VideoSessionWrapper>
         <LiveClass
           sessionId={id}
@@ -114,6 +118,13 @@ const LiveSessionRoom: React.FC = () => {
           onLeave={handleLeaveVideoRoom}
         />
       </VideoSessionWrapper>
+=======
+      <LiveClass
+        sessionId={id}
+        userRole="teacher"
+        onLeave={handleLeaveVideoRoom}
+      />
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
     );
   }
 

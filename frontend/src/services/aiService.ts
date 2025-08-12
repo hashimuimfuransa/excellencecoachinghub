@@ -153,6 +153,7 @@ export const aiService = {
     }
     
     throw new Error(response.error || 'Failed to generate quiz questions');
+<<<<<<< HEAD
   },
 
   // Generate section quiz
@@ -216,5 +217,7 @@ export const aiService = {
         detailedResults: []
       };
     }
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   }
 };

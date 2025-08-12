@@ -187,6 +187,7 @@ const App: React.FC = () => {
           <Route path="courses/:courseId/materials" element={<CourseMaterials />} />
           <Route path="live-sessions" element={<LiveSessions />} />
           <Route path="live-sessions/create" element={<CreateLiveSession />} />
+          <Route path="live-sessions/:id/room" element={<LiveSessionRoom />} />
           <Route path="students" element={<TeacherStudents />} />
           <Route path="student-management" element={<StudentManagement />} />
           <Route path="analytics" element={<TeacherAnalytics />} />
@@ -219,6 +220,7 @@ const App: React.FC = () => {
           <Route path="enhanced-assessments" element={<EnhancedAssessments />} />
           <Route path="enhanced-assessment/:assessmentId" element={<EnhancedTakeAssessment />} />
           <Route path="live-sessions" element={<StudentLiveSessions />} />
+          <Route path="live-sessions/:sessionId/room" element={<StudentLiveSessionRoom />} />
           <Route path="progress" element={<Progress />} />
           <Route path="ai-assistant" element={<AIAssistantPage />} />
           <Route path="recorded-sessions" element={<RecordedSessionsPage />} />
@@ -325,7 +327,6 @@ const App: React.FC = () => {
           </ProtectedRoute>
         }
       />
-
       {/* 404 route */}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

@@ -87,11 +87,18 @@ const StudentAssessments: React.FC = () => {
       // Filter by search term locally
       let filteredAssessments = response.assessments;
       if (filters.search) {
+<<<<<<< HEAD
         filteredAssessments = response.assessments.filter(assessment => {
           const courseTitle = typeof assessment.course === 'string' ? '' : assessment.course.title;
           return assessment.title.toLowerCase().includes(filters.search.toLowerCase()) ||
                  courseTitle.toLowerCase().includes(filters.search.toLowerCase());
         });
+=======
+        filteredAssessments = response.assessments.filter(assessment =>
+          assessment.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+          assessment.course.title.toLowerCase().includes(filters.search.toLowerCase())
+        );
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
       }
 
       setAssessments(filteredAssessments);
@@ -283,7 +290,11 @@ const StudentAssessments: React.FC = () => {
                             {assessment.title}
                           </Typography>
                           <Typography variant="body2" color="text.secondary" noWrap>
+<<<<<<< HEAD
                             {typeof assessment.course === 'string' ? 'Course' : assessment.course.title}
+=======
+                            {assessment.course.title}
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
                           </Typography>
                         </Box>
                         <Tooltip title="Assessment Info">
@@ -407,7 +418,11 @@ const StudentAssessments: React.FC = () => {
                 {selectedAssessment.title}
               </Typography>
               <Typography variant="body2" color="text.secondary" gutterBottom>
+<<<<<<< HEAD
                 {typeof selectedAssessment.course === 'string' ? selectedAssessment.course : selectedAssessment.course.title}
+=======
+                {selectedAssessment.course.title}
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
               </Typography>
               
               {selectedAssessment.description && (

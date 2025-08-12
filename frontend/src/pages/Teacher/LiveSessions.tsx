@@ -144,7 +144,11 @@ const LiveSessions: React.FC = () => {
       setSuccess('Session started successfully!');
       
       // Navigate to live session room
+<<<<<<< HEAD
       navigate(`/video-session/teacher/${session._id}`);
+=======
+      navigate(`/dashboard/teacher/live-sessions/${session._id}/room`);
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
     } catch (err: any) {
       setError(err.message || 'Failed to start session');
     }
@@ -420,7 +424,11 @@ const LiveSessions: React.FC = () => {
                               <Tooltip title="Join Session">
                                 <IconButton
                                   color="primary"
+<<<<<<< HEAD
                                   onClick={() => navigate(`/video-session/teacher/${session._id}`)}
+=======
+                                  onClick={() => navigate(`/dashboard/teacher/live-sessions/${session._id}/room`)}
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
                                 >
                                   <VideoCall />
                                 </IconButton>
@@ -618,7 +626,11 @@ const LiveSessions: React.FC = () => {
                         <Button
                           variant="contained"
                           startIcon={<VideoCall />}
+<<<<<<< HEAD
                           onClick={() => navigate(`/video-session/teacher/${session._id}`)}
+=======
+                          onClick={() => navigate(`/dashboard/teacher/live-sessions/${session._id}/room`)}
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
                           color="primary"
                         >
                           Join Session

@@ -103,6 +103,11 @@ export const getCourseById = async (req: Request, res: Response, next: NextFunct
     if (isPublicRequest) {
       // For public requests, only show approved courses
       filter.status = CourseStatus.APPROVED;
+<<<<<<< HEAD
+=======
+    } else if (req.user.role === 'teacher') {
+      filter.instructor = req.user._id;
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
     }
 
     const course = await Course.findOne(filter)
@@ -111,11 +116,16 @@ export const getCourseById = async (req: Request, res: Response, next: NextFunct
     if (!course) {
       res.status(404).json({
         success: false,
+<<<<<<< HEAD
         error: 'Course not found'
+=======
+        error: 'Course not found or access denied'
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
       });
       return;
     }
 
+<<<<<<< HEAD
     // Check access permissions for authenticated users
     if (!isPublicRequest) {
       const userId = req.user._id.toString();
@@ -142,6 +152,8 @@ export const getCourseById = async (req: Request, res: Response, next: NextFunct
       }
     }
 
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
     res.status(200).json({
       success: true,
       data: { course }

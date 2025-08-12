@@ -339,6 +339,7 @@ const TeacherDashboard: React.FC = () => {
                 <Box>
                   <Button
                     size="small"
+<<<<<<< HEAD
                     variant="outlined"
                     startIcon={<ManageAccounts />}
                     onClick={() => navigate('/dashboard/teacher/course-management')}
@@ -354,6 +355,13 @@ const TeacherDashboard: React.FC = () => {
                     }}
                   >
                     Course Management
+=======
+                    startIcon={<ManageAccounts />}
+                    onClick={() => navigate('/dashboard/teacher/courses')}
+                    sx={{ mr: 1 }}
+                  >
+                    Manage Courses
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
                   </Button>
                   <Button
                     size="small"
@@ -409,6 +417,7 @@ const TeacherDashboard: React.FC = () => {
                             'default'
                           }
                         />
+<<<<<<< HEAD
                         <Button
                           size="small"
                           variant="contained"
@@ -425,6 +434,8 @@ const TeacherDashboard: React.FC = () => {
                         >
                           Manage
                         </Button>
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
                       </Box>
                     </Box>
                     <LinearProgress

@@ -1,5 +1,9 @@
 import { Request, Response } from 'express';
+<<<<<<< HEAD
 import { aiService } from '../services/aiServiceExtension';
+=======
+import { aiService } from '../services/aiService';
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 import { validationResult } from 'express-validator';
 
 // Generate quiz questions using AI
@@ -222,6 +226,7 @@ export const generateCourseContent = async (req: Request, res: Response): Promis
   }
 };
 
+<<<<<<< HEAD
 // Generate section quiz using AI
 export const generateSectionQuiz = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -382,6 +387,8 @@ export const evaluateQuizAnswers = async (req: Request, res: Response): Promise<
   }
 };
 
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 // Check AI service status
 export const getAIServiceStatus = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -394,9 +401,13 @@ export const getAIServiceStatus = async (req: Request, res: Response): Promise<v
         service: 'Gemini AI',
         features: [
           'Quiz Question Generation',
+<<<<<<< HEAD
           'Section Quiz Generation',
           'Essay Grading',
           'Quiz Answer Evaluation',
+=======
+          'Essay Grading',
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
           'Learning Recommendations',
           'Performance Analysis',
           'Course Content Generation'

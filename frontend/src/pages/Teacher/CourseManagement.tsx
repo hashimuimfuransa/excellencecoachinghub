@@ -30,8 +30,12 @@ import {
   Select,
   MenuItem,
   Paper,
+<<<<<<< HEAD
   Divider,
   Tooltip
+=======
+  Divider
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 } from '@mui/material';
 import {
   ArrowBack,
@@ -54,15 +58,22 @@ import {
   Upload,
   Download,
   Send,
+<<<<<<< HEAD
   Folder,
   CloudUpload,
   Description,
   AutoAwesome
+=======
+  Folder
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 } from '@mui/icons-material';
 import { useAuth } from '../../store/AuthContext';
 import { courseService, ICourse } from '../../services/courseService';
 import { courseContentService, ICourseContent } from '../../services/courseContentService';
+<<<<<<< HEAD
 import { assessmentService, IAssessment } from '../../services/assessmentService';
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 import { CourseStatus } from '../../shared/types';
 
 interface TabPanelProps {
@@ -99,10 +110,15 @@ const CourseManagement: React.FC = () => {
   // State management
   const [course, setCourse] = useState<ICourse | null>(null);
   const [courseContent, setCourseContent] = useState<ICourseContent[]>([]);
+<<<<<<< HEAD
   const [assessments, setAssessments] = useState<IAssessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [contentLoading, setContentLoading] = useState(false);
   const [assessmentsLoading, setAssessmentsLoading] = useState(false);
+=======
+  const [loading, setLoading] = useState(true);
+  const [contentLoading, setContentLoading] = useState(false);
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
@@ -111,8 +127,11 @@ const CourseManagement: React.FC = () => {
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [liveSessionDialogOpen, setLiveSessionDialogOpen] = useState(false);
+<<<<<<< HEAD
   const [uploadAssessmentDialogOpen, setUploadAssessmentDialogOpen] = useState(false);
   const [uploadToExistingDialogOpen, setUploadToExistingDialogOpen] = useState(false);
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   
   // Form states
   const [noteTitle, setNoteTitle] = useState('');
@@ -120,6 +139,7 @@ const CourseManagement: React.FC = () => {
   const [assignmentTitle, setAssignmentTitle] = useState('');
   const [assignmentDescription, setAssignmentDescription] = useState('');
   const [assignmentDueDate, setAssignmentDueDate] = useState('');
+<<<<<<< HEAD
   
   // Assessment upload states
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -132,6 +152,8 @@ const CourseManagement: React.FC = () => {
   const [selectedAssessment, setSelectedAssessment] = useState<IAssessment | null>(null);
   const [existingUploadFile, setExistingUploadFile] = useState<File | null>(null);
   const [addingToExisting, setAddingToExisting] = useState(false);
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
   // Load course details and content
   useEffect(() => {
@@ -153,6 +175,7 @@ const CourseManagement: React.FC = () => {
           // Content might not exist yet, which is fine
           setCourseContent([]);
         }
+<<<<<<< HEAD
 
         // Load assessments for this course
         try {
@@ -162,6 +185,8 @@ const CourseManagement: React.FC = () => {
           // Assessments might not exist yet, which is fine
           setAssessments([]);
         }
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
       } catch (err: any) {
         setError(err.message || 'Failed to load course');
       } finally {
@@ -247,6 +272,7 @@ const CourseManagement: React.FC = () => {
     }
   };
 
+<<<<<<< HEAD
   // Handle file upload for assessment
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -397,6 +423,8 @@ const CourseManagement: React.FC = () => {
     }
   };
 
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -650,11 +678,16 @@ const CourseManagement: React.FC = () => {
                   <Button
                     variant="outlined"
                     startIcon={<Quiz />}
+<<<<<<< HEAD
                     onClick={() => navigate(`/dashboard/teacher/assessments/create?courseId=${course._id}`)}
+=======
+                    onClick={() => navigate(`/dashboard/teacher/courses/${course._id}/quiz/create`)}
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
                     fullWidth
                   >
                     Create Assessment
                   </Button>
+<<<<<<< HEAD
                   <Button
                     variant="outlined"
                     startIcon={<CloudUpload />}
@@ -671,6 +704,8 @@ const CourseManagement: React.FC = () => {
                     <AutoAwesome sx={{ mr: 1 }} />
                     AI Upload Assessment
                   </Button>
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
                 </Box>
               </Paper>
             </Grid>
@@ -853,6 +888,7 @@ const CourseManagement: React.FC = () => {
         <TabPanel value={tabValue} index={3}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
             <Typography variant="h6">
+<<<<<<< HEAD
               Assessments & Quizzes ({assessments.length})
             </Typography>
             <Box sx={{ display: 'flex', gap: 1 }}>
@@ -1003,6 +1039,24 @@ const CourseManagement: React.FC = () => {
               ))}
             </Grid>
           )}
+=======
+              Assessments & Quizzes
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => navigate(`/dashboard/teacher/courses/${course._id}/quiz/create`)}
+            >
+              Create Quiz
+            </Button>
+          </Box>
+
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="body1" color="text.secondary" textAlign="center">
+              No assessments created yet. Create quizzes to test student knowledge.
+            </Typography>
+          </Paper>
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
         </TabPanel>
 
         {/* Students Tab */}
@@ -1175,6 +1229,7 @@ const CourseManagement: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+<<<<<<< HEAD
 
       {/* Upload Assessment Dialog */}
       <Dialog open={uploadAssessmentDialogOpen} onClose={() => setUploadAssessmentDialogOpen(false)} maxWidth="md" fullWidth>
@@ -1417,6 +1472,8 @@ const CourseManagement: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
     </Container>
   );
 };

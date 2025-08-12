@@ -132,8 +132,12 @@ router.get('/', authorize(UserRole.TEACHER, UserRole.ADMIN), getAllCourses);
 router.get('/stats', requireAdmin, getCourseStats);
 
 // Routes with ID parameter (must be after specific routes like /stats)
+<<<<<<< HEAD
 // Allow all authenticated users to access course details (access control is handled in controller)
 router.get('/:id', getCourseById);
+=======
+router.get('/:id', authorize(UserRole.TEACHER, UserRole.ADMIN), getCourseById);
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
 // Teacher-specific routes (requires approved teacher profile)
 router.post('/', authorize(UserRole.TEACHER), requireApprovedTeacher, createCourseValidation, validateRequest, createCourse);

@@ -11,13 +11,20 @@ import {
   startRecording,
   stopRecording,
   resetRecordingStatus,
+<<<<<<< HEAD
   joinSession,
   uploadSessionRecording
+=======
+  joinSession
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 } from '../controllers/teacherLiveSessionController';
 import { protect } from '../middleware/auth';
 import { requireTeacher } from '../middleware/roleAuth';
 import { validateRequest } from '../middleware/validateRequest';
+<<<<<<< HEAD
 import { upload } from '../utils/fileUpload';
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
 const router = Router();
 
@@ -176,7 +183,10 @@ router.post('/:id/end', sessionIdValidation, validateRequest, endSession);
 router.post('/:id/start-recording', sessionIdValidation, validateRequest, startRecording);
 router.post('/:id/stop-recording', sessionIdValidation, validateRequest, stopRecording);
 router.post('/:id/reset-recording', sessionIdValidation, validateRequest, resetRecordingStatus);
+<<<<<<< HEAD
 router.post('/:id/upload-recording', upload.single('video'), sessionIdValidation, validateRequest, uploadSessionRecording);
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
 // Join session route (for both teachers and students)
 router.use(protect); // Remove teacher requirement for join

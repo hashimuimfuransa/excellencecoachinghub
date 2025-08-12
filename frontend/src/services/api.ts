@@ -101,6 +101,7 @@ export const apiService = {
     const response = await api.patch(url, data, config);
     return response.data;
   },
+<<<<<<< HEAD
 
   postFormData: async <T>(url: string, formData: FormData, config?: AxiosRequestConfig): Promise<ApiResponse<T>> => {
     const response = await api.post(url, formData, {
@@ -112,6 +113,8 @@ export const apiService = {
     });
     return response.data;
   },
+=======
+>>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 };
 
 export default api;

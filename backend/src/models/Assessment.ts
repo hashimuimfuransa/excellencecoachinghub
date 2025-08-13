@@ -42,6 +42,15 @@ export interface IAssessmentDocument extends Document {
     aiExtracted: boolean;
   }>;
   
+  // Attachments (similar to assignments)
+  attachments?: Array<{
+    filename: string;
+    originalName: string;
+    fileUrl: string;
+    fileSize: number;
+    uploadedAt: Date;
+  }>;
+  
   // Scheduling
   scheduledDate?: Date;
   duration?: number; // in minutes
@@ -191,6 +200,30 @@ const assessmentSchema = new Schema<IAssessmentDocument>({
     aiExtracted: {
       type: Boolean,
       default: false
+    }
+  }],
+  
+  // Attachments
+  attachments: [{
+    filename: {
+      type: String,
+      required: true
+    },
+    originalName: {
+      type: String,
+      required: true
+    },
+    fileUrl: {
+      type: String,
+      required: true
+    },
+    fileSize: {
+      type: Number,
+      required: true
+    },
+    uploadedAt: {
+      type: Date,
+      default: Date.now
     }
   }],
   

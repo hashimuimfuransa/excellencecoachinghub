@@ -119,6 +119,14 @@ const CourseManagement: React.FC = () => {
   const [assignmentTitle, setAssignmentTitle] = useState('');
   const [assignmentDescription, setAssignmentDescription] = useState('');
   const [assignmentDueDate, setAssignmentDueDate] = useState('');
+  const [assignmentPoints, setAssignmentPoints] = useState('100');
+  const [assignmentInstructions, setAssignmentInstructions] = useState('');
+  
+  // Assignment document upload states
+  const [assignmentDocument, setAssignmentDocument] = useState<File | null>(null);
+  const [uploadingAssignmentDoc, setUploadingAssignmentDoc] = useState(false);
+  const [selectedAssignmentForUpload, setSelectedAssignmentForUpload] = useState<ICourseContent | null>(null);
+  const [assignmentUploadDialogOpen, setAssignmentUploadDialogOpen] = useState(false);
   
   // Assessment upload states
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -227,11 +235,14 @@ const CourseManagement: React.FC = () => {
 
     try {
       setContentLoading(true);
-      const newAssignment = await courseContentService.addAssignment(
+      const newAssignment = await courseContentService.addEnhancedAssignment(
         course._id, 
         assignmentTitle, 
         assignmentDescription, 
-        assignmentDueDate
+        assignmentDueDate,
+        parseInt(assignmentPoints) || 100,
+        assignmentInstructions,
+        assignmentDocument
       );
       setCourseContent(prev => [...prev, newAssignment]);
       setSuccess('Assignment created successfully!');
@@ -239,6 +250,9 @@ const CourseManagement: React.FC = () => {
       setAssignmentTitle('');
       setAssignmentDescription('');
       setAssignmentDueDate('');
+      setAssignmentPoints('100');
+      setAssignmentInstructions('');
+      setAssignmentDocument(null);
     } catch (err: any) {
       setError(err.message || 'Failed to create assignment');
     } finally {
@@ -393,6 +407,82 @@ const CourseManagement: React.FC = () => {
       setError(err.message || 'Failed to add questions to assessment');
     } finally {
       setAddingToExisting(false);
+    }
+  };
+
+  // Handle assignment document upload
+  const handleAssignmentDocumentUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Check file type
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain',
+        'image/jpeg',
+        'image/png',
+        'image/gif'
+      ];
+      
+      if (!allowedTypes.includes(file.type)) {
+        setError('Please upload a PDF, Word document, text file, or image');
+        return;
+      }
+
+      // Check file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        setError('File size must be less than 10MB');
+        return;
+      }
+
+      setAssignmentDocument(file);
+      setError(null);
+    }
+  };
+
+  // Remove assignment document
+  const removeAssignmentDocument = () => {
+    setAssignmentDocument(null);
+  };
+
+  // Handle opening upload dialog for existing assignment
+  const handleUploadToAssignment = (assignment: ICourseContent) => {
+    setSelectedAssignmentForUpload(assignment);
+    setAssignmentUploadDialogOpen(true);
+  };
+
+  // Handle uploading document to existing assignment
+  const handleUploadDocumentToAssignment = async () => {
+    if (!selectedAssignmentForUpload || !assignmentDocument) return;
+
+    try {
+      setUploadingAssignmentDoc(true);
+      setError(null);
+
+      const updatedAssignment = await courseContentService.uploadAssignmentDocument(
+        course!._id,
+        selectedAssignmentForUpload._id!,
+        assignmentDocument
+      );
+
+      // Update the assignment in the list
+      setCourseContent(prev => 
+        prev.map(content => 
+          content._id === selectedAssignmentForUpload._id ? updatedAssignment : content
+        )
+      );
+
+      setSuccess(`Document uploaded successfully to "${selectedAssignmentForUpload.title}"!`);
+      
+      // Reset form
+      setAssignmentUploadDialogOpen(false);
+      setSelectedAssignmentForUpload(null);
+      setAssignmentDocument(null);
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload document to assignment');
+    } finally {
+      setUploadingAssignmentDoc(false);
     }
   };
 
@@ -806,44 +896,122 @@ const CourseManagement: React.FC = () => {
                 No assignments created yet. Create your first assignment to engage students.
               </Typography>
             ) : (
-              <List>
+              <Grid container spacing={2}>
                 {courseContent
                   .filter(content => content.type === 'assignment')
                   .map((assignment) => {
                     const assignmentData = assignment.content ? JSON.parse(assignment.content) : {};
                     return (
-                      <ListItem key={assignment._id}>
-                        <ListItemIcon>
-                          <Assignment color="primary" />
-                        </ListItemIcon>
-                        <ListItemText 
-                          primary={assignment.title}
-                          secondary={
-                            <Box>
-                              <Typography variant="body2" color="text.secondary">
+                      <Grid item xs={12} key={assignment._id}>
+                        <Card sx={{ p: 2 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <Box sx={{ flex: 1 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                <Assignment color="primary" />
+                                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                                  {assignment.title}
+                                </Typography>
+                                {assignmentData.points && (
+                                  <Chip 
+                                    label={`${assignmentData.points} pts`} 
+                                    size="small" 
+                                    color="primary" 
+                                    variant="outlined"
+                                  />
+                                )}
+                              </Box>
+                              
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                                 {assignmentData.description}
                               </Typography>
-                              {assignmentData.dueDate && (
-                                <Typography variant="caption" color="text.secondary">
-                                  Due: {new Date(assignmentData.dueDate).toLocaleDateString()}
+                              
+                              {assignmentData.instructions && (
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontStyle: 'italic' }}>
+                                  Instructions: {assignmentData.instructions}
                                 </Typography>
                               )}
+                              
+                              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                                {assignmentData.dueDate && (
+                                  <Typography variant="caption" color="text.secondary">
+                                    Due: {new Date(assignmentData.dueDate).toLocaleDateString()}
+                                  </Typography>
+                                )}
+                                
+                                {assignment.fileUrl && (
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <Description fontSize="small" color="primary" />
+                                    <Typography variant="caption" color="primary">
+                                      Document attached
+                                    </Typography>
+                                  </Box>
+                                )}
+                              </Box>
                             </Box>
-                          }
-                        />
-                        <ListItemSecondaryAction>
-                          <IconButton size="small">
-                            <Edit />
-                          </IconButton>
-                          <IconButton size="small" color="error">
-                            <Delete />
-                          </IconButton>
-                        </ListItemSecondaryAction>
-                      </ListItem>
+                            
+                            <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
+                              <Tooltip title="Upload assignment document">
+                                <IconButton 
+                                  size="small" 
+                                  onClick={() => handleUploadToAssignment(assignment)}
+                                  sx={{ 
+                                    color: 'success.main',
+                                    '&:hover': { backgroundColor: 'success.50' }
+                                  }}
+                                >
+                                  <Upload />
+                                </IconButton>
+                              </Tooltip>
+                              
+                              {assignment.fileUrl && (
+                                <Tooltip title="Download assignment document">
+                                  <IconButton 
+                                    size="small" 
+                                    component="a"
+                                    href={assignment.fileUrl}
+                                    target="_blank"
+                                    sx={{ 
+                                      color: 'info.main',
+                                      '&:hover': { backgroundColor: 'info.50' }
+                                    }}
+                                  >
+                                    <Download />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                              
+                              <Tooltip title="View submissions">
+                                <IconButton 
+                                  size="small"
+                                  onClick={() => navigate(`/dashboard/teacher/assignments/${assignment._id}/submissions`)}
+                                  sx={{ 
+                                    color: 'primary.main',
+                                    '&:hover': { backgroundColor: 'primary.50' }
+                                  }}
+                                >
+                                  <Visibility />
+                                </IconButton>
+                              </Tooltip>
+                              
+                              <Tooltip title="Edit assignment">
+                                <IconButton size="small">
+                                  <Edit />
+                                </IconButton>
+                              </Tooltip>
+                              
+                              <Tooltip title="Delete assignment">
+                                <IconButton size="small" color="error">
+                                  <Delete />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
+                          </Box>
+                        </Card>
+                      </Grid>
                     );
                   })
                 }
-              </List>
+              </Grid>
             )}
           </Paper>
         </TabPanel>
@@ -1127,50 +1295,142 @@ const CourseManagement: React.FC = () => {
 
       {/* Add Assignment Dialog */}
       <Dialog open={assignmentDialogOpen} onClose={() => setAssignmentDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Create Assignment</DialogTitle>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Assignment color="primary" />
+          Create Assignment
+        </DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
             margin="dense"
-            label="Assignment Title"
+            label="Assignment Title *"
             fullWidth
             variant="outlined"
             value={assignmentTitle}
             onChange={(e) => setAssignmentTitle(e.target.value)}
             sx={{ mb: 2 }}
+            placeholder="e.g., Essay on Climate Change, Math Problem Set 1"
           />
+          
           <TextField
             margin="dense"
-            label="Assignment Description"
+            label="Assignment Description *"
             fullWidth
             multiline
-            rows={4}
+            rows={3}
             variant="outlined"
             value={assignmentDescription}
             onChange={(e) => setAssignmentDescription(e.target.value)}
             sx={{ mb: 2 }}
+            placeholder="Describe what students need to do for this assignment"
           />
+          
           <TextField
             margin="dense"
-            label="Due Date"
-            type="datetime-local"
+            label="Detailed Instructions"
             fullWidth
+            multiline
+            rows={2}
             variant="outlined"
-            value={assignmentDueDate}
-            onChange={(e) => setAssignmentDueDate(e.target.value)}
-            InputLabelProps={{
-              shrink: true,
-            }}
+            value={assignmentInstructions}
+            onChange={(e) => setAssignmentInstructions(e.target.value)}
+            sx={{ mb: 2 }}
+            placeholder="Additional instructions, formatting requirements, submission guidelines, etc."
           />
+          
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <TextField
+              margin="dense"
+              label="Points"
+              type="number"
+              variant="outlined"
+              value={assignmentPoints}
+              onChange={(e) => setAssignmentPoints(e.target.value)}
+              sx={{ width: '150px' }}
+              inputProps={{ min: 1, max: 1000 }}
+            />
+            
+            <TextField
+              margin="dense"
+              label="Due Date"
+              type="datetime-local"
+              fullWidth
+              variant="outlined"
+              value={assignmentDueDate}
+              onChange={(e) => setAssignmentDueDate(e.target.value)}
+              InputLabelProps={{
+                shrink: true,
+              }}
+            />
+          </Box>
+          
+          {/* Assignment Document Upload Section */}
+          <Paper sx={{ p: 3, border: '2px dashed #e0e0e0', borderRadius: 2, mb: 2 }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Description />
+              Assignment Document (Optional)
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Upload a document with assignment details, rubric, or additional materials for students.
+            </Typography>
+            
+            {!assignmentDocument ? (
+              <Box sx={{ textAlign: 'center' }}>
+                <input
+                  accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
+                  style={{ display: 'none' }}
+                  id="assignment-document-upload"
+                  type="file"
+                  onChange={handleAssignmentDocumentUpload}
+                />
+                <label htmlFor="assignment-document-upload">
+                  <Button
+                    variant="outlined"
+                    component="span"
+                    startIcon={<CloudUpload />}
+                    sx={{ mb: 1 }}
+                  >
+                    Choose File
+                  </Button>
+                </label>
+                <Typography variant="caption" display="block" color="text.secondary">
+                  Supported formats: PDF, Word, Text, Images • Max size: 10MB
+                </Typography>
+              </Box>
+            ) : (
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Description color="primary" />
+                  <Box>
+                    <Typography variant="body2" fontWeight="medium">
+                      {assignmentDocument.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {(assignmentDocument.size / 1024 / 1024).toFixed(2)} MB
+                    </Typography>
+                  </Box>
+                </Box>
+                <Button
+                  size="small"
+                  color="error"
+                  onClick={removeAssignmentDocument}
+                  startIcon={<Delete />}
+                >
+                  Remove
+                </Button>
+              </Box>
+            )}
+          </Paper>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAssignmentDialogOpen(false)}>Cancel</Button>
           <Button 
             onClick={handleAddAssignment} 
             variant="contained"
-            disabled={!assignmentTitle.trim() || !assignmentDescription.trim()}
+            disabled={!assignmentTitle.trim() || !assignmentDescription.trim() || contentLoading}
+            startIcon={contentLoading ? <CircularProgress size={16} /> : <Assignment />}
           >
-            Create Assignment
+            {contentLoading ? 'Creating...' : 'Create Assignment'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1413,6 +1673,110 @@ const CourseManagement: React.FC = () => {
             }}
           >
             {addingToExisting ? 'Adding Questions...' : 'Add Questions'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Upload Document to Assignment Dialog */}
+      <Dialog open={assignmentUploadDialogOpen} onClose={() => setAssignmentUploadDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Upload color="primary" />
+          Upload Assignment Document
+        </DialogTitle>
+        <DialogContent>
+          {selectedAssignmentForUpload && (
+            <>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Upload a document for <strong>"{selectedAssignmentForUpload.title}"</strong>
+              </Typography>
+              
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                This document will be available for students to download along with the assignment instructions.
+              </Typography>
+
+              {/* File Upload Section */}
+              <Paper sx={{ p: 3, border: '2px dashed #e0e0e0', borderRadius: 2, mb: 2 }}>
+                <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Description />
+                  Select Document
+                </Typography>
+                
+                {!assignmentDocument ? (
+                  <Box sx={{ textAlign: 'center' }}>
+                    <input
+                      accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
+                      style={{ display: 'none' }}
+                      id="assignment-upload-document"
+                      type="file"
+                      onChange={handleAssignmentDocumentUpload}
+                    />
+                    <label htmlFor="assignment-upload-document">
+                      <Button
+                        variant="outlined"
+                        component="span"
+                        startIcon={<CloudUpload />}
+                        sx={{ mb: 1 }}
+                      >
+                        Choose File
+                      </Button>
+                    </label>
+                    <Typography variant="caption" display="block" color="text.secondary">
+                      Supported formats: PDF, Word, Text, Images • Max size: 10MB
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Description color="primary" />
+                      <Box>
+                        <Typography variant="body2" fontWeight="medium">
+                          {assignmentDocument.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {(assignmentDocument.size / 1024 / 1024).toFixed(2)} MB
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Button
+                      size="small"
+                      color="error"
+                      onClick={removeAssignmentDocument}
+                      startIcon={<Delete />}
+                    >
+                      Remove
+                    </Button>
+                  </Box>
+                )}
+              </Paper>
+              
+              {uploadingAssignmentDoc && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2, bgcolor: 'primary.50', borderRadius: 1 }}>
+                  <CircularProgress size={16} />
+                  <Typography variant="body2" color="primary">
+                    Uploading document...
+                  </Typography>
+                </Box>
+              )}
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAssignmentUploadDialogOpen(false)} disabled={uploadingAssignmentDoc}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleUploadDocumentToAssignment} 
+            variant="contained"
+            disabled={!assignmentDocument || uploadingAssignmentDoc}
+            startIcon={uploadingAssignmentDoc ? <CircularProgress size={16} /> : <Upload />}
+            sx={{ 
+              background: 'linear-gradient(45deg, #4CAF50 30%, #66BB6A 90%)',
+              '&:hover': {
+                background: 'linear-gradient(45deg, #388E3C 30%, #4CAF50 90%)',
+              }
+            }}
+          >
+            {uploadingAssignmentDoc ? 'Uploading...' : 'Upload Document'}
           </Button>
         </DialogActions>
       </Dialog>

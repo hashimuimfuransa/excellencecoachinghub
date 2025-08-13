@@ -2,6 +2,50 @@ import { Request, Response, NextFunction } from 'express';
 import { Course } from '../models/Course';
 import { validationResult } from 'express-validator';
 import { CourseStatus } from '../../../shared/types';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(__dirname, '../../uploads/assignments');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, `assignment-${uniqueSuffix}${path.extname(file.originalname)}`);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+      'image/jpeg',
+      'image/png',
+      'image/gif'
+    ];
+    
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only PDF, Word documents, text files, and images are allowed.'));
+    }
+  }
+});
+
+export const uploadAssignmentDocument = upload.single('document');
 
 // Add course content (notes, materials, etc.)
 export const addCourseContent = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -319,6 +363,152 @@ export const reorderCourseContent = async (req: Request, res: Response, next: Ne
       success: true,
       data: { content: course.content },
       message: 'Course content reordered successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Create enhanced assignment with document upload
+export const createEnhancedAssignment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { courseId } = req.params;
+    const { assignmentData } = req.body;
+    
+    // Parse assignment data
+    let parsedData;
+    try {
+      parsedData = JSON.parse(assignmentData);
+    } catch (parseError) {
+      res.status(400).json({
+        success: false,
+        error: 'Invalid assignment data format'
+      });
+      return;
+    }
+
+    const { title, description, dueDate, points, instructions } = parsedData;
+
+    // Find course and verify ownership
+    const course = await Course.findById(courseId);
+    if (!course) {
+      res.status(404).json({
+        success: false,
+        error: 'Course not found'
+      });
+      return;
+    }
+
+    // Check if user is the instructor or admin
+    if (req.user.role !== 'admin' && course.instructor.toString() !== req.user._id.toString()) {
+      res.status(403).json({
+        success: false,
+        error: 'Access denied. You can only add assignments to your own courses.'
+      });
+      return;
+    }
+
+    // Create assignment content
+    const assignmentContent = {
+      description,
+      dueDate,
+      points: points || 100,
+      instructions: instructions || '',
+      type: 'assignment'
+    };
+
+    // Create new assignment
+    const newAssignment = {
+      title,
+      type: 'assignment',
+      content: JSON.stringify(assignmentContent),
+      order: course.content.length + 1,
+      isRequired: true,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    // Add file URL if document was uploaded
+    if (req.file) {
+      const fileUrl = `/uploads/assignments/${req.file.filename}`;
+      newAssignment.fileUrl = fileUrl;
+    }
+
+    // Add assignment to course
+    course.content.push(newAssignment);
+    await course.save();
+
+    res.status(201).json({
+      success: true,
+      data: { content: newAssignment },
+      message: 'Assignment created successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Upload document to existing assignment
+export const uploadDocumentToAssignment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { courseId, assignmentId } = req.params;
+
+    if (!req.file) {
+      res.status(400).json({
+        success: false,
+        error: 'No document uploaded'
+      });
+      return;
+    }
+
+    // Find course and verify ownership
+    const course = await Course.findById(courseId);
+    if (!course) {
+      res.status(404).json({
+        success: false,
+        error: 'Course not found'
+      });
+      return;
+    }
+
+    // Check if user is the instructor or admin
+    if (req.user.role !== 'admin' && course.instructor.toString() !== req.user._id.toString()) {
+      res.status(403).json({
+        success: false,
+        error: 'Access denied. You can only upload documents to your own assignments.'
+      });
+      return;
+    }
+
+    // Find assignment
+    const assignment = course.content.id(assignmentId);
+    if (!assignment) {
+      res.status(404).json({
+        success: false,
+        error: 'Assignment not found'
+      });
+      return;
+    }
+
+    if (assignment.type !== 'assignment') {
+      res.status(400).json({
+        success: false,
+        error: 'Content item is not an assignment'
+      });
+      return;
+    }
+
+    // Update assignment with file URL
+    const fileUrl = `/uploads/assignments/${req.file.filename}`;
+    assignment.fileUrl = fileUrl;
+    assignment.updatedAt = new Date();
+
+    await course.save();
+
+    res.status(200).json({
+      success: true,
+      data: { content: assignment },
+      message: 'Document uploaded successfully'
     });
   } catch (error) {
     next(error);

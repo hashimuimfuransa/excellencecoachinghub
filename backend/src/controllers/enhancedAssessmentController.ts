@@ -8,7 +8,7 @@ import { UserProgress } from '../models/UserProgress';
 import { Attendance } from '../models/Attendance';
 import { LiveSession } from '../models/LiveSession';
 import aiDocumentService from '../services/aiDocumentService';
-import { uploadToCloudinary } from '../config/cloudinary';
+import { uploadDocumentToCloudinary } from '../config/cloudinary';
 
 // Upload assessment document and extract questions
 export const uploadAssessmentDocument = asyncHandler(async (req: Request, res: Response) => {
@@ -22,43 +22,132 @@ export const uploadAssessmentDocument = asyncHandler(async (req: Request, res: R
     });
   }
 
-  const assessment = await Assessment.findOne({ _id: assessmentId, teacherId });
+  console.log('🔍 Looking for assessment:', { assessmentId, teacherId });
+  
+  const assessment = await Assessment.findOne({ _id: assessmentId, instructor: teacherId });
+  console.log('📋 Assessment found:', assessment ? 'Yes' : 'No');
+  
   if (!assessment) {
+    // Try to find the assessment without instructor filter to see if it exists
+    const anyAssessment = await Assessment.findById(assessmentId);
+    console.log('📋 Assessment exists (any instructor):', anyAssessment ? 'Yes' : 'No');
+    if (anyAssessment) {
+      console.log('📋 Assessment instructor:', anyAssessment.instructor);
+      console.log('📋 Current teacher:', teacherId);
+    }
+    
     return res.status(404).json({
       success: false,
-      message: 'Assessment not found'
+      message: 'Assessment not found or you are not authorized to upload documents for this assessment'
     });
   }
 
   try {
-    // Upload document to Cloudinary
-    const uploadResult = await uploadToCloudinary(req.file.buffer, {
-      folder: 'assessments',
-      resource_type: 'auto'
+    console.log('📁 File details:', {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size
     });
+
+    // Upload document to Cloudinary
+    const uploadResult = await uploadDocumentToCloudinary(
+      req.file.buffer,
+      teacherId,
+      req.file.originalname,
+      `excellence-coaching-hub/assessments/${assessmentId}/documents`
+    );
+
+    // Determine file type more accurately
+    const getFileType = (mimetype: string, filename: string): 'pdf' | 'docx' | 'txt' => {
+      // Check MIME type first
+      if (mimetype.includes('pdf') || mimetype === 'application/pdf') {
+        return 'pdf';
+      }
+      if (mimetype.includes('wordprocessingml') || 
+          mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        return 'docx';
+      }
+      if (mimetype.includes('msword')) {
+        return 'docx'; // Treat old .doc as docx for now
+      }
+      
+      // Fallback to file extension
+      const extension = filename.toLowerCase().split('.').pop();
+      if (extension === 'pdf') return 'pdf';
+      if (extension === 'docx' || extension === 'doc') return 'docx';
+      
+      return 'txt';
+    };
+
+    const fileType = getFileType(req.file.mimetype, req.file.originalname);
+    console.log(`🔍 Detected file type: ${fileType}`);
 
     // Process document content
     const documentContent = await aiDocumentService.processDocumentContent(
       req.file.buffer,
-      req.file.mimetype.includes('pdf') ? 'pdf' : 
-      req.file.mimetype.includes('docx') ? 'docx' : 'txt'
+      fileType
     );
 
     // Extract questions using AI
     const extractedQuestions = await aiDocumentService.extractQuestionsFromDocument(
       documentContent,
-      req.file.mimetype.includes('pdf') ? 'pdf' : 
-      req.file.mimetype.includes('docx') ? 'docx' : 'txt'
+      fileType
     );
 
+    // Check if questions were extracted
+    if (extractedQuestions.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No questions could be extracted from the document. Please ensure the document contains properly formatted questions.',
+        data: {
+          documentContent: documentContent.substring(0, 500) + '...', // First 500 chars for debugging
+          extractedQuestions: []
+        }
+      });
+    }
+
     // Update assessment with document and extracted questions
-    assessment.documentUrl = uploadResult.secure_url;
-    assessment.documentType = req.file.mimetype.includes('pdf') ? 'pdf' : 
-                             req.file.mimetype.includes('docx') ? 'docx' : 'txt';
+    assessment.documentUrl = uploadResult.url;
+    assessment.documentType = fileType;
+    
+    // Add to attachments array
+    if (!assessment.attachments) {
+      assessment.attachments = [];
+    }
+    assessment.attachments.push({
+      filename: uploadResult.publicId,
+      originalName: req.file.originalname,
+      fileUrl: uploadResult.url,
+      fileSize: uploadResult.size,
+      uploadedAt: new Date()
+    });
+    
     assessment.extractedQuestions = extractedQuestions;
     assessment.totalPoints = extractedQuestions.reduce((sum, q) => sum + q.points, 0);
 
-    await assessment.save();
+    // Save with retry logic for MongoDB connection issues
+    let saveAttempts = 0;
+    const maxRetries = 3;
+    
+    while (saveAttempts < maxRetries) {
+      try {
+        await assessment.save();
+        console.log('✅ Assessment saved successfully');
+        break;
+      } catch (saveError: any) {
+        saveAttempts++;
+        console.error(`❌ Save attempt ${saveAttempts} failed:`, saveError.message);
+        
+        if (saveAttempts >= maxRetries) {
+          throw saveError;
+        }
+        
+        // Wait before retry (exponential backoff)
+        const delay = Math.pow(2, saveAttempts) * 1000; // 2s, 4s, 8s
+        console.log(`🔄 Retrying save in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
 
     res.status(200).json({
       success: true,

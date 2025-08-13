@@ -77,7 +77,9 @@ import {
   Lightbulb,
   AutoAwesome,
   Psychology,
-  EmojiEvents
+  EmojiEvents,
+  CloudUpload as CloudUploadIcon,
+  CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { useAuth } from '../../hooks/useAuth';
@@ -156,7 +158,9 @@ const EnhancedCourseManagement: React.FC = () => {
   const [assignments, setAssignments] = useState<AssignmentType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
+  const [assessmentType, setAssessmentType] = useState<'assessment' | 'assignment'>('assessment');
 
   // Dialog states
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
@@ -286,14 +290,26 @@ const EnhancedCourseManagement: React.FC = () => {
           setAssessments([]);
         }
 
+        // Test backend connectivity first
+        try {
+          console.log('🔍 Testing backend connectivity...');
+          const healthCheck = await fetch('http://localhost:5000/health');
+          console.log('🏥 Health check response:', healthCheck.status, healthCheck.statusText);
+        } catch (healthError) {
+          console.error('❌ Backend health check failed:', healthError);
+        }
+
         // Load assignments for this course
         try {
+          console.log('🚀 Starting to load assignments for course:', courseId);
           const assignmentsResponse = await assignmentService.getCourseAssignments(courseId);
+          console.log('📦 Assignments response received:', assignmentsResponse);
           if (assignmentsResponse) {
             setAssignments(assignmentsResponse);
+            console.log('✅ Assignments set in state:', assignmentsResponse.length, 'assignments');
           }
         } catch (assignmentsError) {
-          console.error('Failed to load assignments:', assignmentsError);
+          console.error('❌ Failed to load assignments:', assignmentsError);
           // Set empty array if no assignments found
           setAssignments([]);
         }
@@ -379,6 +395,80 @@ const EnhancedCourseManagement: React.FC = () => {
       });
     } catch (error) {
       console.error('Failed to save session:', error);
+    }
+  };
+
+  // Handle assignment creation/editing
+  const handleSaveAssignment = async () => {
+    if (!courseId) return;
+
+    try {
+      if (editingAssignment) {
+        // Update existing assignment
+        const updatedAssignment = await assignmentService.updateAssignment(editingAssignment._id, {
+          title: assignmentForm.title,
+          description: assignmentForm.description,
+          instructions: assignmentForm.instructions,
+          courseId: courseId,
+          dueDate: assignmentForm.dueDate,
+          maxPoints: assignmentForm.maxPoints,
+          submissionType: assignmentForm.submissionType,
+          allowedFileTypes: assignmentForm.allowedFileTypes,
+          maxFileSize: assignmentForm.maxFileSize,
+          isRequired: assignmentForm.isRequired
+        });
+        
+        setAssignments(prev => 
+          prev.map(assignment => 
+            assignment._id === editingAssignment._id ? updatedAssignment : assignment
+          )
+        );
+      } else {
+        // Create new assignment
+        const newAssignment = await assignmentService.createAssignment({
+          title: assignmentForm.title,
+          description: assignmentForm.description,
+          instructions: assignmentForm.instructions,
+          courseId: courseId,
+          dueDate: assignmentForm.dueDate,
+          maxPoints: assignmentForm.maxPoints,
+          submissionType: assignmentForm.submissionType,
+          allowedFileTypes: assignmentForm.allowedFileTypes,
+          maxFileSize: assignmentForm.maxFileSize,
+          isRequired: assignmentForm.isRequired
+        });
+        setAssignments(prev => [...prev, newAssignment]);
+        
+        // Show success message using alert for now
+        alert('Assignment created successfully!');
+      }
+      
+      setAssignmentDialogOpen(false);
+      setEditingAssignment(null);
+      setAssignmentForm({
+        title: '',
+        description: '',
+        instructions: '',
+        dueDate: '',
+        maxPoints: 100,
+        submissionType: 'both',
+        allowedFileTypes: ['pdf', 'doc', 'docx'],
+        maxFileSize: 10,
+        isRequired: true
+      });
+
+      // Refresh assignments list to ensure persistence
+      if (courseId) {
+        try {
+          const refreshedAssignments = await assignmentService.getCourseAssignments(courseId);
+          setAssignments(refreshedAssignments);
+        } catch (refreshError) {
+          console.error('Failed to refresh assignments:', refreshError);
+        }
+      }
+    } catch (error: any) {
+      console.error('Failed to save assignment:', error);
+      setError(error.message || 'Failed to save assignment');
     }
   };
 
@@ -517,55 +607,90 @@ const EnhancedCourseManagement: React.FC = () => {
     }
   };
 
-  // Handle assignment creation/editing
-  const handleSaveAssignment = async () => {
-    if (!courseId) return;
-
+  // Handle downloading assignment submissions
+  const handleDownloadSubmissions = async (assignmentId: string) => {
     try {
-      const assignmentData = {
-        title: assignmentForm.title,
-        description: assignmentForm.description,
-        instructions: assignmentForm.instructions,
-        courseId: courseId,
-        dueDate: assignmentForm.dueDate,
-        maxPoints: assignmentForm.maxPoints,
-        submissionType: assignmentForm.submissionType,
-        allowedFileTypes: assignmentForm.allowedFileTypes,
-        maxFileSize: assignmentForm.maxFileSize,
-        isRequired: assignmentForm.isRequired
-      };
-
-      if (editingAssignment) {
-        // Update existing assignment
-        const updatedAssignment = await assignmentService.updateAssignment(editingAssignment._id, assignmentData);
-        setAssignments(prev => 
-          prev.map(assignment => 
-            assignment._id === editingAssignment._id ? updatedAssignment : assignment
-          )
-        );
-      } else {
-        // Create new assignment
-        const newAssignment = await assignmentService.createAssignment(assignmentData);
-        setAssignments(prev => [...prev, newAssignment]);
-      }
-      
-      setAssignmentDialogOpen(false);
-      setEditingAssignment(null);
-      setAssignmentForm({
-        title: '',
-        description: '',
-        instructions: '',
-        dueDate: '',
-        maxPoints: 100,
-        submissionType: 'both',
-        allowedFileTypes: ['pdf', 'doc', 'docx'],
-        maxFileSize: 10,
-        isRequired: true
-      });
+      // This would typically download a ZIP file of all submissions
+      console.log('Downloading submissions for assignment:', assignmentId);
+      // Implementation would depend on backend API
     } catch (error: any) {
-      console.error('Failed to save assignment:', error);
-      setError(error.message || 'Failed to save assignment');
+      console.error('Failed to download submissions:', error);
+      setError(error.message || 'Failed to download submissions');
     }
+  };
+
+  // Handle uploading assignment document
+  const handleUploadAssignmentDocument = (assignment: Assignment) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pdf,.doc,.docx,.txt,.jpg,.jpeg,.png';
+    input.onchange = async (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (file) {
+        try {
+          setLoading(true);
+          const updatedAssignment = await assignmentService.uploadAssignmentDocument(assignment._id, file);
+          
+          // Update the assignment in the state
+          setAssignments(prev => 
+            prev.map(a => 
+              a._id === assignment._id ? updatedAssignment : a
+            )
+          );
+          
+          alert('Assignment document uploaded successfully!');
+        } catch (error: any) {
+          console.error('Failed to upload assignment document:', error);
+          setError(error.message || 'Failed to upload assignment document');
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    input.click();
+  };
+
+  // Handle upload assessment document
+  const handleUploadAssessmentDocument = (assessment: IAssessment) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pdf,.doc,.docx,.txt,.jpg,.jpeg,.png';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        setLoading(true);
+        try {
+          const formData = new FormData();
+          formData.append('document', file);
+          
+          const response = await fetch(`http://localhost:5000/api/enhanced-assessments/${assessment._id}/upload-document`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: formData
+          });
+          
+          if (response.ok) {
+            setSuccess('Document uploaded successfully!');
+            // Refresh assessments
+            if (courseId) {
+              const refreshedAssessments = await assessmentService.getCourseAssessments(courseId);
+              setAssessments(refreshedAssessments);
+            }
+          } else {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to upload document');
+          }
+        } catch (error: any) {
+          console.error('Failed to upload assessment document:', error);
+          setError(error.message || 'Failed to upload assessment document');
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    input.click();
   };
 
   // Handle starting live session
@@ -671,18 +796,6 @@ const EnhancedCourseManagement: React.FC = () => {
     } catch (error: any) {
       console.error('Failed to toggle assessment publication:', error);
       setError(error.message || 'Failed to toggle assessment publication');
-    }
-  };
-
-  // Handle download submissions
-  const handleDownloadSubmissions = async (assignmentId: string) => {
-    try {
-      // This would typically download a CSV or ZIP file of submissions
-      console.log('Downloading submissions for assignment:', assignmentId);
-      // Implementation would depend on backend API
-    } catch (error: any) {
-      console.error('Failed to download submissions:', error);
-      setError(error.message || 'Failed to download submissions');
     }
   };
 
@@ -845,6 +958,28 @@ const EnhancedCourseManagement: React.FC = () => {
       </AppBar>
 
       <Container maxWidth="xl" sx={{ py: 4 }}>
+        {/* Error Alerts */}
+        {error && (
+          <Alert 
+            severity="error" 
+            sx={{ mb: 3 }}
+            onClose={() => setError(null)}
+          >
+            {error}
+          </Alert>
+        )}
+
+        {/* Success Alerts */}
+        {success && (
+          <Alert 
+            severity="success" 
+            sx={{ mb: 3 }}
+            onClose={() => setSuccess(null)}
+          >
+            {success}
+          </Alert>
+        )}
+
         {/* Course Overview Card */}
         <Card sx={{ 
           mb: 4, 
@@ -911,12 +1046,7 @@ const EnhancedCourseManagement: React.FC = () => {
               />
               <Tab 
                 icon={<Quiz />} 
-                label="Assessments" 
-                sx={{ fontWeight: 'bold' }}
-              />
-              <Tab 
-                icon={<Assignment />} 
-                label="Assignments" 
+                label="Assessments & Assignments" 
                 sx={{ fontWeight: 'bold' }}
               />
               <Tab 
@@ -1239,28 +1369,52 @@ const EnhancedCourseManagement: React.FC = () => {
             </Grid>
           </TabPanel>
 
-          {/* Assessments Tab */}
+          {/* Assessments & Assignments Tab */}
           <TabPanel value={tabValue} index={2}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
               <Typography variant="h5" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Quiz color="primary" />
-                Assessments Management
+                {assessmentType === 'assessment' ? 'Assessments' : 'Assignments'} Management
               </Typography>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setAssessmentDialogOpen(true)}
-                sx={{ 
-                  background: 'linear-gradient(45deg, #FF6B6B 30%, #FF8E53 90%)',
-                  boxShadow: '0 3px 5px 2px rgba(255, 107, 107, .3)'
-                }}
-              >
-                Create Assessment
-              </Button>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <FormControl size="small" sx={{ minWidth: 150 }}>
+                  <InputLabel>Type</InputLabel>
+                  <Select
+                    value={assessmentType}
+                    label="Type"
+                    onChange={(e) => setAssessmentType(e.target.value as 'assessment' | 'assignment')}
+                  >
+                    <MenuItem value="assessment">Assessment</MenuItem>
+                    <MenuItem value="assignment">Assignment</MenuItem>
+                  </Select>
+                </FormControl>
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => {
+                    if (assessmentType === 'assessment') {
+                      setAssessmentDialogOpen(true);
+                    } else {
+                      setAssignmentDialogOpen(true);
+                    }
+                  }}
+                  sx={{ 
+                    background: assessmentType === 'assessment' 
+                      ? 'linear-gradient(45deg, #FF6B6B 30%, #FF8E53 90%)'
+                      : 'linear-gradient(45deg, #4CAF50 30%, #8BC34A 90%)',
+                    boxShadow: assessmentType === 'assessment'
+                      ? '0 3px 5px 2px rgba(255, 107, 107, .3)'
+                      : '0 3px 5px 2px rgba(76, 175, 80, .3)'
+                  }}
+                >
+                  Create {assessmentType === 'assessment' ? 'Assessment' : 'Assignment'}
+                </Button>
+              </Box>
             </Box>
 
             <Grid container spacing={3}>
-              {assessments && assessments.map((assessment) => (
+              {assessmentType === 'assessment' ? (
+                assessments && assessments.length > 0 ? assessments.map((assessment) => (
                 <Grid item xs={12} md={6} lg={4} key={assessment._id}>
                   <Card sx={{ 
                     height: '100%',
@@ -1275,11 +1429,21 @@ const EnhancedCourseManagement: React.FC = () => {
                         <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
                           {assessment.title}
                         </Typography>
-                        <Chip
-                          label={assessment.status}
-                          color={getStatusColor(assessment.status) as any}
-                          size="small"
-                        />
+                        <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column', alignItems: 'flex-end' }}>
+                          <Chip
+                            label={assessment.status}
+                            color={getStatusColor(assessment.status) as any}
+                            size="small"
+                          />
+                          {(assessment.attachments && assessment.attachments.length > 0) || assessment.documentUrl ? (
+                            <Chip
+                              label="Document Uploaded"
+                              color="success"
+                              size="small"
+                              icon={<CheckCircleIcon />}
+                            />
+                          ) : null}
+                        </Box>
                       </Box>
                       
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -1342,17 +1506,11 @@ const EnhancedCourseManagement: React.FC = () => {
                         </Button>
                         <Button
                           size="small"
-                          startIcon={<UploadIcon />}
-                          onClick={() => handleUploadToAssessment(assessment)}
-                          sx={{ 
-                            color: 'primary.main',
-                            '&:hover': {
-                              backgroundColor: 'primary.50'
-                            }
-                          }}
+                          startIcon={<CloudUploadIcon />}
+                          onClick={() => handleUploadAssessmentDocument(assessment)}
+                          color={(assessment.attachments && assessment.attachments.length > 0) || assessment.documentUrl ? "success" : "primary"}
                         >
-                          <AutoAwesome sx={{ fontSize: 16, mr: 0.5 }} />
-                          AI Upload
+                          {(assessment.attachments && assessment.attachments.length > 0) || assessment.documentUrl ? 'Update Doc' : 'Upload Doc'}
                         </Button>
                         {assessment.isPublished ? (
                           <Button
@@ -1377,32 +1535,16 @@ const EnhancedCourseManagement: React.FC = () => {
                     </CardContent>
                   </Card>
                 </Grid>
-              ))}
-            </Grid>
-          </TabPanel>
-
-          {/* Assignments Tab */}
-          <TabPanel value={tabValue} index={3}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h5" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Assignment color="primary" />
-                Assignments Management
-              </Typography>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setAssignmentDialogOpen(true)}
-                sx={{ 
-                  background: 'linear-gradient(45deg, #4CAF50 30%, #8BC34A 90%)',
-                  boxShadow: '0 3px 5px 2px rgba(76, 175, 80, .3)'
-                }}
-              >
-                Create Assignment
-              </Button>
-            </Box>
-
-            <Grid container spacing={3}>
-              {assignments && assignments.map((assignment) => (
+              )) : (
+                <Grid item xs={12}>
+                  <Alert severity="info">
+                    No assessments found for this course. Create your first assessment to get started!
+                  </Alert>
+                </Grid>
+              )
+              ) : (
+                // Assignments section
+                assignments && assignments.length > 0 ? assignments.map((assignment) => (
                 <Grid item xs={12} md={6} lg={4} key={assignment._id}>
                   <Card sx={{ 
                     height: '100%',
@@ -1417,11 +1559,21 @@ const EnhancedCourseManagement: React.FC = () => {
                         <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
                           {assignment.title}
                         </Typography>
-                        <Chip
-                          label={assignment.status}
-                          color={getStatusColor(assignment.status) as any}
-                          size="small"
-                        />
+                        <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column', alignItems: 'flex-end' }}>
+                          <Chip
+                            label={assignment.status}
+                            color={getStatusColor(assignment.status) as any}
+                            size="small"
+                          />
+                          {assignment.assignmentDocument && (
+                            <Chip
+                              label="Document Uploaded"
+                              color="success"
+                              size="small"
+                              icon={<CheckCircleIcon />}
+                            />
+                          )}
+                        </Box>
                       </Box>
                       
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -1471,6 +1623,14 @@ const EnhancedCourseManagement: React.FC = () => {
                         </Button>
                         <Button
                           size="small"
+                          startIcon={<CloudUploadIcon />}
+                          onClick={() => handleUploadAssignmentDocument(assignment)}
+                          color={assignment.assignmentDocument ? "success" : "primary"}
+                        >
+                          {assignment.assignmentDocument ? 'Update Doc' : 'Upload Doc'}
+                        </Button>
+                        <Button
+                          size="small"
                           startIcon={<ViewIcon />}
                           onClick={() => navigate(`/dashboard/teacher/assignments/${assignment._id}`)}
                         >
@@ -1487,12 +1647,19 @@ const EnhancedCourseManagement: React.FC = () => {
                     </CardContent>
                   </Card>
                 </Grid>
-              ))}
+              )) : (
+                <Grid item xs={12}>
+                  <Alert severity="info">
+                    No assignments found for this course. Create your first assignment to get started!
+                  </Alert>
+                </Grid>
+              )
+              )}
             </Grid>
           </TabPanel>
 
           {/* Analytics Tab */}
-          <TabPanel value={tabValue} index={4}>
+          <TabPanel value={tabValue} index={3}>
             <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
               <AnalyticsIcon color="primary" />
               Course Analytics
@@ -1569,7 +1736,7 @@ const EnhancedCourseManagement: React.FC = () => {
           </TabPanel>
 
           {/* Settings Tab */}
-          <TabPanel value={tabValue} index={5}>
+          <TabPanel value={tabValue} index={4}>
             <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
               <SettingsIcon color="primary" />
               Course Settings
@@ -2076,7 +2243,7 @@ const EnhancedCourseManagement: React.FC = () => {
             Cancel
           </Button>
           <Button 
-            onClick={() => console.log('Save assignment')}
+            onClick={handleSaveAssignment}
             variant="contained"
             sx={{ bgcolor: 'white', color: 'primary.main' }}
           >

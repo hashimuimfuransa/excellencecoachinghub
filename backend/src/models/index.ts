@@ -21,6 +21,7 @@ export { default as Feedback, IFeedback } from './Feedback';
 export { default as VideoProvider, IVideoProvider } from './VideoProvider';
 export { default as Certificate, ICertificate } from './Certificate';
 export { default as RecordedSession, IRecordedSession } from './RecordedSession';
+export { Assignment, AssignmentSubmission, IAssignment, IAssignmentSubmission } from './Assignment';
 
 // Re-export shared types for convenience
 export {

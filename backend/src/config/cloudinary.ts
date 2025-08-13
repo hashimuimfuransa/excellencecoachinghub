@@ -322,4 +322,177 @@ export const deleteVideoFromCloudinary = async (videoUrl: string): Promise<void>
   }
 };
 
+// Upload document to Cloudinary
+export const uploadDocumentToCloudinary = async (
+  fileBuffer: Buffer,
+  userId: string,
+  originalName: string,
+  folder: string = 'excellence-coaching-hub/documents'
+): Promise<{ url: string; publicId: string; size: number }> => {
+  try {
+    // Reconfigure Cloudinary in case environment variables were loaded after initial config
+    configureCloudinary();
+
+    // Validate Cloudinary configuration before upload
+    if (!validateCloudinaryConfig()) {
+      throw new Error('Cloudinary is not properly configured. Please restart the server after updating environment variables.');
+    }
+
+    const timestamp = Date.now();
+    // Sanitize filename: remove extension, special characters, and normalize
+    const fileName = originalName
+      .replace(/\.[^/.]+$/, "") // Remove extension
+      .replace(/[^a-zA-Z0-9\s-_]/g, "") // Remove special characters
+      .replace(/\s+/g, "_") // Replace spaces with underscores
+      .substring(0, 50); // Limit length
+    const publicId = `document_${userId}_${fileName}_${timestamp}`;
+
+    console.log('Starting Cloudinary document upload for user:', userId);
+    console.log('Original file name:', originalName);
+    console.log('Folder:', folder);
+    console.log('Public ID:', publicId);
+
+    return new Promise((resolve, reject) => {
+      // First try with 'raw' resource type
+      cloudinary.uploader.upload_stream(
+        {
+          public_id: publicId,
+          folder: folder,
+          resource_type: 'raw',
+          use_filename: false,
+          unique_filename: true,
+        },
+        (error, result) => {
+          if (error) {
+            console.error('First attempt failed, trying with auto resource type:', error.message);
+            
+            // Fallback: try with 'auto' resource type
+            cloudinary.uploader.upload_stream(
+              {
+                public_id: publicId + '_auto',
+                folder: folder,
+                resource_type: 'auto',
+                use_filename: false,
+                unique_filename: true,
+              },
+              (error2, result2) => {
+                if (error2) {
+                  console.error('Second attempt also failed:', error2.message);
+                  
+                  // Final fallback: try as image (for image files)
+                  cloudinary.uploader.upload_stream(
+                    {
+                      public_id: publicId + '_image',
+                      folder: folder,
+                      resource_type: 'image',
+                      use_filename: false,
+                      unique_filename: true,
+                    },
+                    (error3, result3) => {
+                      if (error3) {
+                        console.error('All upload attempts failed');
+                        reject(new Error(`Cloudinary document upload failed: ${error.message}`));
+                      } else if (result3) {
+                        console.log('✅ Cloudinary document upload successful (as image):', result3.public_id);
+                        resolve({
+                          url: result3.secure_url,
+                          publicId: result3.public_id,
+                          size: result3.bytes || 0,
+                        });
+                      } else {
+                        reject(new Error('No result from Cloudinary document upload'));
+                      }
+                    }
+                  ).end(fileBuffer);
+                } else if (result2) {
+                  console.log('✅ Cloudinary document upload successful (auto):', result2.public_id);
+                  resolve({
+                    url: result2.secure_url,
+                    publicId: result2.public_id,
+                    size: result2.bytes || 0,
+                  });
+                } else {
+                  reject(new Error('No result from Cloudinary document upload'));
+                }
+              }
+            ).end(fileBuffer);
+          } else if (result) {
+            console.log('✅ Cloudinary document upload successful (raw):', result.public_id);
+            console.log('Document URL:', result.secure_url);
+            console.log('Size:', result.bytes);
+            resolve({
+              url: result.secure_url,
+              publicId: result.public_id,
+              size: result.bytes || 0,
+            });
+          } else {
+            reject(new Error('No result from Cloudinary document upload'));
+          }
+        }
+      ).end(fileBuffer);
+    });
+  } catch (error) {
+    console.error('Error in uploadDocumentToCloudinary:', error);
+    throw error instanceof Error ? error : new Error('Failed to upload document');
+  }
+};
+
+// Helper function to delete document from Cloudinary
+export const deleteDocumentFromCloudinary = async (documentUrl: string): Promise<void> => {
+  try {
+    if (!documentUrl || !documentUrl.includes('cloudinary.com')) {
+      return; // Not a Cloudinary URL, skip deletion
+    }
+
+    // Extract public_id from Cloudinary URL
+    // URL format: https://res.cloudinary.com/cloud_name/image/upload/v123456/folder/file.pdf
+    const urlParts = documentUrl.split('/');
+    const uploadIndex = urlParts.findIndex(part => part === 'upload');
+    
+    if (uploadIndex === -1 || uploadIndex + 2 >= urlParts.length) {
+      console.error('Invalid Cloudinary URL format:', documentUrl);
+      return;
+    }
+
+    // Get everything after the version number
+    const pathParts = urlParts.slice(uploadIndex + 2); // Skip 'upload' and version
+    const publicId = pathParts.join('/').replace(/\.[^/.]+$/, ''); // Remove extension
+
+    console.log('Deleting document from Cloudinary with public_id:', publicId);
+    await cloudinary.uploader.destroy(publicId);
+    console.log(`Document deleted from Cloudinary: ${publicId}`);
+  } catch (error) {
+    console.error('Error deleting document from Cloudinary:', error);
+    // Don't throw error, as this is not critical
+  }
+};
+
+// Configure multer for document uploads
+export const uploadDocument = multer({
+  storage: storage,
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB limit for documents
+  },
+  fileFilter: (req, file, cb) => {
+    // Check file type
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'application/zip',
+      'application/x-rar-compressed'
+    ];
+    
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only PDF, Word documents, text files, images, and archives are allowed!'));
+    }
+  },
+});
+
 export default cloudinary;

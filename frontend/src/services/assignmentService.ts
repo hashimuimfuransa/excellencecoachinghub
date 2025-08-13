@@ -33,6 +33,13 @@ export interface Assignment {
   maxFileSize: number;
   isRequired: boolean;
   status: 'draft' | 'published' | 'closed';
+  assignmentDocument?: {
+    filename: string;
+    originalName: string;
+    fileUrl: string;
+    fileSize: number;
+    uploadedAt: Date;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -118,12 +125,26 @@ class AssignmentService {
   // Get course assignments
   async getCourseAssignments(courseId: string): Promise<Assignment[]> {
     try {
+      console.log('🔍 Fetching assignments for course:', courseId);
+      console.log('🌐 API Base URL:', api.defaults.baseURL);
+      console.log('🔗 Full URL:', `${api.defaults.baseURL}/assignments/course/${courseId}`);
+      
       const response = await api.get(`/assignments/course/${courseId}`);
-      // Ensure we always return an array
-      const assignments = response.data?.data?.assignments || response.data?.data || [];
+      console.log('✅ Assignment response received:', response.data);
+
+      // Backend returns: { success: true, data: { assignments: [...], count: N } }
+      const assignments = response.data?.data?.assignments || [];
+      console.log('📋 Extracted assignments:', assignments);
+      
       return Array.isArray(assignments) ? assignments : [];
     } catch (error: any) {
-      console.error('Failed to fetch course assignments:', error);
+      console.error('❌ Failed to fetch course assignments:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       // Return empty array on error instead of throwing
       return [];
     }
@@ -200,6 +221,24 @@ class AssignmentService {
     } catch (error: any) {
       console.error('Failed to delete submission:', error);
       throw new Error(error.response?.data?.message || 'Failed to delete submission');
+    }
+  }
+
+  // Upload assignment document (instructor)
+  async uploadAssignmentDocument(assignmentId: string, file: File): Promise<Assignment> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await api.post(`/assignments/${assignmentId}/upload-document`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Failed to upload assignment document:', error);
+      throw new Error(error.response?.data?.error || 'Failed to upload assignment document');
     }
   }
 

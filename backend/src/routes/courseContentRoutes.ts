@@ -8,7 +8,10 @@ import {
   getCourseContent,
   updateCourseContent,
   deleteCourseContent,
-  reorderCourseContent
+  reorderCourseContent,
+  createEnhancedAssignment,
+  uploadDocumentToAssignment,
+  uploadAssignmentDocument
 } from '../controllers/courseContentController';
 
 const router = Router();
@@ -108,6 +111,23 @@ router.put(
   reorderValidation,
   validateRequest,
   reorderCourseContent
+);
+
+// Enhanced assignment routes
+router.post(
+  '/:courseId/assignment',
+  protect,
+  authorize(UserRole.TEACHER, UserRole.ADMIN),
+  uploadAssignmentDocument,
+  createEnhancedAssignment
+);
+
+router.post(
+  '/:courseId/assignment/:assignmentId/document',
+  protect,
+  authorize(UserRole.TEACHER, UserRole.ADMIN),
+  uploadAssignmentDocument,
+  uploadDocumentToAssignment
 );
 
 export default router;

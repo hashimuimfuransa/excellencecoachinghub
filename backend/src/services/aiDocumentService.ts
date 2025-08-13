@@ -1,5 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { asyncHandler } from '../middleware/asyncHandler';
+import * as mammoth from 'mammoth';
+import * as pdfParse from 'pdf-parse';
 
 export interface ExtractedQuestion {
   question: string;
@@ -31,8 +33,13 @@ export class AIDocumentService {
   private model: any;
 
   constructor() {
-    this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || '');
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || '';
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY is required but not found in environment variables');
+    }
+    this.genAI = new GoogleGenerativeAI(apiKey);
+    this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    console.log('✅ AI Document Service initialized with gemini-1.5-flash model');
   }
 
   // Extract questions from uploaded document
@@ -41,16 +48,37 @@ export class AIDocumentService {
     documentType: 'pdf' | 'docx' | 'txt'
   ): Promise<ExtractedQuestion[]> {
     try {
+      console.log(`🔍 Starting question extraction from ${documentType.toUpperCase()} document...`);
+      console.log(`📄 Document content preview (first 300 chars): ${documentContent.substring(0, 300)}...`);
+      
       const prompt = `
-        Analyze the following ${documentType.toUpperCase()} document content and extract all questions.
-        Return the questions in JSON format with the following structure:
+        You are an expert at extracting questions from educational exam documents. This document may contain exam sections (Section A, Section B, Section C, etc.) with various question types.
+
+        SCAN FOR ALL THESE PATTERNS:
+        - Questions ending with "?" 
+        - Numbered questions (1., 2., 3., Q1, Q2, etc.)
+        - Section-based questions (Section A: 1., 2., Section B: 1., 2., etc.)
+        - Multiple choice with options: A), B), C), D) or (a), (b), (c), (d) or a., b., c., d.
+        - True/False questions
+        - Fill-in-the-blank questions (____ or "Complete the following")
+        - Essay questions ("Explain", "Discuss", "Describe", "Analyze")
+        - Short answer questions
+        - Instructions like "Choose the correct answer", "Answer all questions"
+
+        EXAM SECTION HANDLING:
+        - Look for "Section A", "Section B", "Section C", "Part A", "Part B", etc.
+        - Extract questions from ALL sections found
+        - Questions may be numbered starting from 1 in each section
+        - Don't skip any section
+
+        Return questions in JSON format:
         {
           "questions": [
             {
-              "question": "The question text",
+              "question": "Complete question text (include section if relevant)",
               "type": "multiple-choice|true-false|short-answer|essay",
               "options": ["option1", "option2", "option3", "option4"] (only for multiple-choice),
-              "correctAnswer": "The correct answer",
+              "correctAnswer": "The correct answer if clearly indicated",
               "points": 10
             }
           ]
@@ -59,39 +87,82 @@ export class AIDocumentService {
         Document content:
         ${documentContent}
 
-        Rules:
-        1. Identify question types based on format and content
-        2. For multiple-choice, extract all options
-        3. For true-false, use "true" or "false" as correct answer
-        4. Assign reasonable points (5-20) based on question complexity
-        5. For essay questions, don't provide correctAnswer
-        6. Ensure all questions are properly formatted and complete
+        EXTRACTION RULES:
+        1. Extract EVERY question from ALL sections (A, B, C, etc.)
+        2. For multiple-choice: extract all options, look for marked/bold correct answers
+        3. For true-false: use "true" or "false" as correct answer
+        4. Clean question text but preserve meaning
+        5. Points: 5 for simple, 10 for medium, 15-20 for complex questions
+        6. If question type unclear, use "short-answer"
+        7. Include section context in question if helpful (e.g., "Section A: What is...")
+        8. Return ONLY valid JSON, no extra text
+        9. If no questions found, return {"questions": []}
       `;
 
+      console.log('🤖 Sending request to Gemini AI...');
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
+      
+      console.log('📝 Received AI response, parsing...');
 
-      // Parse JSON response
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      // Clean the response text to extract JSON
+      let cleanedText = text.trim();
+      
+      // Remove markdown code blocks if present
+      cleanedText = cleanedText.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+      
+      // Find JSON object
+      const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
-        throw new Error('Failed to parse AI response');
+        console.error('❌ No JSON found in AI response:', text);
+        throw new Error('AI response does not contain valid JSON');
       }
 
-      const parsed = JSON.parse(jsonMatch[0]);
-      const questions: ExtractedQuestion[] = parsed.questions.map((q: any) => ({
-        question: q.question,
-        type: q.type,
-        options: q.options || [],
-        correctAnswer: q.correctAnswer,
-        points: q.points || 10,
-        aiExtracted: true
-      }));
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonMatch[0]);
+      } catch (parseError) {
+        console.error('❌ JSON parsing failed:', parseError);
+        console.error('Raw response:', text);
+        throw new Error('Failed to parse AI response as JSON');
+      }
 
+      if (!parsed.questions || !Array.isArray(parsed.questions)) {
+        console.error('❌ Invalid response structure:', parsed);
+        throw new Error('AI response does not contain questions array');
+      }
+
+      const questions: ExtractedQuestion[] = parsed.questions.map((q: any, index: number) => {
+        if (!q.question || !q.type) {
+          console.warn(`⚠️ Incomplete question at index ${index}:`, q);
+        }
+        
+        return {
+          question: q.question || `Question ${index + 1}`,
+          type: q.type || 'short-answer',
+          options: q.options || [],
+          correctAnswer: q.correctAnswer,
+          points: q.points || 10,
+          aiExtracted: true
+        };
+      });
+
+      console.log(`✅ Successfully extracted ${questions.length} questions`);
       return questions;
     } catch (error) {
       console.error('❌ Error extracting questions:', error);
-      throw new Error('Failed to extract questions from document');
+      
+      // Provide more specific error messages
+      if (error.message?.includes('API key')) {
+        throw new Error('Invalid or missing Google AI API key');
+      } else if (error.message?.includes('quota')) {
+        throw new Error('Google AI API quota exceeded');
+      } else if (error.message?.includes('model')) {
+        throw new Error('AI model not available or unsupported');
+      } else {
+        throw new Error(`Failed to extract questions from document: ${error.message}`);
+      }
     }
   }
 
@@ -310,26 +381,64 @@ export class AIDocumentService {
     return 'You need significant improvement. Please review the material thoroughly.';
   }
 
-  // Process document content (placeholder for actual document processing)
+  // Process document content
   public async processDocumentContent(
     fileBuffer: Buffer,
     fileType: 'pdf' | 'docx' | 'txt'
   ): Promise<string> {
     try {
-      // This is a placeholder - you'll need to implement actual document processing
-      // For PDF: use pdf-parse or similar
-      // For DOCX: use mammoth or similar
-      // For TXT: convert buffer to string
+      console.log(`📄 Processing ${fileType.toUpperCase()} document...`);
       
-      if (fileType === 'txt') {
-        return fileBuffer.toString('utf-8');
+      switch (fileType) {
+        case 'txt':
+          const textContent = fileBuffer.toString('utf-8');
+          console.log(`📝 Extracted ${textContent.length} characters from TXT file`);
+          return textContent;
+          
+        case 'docx':
+          try {
+            const docxResult = await mammoth.extractRawText({ buffer: fileBuffer });
+            const docxContent = docxResult.value;
+            console.log(`📝 Extracted ${docxContent.length} characters from DOCX file`);
+            console.log(`📄 DOCX content preview: ${docxContent.substring(0, 200)}...`);
+            
+            if (docxResult.messages && docxResult.messages.length > 0) {
+              console.warn('⚠️ DOCX processing warnings:', docxResult.messages);
+            }
+            
+            if (!docxContent || docxContent.trim().length === 0) {
+              throw new Error('DOCX file appears to be empty or corrupted');
+            }
+            
+            return docxContent;
+          } catch (docxError) {
+            console.error('❌ DOCX processing failed:', docxError);
+            // Try alternative extraction method
+            console.log('🔄 Attempting alternative DOCX processing...');
+            try {
+              const docxResult = await mammoth.extractRawText({ 
+                buffer: fileBuffer,
+                convertImage: mammoth.images.ignoreAll
+              });
+              return docxResult.value || 'Failed to extract content from DOCX file';
+            } catch (altError) {
+              throw new Error(`Failed to process DOCX file: ${docxError.message}`);
+            }
+          }
+          
+        case 'pdf':
+          const pdfData = await pdfParse(fileBuffer);
+          const pdfContent = pdfData.text;
+          console.log(`📝 Extracted ${pdfContent.length} characters from PDF file`);
+          console.log(`📊 PDF info: ${pdfData.numpages} pages, ${pdfData.numrender} rendered objects`);
+          return pdfContent;
+          
+        default:
+          throw new Error(`Unsupported file type: ${fileType}`);
       }
-      
-      // For now, return a placeholder
-      return 'Document content placeholder - implement actual processing';
     } catch (error) {
       console.error('❌ Error processing document:', error);
-      throw new Error('Failed to process document');
+      throw new Error(`Failed to process ${fileType.toUpperCase()} document: ${error.message}`);
     }
   }
 }

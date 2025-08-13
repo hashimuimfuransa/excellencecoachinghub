@@ -5,10 +5,7 @@ import { Course } from '../models/Course';
 import { User } from '../models/User';
 import { TeacherProfile } from '../models/TeacherProfile';
 import { notificationService } from '../services/notificationService';
-<<<<<<< HEAD
 import { uploadFile } from '../utils/fileUpload';
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
 // Create a new live session (Teacher only)
 export const createLiveSession = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -153,22 +150,16 @@ export const getTeacherSessions = async (req: Request, res: Response, next: Next
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const status = req.query.status as string;
-<<<<<<< HEAD
     const courseId = req.query.courseId as string;
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
     // Build filter
     const filter: any = { instructor: teacherId };
     if (status && status !== 'all') {
       filter.status = status;
     }
-<<<<<<< HEAD
     if (courseId) {
       filter.course = courseId;
     }
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
     const sessions = await LiveSession.find(filter)
       .populate('course', 'title')
@@ -654,7 +645,6 @@ export const resetRecordingStatus = async (req: Request, res: Response, next: Ne
     console.error('❌ Error resetting recording status:', error);
     next(error);
   }
-<<<<<<< HEAD
 };
 
 // Upload video recording for a session (Teacher only)
@@ -737,6 +727,4 @@ export const uploadSessionRecording = async (req: Request, res: Response, next: 
     console.error('❌ Error uploading video recording:', error);
     next(error);
   }
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 };

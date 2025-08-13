@@ -46,7 +46,6 @@ router.post(
   courseNotesController.createCourseNotes
 );
 
-<<<<<<< HEAD
 router.post(
   '/course/:courseId/from-materials',
   auth,
@@ -71,8 +70,6 @@ router.post(
   courseNotesController.createNotesFromMaterials
 );
 
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 router.get(
   '/teacher',
   auth,

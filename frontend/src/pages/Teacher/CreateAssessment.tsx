@@ -1,9 +1,5 @@
 import React, { useState, useEffect } from 'react';
-<<<<<<< HEAD
 import { useNavigate, useSearchParams } from 'react-router-dom';
-=======
-import { useNavigate } from 'react-router-dom';
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 import {
   Container,
   Paper,
@@ -35,13 +31,9 @@ import {
   ExpandMore,
   Save,
   Publish,
-<<<<<<< HEAD
   Preview,
   CloudUpload,
   Description
-=======
-  Preview
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 } from '@mui/icons-material';
 import { DateTimePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -84,10 +76,7 @@ const steps = ['Basic Information', 'Questions', 'Settings', 'Review'];
 const CreateAssessment: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-<<<<<<< HEAD
   const [searchParams] = useSearchParams();
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
   // State management
   const [activeStep, setActiveStep] = useState(0);
@@ -95,11 +84,8 @@ const CreateAssessment: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [courses, setCourses] = useState<any[]>([]);
   const [coursesLoading, setCoursesLoading] = useState(true);
-<<<<<<< HEAD
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [extractingQuestions, setExtractingQuestions] = useState(false);
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
   // Form data
   const [formData, setFormData] = useState<AssessmentData>({
@@ -119,18 +105,13 @@ const CreateAssessment: React.FC = () => {
     gradingRubric: ''
   });
 
-<<<<<<< HEAD
   // Load teacher's courses and set initial courseId from URL
-=======
-  // Load teacher's courses
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   useEffect(() => {
     const loadCourses = async () => {
       try {
         setCoursesLoading(true);
         const response = await courseService.getTeacherCourses();
         setCourses(response.courses.filter((course: any) => course.status === 'approved'));
-<<<<<<< HEAD
         
         // Set courseId from URL parameter if provided
         const courseIdParam = searchParams.get('courseId');
@@ -140,8 +121,6 @@ const CreateAssessment: React.FC = () => {
             courseId: courseIdParam
           }));
         }
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
       } catch (err: any) {
         setError(err.message || 'Failed to load courses');
       } finally {
@@ -150,11 +129,7 @@ const CreateAssessment: React.FC = () => {
     };
 
     loadCourses();
-<<<<<<< HEAD
   }, [searchParams]);
-=======
-  }, []);
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
   // Handle form input changes
   const handleInputChange = (field: keyof AssessmentData, value: any) => {
@@ -164,7 +139,6 @@ const CreateAssessment: React.FC = () => {
     }));
   };
 
-<<<<<<< HEAD
   // Handle file upload
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -198,8 +172,6 @@ const CreateAssessment: React.FC = () => {
     setUploadedFile(null);
   };
 
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   // Add new question
   const addQuestion = () => {
     const questionId = `q_${Date.now()}`;
@@ -259,38 +231,25 @@ const CreateAssessment: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-<<<<<<< HEAD
       setExtractingQuestions(!!uploadedFile);
 
       const assessmentData = {
         ...formData,
         course: formData.courseId, // Use 'course' field for backend compatibility
-=======
-
-      await assessmentService.createAssessment({
-        ...formData,
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
         dueDate: formData.dueDate ? formData.dueDate.toISOString() : undefined,
         availableFrom: formData.availableFrom ? formData.availableFrom.toISOString() : undefined,
         availableUntil: formData.availableUntil ? formData.availableUntil.toISOString() : undefined,
         isPublished: false
-<<<<<<< HEAD
       };
 
       await assessmentService.createAssessment(assessmentData, uploadedFile || undefined);
-=======
-      });
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
       navigate('/dashboard/teacher/assessments');
     } catch (err: any) {
       setError(err.message || 'Failed to save assessment');
     } finally {
       setLoading(false);
-<<<<<<< HEAD
       setExtractingQuestions(false);
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
     }
   };
 
@@ -299,38 +258,25 @@ const CreateAssessment: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-<<<<<<< HEAD
       setExtractingQuestions(!!uploadedFile);
 
       const assessmentData = {
         ...formData,
         course: formData.courseId, // Use 'course' field for backend compatibility
-=======
-
-      await assessmentService.createAssessment({
-        ...formData,
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
         dueDate: formData.dueDate ? formData.dueDate.toISOString() : undefined,
         availableFrom: formData.availableFrom ? formData.availableFrom.toISOString() : undefined,
         availableUntil: formData.availableUntil ? formData.availableUntil.toISOString() : undefined,
         isPublished: true
-<<<<<<< HEAD
       };
 
       await assessmentService.createAssessment(assessmentData, uploadedFile || undefined);
-=======
-      });
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
       navigate('/dashboard/teacher/assessments');
     } catch (err: any) {
       setError(err.message || 'Failed to publish assessment');
     } finally {
       setLoading(false);
-<<<<<<< HEAD
       setExtractingQuestions(false);
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
     }
   };
 
@@ -405,7 +351,6 @@ const CreateAssessment: React.FC = () => {
           placeholder="Provide instructions for students taking this assessment"
         />
       </Grid>
-<<<<<<< HEAD
 
       {/* Document Upload Section */}
       <Grid item xs={12}>
@@ -475,8 +420,6 @@ const CreateAssessment: React.FC = () => {
           )}
         </Paper>
       </Grid>
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
     </Grid>
   );
 
@@ -484,7 +427,6 @@ const CreateAssessment: React.FC = () => {
   const renderQuestions = () => (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-<<<<<<< HEAD
         <Box>
           <Typography variant="h6">
             Questions ({formData.questions.length})
@@ -495,11 +437,6 @@ const CreateAssessment: React.FC = () => {
             </Typography>
           )}
         </Box>
-=======
-        <Typography variant="h6">
-          Questions ({formData.questions.length})
-        </Typography>
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
         <Button
           variant="contained"
           startIcon={<Add />}

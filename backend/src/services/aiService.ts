@@ -767,7 +767,6 @@ Please try again in a moment - I should be back to normal soon!`;
       return false;
     }
   }
-<<<<<<< HEAD
 
   // Generate quiz from section content
   async generateQuizFromContent(params: {
@@ -1462,8 +1461,6 @@ Please try again in a moment - I should be back to normal soon!`;
       return 'I apologize, but I am unable to process your question at the moment. Please try again later or contact your instructor for assistance.';
     }
   }
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 }
 
 // Export singleton instance

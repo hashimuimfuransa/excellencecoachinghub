@@ -22,16 +22,11 @@ export interface IAssessment {
   course: {
     _id: string;
     title: string;
-<<<<<<< HEAD
   } | string;
-=======
-  };
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   instructor: {
     _id: string;
     firstName: string;
     lastName: string;
-<<<<<<< HEAD
   } | string;
   type: 'quiz' | 'assignment' | 'exam' | 'project' | 'homework';
   status: 'draft' | 'published' | 'archived';
@@ -42,15 +37,6 @@ export interface IAssessment {
   attempts: number;
   dueDate?: string;
   scheduledDate?: Date;
-=======
-  };
-  type: 'quiz' | 'assignment' | 'exam' | 'project' | 'homework';
-  questions: IQuestion[];
-  totalPoints: number;
-  timeLimit?: number;
-  attempts: number;
-  dueDate?: string;
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   availableFrom?: string;
   availableUntil?: string;
   instructions?: string;
@@ -62,7 +48,6 @@ export interface IAssessment {
   showResultsImmediately: boolean;
   showCorrectAnswers: boolean;
   requireProctoring: boolean;
-<<<<<<< HEAD
   requireCamera: boolean;
   aiCheatingDetection: boolean;
   proctoringEnabled: boolean;
@@ -70,9 +55,6 @@ export interface IAssessment {
   requiredForCompletion: boolean;
   averageScore: number;
   passRate: number;
-=======
-  proctoringEnabled: boolean;
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   passingScore?: number;
   gradingRubric?: string;
   attachments?: string[];
@@ -83,21 +65,13 @@ export interface IAssessment {
 export interface IAssessmentSubmission {
   _id: string;
   submissionId?: string;
-<<<<<<< HEAD
   assessment: IAssessment | string;
-=======
-  assessment: IAssessment;
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   student: {
     _id: string;
     firstName: string;
     lastName: string;
     email: string;
-<<<<<<< HEAD
   } | string;
-=======
-  };
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   course: {
     _id: string;
     title: string;
@@ -105,7 +79,6 @@ export interface IAssessmentSubmission {
   answers: IAnswer[];
   submittedAt?: string;
   startedAt: string;
-<<<<<<< HEAD
   startTime: Date;
   completedAt?: string;
   endTime?: Date;
@@ -115,14 +88,6 @@ export interface IAssessmentSubmission {
   score?: number;
   percentage?: number;
   passed: boolean;
-=======
-  completedAt?: string;
-  timeSpent: number;
-  attemptNumber: number;
-  status: 'draft' | 'submitted' | 'graded' | 'returned';
-  score?: number;
-  percentage?: number;
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   grade?: string;
   feedback?: string;
   isLate: boolean;
@@ -131,7 +96,6 @@ export interface IAssessmentSubmission {
   gradedAt?: string;
   aiGraded: boolean;
   requiresManualReview: boolean;
-<<<<<<< HEAD
   proctoringData?: {
     faceDetections: any[];
     tabSwitches: number;
@@ -139,8 +103,6 @@ export interface IAssessmentSubmission {
     screenshots: string[];
   };
   createdAt: Date;
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 }
 
 export interface IAnswer {
@@ -222,7 +184,6 @@ export interface SubmissionListResponse {
 export const assessmentService = {
   // Teacher methods
   // Create assessment
-<<<<<<< HEAD
   createAssessment: async (assessmentData: ICreateAssessmentData, file?: File): Promise<IAssessment> => {
     if (file) {
       // Create FormData for file upload
@@ -271,16 +232,6 @@ export const assessmentService = {
       
       throw new Error(response.error || 'Failed to create assessment');
     }
-=======
-  createAssessment: async (assessmentData: ICreateAssessmentData): Promise<IAssessment> => {
-    const response = await apiService.post<{ assessment: IAssessment }>('/assessments', assessmentData);
-    
-    if (response.success && response.data) {
-      return response.data.assessment;
-    }
-    
-    throw new Error(response.error || 'Failed to create assessment');
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   },
 
   // Get teacher's assessments
@@ -326,7 +277,6 @@ export const assessmentService = {
     throw new Error(response.error || 'Failed to update assessment');
   },
 
-<<<<<<< HEAD
   // Add questions from document to existing assessment
   addQuestionsFromDocument: async (id: string, file: File): Promise<IAssessment> => {
     // Create FormData for file upload
@@ -352,8 +302,6 @@ export const assessmentService = {
     throw new Error(result.error || 'Failed to add questions from document');
   },
 
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   // Delete assessment
   deleteAssessment: async (id: string): Promise<void> => {
     const response = await apiService.delete(`/assessments/${id}`);
@@ -521,7 +469,6 @@ export const assessmentService = {
     }
     
     throw new Error(response.error || 'Failed to fetch submission details');
-<<<<<<< HEAD
   },
 
   // Get course assessments (for student course view)
@@ -554,7 +501,5 @@ export const assessmentService = {
       console.error('Failed to fetch student attempts:', error);
       return [];
     }
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   }
 };

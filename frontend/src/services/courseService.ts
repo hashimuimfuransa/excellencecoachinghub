@@ -29,7 +29,6 @@ export interface ICourse {
   price: number;
   duration: number;
   enrolledStudents: string[];
-<<<<<<< HEAD
   students: string[];
   content?: Array<{
     _id: string;
@@ -40,8 +39,6 @@ export interface ICourse {
     duration?: number;
     order: number;
   }>;
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   createdAt: string;
   updatedAt: string;
   approvedAt?: string;

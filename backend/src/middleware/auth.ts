@@ -190,9 +190,6 @@ export const requireEmailVerification = (req: Request, res: Response, next: Next
 
   next();
 };
-<<<<<<< HEAD
 
 // Alias for protect (for backward compatibility)
 export const auth = protect;
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5

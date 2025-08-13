@@ -253,7 +253,6 @@ export const liveSessionService = {
     throw new Error(response.error || 'Failed to stop recording');
   },
 
-<<<<<<< HEAD
   // Upload recording video (Teacher only)
   uploadRecording: async (id: string, videoFile: File): Promise<ILiveSession> => {
     const formData = new FormData();
@@ -268,8 +267,6 @@ export const liveSessionService = {
     throw new Error(response.error || 'Failed to upload recording');
   },
 
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   // Join live session (Teacher)
   joinSession: async (id: string): Promise<ILiveSession> => {
     const response = await apiService.post<{ session: ILiveSession }>(`/teacher/live-sessions/${id}/join`);
@@ -540,7 +537,6 @@ export const liveSessionService = {
       console.warn('Failed to sync recorded sessions:', error);
       return null;
     }
-<<<<<<< HEAD
   },
 
   // Get course sessions (for students)
@@ -557,7 +553,5 @@ export const liveSessionService = {
       console.error('Failed to fetch course sessions:', error);
       return [];
     }
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
   }
 };

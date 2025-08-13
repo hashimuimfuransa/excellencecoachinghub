@@ -189,18 +189,22 @@ export const getTeacherSessions = async (req: Request, res: Response, next: Next
   }
 };
 
-// Get a specific session by ID (Teacher only - must own the session)
+// Get a specific session by ID (Teacher only - must own the session) - OPTIMIZED
 export const getSessionById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
     const teacherId = req.user?.id;
 
+    console.log(`🔍 Teacher ${teacherId} requesting session ${id}`);
+
+    // Optimized query with lean() and selective field loading
     const session = await LiveSession.findOne({ _id: id, instructor: teacherId })
+      .select('title description course scheduledTime duration status actualStartTime actualEndTime meetingId meetingUrl isRecorded recordingUrl maxParticipants chatEnabled handRaiseEnabled screenShareEnabled attendanceRequired createdAt updatedAt participants attendees')
       .populate('course', 'title description')
-      .populate('participants', 'firstName lastName email')
-      .populate('attendees.user', 'firstName lastName email');
+      .lean(); // Convert to plain JS object for better performance
 
     if (!session) {
+      console.log(`❌ Session ${id} not found for teacher ${teacherId}`);
       res.status(404).json({
         success: false,
         error: 'Session not found or you do not have permission to access it'
@@ -208,11 +212,39 @@ export const getSessionById = async (req: Request, res: Response, next: NextFunc
       return;
     }
 
+    console.log(`✅ Session ${id} found for teacher ${teacherId}: ${session.title}`);
+
+    // Load participants and attendees separately for better performance (limit to prevent huge payloads)
+    const participantIds = session.participants?.slice(0, 20) || []; // Limit to first 20
+    const attendeeUserIds = session.attendees?.slice(0, 20).map((a: any) => a.user) || [];
+    
+    const [participants, attendeeUsers] = await Promise.all([
+      participantIds.length > 0 ? 
+        User.find({ _id: { $in: participantIds } }).select('firstName lastName email').lean() : 
+        Promise.resolve([]),
+      attendeeUserIds.length > 0 ? 
+        User.find({ _id: { $in: attendeeUserIds } }).select('firstName lastName email').lean() : 
+        Promise.resolve([])
+    ]);
+
+    // Map attendee users back to attendees
+    const attendees = session.attendees?.slice(0, 20).map((attendee: any) => ({
+      ...attendee,
+      user: attendeeUsers.find((user: any) => user._id.toString() === attendee.user?.toString()) || attendee.user
+    })) || [];
+
+    const optimizedSession = {
+      ...session,
+      participants: participants,
+      attendees: attendees
+    };
+
     res.status(200).json({
       success: true,
-      data: { session }
+      data: { session: optimizedSession }
     });
   } catch (error) {
+    console.error(`❌ Error getting session ${id}:`, error);
     next(error);
   }
 };

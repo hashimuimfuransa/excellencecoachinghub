@@ -44,6 +44,8 @@ export interface ILiveSession {
   isRecorded: boolean;
   recordingUrl?: string;
   recordingSize?: number;
+  recordingTitle?: string;
+  recordingDescription?: string;
   status: 'scheduled' | 'live' | 'ended' | 'cancelled';
   agenda?: string[];
   materials?: string[];

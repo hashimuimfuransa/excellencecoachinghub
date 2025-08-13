@@ -28,8 +28,7 @@ import {
   People,
   ExitToApp,
   Settings,
-  FiberManualRecord,
-  Stop,
+
   PanTool,
   Fullscreen,
   FullscreenExit,
@@ -98,8 +97,6 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [participantsOpen, setParticipantsOpen] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingId, setRecordingId] = useState<string | null>(null);
   const [cameraPermissionRequested, setCameraPermissionRequested] = useState(false);
   const [raiseHandRequests, setRaiseHandRequests] = useState<Set<string>>(new Set());
   const [allowedToSpeak, setAllowedToSpeak] = useState<Set<string>>(new Set());
@@ -144,58 +141,37 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
     }
   }, []);
 
-  // Configure audio quality settings with advanced filtering
-  const configureAudioQuality = useCallback(async () => {
-    try {
-      // Get user media with advanced audio constraints for maximum quality
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: { ideal: 48000 },
-          channelCount: { ideal: 1 }
-        } as MediaTrackConstraints,
-        video: false
-      });
-
-      // Apply additional audio processing if available
-      if (stream.getAudioTracks().length > 0) {
-        const audioTrack = stream.getAudioTracks()[0];
-        
-        // Apply additional constraints for better quality
-        await audioTrack.applyConstraints({
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        } as MediaTrackConstraints);
-      }
-
-      // Stop the stream immediately - we just needed to check settings
-      stream.getTracks().forEach(track => track.stop());
-      
-      console.log('✅ Advanced audio quality settings configured');
-    } catch (error) {
-      console.warn('⚠️ Could not configure advanced audio quality settings:', error);
-      
-      // Fallback to basic settings
+  // Configure audio quality settings - OPTIMIZED (non-blocking)
+  const configureAudioQuality = useCallback(() => {
+    // Run audio configuration in background without blocking room join
+    setTimeout(async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+        // Simplified audio configuration with timeout
+        const audioConfig = navigator.mediaDevices.getUserMedia({
           audio: {
             echoCancellation: true,
             noiseSuppression: true,
-            autoGainControl: true,
-            sampleRate: { ideal: 48000 },
-            channelCount: { ideal: 1 }
+            autoGainControl: true
           } as MediaTrackConstraints,
           video: false
         });
+
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise<MediaStream>((_, reject) => {
+          setTimeout(() => reject(new Error('Audio config timeout')), 3000);
+        });
+
+        const stream = await Promise.race([audioConfig, timeoutPromise]);
         stream.getTracks().forEach(track => track.stop());
-        console.log('✅ Basic audio quality settings configured');
-      } catch (fallbackError) {
-        console.warn('⚠️ Could not configure basic audio quality settings:', fallbackError);
+        
+        console.log('✅ Audio quality configured in background');
+      } catch (error) {
+        console.warn('⚠️ Background audio config failed (non-critical):', error);
       }
-    }
+    }, 1000); // Delay to not block room joining
+
+    // Return immediately to not block the main flow
+    return Promise.resolve();
   }, []);
 
   // Check and request camera permissions (mainly for teachers)
@@ -255,16 +231,24 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
         setLoading(true);
         setError(null);
 
-        // Set a connection timeout
+        // Set a connection timeout - REDUCED for faster feedback
         connectionTimeout = setTimeout(() => {
           if (!isConnected) {
+            console.log('⏰ Connection timeout, stopping initialization');
             setError('Connection timeout - please try again');
             setLoading(false);
             isInitializing = false;
           }
-        }, 30000); // 30 second timeout
+        }, 15000); // 15 second timeout (reduced from 30)
 
         // Get HMS token from backend
+        console.log('🔑 Requesting video token for:', { 
+          role: userRole, 
+          userName: user?.firstName + ' ' + user?.lastName || 'Unknown User',
+          sessionId,
+          roomId 
+        });
+        
         const response = await apiService.post<VideoTokenResponse>('/video/token', {
           role: userRole,
           userName: user?.firstName + ' ' + user?.lastName || 'Unknown User',
@@ -272,8 +256,14 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
           roomId
         });
 
+        console.log('🔑 Video token response:', { 
+          success: response.success, 
+          hasData: !!response.data,
+          hasToken: !!response.data?.token 
+        });
+
         if (!response.success || !response.data) {
-          throw new Error('Failed to get video token');
+          throw new Error(response.error || 'Failed to get video token');
         }
 
         const { token } = response.data;
@@ -287,19 +277,32 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
 
                     console.log('✅ Successfully joined HMS room');
           
+          // Clear loading state immediately after joining
+          setLoading(false);
+          clearTimeout(connectionTimeout);
+          
           // Set session start time
           setSessionStartTime(new Date());
           
           // Track attendance for current user
           trackAttendance(user?._id || '', 'join');
           
-          // Configure audio quality for all users
-          await configureAudioQuality();
-          
-          // Request notification permissions for teachers
-          if (userRole === 'teacher' || userRole === 'admin') {
-            await requestNotificationPermission();
-          }
+          // Run non-blocking optimizations in background without blocking UI
+          setTimeout(() => {
+            const backgroundTasks = [
+              configureAudioQuality(),
+              userRole === 'teacher' || userRole === 'admin' ? requestNotificationPermission() : Promise.resolve()
+            ];
+            
+            // Don't await these - let them run in background
+            Promise.allSettled(backgroundTasks).then(results => {
+              results.forEach((result, index) => {
+                if (result.status === 'rejected') {
+                  console.warn(`Background task ${index} failed:`, result.reason);
+                }
+              });
+            });
+          }, 500);
 
           // Auto-enable video for teachers only (students don't need cameras)
           if (userRole === 'teacher' || userRole === 'admin') {
@@ -444,7 +447,10 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
         if (connectionTimeout) {
           clearTimeout(connectionTimeout);
         }
-        setLoading(false);
+        // Only set loading to false if it wasn't already set by successful join
+        if (loading) {
+          setLoading(false);
+        }
         isInitializing = false;
       }
     };
@@ -663,7 +669,6 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
         startTime: sessionStartTime,
         endTime: new Date(),
         attendance: finalAttendance,
-        recordingId,
         participants: peers.map(peer => ({
           id: peer.id,
           name: peer.name
@@ -677,7 +682,7 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
     } catch (error) {
       console.error('❌ Error ending session:', error);
     }
-  }, [sessionId, roomId, sessionStartTime, attendance, recordingId, peers]);
+  }, [sessionId, roomId, sessionStartTime, attendance, peers]);
 
   // Handle allowing student to speak (for teachers)
   const handleAllowStudentToSpeak = useCallback(async (studentId: string) => {
@@ -735,97 +740,14 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
     }
   }, [hmsActions, isLocalScreenShared]);
 
-  // Handle recording toggle
-  const toggleRecording = useCallback(async () => {
-    try {
-      if (isRecording) {
-        // Stop recording
-        console.log('🛑 Stopping recording with data:', {
-          sessionId,
-          roomId,
-          recordingId,
-          hasRecordingId: !!recordingId
-        });
 
-        if (!recordingId) {
-          console.error('❌ No recording ID available to stop recording');
-          alert('Cannot stop recording: No recording ID found');
-          return;
-        }
-
-        const response = await apiService.post('/video/recording/stop', {
-          sessionId,
-          roomId,
-          recordingId
-        });
-
-        if (response.success) {
-          setIsRecording(false);
-          setRecordingId(null);
-          console.log('✅ Recording stopped successfully');
-        }
-      } else {
-        // Start recording
-        console.log('🎥 Starting recording with data:', {
-          sessionId,
-          roomId
-        });
-
-        const response = await apiService.post<{ data: any }>('/video/recording/start', {
-          sessionId,
-          roomId
-        });
-        
-        console.log('🎥 Recording start response:', response);
-        
-        if (response.success && response.data) {
-          // Handle different possible response structures
-          let newRecordingId: string | undefined;
-          const responseData = response.data as any;
-          
-          if (responseData.data?.recordingId) {
-            // Structure: { success: true, data: { data: { recordingId: "..." } } }
-            newRecordingId = responseData.data.recordingId;
-          } else if (responseData.recordingId) {
-            // Structure: { success: true, data: { recordingId: "..." } }
-            newRecordingId = responseData.recordingId;
-          } else if (typeof responseData === 'string') {
-            // Structure: { success: true, data: "recording-id" }
-            newRecordingId = responseData;
-          }
-          
-          if (newRecordingId) {
-            setIsRecording(true);
-            setRecordingId(newRecordingId);
-            console.log('✅ Recording started successfully with ID:', newRecordingId);
-          } else {
-            console.error('❌ No recording ID found in response:', response);
-            alert('Recording started but no recording ID received. Please try stopping and starting again.');
-          }
-        } else {
-          console.error('❌ Recording start failed:', response);
-          alert('Failed to start recording. Please try again.');
-        }
-      }
-    } catch (error: any) {
-      console.error('❌ Error toggling recording:', error);
-      if (error?.response?.data) {
-        console.error('Error details:', error.response.data);
-        alert(`Recording error: ${error.response.data.error || 'Unknown error'}`);
-      } else {
-        alert(`Recording error: ${error?.message || 'Unknown error'}`);
-      }
-    }
-  }, [isRecording, sessionId, roomId, recordingId]);
 
   // Handle leave room
   const handleLeave = useCallback(async () => {
     try {
       // Show confirmation for teachers ending session
       if (userRole === 'teacher' || userRole === 'admin') {
-        const confirmMessage = isRecording 
-          ? 'Are you sure you want to end this session? The recording will be stopped and saved automatically.'
-          : 'Are you sure you want to end this session? All participants will be disconnected.';
+        const confirmMessage = 'Are you sure you want to end this session? All participants will be disconnected.';
         
         if (!window.confirm(confirmMessage)) {
           return;
@@ -834,23 +756,6 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
 
       // Track attendance before leaving
       trackAttendance(user?._id || '', 'leave');
-      
-      // Stop recording if teacher/admin is leaving and recording is active
-      if ((userRole === 'teacher' || userRole === 'admin') && isRecording && recordingId) {
-        try {
-          console.log('🛑 Auto-stopping recording before ending session');
-          await apiService.post('/video/recording/stop', {
-            sessionId,
-            roomId,
-            recordingId
-          });
-          setIsRecording(false);
-          setRecordingId(null);
-          console.log('✅ Recording stopped before ending session');
-        } catch (error) {
-          console.error('❌ Error stopping recording before ending session:', error);
-        }
-      }
       
       // End session if teacher/admin is leaving
       if (userRole === 'teacher' || userRole === 'admin') {
@@ -872,7 +777,7 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
         onLeave();
       }
     }
-  }, [hmsActions, onLeave, isConnected, userRole, user, trackAttendance, endSession, isRecording, recordingId, sessionId, roomId]);
+  }, [hmsActions, onLeave, isConnected, userRole, user, trackAttendance, endSession, sessionId, roomId]);
 
   // Send chat message
   const sendMessage = useCallback(async (message: string) => {
@@ -939,6 +844,10 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
         fullscreenPeerId={fullscreenPeerId}
         onFullscreenToggle={handleFullscreenToggle}
         userRole={userRole}
+        chatOpen={chatOpen}
+        participantsOpen={participantsOpen}
+        onChatToggle={() => setChatOpen(!chatOpen)}
+        onParticipantsToggle={() => setParticipantsOpen(!participantsOpen)}
         chatComponent={
           <ChatPanel
             messages={messages}
@@ -962,7 +871,6 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
             isLocalVideoEnabled={isLocalVideoEnabled}
             isLocalAudioEnabled={isLocalAudioEnabled}
             isLocalScreenShared={isLocalScreenShared}
-            isRecording={isRecording}
             peers={peers}
             messages={messages}
             chatOpen={chatOpen}
@@ -975,7 +883,6 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
             onToggleVideo={toggleVideo}
             onToggleAudio={toggleAudio}
             onToggleScreenShare={toggleScreenShare}
-            onToggleRecording={toggleRecording}
             onToggleChat={() => setChatOpen(!chatOpen)}
             onToggleParticipants={() => setParticipantsOpen(!participantsOpen)}
             onRaiseHand={handleRaiseHand}
@@ -1016,7 +923,6 @@ interface ResponsiveControlsProps {
   isLocalVideoEnabled: boolean;
   isLocalAudioEnabled: boolean;
   isLocalScreenShared: boolean;
-  isRecording: boolean;
   peers: HMSPeer[];
   messages: HMSMessage[];
   chatOpen: boolean;
@@ -1029,7 +935,6 @@ interface ResponsiveControlsProps {
   onToggleVideo: () => void;
   onToggleAudio: () => void;
   onToggleScreenShare: () => void;
-  onToggleRecording: () => void;
   onToggleChat: () => void;
   onToggleParticipants: () => void;
   onRaiseHand: () => void;
@@ -1044,7 +949,6 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
   isLocalVideoEnabled,
   isLocalAudioEnabled,
   isLocalScreenShared,
-  isRecording,
   peers,
   messages,
   chatOpen,
@@ -1057,7 +961,6 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
   onToggleVideo,
   onToggleAudio,
   onToggleScreenShare,
-  onToggleRecording,
   onToggleChat,
   onToggleParticipants,
   onRaiseHand,
@@ -1081,18 +984,9 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
           <Typography variant="body2" fontWeight="bold">
             Live Class - {userRole === 'teacher' ? 'Teaching' : 'Attending'}
           </Typography>
-          <Box display="flex" alignItems="center" gap={1}>
-            {isRecording && (
-              <Badge color="error" variant="dot">
-                <Typography variant="caption" color="error">
-                  REC
-                </Typography>
-              </Badge>
-            )}
-            <Typography variant="caption">
-              {peers.length} participant{peers.length !== 1 ? 's' : ''}
-            </Typography>
-          </Box>
+          <Typography variant="caption" color="text.secondary">
+            {peers.length} participant{peers.length !== 1 ? 's' : ''}
+          </Typography>
         </Box>
       )}
 
@@ -1182,22 +1076,7 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
             </Tooltip>
           )}
 
-          {/* Recording (teacher/admin only) */}
-          {(userRole === 'teacher' || userRole === 'admin') && (
-            <Tooltip title={isRecording ? 'Stop recording' : 'Start recording'}>
-              <IconButton
-                onClick={onToggleRecording}
-                color={isRecording ? 'error' : 'default'}
-                size={isMobile ? 'small' : 'medium'}
-                sx={{
-                  bgcolor: isRecording ? 'error.light' : 'grey.300',
-                  '&:hover': { bgcolor: isRecording ? 'error.main' : 'grey.400' }
-                }}
-              >
-                {isRecording ? <Stop /> : <FiberManualRecord />}
-              </IconButton>
-            </Tooltip>
-          )}
+
         </Box>
 
         {!isMobile && <Divider orientation="vertical" flexItem />}

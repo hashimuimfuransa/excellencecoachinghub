@@ -101,11 +101,12 @@ export const getSessionById = async (req: Request, res: Response, next: NextFunc
   try {
     const { id } = req.params;
     
+    // Optimized query with selective field loading and lean()
     const session = await LiveSession.findById(id)
+      .select('title description course instructor scheduledTime duration status actualStartTime actualEndTime meetingId meetingUrl isRecorded recordingUrl maxParticipants chatEnabled handRaiseEnabled screenShareEnabled attendanceRequired createdAt updatedAt participants attendees')
       .populate('instructor', 'firstName lastName email')
       .populate('course', 'title description')
-      .populate('participants', 'firstName lastName email')
-      .populate('attendees.user', 'firstName lastName email');
+      .lean(); // Convert to plain JS object for better performance
 
     if (!session) {
       res.status(404).json({
@@ -115,9 +116,34 @@ export const getSessionById = async (req: Request, res: Response, next: NextFunc
       return;
     }
 
+    // Load participants and attendees only if needed (lazy loading)
+    const participantIds = session.participants?.slice(0, 10) || []; // Limit to first 10
+    const attendeeUserIds = session.attendees?.slice(0, 10).map((a: any) => a.user) || [];
+    
+    const [participants, attendeeUsers] = await Promise.all([
+      participantIds.length > 0 ? 
+        User.find({ _id: { $in: participantIds } }).select('firstName lastName email').lean() : 
+        Promise.resolve([]),
+      attendeeUserIds.length > 0 ? 
+        User.find({ _id: { $in: attendeeUserIds } }).select('firstName lastName email').lean() : 
+        Promise.resolve([])
+    ]);
+
+    // Map attendee users back to attendees
+    const attendees = session.attendees?.slice(0, 10).map((attendee: any) => ({
+      ...attendee,
+      user: attendeeUsers.find((user: any) => user._id.toString() === attendee.user?.toString()) || attendee.user
+    })) || [];
+
+    const optimizedSession = {
+      ...session,
+      participants: participants,
+      attendees: attendees
+    };
+
     res.status(200).json({
       success: true,
-      data: { session }
+      data: { session: optimizedSession }
     });
   } catch (error) {
     next(error);

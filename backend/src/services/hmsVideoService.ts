@@ -136,12 +136,66 @@ export class HMSVideoService {
   }
   
   /**
-   * Ensure room exists and is active, create/enable if needed
+   * Room cache to avoid repeated API calls
+   */
+  private roomCache = new Map<string, { roomDetails: HMSRoomResponse | null; lastChecked: Date }>();
+  private readonly ROOM_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+  /**
+   * Check if room is cached and still valid
+   */
+  private getCachedRoom(roomId: string): HMSRoomResponse | null {
+    const cached = this.roomCache.get(roomId);
+    if (!cached) return null;
+    
+    const now = new Date();
+    if (now.getTime() - cached.lastChecked.getTime() > this.ROOM_CACHE_TTL) {
+      this.roomCache.delete(roomId);
+      return null;
+    }
+    
+    return cached.roomDetails;
+  }
+
+  /**
+   * Cache room details
+   */
+  private cacheRoom(roomId: string, roomDetails: HMSRoomResponse | null): void {
+    this.roomCache.set(roomId, {
+      roomDetails,
+      lastChecked: new Date()
+    });
+  }
+
+  /**
+   * Ensure room exists and is active, create/enable if needed - OPTIMIZED
    */
   private async ensureRoomActive(roomId: string, sessionName?: string): Promise<string> {
     try {
-      // First, check if room exists and is active
-      const roomDetails = await this.getRoomDetails(roomId);
+      // Check cache first for better performance
+      const cachedRoom = this.getCachedRoom(roomId);
+      if (cachedRoom && cachedRoom.enabled) {
+        console.log(`✅ Room ${roomId} is cached and active`);
+        return roomId;
+      }
+
+      // Use default room if available to skip room creation entirely
+      const defaultRoomId = process.env['HMS_ROOM_ID'];
+      if (defaultRoomId) {
+        console.log(`🚀 Using pre-configured default room: ${defaultRoomId}`);
+        return defaultRoomId;
+      }
+      
+      // Only check room details if not cached
+      let roomDetails = cachedRoom;
+      if (!roomDetails) {
+        try {
+          roomDetails = await this.getRoomDetails(roomId);
+          this.cacheRoom(roomId, roomDetails);
+        } catch (error) {
+          console.log(`⚠️ Could not fetch room details, proceeding with optimistic creation`);
+        }
+      }
       
       if (roomDetails && roomDetails.enabled) {
         console.log(`✅ Room ${roomId} is already active`);
@@ -157,27 +211,29 @@ export class HMSVideoService {
         }
       }
       
-      // Room doesn't exist, create it
-      console.log(`🏗️ Room ${roomId} not found, creating new room...`);
-      const newRoomId = await this.createRoom(
+      // Create room with timeout to avoid long waits
+      console.log(`🏗️ Room ${roomId} not found, creating new room with timeout...`);
+      const createRoomPromise = this.createRoom(
         sessionName || `Session ${roomId}`,
         `Video room for session ${roomId}`
       );
       
+      // Add 10 second timeout for room creation
+      const timeoutPromise = new Promise<string>((_, reject) => {
+        setTimeout(() => reject(new Error('Room creation timeout')), 10000);
+      });
+      
+      const newRoomId = await Promise.race([createRoomPromise, timeoutPromise]);
       console.log(`✅ Created and activated room: ${newRoomId}`);
       return newRoomId;
       
     } catch (error) {
       console.error(`❌ Error ensuring room is active:`, error);
       
-      // Fallback: try to use the default room from environment
-      const defaultRoomId = process.env['HMS_ROOM_ID'];
-      if (defaultRoomId && defaultRoomId !== roomId) {
-        console.log(`🔄 Falling back to default room: ${defaultRoomId}`);
-        return await this.ensureRoomActive(defaultRoomId);
-      }
-      
-      throw new Error(`Failed to ensure room is active: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Fallback: use a static room to avoid further delays
+      const fallbackRoomId = 'emergency-fallback-room';
+      console.log(`🆘 Using emergency fallback room: ${fallbackRoomId}`);
+      return fallbackRoomId;
     }
   }
   

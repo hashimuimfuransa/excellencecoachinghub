@@ -7,11 +7,14 @@ import {
   Button,
   Alert,
   Container,
-  CircularProgress
+  CircularProgress,
+  Divider
 } from '@mui/material';
 import {
   VideoCall,
-  ArrowBack
+  ArrowBack,
+  PlayArrow,
+  OndemandVideo
 } from '@mui/icons-material';
 import { useAuth } from '../../store/AuthContext';
 import { liveSessionService, ILiveSession } from '../../services/liveSessionService';
@@ -216,7 +219,7 @@ const StudentLiveSessionRoom: React.FC = () => {
             <Button
               variant="contained"
               size="large"
-              startIcon={<VideoCall />}
+              startIcon={<PlayArrow />}
               onClick={() => window.open(session.recordingUrl, '_blank')}
               color="primary"
             >
@@ -224,6 +227,74 @@ const StudentLiveSessionRoom: React.FC = () => {
             </Button>
           )}
         </Box>
+
+        {/* Enhanced Recording Section for Students */}
+        {session.status === 'ended' && (
+          <>
+            <Divider sx={{ my: 3 }} />
+            
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                Session Recording
+              </Typography>
+              
+              {session.recordingUrl ? (
+                // Show available recording with details
+                <Box>
+                  <Alert severity="success" sx={{ mb: 2 }}>
+                    <Typography variant="body2">
+                      Recording is available to watch. You can replay this session anytime.
+                    </Typography>
+                  </Alert>
+                  
+                  <Paper variant="outlined" sx={{ p: 3 }}>
+                    <Box display="flex" alignItems="center" mb={2}>
+                      <OndemandVideo sx={{ mr: 2, fontSize: 32, color: 'primary.main' }} />
+                      <Box flex={1}>
+                        <Typography variant="h6" fontWeight="bold">
+                          {session.recordingTitle || `${session.title} - Recording`}
+                        </Typography>
+                        {session.recordingDescription && (
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            {session.recordingDescription}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Box>
+                    
+                    <Box display="flex" gap={2} flexWrap="wrap">
+                      <Button
+                        variant="contained"
+                        size="large"
+                        startIcon={<PlayArrow />}
+                        onClick={() => window.open(session.recordingUrl, '_blank')}
+                        color="primary"
+                      >
+                        Watch Full Recording
+                      </Button>
+                      
+                      <Button
+                        variant="outlined"
+                        startIcon={<OndemandVideo />}
+                        onClick={() => window.open(session.recordingUrl, '_blank')}
+                      >
+                        Download Recording
+                      </Button>
+                    </Box>
+                  </Paper>
+                </Box>
+              ) : (
+                // Show when no recording is available
+                <Alert severity="info">
+                  <Typography variant="body2">
+                    The instructor has not uploaded a recording for this session yet.
+                    {session.status === 'ended' && ' Check back later for the recorded content.'}
+                  </Typography>
+                </Alert>
+              )}
+            </Box>
+          </>
+        )}
       </Paper>
     </Container>
   );

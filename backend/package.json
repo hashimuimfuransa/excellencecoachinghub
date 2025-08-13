@@ -42,20 +42,14 @@
     "helmet": "^7.1.0",
     "hpp": "^0.2.3",
     "jsonwebtoken": "^9.0.2",
-<<<<<<< HEAD
     "mammoth": "^1.10.0",
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
     "mongoose": "^8.0.3",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "multer-storage-cloudinary": "^4.0.0",
     "node-cron": "^4.2.1",
     "nodemailer": "^6.9.8",
-<<<<<<< HEAD
     "pdf-parse": "^1.1.1",
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
     "socket.io": "^4.7.4",
     "uuid": "^11.1.0",
     "xss": "^1.0.14"

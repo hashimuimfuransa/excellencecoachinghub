@@ -51,11 +51,8 @@ import aiAssistantRoutes from '@/routes/aiAssistantRoutes';
 import courseContentRoutes from '@/routes/courseContentRoutes';
 import courseNotesRoutes from '@/routes/courseNotesRoutes';
 import courseMaterialsRoutes from '@/routes/courseMaterials';
-<<<<<<< HEAD
 import assignmentRoutes from '@/routes/assignmentRoutes';
 import announcementRoutes from '@/routes/announcementRoutes';
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
 
 
@@ -278,11 +275,8 @@ app.use('/api/ai-assistant', aiAssistantRoutes);
 app.use('/api/course-content', courseContentRoutes);
 app.use('/api/course-notes', courseNotesRoutes);
 app.use('/api/course-materials', courseMaterialsRoutes);
-<<<<<<< HEAD
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/announcements', announcementRoutes);
-=======
->>>>>>> dc507cbb987ac3bfebe15ab58858f92a2acad9f5
 
 console.log('✅ All routes mounted successfully');
 

@@ -278,7 +278,7 @@ const RecordedSessions: React.FC<RecordedSessionsProps> = ({
         <>
           <Grid container spacing={3}>
             {filteredRecordings.map((recording) => (
-              <Grid item xs={12} sm={6} md={4} key={recording._id}>
+              <Grid item xs={12} sm={6} md={4} lg={4} xl={3} key={recording._id}>
                 <RecordingCard
                   recording={recording}
                   isBookmarked={bookmarkedRecordings.has(recording._id)}
@@ -355,7 +355,7 @@ const RecordingCard: React.FC<{
         <CardMedia
           component="div"
           sx={{
-            height: 200,
+            height: { xs: 180, sm: 200, md: 220, lg: 240 },
             backgroundImage: `url(${getThumbnail(recording)})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
@@ -372,8 +372,8 @@ const RecordingCard: React.FC<{
           <Box
             className="play-button"
             sx={{
-              width: 60,
-              height: 60,
+              width: { xs: 56, sm: 60, md: 64, lg: 68 },
+              height: { xs: 56, sm: 60, md: 64, lg: 68 },
               borderRadius: '50%',
               bgcolor: alpha(theme.palette.primary.main, 0.9),
               display: 'flex',
@@ -385,7 +385,7 @@ const RecordingCard: React.FC<{
               }
             }}
           >
-            <PlayArrow sx={{ color: 'white', fontSize: 32 }} />
+            <PlayArrow sx={{ color: 'white', fontSize: { xs: 28, sm: 32, md: 36, lg: 40 } }} />
           </Box>
         </CardMedia>
         

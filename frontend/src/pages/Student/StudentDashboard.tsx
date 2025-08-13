@@ -84,31 +84,45 @@ const ResponsiveCardContent = styled(CardContent)(({ theme }) => ({
 }));
 
 const StatsCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(1.5),
+  padding: theme.spacing(2.5),
   textAlign: 'center',
   height: '100%',
-  minHeight: '100px',
+  minHeight: '140px',
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'center',
   alignItems: 'center',
-  background: `linear-gradient(135deg, ${theme.palette.primary.main}15, ${theme.palette.secondary.main}15)`,
+  background: `linear-gradient(135deg, ${theme.palette.primary.main}08, ${theme.palette.secondary.main}08)`,
   border: `1px solid ${theme.palette.divider}`,
+  borderRadius: theme.spacing(2),
   transition: 'all 0.3s ease-in-out',
+  position: 'relative',
+  overflow: 'hidden',
   '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: theme.shadows[4],
+    transform: 'translateY(-4px)',
+    boxShadow: theme.shadows[8],
+    background: `linear-gradient(135deg, ${theme.palette.primary.main}12, ${theme.palette.secondary.main}12)`,
+  },
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '4px',
+    background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
   },
   [theme.breakpoints.down('sm')]: {
-    padding: theme.spacing(1.25),
-    minHeight: '80px',
+    padding: theme.spacing(2),
+    minHeight: '120px',
     '&:hover': {
-      transform: 'none',
+      transform: 'translateY(-2px)',
+      boxShadow: theme.shadows[4],
     },
   },
   [theme.breakpoints.up('lg')]: {
-    padding: theme.spacing(1.75),
-    minHeight: '110px',
+    padding: theme.spacing(3),
+    minHeight: '160px',
   },
 }));
 
@@ -316,105 +330,166 @@ const StudentDashboard: React.FC = () => {
     <ResponsiveDashboard>
       {/* Header */}
       <Box sx={{ 
-        mb: { xs: 2, sm: 2, md: 3 },
+        mb: { xs: 3, sm: 4, md: 5 },
         textAlign: { xs: 'center', sm: 'left' }
       }}>
         <Typography 
-          variant={isMobile ? "h5" : "h4"} 
+          variant={isMobile ? "h4" : "h3"} 
           component="h1" 
           gutterBottom
           sx={{ 
-            fontWeight: 600,
-            color: 'primary.main',
-            mb: { xs: 1, sm: 2 }
+            fontWeight: 700,
+            background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            mb: { xs: 1, sm: 2 },
+            fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' }
           }}
         >
-          Welcome back, {user?.firstName}!
+          Welcome back, {user?.firstName}! 🎓
         </Typography>
         <Typography 
-          variant={isMobile ? "body2" : "body1"} 
+          variant={isMobile ? "body1" : "h6"} 
           color="text.secondary"
           sx={{ 
-            maxWidth: { xs: '100%', sm: '80%', md: '60%' },
-            mx: { xs: 'auto', sm: 0 }
+            maxWidth: { xs: '100%', sm: '80%', md: '70%' },
+            mx: { xs: 'auto', sm: 0 },
+            mb: { xs: 2, sm: 3 },
+            fontWeight: 400,
+            lineHeight: 1.6
           }}
         >
           {dashboardData.stats.totalCourses === 0 
-            ? "Ready to start learning? Explore our courses and begin your journey!"
-            : "Continue your learning journey and achieve your goals."
+            ? "Ready to start learning? Explore our courses and begin your journey to excellence!"
+            : "Continue your learning journey and unlock your potential. Every step counts towards your success!"
           }
         </Typography>
         
         {/* Quick Action Guide */}
         {dashboardData.stats.totalCourses > 0 && (
           <Box sx={{ 
-            mt: 2, 
-            p: 2, 
-            bgcolor: 'primary.light', 
-            borderRadius: 2,
-            border: '1px solid',
-            borderColor: 'primary.main'
+            mt: { xs: 2, sm: 3 }, 
+            p: { xs: 2, sm: 3 }, 
+            background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.08), rgba(33, 203, 243, 0.08))',
+            borderRadius: 3,
+            border: '1px solid rgba(33, 150, 243, 0.2)',
+            position: 'relative',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '3px',
+              background: 'linear-gradient(90deg, #2196F3, #21CBF3)',
+            }
           }}>
-            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+            <Typography 
+              variant={isMobile ? "subtitle1" : "h6"} 
+              sx={{ 
+                fontWeight: 600, 
+                mb: { xs: 1.5, sm: 2 },
+                color: 'primary.main',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}
+            >
               🎯 What would you like to do today?
             </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-              <Button 
-                size="small" 
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 1, sm: 2 }}>
+              <ResponsiveButton 
+                size={buttonSize}
                 variant="outlined" 
                 onClick={() => navigate('/dashboard/student/courses')}
-                sx={{ bgcolor: 'white' }}
+                sx={{ 
+                  bgcolor: 'white',
+                  borderColor: 'primary.main',
+                  color: 'primary.main',
+                  '&:hover': {
+                    bgcolor: 'primary.main',
+                    color: 'white',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 12px rgba(33, 150, 243, 0.3)'
+                  },
+                  transition: 'all 0.3s ease'
+                }}
               >
                 📚 Study Course Materials
-              </Button>
-              <Button 
-                size="small" 
+              </ResponsiveButton>
+              <ResponsiveButton 
+                size={buttonSize}
                 variant="outlined" 
                 onClick={() => navigate('/dashboard/student/assessments')}
-                sx={{ bgcolor: 'white' }}
+                sx={{ 
+                  bgcolor: 'white',
+                  borderColor: 'warning.main',
+                  color: 'warning.main',
+                  '&:hover': {
+                    bgcolor: 'warning.main',
+                    color: 'white',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 12px rgba(255, 152, 0, 0.3)'
+                  },
+                  transition: 'all 0.3s ease'
+                }}
               >
                 📝 Take Assessments
-              </Button>
-              <Button 
-                size="small" 
+              </ResponsiveButton>
+              <ResponsiveButton 
+                size={buttonSize}
                 variant="outlined" 
                 onClick={() => navigate('/dashboard/student/live-sessions')}
-                sx={{ bgcolor: 'white' }}
+                sx={{ 
+                  bgcolor: 'white',
+                  borderColor: 'success.main',
+                  color: 'success.main',
+                  '&:hover': {
+                    bgcolor: 'success.main',
+                    color: 'white',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)'
+                  },
+                  transition: 'all 0.3s ease'
+                }}
               >
                 🎥 Join Live Sessions
-              </Button>
+              </ResponsiveButton>
             </Stack>
           </Box>
         )}
       </Box>
 
       {/* Stats Cards */}
-      <Grid container spacing={{ xs: 2, sm: 2, md: 3 }} sx={{ mb: { xs: 2, sm: 3 } }}>
+      <Grid container spacing={{ xs: 2, sm: 3, md: 4 }} sx={{ mb: { xs: 3, sm: 4, md: 5 } }}>
         <Grid item xs={6} sm={3} md={3}>
-          <StatsCard elevation={isMobile ? 1 : 2}>
+          <StatsCard elevation={3}>
             <School 
               color="primary" 
               sx={{ 
-                fontSize: { xs: '1.5rem', sm: '1.8rem', md: '2rem' },
-                mb: { xs: 0.5, sm: 0.75 }
+                fontSize: { xs: '2.5rem', sm: '3rem', md: '3.5rem' },
+                mb: { xs: 1, sm: 1.5 }
               }} 
             />
             <Typography 
-              variant={isMobile ? "h6" : "h4"} 
+              variant="h3" 
               sx={{ 
                 fontWeight: 700,
                 color: 'primary.main',
-                mb: 0.25,
-                fontSize: { xs: '1.1rem', sm: '1.3rem', md: '1.5rem' }
+                mb: 0.5,
+                fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' }
               }}
             >
               {dashboardData.stats.totalCourses}
             </Typography>
             <Typography 
-              variant={isMobile ? "caption" : "body2"} 
+              variant="body1" 
               color="text.secondary"
               sx={{ 
-                fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' },
+                fontWeight: 500,
+                fontSize: { xs: '0.875rem', sm: '1rem' },
                 textAlign: 'center',
                 lineHeight: 1.2
               }}
@@ -425,30 +500,31 @@ const StudentDashboard: React.FC = () => {
         </Grid>
 
         <Grid item xs={6} sm={3} md={3}>
-          <StatsCard elevation={isMobile ? 1 : 2}>
+          <StatsCard elevation={3}>
             <Assignment 
               color="warning" 
               sx={{ 
-                fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
-                mb: { xs: 0.5, sm: 1 }
+                fontSize: { xs: '2.5rem', sm: '3rem', md: '3.5rem' },
+                mb: { xs: 1, sm: 1.5 }
               }} 
             />
             <Typography 
-              variant={isMobile ? "h6" : "h4"} 
+              variant="h3" 
               sx={{ 
                 fontWeight: 700,
                 color: 'warning.main',
                 mb: 0.5,
-                fontSize: { xs: '1.1rem', sm: '1.5rem', md: '2rem' }
+                fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' }
               }}
             >
               {dashboardData.stats.upcomingAssessments}
             </Typography>
             <Typography 
-              variant={isMobile ? "caption" : "body2"} 
+              variant="body1" 
               color="text.secondary"
               sx={{ 
-                fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' },
+                fontWeight: 500,
+                fontSize: { xs: '0.875rem', sm: '1rem' },
                 textAlign: 'center',
                 lineHeight: 1.2
               }}
@@ -459,30 +535,31 @@ const StudentDashboard: React.FC = () => {
         </Grid>
 
         <Grid item xs={6} sm={3} md={3}>
-          <StatsCard elevation={isMobile ? 1 : 2}>
+          <StatsCard elevation={3}>
             <Quiz 
               color="secondary" 
               sx={{ 
-                fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
-                mb: { xs: 0.5, sm: 1 }
+                fontSize: { xs: '2.5rem', sm: '3rem', md: '3.5rem' },
+                mb: { xs: 1, sm: 1.5 }
               }} 
             />
             <Typography 
-              variant={isMobile ? "h6" : "h4"} 
+              variant="h3" 
               sx={{ 
                 fontWeight: 700,
                 color: 'secondary.main',
                 mb: 0.5,
-                fontSize: { xs: '1.1rem', sm: '1.5rem', md: '2rem' }
+                fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' }
               }}
             >
               {dashboardData.stats.enhancedAssessments}
             </Typography>
             <Typography 
-              variant={isMobile ? "caption" : "body2"} 
+              variant="body1" 
               color="text.secondary"
               sx={{ 
-                fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' },
+                fontWeight: 500,
+                fontSize: { xs: '0.875rem', sm: '1rem' },
                 textAlign: 'center',
                 lineHeight: 1.2
               }}
@@ -493,30 +570,31 @@ const StudentDashboard: React.FC = () => {
         </Grid>
 
         <Grid item xs={6} sm={3} md={3}>
-          <StatsCard elevation={isMobile ? 1 : 2}>
+          <StatsCard elevation={3}>
             <TrendingUp 
               color="success" 
               sx={{ 
-                fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' },
-                mb: { xs: 0.5, sm: 1 }
+                fontSize: { xs: '2.5rem', sm: '3rem', md: '3.5rem' },
+                mb: { xs: 1, sm: 1.5 }
               }} 
             />
             <Typography 
-              variant={isMobile ? "h6" : "h4"} 
+              variant="h3" 
               sx={{ 
                 fontWeight: 700,
                 color: 'success.main',
                 mb: 0.5,
-                fontSize: { xs: '1.1rem', sm: '1.5rem', md: '2rem' }
+                fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' }
               }}
             >
               {dashboardData.stats.averageProgress}%
             </Typography>
             <Typography 
-              variant={isMobile ? "caption" : "body2"} 
+              variant="body1" 
               color="text.secondary"
               sx={{ 
-                fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' },
+                fontWeight: 500,
+                fontSize: { xs: '0.875rem', sm: '1rem' },
                 textAlign: 'center',
                 lineHeight: 1.2
               }}
@@ -528,25 +606,29 @@ const StudentDashboard: React.FC = () => {
       </Grid>
 
       {/* Main Content */}
-      <Grid container spacing={{ xs: 2, sm: 2, md: 3 }}>
+      <Grid container spacing={{ xs: 2, sm: 3, md: 4 }}>
         {/* My Courses */}
         <Grid item xs={12} lg={8}>
-          <ResponsiveCard>
-            <ResponsiveCardContent>
+          <ResponsiveCard elevation={3}>
+            <ResponsiveCardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
               <Stack 
                 direction={{ xs: 'column', sm: 'row' }} 
                 justifyContent="space-between" 
                 alignItems={{ xs: 'flex-start', sm: 'center' }}
-                spacing={{ xs: 1, sm: 2 }}
-                sx={{ mb: { xs: 1.5, sm: 2 } }}
+                spacing={{ xs: 2, sm: 1 }}
+                sx={{ mb: { xs: 2, sm: 3 } }}
               >
                 <Typography 
                   variant={isMobile ? "h6" : "h5"} 
                   sx={{ 
                     fontWeight: 600,
-                    color: 'primary.main'
+                    color: 'primary.main',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
                   }}
                 >
+                  <School sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }} />
                   My Courses
                 </Typography>
                 <ResponsiveButton 
@@ -555,10 +637,20 @@ const StudentDashboard: React.FC = () => {
                   onClick={() => navigate('/dashboard/student/courses')}
                   sx={{ 
                     minWidth: { xs: '100%', sm: 'auto' },
-                    alignSelf: { xs: 'stretch', sm: 'auto' }
+                    alignSelf: { xs: 'stretch', sm: 'auto' },
+                    borderColor: 'primary.main',
+                    color: 'primary.main',
+                    '&:hover': {
+                      borderColor: 'primary.dark',
+                      backgroundColor: 'primary.main',
+                      color: 'white',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 4px 12px rgba(33, 150, 243, 0.3)'
+                    },
+                    transition: 'all 0.3s ease'
                   }}
                 >
-                  View All
+                  View All Courses
                 </ResponsiveButton>
               </Stack>
 
@@ -681,18 +773,22 @@ const StudentDashboard: React.FC = () => {
 
         {/* Quick Actions & Upcoming Sessions */}
         <Grid item xs={12} lg={4}>
-          <Stack spacing={{ xs: 1.5, sm: 2, md: 2.5 }}>
+          <Stack spacing={{ xs: 2, sm: 3, md: 3 }}>
             {/* Upcoming Sessions */}
-            <ResponsiveCard>
-              <ResponsiveCardContent>
+            <ResponsiveCard elevation={3}>
+              <ResponsiveCardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
                 <Typography 
                   variant={isMobile ? "h6" : "h5"} 
                   sx={{ 
                     fontWeight: 600,
                     color: 'primary.main',
-                    mb: { xs: 2, sm: 3 }
+                    mb: { xs: 2, sm: 3 },
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1
                   }}
                 >
+                  <VideoCall sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }} />
                   Upcoming Sessions
                 </Typography>
                 {dashboardData.upcomingSessions.length === 0 ? (
@@ -752,24 +848,30 @@ const StudentDashboard: React.FC = () => {
                 )}
               </ResponsiveCardContent>
             </ResponsiveCard>
-
-            {/* Recorded Sessions */}
-            <ResponsiveCard>
-              <ResponsiveCardContent>
-                <Typography 
-                  variant={isMobile ? "h6" : "h5"} 
-                  sx={{ 
-                    fontWeight: 600,
-                    color: 'primary.main',
-                    mb: { xs: 2, sm: 3 }
-                  }}
-                >
-                  Recorded Sessions
-                </Typography>
-                <RecordedSessions />
-              </ResponsiveCardContent>
-            </ResponsiveCard>
           </Stack>
+        </Grid>
+
+        {/* Recorded Sessions - Full Width Section */}
+        <Grid item xs={12}>
+          <ResponsiveCard elevation={3}>
+            <ResponsiveCardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+              <Typography 
+                variant={isMobile ? "h6" : "h5"} 
+                sx={{ 
+                  fontWeight: 600,
+                  color: 'primary.main',
+                  mb: { xs: 2, sm: 3 },
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
+                }}
+              >
+                <PlayArrow sx={{ fontSize: { xs: '1.2rem', sm: '1.5rem' } }} />
+                Recorded Sessions
+              </Typography>
+              <RecordedSessions maxItems={6} />
+            </ResponsiveCardContent>
+          </ResponsiveCard>
         </Grid>
       </Grid>
     </ResponsiveDashboard>

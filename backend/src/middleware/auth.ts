@@ -20,6 +20,12 @@ interface JwtPayload {
   exp: number;
 }
 
+// Extended Request interface for authenticated routes
+export interface AuthRequest extends Request {
+  user?: IUserDocument;
+  teacherProfile?: ITeacherProfileDocument;
+}
+
 // Protect routes - require authentication
 export const protect = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -193,3 +199,6 @@ export const requireEmailVerification = (req: Request, res: Response, next: Next
 
 // Alias for protect (for backward compatibility)
 export const auth = protect;
+
+// Alias for authorize (for backward compatibility)
+export const requireRole = authorize;

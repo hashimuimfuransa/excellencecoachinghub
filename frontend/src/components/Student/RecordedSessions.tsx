@@ -129,7 +129,8 @@ const RecordedSessions: React.FC<RecordedSessionsProps> = ({
         ...(searchTerm && { search: searchTerm })
       });
 
-      const response = await apiService.get(`/student/live-sessions/recordings?${queryParams}`);
+      const apiUrl = `/recorded-sessions/student?${queryParams}`;
+      const response = await apiService.get(apiUrl);
       
       if (response.success && response.data) {
         setRecordings(response.data.recordings || []);
@@ -268,7 +269,7 @@ const RecordedSessions: React.FC<RecordedSessionsProps> = ({
             <Typography variant="body2" color="textSecondary">
               {searchTerm 
                 ? 'Try adjusting your search terms'
-                : 'Recorded sessions will appear here once your classes are recorded'
+                : 'Recorded sessions from your instructors will appear here once available.'
               }
             </Typography>
           </CardContent>

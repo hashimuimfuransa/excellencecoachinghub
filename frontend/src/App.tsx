@@ -38,6 +38,7 @@ import TestPage from './pages/Teacher/TestPage';
 import TeacherSettings from './pages/Teacher/TeacherSettings';
 import StudentManagement from './pages/Teacher/StudentManagement';
 import CourseMaterials from './pages/Teacher/CourseMaterials';
+import RecordedSessionDetails from './pages/Teacher/RecordedSessionDetails';
 import StudentDashboard from './pages/Student/StudentDashboard';
 import Overview from './pages/Student/Overview';
 import StudentCourses from './pages/Student/StudentCourses';
@@ -191,6 +192,7 @@ const App: React.FC = () => {
           <Route path="students" element={<TeacherStudents />} />
           <Route path="student-management" element={<StudentManagement />} />
           <Route path="analytics" element={<TeacherAnalytics />} />
+          <Route path="recorded-session/:sessionId" element={<RecordedSessionDetails />} />
           <Route path="settings" element={<TeacherSettings />} />
           <Route path="test" element={<TestPage />} />
         </Route>

@@ -23,7 +23,17 @@ export const getCourseAnnouncements = asyncHandler(async (req: Request, res: Res
   // Check if user has access to course
   const userId = req.user?.id;
   const isInstructor = course.instructor.toString() === userId;
-  const isEnrolled = course.students.includes(userId);
+  
+  // Check if student is enrolled in the course
+  let isEnrolled = false;
+  if (!isInstructor) {
+    const { UserProgress } = require('../models/UserProgress');
+    const enrollment = await UserProgress.findOne({
+      user: userId,
+      course: courseId
+    });
+    isEnrolled = !!enrollment;
+  }
 
   if (!isInstructor && !isEnrolled) {
     throw new AppError('Access denied to course announcements', 403);

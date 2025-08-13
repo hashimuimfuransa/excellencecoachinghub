@@ -848,11 +848,16 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
         participantsOpen={participantsOpen}
         onChatToggle={() => setChatOpen(!chatOpen)}
         onParticipantsToggle={() => setParticipantsOpen(!participantsOpen)}
+        raiseHandRequests={raiseHandRequests}
         chatComponent={
           <ChatPanel
             messages={messages}
             onSendMessage={sendMessage}
             onClose={() => setChatOpen(false)}
+            userRole={userRole}
+            peers={peers}
+            raiseHandRequests={raiseHandRequests}
+            onAllowStudentToSpeak={handleAllowStudentToSpeak}
           />
         }
         participantsComponent={
@@ -1081,44 +1086,6 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
 
         {!isMobile && <Divider orientation="vertical" flexItem />}
 
-        {/* Secondary controls (desktop only) */}
-        {!isMobile && (
-          <Box display="flex" alignItems="center" gap={1}>
-            {/* Chat toggle */}
-            <Tooltip title="Toggle chat">
-              <IconButton
-                onClick={onToggleChat}
-                color={chatOpen ? 'primary' : 'default'}
-                size="medium"
-              >
-                <Badge badgeContent={messages.length} color="error">
-                  <Chat />
-                </Badge>
-              </IconButton>
-            </Tooltip>
-
-            {/* Participants toggle */}
-            <Tooltip title="Show participants">
-              <IconButton
-                onClick={onToggleParticipants}
-                color={participantsOpen ? 'primary' : 'default'}
-                size="medium"
-              >
-                <Badge 
-                  badgeContent={
-                    userRole === 'teacher' ? raiseHandRequests.size : 0
-                  } 
-                  color="warning"
-                >
-                  <People />
-                </Badge>
-              </IconButton>
-            </Tooltip>
-          </Box>
-        )}
-
-        {!isMobile && <Divider orientation="vertical" flexItem />}
-
                   {/* Feedback button */}
           <Tooltip title="Session Feedback">
             <IconButton
@@ -1238,8 +1205,22 @@ const ChatPanel: React.FC<{
   messages: HMSMessage[];
   onSendMessage: (message: string) => void;
   onClose: () => void;
-}> = ({ messages, onSendMessage, onClose }) => {
+  userRole?: 'student' | 'teacher' | 'admin';
+  peers?: HMSPeer[];
+  raiseHandRequests?: Set<string>;
+  onAllowStudentToSpeak?: (studentId: string) => void;
+}> = ({ 
+  messages, 
+  onSendMessage, 
+  onClose, 
+  userRole, 
+  peers = [], 
+  raiseHandRequests = new Set(), 
+  onAllowStudentToSpeak 
+}) => {
   const [newMessage, setNewMessage] = useState('');
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const handleSend = () => {
     if (newMessage.trim()) {
@@ -1248,9 +1229,14 @@ const ChatPanel: React.FC<{
     }
   };
 
+  // Find students who have raised hands
+  const studentsWithRaisedHands = peers.filter(peer => 
+    raiseHandRequests.has(peer.id) && !peer.isLocal
+  );
+
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', position: 'relative' }}>
         <Typography variant="h6">Chat</Typography>
         <IconButton
           onClick={onClose}
@@ -1260,15 +1246,91 @@ const ChatPanel: React.FC<{
         </IconButton>
       </Box>
 
+      {/* Raise hand notifications for teachers */}
+      {userRole === 'teacher' && studentsWithRaisedHands.length > 0 && (
+        <Box sx={{ p: 2, bgcolor: 'warning.light', borderBottom: 1, borderColor: 'divider' }}>
+          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+            🤚 Students want to speak:
+          </Typography>
+          {studentsWithRaisedHands.map(student => (
+            <Box key={student.id} sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              mb: 1,
+              p: 1,
+              bgcolor: 'background.paper',
+              borderRadius: 1
+            }}>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                {student.name}
+              </Typography>
+              <Button
+                size="small"
+                variant="contained"
+                color="success"
+                startIcon={<Mic />}
+                onClick={() => onAllowStudentToSpeak?.(student.id)}
+                sx={{ fontSize: '0.7rem', py: 0.5, px: 1 }}
+              >
+                Allow
+              </Button>
+            </Box>
+          ))}
+        </Box>
+      )}
+
       <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
-        {messages.map((message, index) => (
-          <Box key={index} sx={{ mb: 1 }}>
-            <Typography variant="caption" color="textSecondary">
-              {message.senderName}
-            </Typography>
-            <Typography variant="body2">{message.message}</Typography>
-          </Box>
-        ))}
+        {messages.map((message, index) => {
+          const isRaiseHandMessage = message.message.includes('🤚') && message.message.includes('wants to speak');
+          
+          return (
+            <Box 
+              key={index} 
+              sx={{ 
+                mb: 1,
+                p: isRaiseHandMessage ? 1 : 0,
+                bgcolor: isRaiseHandMessage ? 'warning.light' : 'transparent',
+                borderRadius: isRaiseHandMessage ? 1 : 0,
+                border: isRaiseHandMessage ? 1 : 0,
+                borderColor: isRaiseHandMessage ? 'warning.main' : 'transparent'
+              }}
+            >
+              <Typography variant="caption" color="textSecondary">
+                {message.senderName}
+              </Typography>
+              <Typography variant="body2" sx={{ 
+                fontWeight: isRaiseHandMessage ? 600 : 400,
+                color: isRaiseHandMessage ? 'warning.dark' : 'inherit'
+              }}>
+                {message.message}
+              </Typography>
+              
+              {/* Quick action button for raise hand messages */}
+              {isRaiseHandMessage && userRole === 'teacher' && onAllowStudentToSpeak && (
+                <Box sx={{ mt: 1 }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="success"
+                    startIcon={<Mic />}
+                    onClick={() => {
+                      // Extract student name and find peer
+                      const studentName = message.message.split(' wants to speak')[0].replace('🤚 ', '');
+                      const studentPeer = peers.find(peer => peer.name.includes(studentName));
+                      if (studentPeer) {
+                        onAllowStudentToSpeak(studentPeer.id);
+                      }
+                    }}
+                    sx={{ fontSize: '0.7rem', py: 0.25, px: 1 }}
+                  >
+                    Allow to Speak
+                  </Button>
+                </Box>
+              )}
+            </Box>
+          );
+        })}
       </Box>
 
       <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
@@ -1403,10 +1465,18 @@ const ParticipantsPanel: React.FC<{
   onClose: () => void;
   onAllowStudentToSpeak: (studentId: string) => void;
 }> = ({ peers, raiseHandRequests, userRole, attendance, onClose, onAllowStudentToSpeak }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', position: 'relative' }}>
         <Typography variant="h6">Participants ({peers.length})</Typography>
+        {raiseHandRequests.size > 0 && userRole === 'teacher' && (
+          <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.5 }}>
+            {raiseHandRequests.size} student{raiseHandRequests.size > 1 ? 's' : ''} want{raiseHandRequests.size === 1 ? 's' : ''} to speak
+          </Typography>
+        )}
         <IconButton
           onClick={onClose}
           sx={{ position: 'absolute', right: 8, top: 8 }}
@@ -1426,44 +1496,74 @@ const ParticipantsPanel: React.FC<{
             <Box
               key={peer.id}
               sx={{
-                p: 2,
+                p: isMobile ? 2 : 1.5,
                 borderBottom: 1,
                 borderColor: 'divider',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 1,
-                bgcolor: hasRaisedHand ? 'warning.light' : 'transparent'
+                bgcolor: hasRaisedHand ? 'warning.light' : 'transparent',
+                minHeight: isMobile ? 80 : 60
               }}
             >
               <Box sx={{ flex: 1 }}>
-                <Typography variant="body2">
+                <Typography variant={isMobile ? "body1" : "body2"} sx={{ fontWeight: hasRaisedHand ? 600 : 400 }}>
                   {peer.name} {peer.isLocal && '(You)'}
-                  {hasRaisedHand && (
-                    <Box component="span" sx={{ ml: 1, color: 'warning.main' }}>
-                      🤚 Wants to speak
-                    </Box>
-                  )}
                 </Typography>
+                {hasRaisedHand && (
+                  <Typography variant={isMobile ? "body2" : "caption"} sx={{ color: 'warning.main', mt: 0.5 }}>
+                    🤚 Wants to speak
+                  </Typography>
+                )}
                 {peerAttendance && (
                   <Typography variant="caption" color="textSecondary">
                     Duration: {Math.floor(duration / 60)}m {duration % 60}s
                   </Typography>
                 )}
               </Box>
-              <Box display="flex" gap={0.5} alignItems="center">
-                {!peer.audioTrack && <MicOff fontSize="small" color="error" />}
-                {!peer.videoTrack && <VideocamOff fontSize="small" color="error" />}
-                {hasRaisedHand && <PanTool fontSize="small" color="warning" />}
+              
+              <Box display="flex" gap={isMobile ? 1 : 0.5} alignItems="center" flexDirection={isMobile && hasRaisedHand ? 'column' : 'row'}>
+                {/* Status indicators */}
+                <Box display="flex" gap={0.5} alignItems="center">
+                  {!peer.audioTrack && <MicOff fontSize="small" color="error" />}
+                  {!peer.videoTrack && <VideocamOff fontSize="small" color="error" />}
+                  {hasRaisedHand && <PanTool fontSize="small" color="warning" />}
+                </Box>
+                
+                {/* Allow to speak button - more prominent on mobile */}
                 {isStudent && hasRaisedHand && (
-                  <Tooltip title="Allow student to speak">
-                    <IconButton
-                      size="small"
-                      onClick={() => onAllowStudentToSpeak(peer.id)}
-                      color="success"
-                    >
-                      <Mic />
-                    </IconButton>
-                  </Tooltip>
+                  <Box>
+                    {isMobile ? (
+                      <Button
+                        variant="contained"
+                        color="success"
+                        size="small"
+                        startIcon={<Mic />}
+                        onClick={() => onAllowStudentToSpeak(peer.id)}
+                        sx={{ 
+                          minWidth: 120,
+                          fontSize: '0.75rem',
+                          py: 0.5
+                        }}
+                      >
+                        Allow to Speak
+                      </Button>
+                    ) : (
+                      <Tooltip title="Allow student to speak">
+                        <IconButton
+                          size="medium"
+                          onClick={() => onAllowStudentToSpeak(peer.id)}
+                          color="success"
+                          sx={{
+                            bgcolor: 'success.light',
+                            '&:hover': { bgcolor: 'success.main' }
+                          }}
+                        >
+                          <Mic />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Box>
                 )}
               </Box>
             </Box>

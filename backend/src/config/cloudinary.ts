@@ -221,4 +221,105 @@ export const uploadBase64Image = async (
   }
 };
 
+// Upload video to Cloudinary
+export const uploadVideoToCloudinary = async (
+  fileBuffer: Buffer,
+  userId: string,
+  originalName: string,
+  folder: string = 'excellence-coaching-hub/videos'
+): Promise<{ url: string; publicId: string; duration: number; size: number }> => {
+  try {
+    // Reconfigure Cloudinary in case environment variables were loaded after initial config
+    configureCloudinary();
+
+    // Validate Cloudinary configuration before upload
+    if (!validateCloudinaryConfig()) {
+      throw new Error('Cloudinary is not properly configured. Please restart the server after updating environment variables.');
+    }
+
+    const timestamp = Date.now();
+    const fileName = originalName.replace(/\.[^/.]+$/, ""); // Remove extension
+    const publicId = `video_${userId}_${fileName}_${timestamp}`;
+
+    console.log('Starting Cloudinary video upload for user:', userId);
+    console.log('Original file name:', originalName);
+    console.log('Folder:', folder);
+    console.log('Public ID:', publicId);
+
+    return new Promise((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        {
+          public_id: publicId,
+          folder: folder,
+          resource_type: 'video',
+          transformation: [
+            {
+              quality: 'auto:good',
+              format: 'mp4'
+            }
+          ],
+          allowed_formats: ['mp4', 'mov', 'avi', 'mkv', 'webm'],
+        },
+        (error, result) => {
+          if (error) {
+            console.error('Cloudinary video upload error:', error);
+            console.error('Error details:', {
+              message: error.message,
+              http_code: error.http_code,
+              name: error.name
+            });
+            reject(new Error(`Cloudinary video upload failed: ${error.message}`));
+          } else if (result) {
+            console.log('✅ Cloudinary video upload successful:', result.public_id);
+            console.log('Video URL:', result.secure_url);
+            console.log('Duration:', result.duration);
+            console.log('Size:', result.bytes);
+            resolve({
+              url: result.secure_url,
+              publicId: result.public_id,
+              duration: result.duration || 0,
+              size: result.bytes || 0,
+            });
+          } else {
+            reject(new Error('No result from Cloudinary video upload'));
+          }
+        }
+      ).end(fileBuffer);
+    });
+  } catch (error) {
+    console.error('Error in uploadVideoToCloudinary:', error);
+    throw error instanceof Error ? error : new Error('Failed to upload video');
+  }
+};
+
+// Helper function to delete video from Cloudinary
+export const deleteVideoFromCloudinary = async (videoUrl: string): Promise<void> => {
+  try {
+    if (!videoUrl || !videoUrl.includes('cloudinary.com')) {
+      return; // Not a Cloudinary URL, skip deletion
+    }
+
+    // Extract public_id from Cloudinary URL
+    // URL format: https://res.cloudinary.com/cloud_name/video/upload/v123456/folder/file.mp4
+    const urlParts = videoUrl.split('/');
+    const uploadIndex = urlParts.findIndex(part => part === 'upload');
+    
+    if (uploadIndex === -1 || uploadIndex + 2 >= urlParts.length) {
+      console.error('Invalid Cloudinary URL format:', videoUrl);
+      return;
+    }
+
+    // Get everything after the version number
+    const pathParts = urlParts.slice(uploadIndex + 2); // Skip 'upload' and version
+    const publicId = pathParts.join('/').replace(/\.[^/.]+$/, ''); // Remove extension
+
+    console.log('Deleting video from Cloudinary with public_id:', publicId);
+    await cloudinary.uploader.destroy(publicId, { resource_type: 'video' });
+    console.log(`Video deleted from Cloudinary: ${publicId}`);
+  } catch (error) {
+    console.error('Error deleting video from Cloudinary:', error);
+    // Don't throw error, as this is not critical
+  }
+};
+
 export default cloudinary;

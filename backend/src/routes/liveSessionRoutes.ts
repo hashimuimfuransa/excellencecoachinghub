@@ -4,6 +4,7 @@ import {
   getAllSessions,
   getSessionById,
   getSessionsByTeacher,
+  getSessionsByCourse,
   getActiveSessions,
   cancelSession,
   getSessionStats,
@@ -46,6 +47,12 @@ const teacherIdValidation = [
   param('teacherId')
     .isMongoId()
     .withMessage('Invalid teacher ID')
+];
+
+const courseIdValidation = [
+  param('courseId')
+    .isMongoId()
+    .withMessage('Invalid course ID')
 ];
 
 const endSessionValidation = [
@@ -98,6 +105,7 @@ router.get('/active', requireAdmin, getActiveSessions);
 router.get('/recordings', requireAdmin, getSessionRecordings);
 router.get('/recordings/:id', requireAdmin, sessionIdValidation, validateRequest, getRecordingById);
 router.get('/teacher/:teacherId', requireAdmin, teacherIdValidation, validateRequest, getSessionsByTeacher);
+router.get('/course/:courseId', courseIdValidation, validateRequest, getSessionsByCourse);
 router.get('/:id', requireAdmin, sessionIdValidation, validateRequest, getSessionById);
 router.get('/:id/attendance', requireAdmin, sessionIdValidation, validateRequest, getSessionAttendance);
 router.put('/:id/cancel', requireAdmin, cancelSessionValidation, validateRequest, cancelSession);

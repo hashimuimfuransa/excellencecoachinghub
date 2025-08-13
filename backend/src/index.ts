@@ -53,6 +53,7 @@ import courseNotesRoutes from '@/routes/courseNotesRoutes';
 import courseMaterialsRoutes from '@/routes/courseMaterials';
 import assignmentRoutes from '@/routes/assignmentRoutes';
 import announcementRoutes from '@/routes/announcementRoutes';
+import recordedSessionRoutes from '@/routes/recordedSessions';
 
 
 
@@ -277,6 +278,7 @@ app.use('/api/course-notes', courseNotesRoutes);
 app.use('/api/course-materials', courseMaterialsRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/announcements', announcementRoutes);
+app.use('/api/recorded-sessions', recordedSessionRoutes);
 
 console.log('✅ All routes mounted successfully');
 

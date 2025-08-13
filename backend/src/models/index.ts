@@ -20,6 +20,7 @@ export { VideoProctoringSession, IVideoProctoringSessionDocument, IVideoProctori
 export { default as Feedback, IFeedback } from './Feedback';
 export { default as VideoProvider, IVideoProvider } from './VideoProvider';
 export { default as Certificate, ICertificate } from './Certificate';
+export { default as RecordedSession, IRecordedSession } from './RecordedSession';
 
 // Re-export shared types for convenience
 export {

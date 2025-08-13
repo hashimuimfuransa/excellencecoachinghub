@@ -55,10 +55,16 @@ import {
   Bookmark,
   BookmarkBorder,
   Refresh,
-  CheckCircle
+  CheckCircle,
+  MenuBook,
+  Storage
 } from '@mui/icons-material';
 import { useAuth } from '../../store/AuthContext';
 import { liveSessionService, ILiveSession } from '../../services/liveSessionService';
+import { recordingService } from '../../services/recordingService';
+import RecordingCard from '../../components/RecordingCard';
+import RecordingPlayer from '../../components/RecordingPlayer';
+import apiService from '../../services/apiService';
 
 // Styled Components
 const HeroCard = styled(Paper)(({ theme }) => ({
@@ -145,11 +151,32 @@ const StudentLiveSessions: React.FC = () => {
 
   // State management
   const [sessions, setSessions] = useState<ILiveSession[]>([]);
+  const [uploadedRecordings, setUploadedRecordings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [recordingsLoading, setRecordingsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [tabValue, setTabValue] = useState(0);
+  const [selectedRecording, setSelectedRecording] = useState<ILiveSession | null>(null);
+  const [showRecordingPlayer, setShowRecordingPlayer] = useState(false);
+
+  // Load uploaded recordings from Cloudinary
+  const loadUploadedRecordings = async () => {
+    try {
+      setRecordingsLoading(true);
+      const response = await apiService.get('/recorded-sessions/student?page=1&limit=50');
+      
+      if (response.success && response.data) {
+        setUploadedRecordings(response.data.recordings || []);
+      }
+    } catch (err: any) {
+      console.error('Error loading uploaded recordings:', err);
+      // Don't set error here as it's not critical for the main page
+    } finally {
+      setRecordingsLoading(false);
+    }
+  };
 
   // Load sessions
   useEffect(() => {
@@ -172,6 +199,7 @@ const StudentLiveSessions: React.FC = () => {
     };
 
     loadSessions();
+    loadUploadedRecordings(); // Also load uploaded recordings
   }, [statusFilter]);
 
   // Filter sessions based on search and tab
@@ -187,7 +215,9 @@ const StudentLiveSessions: React.FC = () => {
         return matchesSearch && session.status === 'scheduled' && sessionTime > now;
       case 1: // Live
         return matchesSearch && session.status === 'live';
-      case 2: // Past
+      case 2: // Recordings
+        return matchesSearch && session.status === 'ended' && session.recordingUrl;
+      case 3: // Past (All past sessions)
         return matchesSearch && (session.status === 'ended' || session.status === 'cancelled' || sessionTime < now);
       default:
         return matchesSearch;
@@ -197,6 +227,18 @@ const StudentLiveSessions: React.FC = () => {
   // Handle join session
   const handleJoinSession = (sessionId: string) => {
     navigate(`/video-session/student/${sessionId}`);
+  };
+
+  // Handle play recording
+  const handlePlayRecording = (session: ILiveSession) => {
+    setSelectedRecording(session);
+    setShowRecordingPlayer(true);
+  };
+
+  // Handle close recording player
+  const handleCloseRecordingPlayer = () => {
+    setShowRecordingPlayer(false);
+    setSelectedRecording(null);
   };
 
   // Format date and time
@@ -247,7 +289,8 @@ const StudentLiveSessions: React.FC = () => {
     const sessionTime = new Date(s.scheduledTime);
     return s.status === 'scheduled' && sessionTime > now;
   }).length;
-  const recordedSessions = sessions.filter(s => s.status === 'ended' && s.recordingUrl).length;
+  const liveSessionRecordings = sessions.filter(s => s.status === 'ended' && s.recordingUrl).length;
+  const recordedSessions = liveSessionRecordings + uploadedRecordings.length;
 
   if (loading) {
     return (
@@ -275,7 +318,7 @@ const StudentLiveSessions: React.FC = () => {
               <Typography variant="h6" sx={{ opacity: 0.9, mb: 2 }}>
                 Join interactive sessions with your instructors and fellow students!
               </Typography>
-              <Stack direction="row" spacing={2}>
+              <Stack direction="row" spacing={2} flexWrap="wrap" sx={{ gap: 1 }}>
                 <ActionButton 
                   variant="contained" 
                   sx={{ 
@@ -300,6 +343,20 @@ const StudentLiveSessions: React.FC = () => {
                 >
                   📅 View Schedule
                 </ActionButton>
+                {recordedSessions > 0 && (
+                  <ActionButton 
+                    variant="outlined" 
+                    sx={{ 
+                      borderColor: 'white', 
+                      color: 'white',
+                      '&:hover': { bgcolor: alpha(theme.palette.common.white, 0.1) }
+                    }}
+                    startIcon={<OndemandVideo />}
+                    onClick={() => setTabValue(2)}
+                  >
+                    📹 Watch Recordings ({recordedSessions})
+                  </ActionButton>
+                )}
               </Stack>
             </Box>
             <IconButton 
@@ -316,7 +373,21 @@ const StudentLiveSessions: React.FC = () => {
       {/* Quick Stats */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={4}>
-          <Card sx={{ textAlign: 'center', p: 2, bgcolor: alpha(theme.palette.error.main, 0.05), border: `1px solid ${alpha(theme.palette.error.main, 0.2)}` }}>
+          <Card 
+            sx={{ 
+              textAlign: 'center', 
+              p: 2, 
+              bgcolor: alpha(theme.palette.error.main, 0.05), 
+              border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`,
+              cursor: liveSessions > 0 ? 'pointer' : 'default',
+              transition: 'all 0.2s ease',
+              '&:hover': liveSessions > 0 ? {
+                transform: 'translateY(-2px)',
+                boxShadow: `0 4px 12px ${alpha(theme.palette.error.main, 0.2)}`
+              } : {}
+            }}
+            onClick={() => liveSessions > 0 && setTabValue(1)}
+          >
             <LiveTv sx={{ fontSize: 40, color: 'error.main', mb: 1 }} />
             <Typography variant="h4" sx={{ fontWeight: 700, color: 'error.main' }}>
               {liveSessions}
@@ -327,7 +398,21 @@ const StudentLiveSessions: React.FC = () => {
           </Card>
         </Grid>
         <Grid item xs={12} sm={4}>
-          <Card sx={{ textAlign: 'center', p: 2, bgcolor: alpha(theme.palette.primary.main, 0.05), border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}` }}>
+          <Card 
+            sx={{ 
+              textAlign: 'center', 
+              p: 2, 
+              bgcolor: alpha(theme.palette.primary.main, 0.05), 
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+              cursor: upcomingSessions > 0 ? 'pointer' : 'default',
+              transition: 'all 0.2s ease',
+              '&:hover': upcomingSessions > 0 ? {
+                transform: 'translateY(-2px)',
+                boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`
+              } : {}
+            }}
+            onClick={() => upcomingSessions > 0 && setTabValue(0)}
+          >
             <Schedule sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
             <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main' }}>
               {upcomingSessions}
@@ -338,7 +423,21 @@ const StudentLiveSessions: React.FC = () => {
           </Card>
         </Grid>
         <Grid item xs={12} sm={4}>
-          <Card sx={{ textAlign: 'center', p: 2, bgcolor: alpha(theme.palette.success.main, 0.05), border: `1px solid ${alpha(theme.palette.success.main, 0.2)}` }}>
+          <Card 
+            sx={{ 
+              textAlign: 'center', 
+              p: 2, 
+              bgcolor: alpha(theme.palette.success.main, 0.05), 
+              border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`,
+              cursor: recordedSessions > 0 ? 'pointer' : 'default',
+              transition: 'all 0.2s ease',
+              '&:hover': recordedSessions > 0 ? {
+                transform: 'translateY(-2px)',
+                boxShadow: `0 4px 12px ${alpha(theme.palette.success.main, 0.2)}`
+              } : {}
+            }}
+            onClick={() => recordedSessions > 0 && setTabValue(2)}
+          >
             <OndemandVideo sx={{ fontSize: 40, color: 'success.main', mb: 1 }} />
             <Typography variant="h4" sx={{ fontWeight: 700, color: 'success.main' }}>
               {recordedSessions}
@@ -346,9 +445,47 @@ const StudentLiveSessions: React.FC = () => {
             <Typography variant="body2" color="text.secondary">
               📹 Recordings
             </Typography>
+            {recordedSessions > 0 && (
+              <Typography variant="caption" color="success.main" sx={{ display: 'block', mt: 0.5, fontWeight: 600 }}>
+                Click to view →
+              </Typography>
+            )}
           </Card>
         </Grid>
       </Grid>
+
+      {/* New Recordings Alert */}
+      {recordedSessions > 0 && tabValue !== 2 && (
+        <Fade in={true}>
+          <Alert 
+            severity="success" 
+            sx={{ 
+              mb: 3, 
+              borderRadius: 2,
+              border: `1px solid ${theme.palette.success.main}`,
+              bgcolor: alpha(theme.palette.success.main, 0.05)
+            }}
+            action={
+              <Button 
+                color="success" 
+                size="small" 
+                onClick={() => setTabValue(2)}
+                sx={{ fontWeight: 600 }}
+              >
+                📹 View Recordings
+              </Button>
+            }
+            icon={<OndemandVideo />}
+          >
+            <Typography variant="body1" sx={{ fontWeight: 600 }}>
+              🎉 New Recordings Available!
+            </Typography>
+            <Typography variant="body2">
+              You have {recordedSessions} recorded session{recordedSessions > 1 ? 's' : ''} ready to watch from your instructors.
+            </Typography>
+          </Alert>
+        </Fade>
+      )}
 
       {error && (
         <Zoom in={!!error}>
@@ -410,6 +547,9 @@ const StudentLiveSessions: React.FC = () => {
                 <MenuItem value="live">🔴 Live Now</MenuItem>
                 <MenuItem value="scheduled">📅 Scheduled</MenuItem>
                 <MenuItem value="ended">📹 Ended</MenuItem>
+                {tabValue === 2 && (
+                  <MenuItem value="recorded">🎬 With Recordings</MenuItem>
+                )}
               </Select>
             </FormControl>
           </Grid>
@@ -425,9 +565,10 @@ const StudentLiveSessions: React.FC = () => {
           sx={{
             '& .MuiTab-root': {
               textTransform: 'none',
-              fontSize: '1.1rem',
+              fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' },
               fontWeight: 600,
               py: 2,
+              px: { xs: 1, sm: 2 },
             },
             '& .MuiTabs-indicator': {
               height: 4,
@@ -438,7 +579,7 @@ const StudentLiveSessions: React.FC = () => {
           <Tab 
             icon={<Badge badgeContent={upcomingSessions} color="primary"><Schedule /></Badge>} 
             iconPosition="start"
-            label="📅 Upcoming Sessions" 
+            label="📅 Upcoming" 
             sx={{ 
               '&.Mui-selected': { 
                 color: 'primary.main',
@@ -460,7 +601,7 @@ const StudentLiveSessions: React.FC = () => {
           <Tab 
             icon={<Badge badgeContent={recordedSessions} color="success"><OndemandVideo /></Badge>} 
             iconPosition="start"
-            label="📹 Past Sessions" 
+            label="📹 Recordings" 
             sx={{ 
               '&.Mui-selected': { 
                 color: 'success.main',
@@ -468,42 +609,188 @@ const StudentLiveSessions: React.FC = () => {
               }
             }}
           />
+          <Tab 
+            icon={<Schedule />} 
+            iconPosition="start"
+            label="📚 All Past" 
+            sx={{ 
+              '&.Mui-selected': { 
+                color: 'info.main',
+                bgcolor: alpha(theme.palette.info.main, 0.05)
+              }
+            }}
+          />
         </Tabs>
       </Paper>
 
       {/* Sessions Grid */}
-      {filteredSessions.length === 0 ? (
-        <Paper sx={{ p: 6, textAlign: 'center', borderRadius: 3, bgcolor: 'grey.50' }}>
-          <Box sx={{ mb: 3 }}>
-            {tabValue === 0 && <Schedule sx={{ fontSize: 80, color: 'primary.main', opacity: 0.7 }} />}
-            {tabValue === 1 && <LiveTv sx={{ fontSize: 80, color: 'error.main', opacity: 0.7 }} />}
-            {tabValue === 2 && <OndemandVideo sx={{ fontSize: 80, color: 'success.main', opacity: 0.7 }} />}
-          </Box>
-          <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
-            {tabValue === 0 && '📅 No upcoming sessions'}
-            {tabValue === 1 && '🔴 No live sessions right now'}
-            {tabValue === 2 && '📹 No past sessions yet'}
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-            {tabValue === 0 && 'Check back later for scheduled sessions from your enrolled courses.'}
-            {tabValue === 1 && 'When instructors start live sessions, they will appear here.'}
-            {tabValue === 2 && 'Completed sessions with recordings will be available here.'}
-          </Typography>
-          <ActionButton
-            variant="outlined"
-            onClick={() => navigate('/dashboard/student/courses')}
-            startIcon={<VideoCall />}
-          >
-            🎓 View My Courses
-          </ActionButton>
-        </Paper>
-      ) : (
-        <Grid container spacing={3}>
-          {filteredSessions.map((session, index) => {
-            const { date, time } = formatDateTime(session.scheduledTime);
-            const isLive = session.status === 'live';
-            const hasRecording = session.status === 'ended' && session.recordingUrl;
+      {(() => {
+        // For recordings tab, combine both types of recordings
+        if (tabValue === 2) {
+          const liveRecordings = sessions.filter(s => s.status === 'ended' && s.recordingUrl);
+          const allRecordings = [...liveRecordings, ...uploadedRecordings];
+          
+          // Filter recordings based on search
+          const filteredRecordings = allRecordings.filter(recording => {
+            const title = recording.title || '';
+            const description = recording.description || '';
+            return title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                   description.toLowerCase().includes(searchTerm.toLowerCase());
+          });
 
+          if (filteredRecordings.length === 0) {
+            return (
+              <Paper sx={{ p: 6, textAlign: 'center', borderRadius: 3, bgcolor: 'grey.50' }}>
+                <Box sx={{ mb: 3 }}>
+                  <OndemandVideo sx={{ fontSize: 80, color: 'success.main', opacity: 0.7 }} />
+                </Box>
+                <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
+                  📹 No recordings available
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                  {recordingsLoading ? 'Loading recordings...' : 'Recorded sessions from your instructors will appear here once available.'}
+                </Typography>
+                {recordingsLoading && <CircularProgress size={24} sx={{ mt: 2 }} />}
+                <ActionButton
+                  variant="outlined"
+                  onClick={() => navigate('/dashboard/student/courses')}
+                  startIcon={<VideoCall />}
+                >
+                  🎓 View My Courses
+                </ActionButton>
+              </Paper>
+            );
+          }
+
+          return (
+            <Grid container spacing={3}>
+              {filteredRecordings.map((recording, index) => {
+                // Check if this is a live session recording or uploaded recording
+                const isLiveSessionRecording = 'status' in recording;
+                
+                return (
+                  <Grid item xs={12} md={6} lg={4} key={recording._id}>
+                    <Zoom in={true} style={{ transitionDelay: `${index * 100}ms` }}>
+                      {isLiveSessionRecording ? (
+                        <RecordingCard
+                          session={recording}
+                          onPlay={handlePlayRecording}
+                          onViewInCourse={(courseId) => navigate(`/dashboard/student/courses/${courseId}/content`)}
+                          showProgress={true}
+                        />
+                      ) : (
+                        // Custom card for uploaded recordings
+                        <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                          <CardContent sx={{ flex: 1 }}>
+                            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 2 }}>
+                              <Chip
+                                label="📹 Uploaded Recording"
+                                color="success"
+                                variant="filled"
+                                sx={{ fontWeight: 600 }}
+                              />
+                            </Stack>
+                            
+                            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                              {recording.title}
+                            </Typography>
+                            
+                            {recording.description && (
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                {recording.description}
+                              </Typography>
+                            )}
+                            
+                            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                              <Avatar sx={{ width: 24, height: 24, bgcolor: 'primary.main' }}>
+                                📚
+                              </Avatar>
+                              <Typography variant="body2" color="text.secondary">
+                                {recording.course?.title || 'Course'}
+                              </Typography>
+                            </Stack>
+                            
+                            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                              <Avatar sx={{ width: 24, height: 24 }}>
+                                <Person sx={{ fontSize: 16 }} />
+                              </Avatar>
+                              <Typography variant="body2" color="text.secondary">
+                                {recording.instructor?.firstName} {recording.instructor?.lastName}
+                              </Typography>
+                            </Stack>
+                            
+                            {recording.duration && (
+                              <Stack direction="row" alignItems="center" spacing={1}>
+                                <Timer sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                <Typography variant="body2" color="text.secondary">
+                                  {recording.duration}
+                                </Typography>
+                              </Stack>
+                            )}
+                          </CardContent>
+                          
+                          <CardActions sx={{ p: 2, pt: 0 }}>
+                            <Button
+                              fullWidth
+                              variant="contained"
+                              startIcon={<PlayArrow />}
+                              onClick={() => {
+                                // Open video in new tab or use a video player
+                                window.open(recording.recordingUrl, '_blank');
+                              }}
+                              sx={{ borderRadius: 2 }}
+                            >
+                              Watch Recording
+                            </Button>
+                          </CardActions>
+                        </Card>
+                      )}
+                    </Zoom>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          );
+        }
+
+        // For other tabs, use the existing filtered sessions logic
+        if (filteredSessions.length === 0) {
+          return (
+            <Paper sx={{ p: 6, textAlign: 'center', borderRadius: 3, bgcolor: 'grey.50' }}>
+              <Box sx={{ mb: 3 }}>
+                {tabValue === 0 && <Schedule sx={{ fontSize: 80, color: 'primary.main', opacity: 0.7 }} />}
+                {tabValue === 1 && <LiveTv sx={{ fontSize: 80, color: 'error.main', opacity: 0.7 }} />}
+                {tabValue === 3 && <Schedule sx={{ fontSize: 80, color: 'info.main', opacity: 0.7 }} />}
+              </Box>
+              <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
+                {tabValue === 0 && '📅 No upcoming sessions'}
+                {tabValue === 1 && '🔴 No live sessions right now'}
+                {tabValue === 3 && '📚 No past sessions yet'}
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                {tabValue === 0 && 'Check back later for scheduled sessions from your enrolled courses.'}
+                {tabValue === 1 && 'When instructors start live sessions, they will appear here.'}
+                {tabValue === 3 && 'Completed sessions will be available here.'}
+              </Typography>
+              <ActionButton
+                variant="outlined"
+                onClick={() => navigate('/dashboard/student/courses')}
+                startIcon={<VideoCall />}
+              >
+                🎓 View My Courses
+              </ActionButton>
+            </Paper>
+          );
+        }
+
+        return (
+          <Grid container spacing={3}>
+            {filteredSessions.map((session, index) => {
+              const { date, time } = formatDateTime(session.scheduledTime);
+              const isLive = session.status === 'live';
+              const hasRecording = session.status === 'ended' && session.recordingUrl;
+
+            // Use regular SessionCard for other tabs
             return (
               <Grid item xs={12} md={6} lg={4} key={session._id}>
                 <Zoom in={true} style={{ transitionDelay: `${index * 100}ms` }}>
@@ -578,6 +865,26 @@ const StudentLiveSessions: React.FC = () => {
                             👥 {session.participants?.length || 0} participants
                           </Typography>
                         </Stack>
+
+                        {/* Recording-specific information */}
+                        {hasRecording && (
+                          <>
+                            <Stack direction="row" alignItems="center" spacing={1}>
+                              <OndemandVideo sx={{ fontSize: 16, color: 'success.main' }} />
+                              <Typography variant="body2" color="success.main" sx={{ fontWeight: 600 }}>
+                                📹 Recording Available
+                              </Typography>
+                            </Stack>
+                            {session.recordingSize && (
+                              <Stack direction="row" alignItems="center" spacing={1}>
+                                <Storage sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                <Typography variant="body2" color="text.secondary">
+                                  💾 {(session.recordingSize / (1024 * 1024)).toFixed(1)} MB
+                                </Typography>
+                              </Stack>
+                            )}
+                          </>
+                        )}
                       </Stack>
 
                       {/* Description */}
@@ -644,15 +951,34 @@ const StudentLiveSessions: React.FC = () => {
                           📅 Starts at {time}
                         </ActionButton>
                       ) : hasRecording ? (
-                        <ActionButton
-                          fullWidth
-                          variant="contained"
-                          color="success"
-                          startIcon={<OndemandVideo />}
-                          onClick={() => navigate(`/dashboard/student/courses/${session.course._id}/content`)}
-                        >
-                          📹 Watch Recording
-                        </ActionButton>
+                        <Stack direction="row" spacing={1} sx={{ width: '100%' }}>
+                          <ActionButton
+                            fullWidth
+                            variant="contained"
+                            color="success"
+                            startIcon={<OndemandVideo />}
+                            onClick={() => handlePlayRecording(session)}
+                            sx={{ 
+                              bgcolor: 'success.main',
+                              '&:hover': { bgcolor: 'success.dark' }
+                            }}
+                          >
+                            📹 Watch Recording
+                          </ActionButton>
+                          <Tooltip title="View in course content">
+                            <IconButton
+                              color="success"
+                              onClick={() => navigate(`/dashboard/student/courses/${session.course._id}/content`)}
+                              sx={{ 
+                                border: 1, 
+                                borderColor: 'success.main',
+                                '&:hover': { bgcolor: alpha(theme.palette.success.main, 0.1) }
+                              }}
+                            >
+                              <MenuBook />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
                       ) : session.status === 'ended' ? (
                         <ActionButton
                           fullWidth
@@ -678,6 +1004,17 @@ const StudentLiveSessions: React.FC = () => {
             );
           })}
         </Grid>
+        );
+      })()}
+
+      {/* Recording Player Dialog */}
+      {selectedRecording && (
+        <RecordingPlayer
+          open={showRecordingPlayer}
+          onClose={handleCloseRecordingPlayer}
+          session={selectedRecording}
+          autoPlay={true}
+        />
       )}
     </Container>
   );

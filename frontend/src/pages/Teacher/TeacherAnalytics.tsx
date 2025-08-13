@@ -41,11 +41,17 @@ import {
   PieChart,
   VideoCall,
   Grade,
-  Person
+  Person,
+  VideoLibrary,
+  PlayArrow,
+  Visibility,
+  Schedule,
+  CloudUpload
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { courseService, ICourse } from '../../services/courseService';
 import { enhancedAssessmentService } from '../../services/enhancedAssessmentService';
+import { recordedSessionService, IRecordedSession } from '../../services/recordedSessionService';
 import { useNavigate } from 'react-router-dom';
 
 interface AnalyticsData {
@@ -53,6 +59,9 @@ interface AnalyticsData {
   totalCourses: number;
   averageRating: number;
   totalRevenue: number;
+  totalRecordedSessions: number;
+  totalVideoViews: number;
+  totalVideoHours: number;
   coursePerformance: {
     courseId: string;
     courseName: string;
@@ -73,6 +82,15 @@ interface AnalyticsData {
     metric: number;
     metricType: 'enrollments' | 'rating' | 'completion';
   }[];
+  recordedSessionsStats: {
+    sessionId: string;
+    title: string;
+    courseName: string;
+    views: number;
+    duration: string;
+    uploadDate: string;
+    videoSize: number;
+  }[];
 }
 
 const TeacherAnalytics: React.FC = () => {
@@ -86,6 +104,7 @@ const TeacherAnalytics: React.FC = () => {
   const [selectedCourse, setSelectedCourse] = useState<string>('');
   const [courseProgressData, setCourseProgressData] = useState<any>(null);
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [recordedSessions, setRecordedSessions] = useState<IRecordedSession[]>([]);
 
   // Load teacher's courses and analytics
   useEffect(() => {
@@ -103,16 +122,32 @@ const TeacherAnalytics: React.FC = () => {
 
         setCourses(coursesResponse.courses);
 
+        // Load teacher's recorded sessions
+        const recordedSessionsResponse = await recordedSessionService.getTeacherRecordedSessions();
+        setRecordedSessions(recordedSessionsResponse.data);
+
         // Calculate analytics data
         const totalStudents = coursesResponse.courses.reduce((sum, course) => sum + (course.enrollmentCount || 0), 0);
         const totalCourses = coursesResponse.courses.length;
         const averageRating = 4.5; // This would come from actual ratings
+        
+        // Calculate recorded sessions metrics
+        const totalRecordedSessions = recordedSessionsResponse.data.length;
+        const totalVideoViews = recordedSessionsResponse.data.reduce((sum, session) => sum + (session.views || 0), 0);
+        const totalVideoHours = recordedSessionsResponse.data.reduce((sum, session) => {
+          const duration = session.duration || '00:00';
+          const [minutes, seconds] = duration.split(':').map(Number);
+          return sum + (minutes + seconds / 60) / 60;
+        }, 0);
 
         setAnalyticsData({
           totalStudents,
           totalCourses,
           averageRating,
           totalRevenue: totalStudents * 50, // Mock revenue calculation
+          totalRecordedSessions,
+          totalVideoViews,
+          totalVideoHours,
           coursePerformance: coursesResponse.courses.map(course => ({
             courseId: course._id,
             courseName: course.title,
@@ -134,6 +169,15 @@ const TeacherAnalytics: React.FC = () => {
             courseName: course.title,
             metric: course.enrollmentCount || 0,
             metricType: 'enrollments'
+          })),
+          recordedSessionsStats: recordedSessionsResponse.data.map(session => ({
+            sessionId: session._id,
+            title: session.title,
+            courseName: session.course?.title || 'Unknown Course',
+            views: session.views || 0,
+            duration: session.duration || '00:00',
+            uploadDate: session.uploadDate,
+            videoSize: session.videoSize || 0
           }))
         });
 
@@ -292,6 +336,176 @@ const TeacherAnalytics: React.FC = () => {
             </Card>
           </Grid>
         </Grid>
+      )}
+
+      {/* Recorded Sessions Analytics */}
+      {analyticsData && (
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12}>
+            <Typography variant="h5" gutterBottom sx={{ mb: 2 }}>
+              📹 Recorded Sessions Analytics
+            </Typography>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center">
+                  <VideoLibrary color="primary" sx={{ mr: 2 }} />
+                  <Box>
+                    <Typography variant="h4">{analyticsData.totalRecordedSessions}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Total Videos
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center">
+                  <Visibility color="success" sx={{ mr: 2 }} />
+                  <Box>
+                    <Typography variant="h4">{analyticsData.totalVideoViews}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Total Views
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center">
+                  <Schedule color="info" sx={{ mr: 2 }} />
+                  <Box>
+                    <Typography variant="h4">{analyticsData.totalVideoHours.toFixed(1)}h</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Content Hours
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center">
+                  <CloudUpload color="warning" sx={{ mr: 2 }} />
+                  <Box>
+                    <Typography variant="h4">
+                      {recordedSessionService.formatFileSize(
+                        analyticsData.recordedSessionsStats.reduce((sum, session) => sum + session.videoSize, 0)
+                      )}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Storage Used
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      )}
+
+      {/* Recorded Sessions Table */}
+      {analyticsData && analyticsData.recordedSessionsStats.length > 0 && (
+        <Card sx={{ mb: 4 }}>
+          <CardContent>
+            <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+              <Typography variant="h6">
+                📊 Recorded Sessions Performance
+              </Typography>
+              <Button
+                variant="outlined"
+                startIcon={<VideoLibrary />}
+                onClick={() => navigate('/dashboard/teacher/course-management')}
+              >
+                Manage Videos
+              </Button>
+            </Box>
+            
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Video Title</TableCell>
+                    <TableCell>Course</TableCell>
+                    <TableCell align="center">Views</TableCell>
+                    <TableCell align="center">Duration</TableCell>
+                    <TableCell align="center">Size</TableCell>
+                    <TableCell align="center">Upload Date</TableCell>
+                    <TableCell align="center">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {analyticsData.recordedSessionsStats
+                    .sort((a, b) => b.views - a.views)
+                    .slice(0, 10)
+                    .map((session) => (
+                    <TableRow key={session.sessionId}>
+                      <TableCell>
+                        <Box display="flex" alignItems="center">
+                          <PlayArrow sx={{ mr: 1, color: 'primary.main' }} />
+                          <Box>
+                            <Typography variant="body2" fontWeight="medium">
+                              {session.title}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={session.courseName} 
+                          size="small" 
+                          variant="outlined"
+                          color="primary"
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        <Box display="flex" alignItems="center" justifyContent="center">
+                          <Visibility sx={{ mr: 0.5, fontSize: 16 }} />
+                          {session.views}
+                        </Box>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Chip 
+                          label={recordedSessionService.formatDuration(session.duration)} 
+                          size="small"
+                          color="info"
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        {recordedSessionService.formatFileSize(session.videoSize)}
+                      </TableCell>
+                      <TableCell align="center">
+                        {recordedSessionService.formatUploadDate(session.uploadDate)}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => navigate(`/dashboard/teacher/recorded-session/${session.sessionId}`)}
+                        >
+                          View Details
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
       )}
 
       {/* Course Progress Details */}

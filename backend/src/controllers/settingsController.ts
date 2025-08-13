@@ -148,8 +148,12 @@ export const getTeacherStudents = asyncHandler(async (req: Request, res: Respons
       course: { $in: courseIds }
     }).populate('user', 'firstName lastName email avatar createdAt lastLogin');
 
-    // Get unique students
-    const uniqueStudentIds = [...new Set(enrollments.map(e => e.user._id.toString()))];
+    // Get unique students - filter out null users
+    const uniqueStudentIds = [...new Set(
+      enrollments
+        .filter(e => e.user && e.user._id) // Filter out enrollments with null/undefined users
+        .map(e => e.user._id.toString())
+    )];
     
     // Get all quiz attempts for these students in teacher's courses
     const quizAttempts = await QuizAttempt.find({

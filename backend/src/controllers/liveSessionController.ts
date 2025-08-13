@@ -192,6 +192,60 @@ export const getSessionsByTeacher = async (req: Request, res: Response, next: Ne
   }
 };
 
+// Get sessions by course (Available to enrolled students and teachers)
+export const getSessionsByCourse = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { courseId } = req.params;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    // Check if user has access to this course
+    if (userRole === 'student') {
+      // Check if student is enrolled in the course
+      const enrollment = await UserProgress.findOne({
+        user: userId,
+        course: courseId
+      });
+
+      if (!enrollment) {
+        res.status(403).json({
+          success: false,
+          error: 'You are not enrolled in this course'
+        });
+        return;
+      }
+    } else if (userRole === 'teacher') {
+      // Check if teacher is the instructor for any session in this course
+      const teacherSession = await LiveSession.findOne({
+        course: courseId,
+        instructor: userId
+      });
+
+      if (!teacherSession) {
+        res.status(403).json({
+          success: false,
+          error: 'You are not authorized to access sessions for this course'
+        });
+        return;
+      }
+    }
+    // Admin users can access any course sessions (no additional check needed)
+
+    // Get all sessions for the course
+    const sessions = await LiveSession.find({ course: courseId })
+      .populate('instructor', 'firstName lastName email')
+      .populate('course', 'title description')
+      .sort({ scheduledTime: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: { sessions }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Get active/live sessions (Admin only)
 export const getActiveSessions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {

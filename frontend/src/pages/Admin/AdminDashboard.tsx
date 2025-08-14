@@ -13,6 +13,7 @@ import AdminSettings from './AdminSettings';
 import SupportFeedback from './SupportFeedback';
 import AdminProfile from './AdminProfile';
 import RecordingsManagement from './RecordingsManagement';
+import AdminLeaderboard from './AdminLeaderboard';
 import {
   Container,
   Grid,
@@ -565,6 +566,7 @@ const AdminDashboard: React.FC = () => {
       <Route path="/students" element={<StudentManagement />} />
       <Route path="/courses" element={<CourseManagement />} />
       <Route path="/analytics" element={<AnalyticsReports />} />
+      <Route path="/leaderboard" element={<AdminLeaderboard />} />
       <Route path="/proctoring" element={<ProctoringMonitoring />} />
       <Route path="/ai-settings" element={<AISettings />} />
       <Route path="/recordings" element={<RecordingsManagement />} />

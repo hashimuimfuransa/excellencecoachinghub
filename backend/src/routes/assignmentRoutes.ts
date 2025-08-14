@@ -1,5 +1,6 @@
 import express from 'express';
 import { auth } from '../middleware/auth';
+import { authorizeRoles } from '../middleware/roleAuth';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { uploadDocument } from '../config/cloudinary';
 import { Assignment, AssignmentSubmission } from '../models/Assignment';
@@ -30,6 +31,30 @@ router.post('/', auth, asyncHandler(createAssignment));
 router.put('/:id', auth, asyncHandler(updateAssignment));
 router.delete('/:id', auth, asyncHandler(deleteAssignment));
 router.get('/:id', auth, asyncHandler(getAssignmentById));
+
+// Admin route to get all assignments
+router.get('/admin/all', auth, authorizeRoles(['admin']), asyncHandler(async (req, res) => {
+  try {
+    const assignments = await Assignment.find({})
+      .populate('course', 'title')
+      .populate('instructor', 'firstName lastName email')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: {
+        assignments,
+        count: assignments.length
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching all assignments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch assignments'
+    });
+  }
+}));
 
 // Course assignments
 router.get('/course/:courseId', auth, asyncHandler(getCourseAssignments));

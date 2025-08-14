@@ -1,5 +1,12 @@
 import { apiService } from './apiService';
 
+export interface DetailedFeedback {
+  questionId: string;
+  isCorrect?: boolean;
+  pointsEarned?: number;
+  feedback?: string;
+}
+
 export interface StudentGrade {
   _id: string;
   studentId: string;
@@ -22,6 +29,12 @@ export interface StudentGrade {
   attempts: number;
   status: 'submitted' | 'graded' | 'pending' | 'late';
   type: 'assessment' | 'assignment';
+  // AI feedback fields
+  aiGraded?: boolean;
+  correctAnswers?: number;
+  incorrectAnswers?: number;
+  totalQuestions?: number;
+  detailedFeedback?: DetailedFeedback[];
 }
 
 export interface LeaderboardEntry {
@@ -84,7 +97,7 @@ class GradesService {
       if (filters.status && filters.status !== 'all') params.append('status', filters.status);
 
       const response = await apiService.get(`${this.baseUrl}/student?${params.toString()}`);
-      return response?.data?.grades || [];
+      return response?.grades || response?.data?.grades || [];
     } catch (error) {
       console.error('Failed to fetch student grades:', error);
       return [];
@@ -94,7 +107,7 @@ class GradesService {
   async getStudentGradesByCourse(courseId: string): Promise<StudentGrade[]> {
     try {
       const response = await apiService.get(`${this.baseUrl}/student/course/${courseId}`);
-      return response?.data?.grades || [];
+      return response?.grades || response?.data?.grades || [];
     } catch (error) {
       console.error('Failed to fetch student grades by course:', error);
       throw error;
@@ -105,16 +118,32 @@ class GradesService {
     try {
       const url = courseId ? `${this.baseUrl}/stats/course/${courseId}` : `${this.baseUrl}/stats`;
       const response = await apiService.get(url);
-      return response?.data?.stats || {
-        averageScore: 0,
-        totalStudents: 0,
-        completedAssignments: 0,
+      return response?.stats || response?.data?.stats || {
+        totalAssessments: 0,
+        completedAssessments: 0,
         totalAssignments: 0,
-        improvementRate: 0
+        completedAssignments: 0,
+        averageGrade: 0,
+        currentRank: 1,
+        totalStudents: 1,
+        improvementTrend: 'stable' as const,
+        strongSubjects: [],
+        improvementAreas: []
       };
     } catch (error) {
       console.error('Failed to fetch course stats:', error);
-      throw error;
+      return {
+        totalAssessments: 0,
+        completedAssessments: 0,
+        totalAssignments: 0,
+        completedAssignments: 0,
+        averageGrade: 0,
+        currentRank: 1,
+        totalStudents: 1,
+        improvementTrend: 'stable' as const,
+        strongSubjects: [],
+        improvementAreas: []
+      };
     }
   }
 
@@ -281,7 +310,7 @@ class GradesService {
       if (filters.limit) params.append('limit', filters.limit.toString());
 
       const response = await apiService.get(`${this.baseUrl}/admin/leaderboard?${params.toString()}`);
-      return response?.data?.leaderboard || [];
+      return response?.leaderboard || response?.data?.leaderboard || [];
     } catch (error) {
       console.error('Failed to fetch admin leaderboard:', error);
       throw error;
@@ -297,7 +326,7 @@ class GradesService {
       if (filters.status && filters.status !== 'all') params.append('status', filters.status);
 
       const response = await apiService.get(`${this.baseUrl}/admin?${params.toString()}`);
-      return response?.data?.grades || [];
+      return response?.grades || response?.data?.grades || [];
     } catch (error) {
       console.error('Failed to fetch admin grades:', error);
       throw error;

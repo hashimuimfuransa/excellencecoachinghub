@@ -93,6 +93,14 @@ router.get(
   assessmentController.getTeacherAssessments
 );
 
+// Admin route to get all assessments
+router.get(
+  '/admin',
+  auth,
+  authorizeRoles(['admin']),
+  assessmentController.getAllAssessments
+);
+
 router.get(
   '/:id',
   auth,
@@ -250,6 +258,16 @@ router.get(
   ],
   validateRequest,
   studentAssessmentController.getSubmissionDetails
+);
+
+// Get assessment result for student
+router.get(
+  '/:id/result',
+  auth,
+  authorizeRoles(['student']),
+  idValidation,
+  validateRequest,
+  studentAssessmentController.getAssessmentResult
 );
 
 // Course-specific routes

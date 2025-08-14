@@ -216,31 +216,39 @@ const GradesAndLeaderboard: React.FC = () => {
         {/* Statistics Cards */}
         {courseStats && (
           <Grid container spacing={3} sx={{ mb: 4 }}>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={6} sm={6} md={3}>
               <Card sx={{ bgcolor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
-                <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                  <EmojiEvents sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
-                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                <CardContent sx={{ textAlign: 'center', py: { xs: 1.5, sm: 2 } }}>
+                  <EmojiEvents sx={{ fontSize: { xs: 32, sm: 40 }, color: 'primary.main', mb: 1 }} />
+                  <Typography variant="h4" sx={{ 
+                    fontWeight: 'bold', 
+                    color: 'primary.main',
+                    fontSize: { xs: '1.5rem', sm: '2.125rem' }
+                  }}>
                     #{courseStats.currentRank}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     Current Rank
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.625rem', sm: '0.75rem' } }}>
                     out of {courseStats.totalStudents} students
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
             
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={6} sm={6} md={3}>
               <Card sx={{ bgcolor: 'success.50', border: '1px solid', borderColor: 'success.200' }}>
-                <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                  <Star sx={{ fontSize: 40, color: 'success.main', mb: 1 }} />
-                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                <CardContent sx={{ textAlign: 'center', py: { xs: 1.5, sm: 2 } }}>
+                  <Star sx={{ fontSize: { xs: 32, sm: 40 }, color: 'success.main', mb: 1 }} />
+                  <Typography variant="h4" sx={{ 
+                    fontWeight: 'bold', 
+                    color: 'success.main',
+                    fontSize: { xs: '1.5rem', sm: '2.125rem' }
+                  }}>
                     {Math.round(courseStats.averageGrade)}%
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     Average Grade
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mt: 1 }}>
@@ -257,14 +265,18 @@ const GradesAndLeaderboard: React.FC = () => {
               </Card>
             </Grid>
             
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={6} sm={6} md={3}>
               <Card sx={{ bgcolor: 'info.50', border: '1px solid', borderColor: 'info.200' }}>
-                <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                  <Quiz sx={{ fontSize: 40, color: 'info.main', mb: 1 }} />
-                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'info.main' }}>
+                <CardContent sx={{ textAlign: 'center', py: { xs: 1.5, sm: 2 } }}>
+                  <Quiz sx={{ fontSize: { xs: 32, sm: 40 }, color: 'info.main', mb: 1 }} />
+                  <Typography variant="h4" sx={{ 
+                    fontWeight: 'bold', 
+                    color: 'info.main',
+                    fontSize: { xs: '1.5rem', sm: '2.125rem' }
+                  }}>
                     {courseStats.completedAssessments}/{courseStats.totalAssessments}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     Assessments
                   </Typography>
                   <LinearProgress
@@ -276,14 +288,18 @@ const GradesAndLeaderboard: React.FC = () => {
               </Card>
             </Grid>
             
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={6} sm={6} md={3}>
               <Card sx={{ bgcolor: 'warning.50', border: '1px solid', borderColor: 'warning.200' }}>
-                <CardContent sx={{ textAlign: 'center', py: 2 }}>
-                  <Assignment sx={{ fontSize: 40, color: 'warning.main', mb: 1 }} />
-                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
+                <CardContent sx={{ textAlign: 'center', py: { xs: 1.5, sm: 2 } }}>
+                  <Assignment sx={{ fontSize: { xs: 32, sm: 40 }, color: 'warning.main', mb: 1 }} />
+                  <Typography variant="h4" sx={{ 
+                    fontWeight: 'bold', 
+                    color: 'warning.main',
+                    fontSize: { xs: '1.5rem', sm: '2.125rem' }
+                  }}>
                     {courseStats.completedAssignments}/{courseStats.totalAssignments}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     Assignments
                   </Typography>
                   <LinearProgress
@@ -387,12 +403,30 @@ const GradesAndLeaderboard: React.FC = () => {
                     }}>
                       <CardContent>
                         {/* Header */}
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                          <Box sx={{ flexGrow: 1 }}>
-                            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'flex-start', 
+                          mb: 2,
+                          flexDirection: { xs: 'column', sm: 'row' },
+                          gap: { xs: 2, sm: 0 }
+                        }}>
+                          <Box sx={{ flexGrow: 1, width: { xs: '100%', sm: 'auto' } }}>
+                            <Typography variant="h6" sx={{ 
+                              fontWeight: 'bold', 
+                              mb: 1,
+                              fontSize: { xs: '1rem', sm: '1.25rem' },
+                              lineHeight: 1.2,
+                              wordBreak: 'break-word'
+                            }}>
                               {grade.assessmentTitle || grade.assignmentTitle}
                             </Typography>
-                            <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                            <Box sx={{ 
+                              display: 'flex', 
+                              gap: 1, 
+                              mb: 1,
+                              flexWrap: 'wrap'
+                            }}>
                               <Chip
                                 icon={grade.type === 'assessment' ? <Quiz /> : <Assignment />}
                                 label={grade.type.charAt(0).toUpperCase() + grade.type.slice(1)}
@@ -407,16 +441,21 @@ const GradesAndLeaderboard: React.FC = () => {
                             </Box>
                           </Box>
                           
-                          <Box sx={{ textAlign: 'right' }}>
+                          <Box sx={{ 
+                            textAlign: { xs: 'left', sm: 'right' },
+                            minWidth: { xs: 'auto', sm: '120px' }
+                          }}>
                             <Typography variant="h4" sx={{ 
                               fontWeight: 'bold', 
-                              color: `${getGradeColor(grade.percentage)}.main` 
+                              color: `${getGradeColor(grade.percentage)}.main`,
+                              fontSize: { xs: '1.75rem', sm: '2.125rem' }
                             }}>
                               {grade.percentage}%
                             </Typography>
                             <Typography variant="h6" sx={{ 
                               color: `${getGradeColor(grade.percentage)}.main`,
-                              fontWeight: 'bold'
+                              fontWeight: 'bold',
+                              fontSize: { xs: '1rem', sm: '1.25rem' }
                             }}>
                               {grade.grade}
                             </Typography>
@@ -425,7 +464,13 @@ const GradesAndLeaderboard: React.FC = () => {
 
                         {/* Score Details */}
                         <Box sx={{ mb: 2 }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Box sx={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            mb: 1,
+                            flexDirection: { xs: 'column', sm: 'row' },
+                            gap: { xs: 0.5, sm: 0 }
+                          }}>
                             <Typography variant="body2" color="text.secondary">
                               Score: {grade.score}/{grade.maxScore}
                             </Typography>
@@ -442,19 +487,25 @@ const GradesAndLeaderboard: React.FC = () => {
                         </Box>
 
                         {/* Metadata */}
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                          <Typography variant="body2" color="text.secondary">
+                        <Box sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          mb: 2,
+                          flexDirection: { xs: 'column', sm: 'row' },
+                          gap: { xs: 0.5, sm: 0 }
+                        }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                             Submitted: {format(new Date(grade.submittedAt), 'MMM dd, yyyy')}
                           </Typography>
                           {grade.gradedAt && (
-                            <Typography variant="body2" color="text.secondary">
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                               Graded: {format(new Date(grade.gradedAt), 'MMM dd, yyyy')}
                             </Typography>
                           )}
                         </Box>
 
                         {/* Feedback */}
-                        {grade.feedback && (
+                        {(grade.feedback || grade.detailedFeedback) && (
                           <Box sx={{ 
                             p: 2, 
                             bgcolor: 'grey.50', 
@@ -462,12 +513,114 @@ const GradesAndLeaderboard: React.FC = () => {
                             border: '1px solid',
                             borderColor: 'grey.200'
                           }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                              Feedback:
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {grade.feedback}
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mr: 1 }}>
+                                Feedback:
+                              </Typography>
+                              {grade.aiGraded && (
+                                <Chip
+                                  icon={<Psychology />}
+                                  label="AI Graded"
+                                  size="small"
+                                  color="info"
+                                  variant="outlined"
+                                />
+                              )}
+                            </Box>
+                            
+                            {/* Overall Feedback */}
+                            {grade.feedback && (
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                {grade.feedback}
+                              </Typography>
+                            )}
+
+                            {/* Performance Summary for Assessments */}
+                            {grade.type === 'assessment' && grade.totalQuestions && (
+                              <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                  Performance Summary:
+                                </Typography>
+                                <Grid container spacing={2}>
+                                  <Grid item xs={4}>
+                                    <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'success.50', borderRadius: 1 }}>
+                                      <Typography variant="h6" sx={{ color: 'success.main', fontWeight: 'bold' }}>
+                                        {grade.correctAnswers || 0}
+                                      </Typography>
+                                      <Typography variant="caption" color="text.secondary">
+                                        Correct
+                                      </Typography>
+                                    </Box>
+                                  </Grid>
+                                  <Grid item xs={4}>
+                                    <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'error.50', borderRadius: 1 }}>
+                                      <Typography variant="h6" sx={{ color: 'error.main', fontWeight: 'bold' }}>
+                                        {grade.incorrectAnswers || 0}
+                                      </Typography>
+                                      <Typography variant="caption" color="text.secondary">
+                                        Incorrect
+                                      </Typography>
+                                    </Box>
+                                  </Grid>
+                                  <Grid item xs={4}>
+                                    <Box sx={{ textAlign: 'center', p: 1, bgcolor: 'info.50', borderRadius: 1 }}>
+                                      <Typography variant="h6" sx={{ color: 'info.main', fontWeight: 'bold' }}>
+                                        {grade.totalQuestions}
+                                      </Typography>
+                                      <Typography variant="caption" color="text.secondary">
+                                        Total
+                                      </Typography>
+                                    </Box>
+                                  </Grid>
+                                </Grid>
+                              </Box>
+                            )}
+
+                            {/* Detailed Question Feedback */}
+                            {grade.detailedFeedback && grade.detailedFeedback.length > 0 && (
+                              <Box>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                  Question-by-Question Feedback:
+                                </Typography>
+                                <Box sx={{ maxHeight: 200, overflowY: 'auto' }}>
+                                  {grade.detailedFeedback.map((feedback, index) => (
+                                    <Box
+                                      key={feedback.questionId}
+                                      sx={{
+                                        p: 1.5,
+                                        mb: 1,
+                                        bgcolor: feedback.isCorrect ? 'success.50' : 'error.50',
+                                        borderRadius: 1,
+                                        border: '1px solid',
+                                        borderColor: feedback.isCorrect ? 'success.200' : 'error.200'
+                                      }}
+                                    >
+                                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>
+                                          Question {index + 1}:
+                                        </Typography>
+                                        <Chip
+                                          label={feedback.isCorrect ? 'Correct' : 'Incorrect'}
+                                          size="small"
+                                          color={feedback.isCorrect ? 'success' : 'error'}
+                                          variant="outlined"
+                                        />
+                                        {feedback.pointsEarned !== undefined && (
+                                          <Typography variant="caption" sx={{ ml: 1 }}>
+                                            ({feedback.pointsEarned} pts)
+                                          </Typography>
+                                        )}
+                                      </Box>
+                                      {feedback.feedback && (
+                                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                                          {feedback.feedback}
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  ))}
+                                </Box>
+                              </Box>
+                            )}
                           </Box>
                         )}
                       </CardContent>
@@ -502,7 +655,7 @@ const GradesAndLeaderboard: React.FC = () => {
                       const isCurrentUser = entry.studentId === user?.id;
                       
                       return (
-                        <Grid item xs={12} sm={4} key={entry.studentId}>
+                        <Grid item xs={12} sm={6} md={4} key={entry.studentId}>
                           <Card sx={{ 
                             textAlign: 'center',
                             bgcolor: isCurrentUser ? 'primary.50' : 'white',
@@ -583,18 +736,18 @@ const GradesAndLeaderboard: React.FC = () => {
 
               {/* Full Leaderboard Table */}
               <Grid item xs={12}>
-                <TableContainer component={Paper}>
-                  <Table>
+                <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+                  <Table sx={{ minWidth: { xs: 600, md: 750 } }}>
                     <TableHead>
                       <TableRow>
-                        <TableCell>Rank</TableCell>
-                        <TableCell>Student</TableCell>
-                        <TableCell align="center">Average Score</TableCell>
-                        <TableCell align="center">Completed</TableCell>
-                        <TableCell align="center">Total Points</TableCell>
-                        <TableCell align="center">Streak</TableCell>
-                        <TableCell align="center">Badges</TableCell>
-                        <TableCell align="center">Trend</TableCell>
+                        <TableCell sx={{ minWidth: 80 }}>Rank</TableCell>
+                        <TableCell sx={{ minWidth: 150 }}>Student</TableCell>
+                        <TableCell align="center" sx={{ minWidth: 100 }}>Score</TableCell>
+                        <TableCell align="center" sx={{ minWidth: 90, display: { xs: 'none', sm: 'table-cell' } }}>Completed</TableCell>
+                        <TableCell align="center" sx={{ minWidth: 90 }}>Points</TableCell>
+                        <TableCell align="center" sx={{ minWidth: 80, display: { xs: 'none', md: 'table-cell' } }}>Streak</TableCell>
+                        <TableCell align="center" sx={{ minWidth: 80, display: { xs: 'none', md: 'table-cell' } }}>Badges</TableCell>
+                        <TableCell align="center" sx={{ minWidth: 80, display: { xs: 'none', sm: 'table-cell' } }}>Trend</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -642,7 +795,7 @@ const GradesAndLeaderboard: React.FC = () => {
                               </Typography>
                             </TableCell>
                             
-                            <TableCell align="center">
+                            <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                               <Typography variant="body2">
                                 {entry.completedAssessments + entry.completedAssignments} items
                               </Typography>
@@ -657,7 +810,7 @@ const GradesAndLeaderboard: React.FC = () => {
                               />
                             </TableCell>
                             
-                            <TableCell align="center">
+                            <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <Celebration sx={{ fontSize: 16, mr: 0.5, color: 'warning.main' }} />
                                 <Typography variant="body2">
@@ -666,13 +819,13 @@ const GradesAndLeaderboard: React.FC = () => {
                               </Box>
                             </TableCell>
                             
-                            <TableCell align="center">
+                            <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                               <Badge badgeContent={entry.badges.length} color="primary">
                                 <EmojiEvents color="warning" />
                               </Badge>
                             </TableCell>
                             
-                            <TableCell align="center">
+                            <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 {entry.improvement > 0 ? (
                                   <>

@@ -12,6 +12,20 @@ export class AIService {
     this.model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
   }
 
+  // Helper function to extract JSON from AI responses that might be wrapped in markdown
+  private extractJsonFromResponse(text: string): any {
+    let jsonText = text.trim();
+    
+    // Remove markdown code blocks if present
+    if (jsonText.startsWith('```json') && jsonText.endsWith('```')) {
+      jsonText = jsonText.slice(7, -3).trim();
+    } else if (jsonText.startsWith('```') && jsonText.endsWith('```')) {
+      jsonText = jsonText.slice(3, -3).trim();
+    }
+    
+    return JSON.parse(jsonText);
+  }
+
   // Generate quiz questions from course content
   async generateQuizQuestions(
     courseContent: string,
@@ -46,7 +60,7 @@ export class AIService {
       
       // Parse JSON response
       try {
-        const questions = JSON.parse(text);
+        const questions = this.extractJsonFromResponse(text);
         return Array.isArray(questions) ? questions : [];
       } catch (parseError) {
         console.error('Failed to parse AI response as JSON:', parseError);
@@ -93,7 +107,7 @@ export class AIService {
       const text = response.text();
       
       try {
-        return JSON.parse(text);
+        return this.extractJsonFromResponse(text);
       } catch (parseError) {
         console.error('Failed to parse grading response:', parseError);
         return {
@@ -148,7 +162,7 @@ export class AIService {
       const text = response.text();
       
       try {
-        return JSON.parse(text);
+        return this.extractJsonFromResponse(text);
       } catch (parseError) {
         console.error('Failed to parse recommendations:', parseError);
         return {
@@ -209,7 +223,7 @@ export class AIService {
       const text = response.text();
       
       try {
-        return JSON.parse(text);
+        return this.extractJsonFromResponse(text);
       } catch (parseError) {
         console.error('Failed to parse performance analysis:', parseError);
         return {
@@ -273,7 +287,7 @@ export class AIService {
       const text = response.text();
       
       try {
-        return JSON.parse(text);
+        return this.extractJsonFromResponse(text);
       } catch (parseError) {
         console.error('Failed to parse course content:', parseError);
         return {
@@ -296,8 +310,9 @@ export class AIService {
     maxPoints: number;
     rubric?: string;
   }): Promise<{ score: number; feedback: string; confidence: number }> {
+    const { question, correctAnswer, studentAnswer, maxPoints, rubric } = params;
+    
     try {
-      const { question, correctAnswer, studentAnswer, maxPoints, rubric } = params;
 
       const prompt = `
         You are an expert academic grader. Grade this individual answer.
@@ -337,7 +352,7 @@ export class AIService {
       const text = response.text();
 
       try {
-        const gradeResult = JSON.parse(text);
+        const gradeResult = this.extractJsonFromResponse(text);
         
         // Validate and constrain values
         const score = Math.min(Math.max(gradeResult.score || 0, 0), maxPoints);
@@ -378,11 +393,54 @@ export class AIService {
     } catch (error) {
       console.error('AI answer grading failed:', error);
       
-      // Return minimal score for any attempt
+      // Check if it's a service overload error
+      const isServiceOverload = error.message && error.message.includes('overloaded');
+      
+      // Enhanced fallback grading logic
       const hasAnswer = studentAnswer && studentAnswer.trim().length > 0;
+      
+      if (hasAnswer) {
+        // Simple keyword matching for fallback
+        const studentText = studentAnswer.toLowerCase().trim();
+        const correctText = correctAnswer.toLowerCase().trim();
+        
+        let fallbackScore = 0;
+        
+        // Basic similarity check
+        if (studentText === correctText) {
+          fallbackScore = maxPoints; // Perfect match
+        } else if (studentText.includes(correctText) || correctText.includes(studentText)) {
+          fallbackScore = Math.round(maxPoints * 0.8); // Good match
+        } else {
+          // Keyword matching
+          const correctWords = correctText.split(/\s+/).filter(word => word.length > 2);
+          const studentWords = studentText.split(/\s+/);
+          const matchingWords = correctWords.filter(word => 
+            studentWords.some(sWord => sWord.includes(word) || word.includes(sWord))
+          );
+          
+          if (matchingWords.length > 0) {
+            const matchRatio = matchingWords.length / correctWords.length;
+            fallbackScore = Math.round(maxPoints * matchRatio * 0.6); // Conservative scoring
+          } else {
+            fallbackScore = Math.round(maxPoints * 0.2); // Minimal credit for attempt
+          }
+        }
+        
+        const feedback = isServiceOverload 
+          ? 'AI grading service temporarily unavailable. Answer evaluated using basic matching. Please review with instructor for detailed feedback.'
+          : 'Answer submitted. Manual review recommended due to grading service error.';
+        
+        return {
+          score: fallbackScore,
+          feedback,
+          confidence: 0.3
+        };
+      }
+      
       return {
-        score: hasAnswer ? Math.round(maxPoints * 0.3) : 0,
-        feedback: hasAnswer ? 'Answer submitted. Manual review recommended.' : 'No answer provided.',
+        score: 0,
+        feedback: 'No answer provided.',
         confidence: 0.2
       };
     }
@@ -442,7 +500,7 @@ export class AIService {
             try {
               const result = await this.model.generateContent(shortAnswerPrompt);
               const response = await result.response;
-              const gradeResult = JSON.parse(response.text());
+              const gradeResult = this.extractJsonFromResponse(response.text());
 
               isCorrect = gradeResult.isCorrect;
               pointsEarned = Math.min(gradeResult.pointsEarned, question.points);
@@ -641,7 +699,7 @@ export class AIService {
       const text = response.text();
 
       try {
-        const gradeResult = JSON.parse(text);
+        const gradeResult = this.extractJsonFromResponse(text);
         
         // Validate score is within bounds
         const score = Math.min(Math.max(gradeResult.score || 0, 0), maxPoints);
@@ -708,7 +766,7 @@ export class AIService {
 
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
-      const questions = JSON.parse(response.text());
+      const questions = this.extractJsonFromResponse(response.text());
 
       return questions.map((q: any, index: number) => ({
         id: `q_${Date.now()}_${index}`,
@@ -1036,7 +1094,7 @@ Please try again in a moment - I should be back to normal soon!`;
 
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
-      return JSON.parse(response.text());
+      return this.extractJsonFromResponse(response.text());
     } catch (error) {
       console.error('Failed to generate quiz from content:', error);
       return {
@@ -1296,14 +1354,20 @@ Please try again in a moment - I should be back to normal soon!`;
       const text = response.text();
       
       try {
-        // Clean the response text to extract JSON
-        const jsonMatch = text.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-          const questions = JSON.parse(jsonMatch[0]);
+        // Try to extract JSON using the helper function first
+        try {
+          const questions = this.extractJsonFromResponse(text);
           return Array.isArray(questions) ? questions : [];
-        } else {
-          console.error('No JSON array found in AI response');
-          return [];
+        } catch (firstError) {
+          // Fallback to regex matching for array extraction
+          const jsonMatch = text.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            const questions = JSON.parse(jsonMatch[0]);
+            return Array.isArray(questions) ? questions : [];
+          } else {
+            console.error('No JSON array found in AI response');
+            return [];
+          }
         }
       } catch (parseError) {
         console.error('Failed to parse AI response as JSON:', parseError);
@@ -1405,37 +1469,43 @@ Please try again in a moment - I should be back to normal soon!`;
       const text = response.text();
       
       try {
-        // Clean the response text to extract JSON
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const quizData = JSON.parse(jsonMatch[0]);
-          
-          // Ensure questions have proper IDs and structure
-          const questions = quizData.questions.map((q: any, index: number) => ({
-            id: q.id || `q${index + 1}`,
-            question: q.question,
-            type: q.type,
-            options: q.options,
-            correctAnswer: q.correctAnswer,
-            explanation: q.explanation,
-            difficulty: q.difficulty || difficulty,
-            points: q.points || 10
-          }));
-          
-          const totalPoints = questions.reduce((sum: number, q: any) => sum + q.points, 0);
-          
-          return {
-            id: `quiz_${params.sectionId}_${Date.now()}`,
-            sectionId: params.sectionId,
-            title: `Quiz: ${params.sectionTitle}`,
-            questions,
-            totalQuestions: questions.length,
-            totalPoints,
-            estimatedTime: Math.max(5, questions.length * 2) // 2 minutes per question, minimum 5 minutes
-          };
-        } else {
-          throw new Error('No valid JSON found in AI response');
+        // Try to extract JSON using the helper function first
+        let quizData;
+        try {
+          quizData = this.extractJsonFromResponse(text);
+        } catch (firstError) {
+          // Fallback to regex matching for object extraction
+          const jsonMatch = text.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            quizData = JSON.parse(jsonMatch[0]);
+          } else {
+            throw new Error('No JSON object found in AI response');
+          }
         }
+        
+        // Ensure questions have proper IDs and structure
+        const questions = quizData.questions.map((q: any, index: number) => ({
+          id: q.id || `q${index + 1}`,
+          question: q.question,
+          type: q.type,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          explanation: q.explanation,
+          difficulty: q.difficulty || difficulty,
+          points: q.points || 10
+        }));
+        
+        const totalPoints = questions.reduce((sum: number, q: any) => sum + q.points, 0);
+        
+        return {
+          id: `quiz_${params.sectionId}_${Date.now()}`,
+          sectionId: params.sectionId,
+          title: `Quiz: ${params.sectionTitle}`,
+          questions,
+          totalQuestions: questions.length,
+          totalPoints,
+          estimatedTime: Math.max(5, questions.length * 2) // 2 minutes per question, minimum 5 minutes
+        };
       } catch (parseError) {
         console.error('Failed to parse AI quiz response:', parseError);
         console.error('AI Response:', text);
@@ -1596,15 +1666,21 @@ Please try again in a moment - I should be back to normal soon!`;
             const response = await result.response;
             const text = response.text();
             
-            const jsonMatch = text.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              const evaluation = JSON.parse(jsonMatch[0]);
-              isCorrect = evaluation.isCorrect;
-              pointsEarned = Math.min(Math.max(0, evaluation.pointsEarned), pointsPossible);
-              feedback = evaluation.feedback;
-            } else {
-              throw new Error('No JSON found in evaluation response');
+            let evaluation;
+            try {
+              evaluation = this.extractJsonFromResponse(text);
+            } catch (firstError) {
+              // Fallback to regex matching for object extraction
+              const jsonMatch = text.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                evaluation = JSON.parse(jsonMatch[0]);
+              } else {
+                throw new Error('No JSON found in evaluation response');
+              }
             }
+            isCorrect = evaluation.isCorrect;
+            pointsEarned = Math.min(Math.max(0, evaluation.pointsEarned), pointsPossible);
+            feedback = evaluation.feedback;
           } catch (aiError) {
             console.error('AI evaluation failed for short answer:', aiError);
             // Fallback: simple keyword matching

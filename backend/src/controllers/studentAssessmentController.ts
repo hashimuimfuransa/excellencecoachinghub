@@ -498,7 +498,14 @@ export const submitAssessmentDirect = async (req: Request, res: Response, next: 
     }
 
     // Check if assessment is published
+    console.log('📋 Assessment status check:', {
+      isPublished: assessment.isPublished,
+      status: assessment.status,
+      title: assessment.title
+    });
+    
     if (!assessment.isPublished || assessment.status !== 'published') {
+      console.log('❌ Assessment not available for submission');
       res.status(403).json({
         success: false,
         error: 'Assessment is not available for submission'
@@ -513,7 +520,14 @@ export const submitAssessmentDirect = async (req: Request, res: Response, next: 
       course: assessment.course._id
     });
 
+    console.log('👤 Enrollment check:', {
+      studentId,
+      courseId: assessment.course._id,
+      enrollmentFound: !!enrollment
+    });
+
     if (!enrollment) {
+      console.log('❌ Student not enrolled in course');
       res.status(403).json({
         success: false,
         error: 'You are not enrolled in this course'
@@ -522,7 +536,14 @@ export const submitAssessmentDirect = async (req: Request, res: Response, next: 
     }
 
     // Check if due date has passed
+    console.log('📅 Due date check:', {
+      dueDate: assessment.dueDate,
+      currentDate: new Date(),
+      isPastDue: assessment.dueDate && new Date() > assessment.dueDate
+    });
+    
     if (assessment.dueDate && new Date() > assessment.dueDate) {
+      console.log('❌ Assessment deadline has passed');
       res.status(403).json({
         success: false,
         error: 'Assessment submission deadline has passed'
@@ -537,7 +558,14 @@ export const submitAssessmentDirect = async (req: Request, res: Response, next: 
       status: { $in: [SubmissionStatus.SUBMITTED, SubmissionStatus.GRADED] }
     });
 
+    console.log('🔄 Attempts check:', {
+      maxAttempts: assessment.attempts,
+      existingAttempts,
+      canSubmit: !assessment.attempts || existingAttempts < assessment.attempts
+    });
+
     if (assessment.attempts && existingAttempts >= assessment.attempts) {
+      console.log('❌ Maximum attempts exceeded');
       res.status(403).json({
         success: false,
         error: `Maximum attempts (${assessment.attempts}) exceeded`
@@ -550,7 +578,7 @@ export const submitAssessmentDirect = async (req: Request, res: Response, next: 
       assessment: assessmentId,
       student: studentId,
       course: assessment.course._id,
-      answers: answers || [],
+      answers: [], // Will be populated after grading
       timeSpent: timeSpent || 0,
       status: SubmissionStatus.SUBMITTED,
       submittedAt: new Date(),
@@ -571,14 +599,15 @@ export const submitAssessmentDirect = async (req: Request, res: Response, next: 
 
       maxScore += question.points || 1;
 
-      if (!studentAnswer) {
-        // No answer provided
+      if (!studentAnswer || !studentAnswer.answer || studentAnswer.answer.toString().trim() === '') {
+        // No answer provided or empty answer
         gradedAnswers.push({
           questionId: question._id,
           answer: '',
           isCorrect: false,
           pointsEarned: 0,
-          feedback: 'No answer provided'
+          feedback: 'No answer provided',
+          timeSpent: studentAnswer?.timeSpent || 0
         });
         continue;
       }
@@ -625,11 +654,11 @@ export const submitAssessmentDirect = async (req: Request, res: Response, next: 
       totalScore += score;
       gradedAnswers.push({
         questionId: question._id,
-        studentAnswer: studentAnswer.answer || studentAnswer.text || '',
+        answer: studentAnswer.answer || studentAnswer.text || '',
         isCorrect,
-        score,
-        maxScore: question.points || 1,
-        feedback
+        pointsEarned: score,
+        feedback,
+        timeSpent: studentAnswer.timeSpent || 0
       });
     }
 
@@ -639,12 +668,11 @@ export const submitAssessmentDirect = async (req: Request, res: Response, next: 
 
     // Update submission with grading results
     submission.score = totalScore;
-    submission.maxScore = maxScore;
     submission.percentage = percentage;
-    submission.passed = passed;
     submission.status = SubmissionStatus.GRADED;
     submission.gradedAt = new Date();
-    submission.gradedBy = 'AI_SYSTEM';
+    submission.gradedBy = null; // AI grading - no specific user
+    submission.aiGraded = true;
     submission.answers = gradedAnswers;
 
     // Generate overall feedback
@@ -673,40 +701,46 @@ export const submitAssessmentDirect = async (req: Request, res: Response, next: 
       });
 
       if (progress) {
-        // Update assessment completion
-        const assessmentProgress = progress.assessments.find(
-          (a: any) => a.assessment.toString() === assessmentId
-        );
+        // Update basic progress fields
+        progress.lastAccessed = new Date();
+        progress.lastActivityDate = new Date();
+        progress.totalTimeSpent += timeSpent || 0;
 
-        if (assessmentProgress) {
-          assessmentProgress.completed = true;
-          assessmentProgress.score = totalScore;
-          assessmentProgress.maxScore = maxScore;
-          assessmentProgress.percentage = percentage;
-          assessmentProgress.passed = passed;
-          assessmentProgress.completedAt = new Date();
-        } else {
-          progress.assessments.push({
-            assessment: assessmentId,
-            completed: true,
-            score: totalScore,
-            maxScore: maxScore,
-            percentage: percentage,
-            passed: passed,
-            completedAt: new Date()
-          });
+        // Add points based on score
+        if (passed) {
+          progress.totalPoints += totalScore;
         }
 
-        // Recalculate overall progress
-        const completedAssessments = progress.assessments.filter((a: any) => a.completed);
-        progress.assessmentsCompleted = completedAssessments.length;
-        
-        if (completedAssessments.length > 0) {
-          const avgScore = completedAssessments.reduce((sum: number, a: any) => sum + (a.percentage || 0), 0) / completedAssessments.length;
-          progress.averageScore = avgScore;
+        // Update streak if this is a new day
+        const today = new Date().toDateString();
+        const lastActivity = progress.lastActivityDate.toDateString();
+        if (today !== lastActivity) {
+          progress.streakDays += 1;
         }
 
         await progress.save();
+        console.log('✅ User progress updated successfully');
+      } else {
+        // Create new progress record if it doesn't exist
+        const newProgress = new UserProgress({
+          user: studentId,
+          course: assessment.course._id,
+          completedLessons: [],
+          completedQuizzes: [],
+          totalTimeSpent: timeSpent || 0,
+          progressPercentage: 0,
+          lastAccessed: new Date(),
+          badges: [],
+          totalPoints: passed ? totalScore : 0,
+          streakDays: 1,
+          lastActivityDate: new Date(),
+          enrollmentDate: new Date(),
+          isCompleted: false,
+          certificateIssued: false
+        });
+        
+        await newProgress.save();
+        console.log('✅ New user progress created successfully');
       }
     } catch (progressError) {
       console.error('Error updating user progress:', progressError);
@@ -738,6 +772,84 @@ export const submitAssessmentDirect = async (req: Request, res: Response, next: 
   }
 };
 
+// Get assessment result for a student
+export const getAssessmentResult = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id: assessmentId } = req.params;
+    const studentId = req.user?.id;
+
+    if (!studentId) {
+      res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+      return;
+    }
+
+    // Find the most recent submission for this assessment by this student
+    const submission = await AssessmentSubmission.findOne({
+      assessment: assessmentId,
+      student: studentId,
+      status: { $in: ['submitted', 'graded'] } // Include both submitted and graded submissions
+    })
+    .populate('assessment', 'title type totalPoints passingScore timeLimit')
+    .sort({ submittedAt: -1 }); // Get the most recent submission
+
+    if (!submission) {
+      res.status(404).json({
+        success: false,
+        message: 'No completed assessment submission found'
+      });
+      return;
+    }
+
+    // Calculate results
+    const totalScore = submission.answers.reduce((sum, answer) => sum + (answer.pointsEarned || 0), 0);
+    const maxScore = submission.assessment.totalPoints || submission.answers.reduce((sum, answer) => sum + (answer.pointsEarned || 0), 0);
+    const percentage = maxScore > 0 ? (totalScore / maxScore) * 100 : 0;
+    const passed = percentage >= (submission.assessment.passingScore || 60);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        assessment: {
+          _id: submission.assessment._id,
+          title: submission.assessment.title,
+          type: submission.assessment.type,
+          totalPoints: submission.assessment.totalPoints,
+          passingScore: submission.assessment.passingScore,
+          timeLimit: submission.assessment.timeLimit
+        },
+        result: {
+          submissionId: submission._id,
+          score: totalScore,
+          maxScore: maxScore,
+          percentage: Math.round(percentage * 10) / 10, // Round to 1 decimal place
+          passed: passed,
+          status: submission.status,
+          submittedAt: submission.submittedAt,
+          gradedAt: submission.gradedAt,
+          gradedBy: submission.gradedBy,
+          feedback: submission.feedback,
+          timeSpent: submission.timeSpent,
+          answers: submission.answers.map(answer => ({
+            questionId: answer.questionId,
+            answer: answer.answer,
+            isCorrect: answer.isCorrect,
+            pointsEarned: answer.pointsEarned,
+            feedback: answer.feedback,
+            timeSpent: answer.timeSpent
+          }))
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in getAssessmentResult:', error);
+    next(error);
+  }
+};
+
 export default {
   getStudentAssessments,
   startAssessment,
@@ -746,5 +858,6 @@ export default {
   submitAssessmentDirect,
   getStudentSubmissions,
   getSubmissionDetails,
-  getStudentCourseAttempts
+  getStudentCourseAttempts,
+  getAssessmentResult
 };

@@ -53,7 +53,7 @@ export interface IAssessmentSubmissionDocument extends Document {
   // Instance methods
   calculateScore(): { score: number; percentage: number };
   submit(): Promise<IAssessmentSubmissionDocument>;
-  gradeSubmission(graderId: string, isAI?: boolean): Promise<IAssessmentSubmissionDocument>;
+  gradeSubmission(graderId: string | null, isAI?: boolean): Promise<IAssessmentSubmissionDocument>;
   applyLatePenalty(penalty: number): void;
   canResubmit(): boolean;
 }
@@ -238,13 +238,13 @@ assessmentSubmissionSchema.methods.submit = async function(): Promise<IAssessmen
 };
 
 // Instance method to grade assessment
-assessmentSubmissionSchema.methods.gradeSubmission = async function(graderId: string, isAI: boolean = false): Promise<IAssessmentSubmissionDocument> {
+assessmentSubmissionSchema.methods.gradeSubmission = async function(graderId: string | null, isAI: boolean = false): Promise<IAssessmentSubmissionDocument> {
   const { score, percentage } = this.calculateScore();
   
   this.score = score;
   this.percentage = percentage;
   this.status = SubmissionStatus.GRADED;
-  this.gradedBy = graderId;
+  this.gradedBy = graderId ? new mongoose.Types.ObjectId(graderId) : null;
   this.gradedAt = new Date();
   this.aiGraded = isAI;
   

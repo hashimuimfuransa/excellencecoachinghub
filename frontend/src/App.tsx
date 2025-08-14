@@ -80,7 +80,7 @@ import ProctoringDashboard from './pages/Admin/ProctoringDashboard';
 import GradesAndLeaderboard from './pages/Student/GradesAndLeaderboard';
 import StudentLeaderboard from './pages/Student/StudentLeaderboard';
 import TeacherGradesLeaderboard from './pages/Teacher/TeacherGradesLeaderboard';
-import AdminLeaderboard from './pages/Admin/AdminLeaderboard';
+
 
 // Import hooks
 import { useAuth } from './hooks/useAuth';
@@ -183,14 +183,7 @@ const App: React.FC = () => {
           }
         />
         
-        <Route
-          path="admin/leaderboard"
-          element={
-            <ProtectedRoute requiredRole={UserRole.ADMIN}>
-              <AdminLeaderboard />
-            </ProtectedRoute>
-          }
-        />
+
 
         <Route
           path="teacher"

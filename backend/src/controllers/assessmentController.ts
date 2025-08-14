@@ -241,6 +241,56 @@ export const getTeacherAssessments = async (req: Request, res: Response, next: N
   }
 };
 
+// Get all assessments (Admin only)
+export const getAllAssessments = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const type = req.query.type as string;
+    const courseId = req.query.courseId as string;
+    const status = req.query.status as string;
+
+    // Build filter
+    const filter: any = {};
+    if (type && type !== 'all') {
+      filter.type = type;
+    }
+    if (courseId) {
+      filter.course = courseId;
+    }
+    if (status && status !== 'all') {
+      filter.status = status;
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [assessments, total] = await Promise.all([
+      Assessment.find(filter)
+        .populate('course', 'title')
+        .populate('instructor', 'firstName lastName email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Assessment.countDocuments(filter)
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        assessments,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+          itemsPerPage: limit
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Get assessment by ID
 export const getAssessmentById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -816,6 +866,7 @@ export const getCourseAssessments = async (req: Request, res: Response, next: Ne
 export default {
   createAssessment,
   getTeacherAssessments,
+  getAllAssessments,
   getAssessmentById,
   updateAssessment,
   deleteAssessment,

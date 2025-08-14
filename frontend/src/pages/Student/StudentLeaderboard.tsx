@@ -42,6 +42,7 @@ import {
   EmojiEvents,
   TrendingUp,
   TrendingDown,
+  TrendingFlat,
   School,
   Assignment,
   Quiz,
@@ -962,7 +963,7 @@ const StudentLeaderboard: React.FC = () => {
           {/* Course Leaderboards Tab */}
           <TabPanel value={tabValue} index={1}>
             <Box sx={{ mb: 3 }}>
-              <FormControl size="small" sx={{ minWidth: 300 }}>
+              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 300 } }}>
                 <InputLabel>Select Course</InputLabel>
                 <Select
                   value={selectedCourse}

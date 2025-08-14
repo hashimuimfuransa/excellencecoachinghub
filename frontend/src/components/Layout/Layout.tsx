@@ -172,7 +172,7 @@ const Layout: React.FC = () => {
         { text: 'Course Management', icon: <School />, path: '/dashboard/admin/courses' },
         { text: 'Recordings Management', icon: <VideoLibrary />, path: '/dashboard/admin/recordings' },
         { text: 'Analytics & Reports', icon: <Analytics />, path: '/dashboard/admin/analytics' },
-        { text: 'System Leaderboard', icon: <EmojiEvents />, path: '/admin/leaderboard' },
+        { text: 'System Leaderboard', icon: <EmojiEvents />, path: '/dashboard/admin/leaderboard' },
         { text: 'Proctoring & Monitoring', icon: <Security />, path: '/dashboard/admin/proctoring' },
         { text: 'AI Settings', icon: <Psychology />, path: '/dashboard/admin/ai-settings' },
         { text: 'Admin Settings', icon: <Settings />, path: '/dashboard/admin/settings' },

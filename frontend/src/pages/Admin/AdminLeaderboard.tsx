@@ -92,6 +92,7 @@ import {
   GetApp,
   Print,
   Send,
+  PictureAsPdf,
   Comment,
   PersonAdd,
   Class,
@@ -304,9 +305,209 @@ const AdminLeaderboard: React.FC = () => {
     setDetailsDialogOpen(true);
   };
 
-  // Export leaderboard
+  // Export leaderboard to PDF
   const handleExportLeaderboard = () => {
-    console.log('Exporting leaderboard...');
+    const currentData = getCurrentLeaderboardData();
+    if (currentData.length === 0) {
+      setError('No data available to export');
+      return;
+    }
+
+    try {
+      // Create PDF content
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        setError('Please allow popups to download the PDF');
+        return;
+      }
+
+      const currentDate = new Date().toLocaleDateString();
+      const title = getExportTitle();
+      
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>${title}</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 20px; 
+              color: #333;
+            }
+            .header { 
+              text-align: center; 
+              margin-bottom: 30px; 
+              border-bottom: 2px solid #1976d2;
+              padding-bottom: 20px;
+            }
+            .title { 
+              font-size: 24px; 
+              font-weight: bold; 
+              color: #1976d2;
+              margin-bottom: 10px;
+            }
+            .subtitle { 
+              font-size: 16px; 
+              color: #666;
+              margin-bottom: 5px;
+            }
+            .date { 
+              font-size: 14px; 
+              color: #999;
+            }
+            table { 
+              width: 100%; 
+              border-collapse: collapse; 
+              margin-top: 20px;
+            }
+            th, td { 
+              border: 1px solid #ddd; 
+              padding: 12px; 
+              text-align: left;
+            }
+            th { 
+              background-color: #f5f5f5; 
+              font-weight: bold;
+              color: #1976d2;
+            }
+            .rank-cell { 
+              text-align: center; 
+              font-weight: bold;
+              font-size: 18px;
+            }
+            .rank-1 { color: #ffd700; }
+            .rank-2 { color: #c0c0c0; }
+            .rank-3 { color: #cd7f32; }
+            .student-name { 
+              font-weight: bold;
+              color: #333;
+            }
+            .score { 
+              text-align: center;
+              font-weight: bold;
+            }
+            .high-score { color: #4caf50; }
+            .medium-score { color: #ff9800; }
+            .low-score { color: #f44336; }
+            .footer {
+              margin-top: 30px;
+              text-align: center;
+              font-size: 12px;
+              color: #999;
+              border-top: 1px solid #ddd;
+              padding-top: 20px;
+            }
+            @media print {
+              body { margin: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="title">Excellence Coaching Hub</div>
+            <div class="subtitle">${title}</div>
+            <div class="date">Generated on: ${currentDate}</div>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Student Name</th>
+                <th>Email</th>
+                <th>Total Points</th>
+                <th>Average Score</th>
+                <th>Assessments</th>
+                <th>Assignments</th>
+                <th>Improvement</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${currentData.map(entry => `
+                <tr>
+                  <td class="rank-cell rank-${entry.rank <= 3 ? entry.rank : 'other'}">
+                    ${entry.rank <= 3 ? (entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : '🥉') : ''} #${entry.rank}
+                  </td>
+                  <td class="student-name">${entry.studentName}</td>
+                  <td>${entry.studentEmail}</td>
+                  <td class="score ${entry.totalPoints >= 80 ? 'high-score' : entry.totalPoints >= 60 ? 'medium-score' : 'low-score'}">
+                    ${entry.totalPoints}
+                  </td>
+                  <td class="score ${entry.averageScore >= 80 ? 'high-score' : entry.averageScore >= 60 ? 'medium-score' : 'low-score'}">
+                    ${entry.averageScore.toFixed(1)}%
+                  </td>
+                  <td class="score">${entry.completedAssessments}</td>
+                  <td class="score">${entry.completedAssignments}</td>
+                  <td class="score ${entry.improvement > 0 ? 'high-score' : entry.improvement < 0 ? 'low-score' : ''}">
+                    ${entry.improvement > 0 ? '+' : ''}${entry.improvement}%
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <div class="footer">
+            <p>Total Students: ${currentData.length}</p>
+            <p>This report was generated automatically by Excellence Coaching Hub</p>
+          </div>
+          
+          <div class="no-print" style="margin-top: 20px; text-align: center;">
+            <button onclick="window.print()" style="padding: 10px 20px; background: #1976d2; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;">
+              Print PDF
+            </button>
+            <button onclick="window.close()" style="padding: 10px 20px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer;">
+              Close
+            </button>
+          </div>
+        </body>
+        </html>
+      `;
+
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      
+      setSuccess('PDF export window opened. Use the print dialog to save as PDF.');
+    } catch (err: any) {
+      console.error('Failed to export PDF:', err);
+      setError('Failed to export PDF. Please try again.');
+    }
+  };
+
+  // Get current leaderboard data based on active tab
+  const getCurrentLeaderboardData = (): LeaderboardEntry[] => {
+    switch (tabValue) {
+      case 0:
+        return overallLeaderboard;
+      case 1:
+        return selectedCourse ? (courseLeaderboards[selectedCourse] || []) : [];
+      case 2:
+        return selectedAssessment ? (assessmentLeaderboards[selectedAssessment] || []) : [];
+      case 3:
+        return selectedAssignment ? (assignmentLeaderboards[selectedAssignment] || []) : [];
+      default:
+        return [];
+    }
+  };
+
+  // Get export title based on active tab
+  const getExportTitle = (): string => {
+    switch (tabValue) {
+      case 0:
+        return 'Overall Student Leaderboard';
+      case 1:
+        const course = courses.find(c => c._id === selectedCourse);
+        return `Course Leaderboard - ${course?.title || 'Unknown Course'}`;
+      case 2:
+        const assessment = assessments.find(a => a._id === selectedAssessment);
+        return `Assessment Leaderboard - ${assessment?.title || 'Unknown Assessment'}`;
+      case 3:
+        const assignment = assignments.find(a => a._id === selectedAssignment);
+        return `Assignment Leaderboard - ${assignment?.title || 'Unknown Assignment'}`;
+      default:
+        return 'Student Leaderboard';
+    }
   };
 
   // Render leaderboard entry
@@ -327,36 +528,54 @@ const AdminLeaderboard: React.FC = () => {
           }
         }}
       >
-        <CardContent>
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
           <Grid container spacing={2} alignItems="center">
             {/* Rank and Avatar */}
             <Grid item xs={12} sm={4}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box sx={{ textAlign: 'center', minWidth: 60 }}>
-                  <Typography variant="h3" sx={{ fontSize: '2.5rem' }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: { xs: 1.5, sm: 2 },
+                mb: { xs: 2, sm: 0 }
+              }}>
+                <Box sx={{ textAlign: 'center', minWidth: { xs: 50, sm: 60 } }}>
+                  <Typography variant="h3" sx={{ fontSize: { xs: '2rem', sm: '2.5rem' } }}>
                     {rankDisplay.icon}
                   </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold', color: rankDisplay.color }}>
+                  <Typography variant="h6" sx={{ 
+                    fontWeight: 'bold', 
+                    color: rankDisplay.color,
+                    fontSize: { xs: '1rem', sm: '1.25rem' }
+                  }}>
                     #{entry.rank}
                   </Typography>
                 </Box>
                 <Avatar sx={{ 
-                  width: 56, 
-                  height: 56,
+                  width: { xs: 48, sm: 56 }, 
+                  height: { xs: 48, sm: 56 },
                   bgcolor: entry.rank <= 3 ? 'primary.main' : 'grey.400',
-                  fontSize: '1.5rem'
+                  fontSize: { xs: '1.25rem', sm: '1.5rem' }
                 }}>
                   {entry.studentName.charAt(0)}
                 </Avatar>
-                <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Typography variant="h6" sx={{ 
+                    fontWeight: 'bold',
+                    fontSize: { xs: '1rem', sm: '1.25rem' },
+                    wordBreak: 'break-word'
+                  }}>
                     {entry.studentName}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    wordBreak: 'break-word'
+                  }}>
                     {entry.studentEmail}
                   </Typography>
                   {showCourse && entry.courseName && (
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" sx={{
+                      fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                    }}>
                       {entry.courseName}
                     </Typography>
                   )}
@@ -489,23 +708,46 @@ const AdminLeaderboard: React.FC = () => {
     <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
       {/* Header */}
       <AppBar position="static" elevation={1} sx={{ bgcolor: 'white', color: 'text.primary' }}>
-        <Toolbar>
-          <IconButton onClick={() => navigate('/dashboard/admin')} sx={{ mr: 2 }}>
+        <Toolbar sx={{ px: { xs: 1, sm: 2 } }}>
+          <IconButton onClick={() => navigate('/dashboard/admin')} sx={{ mr: { xs: 1, sm: 2 } }}>
             <ArrowBack />
           </IconButton>
-          <AdminPanelSettings color="primary" sx={{ mr: 2 }} />
-          <Typography variant="h6" sx={{ flexGrow: 1, color: 'primary.main', fontWeight: 'bold' }}>
-            Admin Leaderboards & Performance Analytics
+          <AdminPanelSettings color="primary" sx={{ mr: { xs: 1, sm: 2 }, display: { xs: 'none', sm: 'block' } }} />
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              flexGrow: 1, 
+              color: 'primary.main', 
+              fontWeight: 'bold',
+              fontSize: { xs: '1rem', sm: '1.25rem' }
+            }}
+          >
+            {window.innerWidth < 600 ? 'Admin Leaderboards' : 'Admin Leaderboards & Performance Analytics'}
           </Typography>
           
           <Button
             variant="outlined"
-            startIcon={<GetApp />}
+            startIcon={<PictureAsPdf />}
             onClick={handleExportLeaderboard}
-            sx={{ mr: 2 }}
+            sx={{ 
+              mr: { xs: 1, sm: 2 },
+              display: { xs: 'none', sm: 'flex' }
+            }}
+            color="primary"
           >
-            Export Data
+            Export PDF
           </Button>
+          
+          <IconButton 
+            onClick={handleExportLeaderboard}
+            color="primary"
+            sx={{ 
+              mr: { xs: 1, sm: 0 },
+              display: { xs: 'flex', sm: 'none' }
+            }}
+          >
+            <PictureAsPdf />
+          </IconButton>
           
           <IconButton onClick={loadInitialData} color="primary">
             <Refresh />
@@ -589,36 +831,50 @@ const AdminLeaderboard: React.FC = () => {
               textColor="primary"
               variant="scrollable"
               scrollButtons="auto"
+              allowScrollButtonsMobile
+              sx={{
+                '& .MuiTab-root': {
+                  minHeight: { xs: 48, sm: 72 },
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                  fontWeight: 600,
+                  minWidth: { xs: 120, sm: 160 }
+                }
+              }}
             >
               <Tab
-                icon={<EmojiEvents />}
-                label="Overall Leaderboard"
+                icon={<EmojiEvents sx={{ fontSize: { xs: 18, sm: 24 } }} />}
+                label={window.innerWidth < 600 ? "Overall" : "Overall Leaderboard"}
                 id="admin-leaderboard-tab-0"
                 aria-controls="admin-leaderboard-tabpanel-0"
+                iconPosition={window.innerWidth < 600 ? "top" : "start"}
               />
               <Tab
-                icon={<School />}
-                label="Course Leaderboards"
+                icon={<School sx={{ fontSize: { xs: 18, sm: 24 } }} />}
+                label={window.innerWidth < 600 ? "Courses" : "Course Leaderboards"}
                 id="admin-leaderboard-tab-1"
                 aria-controls="admin-leaderboard-tabpanel-1"
+                iconPosition={window.innerWidth < 600 ? "top" : "start"}
               />
               <Tab
-                icon={<Quiz />}
-                label="Assessment Leaderboards"
+                icon={<Quiz sx={{ fontSize: { xs: 18, sm: 24 } }} />}
+                label={window.innerWidth < 600 ? "Assessments" : "Assessment Leaderboards"}
                 id="admin-leaderboard-tab-2"
                 aria-controls="admin-leaderboard-tabpanel-2"
+                iconPosition={window.innerWidth < 600 ? "top" : "start"}
               />
               <Tab
-                icon={<Assignment />}
-                label="Assignment Leaderboards"
+                icon={<Assignment sx={{ fontSize: { xs: 18, sm: 24 } }} />}
+                label={window.innerWidth < 600 ? "Assignments" : "Assignment Leaderboards"}
                 id="admin-leaderboard-tab-3"
                 aria-controls="admin-leaderboard-tabpanel-3"
+                iconPosition={window.innerWidth < 600 ? "top" : "start"}
               />
               <Tab
-                icon={<Analytics />}
-                label="System Analytics"
+                icon={<Analytics sx={{ fontSize: { xs: 18, sm: 24 } }} />}
+                label={window.innerWidth < 600 ? "Analytics" : "System Analytics"}
                 id="admin-leaderboard-tab-4"
                 aria-controls="admin-leaderboard-tabpanel-4"
+                iconPosition={window.innerWidth < 600 ? "top" : "start"}
               />
             </Tabs>
           </AppBar>

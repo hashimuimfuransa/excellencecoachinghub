@@ -193,12 +193,16 @@ const CourseAssessmentsPage: React.FC = () => {
         const courseData = await courseService.getPublicCourseById(id);
         setCourse(courseData);
 
-        // Load assessments
+        // Load assessments for this course
+        console.log('🔍 Loading assessments for course:', id);
         const assessmentsData = await assessmentService.getCourseAssessments(id);
+        console.log('📚 Assessments loaded:', assessmentsData);
         setAssessments((assessmentsData || []) as Assessment[]);
 
-        // Load student attempts
+        // Load student attempts for this course
+        console.log('🔍 Loading student attempts for course:', id);
         const attemptsData = await assessmentService.getStudentAttempts(id);
+        console.log('📝 Student attempts loaded:', attemptsData);
         const attemptsMap: Record<string, AssessmentAttempt[]> = {};
         attemptsData?.forEach((attempt: any) => {
           const assessmentId = typeof attempt.assessment === 'string' ? attempt.assessment : attempt.assessment._id;
@@ -290,7 +294,7 @@ const CourseAssessmentsPage: React.FC = () => {
 
   // Start assessment
   const startAssessment = (assessment: Assessment) => {
-    navigate(`/dashboard/student/assessment/${assessment._id}/take`);
+    navigate(`/assessment/${assessment._id}/take`);
   };
 
   // View assessment details
@@ -354,7 +358,7 @@ const CourseAssessmentsPage: React.FC = () => {
         </Alert>
         <Button
           startIcon={<ArrowBack />}
-          onClick={() => navigate(`/dashboard/student/course/${id}`)}
+          onClick={() => navigate(`/course/${id}`)}
           variant="outlined"
         >
           Back to Course
@@ -366,136 +370,284 @@ const CourseAssessmentsPage: React.FC = () => {
   const filteredAssessments = getFilteredAssessments();
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Button
-          startIcon={<ArrowBack />}
-          onClick={() => navigate(`/dashboard/student/course/${id}`)}
-          sx={{ mb: 2 }}
-        >
-          Back to Course
-        </Button>
+    <Box sx={{ 
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      py: 4
+    }}>
+      <Container maxWidth="lg">
+        {/* Header */}
+        <Box sx={{ mb: 4 }}>
+          <Button
+            startIcon={<ArrowBack />}
+            onClick={() => navigate(`/course/${id}`)}
+            sx={{ 
+              mb: 3,
+              color: 'white',
+              borderColor: 'rgba(255,255,255,0.3)',
+              '&:hover': {
+                borderColor: 'white',
+                bgcolor: 'rgba(255,255,255,0.1)'
+              }
+            }}
+            variant="outlined"
+          >
+            Back to Course
+          </Button>
 
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={8}>
-            <Card>
-              <CardContent>
-                <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Assessment color="primary" />
-                  {course?.title} - Assessments
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  Test your knowledge and track your progress through quizzes and exams
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <TrendingUp color="primary" />
-                  Overall Progress
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Box sx={{ flex: 1 }}>
-                    <LinearProgress 
-                      variant="determinate" 
-                      value={getOverallProgress()}
-                      sx={{ height: 8, borderRadius: 4 }}
-                    />
-                  </Box>
-                  <Typography variant="h6" color="primary.main">
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={8}>
+              <Card sx={{ 
+                background: 'rgba(255,255,255,0.95)', 
+                backdropFilter: 'blur(10px)',
+                borderRadius: 3,
+                boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+              }}>
+                <CardContent sx={{ p: 4 }}>
+                  <Typography variant="h4" gutterBottom sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 2,
+                    color: 'primary.main',
+                    fontWeight: 'bold'
+                  }}>
+                    <Assessment sx={{ fontSize: 40 }} />
+                    {course?.title} - Assessments
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
+                    Test your knowledge and track your progress through quizzes and exams
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Card sx={{ 
+                background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                color: 'white',
+                borderRadius: 3,
+                boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+              }}>
+                <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                  <Typography variant="h6" gutterBottom sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1,
+                    justifyContent: 'center',
+                    fontWeight: 'bold'
+                  }}>
+                    <TrendingUp />
+                    Overall Progress
+                  </Typography>
+                  <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 1 }}>
                     {getOverallProgress()}%
                   </Typography>
-                </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  {assessments.filter(a => getAssessmentStatus(a) === 'passed').length} of {assessments.length} assessments passed
-                </Typography>
+                  <LinearProgress 
+                    variant="determinate" 
+                    value={getOverallProgress()}
+                    sx={{ 
+                      height: 8, 
+                      borderRadius: 4,
+                      bgcolor: 'rgba(255,255,255,0.3)',
+                      '& .MuiLinearProgress-bar': {
+                        bgcolor: 'white'
+                      }
+                    }}
+                  />
+                  <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
+                    {assessments.filter(a => getAssessmentStatus(a) === 'passed').length} of {assessments.length} assessments passed
+                  </Typography>
               </CardContent>
             </Card>
           </Grid>
         </Grid>
       </Box>
 
-      {/* Error Alert */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
+        {/* Error Alert */}
+        {error && (
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mb: 3,
+              borderRadius: 2,
+              bgcolor: 'rgba(255,255,255,0.95)',
+              backdropFilter: 'blur(10px)'
+            }} 
+            onClose={() => setError(null)}
+          >
+            {error}
+          </Alert>
+        )}
 
-      {/* Filters */}
-      <Box sx={{ mb: 3 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={4}>
-            <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
-              <Tab label="All" />
-              <Tab label="Available" />
-              <Tab label="Completed" />
-            </Tabs>
+        {/* Statistics Cards */}
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              borderRadius: 3,
+              textAlign: 'center'
+            }}>
+              <CardContent>
+                <Quiz sx={{ fontSize: 40, mb: 1 }} />
+                <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                  {assessments.length}
+                </Typography>
+                <Typography variant="body2">
+                  Total Assessments
+                </Typography>
+              </CardContent>
+            </Card>
           </Grid>
-          <Grid item xs={12} md={4}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Filter by Type</InputLabel>
-              <Select
-                value={typeFilter}
-                label="Filter by Type"
-                onChange={(e) => setTypeFilter(e.target.value)}
-              >
-                <MenuItem value="all">All Types</MenuItem>
-                <MenuItem value="quiz">Quizzes</MenuItem>
-                <MenuItem value="assignment">Assignments</MenuItem>
-                <MenuItem value="final">Final Exams</MenuItem>
-              </Select>
-            </FormControl>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ 
+              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+              color: 'white',
+              borderRadius: 3,
+              textAlign: 'center'
+            }}>
+              <CardContent>
+                <CheckCircle sx={{ fontSize: 40, mb: 1 }} />
+                <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                  {assessments.filter(a => getAssessmentStatus(a) === 'passed').length}
+                </Typography>
+                <Typography variant="body2">
+                  Completed
+                </Typography>
+              </CardContent>
+            </Card>
           </Grid>
-          <Grid item xs={12} md={4}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Filter by Status</InputLabel>
-              <Select
-                value={statusFilter}
-                label="Filter by Status"
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <MenuItem value="all">All Status</MenuItem>
-                <MenuItem value="available">Available</MenuItem>
-                <MenuItem value="passed">Passed</MenuItem>
-                <MenuItem value="attempted">Attempted</MenuItem>
-                <MenuItem value="expired">Expired</MenuItem>
-              </Select>
-            </FormControl>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ 
+              background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+              color: 'white',
+              borderRadius: 3,
+              textAlign: 'center'
+            }}>
+              <CardContent>
+                <PlayArrow sx={{ fontSize: 40, mb: 1 }} />
+                <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                  {assessments.filter(a => getAssessmentStatus(a) === 'available').length}
+                </Typography>
+                <Typography variant="body2">
+                  Available
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ 
+              background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+              color: 'white',
+              borderRadius: 3,
+              textAlign: 'center'
+            }}>
+              <CardContent>
+                <Warning sx={{ fontSize: 40, mb: 1 }} />
+                <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                  {assessments.filter(a => getAssessmentStatus(a) === 'expired').length}
+                </Typography>
+                <Typography variant="body2">
+                  Expired
+                </Typography>
+              </CardContent>
+            </Card>
           </Grid>
         </Grid>
-      </Box>
 
-      {/* Assessments List */}
-      {filteredAssessments.length === 0 ? (
-        <Paper sx={{ p: 4, textAlign: 'center' }}>
-          <Assessment sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            No assessments found
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {typeFilter === 'all' && statusFilter === 'all'
-              ? "Your instructor hasn't created any assessments yet."
-              : "No assessments match the selected filters."
-            }
-          </Typography>
-        </Paper>
-      ) : (
-        <Grid container spacing={3}>
-          {filteredAssessments.map((assessment) => {
-            const status = getAssessmentStatus(assessment);
-            const statusInfo = getStatusInfo(status);
-            const bestAttempt = getBestAttempt(assessment._id);
-            const remainingAttempts = getRemainingAttempts(assessment);
-            const assessmentAttempts = attempts[assessment._id] || [];
+        {/* Filters */}
+        <Card sx={{ 
+          mb: 3,
+          background: 'rgba(255,255,255,0.95)', 
+          backdropFilter: 'blur(10px)',
+          borderRadius: 3
+        }}>
+          <CardContent>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} md={6}>
+                <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
+                  <Tab label="All Assessments" />
+                  <Tab label="Available" />
+                  <Tab label="Completed" />
+                </Tabs>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Filter by Type</InputLabel>
+                  <Select
+                    value={typeFilter}
+                    label="Filter by Type"
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                  >
+                    <MenuItem value="all">All Types</MenuItem>
+                    <MenuItem value="quiz">Quizzes</MenuItem>
+                    <MenuItem value="exam">Exams</MenuItem>
+                    <MenuItem value="project">Projects</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Filter by Status</InputLabel>
+                  <Select
+                    value={statusFilter}
+                    label="Filter by Status"
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                    <MenuItem value="all">All Status</MenuItem>
+                    <MenuItem value="available">Available</MenuItem>
+                    <MenuItem value="passed">Passed</MenuItem>
+                    <MenuItem value="attempted">Attempted</MenuItem>
+                    <MenuItem value="expired">Expired</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
 
-            return (
-              <Grid item xs={12} key={assessment._id}>
-                <Card>
+        {/* Assessments List */}
+        {filteredAssessments.length === 0 ? (
+          <Paper sx={{ 
+            p: 4, 
+            textAlign: 'center',
+            background: 'rgba(255,255,255,0.95)', 
+            backdropFilter: 'blur(10px)',
+            borderRadius: 3
+          }}>
+            <Assessment sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No assessments found
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {typeFilter === 'all' && statusFilter === 'all'
+                ? "Your instructor hasn't created any assessments yet."
+                : "No assessments match the selected filters."
+              }
+            </Typography>
+          </Paper>
+        ) : (
+          <Grid container spacing={3}>
+            {filteredAssessments.map((assessment) => {
+              const status = getAssessmentStatus(assessment);
+              const statusInfo = getStatusInfo(status);
+              const bestAttempt = getBestAttempt(assessment._id);
+              const remainingAttempts = getRemainingAttempts(assessment);
+              const assessmentAttempts = attempts[assessment._id] || [];
+
+              return (
+                <Grid item xs={12} md={6} key={assessment._id}>
+                  <Card sx={{ 
+                    background: 'rgba(255,255,255,0.95)', 
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: 3,
+                    transition: 'all 0.3s ease',
+                    border: '1px solid rgba(0,0,0,0.08)',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+                      borderColor: 'primary.main'
+                    }
+                  }}>
                   <CardContent>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                       <Box sx={{ flex: 1 }}>
@@ -915,7 +1067,8 @@ const CourseAssessmentsPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+      </Container>
+    </Box>
   );
 };
 

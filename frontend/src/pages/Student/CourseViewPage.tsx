@@ -69,6 +69,7 @@ const CourseViewPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [enrollmentDetails, setEnrollmentDetails] = useState<any>(null);
+  const [enrolling, setEnrolling] = useState(false);
   const [courseStats, setCourseStats] = useState<CourseStats>({
     totalNotes: 0,
     completedNotes: 0,
@@ -221,11 +222,11 @@ const CourseViewPage: React.FC = () => {
   };
 
   const handleAssignmentsView = () => {
-    navigate(`/dashboard/student/course/${id}/assignments`);
+    navigate(`/course/${id}/assignments`);
   };
 
   const handleAssessmentsView = () => {
-    navigate(`/dashboard/student/course/${id}/assessments`);
+    navigate(`/course/${id}/assessments`);
   };
 
   const handleAnnouncementsView = () => {
@@ -259,18 +260,43 @@ const CourseViewPage: React.FC = () => {
     );
   }
 
+  const handleEnroll = async () => {
+    if (!id) return;
+    
+    try {
+      setEnrolling(true);
+      await enrollmentService.enrollInCourse(id);
+      setIsEnrolled(true);
+      // Reload the page data
+      window.location.reload();
+    } catch (err: any) {
+      setError(err.message || 'Failed to enroll in course');
+      setEnrolling(false);
+    }
+  };
+
   if (!isEnrolled) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Alert severity="info" sx={{ mb: 3 }}>
           You need to be enrolled in this course to access the content.
         </Alert>
-        <Button
-          onClick={() => navigate(`/courses/${id}`)}
-          variant="contained"
-        >
-          View Course Details
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            onClick={handleEnroll}
+            variant="contained"
+            disabled={enrolling}
+            startIcon={enrolling ? <CircularProgress size={20} /> : <School />}
+          >
+            {enrolling ? 'Enrolling...' : 'Enroll in Course'}
+          </Button>
+          <Button
+            onClick={() => navigate('/courses')}
+            variant="outlined"
+          >
+            Browse All Courses
+          </Button>
+        </Box>
       </Container>
     );
   }

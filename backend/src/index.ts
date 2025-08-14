@@ -54,6 +54,7 @@ import courseMaterialsRoutes from '@/routes/courseMaterials';
 import assignmentRoutes from '@/routes/assignmentRoutes';
 import announcementRoutes from '@/routes/announcementRoutes';
 import recordedSessionRoutes from '@/routes/recordedSessions';
+import gradesRoutes from '@/routes/gradesRoutes';
 
 
 
@@ -279,6 +280,7 @@ app.use('/api/course-materials', courseMaterialsRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/recorded-sessions', recordedSessionRoutes);
+app.use('/api/grades', gradesRoutes);
 
 console.log('✅ All routes mounted successfully');
 

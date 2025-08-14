@@ -134,7 +134,7 @@ export const updateAssignment = async (req: AuthRequest, res: Response) => {
     }
 
     // Check authorization
-    if (assignment.instructor.toString() !== req.user?._id) {
+    if (assignment.instructor.toString() !== req.user?._id.toString()) {
       return res.status(403).json({
         success: false,
         error: 'Not authorized to update this assignment'
@@ -189,7 +189,7 @@ export const deleteAssignment = async (req: AuthRequest, res: Response) => {
     }
 
     // Check authorization
-    if (assignment.instructor.toString() !== req.user?._id) {
+    if (assignment.instructor.toString() !== req.user?._id.toString()) {
       return res.status(403).json({
         success: false,
         error: 'Not authorized to delete this assignment'
@@ -313,7 +313,25 @@ export const getAssignmentById = async (req: AuthRequest, res: Response) => {
 export const submitAssignment = async (req: AuthRequest, res: Response) => {
   try {
     const { assignmentId } = req.params;
-    const { submissionText, attachments } = req.body;
+    const { submissionText, attachments, sections, isDraft = false, autoSubmit = false } = req.body;
+
+    console.log('Assignment submission request:', {
+      assignmentId,
+      userId: req.user?._id,
+      hasSubmissionText: !!submissionText,
+      hasSections: !!sections,
+      sectionsCount: sections?.length || 0,
+      isDraft,
+      autoSubmit
+    });
+
+    // Validate user
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
 
     // Find assignment
     const assignment = await Assignment.findById(assignmentId);
@@ -332,51 +350,91 @@ export const submitAssignment = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if already submitted
+    // Check if already submitted (only for final submission)
     const existingSubmission = await AssignmentSubmission.findOne({
       assignment: assignmentId,
       student: req.user._id
     });
 
-    if (existingSubmission) {
+    if (existingSubmission && existingSubmission.status === 'submitted' && !isDraft && !autoSubmit) {
       return res.status(400).json({
         success: false,
         error: 'Assignment already submitted'
       });
     }
 
-    // Validate submission based on type
-    if (assignment.submissionType === 'text' && !submissionText) {
-      return res.status(400).json({
-        success: false,
-        error: 'Text submission is required'
-      });
+    // Check time limit for auto-submit
+    const now = new Date();
+    const isOverdue = now > assignment.dueDate;
+    
+    // Validate submission if not a draft and not auto-submit
+    if (!isDraft && !autoSubmit) {
+      if (assignment.submissionType === 'text') {
+        const hasTextSubmission = submissionText && submissionText.trim().length > 0;
+        const hasSectionContent = sections && sections.length > 0 && sections.some(s => s.content && s.content.trim().length > 0);
+        
+        if (!hasTextSubmission && !hasSectionContent) {
+          return res.status(400).json({
+            success: false,
+            error: 'Text submission is required. Please add content to at least one section or the general response area.'
+          });
+        }
+      }
+
+      if (assignment.submissionType === 'file' && (!attachments || attachments.length === 0)) {
+        return res.status(400).json({
+          success: false,
+          error: 'File submission is required'
+        });
+      }
     }
 
-    if (assignment.submissionType === 'file' && (!attachments || attachments.length === 0)) {
-      return res.status(400).json({
-        success: false,
-        error: 'File submission is required'
+    // Create or update submission
+    let submission;
+    if (existingSubmission) {
+      // Update existing submission
+      submission = existingSubmission;
+      submission.submissionText = submissionText || submission.submissionText;
+      submission.attachments = attachments || submission.attachments;
+      submission.sections = sections || submission.sections;
+      submission.status = isDraft ? 'draft' : 'submitted';
+      submission.submittedAt = isDraft ? submission.submittedAt : new Date();
+      submission.isLate = isDraft ? submission.isLate : isOverdue;
+      submission.autoSubmitted = autoSubmit;
+    } else {
+      // Create new submission
+      submission = new AssignmentSubmission({
+        assignment: assignmentId,
+        student: req.user._id,
+        submissionText: submissionText || '',
+        attachments: attachments || [],
+        sections: sections || [],
+        submittedAt: isDraft ? undefined : new Date(),
+        isLate: isDraft ? false : isOverdue,
+        status: isDraft ? 'draft' : 'submitted',
+        autoSubmitted: autoSubmit
       });
     }
-
-    // Create submission
-    const submission = new AssignmentSubmission({
-      assignment: assignmentId,
-      student: req.user._id,
-      submissionText,
-      attachments: attachments || [],
-      submittedAt: new Date(),
-      isLate: new Date() > assignment.dueDate
-    });
 
     await submission.save();
     await submission.populate('student', 'firstName lastName email');
 
-    res.status(201).json({
+    // Trigger AI grading for submitted assignments
+    if (!isDraft && submission.status === 'submitted') {
+      try {
+        await triggerAIGrading(submission, assignment);
+      } catch (aiError) {
+        console.error('AI grading failed:', aiError);
+        // Don't fail the submission if AI grading fails
+      }
+    }
+
+    res.status(isDraft ? 200 : 201).json({
       success: true,
       data: submission,
-      message: 'Assignment submitted successfully'
+      message: isDraft ? 'Assignment draft saved successfully' : 
+               autoSubmit ? 'Assignment auto-submitted successfully' :
+               'Assignment submitted successfully'
     });
   } catch (error: any) {
     console.error('Error submitting assignment:', error);
@@ -384,6 +442,37 @@ export const submitAssignment = async (req: AuthRequest, res: Response) => {
       success: false,
       error: error.message || 'Failed to submit assignment'
     });
+  }
+};
+
+// Trigger AI grading for assignment submission
+const triggerAIGrading = async (submission: any, assignment: any) => {
+  try {
+    // Import AI grading service
+    const { aiService } = await import('../services/aiService');
+    
+    const aiResult = await aiService.gradeAssignmentSubmission({
+      assignmentTitle: assignment.title,
+      assignmentInstructions: assignment.instructions,
+      submissionText: submission.submissionText,
+      sections: submission.sections,
+      maxPoints: assignment.maxPoints
+    });
+
+    // Update submission with AI grade
+    submission.aiGrade = {
+      score: aiResult.score,
+      feedback: aiResult.feedback,
+      confidence: aiResult.confidence,
+      gradedAt: new Date()
+    };
+    submission.grade = aiResult.score; // Set preliminary grade
+    submission.feedback = aiResult.feedback;
+    
+    await submission.save();
+  } catch (error) {
+    console.error('AI grading error:', error);
+    throw error;
   }
 };
 
@@ -513,6 +602,86 @@ export const uploadAssignmentDocument = async (req: AuthRequest, res: Response) 
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to upload assignment document'
+    });
+  }
+};
+
+// Replace assignment document (removes old document and uploads new one)
+export const replaceAssignmentDocument = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No file uploaded'
+      });
+    }
+
+    const { assignmentId } = req.params;
+
+    // Find assignment and verify instructor
+    const assignment = await Assignment.findById(assignmentId);
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Assignment not found'
+      });
+    }
+
+    if (assignment.instructor.toString() !== req.user?._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to replace documents for this assignment'
+      });
+    }
+
+    // Check if assignment has submissions
+    const hasSubmissions = await AssignmentSubmission.exists({ assignment: assignmentId });
+    if (hasSubmissions) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot replace assignment document after students have submitted'
+      });
+    }
+
+    // Delete old document if it exists
+    if (assignment.assignmentDocument?.filename) {
+      try {
+        await deleteDocumentFromCloudinary(assignment.assignmentDocument.filename);
+      } catch (deleteError) {
+        console.warn('Failed to delete old document:', deleteError);
+        // Continue with upload even if deletion fails
+      }
+    }
+
+    // Upload new document to Cloudinary
+    const uploadResult = await uploadDocumentToCloudinary(
+      req.file.buffer,
+      req.user._id,
+      req.file.originalname,
+      `excellence-coaching-hub/assignments/${assignmentId}/documents`
+    );
+
+    // Update assignment with new document info
+    assignment.assignmentDocument = {
+      filename: uploadResult.publicId,
+      originalName: req.file.originalname,
+      fileUrl: uploadResult.url,
+      fileSize: uploadResult.size,
+      uploadedAt: new Date()
+    };
+
+    await assignment.save();
+
+    res.json({
+      success: true,
+      data: assignment,
+      message: 'Assignment document replaced successfully'
+    });
+  } catch (error: any) {
+    console.error('Error replacing assignment document:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to replace assignment document'
     });
   }
 };
@@ -752,6 +921,141 @@ export const toggleAssignmentStatus = async (req: AuthRequest, res: Response) =>
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to update assignment status'
+    });
+  }
+};
+
+// Save assignment draft
+export const saveDraft = async (req: AuthRequest, res: Response) => {
+  try {
+    const { assignmentId, submissionText, attachments, isDraft = true } = req.body;
+
+    // Find assignment
+    const assignment = await Assignment.findById(assignmentId);
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Assignment not found'
+      });
+    }
+
+    // Find existing submission or create new one
+    let submission = await AssignmentSubmission.findOne({
+      assignment: assignmentId,
+      student: req.user?._id
+    });
+
+    if (submission) {
+      // Update existing submission
+      submission.submissionText = submissionText;
+      submission.attachments = attachments || submission.attachments;
+      submission.status = isDraft ? 'draft' : 'submitted';
+      submission.autoSavedAt = new Date();
+      submission.version = (submission.version || 1) + 1;
+      
+      if (!isDraft) {
+        submission.submittedAt = new Date();
+        submission.isLate = new Date() > new Date(assignment.dueDate);
+      }
+    } else {
+      // Create new submission
+      submission = new AssignmentSubmission({
+        assignment: assignmentId,
+        student: req.user?._id,
+        submissionText,
+        attachments: attachments || [],
+        status: isDraft ? 'draft' : 'submitted',
+        submittedAt: isDraft ? undefined : new Date(),
+        isLate: isDraft ? false : new Date() > new Date(assignment.dueDate),
+        autoSavedAt: new Date(),
+        version: 1
+      });
+    }
+
+    await submission.save();
+
+    res.json({
+      success: true,
+      data: submission,
+      message: isDraft ? 'Draft saved successfully' : 'Assignment submitted successfully'
+    });
+  } catch (error: any) {
+    console.error('Error saving assignment draft:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to save assignment draft'
+    });
+  }
+};
+
+// Get submission history
+export const getSubmissionHistory = async (req: AuthRequest, res: Response) => {
+  try {
+    const { assignmentId } = req.params;
+
+    // Find all submission versions for this assignment and student
+    const submissions = await AssignmentSubmission.find({
+      assignment: assignmentId,
+      student: req.user?._id
+    }).sort({ version: -1 }).limit(10);
+
+    const history = submissions.map(submission => ({
+      _id: submission._id,
+      version: submission.version,
+      submissionText: submission.submissionText,
+      attachments: submission.attachments,
+      savedAt: submission.autoSavedAt || submission.submittedAt,
+      autoSaved: !!submission.autoSavedAt
+    }));
+
+    res.json({
+      success: true,
+      data: history
+    });
+  } catch (error: any) {
+    console.error('Error getting submission history:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to get submission history'
+    });
+  }
+};
+
+// Update AI grade for submission
+export const updateAIGrade = async (req: AuthRequest, res: Response) => {
+  try {
+    const { submissionId } = req.params;
+    const { score, feedback, confidence, gradedAt } = req.body;
+
+    // Find submission
+    const submission = await AssignmentSubmission.findById(submissionId);
+    if (!submission) {
+      return res.status(404).json({
+        success: false,
+        error: 'Submission not found'
+      });
+    }
+
+    // Update AI grade
+    submission.aiGrade = {
+      score,
+      feedback,
+      confidence,
+      gradedAt: gradedAt || new Date()
+    };
+
+    await submission.save();
+
+    res.json({
+      success: true,
+      data: submission,
+      message: 'AI grade updated successfully'
+    });
+  } catch (error: any) {
+    console.error('Error updating AI grade:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to update AI grade'
     });
   }
 };

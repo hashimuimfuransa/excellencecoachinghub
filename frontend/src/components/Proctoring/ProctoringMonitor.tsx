@@ -1,130 +1,225 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   Box,
-  Alert,
+  Paper,
   Typography,
-  IconButton,
+  Alert,
   Chip,
+  IconButton,
+  Tooltip,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Button,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
   LinearProgress
 } from '@mui/material';
 import {
-  Videocam,
-  VideocamOff,
+  Camera,
+  CameraAlt,
+  Mic,
+  MicOff,
+  Visibility,
+  VisibilityOff,
   Warning,
   Security,
-  Visibility,
-  VisibilityOff
+  Psychology,
+  Person,
+  PersonOff,
+  VolumeUp,
+  VolumeOff,
+  TabUnselected,
+  Fullscreen,
+  FullscreenExit
 } from '@mui/icons-material';
 
 interface ProctoringMonitorProps {
-  assessmentId: string;
-  isActive: boolean;
-  onViolation: (violation: ProctoringViolation) => void;
-  onStatusChange: (status: ProctoringStatus) => void;
+  onViolation: (violation: string) => void;
+  requireCamera?: boolean;
+  aiDetection?: boolean;
+  onStatusChange?: (status: 'active' | 'inactive' | 'error') => void;
 }
 
-export interface ProctoringViolation {
-  type: 'tab_switch' | 'face_not_detected' | 'multiple_faces' | 'suspicious_movement' | 'window_blur' | 'fullscreen_exit';
+interface ViolationEvent {
+  type: 'face_not_detected' | 'multiple_faces' | 'tab_switch' | 'fullscreen_exit' | 'audio_detected' | 'suspicious_movement';
   timestamp: Date;
   severity: 'low' | 'medium' | 'high';
   description: string;
 }
 
-export interface ProctoringStatus {
-  isActive: boolean;
-  cameraEnabled: boolean;
-  faceDetected: boolean;
-  violations: ProctoringViolation[];
-  warningCount: number;
-}
-
 const ProctoringMonitor: React.FC<ProctoringMonitorProps> = ({
-  assessmentId,
-  isActive,
   onViolation,
+  requireCamera = true,
+  aiDetection = true,
   onStatusChange
 }) => {
-  // State management
-  const [status, setStatus] = useState<ProctoringStatus>({
-    isActive: false,
-    cameraEnabled: false,
-    faceDetected: false,
-    violations: [],
-    warningCount: 0
-  });
-  const [showWarningDialog, setShowWarningDialog] = useState(false);
-  const [currentViolation, setCurrentViolation] = useState<ProctoringViolation | null>(null);
-  const [permissionDenied, setPermissionDenied] = useState(false);
-
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const violationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
 
-  // Initialize camera and face detection
-  const initializeCamera = useCallback(async () => {
+  // State
+  const [isActive, setIsActive] = useState(false);
+  const [cameraPermission, setCameraPermission] = useState(false);
+  const [micPermission, setMicPermission] = useState(false);
+  const [faceDetected, setFaceDetected] = useState(false);
+  const [violations, setViolations] = useState<ViolationEvent[]>([]);
+  const [showViolations, setShowViolations] = useState(false);
+  const [audioLevel, setAudioLevel] = useState(0);
+  const [tabSwitchCount, setTabSwitchCount] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Initialize proctoring
+  useEffect(() => {
+    initializeProctoring();
+    setupEventListeners();
+    
+    return () => {
+      cleanup();
+    };
+  }, []);
+
+  const initializeProctoring = async () => {
+    try {
+      if (requireCamera) {
+        await setupCamera();
+      }
+      await setupAudioMonitoring();
+      setIsActive(true);
+      onStatusChange?.('active');
+    } catch (error: any) {
+      setError(error.message);
+      onStatusChange?.('error');
+    }
+  };
+
+  const setupCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
+        video: { 
           width: { ideal: 640 },
           height: { ideal: 480 },
           facingMode: 'user'
         },
-        audio: false
+        audio: true
       });
+
+      streamRef.current = stream;
+      setCameraPermission(true);
+      setMicPermission(true);
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        
-        setStatus(prev => ({ ...prev, cameraEnabled: true }));
-        setPermissionDenied(false);
+        videoRef.current.play();
       }
-    } catch (error) {
-      console.error('Camera access denied:', error);
-      setPermissionDenied(true);
-      setStatus(prev => ({ ...prev, cameraEnabled: false }));
-      
-      // Report violation for camera denial
-      const violation: ProctoringViolation = {
-        type: 'face_not_detected',
-        timestamp: new Date(),
-        severity: 'high',
-        description: 'Camera access denied or not available'
-      };
-      handleViolation(violation);
-    }
-  }, []);
 
-  // Face detection using basic video analysis
-  const detectFace = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current || !isActive) return;
+      if (aiDetection) {
+        startFaceDetection();
+      }
+    } catch (error: any) {
+      throw new Error('Camera access denied. Please allow camera access for proctored exam.');
+    }
+  };
+
+  const setupAudioMonitoring = async () => {
+    try {
+      if (!streamRef.current) return;
+
+      audioContextRef.current = new AudioContext();
+      const source = audioContextRef.current.createMediaStreamSource(streamRef.current);
+      analyserRef.current = audioContextRef.current.createAnalyser();
+      
+      analyserRef.current.fftSize = 256;
+      source.connect(analyserRef.current);
+
+      monitorAudioLevel();
+    } catch (error) {
+      console.warn('Audio monitoring setup failed:', error);
+    }
+  };
+
+  const monitorAudioLevel = () => {
+    if (!analyserRef.current) return;
+
+    const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+    
+    const checkAudio = () => {
+      if (!analyserRef.current) return;
+      
+      analyserRef.current.getByteFrequencyData(dataArray);
+      const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+      setAudioLevel(average);
+
+      // Detect suspicious audio levels (potential cheating)
+      if (average > 50) {
+        recordViolation({
+          type: 'audio_detected',
+          timestamp: new Date(),
+          severity: 'medium',
+          description: 'Unusual audio activity detected'
+        });
+      }
+
+      requestAnimationFrame(checkAudio);
+    };
+
+    checkAudio();
+  };
+
+  const startFaceDetection = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    detectionIntervalRef.current = setInterval(() => {
+      detectFaces();
+    }, 2000); // Check every 2 seconds
+  };
+
+  const detectFaces = async () => {
+    if (!videoRef.current || !canvasRef.current) return;
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
 
-    if (!ctx || video.videoWidth === 0 || video.videoHeight === 0) return;
+    if (!ctx || video.videoWidth === 0) return;
 
-    // Set canvas dimensions
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
 
-    // Draw video frame to canvas
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    try {
+      // Simple face detection using basic image analysis
+      // In a real implementation, you would use a proper face detection library
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const faceDetected = await performBasicFaceDetection(imageData);
+      
+      setFaceDetected(faceDetected);
 
-    // Get image data for analysis
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      if (!faceDetected) {
+        recordViolation({
+          type: 'face_not_detected',
+          timestamp: new Date(),
+          severity: 'high',
+          description: 'Student face not detected in camera view'
+        });
+      }
+    } catch (error) {
+      console.error('Face detection error:', error);
+    }
+  };
+
+  const performBasicFaceDetection = async (imageData: ImageData): Promise<boolean> => {
+    // This is a simplified face detection algorithm
+    // In production, you would use libraries like face-api.js or MediaPipe
     const data = imageData.data;
-
-    // Simple face detection based on skin tone and movement
     let skinPixels = 0;
     let totalPixels = data.length / 4;
 
@@ -133,7 +228,7 @@ const ProctoringMonitor: React.FC<ProctoringMonitorProps> = ({
       const g = data[i + 1];
       const b = data[i + 2];
 
-      // Basic skin tone detection
+      // Simple skin color detection
       if (r > 95 && g > 40 && b > 20 && 
           Math.max(r, g, b) - Math.min(r, g, b) > 15 &&
           Math.abs(r - g) > 15 && r > g && r > b) {
@@ -142,264 +237,264 @@ const ProctoringMonitor: React.FC<ProctoringMonitorProps> = ({
     }
 
     const skinRatio = skinPixels / totalPixels;
-    const faceDetected = skinRatio > 0.02; // Threshold for face detection
+    return skinRatio > 0.02; // At least 2% skin pixels indicates face presence
+  };
 
-    setStatus(prev => ({ ...prev, faceDetected }));
-
-    // Check for violations
-    if (!faceDetected) {
-      const violation: ProctoringViolation = {
-        type: 'face_not_detected',
-        timestamp: new Date(),
-        severity: 'medium',
-        description: 'Face not detected in camera view'
-      };
-      handleViolation(violation);
-    }
-  }, [isActive]);
-
-  // Handle proctoring violations
-  const handleViolation = useCallback((violation: ProctoringViolation) => {
-    setStatus(prev => {
-      const newViolations = [...prev.violations, violation];
-      const newWarningCount = prev.warningCount + 1;
-      
-      const newStatus = {
-        ...prev,
-        violations: newViolations,
-        warningCount: newWarningCount
-      };
-
-      onStatusChange(newStatus);
-      return newStatus;
-    });
-
-    setCurrentViolation(violation);
-    setShowWarningDialog(true);
-    onViolation(violation);
-
-    // Auto-close warning after 5 seconds
-    if (violationTimeoutRef.current) {
-      clearTimeout(violationTimeoutRef.current);
-    }
-    violationTimeoutRef.current = setTimeout(() => {
-      setShowWarningDialog(false);
-    }, 5000);
-  }, [onViolation, onStatusChange]);
-
-  // Monitor tab switching and window focus
-  useEffect(() => {
-    if (!isActive) return;
-
+  const setupEventListeners = () => {
+    // Tab switch detection
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        const violation: ProctoringViolation = {
+        setTabSwitchCount(prev => prev + 1);
+        recordViolation({
           type: 'tab_switch',
           timestamp: new Date(),
           severity: 'high',
-          description: 'Student switched tabs or minimized window'
-        };
-        handleViolation(violation);
+          description: 'Student switched to another tab or application'
+        });
       }
     };
 
-    const handleWindowBlur = () => {
-      const violation: ProctoringViolation = {
-        type: 'window_blur',
-        timestamp: new Date(),
-        severity: 'medium',
-        description: 'Window lost focus'
-      };
-      handleViolation(violation);
-    };
-
+    // Fullscreen exit detection
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) {
-        const violation: ProctoringViolation = {
+      const isFullscreen = !!document.fullscreenElement;
+      setIsFullscreen(isFullscreen);
+      
+      if (!isFullscreen) {
+        recordViolation({
           type: 'fullscreen_exit',
           timestamp: new Date(),
           severity: 'high',
           description: 'Student exited fullscreen mode'
-        };
-        handleViolation(violation);
+        });
+      }
+    };
+
+    // Keyboard shortcuts detection
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent common cheating shortcuts
+      if (
+        (e.ctrlKey && (e.key === 'c' || e.key === 'v' || e.key === 'a' || e.key === 't')) ||
+        (e.altKey && e.key === 'Tab') ||
+        e.key === 'F12' ||
+        (e.ctrlKey && e.shiftKey && e.key === 'I')
+      ) {
+        e.preventDefault();
+        recordViolation({
+          type: 'suspicious_movement',
+          timestamp: new Date(),
+          severity: 'medium',
+          description: `Suspicious keyboard shortcut detected: ${e.key}`
+        });
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('blur', handleWindowBlur);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('blur', handleWindowBlur);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isActive, handleViolation]);
+  };
 
-  // Start/stop proctoring
-  useEffect(() => {
-    if (isActive) {
-      initializeCamera();
-      
-      // Start face detection
-      detectionIntervalRef.current = setInterval(detectFace, 2000); // Check every 2 seconds
-      
-      setStatus(prev => ({ ...prev, isActive: true }));
-    } else {
-      // Stop camera
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
-      }
-      
-      // Clear intervals
-      if (detectionIntervalRef.current) {
-        clearInterval(detectionIntervalRef.current);
-        detectionIntervalRef.current = null;
-      }
-      
-      setStatus(prev => ({ 
-        ...prev, 
-        isActive: false, 
-        cameraEnabled: false, 
-        faceDetected: false 
-      }));
+  const recordViolation = useCallback((violation: ViolationEvent) => {
+    setViolations(prev => [...prev, violation]);
+    onViolation(violation.description);
+  }, [onViolation]);
+
+  const cleanup = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
     }
+    
+    if (detectionIntervalRef.current) {
+      clearInterval(detectionIntervalRef.current);
+    }
+    
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+    }
+    
+    setIsActive(false);
+    onStatusChange?.('inactive');
+  };
 
-    return () => {
-      if (detectionIntervalRef.current) {
-        clearInterval(detectionIntervalRef.current);
-      }
-      if (violationTimeoutRef.current) {
-        clearTimeout(violationTimeoutRef.current);
-      }
-    };
-  }, [isActive, initializeCamera, detectFace]);
-
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'high': return 'error';
-      case 'medium': return 'warning';
-      case 'low': return 'info';
-      default: return 'default';
+  const getViolationIcon = (type: ViolationEvent['type']) => {
+    switch (type) {
+      case 'face_not_detected':
+        return <PersonOff color="error" />;
+      case 'multiple_faces':
+        return <Person color="warning" />;
+      case 'tab_switch':
+        return <TabUnselected color="error" />;
+      case 'fullscreen_exit':
+        return <FullscreenExit color="error" />;
+      case 'audio_detected':
+        return <VolumeUp color="warning" />;
+      case 'suspicious_movement':
+        return <Warning color="warning" />;
+      default:
+        return <Warning />;
     }
   };
+
+  const getSeverityColor = (severity: ViolationEvent['severity']) => {
+    switch (severity) {
+      case 'low':
+        return 'info';
+      case 'medium':
+        return 'warning';
+      case 'high':
+        return 'error';
+      default:
+        return 'default';
+    }
+  };
+
+  if (error) {
+    return (
+      <Alert severity="error" sx={{ position: 'fixed', top: 80, right: 16, zIndex: 9999 }}>
+        Proctoring Error: {error}
+      </Alert>
+    );
+  }
 
   return (
     <Box>
       {/* Proctoring Status Bar */}
-      <Box sx={{ 
-        position: 'fixed', 
-        top: 0, 
-        left: 0, 
-        right: 0, 
-        zIndex: 9999,
-        bgcolor: status.isActive ? 'success.main' : 'error.main',
-        color: 'white',
-        p: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Security />
-          <Typography variant="body2">
-            Proctoring: {status.isActive ? 'Active' : 'Inactive'}
+      <Paper
+        sx={{
+          position: 'fixed',
+          top: 80,
+          right: 16,
+          p: 2,
+          zIndex: 9999,
+          minWidth: 300,
+          bgcolor: isActive ? 'success.light' : 'error.light'
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+          <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Security color={isActive ? 'success' : 'error'} />
+            Proctoring {isActive ? 'Active' : 'Inactive'}
           </Typography>
-          
+          <IconButton size="small" onClick={() => setShowViolations(true)}>
+            <Visibility />
+          </IconButton>
+        </Box>
+
+        <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
           <Chip
-            icon={status.cameraEnabled ? <Videocam /> : <VideocamOff />}
-            label={status.cameraEnabled ? 'Camera On' : 'Camera Off'}
+            icon={faceDetected ? <Person /> : <PersonOff />}
+            label="Face"
+            color={faceDetected ? 'success' : 'error'}
             size="small"
-            color={status.cameraEnabled ? 'success' : 'error'}
-            variant="outlined"
           />
-          
           <Chip
-            icon={status.faceDetected ? <Visibility /> : <VisibilityOff />}
-            label={status.faceDetected ? 'Face Detected' : 'No Face'}
+            icon={cameraPermission ? <Camera /> : <CameraAlt />}
+            label="Camera"
+            color={cameraPermission ? 'success' : 'error'}
             size="small"
-            color={status.faceDetected ? 'success' : 'warning'}
-            variant="outlined"
+          />
+          <Chip
+            icon={micPermission ? <Mic /> : <MicOff />}
+            label="Mic"
+            color={micPermission ? 'success' : 'error'}
+            size="small"
           />
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="body2">
-            Warnings: {status.warningCount}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="caption">
+            Violations: {violations.length}
           </Typography>
-          {status.warningCount > 0 && (
-            <Warning color="warning" />
-          )}
+          <Typography variant="caption">
+            Tab switches: {tabSwitchCount}
+          </Typography>
         </Box>
-      </Box>
+
+        {audioLevel > 0 && (
+          <Box sx={{ mt: 1 }}>
+            <Typography variant="caption">Audio Level:</Typography>
+            <LinearProgress 
+              variant="determinate" 
+              value={Math.min(audioLevel * 2, 100)} 
+              sx={{ height: 4 }}
+            />
+          </Box>
+        )}
+      </Paper>
 
       {/* Hidden video element for face detection */}
-      <video
-        ref={videoRef}
-        autoPlay
-        muted
-        playsInline
-        style={{ display: 'none' }}
-      />
-      
-      {/* Hidden canvas for image processing */}
-      <canvas
-        ref={canvasRef}
-        style={{ display: 'none' }}
-      />
-
-      {/* Permission Denied Alert */}
-      {permissionDenied && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          Camera access is required for proctoring. Please enable camera permissions and refresh the page.
-        </Alert>
+      {requireCamera && (
+        <Box sx={{ position: 'fixed', bottom: 16, right: 16, zIndex: 9999 }}>
+          <Paper sx={{ p: 1 }}>
+            <video
+              ref={videoRef}
+              width={160}
+              height={120}
+              autoPlay
+              muted
+              style={{ borderRadius: 4 }}
+            />
+            <canvas
+              ref={canvasRef}
+              style={{ display: 'none' }}
+            />
+          </Paper>
+        </Box>
       )}
 
-      {/* Violation Warning Dialog */}
+      {/* Violations Dialog */}
       <Dialog
-        open={showWarningDialog}
-        onClose={() => setShowWarningDialog(false)}
-        maxWidth="sm"
+        open={showViolations}
+        onClose={() => setShowViolations(false)}
+        maxWidth="md"
         fullWidth
       >
-        <DialogTitle sx={{ 
-          bgcolor: 'error.main', 
-          color: 'white',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1
-        }}>
-          <Warning />
-          Proctoring Violation Detected
+        <DialogTitle>
+          Proctoring Violations
+          <Typography variant="body2" color="text.secondary">
+            Total violations: {violations.length}
+          </Typography>
         </DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
-          {currentViolation && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                {currentViolation.description}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Severity: {currentViolation.severity.toUpperCase()}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Time: {currentViolation.timestamp.toLocaleTimeString()}
-              </Typography>
-              
-              <Alert severity="warning" sx={{ mt: 2 }}>
-                Multiple violations may result in automatic submission of your assessment.
-                Please ensure you follow all proctoring guidelines.
-              </Alert>
-            </Box>
+        <DialogContent>
+          {violations.length === 0 ? (
+            <Typography color="text.secondary">
+              No violations detected.
+            </Typography>
+          ) : (
+            <List>
+              {violations.slice().reverse().map((violation, index) => (
+                <ListItem key={index}>
+                  <ListItemIcon>
+                    {getViolationIcon(violation.type)}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={violation.description}
+                    secondary={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Chip
+                          label={violation.severity}
+                          color={getSeverityColor(violation.severity) as any}
+                          size="small"
+                        />
+                        <Typography variant="caption">
+                          {violation.timestamp.toLocaleTimeString()}
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                </ListItem>
+              ))}
+            </List>
           )}
         </DialogContent>
         <DialogActions>
-          <Button 
-            onClick={() => setShowWarningDialog(false)}
-            variant="contained"
-            color="primary"
-          >
-            I Understand
+          <Button onClick={() => setShowViolations(false)}>
+            Close
           </Button>
         </DialogActions>
       </Dialog>

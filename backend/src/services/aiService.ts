@@ -288,6 +288,106 @@ export class AIService {
     }
   }
 
+  // Grade individual answer using AI
+  async gradeAnswer(params: {
+    question: string;
+    correctAnswer: string;
+    studentAnswer: string;
+    maxPoints: number;
+    rubric?: string;
+  }): Promise<{ score: number; feedback: string; confidence: number }> {
+    try {
+      const { question, correctAnswer, studentAnswer, maxPoints, rubric } = params;
+
+      const prompt = `
+        You are an expert academic grader. Grade this individual answer.
+
+        **Question:** ${question}
+        
+        **Correct/Expected Answer:** ${correctAnswer}
+        
+        **Student Answer:** ${studentAnswer}
+        
+        **Maximum Points:** ${maxPoints}
+        
+        ${rubric ? `**Grading Rubric:** ${rubric}` : ''}
+
+        Please evaluate the student's answer and provide:
+        1. A score from 0 to ${maxPoints} points
+        2. Constructive feedback explaining the grade
+        3. Your confidence level in this assessment (0.0 to 1.0)
+
+        Consider:
+        - Accuracy and correctness of the answer
+        - Completeness of the response
+        - Understanding demonstrated
+        - Partial credit for partially correct answers
+        - Clear reasoning and explanation
+
+        Respond in JSON format:
+        {
+          "score": <number between 0 and ${maxPoints}>,
+          "feedback": "<constructive feedback explaining the grade>",
+          "confidence": <number between 0.0 and 1.0>
+        }
+      `;
+
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+
+      try {
+        const gradeResult = JSON.parse(text);
+        
+        // Validate and constrain values
+        const score = Math.min(Math.max(gradeResult.score || 0, 0), maxPoints);
+        const confidence = Math.min(Math.max(gradeResult.confidence || 0.7, 0), 1);
+        
+        return {
+          score,
+          feedback: gradeResult.feedback || 'Answer graded by AI system.',
+          confidence
+        };
+      } catch (parseError) {
+        console.error('Failed to parse AI grading response:', parseError);
+        
+        // Fallback grading logic
+        const studentText = studentAnswer.toLowerCase().trim();
+        const correctText = correctAnswer.toLowerCase().trim();
+        
+        let fallbackScore = 0;
+        if (studentText.length > 0) {
+          // Simple keyword matching for fallback
+          const correctWords = correctText.split(/\s+/);
+          const studentWords = studentText.split(/\s+/);
+          const matchingWords = correctWords.filter(word => 
+            studentWords.some(sWord => sWord.includes(word) || word.includes(sWord))
+          );
+          
+          const matchRatio = matchingWords.length / correctWords.length;
+          fallbackScore = Math.round(maxPoints * matchRatio * 0.7); // Conservative scoring
+        }
+        
+        return {
+          score: fallbackScore,
+          feedback: 'Answer evaluated. Consider reviewing with instructor for detailed feedback.',
+          confidence: 0.4
+        };
+      }
+
+    } catch (error) {
+      console.error('AI answer grading failed:', error);
+      
+      // Return minimal score for any attempt
+      const hasAnswer = studentAnswer && studentAnswer.trim().length > 0;
+      return {
+        score: hasAnswer ? Math.round(maxPoints * 0.3) : 0,
+        feedback: hasAnswer ? 'Answer submitted. Manual review recommended.' : 'No answer provided.',
+        confidence: 0.2
+      };
+    }
+  }
+
   // Grade assessment submission using AI
   async gradeAssessment(submissionId: string): Promise<any> {
     try {
@@ -461,6 +561,127 @@ export class AIService {
     } catch (error) {
       console.error('Assessment grading failed:', error);
       throw error;
+    }
+  }
+
+  // Grade assignment submission with AI
+  async gradeAssignmentSubmission(assignmentData: {
+    assignmentTitle: string;
+    assignmentInstructions: string;
+    submissionText: string;
+    sections?: Array<{
+      id: string;
+      title: string;
+      content: string;
+      type: string;
+    }>;
+    maxPoints: number;
+  }): Promise<{ score: number; feedback: string; confidence: number }> {
+    try {
+      const { assignmentTitle, assignmentInstructions, submissionText, sections, maxPoints } = assignmentData;
+
+      // Combine text submission and sections content
+      let fullSubmission = submissionText || '';
+      if (sections && sections.length > 0) {
+        fullSubmission += '\n\n' + sections.map(section => 
+          `**${section.title}:**\n${section.content}`
+        ).join('\n\n');
+      }
+
+      const prompt = `
+        You are an expert academic grader. Grade the following assignment submission.
+
+        **Assignment Title:** ${assignmentTitle}
+        
+        **Assignment Instructions:**
+        ${assignmentInstructions}
+        
+        **Student Submission:**
+        ${fullSubmission}
+        
+        **Maximum Points:** ${maxPoints}
+
+        Please provide a comprehensive evaluation including:
+        
+        1. **Overall Score** (0-${maxPoints}): Based on how well the submission meets the assignment requirements
+        2. **Detailed Feedback**: Specific comments on strengths, weaknesses, and areas for improvement
+        3. **Confidence Level** (0.0-1.0): How confident you are in this assessment
+        
+        Grading Criteria:
+        - Content quality and relevance (40%)
+        - Understanding of concepts (25%)
+        - Organization and structure (20%)
+        - Grammar and clarity (15%)
+        
+        Consider:
+        - Does the submission address all parts of the assignment?
+        - Is the content accurate and well-researched?
+        - Is the writing clear and well-organized?
+        - Are there any factual errors or misunderstandings?
+        
+        Please respond in JSON format:
+        {
+          "score": <number between 0 and ${maxPoints}>,
+          "percentage": <percentage score>,
+          "feedback": "<detailed feedback text>",
+          "confidence": <number between 0.0 and 1.0>,
+          "strengths": ["<strength 1>", "<strength 2>", ...],
+          "improvements": ["<improvement 1>", "<improvement 2>", ...],
+          "criteriaScores": {
+            "content": <score out of 10>,
+            "understanding": <score out of 10>,
+            "organization": <score out of 10>,
+            "clarity": <score out of 10>
+          }
+        }
+      `;
+
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+
+      try {
+        const gradeResult = JSON.parse(text);
+        
+        // Validate score is within bounds
+        const score = Math.min(Math.max(gradeResult.score || 0, 0), maxPoints);
+        const confidence = Math.min(Math.max(gradeResult.confidence || 0.5, 0), 1);
+        
+        return {
+          score,
+          feedback: gradeResult.feedback || 'Assignment graded by AI system.',
+          confidence
+        };
+      } catch (parseError) {
+        console.error('Failed to parse AI grading response:', parseError);
+        
+        // Fallback grading based on submission length and content
+        const wordCount = fullSubmission.split(/\s+/).length;
+        const hasContent = fullSubmission.trim().length > 50;
+        
+        let fallbackScore = 0;
+        if (hasContent) {
+          if (wordCount < 100) fallbackScore = maxPoints * 0.3;
+          else if (wordCount < 300) fallbackScore = maxPoints * 0.6;
+          else fallbackScore = maxPoints * 0.75;
+        }
+        
+        return {
+          score: Math.round(fallbackScore),
+          feedback: 'Assignment auto-graded. This submission shows effort but may need instructor review for detailed feedback.',
+          confidence: 0.3
+        };
+      }
+
+    } catch (error) {
+      console.error('Assignment grading failed:', error);
+      
+      // Return minimal score for any submission attempt
+      return {
+        score: Math.round(maxPoints * 0.5),
+        feedback: 'Assignment submitted successfully. Awaiting instructor review for detailed grading.',
+        confidence: 0.1
+      };
     }
   }
 
@@ -1016,15 +1237,21 @@ Please try again in a moment - I should be back to normal soon!`;
     answerSheetContent?: string
   ): Promise<Array<{
     question: string;
-    type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay';
+    type: 'multiple_choice' | 'multiple_choice_multiple' | 'true_false' | 'short_answer' | 'essay' | 'fill_in_blank' | 'numerical' | 'matching';
     options?: string[];
-    correctAnswer?: string;
+    correctAnswer?: string | string[];
     points: number;
     aiExtracted: boolean;
+    section?: string;
+    sectionTitle?: string;
+    leftItems?: string[];
+    rightItems?: string[];
+    matchingPairs?: Array<{ left: string; right: string; }>;
   }>> {
     try {
       const prompt = `
         Extract assessment questions from the following document text and format them appropriately for a ${assessmentType}.
+        Pay special attention to sections (Section A, Section B, Section C, etc.) and different question types.
         
         Document Text:
         ${documentText}
@@ -1033,23 +1260,35 @@ Please try again in a moment - I should be back to normal soon!`;
         [
           {
             "question": "Question text here?",
-            "type": "multiple-choice", // or "true-false", "short-answer", "essay"
-            "options": ["Option A", "Option B", "Option C", "Option D"], // only for multiple-choice
-            "correctAnswer": "Option A", // provide if determinable from context
+            "type": "multiple_choice", // or "multiple_choice_multiple", "true_false", "short_answer", "essay", "fill_in_blank", "numerical", "matching"
+            "options": ["Option A", "Option B", "Option C", "Option D"], // for multiple choice questions
+            "correctAnswer": "Option A", // or ["Option A", "Option B"] for multiple answers
             "points": 10,
-            "aiExtracted": true
+            "aiExtracted": true,
+            "section": "A", // if the question belongs to a section (A, B, C, etc.)
+            "sectionTitle": "Multiple Choice Questions", // section description
+            "leftItems": ["Item 1", "Item 2"], // for matching questions only
+            "rightItems": ["Match A", "Match B"], // for matching questions only
+            "matchingPairs": [{"left": "Item 1", "right": "Match A"}] // correct matches for matching questions
           }
         ]
         
         Guidelines:
-        - Extract or create questions that test understanding of the key concepts
-        - For multiple-choice questions, provide 4 options
-        - For true-false questions, don't include options array
-        - For short-answer and essay questions, provide sample answers as correctAnswer if possible
-        - Assign appropriate point values (typically 5-15 points per question)
-        - If the document contains existing questions, extract them as-is
-        - If the document is content-based, create questions that test comprehension
+        - Identify and preserve section structure (Section A, B, C, etc.)
+        - Support all question types: multiple_choice, multiple_choice_multiple, true_false, short_answer, essay, fill_in_blank, numerical, matching
+        - For multiple_choice: provide 4 options with one correct answer
+        - For multiple_choice_multiple: provide 4+ options with multiple correct answers as array
+        - For true_false: don't include options array, use "true" or "false" as correctAnswer
+        - For matching: provide leftItems and rightItems arrays, and matchingPairs for correct answers
+        - For fill_in_blank: question should have blanks marked with _____ or [blank]
+        - For numerical: correctAnswer should be a number
+        - For short_answer and essay: provide sample answers as correctAnswer
+        - Assign appropriate point values based on question complexity
+        - If document has existing questions, extract them exactly as written
+        - If document is content-based, create questions that test comprehension
+        - Preserve section titles and organization from the original document
         - Ensure questions are clear and unambiguous
+        - For matching questions, ensure equal number of left and right items
       `;
 
       const result = await this.model.generateContent(prompt);

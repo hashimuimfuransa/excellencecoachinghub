@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
-// Create axios instance with default config
+// Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
 });
@@ -16,55 +16,101 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-export interface UploadResult {
+interface FileUploadResult {
   filename: string;
   originalName: string;
   fileUrl: string;
   fileSize: number;
-  mimeType: string;
   uploadedAt: Date;
 }
 
-export interface UploadProgress {
-  loaded: number;
-  total: number;
-  percentage: number;
-}
-
 class FileUploadService {
-  // Upload assignment file
+  // Upload assignment file (student submission)
   async uploadAssignmentFile(
     file: File, 
     courseId: string, 
     assignmentId: string,
-    onProgress?: (progress: UploadProgress) => void
-  ): Promise<UploadResult> {
+    onProgress?: (progress: number) => void
+  ): Promise<FileUploadResult> {
     try {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('courseId', courseId);
-      formData.append('assignmentId', assignmentId);
 
-      const response = await api.post('/uploads/assignment', formData, {
+      const response = await api.post(`/assignments/${assignmentId}/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
         onUploadProgress: (progressEvent) => {
           if (onProgress && progressEvent.total) {
-            const progress: UploadProgress = {
-              loaded: progressEvent.loaded,
-              total: progressEvent.total,
-              percentage: Math.round((progressEvent.loaded * 100) / progressEvent.total)
-            };
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
             onProgress(progress);
           }
-        }
+        },
       });
 
       return response.data.data;
     } catch (error: any) {
-      console.error('Failed to upload assignment file:', error);
+      console.error('File upload failed:', error);
       throw new Error(error.response?.data?.message || 'Failed to upload file');
+    }
+  }
+
+  // Upload assignment document (instructor)
+  async uploadAssignmentDocument(
+    file: File, 
+    assignmentId: string,
+    onProgress?: (progress: number) => void
+  ): Promise<FileUploadResult> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await api.post(`/assignments/${assignmentId}/upload-document`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (onProgress && progressEvent.total) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            onProgress(progress);
+          }
+        },
+      });
+
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Document upload failed:', error);
+      throw new Error(error.response?.data?.message || 'Failed to upload document');
+    }
+  }
+
+  // Upload assessment file
+  async uploadAssessmentFile(
+    file: File, 
+    assessmentId: string,
+    onProgress?: (progress: number) => void
+  ): Promise<FileUploadResult> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await api.post(`/assessments/${assessmentId}/upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (onProgress && progressEvent.total) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            onProgress(progress);
+          }
+        },
+      });
+
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Assessment file upload failed:', error);
+      throw new Error(error.response?.data?.message || 'Failed to upload assessment file');
     }
   }
 
@@ -72,175 +118,30 @@ class FileUploadService {
   async uploadCourseMaterial(
     file: File, 
     courseId: string,
-    onProgress?: (progress: UploadProgress) => void
-  ): Promise<UploadResult> {
+    materialType: 'document' | 'video' | 'image' | 'other' = 'document',
+    onProgress?: (progress: number) => void
+  ): Promise<FileUploadResult> {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('courseId', courseId);
+      formData.append('materialType', materialType);
 
-      const response = await api.post('/uploads/course-material', formData, {
+      const response = await api.post(`/courses/${courseId}/upload-material`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
         onUploadProgress: (progressEvent) => {
           if (onProgress && progressEvent.total) {
-            const progress: UploadProgress = {
-              loaded: progressEvent.loaded,
-              total: progressEvent.total,
-              percentage: Math.round((progressEvent.loaded * 100) / progressEvent.total)
-            };
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
             onProgress(progress);
           }
-        }
-      });
-
-      return response.data.data;
-    } catch (error: any) {
-      console.error('Failed to upload course material:', error);
-      throw new Error(error.response?.data?.message || 'Failed to upload file');
-    }
-  }
-
-  // Upload profile avatar
-  async uploadAvatar(
-    file: File,
-    onProgress?: (progress: UploadProgress) => void
-  ): Promise<UploadResult> {
-    try {
-      const formData = new FormData();
-      formData.append('avatar', file);
-
-      const response = await api.post('/uploads/avatar', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
         },
-        onUploadProgress: (progressEvent) => {
-          if (onProgress && progressEvent.total) {
-            const progress: UploadProgress = {
-              loaded: progressEvent.loaded,
-              total: progressEvent.total,
-              percentage: Math.round((progressEvent.loaded * 100) / progressEvent.total)
-            };
-            onProgress(progress);
-          }
-        }
       });
 
       return response.data.data;
     } catch (error: any) {
-      console.error('Failed to upload avatar:', error);
-      throw new Error(error.response?.data?.message || 'Failed to upload avatar');
-    }
-  }
-
-  // Upload course thumbnail
-  async uploadCourseThumbnail(
-    file: File, 
-    courseId: string,
-    onProgress?: (progress: UploadProgress) => void
-  ): Promise<UploadResult> {
-    try {
-      const formData = new FormData();
-      formData.append('thumbnail', file);
-      formData.append('courseId', courseId);
-
-      const response = await api.post('/uploads/course-thumbnail', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent) => {
-          if (onProgress && progressEvent.total) {
-            const progress: UploadProgress = {
-              loaded: progressEvent.loaded,
-              total: progressEvent.total,
-              percentage: Math.round((progressEvent.loaded * 100) / progressEvent.total)
-            };
-            onProgress(progress);
-          }
-        }
-      });
-
-      return response.data.data;
-    } catch (error: any) {
-      console.error('Failed to upload course thumbnail:', error);
-      throw new Error(error.response?.data?.message || 'Failed to upload thumbnail');
-    }
-  }
-
-  // Upload announcement attachment
-  async uploadAnnouncementAttachment(
-    file: File, 
-    courseId: string,
-    onProgress?: (progress: UploadProgress) => void
-  ): Promise<UploadResult> {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('courseId', courseId);
-
-      const response = await api.post('/uploads/announcement-attachment', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent) => {
-          if (onProgress && progressEvent.total) {
-            const progress: UploadProgress = {
-              loaded: progressEvent.loaded,
-              total: progressEvent.total,
-              percentage: Math.round((progressEvent.loaded * 100) / progressEvent.total)
-            };
-            onProgress(progress);
-          }
-        }
-      });
-
-      return response.data.data;
-    } catch (error: any) {
-      console.error('Failed to upload announcement attachment:', error);
-      throw new Error(error.response?.data?.message || 'Failed to upload attachment');
-    }
-  }
-
-  // Upload multiple files
-  async uploadMultipleFiles(
-    files: File[], 
-    uploadType: 'assignment' | 'course-material' | 'announcement',
-    courseId: string,
-    assignmentId?: string,
-    onProgress?: (fileIndex: number, progress: UploadProgress) => void
-  ): Promise<UploadResult[]> {
-    try {
-      const results: UploadResult[] = [];
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        let result: UploadResult;
-
-        const progressCallback = onProgress ? (progress: UploadProgress) => onProgress(i, progress) : undefined;
-
-        switch (uploadType) {
-          case 'assignment':
-            if (!assignmentId) throw new Error('Assignment ID required for assignment uploads');
-            result = await this.uploadAssignmentFile(file, courseId, assignmentId, progressCallback);
-            break;
-          case 'course-material':
-            result = await this.uploadCourseMaterial(file, courseId, progressCallback);
-            break;
-          case 'announcement':
-            result = await this.uploadAnnouncementAttachment(file, courseId, progressCallback);
-            break;
-          default:
-            throw new Error('Invalid upload type');
-        }
-
-        results.push(result);
-      }
-
-      return results;
-    } catch (error: any) {
-      console.error('Failed to upload multiple files:', error);
-      throw new Error(error.message || 'Failed to upload files');
+      console.error('Course material upload failed:', error);
+      throw new Error(error.response?.data?.message || 'Failed to upload course material');
     }
   }
 
@@ -248,11 +149,12 @@ class FileUploadService {
   async downloadFile(fileUrl: string): Promise<Blob> {
     try {
       const response = await api.get(fileUrl, {
-        responseType: 'blob'
+        responseType: 'blob',
       });
+
       return response.data;
     } catch (error: any) {
-      console.error('Failed to download file:', error);
+      console.error('File download failed:', error);
       throw new Error(error.response?.data?.message || 'Failed to download file');
     }
   }
@@ -260,125 +162,130 @@ class FileUploadService {
   // Delete file
   async deleteFile(fileUrl: string): Promise<void> {
     try {
-      await api.delete('/uploads/file', {
+      await api.delete('/files/delete', {
         data: { fileUrl }
       });
     } catch (error: any) {
-      console.error('Failed to delete file:', error);
+      console.error('File deletion failed:', error);
       throw new Error(error.response?.data?.message || 'Failed to delete file');
     }
   }
 
   // Get file info
-  async getFileInfo(fileUrl: string): Promise<any> {
+  async getFileInfo(fileUrl: string): Promise<{
+    filename: string;
+    originalName: string;
+    fileSize: number;
+    mimeType: string;
+    uploadedAt: Date;
+  }> {
     try {
-      const response = await api.get('/uploads/file-info', {
+      const response = await api.get('/files/info', {
         params: { fileUrl }
       });
+
       return response.data.data;
     } catch (error: any) {
       console.error('Failed to get file info:', error);
-      throw new Error(error.response?.data?.message || 'Failed to get file info');
+      throw new Error(error.response?.data?.message || 'Failed to get file information');
     }
   }
 
   // Validate file before upload
-  validateFile(file: File, options: {
-    maxSize?: number; // in bytes
-    allowedTypes?: string[];
-    allowedExtensions?: string[];
-  }): { isValid: boolean; error?: string } {
-    const { maxSize, allowedTypes, allowedExtensions } = options;
-
+  validateFile(
+    file: File, 
+    allowedTypes: string[] = [], 
+    maxSizeInMB: number = 10
+  ): { isValid: boolean; error?: string } {
     // Check file size
-    if (maxSize && file.size > maxSize) {
+    const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
+    if (file.size > maxSizeInBytes) {
       return {
         isValid: false,
-        error: `File size exceeds maximum allowed size of ${(maxSize / 1024 / 1024).toFixed(2)} MB`
+        error: `File size exceeds ${maxSizeInMB}MB limit`
       };
     }
 
     // Check file type
-    if (allowedTypes && !allowedTypes.includes(file.type)) {
-      return {
-        isValid: false,
-        error: `File type ${file.type} is not allowed. Allowed types: ${allowedTypes.join(', ')}`
-      };
-    }
-
-    // Check file extension
-    if (allowedExtensions) {
+    if (allowedTypes.length > 0) {
       const fileExtension = file.name.split('.').pop()?.toLowerCase();
-      if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+      if (!fileExtension || !allowedTypes.includes(fileExtension)) {
         return {
           isValid: false,
-          error: `File extension .${fileExtension} is not allowed. Allowed extensions: ${allowedExtensions.join(', ')}`
+          error: `File type not allowed. Allowed types: ${allowedTypes.join(', ')}`
         };
       }
+    }
+
+    // Check for malicious file names
+    const dangerousPatterns = [
+      /\.exe$/i,
+      /\.bat$/i,
+      /\.cmd$/i,
+      /\.scr$/i,
+      /\.vbs$/i,
+      /\.js$/i,
+      /\.jar$/i,
+      /\.com$/i,
+      /\.pif$/i
+    ];
+
+    if (dangerousPatterns.some(pattern => pattern.test(file.name))) {
+      return {
+        isValid: false,
+        error: 'File type not allowed for security reasons'
+      };
     }
 
     return { isValid: true };
   }
 
-  // Get upload limits
-  async getUploadLimits(): Promise<any> {
-    try {
-      const response = await api.get('/uploads/limits');
-      return response.data.data || {
-        maxFileSize: 10 * 1024 * 1024, // 10MB default
-        allowedTypes: ['image/*', 'application/pdf', 'text/*'],
-        maxFilesPerUpload: 5
-      };
-    } catch (error: any) {
-      console.error('Failed to get upload limits:', error);
-      return {
-        maxFileSize: 10 * 1024 * 1024, // 10MB default
-        allowedTypes: ['image/*', 'application/pdf', 'text/*'],
-        maxFilesPerUpload: 5
-      };
-    }
+  // Format file size for display
+  formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
-  // Generate presigned URL for direct upload (for large files)
-  async generatePresignedUrl(fileName: string, fileType: string, uploadType: string): Promise<any> {
-    try {
-      const response = await api.post('/uploads/presigned-url', {
-        fileName,
-        fileType,
-        uploadType
-      });
-      return response.data.data;
-    } catch (error: any) {
-      console.error('Failed to generate presigned URL:', error);
-      throw new Error(error.response?.data?.message || 'Failed to generate presigned URL');
-    }
-  }
-
-  // Upload to presigned URL
-  async uploadToPresignedUrl(
-    presignedUrl: string, 
-    file: File,
-    onProgress?: (progress: UploadProgress) => void
-  ): Promise<void> {
-    try {
-      await axios.put(presignedUrl, file, {
-        headers: {
-          'Content-Type': file.type,
-        },
-        onUploadProgress: (progressEvent) => {
-          if (onProgress && progressEvent.total) {
-            const progress: UploadProgress = {
-              loaded: progressEvent.loaded,
-              total: progressEvent.total,
-              percentage: Math.round((progressEvent.loaded * 100) / progressEvent.total)
-            };
-            onProgress(progress);
-          }
-        }
-      });
-    } catch (error: any) {
-      console.error('Failed to upload to presigned URL:', error);
-      throw new Error('Failed to upload file');
+  // Get file icon based on extension
+  getFileIcon(filename: string): string {
+    const extension = filename.split('.').pop()?.toLowerCase();
+    
+    switch (extension) {
+      case 'pdf':
+        return '📄';
+      case 'doc':
+      case 'docx':
+        return '📝';
+      case 'xls':
+      case 'xlsx':
+        return '📊';
+      case 'ppt':
+      case 'pptx':
+        return '📽️';
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+        return '🖼️';
+      case 'mp4':
+      case 'avi':
+      case 'mov':
+        return '🎥';
+      case 'mp3':
+      case 'wav':
+        return '🎵';
+      case 'zip':
+      case 'rar':
+        return '📦';
+      case 'txt':
+        return '📄';
+      default:
+        return '📎';
     }
   }
 }

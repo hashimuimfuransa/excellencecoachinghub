@@ -34,11 +34,19 @@ export interface IEnhancedAssessment {
 
 export interface IExtractedQuestion {
   question: string;
-  type: 'multiple_choice' | 'multiple_choice_multiple' | 'true_false' | 'short_answer' | 'essay' | 'fill_in_blank' | 'numerical';
+  type: 'multiple_choice' | 'multiple_choice_multiple' | 'true_false' | 'short_answer' | 'essay' | 'fill_in_blank' | 'numerical' | 'matching';
   options?: string[];
   correctAnswer?: string | string[];
   points: number;
   aiExtracted: boolean;
+  section?: string; // Section A, B, C, etc.
+  sectionTitle?: string; // Section title/description
+  matchingPairs?: Array<{
+    left: string;
+    right: string;
+  }>;
+  leftItems?: string[]; // For matching questions
+  rightItems?: string[]; // For matching questions
 }
 
 export interface IAssessmentSubmission {

@@ -1,5 +1,8 @@
 import { apiService } from './apiService';
 
+// Helper function to get API base URL
+const getApiBaseUrl = () => process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
 // Assessment interfaces
 export interface IQuestion {
   _id: string;
@@ -16,6 +19,7 @@ export interface IQuestion {
 }
 
 export interface IAssessment {
+  documentUrl: boolean | undefined;
   _id: string;
   title: string;
   description?: string;
@@ -207,7 +211,7 @@ export const assessmentService = {
 
       // Use fetch directly for file upload
       const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/assessments`, {
+      const response = await fetch(`${getApiBaseUrl()}/assessments`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -232,6 +236,27 @@ export const assessmentService = {
       
       throw new Error(response.error || 'Failed to create assessment');
     }
+  },
+
+  // Get all assessments (admin only)
+  getAllAssessments: async (filters: AssessmentFilters = {}): Promise<AssessmentListResponse> => {
+    const queryParams = new URLSearchParams();
+    
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    const response = await apiService.get<AssessmentListResponse>(
+      `/assessments/admin?${queryParams.toString()}`
+    );
+    
+    if (response.success && response.data) {
+      return response.data;
+    }
+    
+    throw new Error(response.error || 'Failed to fetch all assessments');
   },
 
   // Get teacher's assessments
@@ -285,7 +310,7 @@ export const assessmentService = {
 
     // Use fetch directly for file upload
     const token = localStorage.getItem('token');
-    const response = await fetch(`${process.env.REACT_APP_API_URL}/assessments/${id}/add-questions`, {
+    const response = await fetch(`${getApiBaseUrl()}/assessments/${id}/add-questions`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -300,6 +325,31 @@ export const assessmentService = {
     }
     
     throw new Error(result.error || 'Failed to add questions from document');
+  },
+
+  // Replace questions from document in existing assessment (removes old document-extracted questions)
+  replaceQuestionsFromDocument: async (id: string, file: File): Promise<IAssessment> => {
+    // Create FormData for file upload
+    const formData = new FormData();
+    formData.append('document', file);
+
+    // Use fetch directly for file upload
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${getApiBaseUrl()}/assessments/${id}/replace-questions`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const result = await response.json();
+    
+    if (response.ok && result.success) {
+      return result.data.assessment;
+    }
+    
+    throw new Error(result.error || 'Failed to replace questions from document');
   },
 
   // Delete assessment
@@ -382,6 +432,17 @@ export const assessmentService = {
     }
     
     throw new Error(response.error || 'Failed to fetch available assessments');
+  },
+
+  // Debug method to check student info
+  debugStudentInfo: async (): Promise<any> => {
+    const response = await apiService.get('/assessments/debug/student-info');
+    
+    if (response.success) {
+      return response.debug;
+    }
+    
+    throw new Error(response.error || 'Failed to fetch debug info');
   },
 
   // Start assessment attempt
@@ -500,6 +561,54 @@ export const assessmentService = {
     } catch (error: any) {
       console.error('Failed to fetch student attempts:', error);
       return [];
+    }
+  },
+
+  // Get assessment result
+  getAssessmentResult: async (assessmentId: string): Promise<any> => {
+    try {
+      const response = await apiService.get(`/assessments/${assessmentId}/result`);
+      
+      if (response.success && response.data) {
+        return response.data;
+      }
+      
+      throw new Error(response.error || 'Failed to get assessment result');
+    } catch (error: any) {
+      console.error('Failed to get assessment result:', error);
+      throw new Error(error.message || 'Failed to get assessment result');
+    }
+  },
+
+  // Get student's assessment attempts
+  getAssessmentAttempts: async (assessmentId: string): Promise<any[]> => {
+    try {
+      const response = await apiService.get(`/assessments/${assessmentId}/attempts`);
+      
+      if (response.success && response.data) {
+        return response.data;
+      }
+      
+      throw new Error(response.error || 'Failed to get assessment attempts');
+    } catch (error: any) {
+      console.error('Failed to get assessment attempts:', error);
+      throw new Error(error.message || 'Failed to get assessment attempts');
+    }
+  },
+
+  // Start assessment attempt
+  startAssessmentAttempt: async (assessmentId: string): Promise<any> => {
+    try {
+      const response = await apiService.post(`/assessments/${assessmentId}/start`, {});
+      
+      if (response.success && response.data) {
+        return response.data;
+      }
+      
+      throw new Error(response.error || 'Failed to start assessment attempt');
+    } catch (error: any) {
+      console.error('Failed to start assessment attempt:', error);
+      throw new Error(error.message || 'Failed to start assessment attempt');
     }
   }
 };

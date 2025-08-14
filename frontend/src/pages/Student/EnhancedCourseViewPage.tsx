@@ -155,6 +155,7 @@ const EnhancedCourseViewPage: React.FC = () => {
   const [recentAnnouncements, setRecentAnnouncements] = useState<any[]>([]);
   const [upcomingSessions, setUpcomingSessions] = useState<ILiveSession[]>([]);
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [enrolling, setEnrolling] = useState(false);
 
   // Load course data and stats
   useEffect(() => {
@@ -292,11 +293,11 @@ const EnhancedCourseViewPage: React.FC = () => {
   };
 
   const handleAssignmentsView = () => {
-    navigate(`/dashboard/student/course/${id}/assignments`);
+    navigate(`/course/${id}/assignments`);
   };
 
   const handleAssessmentsView = () => {
-    navigate(`/dashboard/student/course/${id}/assessments`);
+    navigate(`/course/${id}/assessments`);
   };
 
   const handleAnnouncementsView = () => {
@@ -305,6 +306,21 @@ const EnhancedCourseViewPage: React.FC = () => {
 
   const toggleBookmark = () => {
     setIsBookmarked(!isBookmarked);
+  };
+
+  const handleEnroll = async () => {
+    if (!id) return;
+    
+    try {
+      setEnrolling(true);
+      await enrollmentService.enrollInCourse(id);
+      setIsEnrolled(true);
+      // Reload the page data
+      window.location.reload();
+    } catch (err: any) {
+      setError(err.message || 'Failed to enroll in course');
+      setEnrolling(false);
+    }
   };
 
   if (loading) {
@@ -347,13 +363,24 @@ const EnhancedCourseViewPage: React.FC = () => {
           <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
             You need to be enrolled in this course to access the content.
           </Alert>
-          <Button
-            onClick={() => navigate(`/courses/${id}`)}
-            variant="contained"
-            sx={{ borderRadius: 2 }}
-          >
-            View Course Details
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              onClick={handleEnroll}
+              variant="contained"
+              disabled={enrolling}
+              startIcon={enrolling ? <CircularProgress size={20} /> : <School />}
+              sx={{ borderRadius: 2 }}
+            >
+              {enrolling ? 'Enrolling...' : 'Enroll in Course'}
+            </Button>
+            <Button
+              onClick={() => navigate('/courses')}
+              variant="outlined"
+              sx={{ borderRadius: 2 }}
+            >
+              Browse All Courses
+            </Button>
+          </Box>
         </Container>
       </GradientBackground>
     );

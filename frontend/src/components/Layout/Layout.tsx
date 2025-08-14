@@ -45,7 +45,10 @@ import {
   Security,
   Groups,
   ManageAccounts,
-  Add
+  Add,
+  Grade,
+  Leaderboard,
+  EmojiEvents
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { useNotifications } from '../../hooks/useNotifications';
@@ -169,6 +172,7 @@ const Layout: React.FC = () => {
         { text: 'Course Management', icon: <School />, path: '/dashboard/admin/courses' },
         { text: 'Recordings Management', icon: <VideoLibrary />, path: '/dashboard/admin/recordings' },
         { text: 'Analytics & Reports', icon: <Analytics />, path: '/dashboard/admin/analytics' },
+        { text: 'System Leaderboard', icon: <EmojiEvents />, path: '/admin/leaderboard' },
         { text: 'Proctoring & Monitoring', icon: <Security />, path: '/dashboard/admin/proctoring' },
         { text: 'AI Settings', icon: <Psychology />, path: '/dashboard/admin/ai-settings' },
         { text: 'Admin Settings', icon: <Settings />, path: '/dashboard/admin/settings' },
@@ -181,6 +185,7 @@ const Layout: React.FC = () => {
         { text: 'Create Course', icon: <Add />, path: '/dashboard/teacher/courses/create' },
         { text: 'Live Sessions', icon: <VideoCall />, path: '/dashboard/teacher/live-sessions' },
         { text: 'Student Management', icon: <ManageAccounts />, path: '/dashboard/teacher/student-management' },
+        { text: 'Grades & Performance', icon: <Grade />, path: '/dashboard/teacher/grades' },
         { text: 'Analytics', icon: <Analytics />, path: '/dashboard/teacher/analytics' },
         { text: 'Settings', icon: <Settings />, path: '/dashboard/teacher/settings' },
         { text: 'Profile', icon: <Person />, path: '/dashboard/teacher/profile' }
@@ -189,6 +194,8 @@ const Layout: React.FC = () => {
       roleSpecificItems.push(
         { text: 'My Courses', icon: <School />, path: '/dashboard/student/courses' },
         { text: '🔴 Live Sessions', icon: <VideoCall />, path: '/live-sessions' },
+        { text: 'My Grades', icon: <Grade />, path: '/dashboard/student/grades' },
+        { text: 'Leaderboard', icon: <EmojiEvents />, path: '/dashboard/student/leaderboard' },
         { text: 'Progress', icon: <Analytics />, path: '/dashboard/student/progress' },
         { text: 'AI Assistant', icon: <Psychology />, path: '/dashboard/student/ai-assistant' },
         { text: 'Settings', icon: <Settings />, path: '/dashboard/student/settings' },

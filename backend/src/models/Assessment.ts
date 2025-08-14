@@ -14,7 +14,7 @@ export interface IAssessmentDocument extends Document {
   questions: Array<{
     id: string;
     question: string;
-    type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay';
+    type: 'multiple-choice' | 'multiple_choice' | 'true-false' | 'true_false' | 'short-answer' | 'short_answer' | 'essay' | 'fill_in_blank' | 'numerical' | 'matching' | 'multiple_choice_multiple';
     options?: string[];
     correctAnswer?: string;
     points: number;
@@ -35,7 +35,7 @@ export interface IAssessmentDocument extends Document {
   documentType?: 'pdf' | 'docx' | 'txt';
   extractedQuestions?: Array<{
     question: string;
-    type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay';
+    type: 'multiple-choice' | 'multiple_choice' | 'true-false' | 'true_false' | 'short-answer' | 'short_answer' | 'essay' | 'fill_in_blank' | 'numerical' | 'matching' | 'multiple_choice_multiple';
     options?: string[];
     correctAnswer?: string;
     points: number;
@@ -82,6 +82,10 @@ export interface IAssessmentDocument extends Document {
 }
 
 export interface IAssessmentModel extends Model<IAssessmentDocument> {}
+
+// Export types for use in other files
+export type QuestionType = 'multiple-choice' | 'multiple_choice' | 'true-false' | 'true_false' | 'short-answer' | 'short_answer' | 'essay' | 'fill_in_blank' | 'numerical' | 'matching' | 'multiple_choice_multiple';
+export type AssessmentType = 'quiz' | 'assignment' | 'final' | 'exam' | 'project' | 'homework';
 
 const assessmentSchema = new Schema<IAssessmentDocument>({
   title: {
@@ -144,7 +148,7 @@ const assessmentSchema = new Schema<IAssessmentDocument>({
     },
     type: {
       type: String,
-      enum: ['multiple-choice', 'true-false', 'short-answer', 'essay'],
+      enum: ['multiple-choice', 'multiple_choice', 'true-false', 'true_false', 'short-answer', 'short_answer', 'essay', 'fill_in_blank', 'numerical', 'matching', 'multiple_choice_multiple'],
       required: true
     },
     options: [String],
@@ -187,7 +191,7 @@ const assessmentSchema = new Schema<IAssessmentDocument>({
     },
     type: {
       type: String,
-      enum: ['multiple-choice', 'true-false', 'short-answer', 'essay'],
+      enum: ['multiple-choice', 'multiple_choice', 'true-false', 'true_false', 'short-answer', 'short_answer', 'essay', 'fill_in_blank', 'numerical', 'matching', 'multiple_choice_multiple'],
       required: true
     },
     options: [String],

@@ -2,6 +2,7 @@ import express from 'express';
 import { auth } from '../middleware/auth';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { uploadDocument } from '../config/cloudinary';
+import { Assignment, AssignmentSubmission } from '../models/Assignment';
 import {
   createAssignment,
   updateAssignment,
@@ -11,11 +12,15 @@ import {
   submitAssignment,
   uploadAssignmentFile,
   uploadAssignmentDocument,
+  replaceAssignmentDocument,
   getAssignmentSubmissions,
   getStudentSubmission,
   gradeSubmission,
   getAssignmentStats,
-  toggleAssignmentStatus
+  toggleAssignmentStatus,
+  saveDraft,
+  getSubmissionHistory,
+  updateAIGrade
 } from '../controllers/assignmentController';
 
 const router = express.Router();
@@ -28,6 +33,34 @@ router.get('/:id', auth, asyncHandler(getAssignmentById));
 
 // Course assignments
 router.get('/course/:courseId', auth, asyncHandler(getCourseAssignments));
+router.get('/course/:courseId/submissions', auth, asyncHandler(async (req, res) => {
+  const { courseId } = req.params;
+  
+  try {
+    // Get all assignments for the course
+    const assignments = await Assignment.find({ course: courseId });
+    const assignmentIds = assignments.map(a => a._id);
+    
+    // Get all submissions for these assignments
+    const submissions = await AssignmentSubmission.find({ 
+      assignment: { $in: assignmentIds } 
+    })
+    .populate('assignment', 'title dueDate')
+    .populate('student', 'firstName lastName email')
+    .sort({ submittedAt: -1 });
+    
+    res.json({
+      success: true,
+      data: submissions
+    });
+  } catch (error: any) {
+    console.error('Failed to fetch course submissions:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch course submissions'
+    });
+  }
+}));
 
 // Assignment submissions
 router.post('/:assignmentId/submit', auth, asyncHandler(submitAssignment));
@@ -40,6 +73,9 @@ router.post('/:assignmentId/upload', auth, uploadDocument.single('file'), asyncH
 // Upload assignment document (instructor)
 router.post('/:assignmentId/upload-document', auth, uploadDocument.single('file'), asyncHandler(uploadAssignmentDocument));
 
+// Replace assignment document (instructor)
+router.put('/:assignmentId/replace-document', auth, uploadDocument.single('file'), asyncHandler(replaceAssignmentDocument));
+
 // Grading
 router.post('/submissions/:submissionId/grade', auth, asyncHandler(gradeSubmission));
 
@@ -49,13 +85,17 @@ router.get('/:assignmentId/stats', auth, asyncHandler(getAssignmentStats));
 // Status management
 router.patch('/:assignmentId/toggle-status', auth, asyncHandler(toggleAssignmentStatus));
 
+// Draft saving and submission history
+router.post('/save-draft', auth, asyncHandler(saveDraft));
+router.get('/:assignmentId/submission-history', auth, asyncHandler(getSubmissionHistory));
+router.post('/submissions/:submissionId/ai-grade', auth, asyncHandler(updateAIGrade));
+
 // Additional utility routes
 router.get('/course/:courseId/upcoming', auth, asyncHandler(async (req, res) => {
   const { courseId } = req.params;
   const { days = 7 } = req.query;
   
   try {
-    const { Assignment } = await import('../models/Assignment');
     const assignments = await (Assignment as any).findUpcoming(courseId, parseInt(days as string));
     
     res.json({
@@ -74,7 +114,6 @@ router.get('/course/:courseId/overdue', auth, asyncHandler(async (req, res) => {
   const { courseId } = req.params;
   
   try {
-    const { Assignment } = await import('../models/Assignment');
     const assignments = await (Assignment as any).findOverdue(courseId);
     
     res.json({
@@ -94,7 +133,6 @@ router.get('/:assignmentId/submittable', auth, asyncHandler(async (req, res) => 
   const { assignmentId } = req.params;
   
   try {
-    const { Assignment } = await import('../models/Assignment');
     const assignment = await Assignment.findById(assignmentId);
     
     if (!assignment) {

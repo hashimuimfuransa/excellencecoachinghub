@@ -178,7 +178,7 @@ export const getTeacherStudents = asyncHandler(async (req: Request, res: Respons
     let totalScoreCount = 0;
 
     for (const studentId of uniqueStudentIds) {
-      const studentEnrollments = enrollments.filter(e => e.user._id.toString() === studentId);
+      const studentEnrollments = enrollments.filter(e => e.user && e.user._id && e.user._id.toString() === studentId);
       const studentQuizAttempts = relevantQuizAttempts.filter(a => a.student.toString() === studentId);
       const studentBadges = userBadges.filter(ub => ub.user.toString() === studentId);
 

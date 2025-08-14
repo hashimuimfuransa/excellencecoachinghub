@@ -15,9 +15,18 @@ export const getStudentAssessments = async (req: Request, res: Response, next: N
     const courseId = req.query.courseId as string;
     const status = req.query.status as string;
 
-    // Get enrolled courses
-    const enrolledCourses = await Course.find({ enrolledStudents: studentId }).select('_id');
-    const courseIds = enrolledCourses.map(course => course._id);
+    // Get enrolled courses using UserProgress
+    const { UserProgress } = await import('../models/UserProgress');
+    const enrollments = await UserProgress.find({ user: studentId }).select('course');
+    const courseIds = enrollments.map(enrollment => enrollment.course);
+    
+    console.log('🔍 Student assessments debug:', {
+      studentId,
+      enrollmentsCount: enrollments.length,
+      courseIds: courseIds.map(id => id.toString()),
+      status: status,
+      requestedStatus: req.query.status
+    });
 
     // Build filter
     const filter: any = { 
@@ -47,6 +56,8 @@ export const getStudentAssessments = async (req: Request, res: Response, next: N
       filter.course = courseId;
     }
 
+    console.log('🔍 Final filter:', filter);
+
     const skip = (page - 1) * limit;
 
     const [assessments, total] = await Promise.all([
@@ -58,6 +69,12 @@ export const getStudentAssessments = async (req: Request, res: Response, next: N
         .limit(limit),
       Assessment.countDocuments(filter)
     ]);
+
+    console.log('📊 Assessment query results:', {
+      found: assessments.length,
+      total,
+      assessmentTitles: assessments.map(a => a.title)
+    });
 
     // Get submission status for each assessment
     const assessmentsWithStatus = await Promise.all(
@@ -115,15 +132,25 @@ export const startAssessment = async (req: Request, res: Response, next: NextFun
       return;
     }
 
-    // Check if student is enrolled in the course
-    const course = await Course.findOne({ 
-      _id: assessment.course._id, 
-      enrolledStudents: studentId 
+    // Check if student is enrolled in the course using UserProgress
+    const { UserProgress } = await import('../models/UserProgress');
+    const enrollment = await UserProgress.findOne({
+      user: studentId,
+      course: assessment.course._id
     });
-    if (!course) {
+    if (!enrollment) {
       res.status(403).json({
         success: false,
         error: 'You are not enrolled in this course'
+      });
+      return;
+    }
+    
+    const course = await Course.findById(assessment.course._id);
+    if (!course) {
+      res.status(404).json({
+        success: false,
+        error: 'Course not found'
       });
       return;
     }
@@ -395,11 +422,329 @@ export const getSubmissionDetails = async (req: Request, res: Response, next: Ne
   }
 };
 
+// Get student's attempts for a specific course
+export const getStudentCourseAttempts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { courseId } = req.params;
+    const studentId = req.user?.id;
+
+    // Verify course exists and student is enrolled
+    const course = await Course.findById(courseId);
+    if (!course) {
+      res.status(404).json({
+        success: false,
+        error: 'Course not found'
+      });
+      return;
+    }
+
+    // Check if student is enrolled in the course using UserProgress
+    const { UserProgress } = await import('../models/UserProgress');
+    const enrollment = await UserProgress.findOne({
+      user: studentId,
+      course: courseId
+    });
+    
+    if (!enrollment) {
+      res.status(403).json({
+        success: false,
+        error: 'You are not enrolled in this course'
+      });
+      return;
+    }
+
+    // Get all assessment submissions for this student in this course
+    const attempts = await AssessmentSubmission.find({ 
+      student: studentId,
+      course: courseId 
+    })
+    .populate('assessment', 'title type totalPoints passingScore')
+    .populate('course', 'title')
+    .sort({ submittedAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: { attempts }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Submit assessment directly (creates submission and submits in one step)
+export const submitAssessmentDirect = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id: assessmentId } = req.params;
+    const { answers, timeSpent } = req.body;
+    const studentId = req.user?.id;
+
+    console.log('🎯 Direct assessment submission:', {
+      assessmentId,
+      studentId,
+      answersCount: answers?.length,
+      timeSpent
+    });
+
+    // Get assessment with questions
+    const assessment = await Assessment.findById(assessmentId)
+      .populate('course', 'title instructor');
+
+    if (!assessment) {
+      res.status(404).json({
+        success: false,
+        error: 'Assessment not found'
+      });
+      return;
+    }
+
+    // Check if assessment is published
+    if (!assessment.isPublished || assessment.status !== 'published') {
+      res.status(403).json({
+        success: false,
+        error: 'Assessment is not available for submission'
+      });
+      return;
+    }
+
+    // Check if student is enrolled in the course
+    const { UserProgress } = await import('../models/UserProgress');
+    const enrollment = await UserProgress.findOne({
+      user: studentId,
+      course: assessment.course._id
+    });
+
+    if (!enrollment) {
+      res.status(403).json({
+        success: false,
+        error: 'You are not enrolled in this course'
+      });
+      return;
+    }
+
+    // Check if due date has passed
+    if (assessment.dueDate && new Date() > assessment.dueDate) {
+      res.status(403).json({
+        success: false,
+        error: 'Assessment submission deadline has passed'
+      });
+      return;
+    }
+
+    // Check existing attempts
+    const existingAttempts = await AssessmentSubmission.countDocuments({
+      assessment: assessmentId,
+      student: studentId,
+      status: { $in: [SubmissionStatus.SUBMITTED, SubmissionStatus.GRADED] }
+    });
+
+    if (assessment.attempts && existingAttempts >= assessment.attempts) {
+      res.status(403).json({
+        success: false,
+        error: `Maximum attempts (${assessment.attempts}) exceeded`
+      });
+      return;
+    }
+
+    // Create new submission
+    const submission = new AssessmentSubmission({
+      assessment: assessmentId,
+      student: studentId,
+      course: assessment.course._id,
+      answers: answers || [],
+      timeSpent: timeSpent || 0,
+      status: SubmissionStatus.SUBMITTED,
+      submittedAt: new Date(),
+      attemptNumber: existingAttempts + 1
+    });
+
+    // Auto-grade the submission using AI
+    console.log('🤖 Starting AI grading process...');
+    
+    let totalScore = 0;
+    let maxScore = 0;
+    const gradedAnswers = [];
+
+    for (let i = 0; i < assessment.questions.length; i++) {
+      const question = assessment.questions[i];
+      const studentAnswer = answers?.find((a: any) => a.questionId === question._id.toString()) || 
+                           answers?.[i]; // Fallback to index-based matching
+
+      maxScore += question.points || 1;
+
+      if (!studentAnswer) {
+        // No answer provided
+        gradedAnswers.push({
+          questionId: question._id,
+          answer: '',
+          isCorrect: false,
+          pointsEarned: 0,
+          feedback: 'No answer provided'
+        });
+        continue;
+      }
+
+      let isCorrect = false;
+      let score = 0;
+      let feedback = '';
+
+      try {
+        if (question.type === 'multiple-choice' || question.type === 'true-false') {
+          // Objective questions - direct comparison
+          isCorrect = studentAnswer.answer === question.correctAnswer;
+          score = isCorrect ? (question.points || 1) : 0;
+          feedback = isCorrect ? 'Correct!' : `Incorrect. The correct answer is: ${question.correctAnswer}`;
+        } else {
+          // Subjective questions - AI grading
+          const aiGradingResult = await aiService.gradeAnswer({
+            question: question.question,
+            correctAnswer: question.correctAnswer || question.explanation || '',
+            studentAnswer: studentAnswer.answer || studentAnswer.text || '',
+            maxPoints: question.points || 1,
+            rubric: question.rubric || ''
+          });
+
+          score = aiGradingResult.score;
+          feedback = aiGradingResult.feedback;
+          isCorrect = score >= (question.points || 1) * 0.7; // 70% threshold for "correct"
+        }
+      } catch (aiError) {
+        console.error('AI grading error:', aiError);
+        // Fallback grading
+        if (question.type === 'multiple-choice' || question.type === 'true-false') {
+          isCorrect = studentAnswer.answer === question.correctAnswer;
+          score = isCorrect ? (question.points || 1) : 0;
+          feedback = isCorrect ? 'Correct!' : 'Incorrect';
+        } else {
+          // For subjective questions, give partial credit if answer exists
+          score = studentAnswer.answer ? (question.points || 1) * 0.5 : 0;
+          feedback = 'Answer submitted - manual review may be required';
+          isCorrect = score > 0;
+        }
+      }
+
+      totalScore += score;
+      gradedAnswers.push({
+        questionId: question._id,
+        studentAnswer: studentAnswer.answer || studentAnswer.text || '',
+        isCorrect,
+        score,
+        maxScore: question.points || 1,
+        feedback
+      });
+    }
+
+    // Calculate percentage and determine pass/fail
+    const percentage = maxScore > 0 ? (totalScore / maxScore) * 100 : 0;
+    const passed = percentage >= (assessment.passingScore || 60);
+
+    // Update submission with grading results
+    submission.score = totalScore;
+    submission.maxScore = maxScore;
+    submission.percentage = percentage;
+    submission.passed = passed;
+    submission.status = SubmissionStatus.GRADED;
+    submission.gradedAt = new Date();
+    submission.gradedBy = 'AI_SYSTEM';
+    submission.answers = gradedAnswers;
+
+    // Generate overall feedback
+    let overallFeedback = `You scored ${totalScore}/${maxScore} (${percentage.toFixed(1)}%). `;
+    if (passed) {
+      overallFeedback += '🎉 Congratulations! You passed this assessment.';
+    } else {
+      overallFeedback += `You need ${assessment.passingScore || 60}% to pass. Keep studying and try again!`;
+    }
+    submission.feedback = overallFeedback;
+
+    await submission.save();
+
+    console.log('✅ Assessment graded successfully:', {
+      submissionId: submission._id,
+      score: `${totalScore}/${maxScore}`,
+      percentage: `${percentage.toFixed(1)}%`,
+      passed
+    });
+
+    // Update user progress
+    try {
+      const progress = await UserProgress.findOne({
+        user: studentId,
+        course: assessment.course._id
+      });
+
+      if (progress) {
+        // Update assessment completion
+        const assessmentProgress = progress.assessments.find(
+          (a: any) => a.assessment.toString() === assessmentId
+        );
+
+        if (assessmentProgress) {
+          assessmentProgress.completed = true;
+          assessmentProgress.score = totalScore;
+          assessmentProgress.maxScore = maxScore;
+          assessmentProgress.percentage = percentage;
+          assessmentProgress.passed = passed;
+          assessmentProgress.completedAt = new Date();
+        } else {
+          progress.assessments.push({
+            assessment: assessmentId,
+            completed: true,
+            score: totalScore,
+            maxScore: maxScore,
+            percentage: percentage,
+            passed: passed,
+            completedAt: new Date()
+          });
+        }
+
+        // Recalculate overall progress
+        const completedAssessments = progress.assessments.filter((a: any) => a.completed);
+        progress.assessmentsCompleted = completedAssessments.length;
+        
+        if (completedAssessments.length > 0) {
+          const avgScore = completedAssessments.reduce((sum: number, a: any) => sum + (a.percentage || 0), 0) / completedAssessments.length;
+          progress.averageScore = avgScore;
+        }
+
+        await progress.save();
+      }
+    } catch (progressError) {
+      console.error('Error updating user progress:', progressError);
+      // Don't fail the submission if progress update fails
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        submission: {
+          _id: submission._id,
+          score: totalScore,
+          maxScore: maxScore,
+          percentage: percentage,
+          passed: passed,
+          status: submission.status,
+          feedback: submission.feedback,
+          submittedAt: submission.submittedAt,
+          gradedAt: submission.gradedAt,
+          answers: gradedAnswers
+        }
+      },
+      message: `Assessment submitted and graded! Score: ${totalScore}/${maxScore} (${percentage.toFixed(1)}%)`
+    });
+
+  } catch (error) {
+    console.error('Error in submitAssessmentDirect:', error);
+    next(error);
+  }
+};
+
 export default {
   getStudentAssessments,
   startAssessment,
   saveAssessmentProgress,
   submitAssessment,
+  submitAssessmentDirect,
   getStudentSubmissions,
-  getSubmissionDetails
+  getSubmissionDetails,
+  getStudentCourseAttempts
 };

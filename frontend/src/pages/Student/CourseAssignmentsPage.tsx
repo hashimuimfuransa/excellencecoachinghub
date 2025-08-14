@@ -139,12 +139,13 @@ const CourseAssignmentsPage: React.FC = () => {
         const courseData = await courseService.getPublicCourseById(id);
         setCourse(courseData);
 
-        // Load assignments
+        // Load assignments for this course
+        console.log('🔍 Loading assignments for course:', id);
         const assignmentsData = await assignmentService.getCourseAssignments(id);
-        console.log('CourseAssignmentsPage - assignmentsData loaded:', assignmentsData, 'isArray:', Array.isArray(assignmentsData));
+        console.log('📋 Assignments loaded:', assignmentsData, 'isArray:', Array.isArray(assignmentsData));
         // Ensure assignmentsData is always an array
         const assignmentsArray = Array.isArray(assignmentsData) ? assignmentsData : [];
-        console.log('CourseAssignmentsPage - assignmentsArray set:', assignmentsArray);
+        console.log('✅ Assignments array set:', assignmentsArray.length, 'assignments');
         setAssignments(assignmentsArray);
 
         // Load student submissions
@@ -268,6 +269,16 @@ const CourseAssignmentsPage: React.FC = () => {
     }
   };
 
+  // Open assignment work page
+  const openAssignmentWork = (assignment: Assignment) => {
+    // Check if this is an enhanced assignment with questions
+    if (assignment.hasQuestions || (assignment.questions && assignment.questions.length > 0)) {
+      navigate(`/assignment/${assignment._id}/take`);
+    } else {
+      navigate(`/assignment/${assignment._id}/work`);
+    }
+  };
+
   // Open submission dialog
   const openSubmissionDialog = (assignment: Assignment) => {
     setSelectedAssignment(assignment);
@@ -342,7 +353,7 @@ const CourseAssignmentsPage: React.FC = () => {
         </Alert>
         <Button
           startIcon={<ArrowBack />}
-          onClick={() => navigate(`/dashboard/student/course/${id}`)}
+          onClick={() => navigate(`/course/${id}`)}
           variant="outlined"
         >
           Back to Course
@@ -354,50 +365,166 @@ const CourseAssignmentsPage: React.FC = () => {
   const filteredAssignments = getFilteredAssignments();
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Button
-          startIcon={<ArrowBack />}
-          onClick={() => navigate(`/dashboard/student/course/${id}`)}
-          sx={{ mb: 2 }}
-        >
-          Back to Course
-        </Button>
+    <Box sx={{ 
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      py: 4
+    }}>
+      <Container maxWidth="lg">
+        {/* Header */}
+        <Box sx={{ mb: 4 }}>
+          <Button
+            startIcon={<ArrowBack />}
+            onClick={() => navigate(`/course/${id}`)}
+            sx={{ 
+              mb: 3,
+              color: 'white',
+              borderColor: 'rgba(255,255,255,0.3)',
+              '&:hover': {
+                borderColor: 'white',
+                bgcolor: 'rgba(255,255,255,0.1)'
+              }
+            }}
+            variant="outlined"
+          >
+            Back to Course
+          </Button>
 
-        <Card>
-          <CardContent>
-            <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Assignment color="primary" />
-              {course?.title} - Assignments
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Complete and submit your assignments to demonstrate your learning progress
-            </Typography>
-          </CardContent>
-        </Card>
-      </Box>
+          <Card sx={{ 
+            background: 'rgba(255,255,255,0.95)', 
+            backdropFilter: 'blur(10px)',
+            borderRadius: 3,
+            boxShadow: '0 20px 40px rgba(0,0,0,0.1)'
+          }}>
+            <CardContent sx={{ p: 4 }}>
+              <Typography variant="h4" gutterBottom sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 2,
+                color: 'primary.main',
+                fontWeight: 'bold'
+              }}>
+                <Assignment sx={{ fontSize: 40 }} />
+                {course?.title} - Assignments
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
+                Complete and submit your assignments to demonstrate your learning progress
+              </Typography>
+            </CardContent>
+          </Card>
+        </Box>
 
-      {/* Error Alert */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
+        {/* Error Alert */}
+        {error && (
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mb: 3,
+              borderRadius: 2,
+              bgcolor: 'rgba(255,255,255,0.95)',
+              backdropFilter: 'blur(10px)'
+            }} 
+            onClose={() => setError(null)}
+          >
+            {error}
+          </Alert>
+        )}
 
-      {/* Filters and Tabs */}
-      <Box sx={{ mb: 3 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={6}>
-            <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
-              <Tab label="All Assignments" />
-              <Tab label="Pending" />
-              <Tab label="Submitted" />
-              <Tab label="Graded" />
-            </Tabs>
+        {/* Statistics Cards */}
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              borderRadius: 3,
+              textAlign: 'center'
+            }}>
+              <CardContent>
+                <Assignment sx={{ fontSize: 40, mb: 1 }} />
+                <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                  {assignments.length}
+                </Typography>
+                <Typography variant="body2">
+                  Total Assignments
+                </Typography>
+              </CardContent>
+            </Card>
           </Grid>
-          <Grid item xs={12} md={6}>
-            <FormControl fullWidth size="small">
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ 
+              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+              color: 'white',
+              borderRadius: 3,
+              textAlign: 'center'
+            }}>
+              <CardContent>
+                <CheckCircle sx={{ fontSize: 40, mb: 1 }} />
+                <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                  {assignments.filter(a => getAssignmentStatus(a) === 'submitted' || getAssignmentStatus(a) === 'graded').length}
+                </Typography>
+                <Typography variant="body2">
+                  Submitted
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ 
+              background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+              color: 'white',
+              borderRadius: 3,
+              textAlign: 'center'
+            }}>
+              <CardContent>
+                <Timer sx={{ fontSize: 40, mb: 1 }} />
+                <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                  {assignments.filter(a => getAssignmentStatus(a) === 'pending' || getAssignmentStatus(a) === 'due-soon').length}
+                </Typography>
+                <Typography variant="body2">
+                  Pending
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ 
+              background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+              color: 'white',
+              borderRadius: 3,
+              textAlign: 'center'
+            }}>
+              <CardContent>
+                <Warning sx={{ fontSize: 40, mb: 1 }} />
+                <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                  {assignments.filter(a => getAssignmentStatus(a) === 'overdue').length}
+                </Typography>
+                <Typography variant="body2">
+                  Overdue
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Filters and Tabs */}
+        <Card sx={{ 
+          mb: 3,
+          background: 'rgba(255,255,255,0.95)', 
+          backdropFilter: 'blur(10px)',
+          borderRadius: 3
+        }}>
+          <CardContent>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} md={8}>
+                <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
+                  <Tab label="All Assignments" />
+                  <Tab label="Pending" />
+                  <Tab label="Submitted" />
+                  <Tab label="Graded" />
+                </Tabs>
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <FormControl fullWidth size="small">
               <InputLabel>Filter by Status</InputLabel>
               <Select
                 value={statusFilter}
@@ -409,39 +536,65 @@ const CourseAssignmentsPage: React.FC = () => {
                 <MenuItem value="due-soon">Due Soon</MenuItem>
                 <MenuItem value="submitted">Submitted</MenuItem>
                 <MenuItem value="graded">Graded</MenuItem>
-                <MenuItem value="overdue">Overdue</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-        </Grid>
-      </Box>
+                    <MenuItem value="overdue">Overdue</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
 
-      {/* Assignments List */}
-      {filteredAssignments.length === 0 ? (
-        <Paper sx={{ p: 4, textAlign: 'center' }}>
-          <Assignment sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            No assignments found
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {statusFilter === 'all' 
-              ? "Your instructor hasn't created any assignments yet."
-              : `No assignments match the selected filter: ${statusFilter}`
-            }
-          </Typography>
-        </Paper>
-      ) : (
-        <Grid container spacing={3}>
-          {filteredAssignments.map((assignment) => {
-            const status = getAssignmentStatus(assignment);
-            const statusInfo = getStatusInfo(status);
-            const submission = submissions[assignment._id];
+        {/* Assignments List */}
+        {filteredAssignments.length === 0 ? (
+          <Paper sx={{ 
+            p: 4, 
+            textAlign: 'center',
+            background: 'rgba(255,255,255,0.95)', 
+            backdropFilter: 'blur(10px)',
+            borderRadius: 3
+          }}>
+            <Assignment sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No assignments found
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {statusFilter === 'all' 
+                ? "Your instructor hasn't created any assignments yet."
+                : `No assignments match the selected filter: ${statusFilter}`
+              }
+            </Typography>
+          </Paper>
+        ) : (
+          <Grid container spacing={3}>
+            {filteredAssignments.map((assignment) => {
+              const status = getAssignmentStatus(assignment);
+              const statusInfo = getStatusInfo(status);
+              const submission = submissions[assignment._id];
 
-            return (
-              <Grid item xs={12} key={assignment._id}>
-                <Card>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+              return (
+                <Grid item xs={12} md={6} key={assignment._id}>
+                  <Card sx={{ 
+                    background: 'rgba(255,255,255,0.95)', 
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: 3,
+                    transition: 'all 0.3s ease',
+                    border: '1px solid rgba(0,0,0,0.08)',
+                    minHeight: { xs: 280, sm: 'auto' },
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+                      borderColor: 'primary.main'
+                    }
+                  }}>
+                  <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      justifyContent: 'space-between', 
+                      alignItems: { xs: 'stretch', sm: 'flex-start' }, 
+                      mb: 2,
+                      gap: { xs: 2, sm: 0 }
+                    }}>
                       <Box sx={{ flex: 1 }}>
                         <Typography variant="h6" gutterBottom>
                           {assignment.title}
@@ -507,13 +660,29 @@ const CourseAssignmentsPage: React.FC = () => {
                         )}
                       </Box>
 
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, ml: 2 }}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        flexDirection: { xs: 'column', sm: 'column' }, 
+                        gap: 1, 
+                        ml: { xs: 0, sm: 2 },
+                        mt: { xs: 2, sm: 0 },
+                        width: { xs: '100%', sm: 'auto' }
+                      }}>
                         {submission ? (
                           <>
                             <Button
                               variant="outlined"
                               startIcon={<Visibility />}
                               onClick={() => viewSubmissionDetails(assignment)}
+                              sx={{
+                                minHeight: { xs: 48, sm: 36 },
+                                fontSize: { xs: '1rem', sm: '0.875rem' },
+                                fontWeight: 'bold',
+                                borderRadius: 2,
+                                textTransform: 'none',
+                                width: { xs: '100%', sm: 'auto' },
+                                minWidth: { sm: 140 }
+                              }}
                             >
                               View Submission
                             </Button>
@@ -521,20 +690,51 @@ const CourseAssignmentsPage: React.FC = () => {
                               <Button
                                 variant="contained"
                                 startIcon={<Edit />}
-                                onClick={() => openSubmissionDialog(assignment)}
+                                onClick={() => openAssignmentWork(assignment)}
+                                sx={{
+                                  minHeight: { xs: 48, sm: 36 },
+                                  fontSize: { xs: '1rem', sm: '0.875rem' },
+                                  fontWeight: 'bold',
+                                  borderRadius: 2,
+                                  textTransform: 'none',
+                                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                  width: { xs: '100%', sm: 'auto' },
+                                  minWidth: { sm: 140 },
+                                  '&:hover': {
+                                    boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
+                                    transform: 'translateY(-1px)'
+                                  }
+                                }}
                               >
-                                Edit Submission
+                                Continue Work
                               </Button>
                             )}
                           </>
                         ) : (
                           <Button
                             variant="contained"
-                            startIcon={<TurnedIn />}
-                            onClick={() => openSubmissionDialog(assignment)}
+                            startIcon={<Assignment />}
+                            onClick={() => openAssignmentWork(assignment)}
                             disabled={status === 'overdue'}
+                            sx={{
+                              minHeight: { xs: 48, sm: 36 },
+                              fontSize: { xs: '1rem', sm: '0.875rem' },
+                              fontWeight: 'bold',
+                              borderRadius: 2,
+                              textTransform: 'none',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                              width: { xs: '100%', sm: 'auto' },
+                              minWidth: { sm: 140 },
+                              '&:hover': {
+                                boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
+                                transform: 'translateY(-1px)'
+                              },
+                              '&:disabled': {
+                                opacity: 0.6
+                              }
+                            }}
                           >
-                            Submit Assignment
+                            Work on Assignment
                           </Button>
                         )}
                       </Box>
@@ -782,7 +982,8 @@ const CourseAssignmentsPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+      </Container>
+    </Box>
   );
 };
 

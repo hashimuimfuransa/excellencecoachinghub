@@ -26,7 +26,12 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  CircularProgress
+  CircularProgress,
+  Grid,
+  FormControl,
+  Select,
+  MenuItem,
+  Tooltip
 } from '@mui/material';
 import {
   Security,
@@ -245,6 +250,28 @@ const EnhancedTakeAssessment: React.FC = () => {
       });
     };
 
+    const handleMatchingChange = (leftItem: string, rightItem: string) => {
+      setAnswers(prev => {
+        const newAnswers = [...prev];
+        if (newAnswers[currentQuestionIndex]) {
+          const currentAnswer = newAnswers[currentQuestionIndex].answer;
+          let matchingPairs: Record<string, string> = {};
+          
+          if (currentAnswer) {
+            try {
+              matchingPairs = JSON.parse(currentAnswer);
+            } catch (e) {
+              matchingPairs = {};
+            }
+          }
+          
+          matchingPairs[leftItem] = rightItem;
+          newAnswers[currentQuestionIndex].answer = JSON.stringify(matchingPairs);
+        }
+        return newAnswers;
+      });
+    };
+
     switch (question.type) {
       case 'multiple_choice':
         return (
@@ -330,6 +357,58 @@ const EnhancedTakeAssessment: React.FC = () => {
           />
         );
 
+      case 'matching':
+        const currentMatches = answer.answer ? JSON.parse(answer.answer || '{}') : {};
+        return (
+          <Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Match the items from the left column with the correct items from the right column.
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Column A
+                </Typography>
+                <List dense>
+                  {question.leftItems?.map((leftItem, index) => (
+                    <ListItem key={index} sx={{ bgcolor: 'grey.50', mb: 1, borderRadius: 1 }}>
+                      <ListItemText primary={leftItem} />
+                    </ListItem>
+                  ))}
+                </List>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Column B
+                </Typography>
+                {question.leftItems?.map((leftItem, leftIndex) => (
+                  <Box key={leftIndex} sx={{ mb: 2 }}>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      Match for "{leftItem}":
+                    </Typography>
+                    <FormControl fullWidth size="small">
+                      <Select
+                        value={currentMatches[leftItem] || ''}
+                        onChange={(e) => handleMatchingChange(leftItem, e.target.value)}
+                        displayEmpty
+                      >
+                        <MenuItem value="">
+                          <em>Select a match</em>
+                        </MenuItem>
+                        {question.rightItems?.map((rightItem, rightIndex) => (
+                          <MenuItem key={rightIndex} value={rightItem}>
+                            {rightItem}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Box>
+                ))}
+              </Grid>
+            </Grid>
+          </Box>
+        );
+
       default:
         return (
           <TextField
@@ -361,6 +440,8 @@ const EnhancedTakeAssessment: React.FC = () => {
         return 'Fill in the Blank';
       case 'numerical':
         return 'Numerical';
+      case 'matching':
+        return 'Matching';
       default:
         return 'Question';
     }
@@ -521,6 +602,50 @@ const EnhancedTakeAssessment: React.FC = () => {
         </Box>
       </Paper>
 
+      {/* Section Overview */}
+      {assessment.extractedQuestions && assessment.extractedQuestions.some(q => q.section) && (
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Assessment Sections
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+            {Array.from(new Set(assessment.extractedQuestions.map(q => q.section).filter(Boolean))).map(section => {
+              const sectionQuestions = assessment.extractedQuestions?.filter(q => q.section === section) || [];
+              const answeredInSection = sectionQuestions.filter((_, index) => {
+                const globalIndex = assessment.extractedQuestions?.findIndex(q => q === sectionQuestions[index]);
+                return answers[globalIndex || 0]?.answer && answers[globalIndex || 0].answer.trim() !== '';
+              }).length;
+              
+              return (
+                <Card key={section} sx={{ 
+                  minWidth: 200, 
+                  bgcolor: section === currentQuestion?.section ? 'primary.50' : 'grey.50',
+                  border: section === currentQuestion?.section ? '2px solid' : '1px solid',
+                  borderColor: section === currentQuestion?.section ? 'primary.main' : 'grey.200'
+                }}>
+                  <CardContent sx={{ p: 2 }}>
+                    <Typography variant="h6" color="primary.main">
+                      Section {section}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {sectionQuestions.length} questions
+                    </Typography>
+                    <Typography variant="body2" color="success.main">
+                      {answeredInSection} answered
+                    </Typography>
+                    <LinearProgress
+                      variant="determinate"
+                      value={(answeredInSection / sectionQuestions.length) * 100}
+                      sx={{ mt: 1, height: 4, borderRadius: 2 }}
+                    />
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </Box>
+        </Paper>
+      )}
+
       {/* Proctoring Monitor */}
       {proctoringActive && (
         <Box sx={{ mb: 3 }}>
@@ -541,23 +666,56 @@ const EnhancedTakeAssessment: React.FC = () => {
       {currentQuestion && currentAnswer && (
         <Card sx={{ mb: 3 }}>
           <CardContent>
+            {/* Section Header */}
+            {currentQuestion.section && (
+              <Box sx={{ 
+                mb: 3, 
+                p: 2, 
+                bgcolor: 'primary.50', 
+                borderRadius: 1,
+                border: '1px solid',
+                borderColor: 'primary.200'
+              }}>
+                <Typography variant="h6" color="primary.main" gutterBottom>
+                  Section {currentQuestion.section}
+                </Typography>
+                {currentQuestion.sectionTitle && (
+                  <Typography variant="body2" color="text.secondary">
+                    {currentQuestion.sectionTitle}
+                  </Typography>
+                )}
+              </Box>
+            )}
+
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
               <Box sx={{ flex: 1 }}>
                 <Typography variant="h6" gutterBottom>
                   Question {currentQuestionIndex + 1}
+                  {currentQuestion.section && (
+                    <Chip 
+                      label={`Section ${currentQuestion.section}`}
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                      sx={{ ml: 1 }}
+                    />
+                  )}
                 </Typography>
                 <Chip
                   label={getQuestionTypeLabel(currentQuestion.type)}
                   size="small"
+                  color="secondary"
                   sx={{ mb: 2 }}
                 />
-                <Typography variant="body1" sx={{ mb: 3 }}>
+                <Typography variant="body1" sx={{ mb: 3, fontSize: '1.1rem', lineHeight: 1.6 }}>
                   {currentQuestion.question}
                 </Typography>
               </Box>
-              <Typography variant="body2" color="text.secondary">
-                {currentQuestion.points} points
-              </Typography>
+              <Box sx={{ textAlign: 'right' }}>
+                <Typography variant="body2" color="text.secondary">
+                  {currentQuestion.points} points
+                </Typography>
+              </Box>
             </Box>
 
             {renderQuestion(currentQuestion, currentAnswer)}
@@ -566,36 +724,83 @@ const EnhancedTakeAssessment: React.FC = () => {
       )}
 
       {/* Navigation */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: { xs: 'column', md: 'row' },
+        justifyContent: 'space-between', 
+        alignItems: { xs: 'stretch', md: 'center' },
+        gap: 2
+      }}>
         <Button
           variant="outlined"
           startIcon={<NavigateBefore />}
           onClick={() => handleQuestionNavigation('prev')}
           disabled={currentQuestionIndex === 0}
+          sx={{
+            minHeight: { xs: 48, md: 36 },
+            order: { xs: 2, md: 1 }
+          }}
         >
           Previous
         </Button>
 
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          {assessment.extractedQuestions?.map((_, index) => (
-            <IconButton
-              key={index}
-              size="small"
-              onClick={() => {
-                handleQuestionNavigation('next');
-                setCurrentQuestionIndex(index);
-              }}
-              sx={{
-                bgcolor: index === currentQuestionIndex ? 'primary.main' : 'grey.300',
-                color: index === currentQuestionIndex ? 'white' : 'text.primary',
-                '&:hover': {
-                  bgcolor: index === currentQuestionIndex ? 'primary.dark' : 'grey.400',
-                }
-              }}
-            >
-              {index + 1}
-            </IconButton>
-          ))}
+        {/* Question Navigation Grid */}
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 1, 
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+          order: { xs: 1, md: 2 },
+          maxWidth: { xs: '100%', md: '400px' },
+          overflow: 'auto'
+        }}>
+          {assessment.extractedQuestions?.map((question, index) => {
+            const isAnswered = answers[index]?.answer && answers[index].answer.trim() !== '';
+            return (
+              <Tooltip 
+                key={index}
+                title={`Question ${index + 1}${question.section ? ` (Section ${question.section})` : ''} - ${isAnswered ? 'Answered' : 'Not answered'}`}
+              >
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    setCurrentQuestionIndex(index);
+                  }}
+                  sx={{
+                    minWidth: 40,
+                    minHeight: 40,
+                    bgcolor: index === currentQuestionIndex 
+                      ? 'primary.main' 
+                      : isAnswered 
+                        ? 'success.light'
+                        : 'grey.300',
+                    color: index === currentQuestionIndex 
+                      ? 'white' 
+                      : isAnswered
+                        ? 'success.contrastText'
+                        : 'text.primary',
+                    border: question.section ? '2px solid' : 'none',
+                    borderColor: question.section === 'A' 
+                      ? 'primary.main' 
+                      : question.section === 'B'
+                        ? 'secondary.main'
+                        : question.section === 'C'
+                          ? 'warning.main'
+                          : 'transparent',
+                    '&:hover': {
+                      bgcolor: index === currentQuestionIndex 
+                        ? 'primary.dark' 
+                        : isAnswered
+                          ? 'success.main'
+                          : 'grey.400',
+                    }
+                  }}
+                >
+                  {index + 1}
+                </IconButton>
+              </Tooltip>
+            );
+          })}
         </Box>
 
         {currentQuestionIndex === (assessment.extractedQuestions?.length || 0) - 1 ? (
@@ -605,6 +810,11 @@ const EnhancedTakeAssessment: React.FC = () => {
             endIcon={<Send />}
             onClick={() => setShowSubmitDialog(true)}
             disabled={submitting}
+            sx={{
+              minHeight: { xs: 48, md: 36 },
+              order: { xs: 3, md: 3 },
+              fontWeight: 'bold'
+            }}
           >
             Submit Assessment
           </Button>
@@ -613,6 +823,10 @@ const EnhancedTakeAssessment: React.FC = () => {
             variant="contained"
             endIcon={<NavigateNext />}
             onClick={() => handleQuestionNavigation('next')}
+            sx={{
+              minHeight: { xs: 48, md: 36 },
+              order: { xs: 3, md: 3 }
+            }}
           >
             Next
           </Button>

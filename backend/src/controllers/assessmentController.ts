@@ -391,6 +391,7 @@ export const togglePublishAssessment = async (req: Request, res: Response, next:
     }
 
     assessment.isPublished = !assessment.isPublished;
+    assessment.status = assessment.isPublished ? 'published' : 'draft';
     await assessment.save();
 
     res.status(200).json({
@@ -525,6 +526,140 @@ export const addQuestionsFromDocument = async (req: Request, res: Response, next
   }
 };
 
+// Replace questions from document in existing assessment (removes old document-extracted questions)
+export const replaceQuestionsFromDocument = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const teacherId = req.user?.id;
+
+    // Find the assessment and verify ownership
+    const assessment = await Assessment.findOne({ _id: id, instructor: teacherId });
+    if (!assessment) {
+      res.status(404).json({
+        success: false,
+        error: 'Assessment not found or you do not have permission to modify it'
+      });
+      return;
+    }
+
+    // Check if assessment has submissions
+    const hasSubmissions = await AssessmentSubmission.exists({ assessment: id });
+    if (hasSubmissions) {
+      res.status(400).json({
+        success: false,
+        error: 'Cannot replace questions in assessment with existing submissions'
+      });
+      return;
+    }
+
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    
+    if (!files || !files.document || files.document.length === 0) {
+      res.status(400).json({
+        success: false,
+        error: 'No exam document uploaded'
+      });
+      return;
+    }
+
+    const examFile = files.document[0];
+    const answerSheetFile = files.answerSheet ? files.answerSheet[0] : null;
+
+    try {
+      // Parse exam document content
+      const parseResult = await DocumentParser.parseDocument(
+        examFile.buffer,
+        examFile.mimetype,
+        examFile.originalname
+      );
+
+      // Parse answer sheet if provided
+      let answerSheetContent = '';
+      if (answerSheetFile) {
+        const answerSheetResult = await DocumentParser.parseDocument(
+          answerSheetFile.buffer,
+          answerSheetFile.mimetype,
+          answerSheetFile.originalname
+        );
+        answerSheetContent = answerSheetResult.content;
+      }
+
+      // Validate document
+      const validation = DocumentParser.validateDocument(parseResult);
+      if (!validation.isValid) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid document',
+          details: validation.errors
+        });
+        return;
+      }
+
+      // Extract questions using AI
+      const cleanedText = DocumentParser.cleanText(parseResult.text);
+      const extractedQuestions = await aiService.extractQuestionsFromDocument(
+        cleanedText, 
+        assessment.type as any,
+        answerSheetContent // Pass answer sheet content for reference
+      );
+
+      // Add unique IDs to extracted questions
+      const questionsWithIds = extractedQuestions.map((q, index) => ({
+        ...q,
+        id: `extracted_${Date.now()}_${index}`
+      }));
+
+      // Remove old document-extracted questions and keep only manually created ones
+      const manualQuestions = assessment.questions.filter(q => !q.id.startsWith('extracted_'));
+      
+      // Replace with new extracted questions
+      const updatedQuestions = [...manualQuestions, ...questionsWithIds];
+      
+      // Recalculate total points
+      const newTotalPoints = updatedQuestions.reduce((sum, q) => sum + (q.points || 10), 0);
+
+      // Update assessment
+      assessment.questions = updatedQuestions;
+      assessment.totalPoints = newTotalPoints;
+      
+      // Update document info
+      const uploadResult = await uploadFile(examFile, 'assessments');
+      assessment.documentUrl = uploadResult.url;
+      assessment.documentType = examFile.mimetype.includes('pdf') ? 'pdf' : 
+                               examFile.mimetype.includes('word') ? 'docx' : 'txt';
+      assessment.extractedQuestions = questionsWithIds;
+      
+      await assessment.save();
+
+      // Populate response
+      await assessment.populate('course', 'title');
+      await assessment.populate('instructor', 'firstName lastName');
+
+      res.status(200).json({
+        success: true,
+        data: { 
+          assessment,
+          replacedQuestions: questionsWithIds.length,
+          totalQuestions: updatedQuestions.length,
+          removedOldQuestions: assessment.questions.length - manualQuestions.length
+        },
+        message: `Successfully replaced document questions with ${questionsWithIds.length} new questions`
+      });
+
+    } catch (error) {
+      console.error('Document processing error:', error);
+      res.status(400).json({
+        success: false,
+        error: 'Failed to process uploaded document',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+      return;
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Get assessment submissions (Teacher only)
 export const getAssessmentSubmissions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -636,6 +771,48 @@ export const gradeSubmission = async (req: Request, res: Response, next: NextFun
   }
 };
 
+// Get assessments for a specific course
+export const getCourseAssessments = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { courseId } = req.params;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
+    // Verify course exists
+    const course = await Course.findById(courseId);
+    if (!course) {
+      res.status(404).json({
+        success: false,
+        error: 'Course not found'
+      });
+      return;
+    }
+
+    // Build filter based on user role
+    let filter: any = { course: courseId };
+    
+    if (userRole === 'teacher') {
+      // Teachers can only see their own assessments
+      filter.instructor = userId;
+    } else if (userRole === 'student') {
+      // Students can only see published assessments
+      filter.isPublished = true;
+    }
+
+    const assessments = await Assessment.find(filter)
+      .populate('course', 'title')
+      .populate('instructor', 'firstName lastName')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: { assessments }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export default {
   createAssessment,
   getTeacherAssessments,
@@ -644,5 +821,6 @@ export default {
   deleteAssessment,
   togglePublishAssessment,
   getAssessmentSubmissions,
-  gradeSubmission
+  gradeSubmission,
+  getCourseAssessments
 };

@@ -177,6 +177,10 @@ const EnhancedCourseManagement: React.FC = () => {
   const [editingAssignment, setEditingAssignment] = useState<AssignmentType | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState<CourseNote | null>(null);
+  const [assessmentDeleteConfirmOpen, setAssessmentDeleteConfirmOpen] = useState(false);
+  const [assessmentToDelete, setAssessmentToDelete] = useState<IAssessment | null>(null);
+  const [assignmentDeleteConfirmOpen, setAssignmentDeleteConfirmOpen] = useState(false);
+  const [assignmentToDelete, setAssignmentToDelete] = useState<AssignmentType | null>(null);
 
   // Form states
   const [noteForm, setNoteForm] = useState({
@@ -538,6 +542,22 @@ const EnhancedCourseManagement: React.FC = () => {
     }
   };
 
+  // Delete assignment
+  const handleDeleteAssignment = async () => {
+    if (!assignmentToDelete) return;
+
+    try {
+      await assignmentService.deleteAssignment(assignmentToDelete._id);
+      setAssignments(prev => prev.filter(assignment => assignment._id !== assignmentToDelete._id));
+      setAssignmentDeleteConfirmOpen(false);
+      setAssignmentToDelete(null);
+      setSuccess('Assignment deleted successfully');
+    } catch (error: any) {
+      console.error('Failed to delete assignment:', error);
+      setError(error.message || 'Failed to delete assignment');
+    }
+  };
+
   // Handle joining live session
   const handleJoinSession = async (session: ILiveSession) => {
     try {
@@ -607,6 +627,8 @@ const EnhancedCourseManagement: React.FC = () => {
     }
   };
 
+
+
   // Handle downloading assignment submissions
   const handleDownloadSubmissions = async (assignmentId: string) => {
     try {
@@ -620,7 +642,7 @@ const EnhancedCourseManagement: React.FC = () => {
   };
 
   // Handle uploading assignment document
-  const handleUploadAssignmentDocument = (assignment: Assignment) => {
+  const handleUploadAssignmentDocument = (assignment: AssignmentType) => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.pdf,.doc,.docx,.txt,.jpg,.jpeg,.png';
@@ -629,7 +651,20 @@ const EnhancedCourseManagement: React.FC = () => {
       if (file) {
         try {
           setLoading(true);
-          const updatedAssignment = await assignmentService.uploadAssignmentDocument(assignment._id, file);
+          
+          // Check if assignment already has a document - if so, replace it
+          const hasExistingDocument = assignment.assignmentDocument?.fileUrl;
+          let updatedAssignment;
+          
+          if (hasExistingDocument) {
+            // Replace existing document
+            updatedAssignment = await assignmentService.replaceAssignmentDocument(assignment._id, file);
+            setSuccess('Assignment document replaced successfully!');
+          } else {
+            // Upload new document
+            updatedAssignment = await assignmentService.uploadAssignmentDocument(assignment._id, file);
+            setSuccess('Assignment document uploaded successfully!');
+          }
           
           // Update the assignment in the state
           setAssignments(prev => 
@@ -638,7 +673,6 @@ const EnhancedCourseManagement: React.FC = () => {
             )
           );
           
-          alert('Assignment document uploaded successfully!');
         } catch (error: any) {
           console.error('Failed to upload assignment document:', error);
           setError(error.message || 'Failed to upload assignment document');
@@ -660,28 +694,27 @@ const EnhancedCourseManagement: React.FC = () => {
       if (file) {
         setLoading(true);
         try {
-          const formData = new FormData();
-          formData.append('document', file);
+          // Check if assessment already has extracted questions - if so, replace them
+          const hasExistingQuestions = assessment.questions && assessment.questions.some(q => q.id.startsWith('extracted_'));
+          let updatedAssessment;
           
-          const response = await fetch(`http://localhost:5000/api/enhanced-assessments/${assessment._id}/upload-document`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: formData
-          });
-          
-          if (response.ok) {
-            setSuccess('Document uploaded successfully!');
-            // Refresh assessments
-            if (courseId) {
-              const refreshedAssessments = await assessmentService.getCourseAssessments(courseId);
-              setAssessments(refreshedAssessments);
-            }
+          if (hasExistingQuestions) {
+            // Replace existing document-extracted questions
+            updatedAssessment = await assessmentService.replaceQuestionsFromDocument(assessment._id, file);
+            setSuccess('Assessment document replaced and questions updated successfully!');
           } else {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to upload document');
+            // Add new questions from document
+            updatedAssessment = await assessmentService.addQuestionsFromDocument(assessment._id, file);
+            setSuccess('Assessment document uploaded and questions extracted successfully!');
           }
+          
+          // Update the assessment in the state
+          setAssessments(prev => 
+            prev.map(a => 
+              a._id === assessment._id ? updatedAssessment : a
+            )
+          );
+          
         } catch (error: any) {
           console.error('Failed to upload assessment document:', error);
           setError(error.message || 'Failed to upload assessment document');
@@ -785,17 +818,39 @@ const EnhancedCourseManagement: React.FC = () => {
   // Handle assessment publication toggle
   const handleToggleAssessmentPublication = async (assessmentId: string) => {
     try {
+      const assessment = assessments.find(a => a._id === assessmentId);
+      if (!assessment) return;
+
       await assessmentService.togglePublishAssessment(assessmentId);
+      
       setAssessments(prev => 
-        prev.map(assessment => 
-          assessment._id === assessmentId 
-            ? { ...assessment, isPublished: !assessment.isPublished }
-            : assessment
+        prev.map(a => 
+          a._id === assessmentId 
+            ? { ...a, isPublished: !a.isPublished, status: !a.isPublished ? 'published' : 'draft' }
+            : a
         )
       );
+      
+      setSuccess(`Assessment ${!assessment.isPublished ? 'published' : 'unpublished'} successfully! ${!assessment.isPublished ? 'Students can now see it.' : 'Students can no longer see it.'}`);
     } catch (error: any) {
       console.error('Failed to toggle assessment publication:', error);
       setError(error.message || 'Failed to toggle assessment publication');
+    }
+  };
+
+  // Handle assessment deletion
+  const handleDeleteAssessment = async () => {
+    if (!assessmentToDelete) return;
+
+    try {
+      await assessmentService.deleteAssessment(assessmentToDelete._id);
+      setAssessments(prev => prev.filter(assessment => assessment._id !== assessmentToDelete._id));
+      setAssessmentDeleteConfirmOpen(false);
+      setAssessmentToDelete(null);
+      setSuccess('Assessment deleted successfully!');
+    } catch (error: any) {
+      console.error('Failed to delete assessment:', error);
+      setError(error.message || 'Failed to delete assessment');
     }
   };
 
@@ -859,6 +914,7 @@ const EnhancedCourseManagement: React.FC = () => {
       setUploadAssessmentDialogOpen(false);
       setSelectedAssessmentForUpload(null);
       setUploadAssessmentFile(null);
+      setSuccess('Document uploaded and questions extracted successfully!');
       
     } catch (err: any) {
       setError(err.message || 'Failed to add questions to assessment');
@@ -1371,110 +1427,255 @@ const EnhancedCourseManagement: React.FC = () => {
 
           {/* Assessments & Assignments Tab */}
           <TabPanel value={tabValue} index={2}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h5" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
+            {/* Header with Statistics */}
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h5" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
                 <Quiz color="primary" />
-                {assessmentType === 'assessment' ? 'Assessments' : 'Assignments'} Management
+                Assessments & Assignments Management
               </Typography>
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                <FormControl size="small" sx={{ minWidth: 150 }}>
-                  <InputLabel>Type</InputLabel>
-                  <Select
-                    value={assessmentType}
-                    label="Type"
-                    onChange={(e) => setAssessmentType(e.target.value as 'assessment' | 'assignment')}
-                  >
-                    <MenuItem value="assessment">Assessment</MenuItem>
-                    <MenuItem value="assignment">Assignment</MenuItem>
-                  </Select>
-                </FormControl>
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={() => {
-                    if (assessmentType === 'assessment') {
-                      setAssessmentDialogOpen(true);
-                    } else {
-                      setAssignmentDialogOpen(true);
-                    }
-                  }}
-                  sx={{ 
-                    background: assessmentType === 'assessment' 
-                      ? 'linear-gradient(45deg, #FF6B6B 30%, #FF8E53 90%)'
-                      : 'linear-gradient(45deg, #4CAF50 30%, #8BC34A 90%)',
-                    boxShadow: assessmentType === 'assessment'
-                      ? '0 3px 5px 2px rgba(255, 107, 107, .3)'
-                      : '0 3px 5px 2px rgba(76, 175, 80, .3)'
-                  }}
-                >
-                  Create {assessmentType === 'assessment' ? 'Assessment' : 'Assignment'}
-                </Button>
-              </Box>
+              
+              {/* Statistics Cards */}
+              <Grid container spacing={3} sx={{ mb: 4 }}>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card sx={{ 
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    height: '100%'
+                  }}>
+                    <CardContent sx={{ textAlign: 'center' }}>
+                      <Quiz sx={{ fontSize: 40, mb: 1 }} />
+                      <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                        {assessments.length}
+                      </Typography>
+                      <Typography variant="body2">
+                        Total Assessments
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card sx={{ 
+                    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                    color: 'white',
+                    height: '100%'
+                  }}>
+                    <CardContent sx={{ textAlign: 'center' }}>
+                      <Assignment sx={{ fontSize: 40, mb: 1 }} />
+                      <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                        {assignments.length}
+                      </Typography>
+                      <Typography variant="body2">
+                        Total Assignments
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card sx={{ 
+                    background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                    color: 'white',
+                    height: '100%'
+                  }}>
+                    <CardContent sx={{ textAlign: 'center' }}>
+                      <Publish sx={{ fontSize: 40, mb: 1 }} />
+                      <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                        {assessments.filter(a => a.isPublished).length}
+                      </Typography>
+                      <Typography variant="body2">
+                        Published Assessments
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card sx={{ 
+                    background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                    color: 'white',
+                    height: '100%'
+                  }}>
+                    <CardContent sx={{ textAlign: 'center' }}>
+                      <TrendingUp sx={{ fontSize: 40, mb: 1 }} />
+                      <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                        {Math.round(assessments.reduce((acc, a) => acc + (a.averageScore || 0), 0) / (assessments.length || 1))}%
+                      </Typography>
+                      <Typography variant="body2">
+                        Average Score
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
             </Box>
 
+            {/* Toggle and Create Button */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <FormControl size="small" sx={{ minWidth: 150 }}>
+                  <InputLabel>View Type</InputLabel>
+                  <Select
+                    value={assessmentType}
+                    label="View Type"
+                    onChange={(e) => setAssessmentType(e.target.value as 'assessment' | 'assignment')}
+                  >
+                    <MenuItem value="assessment">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Quiz fontSize="small" />
+                        Assessments
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="assignment">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Assignment fontSize="small" />
+                        Assignments
+                      </Box>
+                    </MenuItem>
+                  </Select>
+                </FormControl>
+                <Typography variant="body2" color="text.secondary">
+                  Showing {assessmentType === 'assessment' ? assessments.length : assignments.length} {assessmentType}s
+                </Typography>
+              </Box>
+              
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  if (assessmentType === 'assessment') {
+                    setAssessmentDialogOpen(true);
+                  } else {
+                    setAssignmentDialogOpen(true);
+                  }
+                }}
+                sx={{ 
+                  background: assessmentType === 'assessment' 
+                    ? 'linear-gradient(45deg, #FF6B6B 30%, #FF8E53 90%)'
+                    : 'linear-gradient(45deg, #4CAF50 30%, #8BC34A 90%)',
+                  boxShadow: assessmentType === 'assessment'
+                    ? '0 3px 5px 2px rgba(255, 107, 107, .3)'
+                    : '0 3px 5px 2px rgba(76, 175, 80, .3)',
+                  px: 3,
+                  py: 1.5
+                }}
+              >
+                Create New {assessmentType === 'assessment' ? 'Assessment' : 'Assignment'}
+              </Button>
+            </Box>
+
+            {/* Content Grid */}
             <Grid container spacing={3}>
               {assessmentType === 'assessment' ? (
                 assessments && assessments.length > 0 ? assessments.map((assessment) => (
                 <Grid item xs={12} md={6} lg={4} key={assessment._id}>
                   <Card sx={{ 
                     height: '100%',
-                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    transition: 'all 0.3s ease',
+                    border: '1px solid rgba(0,0,0,0.08)',
                     '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: '0 8px 25px rgba(0,0,0,0.15)'
+                      transform: 'translateY(-8px)',
+                      boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+                      borderColor: 'primary.main'
                     }
                   }}>
-                    <CardContent>
+                    <CardContent sx={{ p: 3 }}>
+                      {/* Header */}
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1, color: 'primary.main' }}>
                           {assessment.title}
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column', alignItems: 'flex-end' }}>
                           <Chip
-                            label={assessment.status}
-                            color={getStatusColor(assessment.status) as any}
+                            label={assessment.isPublished ? 'Published' : 'Draft'}
+                            color={assessment.isPublished ? 'success' : 'warning'}
                             size="small"
+                            icon={assessment.isPublished ? <Publish /> : <UnpublishedOutlined />}
                           />
                           {(assessment.attachments && assessment.attachments.length > 0) || assessment.documentUrl ? (
                             <Chip
-                              label="Document Uploaded"
-                              color="success"
+                              label="Has Document"
+                              color="info"
                               size="small"
                               icon={<CheckCircleIcon />}
+                            />
+                          ) : null}
+                          {assessment.questions && assessment.questions.length > 0 ? (
+                            <Chip
+                              label={`${assessment.questions.length} Questions`}
+                              color="success"
+                              size="small"
+                              variant="outlined"
                             />
                           ) : null}
                         </Box>
                       </Box>
                       
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {assessment.description}
+                      {/* Description */}
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 3, minHeight: 40 }}>
+                        {assessment.description || 'No description provided'}
                       </Typography>
 
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                      {/* Metadata */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexWrap: 'wrap' }}>
                         <Chip
                           icon={<Quiz />}
-                          label={assessment.type}
+                          label={assessment.type.toUpperCase()}
                           size="small"
                           variant="outlined"
+                          color="primary"
                         />
                         <Chip
                           icon={<AccessTime />}
-                          label={`${assessment.timeLimit || 'No limit'} min`}
+                          label={assessment.timeLimit ? `${assessment.timeLimit}min` : 'No limit'}
                           size="small"
                           variant="outlined"
                         />
+                        <Chip
+                          icon={<Star />}
+                          label={`${assessment.totalPoints || 0} pts`}
+                          size="small"
+                          variant="outlined"
+                          color="warning"
+                        />
                       </Box>
 
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {assessment.totalQuestions} questions • {assessment.totalPoints} points
-                      </Typography>
+                      {/* Stats */}
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="h6" color="primary.main" sx={{ fontWeight: 'bold' }}>
+                            {assessment.questions?.length || 0}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Questions
+                          </Typography>
+                        </Box>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="h6" color="success.main" sx={{ fontWeight: 'bold' }}>
+                            {assessment.attempts || 1}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Attempts
+                          </Typography>
+                        </Box>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="h6" color="warning.main" sx={{ fontWeight: 'bold' }}>
+                            {assessment.passingScore || 70}%
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Pass Score
+                          </Typography>
+                        </Box>
+                      </Box>
 
+                      {/* Due Date */}
                       {assessment.dueDate && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                          Due: {format(new Date(assessment.dueDate), 'MMM dd, yyyy HH:mm')}
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, p: 1, bgcolor: 'info.50', borderRadius: 1 }}>
+                          <ScheduleIcon color="info" fontSize="small" />
+                          <Typography variant="body2" color="info.main">
+                            Due: {format(new Date(assessment.dueDate), 'MMM dd, yyyy HH:mm')}
+                          </Typography>
+                        </Box>
                       )}
 
+                      {/* Action Buttons */}
                       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                         <Button
                           size="small"
@@ -1494,6 +1695,7 @@ const EnhancedCourseManagement: React.FC = () => {
                             });
                             setAssessmentDialogOpen(true);
                           }}
+                          variant="outlined"
                         >
                           Edit
                         </Button>
@@ -1501,45 +1703,67 @@ const EnhancedCourseManagement: React.FC = () => {
                           size="small"
                           startIcon={<ViewIcon />}
                           onClick={() => navigate(`/dashboard/teacher/assessments/${assessment._id}`)}
+                          variant="outlined"
+                          color="info"
                         >
                           View
                         </Button>
                         <Button
                           size="small"
                           startIcon={<CloudUploadIcon />}
-                          onClick={() => handleUploadAssessmentDocument(assessment)}
+                          onClick={() => handleUploadToAssessment(assessment)}
+                          variant="outlined"
                           color={(assessment.attachments && assessment.attachments.length > 0) || assessment.documentUrl ? "success" : "primary"}
                         >
-                          {(assessment.attachments && assessment.attachments.length > 0) || assessment.documentUrl ? 'Update Doc' : 'Upload Doc'}
+                          {(assessment.attachments && assessment.attachments.length > 0) || assessment.documentUrl ? 'Update' : 'Upload'}
                         </Button>
-                        {assessment.isPublished ? (
-                          <Button
-                            size="small"
-                            startIcon={<UnpublishedOutlined />}
-                            color="warning"
-                            onClick={() => handleToggleAssessmentPublication(assessment._id)}
-                          >
-                            Unpublish
-                          </Button>
-                        ) : (
-                          <Button
-                            size="small"
-                            startIcon={<Publish />}
-                            color="success"
-                            onClick={() => handleToggleAssessmentPublication(assessment._id)}
-                          >
-                            Publish
-                          </Button>
-                        )}
+                        <Button
+                          size="small"
+                          startIcon={assessment.isPublished ? <UnpublishedOutlined /> : <Publish />}
+                          color={assessment.isPublished ? "warning" : "success"}
+                          onClick={() => handleToggleAssessmentPublication(assessment._id)}
+                          variant="contained"
+                        >
+                          {assessment.isPublished ? 'Unpublish' : 'Publish'}
+                        </Button>
+                        <Button
+                          size="small"
+                          startIcon={<DeleteIcon />}
+                          color="error"
+                          onClick={() => {
+                            setAssessmentToDelete(assessment);
+                            setAssessmentDeleteConfirmOpen(true);
+                          }}
+                          variant="outlined"
+                        >
+                          Delete
+                        </Button>
                       </Box>
                     </CardContent>
                   </Card>
                 </Grid>
               )) : (
                 <Grid item xs={12}>
-                  <Alert severity="info">
-                    No assessments found for this course. Create your first assessment to get started!
-                  </Alert>
+                  <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.50' }}>
+                    <Quiz sx={{ fontSize: 64, color: 'grey.400', mb: 2 }} />
+                    <Typography variant="h6" color="text.secondary" gutterBottom>
+                      No Assessments Yet
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                      Create your first assessment to start evaluating your students' progress.
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={() => setAssessmentDialogOpen(true)}
+                      sx={{ 
+                        background: 'linear-gradient(45deg, #FF6B6B 30%, #FF8E53 90%)',
+                        boxShadow: '0 3px 5px 2px rgba(255, 107, 107, .3)'
+                      }}
+                    >
+                      Create First Assessment
+                    </Button>
+                  </Paper>
                 </Grid>
               )
               ) : (
@@ -1548,27 +1772,30 @@ const EnhancedCourseManagement: React.FC = () => {
                 <Grid item xs={12} md={6} lg={4} key={assignment._id}>
                   <Card sx={{ 
                     height: '100%',
-                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    transition: 'all 0.3s ease',
+                    border: '1px solid rgba(0,0,0,0.08)',
                     '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: '0 8px 25px rgba(0,0,0,0.15)'
+                      transform: 'translateY(-8px)',
+                      boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+                      borderColor: 'success.main'
                     }
                   }}>
-                    <CardContent>
+                    <CardContent sx={{ p: 3 }}>
+                      {/* Header */}
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1, color: 'success.main' }}>
                           {assignment.title}
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column', alignItems: 'flex-end' }}>
                           <Chip
-                            label={assignment.status}
-                            color={getStatusColor(assignment.status) as any}
+                            label={assignment.status || 'Active'}
+                            color={getStatusColor(assignment.status || 'published') as any}
                             size="small"
                           />
                           {assignment.assignmentDocument && (
                             <Chip
-                              label="Document Uploaded"
-                              color="success"
+                              label="Has Document"
+                              color="info"
                               size="small"
                               icon={<CheckCircleIcon />}
                             />
@@ -1576,29 +1803,74 @@ const EnhancedCourseManagement: React.FC = () => {
                         </Box>
                       </Box>
                       
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {assignment.description}
+                      {/* Description */}
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 3, minHeight: 40 }}>
+                        {assignment.description || 'No description provided'}
                       </Typography>
 
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                      {/* Metadata */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexWrap: 'wrap' }}>
                         <Chip
                           icon={<Assignment />}
-                          label={assignment.submissionType}
+                          label={assignment.submissionType.toUpperCase()}
                           size="small"
                           variant="outlined"
+                          color="success"
                         />
                         <Chip
                           icon={<Star />}
                           label={`${assignment.maxPoints} pts`}
                           size="small"
                           variant="outlined"
+                          color="warning"
                         />
+                        {assignment.isRequired && (
+                          <Chip
+                            label="Required"
+                            size="small"
+                            color="error"
+                            variant="outlined"
+                          />
+                        )}
                       </Box>
 
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Due: {format(new Date(assignment.dueDate), 'MMM dd, yyyy HH:mm')}
-                      </Typography>
+                      {/* File Info */}
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="h6" color="success.main" sx={{ fontWeight: 'bold' }}>
+                            {assignment.allowedFileTypes?.length || 0}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            File Types
+                          </Typography>
+                        </Box>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="h6" color="info.main" sx={{ fontWeight: 'bold' }}>
+                            {assignment.maxFileSize || 10}MB
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Max Size
+                          </Typography>
+                        </Box>
+                        <Box sx={{ textAlign: 'center' }}>
+                          <Typography variant="h6" color="primary.main" sx={{ fontWeight: 'bold' }}>
+                            0
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Submissions
+                          </Typography>
+                        </Box>
+                      </Box>
 
+                      {/* Due Date */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, p: 1, bgcolor: 'warning.50', borderRadius: 1 }}>
+                        <ScheduleIcon color="warning" fontSize="small" />
+                        <Typography variant="body2" color="warning.main">
+                          Due: {format(new Date(assignment.dueDate), 'MMM dd, yyyy HH:mm')}
+                        </Typography>
+                      </Box>
+
+                      {/* Action Buttons */}
                       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                         <Button
                           size="small"
@@ -1618,30 +1890,48 @@ const EnhancedCourseManagement: React.FC = () => {
                             });
                             setAssignmentDialogOpen(true);
                           }}
+                          variant="outlined"
                         >
                           Edit
                         </Button>
                         <Button
                           size="small"
-                          startIcon={<CloudUploadIcon />}
-                          onClick={() => handleUploadAssignmentDocument(assignment)}
-                          color={assignment.assignmentDocument ? "success" : "primary"}
-                        >
-                          {assignment.assignmentDocument ? 'Update Doc' : 'Upload Doc'}
-                        </Button>
-                        <Button
-                          size="small"
                           startIcon={<ViewIcon />}
                           onClick={() => navigate(`/dashboard/teacher/assignments/${assignment._id}`)}
+                          variant="outlined"
+                          color="info"
                         >
                           View
                         </Button>
                         <Button
                           size="small"
+                          startIcon={<CloudUploadIcon />}
+                          onClick={() => handleUploadAssignmentDocument(assignment)}
+                          variant="outlined"
+                          color={assignment.assignmentDocument ? "success" : "primary"}
+                        >
+                          {assignment.assignmentDocument ? 'Update' : 'Upload'}
+                        </Button>
+                        <Button
+                          size="small"
                           startIcon={<DownloadIcon />}
                           onClick={() => handleDownloadSubmissions(assignment._id)}
+                          variant="contained"
+                          color="success"
                         >
                           Submissions
+                        </Button>
+                        <Button
+                          size="small"
+                          startIcon={<DeleteIcon />}
+                          onClick={() => {
+                            setAssignmentToDelete(assignment);
+                            setAssignmentDeleteConfirmOpen(true);
+                          }}
+                          variant="outlined"
+                          color="error"
+                        >
+                          Delete
                         </Button>
                       </Box>
                     </CardContent>
@@ -1649,9 +1939,26 @@ const EnhancedCourseManagement: React.FC = () => {
                 </Grid>
               )) : (
                 <Grid item xs={12}>
-                  <Alert severity="info">
-                    No assignments found for this course. Create your first assignment to get started!
-                  </Alert>
+                  <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'grey.50' }}>
+                    <Assignment sx={{ fontSize: 64, color: 'grey.400', mb: 2 }} />
+                    <Typography variant="h6" color="text.secondary" gutterBottom>
+                      No Assignments Yet
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                      Create your first assignment to give students practical work to complete.
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={() => setAssignmentDialogOpen(true)}
+                      sx={{ 
+                        background: 'linear-gradient(45deg, #4CAF50 30%, #8BC34A 90%)',
+                        boxShadow: '0 3px 5px 2px rgba(76, 175, 80, .3)'
+                      }}
+                    >
+                      Create First Assignment
+                    </Button>
+                  </Paper>
                 </Grid>
               )
               )}
@@ -2367,6 +2674,108 @@ const EnhancedCourseManagement: React.FC = () => {
             }}
           >
             {extractingQuestions ? 'Adding Questions...' : 'Add Questions'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Assignment Delete Confirmation Dialog */}
+      <Dialog
+        open={assignmentDeleteConfirmOpen}
+        onClose={() => setAssignmentDeleteConfirmOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
+            color: 'white'
+          }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <DeleteIcon />
+          Delete Assignment
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Are you sure you want to delete the assignment "{assignmentToDelete?.title}"?
+          </Typography>
+          <Alert severity="warning" sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'white' }}>
+            <Typography variant="body2">
+              <strong>Warning:</strong> This action cannot be undone. All student submissions and data associated with this assignment will be permanently deleted.
+            </Typography>
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setAssignmentDeleteConfirmOpen(false)} 
+            sx={{ color: 'white' }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteAssignment}
+            variant="contained"
+            startIcon={<DeleteIcon />}
+            sx={{ 
+              bgcolor: 'white', 
+              color: 'error.main',
+              '&:hover': {
+                bgcolor: 'rgba(255,255,255,0.9)',
+              }
+            }}
+          >
+            Delete Assignment
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Assessment Delete Confirmation Dialog */}
+      <Dialog
+        open={assessmentDeleteConfirmOpen}
+        onClose={() => setAssessmentDeleteConfirmOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
+            color: 'white'
+          }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <DeleteIcon />
+          Delete Assessment
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Are you sure you want to delete the assessment "{assessmentToDelete?.title}"?
+          </Typography>
+          <Alert severity="warning" sx={{ bgcolor: 'rgba(255,255,255,0.1)', color: 'white' }}>
+            <Typography variant="body2">
+              <strong>Warning:</strong> This action cannot be undone. All student submissions and data associated with this assessment will be permanently deleted.
+            </Typography>
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setAssessmentDeleteConfirmOpen(false)} 
+            sx={{ color: 'white' }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteAssessment}
+            variant="contained"
+            startIcon={<DeleteIcon />}
+            sx={{ 
+              bgcolor: 'white', 
+              color: 'error.main',
+              '&:hover': {
+                bgcolor: 'rgba(255,255,255,0.9)',
+              }
+            }}
+          >
+            Delete Assessment
           </Button>
         </DialogActions>
       </Dialog>

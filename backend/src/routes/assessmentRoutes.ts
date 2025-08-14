@@ -7,7 +7,7 @@ import { upload } from '../utils/fileUpload';
 
 // Import controllers
 import assessmentController from '../controllers/assessmentController';
-import { addQuestionsFromDocument } from '../controllers/assessmentController';
+import { addQuestionsFromDocument, replaceQuestionsFromDocument } from '../controllers/assessmentController';
 import studentAssessmentController from '../controllers/studentAssessmentController';
 
 const router = express.Router();
@@ -133,6 +133,19 @@ router.post(
   addQuestionsFromDocument
 );
 
+router.put(
+  '/:id/replace-questions',
+  auth,
+  authorizeRoles(['teacher']),
+  upload.fields([
+    { name: 'document', maxCount: 1 },
+    { name: 'answerSheet', maxCount: 1 }
+  ]),
+  idValidation,
+  validateRequest,
+  replaceQuestionsFromDocument
+);
+
 router.patch(
   '/:id/publish',
   auth,
@@ -195,6 +208,17 @@ router.put(
   studentAssessmentController.saveAssessmentProgress
 );
 
+// Submit assessment directly (creates submission and submits)
+router.post(
+  '/:id/submit',
+  auth,
+  authorizeRoles(['student']),
+  idValidation,
+  submissionValidation,
+  validateRequest,
+  studentAssessmentController.submitAssessmentDirect
+);
+
 router.post(
   '/submissions/:submissionId/submit',
   auth,
@@ -226,6 +250,82 @@ router.get(
   ],
   validateRequest,
   studentAssessmentController.getSubmissionDetails
+);
+
+// Course-specific routes
+router.get(
+  '/course/:courseId',
+  auth,
+  [
+    param('courseId')
+      .isMongoId()
+      .withMessage('Invalid course ID format')
+  ],
+  validateRequest,
+  assessmentController.getCourseAssessments
+);
+
+router.get(
+  '/course/:courseId/student-attempts',
+  auth,
+  authorizeRoles(['student']),
+  [
+    param('courseId')
+      .isMongoId()
+      .withMessage('Invalid course ID format')
+  ],
+  validateRequest,
+  studentAssessmentController.getStudentCourseAttempts
+);
+
+// Debug route to check assessments and enrollments
+router.get(
+  '/debug/student-info',
+  auth,
+  authorizeRoles(['student']),
+  async (req, res) => {
+    try {
+      const studentId = req.user?.id;
+      
+      // Get enrollments
+      const { UserProgress } = await import('../models/UserProgress');
+      const { Assessment } = await import('../models/Assessment');
+      const enrollments = await UserProgress.find({ user: studentId }).populate('course', 'title instructor');
+      
+      // Get all published assessments in enrolled courses
+      const courseIds = enrollments.map(e => e.course._id);
+      const assessments = await Assessment.find({
+        course: { $in: courseIds },
+        isPublished: true,
+        status: 'published'
+      }).populate('course', 'title');
+      
+      res.json({
+        success: true,
+        debug: {
+          studentId,
+          enrollments: enrollments.map(e => ({
+            courseId: e.course._id,
+            courseTitle: e.course.title,
+            instructor: e.course.instructor
+          })),
+          publishedAssessments: assessments.map(a => ({
+            id: a._id,
+            title: a.title,
+            courseTitle: a.course.title,
+            isPublished: a.isPublished,
+            status: a.status,
+            type: a.type
+          }))
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
 );
 
 export default router;

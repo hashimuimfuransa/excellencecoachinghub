@@ -28,6 +28,13 @@ export interface IAssignmentSubmission extends Document {
   assignment: mongoose.Types.ObjectId;
   student: mongoose.Types.ObjectId;
   submissionText?: string;
+  sections?: Array<{
+    id: string;
+    title: string;
+    content: string;
+    type: 'text' | 'essay' | 'code' | 'math';
+    completed: boolean;
+  }>;
   attachments: Array<{
     filename: string;
     originalName: string;
@@ -35,13 +42,22 @@ export interface IAssignmentSubmission extends Document {
     fileSize: number;
     uploadedAt: Date;
   }>;
-  submittedAt: Date;
+  submittedAt?: Date;
   isLate: boolean;
-  status: 'submitted' | 'graded' | 'returned';
+  status: 'draft' | 'submitted' | 'graded' | 'returned';
   grade?: number;
   feedback?: string;
+  autoSubmitted?: boolean;
+  aiGrade?: {
+    score: number;
+    feedback: string;
+    confidence: number;
+    gradedAt: Date;
+  };
   gradedAt?: Date;
   gradedBy?: mongoose.Types.ObjectId;
+  version: number;
+  autoSavedAt?: Date;
 }
 
 const AssignmentSchema = new Schema<IAssignment>({
@@ -161,6 +177,30 @@ const AssignmentSubmissionSchema = new Schema<IAssignmentSubmission>({
     trim: true,
     maxlength: [10000, 'Submission text cannot exceed 10000 characters']
   },
+  sections: [{
+    id: {
+      type: String,
+      required: true
+    },
+    title: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    content: {
+      type: String,
+      default: ''
+    },
+    type: {
+      type: String,
+      enum: ['text', 'essay', 'code', 'math'],
+      default: 'text'
+    },
+    completed: {
+      type: Boolean,
+      default: false
+    }
+  }],
   attachments: [{
     filename: {
       type: String,
@@ -184,8 +224,7 @@ const AssignmentSubmissionSchema = new Schema<IAssignmentSubmission>({
     }
   }],
   submittedAt: {
-    type: Date,
-    default: Date.now
+    type: Date
   },
   isLate: {
     type: Boolean,
@@ -193,8 +232,8 @@ const AssignmentSubmissionSchema = new Schema<IAssignmentSubmission>({
   },
   status: {
     type: String,
-    enum: ['submitted', 'graded', 'returned'],
-    default: 'submitted'
+    enum: ['draft', 'submitted', 'graded', 'returned'],
+    default: 'draft'
   },
   grade: {
     type: Number,
@@ -211,12 +250,45 @@ const AssignmentSubmissionSchema = new Schema<IAssignmentSubmission>({
     trim: true,
     maxlength: [2000, 'Feedback cannot exceed 2000 characters']
   },
+  autoSubmitted: {
+    type: Boolean,
+    default: false
+  },
   gradedAt: {
     type: Date
   },
   gradedBy: {
     type: Schema.Types.ObjectId,
     ref: 'User'
+  },
+  aiGrade: {
+    score: {
+      type: Number,
+      min: [0, 'AI grade score cannot be negative'],
+      max: [100, 'AI grade score cannot exceed 100']
+    },
+    feedback: {
+      type: String,
+      trim: true,
+      maxlength: [5000, 'AI feedback cannot exceed 5000 characters']
+    },
+    confidence: {
+      type: Number,
+      min: [0, 'Confidence cannot be negative'],
+      max: [1, 'Confidence cannot exceed 1']
+    },
+    gradedAt: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  version: {
+    type: Number,
+    default: 1,
+    min: [1, 'Version must be at least 1']
+  },
+  autoSavedAt: {
+    type: Date
   }
 }, {
   timestamps: true,
@@ -230,7 +302,7 @@ AssignmentSchema.index({ instructor: 1 });
 AssignmentSchema.index({ dueDate: 1 });
 AssignmentSchema.index({ createdAt: -1 });
 
-AssignmentSubmissionSchema.index({ assignment: 1, student: 1 }, { unique: true });
+AssignmentSubmissionSchema.index({ assignment: 1, student: 1, version: -1 });
 AssignmentSubmissionSchema.index({ student: 1 });
 AssignmentSubmissionSchema.index({ submittedAt: -1 });
 

@@ -19,6 +19,20 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+export interface AssignmentQuestion {
+  _id: string;
+  question: string;
+  type: 'multiple_choice' | 'multiple_choice_multiple' | 'true_false' | 'short_answer' | 'essay' | 'fill_in_blank' | 'numerical' | 'matching';
+  options?: string[];
+  correctAnswer?: string | string[];
+  points: number;
+  section?: string;
+  sectionTitle?: string;
+  leftItems?: string[];
+  rightItems?: string[];
+  matchingPairs?: Array<{ left: string; right: string; }>;
+}
+
 export interface Assignment {
   _id: string;
   title: string;
@@ -40,8 +54,22 @@ export interface Assignment {
     fileSize: number;
     uploadedAt: Date;
   };
+  // Enhanced assignment features
+  questions?: AssignmentQuestion[];
+  hasQuestions?: boolean;
+  autoSubmit?: boolean;
+  timeLimit?: number; // in minutes
+  extractedQuestions?: AssignmentQuestion[];
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface AssignmentSection {
+  id: string;
+  title: string;
+  content: string;
+  type: 'text' | 'essay' | 'code' | 'math';
+  completed: boolean;
 }
 
 export interface AssignmentSubmission {
@@ -49,6 +77,7 @@ export interface AssignmentSubmission {
   assignment: string;
   student: string;
   submissionText?: string;
+  sections?: AssignmentSection[];
   attachments: Array<{
     filename: string;
     originalName: string;
@@ -56,24 +85,36 @@ export interface AssignmentSubmission {
     fileSize: number;
     uploadedAt: Date;
   }>;
-  submittedAt: Date;
+  submittedAt?: Date;
   isLate: boolean;
-  status: 'submitted' | 'graded' | 'returned';
+  status: 'draft' | 'submitted' | 'graded' | 'returned';
   grade?: number;
   feedback?: string;
+  autoSubmitted?: boolean;
+  aiGrade?: {
+    score: number;
+    feedback: string;
+    confidence: number;
+    gradedAt: Date;
+  };
   gradedAt?: Date;
   gradedBy?: string;
+  version: number;
+  autoSavedAt?: Date;
 }
 
 export interface SubmissionData {
   assignmentId: string;
   submissionText?: string;
-  attachments: Array<{
+  sections?: AssignmentSection[];
+  attachments?: Array<{
     filename: string;
     originalName: string;
     fileUrl: string;
     fileSize: number;
   }>;
+  isDraft?: boolean;
+  autoSubmit?: boolean;
 }
 
 export interface CreateAssignmentData {
@@ -119,6 +160,18 @@ class AssignmentService {
     } catch (error: any) {
       console.error('Failed to delete assignment:', error);
       throw new Error(error.response?.data?.message || 'Failed to delete assignment');
+    }
+  }
+
+  // Get all assignments (admin only)
+  async getAllAssignments(): Promise<Assignment[]> {
+    try {
+      const response = await api.get('/assignments/admin/all');
+      const assignments = response.data?.data?.assignments || [];
+      return Array.isArray(assignments) ? assignments : [];
+    } catch (error: any) {
+      console.error('Failed to fetch all assignments:', error);
+      return [];
     }
   }
 
@@ -194,12 +247,15 @@ class AssignmentService {
     try {
       const response = await api.post(`/assignments/${submissionData.assignmentId}/submit`, {
         submissionText: submissionData.submissionText,
-        attachments: submissionData.attachments
+        attachments: submissionData.attachments,
+        sections: submissionData.sections,
+        isDraft: submissionData.isDraft || false,
+        autoSubmit: submissionData.autoSubmit || false
       });
       return response.data.data;
     } catch (error: any) {
       console.error('Failed to submit assignment:', error);
-      throw new Error(error.response?.data?.message || 'Failed to submit assignment');
+      throw new Error(error.response?.data?.message || error.response?.data?.error || 'Failed to submit assignment');
     }
   }
 
@@ -242,6 +298,24 @@ class AssignmentService {
     }
   }
 
+  // Replace assignment document (instructor) - removes old document and uploads new one
+  async replaceAssignmentDocument(assignmentId: string, file: File): Promise<Assignment> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await api.put(`/assignments/${assignmentId}/replace-document`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Failed to replace assignment document:', error);
+      throw new Error(error.response?.data?.error || 'Failed to replace assignment document');
+    }
+  }
+
   // Get assignment statistics
   async getAssignmentStats(assignmentId: string): Promise<any> {
     try {
@@ -276,6 +350,172 @@ class AssignmentService {
     } catch (error: any) {
       console.error('Failed to fetch upcoming assignments:', error);
       return [];
+    }
+  }
+
+  // Get submission history
+  async getSubmissionHistory(assignmentId: string): Promise<any[]> {
+    try {
+      const response = await api.get(`/assignments/${assignmentId}/submission-history`);
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch submission history');
+    }
+  }
+
+  // Update AI grade
+  async updateAIGrade(submissionId: string, aiGradeData: {
+    score: number;
+    feedback: string;
+    confidence: number;
+    gradedAt?: Date;
+  }): Promise<AssignmentSubmission> {
+    try {
+      const response = await api.post(`/assignments/submissions/${submissionId}/ai-grade`, aiGradeData);
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to update AI grade');
+    }
+  }
+
+  // Enhanced Assignment Methods
+
+  // Save assignment draft with questions support
+  async saveDraft(draftData: {
+    assignmentId: string;
+    answers?: Array<{
+      questionId: string;
+      answer: string;
+      timeSpent: number;
+      attachments?: File[];
+    }>;
+    submissionText?: string;
+    attachments?: File[];
+    isDraft?: boolean;
+  }): Promise<AssignmentSubmission> {
+    try {
+      const response = await api.post('/assignments/save-draft', draftData);
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to save draft');
+    }
+  }
+
+  // Submit assignment with questions support
+  async submitAssignmentWithQuestions(submissionData: {
+    assignmentId: string;
+    answers?: Array<{
+      questionId: string;
+      answer: string;
+      timeSpent: number;
+      attachments?: File[];
+    }>;
+    textResponse?: string;
+    attachments?: File[];
+    finalSubmission?: boolean;
+    isAutoSubmit?: boolean;
+  }): Promise<AssignmentSubmission> {
+    try {
+      const response = await api.post(`/assignments/${submissionData.assignmentId}/submit`, {
+        answers: submissionData.answers,
+        textResponse: submissionData.textResponse,
+        attachments: submissionData.attachments,
+        finalSubmission: submissionData.finalSubmission,
+        isAutoSubmit: submissionData.isAutoSubmit
+      });
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Failed to submit assignment:', error);
+      throw new Error(error.response?.data?.message || 'Failed to submit assignment');
+    }
+  }
+
+  // Create assignment with questions extraction
+  async createAssignmentWithQuestions(assignmentData: {
+    title: string;
+    description: string;
+    instructions: string;
+    courseId: string;
+    dueDate: Date;
+    maxPoints: number;
+    submissionType: 'file' | 'text' | 'both';
+    allowedFileTypes: string[];
+    maxFileSize: number;
+    isRequired: boolean;
+    hasQuestions?: boolean;
+    autoSubmit?: boolean;
+    timeLimit?: number;
+    extractQuestions?: boolean;
+  }, file?: File): Promise<Assignment> {
+    try {
+      const formData = new FormData();
+      
+      // Add assignment data
+      Object.entries(assignmentData).forEach(([key, value]) => {
+        if (value !== undefined) {
+          formData.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
+        }
+      });
+
+      // Add file if provided
+      if (file) {
+        formData.append('file', file);
+      }
+
+      const response = await api.post('/assignments/create-enhanced', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Failed to create enhanced assignment:', error);
+      throw new Error(error.response?.data?.error || 'Failed to create assignment');
+    }
+  }
+
+  // Get assignment with questions
+  async getAssignmentWithQuestions(assignmentId: string): Promise<Assignment> {
+    try {
+      const response = await api.get(`/assignments/${assignmentId}/enhanced`);
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Failed to fetch enhanced assignment:', error);
+      throw new Error(error.response?.data?.message || 'Failed to fetch assignment');
+    }
+  }
+
+  // Get assignment submission with answers
+  async getSubmissionWithAnswers(assignmentId: string): Promise<AssignmentSubmission | null> {
+    try {
+      const response = await api.get(`/assignments/${assignmentId}/submission/enhanced`);
+      return response.data.data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return null; // No submission found
+      }
+      console.error('Failed to fetch enhanced submission:', error);
+      throw new Error(error.response?.data?.message || 'Failed to fetch submission');
+    }
+  }
+
+  // Grade assignment automatically
+  async autoGradeAssignment(submissionId: string): Promise<{
+    score: number;
+    feedback: string;
+    gradedAnswers: Array<{
+      questionId: string;
+      score: number;
+      feedback: string;
+      isCorrect: boolean;
+    }>;
+  }> {
+    try {
+      const response = await api.post(`/assignments/submissions/${submissionId}/auto-grade`);
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Failed to auto-grade assignment:', error);
+      throw new Error(error.response?.data?.message || 'Failed to auto-grade assignment');
     }
   }
 

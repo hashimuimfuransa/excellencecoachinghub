@@ -298,8 +298,23 @@ const EnhancedAssessments: React.FC = () => {
           const status = getAssessmentStatus(assessment);
           return (
             <Grid item xs={12} sm={6} md={4} key={assessment._id}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <CardContent sx={{ flexGrow: 1 }}>
+              <Card sx={{ 
+                height: '100%', 
+                display: 'flex', 
+                flexDirection: 'column',
+                minHeight: { xs: 350, sm: 320 },
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: 3
+                }
+              }}>
+                <CardContent sx={{ 
+                  flexGrow: 1,
+                  p: { xs: 2, sm: 3 },
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     <Avatar sx={{ bgcolor: `${getTypeColor(assessment.type)}.main`, mr: 1 }}>
                       {getTypeIcon(assessment.type)}
@@ -361,19 +376,50 @@ const EnhancedAssessments: React.FC = () => {
                     </Typography>
                   )}
 
-                  <Box sx={{ display: 'flex', gap: 1, mt: 'auto' }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: 1, 
+                    mt: 'auto',
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    alignItems: 'stretch'
+                  }}>
                     <Button
                       variant="contained"
                       startIcon={<PlayArrow />}
                       onClick={() => handleStartAssessment(assessment)}
                       fullWidth
                       disabled={status.status === 'Draft' || status.status === 'Archived'}
+                      sx={{
+                        minHeight: { xs: 48, sm: 36 },
+                        fontSize: { xs: '1rem', sm: '0.875rem' },
+                        fontWeight: 'bold',
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        '&:hover': {
+                          boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
+                          transform: 'translateY(-1px)'
+                        },
+                        '&:disabled': {
+                          opacity: 0.6
+                        }
+                      }}
                     >
                       Start Assessment
                     </Button>
                     <IconButton
                       onClick={() => showAssessmentInfo(assessment)}
                       size="small"
+                      sx={{
+                        minWidth: { xs: 48, sm: 'auto' },
+                        minHeight: { xs: 48, sm: 'auto' },
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        '&:hover': {
+                          backgroundColor: 'action.hover'
+                        }
+                      }}
                     >
                       <Info />
                     </IconButton>

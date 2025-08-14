@@ -45,7 +45,7 @@ import StudentCourses from './pages/Student/StudentCourses';
 import Assessments from './pages/Student/Assessments';
 import TakeAssessment from './pages/Student/TakeAssessment';
 import EnhancedAssessments from './pages/Student/EnhancedAssessments';
-import EnhancedTakeAssessment from './pages/Student/EnhancedTakeAssessment';
+import EnhancedTakeAssessmentStudent from './pages/Student/EnhancedTakeAssessment';
 import StudentLiveSessions from './pages/Student/LiveSessions';
 import StudentLiveSessionRoom from './pages/Student/LiveSessionRoom';
 import Progress from './pages/Student/Progress';
@@ -64,12 +64,23 @@ import NotesPreviewPage from './pages/Teacher/NotesPreviewPage';
 import CourseAssignmentsPage from './pages/Student/CourseAssignmentsPage';
 import CourseAssessmentsPage from './pages/Student/CourseAssessmentsPage';
 import CourseAnnouncementsPage from './pages/Student/CourseAnnouncementsPage';
+import TakeAssessmentStandalone from './pages/Assessment/TakeAssessment';
+import EnhancedTakeAssessment from './pages/Assessment/EnhancedTakeAssessment';
+import AssessmentResults from './pages/Assessment/AssessmentResults';
+import EnhancedWorkOnAssignment from './pages/Assignment/EnhancedWorkOnAssignment';
+import EnhancedTakeAssignment from './pages/Assignment/EnhancedTakeAssignment';
+import AssignmentResults from './pages/Assignment/AssignmentResults';
 import CoursesPage from './pages/Courses/CoursesPage';
 import CourseDetailPage from './pages/Courses/CourseDetailPage';
 import QuizPage from './pages/Quiz/QuizPage';
 import ProfilePage from './pages/Profile/ProfilePage';
 import NotificationPage from './pages/Notifications/NotificationPage';
 import NotFoundPage from './pages/NotFound/NotFoundPage';
+import ProctoringDashboard from './pages/Admin/ProctoringDashboard';
+import GradesAndLeaderboard from './pages/Student/GradesAndLeaderboard';
+import StudentLeaderboard from './pages/Student/StudentLeaderboard';
+import TeacherGradesLeaderboard from './pages/Teacher/TeacherGradesLeaderboard';
+import AdminLeaderboard from './pages/Admin/AdminLeaderboard';
 
 // Import hooks
 import { useAuth } from './hooks/useAuth';
@@ -171,6 +182,15 @@ const App: React.FC = () => {
             </ProtectedRoute>
           }
         />
+        
+        <Route
+          path="admin/leaderboard"
+          element={
+            <ProtectedRoute requiredRole={UserRole.ADMIN}>
+              <AdminLeaderboard />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="teacher"
@@ -193,6 +213,8 @@ const App: React.FC = () => {
           <Route path="student-management" element={<StudentManagement />} />
           <Route path="analytics" element={<TeacherAnalytics />} />
           <Route path="recorded-session/:sessionId" element={<RecordedSessionDetails />} />
+          <Route path="grades" element={<TeacherGradesLeaderboard />} />
+          <Route path="grades/:courseId" element={<TeacherGradesLeaderboard />} />
           <Route path="settings" element={<TeacherSettings />} />
           <Route path="test" element={<TestPage />} />
         </Route>
@@ -214,18 +236,14 @@ const App: React.FC = () => {
           <Route path="course/:id" element={<CourseViewPage />} />
           <Route path="course/:id/notes" element={<CourseNotesStudyPage />} />
           <Route path="course/:id/live-sessions" element={<StudentLiveSessions />} />
-          <Route path="course/:id/assignments" element={<CourseAssignmentsPage />} />
-          <Route path="course/:id/assessments" element={<CourseAssessmentsPage />} />
           <Route path="course/:id/announcements" element={<CourseAnnouncementsPage />} />
-          <Route path="assessments" element={<Assessments />} />
-          <Route path="assessments/:assessmentId/take" element={<TakeAssessment />} />
-          <Route path="enhanced-assessments" element={<EnhancedAssessments />} />
-          <Route path="enhanced-assessment/:assessmentId" element={<EnhancedTakeAssessment />} />
           <Route path="live-sessions" element={<StudentLiveSessions />} />
           <Route path="live-sessions/:sessionId/room" element={<StudentLiveSessionRoom />} />
           <Route path="progress" element={<Progress />} />
           <Route path="ai-assistant" element={<AIAssistantPage />} />
           <Route path="recorded-sessions" element={<RecordedSessionsPage />} />
+          <Route path="grades" element={<GradesAndLeaderboard />} />
+          <Route path="leaderboard" element={<StudentLeaderboard />} />
           <Route path="settings" element={<StudentSettings />} />
         </Route>
 
@@ -310,6 +328,96 @@ const App: React.FC = () => {
         element={
           <ProtectedRoute requiredRole={UserRole.TEACHER}>
             <EnhancedCourseManagement />
+          </ProtectedRoute>
+        }
+      />
+      
+      {/* Standalone Assessment and Assignment Pages */}
+      <Route
+        path="/course/:id/assignments"
+        element={
+          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+            <CourseAssignmentsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/course/:id/assessments"
+        element={
+          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+            <CourseAssessmentsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/assessments"
+        element={
+          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+            <Assessments />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/enhanced-assessments"
+        element={
+          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+            <EnhancedAssessments />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/assessment/:assessmentId/take"
+        element={
+          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+            <EnhancedTakeAssessment />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/enhanced-assessment/:assessmentId"
+        element={
+          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+            <EnhancedTakeAssessmentStudent />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/assessments/:assessmentId/take"
+        element={
+          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+            <TakeAssessment />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/assessment/:assessmentId/results"
+        element={
+          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+            <AssessmentResults />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/assignment/:assignmentId/work"
+        element={
+          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+            <EnhancedWorkOnAssignment />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/assignment/:assignmentId/take"
+        element={
+          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+            <EnhancedTakeAssignment />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/assignment/:assignmentId/results"
+        element={
+          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+            <AssignmentResults />
           </ProtectedRoute>
         }
       />

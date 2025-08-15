@@ -113,9 +113,9 @@ const StudentAssessments: React.FC = () => {
   // Handle assessment start
   const handleStartAssessment = async (assessment: IAssessment) => {
     try {
-      const response = await assessmentService.startAssessment(assessment._id);
-      navigate(`/dashboard/student/assessments/${assessment._id}/take`, {
-        state: { submission: response.submission, assessment: response.assessment }
+      // Use the proctored assessment interface for all assessments
+      navigate(`/proctored-assessment/${assessment._id}/take`, {
+        state: { assessment }
       });
     } catch (err: any) {
       setError(err.message || 'Failed to start assessment');
@@ -297,7 +297,7 @@ const StudentAssessments: React.FC = () => {
                       </Box>
 
                       {/* Status and Type */}
-                      <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                      <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
                         <Chip
                           label={status.label}
                           color={status.color}
@@ -308,6 +308,13 @@ const StudentAssessments: React.FC = () => {
                           label={assessment.type.charAt(0).toUpperCase() + assessment.type.slice(1)}
                           variant="outlined"
                           size="small"
+                        />
+                        <Chip
+                          label="Proctored"
+                          color="error"
+                          size="small"
+                          icon={<Security />}
+                          variant="outlined"
                         />
                       </Box>
 
@@ -362,10 +369,25 @@ const StudentAssessments: React.FC = () => {
                     <Box sx={{ p: 2, pt: 0 }}>
                       <Button
                         fullWidth
-                        variant="contained"
                         startIcon={<PlayArrow />}
                         onClick={() => handleStartAssessment(assessment)}
                         disabled={!status.label.includes('Available') && !status.label.includes('In Progress')}
+                        sx={{
+                          backgroundColor: (!status.label.includes('Available') && !status.label.includes('In Progress')) ? '#cccccc' : '#1976d2',
+                          color: '#ffffff',
+                          padding: '8px 16px',
+                          borderRadius: '4px',
+                          textTransform: 'none',
+                          fontWeight: 500,
+                          '&:hover': {
+                            backgroundColor: (!status.label.includes('Available') && !status.label.includes('In Progress')) ? '#cccccc' : '#1565c0',
+                          },
+                          '&:disabled': {
+                            backgroundColor: '#cccccc',
+                            color: '#666666',
+                            cursor: 'not-allowed',
+                          }
+                        }}
                       >
                         {status.label.includes('In Progress') ? 'Continue' : 'Start Assessment'}
                       </Button>
@@ -465,10 +487,20 @@ const StudentAssessments: React.FC = () => {
           </Button>
           {selectedAssessment && (
             <Button
-              variant="contained"
               onClick={() => {
                 setInfoDialogOpen(false);
                 handleStartAssessment(selectedAssessment);
+              }}
+              sx={{
+                backgroundColor: '#1976d2',
+                color: '#ffffff',
+                padding: '8px 16px',
+                borderRadius: '4px',
+                textTransform: 'none',
+                fontWeight: 500,
+                '&:hover': {
+                  backgroundColor: '#1565c0',
+                },
               }}
             >
               Start Assessment

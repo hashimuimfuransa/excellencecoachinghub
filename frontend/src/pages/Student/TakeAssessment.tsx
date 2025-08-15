@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Container,
   Box,
@@ -111,6 +111,7 @@ interface AssessmentProgress {
 const TakeAssessment: React.FC = () => {
   const { assessmentId } = useParams<{ assessmentId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // State management
   const [assessment, setAssessment] = useState<IAssessment | null>(null);
@@ -143,6 +144,16 @@ const TakeAssessment: React.FC = () => {
     currentSection: 0,
     sectionsCompleted: 0
   });
+
+  // Redirect to proctored interface
+  useEffect(() => {
+    if (assessmentId) {
+      navigate(`/proctored-assessment/${assessmentId}/take`, {
+        state: location.state,
+        replace: true
+      });
+    }
+  }, [assessmentId, navigate, location.state]);
 
   // Refs
   const timerRef = useRef<NodeJS.Timeout | null>(null);

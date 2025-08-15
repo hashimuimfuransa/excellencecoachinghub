@@ -610,5 +610,58 @@ export const assessmentService = {
       console.error('Failed to start assessment attempt:', error);
       throw new Error(error.message || 'Failed to start assessment attempt');
     }
+  },
+
+  // Proctoring methods
+  saveAssessmentProgress: async (assessmentId: string, progressData: {
+    answers: any[];
+    currentQuestionIndex: number;
+    timeRemaining: number | null;
+    violations: string[];
+  }): Promise<void> => {
+    try {
+      const response = await apiService.post(`/assessments/${assessmentId}/progress`, progressData);
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to save assessment progress');
+      }
+    } catch (error: any) {
+      console.error('Failed to save assessment progress:', error);
+      throw new Error(error.message || 'Failed to save assessment progress');
+    }
+  },
+
+  submitAssessment: async (assessmentId: string, submissionData: {
+    answers: any[];
+    submissionType: 'manual' | 'auto';
+    autoSubmitReason?: string;
+    violations: string[];
+    timeSpent: number;
+  }): Promise<void> => {
+    try {
+      const response = await apiService.post(`/assessments/${assessmentId}/submit`, submissionData);
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to submit assessment');
+      }
+    } catch (error: any) {
+      console.error('Failed to submit assessment:', error);
+      throw new Error(error.message || 'Failed to submit assessment');
+    }
+  },
+
+  getAssessment: async (assessmentId: string): Promise<{ assessment: IAssessment }> => {
+    try {
+      const response = await apiService.get<{ assessment: IAssessment }>(`/assessments/${assessmentId}`);
+      
+      if (response.success && response.data) {
+        return response.data;
+      }
+      
+      throw new Error(response.error || 'Failed to fetch assessment');
+    } catch (error: any) {
+      console.error('Failed to fetch assessment:', error);
+      throw new Error(error.message || 'Failed to fetch assessment');
+    }
   }
 };

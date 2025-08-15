@@ -1,0 +1,145 @@
+/* Bulletproof CSS overrides to prevent any MUI theme access errors */
+
+/* Force all contained buttons to have explicit colors */
+.MuiButton-root.MuiButton-contained,
+.MuiButton-contained {
+  background-color: #1976d2 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.MuiButton-root.MuiButton-contained:hover,
+.MuiButton-contained:hover {
+  background-color: #1565c0 !important;
+  box-shadow: none !important;
+}
+
+.MuiButton-root.MuiButton-contained:disabled,
+.MuiButton-contained:disabled {
+  background-color: #cccccc !important;
+  color: #666666 !important;
+}
+
+/* Specific color variants */
+.MuiButton-containedPrimary {
+  background-color: #1976d2 !important;
+  color: #ffffff !important;
+}
+
+.MuiButton-containedPrimary:hover {
+  background-color: #1565c0 !important;
+}
+
+.MuiButton-containedSecondary {
+  background-color: #dc004e !important;
+  color: #ffffff !important;
+}
+
+.MuiButton-containedSecondary:hover {
+  background-color: #9a0036 !important;
+}
+
+.MuiButton-containedSuccess {
+  background-color: #4caf50 !important;
+  color: #ffffff !important;
+}
+
+.MuiButton-containedSuccess:hover {
+  background-color: #388e3c !important;
+}
+
+.MuiButton-containedError {
+  background-color: #f44336 !important;
+  color: #ffffff !important;
+}
+
+.MuiButton-containedError:hover {
+  background-color: #d32f2f !important;
+}
+
+.MuiButton-containedInfo {
+  background-color: #2196f3 !important;
+  color: #ffffff !important;
+}
+
+.MuiButton-containedInfo:hover {
+  background-color: #1976d2 !important;
+}
+
+.MuiButton-containedWarning {
+  background-color: #ff9800 !important;
+  color: #000000 !important;
+}
+
+.MuiButton-containedWarning:hover {
+  background-color: #f57c00 !important;
+}
+
+/* Override chips */
+.MuiChip-root.MuiChip-colorPrimary,
+.MuiChip-colorPrimary {
+  background-color: #1976d2 !important;
+  color: #ffffff !important;
+}
+
+.MuiChip-root.MuiChip-colorSecondary,
+.MuiChip-colorSecondary {
+  background-color: #dc004e !important;
+  color: #ffffff !important;
+}
+
+.MuiChip-root.MuiChip-colorSuccess,
+.MuiChip-colorSuccess {
+  background-color: #4caf50 !important;
+  color: #ffffff !important;
+}
+
+.MuiChip-root.MuiChip-colorError,
+.MuiChip-colorError {
+  background-color: #f44336 !important;
+  color: #ffffff !important;
+}
+
+.MuiChip-root.MuiChip-colorInfo,
+.MuiChip-colorInfo {
+  background-color: #2196f3 !important;
+  color: #ffffff !important;
+}
+
+.MuiChip-root.MuiChip-colorWarning,
+.MuiChip-colorWarning {
+  background-color: #ff9800 !important;
+  color: #000000 !important;
+}
+
+/* Override icon buttons */
+.MuiIconButton-colorPrimary {
+  color: #1976d2 !important;
+}
+
+.MuiIconButton-colorSecondary {
+  color: #dc004e !important;
+}
+
+.MuiIconButton-colorSuccess {
+  color: #4caf50 !important;
+}
+
+.MuiIconButton-colorError {
+  color: #f44336 !important;
+}
+
+.MuiIconButton-colorInfo {
+  color: #2196f3 !important;
+}
+
+.MuiIconButton-colorWarning {
+  color: #ff9800 !important;
+}
+
+/* Force all buttons to have consistent styling */
+.MuiButton-root {
+  text-transform: none !important;
+  font-weight: 500 !important;
+  border-radius: 4px !important;
+}

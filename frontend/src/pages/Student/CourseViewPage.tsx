@@ -388,11 +388,27 @@ const CourseViewPage: React.FC = () => {
               <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 2 }}>
                 <Chip 
                   label={`${courseStats.completedNotes}/${courseStats.totalNotes} Notes`}
-                  color={courseStats.completedNotes === courseStats.totalNotes ? 'success' : 'default'}
                   icon={courseStats.completedNotes === courseStats.totalNotes ? <CheckCircle /> : <RadioButtonUnchecked />}
+                  sx={{
+                    backgroundColor: courseStats.completedNotes === courseStats.totalNotes ? '#4caf50' : '#e0e0e0',
+                    color: courseStats.completedNotes === courseStats.totalNotes ? '#ffffff' : '#666666',
+                  }}
                 />
               </Box>
-              <Button variant="contained" startIcon={<PlayArrow />}>
+              <Button 
+                startIcon={<PlayArrow />}
+                sx={{
+                  backgroundColor: '#1976d2',
+                  color: '#ffffff',
+                  padding: '8px 16px',
+                  borderRadius: '4px',
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  '&:hover': {
+                    backgroundColor: '#1565c0',
+                  },
+                }}
+              >
                 Start Learning
               </Button>
             </CardContent>
@@ -425,12 +441,28 @@ const CourseViewPage: React.FC = () => {
                 <Badge badgeContent={courseStats.upcomingLiveSessions} color="error">
                   <Chip 
                     label="Live Sessions"
-                    color="secondary"
                     icon={<LiveTv />}
+                    sx={{
+                      backgroundColor: '#dc004e',
+                      color: '#ffffff',
+                    }}
                   />
                 </Badge>
               </Box>
-              <Button variant="contained" color="secondary" startIcon={<PlayArrow />}>
+              <Button 
+                startIcon={<PlayArrow />}
+                sx={{
+                  backgroundColor: '#dc004e',
+                  color: '#ffffff',
+                  padding: '8px 16px',
+                  borderRadius: '4px',
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  '&:hover': {
+                    backgroundColor: '#9a0036',
+                  },
+                }}
+              >
                 Join Sessions
               </Button>
             </CardContent>

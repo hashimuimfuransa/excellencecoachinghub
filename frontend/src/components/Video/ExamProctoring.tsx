@@ -357,7 +357,20 @@ const ExamProctoringContent: React.FC<ExamProctoringProps> = ({
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setWarningDialogOpen(false)} color="primary">
+          <Button 
+            onClick={() => setWarningDialogOpen(false)} 
+            sx={{
+              backgroundColor: '#1976d2',
+              color: '#ffffff',
+              padding: '8px 16px',
+              borderRadius: '4px',
+              textTransform: 'none',
+              fontWeight: 500,
+              '&:hover': {
+                backgroundColor: '#1565c0',
+              },
+            }}
+          >
             Understood
           </Button>
         </DialogActions>

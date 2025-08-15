@@ -1,22 +1,55 @@
 import { createTheme, ThemeOptions } from '@mui/material/styles';
 
-// Define custom theme colors
-const primaryColor = '#1976d2';
-const secondaryColor = '#dc004e';
+// Define explicit color values
+const colors = {
+  primary: {
+    main: '#1976d2',
+    light: '#42a5f5',
+    dark: '#1565c0',
+    contrastText: '#ffffff',
+  },
+  secondary: {
+    main: '#dc004e',
+    light: '#ff5983',
+    dark: '#9a0036',
+    contrastText: '#ffffff',
+  },
+  error: {
+    main: '#f44336',
+    light: '#e57373',
+    dark: '#d32f2f',
+    contrastText: '#ffffff',
+  },
+  warning: {
+    main: '#ff9800',
+    light: '#ffb74d',
+    dark: '#f57c00',
+    contrastText: '#000000',
+  },
+  info: {
+    main: '#2196f3',
+    light: '#64b5f6',
+    dark: '#1976d2',
+    contrastText: '#ffffff',
+  },
+  success: {
+    main: '#4caf50',
+    light: '#81c784',
+    dark: '#388e3c',
+    contrastText: '#ffffff',
+  },
+};
 
-export const lightTheme: ThemeOptions = {
+// Create a bulletproof theme with explicit overrides
+export const theme = createTheme({
   palette: {
     mode: 'light',
-    primary: {
-      main: primaryColor,
-      light: '#42a5f5',
-      dark: '#1565c0',
-    },
-    secondary: {
-      main: secondaryColor,
-      light: '#ff5983',
-      dark: '#9a0036',
-    },
+    primary: colors.primary,
+    secondary: colors.secondary,
+    error: colors.error,
+    warning: colors.warning,
+    info: colors.info,
+    success: colors.success,
     background: {
       default: '#f8fafc',
       paper: '#ffffff',
@@ -36,6 +69,10 @@ export const lightTheme: ThemeOptions = {
       700: '#2d3748',
       800: '#1a202c',
       900: '#171923',
+    },
+    action: {
+      disabled: '#cccccc',
+      disabledBackground: '#f5f5f5',
     },
   },
   typography: {
@@ -69,114 +106,191 @@ export const lightTheme: ThemeOptions = {
       fontWeight: 600,
     },
     body1: {
-      lineHeight: 1.7,
+      fontSize: '1rem',
+      lineHeight: 1.6,
     },
     body2: {
-      lineHeight: 1.6,
+      fontSize: '0.875rem',
+      lineHeight: 1.5,
+    },
+    button: {
+      textTransform: 'none',
+      fontWeight: 500,
     },
   },
   shape: {
-    borderRadius: 12,
+    borderRadius: 8,
   },
+  spacing: 8,
   components: {
+    // Completely override Button component to prevent theme access errors
     MuiButton: {
+      defaultProps: {
+        disableElevation: true,
+      },
       styleOverrides: {
         root: {
           textTransform: 'none',
-          borderRadius: 8,
-          fontWeight: 600,
-          padding: '10px 24px',
-          boxShadow: 'none',
-          '&:hover': {
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          fontWeight: 500,
+          borderRadius: '4px',
+          padding: '8px 16px',
+          // Override all variants with explicit colors
+          '&.MuiButton-contained': {
+            backgroundColor: colors.primary.main,
+            color: colors.primary.contrastText,
+            boxShadow: 'none',
+            '&:hover': {
+              backgroundColor: colors.primary.dark,
+              boxShadow: 'none',
+            },
+            '&:disabled': {
+              backgroundColor: '#cccccc',
+              color: '#666666',
+            },
           },
-        },
-        contained: {
-          '&:hover': {
-            boxShadow: '0 4px 12px rgba(25, 118, 210, 0.4)',
+          '&.MuiButton-containedPrimary': {
+            backgroundColor: colors.primary.main,
+            color: colors.primary.contrastText,
+            '&:hover': {
+              backgroundColor: colors.primary.dark,
+            },
+            '&:disabled': {
+              backgroundColor: '#cccccc',
+              color: '#666666',
+            },
+          },
+          '&.MuiButton-containedSecondary': {
+            backgroundColor: colors.secondary.main,
+            color: colors.secondary.contrastText,
+            '&:hover': {
+              backgroundColor: colors.secondary.dark,
+            },
+            '&:disabled': {
+              backgroundColor: '#cccccc',
+              color: '#666666',
+            },
+          },
+          '&.MuiButton-containedSuccess': {
+            backgroundColor: colors.success.main,
+            color: colors.success.contrastText,
+            '&:hover': {
+              backgroundColor: colors.success.dark,
+            },
+            '&:disabled': {
+              backgroundColor: '#cccccc',
+              color: '#666666',
+            },
+          },
+          '&.MuiButton-containedError': {
+            backgroundColor: colors.error.main,
+            color: colors.error.contrastText,
+            '&:hover': {
+              backgroundColor: colors.error.dark,
+            },
+            '&:disabled': {
+              backgroundColor: '#cccccc',
+              color: '#666666',
+            },
+          },
+          '&.MuiButton-containedInfo': {
+            backgroundColor: colors.info.main,
+            color: colors.info.contrastText,
+            '&:hover': {
+              backgroundColor: colors.info.dark,
+            },
+            '&:disabled': {
+              backgroundColor: '#cccccc',
+              color: '#666666',
+            },
+          },
+          '&.MuiButton-containedWarning': {
+            backgroundColor: colors.warning.main,
+            color: colors.warning.contrastText,
+            '&:hover': {
+              backgroundColor: colors.warning.dark,
+            },
+            '&:disabled': {
+              backgroundColor: '#cccccc',
+              color: '#666666',
+            },
           },
         },
       },
     },
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          borderRadius: 16,
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          border: '1px solid #e2e8f0',
-          '&:hover': {
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          },
-        },
-      },
-    },
-    MuiTextField: {
-      styleOverrides: {
-        root: {
-          '& .MuiOutlinedInput-root': {
-            borderRadius: 8,
-          },
-        },
-      },
-    },
+    // Override Chip component
     MuiChip: {
       styleOverrides: {
         root: {
-          borderRadius: 6,
-          fontWeight: 500,
+          '&.MuiChip-colorPrimary': {
+            backgroundColor: colors.primary.main,
+            color: colors.primary.contrastText,
+          },
+          '&.MuiChip-colorSecondary': {
+            backgroundColor: colors.secondary.main,
+            color: colors.secondary.contrastText,
+          },
+          '&.MuiChip-colorSuccess': {
+            backgroundColor: colors.success.main,
+            color: colors.success.contrastText,
+          },
+          '&.MuiChip-colorError': {
+            backgroundColor: colors.error.main,
+            color: colors.error.contrastText,
+          },
+          '&.MuiChip-colorInfo': {
+            backgroundColor: colors.info.main,
+            color: colors.info.contrastText,
+          },
+          '&.MuiChip-colorWarning': {
+            backgroundColor: colors.warning.main,
+            color: colors.warning.contrastText,
+          },
         },
       },
     },
-    MuiAppBar: {
+    // Override IconButton component
+    MuiIconButton: {
       styleOverrides: {
         root: {
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          backgroundImage: 'none',
-        },
-        elevation1: {
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        },
-        elevation2: {
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-        },
-        elevation3: {
-          boxShadow: '0 10px 15px rgba(0,0,0,0.1)',
+          '&.MuiIconButton-colorPrimary': {
+            color: colors.primary.main,
+          },
+          '&.MuiIconButton-colorSecondary': {
+            color: colors.secondary.main,
+          },
+          '&.MuiIconButton-colorSuccess': {
+            color: colors.success.main,
+          },
+          '&.MuiIconButton-colorError': {
+            color: colors.error.main,
+          },
+          '&.MuiIconButton-colorInfo': {
+            color: colors.info.main,
+          },
+          '&.MuiIconButton-colorWarning': {
+            color: colors.warning.main,
+          },
         },
       },
     },
   },
-};
+});
 
-export const darkTheme: ThemeOptions = {
-  ...lightTheme,
+// Create dark theme (simplified)
+export const darkTheme = createTheme({
   palette: {
     mode: 'dark',
-    primary: {
-      main: '#90caf9',
-      light: '#e3f2fd',
-      dark: '#42a5f5',
-    },
-    secondary: {
-      main: '#f48fb1',
-      light: '#fce4ec',
-      dark: '#e91e63',
-    },
-    background: {
-      default: '#121212',
-      paper: '#1e1e1e',
-    },
-    text: {
-      primary: '#ffffff',
-      secondary: '#b0b0b0',
-    },
+    primary: colors.primary,
+    secondary: colors.secondary,
+    error: colors.error,
+    warning: colors.warning,
+    info: colors.info,
+    success: colors.success,
   },
-};
+});
 
-// Create the default theme (light mode)
-export const theme = createTheme(lightTheme);
+// Ensure theme is properly created
+console.log('Theme created successfully with bulletproof overrides');
+console.log('Primary color:', theme.palette.primary.main);
+console.log('Success color:', theme.palette.success.main);
+console.log('Error color:', theme.palette.error.main);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Container,
   Typography,
@@ -28,7 +28,14 @@ import {
   ListItem,
   ListItemText,
   ListItemAvatar,
-  Divider
+  Divider,
+  TextField,
+  IconButton,
+  Tooltip,
+  Badge,
+  LinearProgress,
+  styled,
+  keyframes
 } from '@mui/material';
 import {
   Videocam,
@@ -40,102 +47,254 @@ import {
   Flag,
   PlayArrow,
   Stop,
-  Refresh
+  Refresh,
+  Send,
+  Block,
+  Message,
+  PersonOff,
+  VolumeUp,
+  TabUnselected,
+  FullscreenExit
 } from '@mui/icons-material';
+import { io, Socket } from 'socket.io-client';
 
-// Mock proctoring data
-const mockProctoringData = {
-  activeExams: [
-    {
-      id: 'E001',
-      title: 'Machine Learning Final Exam',
-      course: 'ML Fundamentals',
-      instructor: 'Dr. Sarah Johnson',
-      studentsCount: 45,
-      activeStudents: 42,
-      startTime: '2024-01-15T14:00:00Z',
-      duration: 120,
-      flaggedBehaviors: 3
-    },
-    {
-      id: 'E002',
-      title: 'React Development Quiz',
-      course: 'Advanced React',
-      instructor: 'John Smith',
-      studentsCount: 28,
-      activeStudents: 26,
-      startTime: '2024-01-15T15:30:00Z',
-      duration: 60,
-      flaggedBehaviors: 1
-    }
-  ],
-  flaggedBehaviors: [
-    {
-      id: 'F001',
-      examId: 'E001',
-      studentName: 'Alice Brown',
-      studentEmail: 'alice.brown@example.com',
-      behavior: 'Multiple faces detected',
-      severity: 'high',
-      timestamp: '2024-01-15T14:25:00Z',
-      screenshot: null,
-      reviewed: false
-    },
-    {
-      id: 'F002',
-      examId: 'E001',
-      studentName: 'Bob Wilson',
-      studentEmail: 'bob.wilson@example.com',
-      behavior: 'Tab switching detected',
-      severity: 'medium',
-      timestamp: '2024-01-15T14:18:00Z',
-      screenshot: null,
-      reviewed: false
-    },
-    {
-      id: 'F003',
-      examId: 'E002',
-      studentName: 'Carol Davis',
-      studentEmail: 'carol.davis@example.com',
-      behavior: 'Eye tracking anomaly',
-      severity: 'low',
-      timestamp: '2024-01-15T15:45:00Z',
-      screenshot: null,
-      reviewed: true
-    }
-  ],
-  examHistory: [
-    {
-      id: 'E003',
-      title: 'Python Basics Test',
-      course: 'Python Programming',
-      date: '2024-01-14',
-      studentsCount: 35,
-      flaggedCount: 2,
-      status: 'completed'
-    },
-    {
-      id: 'E004',
-      title: 'Database Design Exam',
-      course: 'Database Systems',
-      date: '2024-01-13',
-      studentsCount: 22,
-      flaggedCount: 0,
-      status: 'completed'
-    }
-  ]
-};
+// Real-time proctoring data is now derived from socket connections
+
+// Styled components and animations
+const pulse = keyframes`
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+`;
+
+const LiveIndicator = styled(Box)(({ theme }) => ({
+  animation: `${pulse} 2s infinite`,
+}));
+
+interface LiveStudent {
+  id: string;
+  name: string;
+  email: string;
+  assessmentId: string;
+  assessmentTitle: string;
+  joinedAt: string;
+  lastFrame?: string;
+  lastFrameTime?: string;
+  violations: number;
+  tabSwitches: number;
+  faceDetected: boolean;
+  audioLevel: number;
+  status: 'active' | 'flagged' | 'disconnected';
+}
+
+interface ProctoringViolation {
+  id: string;
+  studentId: string;
+  studentName: string;
+  assessmentId: string;
+  type: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high';
+  timestamp: string;
+}
 
 const ProctoringMonitoring: React.FC = () => {
   const [currentTab, setCurrentTab] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [proctoringData] = useState(mockProctoringData);
+  // Derive real data from live students
+  const proctoringData = React.useMemo(() => {
+    // Group students by assessment to create active exams
+    const examMap = new Map();
+    
+    liveStudents.forEach(student => {
+      if (!examMap.has(student.assessmentId)) {
+        examMap.set(student.assessmentId, {
+          id: student.assessmentId,
+          title: student.assessmentTitle,
+          course: 'Course Name', // You might want to get this from the assessment data
+          instructor: 'Instructor Name', // You might want to get this from the assessment data
+          studentsCount: 0,
+          activeStudents: 0,
+          startTime: student.joinedAt,
+          duration: 120, // Default duration, you might want to get this from assessment data
+          flaggedBehaviors: 0
+        });
+      }
+      
+      const exam = examMap.get(student.assessmentId);
+      exam.studentsCount++;
+      if (student.status === 'active') {
+        exam.activeStudents++;
+      }
+      if (student.status === 'flagged') {
+        exam.flaggedBehaviors++;
+      }
+    });
+    
+    return {
+      activeExams: Array.from(examMap.values()),
+      flaggedBehaviors: realtimeViolations.map(v => ({
+        id: v.id,
+        examId: v.assessmentId,
+        studentName: v.studentName,
+        studentEmail: '', // You might want to get this from student data
+        behavior: v.description,
+        severity: v.severity,
+        timestamp: v.timestamp,
+        screenshot: null,
+        reviewed: false
+      })),
+      examHistory: [] // You might want to implement this with completed assessments
+    };
+  }, [liveStudents, realtimeViolations]);
   const [selectedExam, setSelectedExam] = useState<any>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [flaggedDialogOpen, setFlaggedDialogOpen] = useState(false);
   const [selectedFlag, setSelectedFlag] = useState<any>(null);
+  
+  // Real-time proctoring state
+  const [liveStudents, setLiveStudents] = useState<LiveStudent[]>([]);
+  const [realtimeViolations, setRealtimeViolations] = useState<ProctoringViolation[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<LiveStudent | null>(null);
+  const [studentDialogOpen, setStudentDialogOpen] = useState(false);
+  const [warningMessage, setWarningMessage] = useState('');
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
+  
+  const socketRef = useRef<Socket | null>(null);
+
+  // Initialize socket connection
+  useEffect(() => {
+    initializeSocket();
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, []);
+
+  const initializeSocket = () => {
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+    setConnectionStatus('connecting');
+    
+    socketRef.current = io(backendUrl, {
+      transports: ['websocket'],
+      upgrade: true
+    });
+
+    socketRef.current.on('connect', () => {
+      console.log('Admin socket connected for proctoring');
+      setConnectionStatus('connected');
+      
+      // Join admin proctoring room
+      socketRef.current?.emit('join_proctoring_session', {
+        role: 'admin'
+      });
+    });
+
+    socketRef.current.on('disconnect', () => {
+      console.log('Admin socket disconnected');
+      setConnectionStatus('disconnected');
+    });
+
+    // Handle student joining proctoring session
+    socketRef.current.on('student_joined_proctoring', (data) => {
+      const newStudent: LiveStudent = {
+        id: data.studentId,
+        name: data.studentName || 'Unknown Student',
+        email: data.studentEmail || '',
+        assessmentId: data.assessmentId,
+        assessmentTitle: data.assessmentTitle || 'Unknown Assessment',
+        joinedAt: new Date().toISOString(),
+        violations: 0,
+        tabSwitches: 0,
+        faceDetected: true,
+        audioLevel: 0,
+        status: 'active'
+      };
+      
+      setLiveStudents(prev => {
+        const existing = prev.find(s => s.id === data.studentId);
+        if (existing) {
+          return prev.map(s => s.id === data.studentId ? { ...s, status: 'active' } : s);
+        }
+        return [...prev, newStudent];
+      });
+    });
+
+    // Handle student leaving proctoring session
+    socketRef.current.on('student_left_proctoring', (data) => {
+      setLiveStudents(prev => 
+        prev.map(s => 
+          s.id === data.studentId 
+            ? { ...s, status: 'disconnected' } 
+            : s
+        )
+      );
+    });
+
+    // Handle video frames from students
+    socketRef.current.on('video_frame', (data) => {
+      setLiveStudents(prev => 
+        prev.map(student => 
+          student.id === data.studentId 
+            ? {
+                ...student,
+                lastFrame: data.frame,
+                lastFrameTime: data.timestamp,
+                faceDetected: data.metadata.faceDetected,
+                audioLevel: data.metadata.audioLevel,
+                violations: data.metadata.violations,
+                tabSwitches: data.metadata.tabSwitches,
+                status: 'active'
+              }
+            : student
+        )
+      );
+    });
+
+    // Handle proctoring violations
+    socketRef.current.on('proctoring_violation', (data) => {
+      const violation: ProctoringViolation = {
+        id: Date.now().toString(),
+        studentId: data.studentId,
+        studentName: liveStudents.find(s => s.id === data.studentId)?.name || 'Unknown',
+        assessmentId: data.assessmentId,
+        type: data.violation.type,
+        description: data.violation.description,
+        severity: data.violation.severity,
+        timestamp: data.violation.timestamp
+      };
+
+      setRealtimeViolations(prev => [violation, ...prev]);
+      
+      // Update student status if high severity
+      if (data.violation.severity === 'high') {
+        setLiveStudents(prev => 
+          prev.map(s => 
+            s.id === data.studentId 
+              ? { ...s, status: 'flagged' } 
+              : s
+          )
+        );
+      }
+    });
+
+    socketRef.current.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+      setConnectionStatus('disconnected');
+    });
+  };
 
   // Handle refresh
   const handleRefresh = () => {
@@ -163,6 +322,51 @@ const ProctoringMonitoring: React.FC = () => {
     // TODO: Implement API call to mark flag as reviewed
     setSuccess('Flagged behavior marked as reviewed');
     setFlaggedDialogOpen(false);
+  };
+
+  // Handle student selection for detailed view
+  const handleViewStudent = (student: LiveStudent) => {
+    setSelectedStudent(student);
+    setStudentDialogOpen(true);
+  };
+
+  // Send warning to student
+  const sendWarningToStudent = (studentId: string, message: string) => {
+    if (!socketRef.current) return;
+    
+    socketRef.current.emit('admin_message', {
+      studentId,
+      type: 'warning',
+      message: message || 'Please maintain proper exam conduct'
+    });
+    
+    setSuccess(`Warning sent to student`);
+    setWarningMessage('');
+  };
+
+  // Auto-submit student assessment
+  const autoSubmitAssessment = (studentId: string, reason: string) => {
+    if (!socketRef.current) return;
+    
+    if (window.confirm('Are you sure you want to auto-submit this student\'s assessment? This action cannot be undone.')) {
+      socketRef.current.emit('admin_message', {
+        studentId,
+        type: 'auto_submit',
+        message: reason || 'Assessment auto-submitted due to policy violation'
+      });
+      
+      // Update student status
+      setLiveStudents(prev => 
+        prev.map(s => 
+          s.id === studentId 
+            ? { ...s, status: 'disconnected' } 
+            : s
+        )
+      );
+      
+      setSuccess(`Assessment auto-submitted for student`);
+      setStudentDialogOpen(false);
+    }
   };
 
   // Get severity color
@@ -212,6 +416,313 @@ const ProctoringMonitoring: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [error]);
+
+  const LiveMonitoringTab = () => (
+    <Box>
+      {/* Connection Status */}
+      <Alert 
+        severity={connectionStatus === 'connected' ? 'success' : connectionStatus === 'connecting' ? 'warning' : 'error'}
+        sx={{ mb: 3 }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography>
+            Real-time Connection: {connectionStatus === 'connected' ? 'Connected' : connectionStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
+          </Typography>
+          {connectionStatus === 'disconnected' && (
+            <Button size="small" onClick={initializeSocket}>
+              Reconnect
+            </Button>
+          )}
+        </Box>
+      </Alert>
+
+      {/* Live Statistics */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center">
+                <Videocam color="primary" sx={{ mr: 2 }} />
+                <Box>
+                  <Typography variant="h4">{liveStudents ? liveStudents.filter(s => s.status === 'active').length : 0}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Active Students
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center">
+                <Warning color="warning" sx={{ mr: 2 }} />
+                <Box>
+                  <Typography variant="h4">{liveStudents.filter(s => s.status === 'flagged').length}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Flagged Students
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center">
+                <Flag color="error" sx={{ mr: 2 }} />
+                <Box>
+                  <Typography variant="h4">{realtimeViolations.length}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Total Violations
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Box display="flex" alignItems="center">
+                <PersonOff color="disabled" sx={{ mr: 2 }} />
+                <Box>
+                  <Typography variant="h4">{liveStudents.filter(s => s.status === 'disconnected').length}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Disconnected
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Live Video Feeds */}
+      {!liveStudents || liveStudents.length === 0 ? (
+        <Card>
+          <CardContent>
+            <Box sx={{ textAlign: 'center', py: 8 }}>
+              <Videocam sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+              <Typography variant="h6" gutterBottom>
+                No students currently taking proctored assessments
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Live video feeds will appear here when students start proctored assessments.
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
+      ) : (
+        <Grid container spacing={3}>
+          {liveStudents && liveStudents.map((student) => (
+            <Grid item xs={12} sm={6} md={4} lg={3} key={student.id}>
+              <Card 
+                sx={{ 
+                  height: '100%',
+                  border: student.status === 'flagged' ? 2 : 1,
+                  borderColor: student.status === 'flagged' ? 'error.main' : 'divider'
+                }}
+              >
+                <CardContent sx={{ p: 1 }}>
+                  {/* Student Info Header */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                      <Avatar sx={{ width: 24, height: 24, mr: 1, fontSize: '0.75rem' }}>
+                        {student.name.charAt(0)}
+                      </Avatar>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="body2" noWrap fontWeight="medium">
+                          {student.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" noWrap>
+                          {student.assessmentTitle}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Chip
+                      label={student.status}
+                      size="small"
+                      color={
+                        student.status === 'active' ? 'success' :
+                        student.status === 'flagged' ? 'error' : 'default'
+                      }
+                    />
+                  </Box>
+
+                  {/* Video Feed */}
+                  <Box 
+                    sx={{ 
+                      position: 'relative',
+                      width: '100%',
+                      height: 180,
+                      bgcolor: 'grey.100',
+                      borderRadius: 1,
+                      mb: 1,
+                      overflow: 'hidden',
+                      border: student.status === 'flagged' ? '2px solid' : '1px solid',
+                      borderColor: student.status === 'flagged' ? 'error.main' : 'divider',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => handleViewStudent(student)}
+                  >
+                    {student.lastFrame ? (
+                      <>
+                        <img
+                          src={student.lastFrame}
+                          alt={`${student.name} video feed`}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                        {/* Live indicator */}
+                        <Box sx={{ 
+                          position: 'absolute', 
+                          bottom: 4, 
+                          left: 4,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 0.5,
+                          bgcolor: 'rgba(0,0,0,0.7)',
+                          color: 'white',
+                          px: 1,
+                          py: 0.5,
+                          borderRadius: 1,
+                          fontSize: '0.7rem'
+                        }}>
+                          {student.status === 'active' ? (
+                            <LiveIndicator sx={{ 
+                              width: 6, 
+                              height: 6, 
+                              bgcolor: 'success.main',
+                              borderRadius: '50%'
+                            }} />
+                          ) : (
+                            <Box sx={{ 
+                              width: 6, 
+                              height: 6, 
+                              bgcolor: 'error.main',
+                              borderRadius: '50%'
+                            }} />
+                          )}
+                          <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
+                            {student.status === 'active' ? 'LIVE' : 'OFFLINE'}
+                          </Typography>
+                        </Box>
+                      </>
+                    ) : (
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        height: '100%',
+                        flexDirection: 'column'
+                      }}>
+                        <Videocam sx={{ fontSize: 32, color: 'text.secondary', mb: 1 }} />
+                        <Typography variant="caption" color="text.secondary">
+                          {student.status === 'disconnected' ? 'Disconnected' : 'Waiting for video...'}
+                        </Typography>
+                        {student.status === 'active' && (
+                          <CircularProgress size={20} sx={{ mt: 1 }} />
+                        )}
+                      </Box>
+                    )}
+                    
+                    {/* Status Indicators */}
+                    <Box sx={{ position: 'absolute', top: 4, left: 4, display: 'flex', gap: 0.5 }}>
+                      {!student.faceDetected && (
+                        <Chip
+                          icon={<PersonOff />}
+                          label="No Face"
+                          size="small"
+                          color="error"
+                          sx={{ height: 20, fontSize: '0.6rem' }}
+                        />
+                      )}
+                      {student.audioLevel > 50 && (
+                        <Chip
+                          icon={<VolumeUp />}
+                          label="Audio"
+                          size="small"
+                          color="warning"
+                          sx={{ height: 20, fontSize: '0.6rem' }}
+                        />
+                      )}
+                    </Box>
+
+                    {/* Violation Count */}
+                    {student.violations > 0 && (
+                      <Box sx={{ position: 'absolute', top: 4, right: 4 }}>
+                        <Badge badgeContent={student.violations} color="error">
+                          <Warning color="error" />
+                        </Badge>
+                      </Box>
+                    )}
+                  </Box>
+
+                  {/* Student Stats */}
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Violations: {student.violations}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Tab switches: {student.tabSwitches}
+                    </Typography>
+                  </Box>
+
+                  {/* Last Update */}
+                  {student.lastFrameTime && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                      Last update: {new Date(student.lastFrameTime).toLocaleTimeString()}
+                    </Typography>
+                  )}
+
+                  {/* Action Buttons */}
+                  <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleViewStudent(student)}
+                      startIcon={<Visibility />}
+                      sx={{ flex: 1, fontSize: '0.7rem' }}
+                    >
+                      View
+                    </Button>
+                    <Tooltip title="Send Warning">
+                      <IconButton
+                        size="small"
+                        color="warning"
+                        onClick={() => {
+                          setSelectedStudent(student);
+                          setWarningMessage('Please maintain proper exam conduct');
+                          sendWarningToStudent(student.id, 'Please maintain proper exam conduct');
+                        }}
+                      >
+                        <Message />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Auto Submit">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => autoSubmitAssessment(student.id, 'Multiple violations detected')}
+                      >
+                        <Block />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+    </Box>
+  );
 
   const ActiveExamsTab = () => (
     <Box>
@@ -527,17 +1038,37 @@ const ProctoringMonitoring: React.FC = () => {
           indicatorColor="primary"
           textColor="primary"
         >
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                Live Monitoring
+                {liveStudents.filter(s => s.status === 'active').length > 0 && (
+                  <Badge badgeContent={liveStudents.filter(s => s.status === 'active').length} color="primary" />
+                )}
+              </Box>
+            } 
+          />
           <Tab label={`Active Exams (${proctoringData.activeExams.length})`} />
-          <Tab label={`Flagged Behaviors (${proctoringData.flaggedBehaviors.filter(f => !f.reviewed).length})`} />
+          <Tab 
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                Flagged Behaviors ({proctoringData.flaggedBehaviors.filter(f => !f.reviewed).length + realtimeViolations.length})
+                {realtimeViolations.length > 0 && (
+                  <Badge badgeContent={realtimeViolations.length} color="error" />
+                )}
+              </Box>
+            }
+          />
           <Tab label="Exam History" />
         </Tabs>
       </Paper>
 
       {/* Tab Content */}
       <Box sx={{ mt: 2 }}>
-        {currentTab === 0 && <ActiveExamsTab />}
-        {currentTab === 1 && <FlaggedBehaviorsTab />}
-        {currentTab === 2 && <ExamHistoryTab />}
+        {currentTab === 0 && <LiveMonitoringTab />}
+        {currentTab === 1 && <ActiveExamsTab />}
+        {currentTab === 2 && <FlaggedBehaviorsTab />}
+        {currentTab === 3 && <ExamHistoryTab />}
       </Box>
 
       {/* Exam Details Dialog */}
@@ -624,6 +1155,250 @@ const ProctoringMonitoring: React.FC = () => {
               Mark as Reviewed
             </Button>
           )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Student Detail Dialog */}
+      <Dialog open={studentDialogOpen} onClose={() => setStudentDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar>{selectedStudent?.name.charAt(0)}</Avatar>
+            <Box>
+              <Typography variant="h6">{selectedStudent?.name}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {selectedStudent?.assessmentTitle}
+              </Typography>
+            </Box>
+            <Chip
+              label={selectedStudent?.status}
+              color={
+                selectedStudent?.status === 'active' ? 'success' :
+                selectedStudent?.status === 'flagged' ? 'error' : 'default'
+              }
+            />
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {selectedStudent && (
+            <Box sx={{ pt: 2 }}>
+              {/* Large Video Feed */}
+              <Box 
+                sx={{ 
+                  width: '100%',
+                  height: 350,
+                  bgcolor: 'grey.100',
+                  borderRadius: 1,
+                  mb: 3,
+                  overflow: 'hidden',
+                  position: 'relative',
+                  border: selectedStudent.status === 'flagged' ? '2px solid' : '1px solid',
+                  borderColor: selectedStudent.status === 'flagged' ? 'error.main' : 'divider'
+                }}
+              >
+                {selectedStudent.lastFrame ? (
+                  <>
+                    <img
+                      src={selectedStudent.lastFrame}
+                      alt={`${selectedStudent.name} video feed`}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
+                    />
+                    {/* Video Controls Overlay */}
+                    <Box sx={{ 
+                      position: 'absolute', 
+                      top: 8, 
+                      right: 8,
+                      display: 'flex',
+                      gap: 1
+                    }}>
+                      <Tooltip title="Fullscreen View">
+                        <IconButton
+                          size="small"
+                          sx={{ 
+                            bgcolor: 'rgba(0,0,0,0.7)', 
+                            color: 'white',
+                            '&:hover': { bgcolor: 'rgba(0,0,0,0.8)' }
+                          }}
+                          onClick={() => {
+                            // Open fullscreen video view
+                            const newWindow = window.open('', '_blank', 'width=800,height=600');
+                            if (newWindow) {
+                              newWindow.document.write(`
+                                <html>
+                                  <head><title>${selectedStudent.name} - Live Feed</title></head>
+                                  <body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;">
+                                    <img src="${selectedStudent.lastFrame}" style="max-width:100%;max-height:100%;object-fit:contain;" />
+                                  </body>
+                                </html>
+                              `);
+                            }
+                          }}
+                        >
+                          <Visibility />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                    
+                    {/* Live Status Indicator */}
+                    <Box sx={{ 
+                      position: 'absolute', 
+                      bottom: 8, 
+                      left: 8,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      bgcolor: 'rgba(0,0,0,0.8)',
+                      color: 'white',
+                      px: 2,
+                      py: 1,
+                      borderRadius: 2
+                    }}>
+                      {selectedStudent.status === 'active' ? (
+                        <LiveIndicator sx={{ 
+                          width: 8, 
+                          height: 8, 
+                          bgcolor: 'success.main',
+                          borderRadius: '50%'
+                        }} />
+                      ) : (
+                        <Box sx={{ 
+                          width: 8, 
+                          height: 8, 
+                          bgcolor: 'error.main',
+                          borderRadius: '50%'
+                        }} />
+                      )}
+                      <Typography variant="body2" fontWeight="bold">
+                        {selectedStudent.status === 'active' ? 'LIVE' : 'OFFLINE'}
+                      </Typography>
+                      <Typography variant="caption" sx={{ ml: 1 }}>
+                        Last update: {selectedStudent.lastFrameTime ? 
+                          new Date(selectedStudent.lastFrameTime).toLocaleTimeString() : 
+                          'Never'
+                        }
+                      </Typography>
+                    </Box>
+                  </>
+                ) : (
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    height: '100%',
+                    flexDirection: 'column'
+                  }}>
+                    <Videocam sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                    <Typography variant="body1" color="text.secondary" gutterBottom>
+                      No video feed available
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {selectedStudent.status === 'disconnected' ? 
+                        'Student has disconnected' : 
+                        'Waiting for video stream...'
+                      }
+                    </Typography>
+                    {selectedStudent.status === 'active' && (
+                      <CircularProgress sx={{ mt: 2 }} />
+                    )}
+                  </Box>
+                )}
+              </Box>
+
+              {/* Student Statistics */}
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={6}>
+                  <Paper sx={{ p: 2, textAlign: 'center' }}>
+                    <Typography variant="h4" color="error.main">{selectedStudent.violations}</Typography>
+                    <Typography variant="body2">Violations</Typography>
+                  </Paper>
+                </Grid>
+                <Grid item xs={6}>
+                  <Paper sx={{ p: 2, textAlign: 'center' }}>
+                    <Typography variant="h4" color="warning.main">{selectedStudent.tabSwitches}</Typography>
+                    <Typography variant="body2">Tab Switches</Typography>
+                  </Paper>
+                </Grid>
+              </Grid>
+
+              {/* Status Indicators */}
+              <Box sx={{ display: 'flex', gap: 1, mb: 3, flexWrap: 'wrap' }}>
+                <Chip
+                  icon={selectedStudent.faceDetected ? <Person /> : <PersonOff />}
+                  label={selectedStudent.faceDetected ? 'Face Detected' : 'No Face'}
+                  color={selectedStudent.faceDetected ? 'success' : 'error'}
+                />
+                <Chip
+                  icon={<VolumeUp />}
+                  label={`Audio Level: ${Math.round(selectedStudent.audioLevel)}`}
+                  color={selectedStudent.audioLevel > 50 ? 'warning' : 'default'}
+                />
+                <Chip
+                  label={`Joined: ${new Date(selectedStudent.joinedAt).toLocaleTimeString()}`}
+                  variant="outlined"
+                />
+              </Box>
+
+              {/* Warning Message Input */}
+              <TextField
+                fullWidth
+                label="Warning Message"
+                value={warningMessage}
+                onChange={(e) => setWarningMessage(e.target.value)}
+                placeholder="Enter a warning message for the student..."
+                multiline
+                rows={2}
+                sx={{ mb: 2 }}
+              />
+
+              {/* Recent Violations */}
+              {realtimeViolations.filter(v => v.studentId === selectedStudent.id).length > 0 && (
+                <Box>
+                  <Typography variant="h6" gutterBottom>Recent Violations</Typography>
+                  <List dense>
+                    {realtimeViolations
+                      .filter(v => v.studentId === selectedStudent.id)
+                      .slice(0, 5)
+                      .map((violation) => (
+                        <ListItem key={violation.id}>
+                          <ListItemAvatar>
+                            <Avatar sx={{ bgcolor: getSeverityColor(violation.severity) + '.main' }}>
+                              <Warning />
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText
+                            primary={violation.description}
+                            secondary={`${violation.severity.toUpperCase()} - ${new Date(violation.timestamp).toLocaleTimeString()}`}
+                          />
+                        </ListItem>
+                      ))}
+                  </List>
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setStudentDialogOpen(false)}>Close</Button>
+          <Button
+            variant="outlined"
+            color="warning"
+            startIcon={<Send />}
+            onClick={() => selectedStudent && sendWarningToStudent(selectedStudent.id, warningMessage)}
+            disabled={!warningMessage.trim()}
+          >
+            Send Warning
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            startIcon={<Block />}
+            onClick={() => selectedStudent && autoSubmitAssessment(selectedStudent.id, 'Multiple violations detected')}
+          >
+            Auto Submit
+          </Button>
         </DialogActions>
       </Dialog>
     </Container>

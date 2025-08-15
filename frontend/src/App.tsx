@@ -46,6 +46,9 @@ import Assessments from './pages/Student/Assessments';
 import TakeAssessment from './pages/Student/TakeAssessment';
 import EnhancedAssessments from './pages/Student/EnhancedAssessments';
 import EnhancedTakeAssessmentStudent from './pages/Student/EnhancedTakeAssessment';
+import EnhancedTakeAssessmentWithProctoring from './pages/Student/EnhancedTakeAssessmentWithProctoring';
+import ProctoringTest from './pages/Test/ProctoringTest';
+import AssessmentProctoringTest from './pages/Test/AssessmentProctoringTest';
 import StudentLiveSessions from './pages/Student/LiveSessions';
 import StudentLiveSessionRoom from './pages/Student/LiveSessionRoom';
 import Progress from './pages/Student/Progress';
@@ -73,10 +76,15 @@ import AssignmentResults from './pages/Assignment/AssignmentResults';
 import CoursesPage from './pages/Courses/CoursesPage';
 import CourseDetailPage from './pages/Courses/CourseDetailPage';
 import QuizPage from './pages/Quiz/QuizPage';
+import TakeExamPage from './pages/Exam/TakeExamPage';
+import ExamResultsPage from './pages/Exam/ExamResultsPage';
+import ExamListPage from './pages/Exam/ExamListPage';
+import ExamTestPage from './pages/Test/ExamTestPage';
 import ProfilePage from './pages/Profile/ProfilePage';
 import NotificationPage from './pages/Notifications/NotificationPage';
 import NotFoundPage from './pages/NotFound/NotFoundPage';
 import ProctoringDashboard from './pages/Admin/ProctoringDashboard';
+import ProctoringMonitoring from './pages/Admin/ProctoringMonitoring';
 import GradesAndLeaderboard from './pages/Student/GradesAndLeaderboard';
 import StudentLeaderboard from './pages/Student/StudentLeaderboard';
 import TeacherGradesLeaderboard from './pages/Teacher/TeacherGradesLeaderboard';
@@ -135,6 +143,7 @@ const App: React.FC = () => {
         <Route path="/verify-email" element={<EmailVerificationPage />} />
         <Route path="/test-email" element={<TestEmailPage />} />
         <Route path="/email-demo" element={<EmailSystemDemo />} />
+        <Route path="/test-assessment-proctoring" element={<AssessmentProctoringTest />} />
 
 
 
@@ -243,6 +252,10 @@ const App: React.FC = () => {
         {/* Common protected routes */}
         <Route path="notifications" element={<NotificationPage />} />
         <Route path="quiz/:id" element={<QuizPage />} />
+        <Route path="exams" element={<ExamListPage />} />
+        <Route path="exam/:examId/take" element={<TakeExamPage />} />
+        <Route path="exam/:examId/results" element={<ExamResultsPage />} />
+        <Route path="exam-test" element={<ExamTestPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="courses/:id/content" element={<CourseContent />} />
       </Route>
@@ -379,6 +392,22 @@ const App: React.FC = () => {
         element={
           <ProtectedRoute requiredRole={UserRole.STUDENT}>
             <TakeAssessment />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/proctored-assessment/:id/take"
+        element={
+          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+            <EnhancedTakeAssessmentWithProctoring />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/proctoring-test"
+        element={
+          <ProtectedRoute>
+            <ProctoringTest />
           </ProtectedRoute>
         }
       />

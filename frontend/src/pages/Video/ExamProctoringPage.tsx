@@ -372,10 +372,36 @@ const ExamProctoringPage: React.FC = () => {
           </Alert>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleConsentDenied} color="error">
+          <Button 
+            onClick={handleConsentDenied} 
+            sx={{
+              backgroundColor: '#f44336',
+              color: '#ffffff',
+              padding: '8px 16px',
+              borderRadius: '4px',
+              textTransform: 'none',
+              fontWeight: 500,
+              '&:hover': {
+                backgroundColor: '#d32f2f',
+              },
+            }}
+          >
             I Do Not Consent
           </Button>
-          <Button onClick={handleConsentGiven} variant="contained" color="primary">
+          <Button 
+            onClick={handleConsentGiven} 
+            sx={{
+              backgroundColor: '#1976d2',
+              color: '#ffffff',
+              padding: '8px 16px',
+              borderRadius: '4px',
+              textTransform: 'none',
+              fontWeight: 500,
+              '&:hover': {
+                backgroundColor: '#1565c0',
+              },
+            }}
+          >
             I Consent and Agree
           </Button>
         </DialogActions>

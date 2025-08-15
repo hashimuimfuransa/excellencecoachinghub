@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -113,7 +113,18 @@ interface Answer {
 const EnhancedTakeAssessment: React.FC = () => {
   const { assessmentId } = useParams<{ assessmentId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+
+  // Redirect to proctored interface
+  useEffect(() => {
+    if (assessmentId) {
+      navigate(`/proctored-assessment/${assessmentId}/take`, {
+        state: location.state,
+        replace: true
+      });
+    }
+  }, [assessmentId, navigate, location.state]);
 
   // Assessment state
   const [assessment, setAssessment] = useState<Assessment | null>(null);
@@ -577,9 +588,23 @@ const EnhancedTakeAssessment: React.FC = () => {
                   <Grid item xs={12} sm={6} key={key}>
                     <Paper sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
                       {value ? (
-                        <Chip label="✓" color="success" size="small" />
+                        <Chip 
+                          label="✓" 
+                          size="small" 
+                          sx={{
+                            backgroundColor: '#4caf50',
+                            color: '#ffffff',
+                          }}
+                        />
                       ) : (
-                        <Chip label="✗" color="error" size="small" />
+                        <Chip 
+                          label="✗" 
+                          size="small" 
+                          sx={{
+                            backgroundColor: '#f44336',
+                            color: '#ffffff',
+                          }}
+                        />
                       )}
                       <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
                         {key.replace(/([A-Z])/g, ' $1').trim()}
@@ -628,12 +653,22 @@ const EnhancedTakeAssessment: React.FC = () => {
           {assessment.isProctored && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
               <Tooltip title={webcamEnabled ? 'Webcam Active' : 'Webcam Inactive'}>
-                <IconButton size="small" color={webcamEnabled ? 'success' : 'error'}>
+                <IconButton 
+                  size="small" 
+                  sx={{
+                    color: webcamEnabled ? '#4caf50' : '#f44336'
+                  }}
+                >
                   {webcamEnabled ? <Videocam /> : <VideocamOff />}
                 </IconButton>
               </Tooltip>
               <Tooltip title={screenShareEnabled ? 'Screen Share Active' : 'Screen Share Inactive'}>
-                <IconButton size="small" color={screenShareEnabled ? 'success' : 'error'}>
+                <IconButton 
+                  size="small" 
+                  sx={{
+                    color: screenShareEnabled ? '#4caf50' : '#f44336'
+                  }}
+                >
                   <ScreenShare />
                 </IconButton>
               </Tooltip>

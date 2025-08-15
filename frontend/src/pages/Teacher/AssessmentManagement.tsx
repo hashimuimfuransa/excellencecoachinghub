@@ -547,7 +547,20 @@ const TeacherAssessmentManagement: React.FC = () => {
           <Button onClick={() => setDeleteDialogOpen(false)}>
             Cancel
           </Button>
-          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+          <Button 
+            onClick={handleDeleteConfirm} 
+            sx={{
+              backgroundColor: '#f44336',
+              color: '#ffffff',
+              padding: '8px 16px',
+              borderRadius: '4px',
+              textTransform: 'none',
+              fontWeight: 500,
+              '&:hover': {
+                backgroundColor: '#d32f2f',
+              },
+            }}
+          >
             Delete
           </Button>
         </DialogActions>

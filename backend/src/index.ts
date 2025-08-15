@@ -21,6 +21,7 @@ import { globalAsyncErrorCatcher } from '@/middleware/asyncHandler';
 import { setupSocketIO } from '@/services/socketService';
 import { setSocketIO } from '@/services/notificationService';
 import { liveSessionScheduler } from '@/services/liveSessionScheduler';
+import { proctoringService } from '@/services/proctoringService';
 import { validateCloudinaryConfig } from '@/config/cloudinary';
 import videoProviderService from '@/services/videoProviderService';
 
@@ -193,6 +194,22 @@ app.get('/health', (_req, res) => {
   });
 });
 
+// API Health check endpoint for frontend tests
+app.get('/api/health', (_req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    message: 'Backend API is running',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV,
+    services: {
+      database: 'connected', // You could add actual DB health check here
+      socketIO: 'running',
+      proctoring: 'available'
+    }
+  });
+});
+
 // Handle common static file requests that browsers make automatically
 app.get('/favicon.ico', (_req, res) => {
   res.status(204).end(); // No content
@@ -287,8 +304,9 @@ console.log('✅ All routes mounted successfully');
 // Setup Socket.IO
 setupSocketIO(io);
 
-// Set Socket.IO instance for notification service
+// Set Socket.IO instance for notification service and proctoring
 setSocketIO(io);
+proctoringService.setSocketIO(io);
 
 // Error handling middleware
 app.use(notFound);

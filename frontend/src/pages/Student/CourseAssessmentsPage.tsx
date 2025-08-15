@@ -294,7 +294,9 @@ const CourseAssessmentsPage: React.FC = () => {
 
   // Start assessment
   const startAssessment = (assessment: Assessment) => {
-    navigate(`/assessment/${assessment._id}/take`);
+    navigate(`/proctored-assessment/${assessment._id}/take`, {
+      state: { assessment }
+    });
   };
 
   // View assessment details

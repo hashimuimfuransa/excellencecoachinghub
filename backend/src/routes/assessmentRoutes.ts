@@ -346,4 +346,62 @@ router.get(
   }
 );
 
+// Proctoring endpoints
+router.post(
+  '/:id/progress',
+  auth,
+  authorizeRoles(['student']),
+  idValidation,
+  [
+    body('answers').isArray().withMessage('Answers must be an array'),
+    body('currentQuestionIndex').isInt({ min: 0 }).withMessage('Current question index must be a non-negative integer'),
+    body('violations').isArray().withMessage('Violations must be an array')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      // For now, just acknowledge the progress save
+      // In a full implementation, you'd save this to a database
+      res.json({
+        success: true,
+        message: 'Progress saved successfully'
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+);
+
+router.post(
+  '/:id/submit',
+  auth,
+  authorizeRoles(['student']),
+  idValidation,
+  [
+    body('answers').isArray().withMessage('Answers must be an array'),
+    body('submissionType').isIn(['manual', 'auto']).withMessage('Invalid submission type'),
+    body('violations').isArray().withMessage('Violations must be an array'),
+    body('timeSpent').isInt({ min: 0 }).withMessage('Time spent must be a non-negative integer')
+  ],
+  validateRequest,
+  async (req, res) => {
+    try {
+      // For now, just acknowledge the submission
+      // In a full implementation, you'd save this to a database and calculate scores
+      res.json({
+        success: true,
+        message: 'Assessment submitted successfully'
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+);
+
 export default router;

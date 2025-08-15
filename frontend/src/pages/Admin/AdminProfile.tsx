@@ -317,7 +317,19 @@ const AdminProfile: React.FC = () => {
             </Grid>
 
             <Box mt={3}>
-              <Button variant="contained" color="primary">
+              <Button 
+                sx={{
+                  backgroundColor: '#1976d2',
+                  color: '#ffffff',
+                  padding: '8px 16px',
+                  borderRadius: '4px',
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  '&:hover': {
+                    backgroundColor: '#1565c0',
+                  },
+                }}
+              >
                 Update Password
               </Button>
             </Box>

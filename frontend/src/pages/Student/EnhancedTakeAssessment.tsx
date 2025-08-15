@@ -463,7 +463,20 @@ const EnhancedTakeAssessment: React.FC = () => {
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
-        <Button variant="contained" onClick={() => navigate('/student/enhanced-assessments')}>
+        <Button 
+          onClick={() => navigate('/student/enhanced-assessments')}
+          sx={{
+            backgroundColor: '#1976d2',
+            color: '#ffffff',
+            padding: '8px 16px',
+            borderRadius: '4px',
+            textTransform: 'none',
+            fontWeight: 500,
+            '&:hover': {
+              backgroundColor: '#1565c0',
+            },
+          }}
+        >
           Back to Assessments
         </Button>
       </Container>

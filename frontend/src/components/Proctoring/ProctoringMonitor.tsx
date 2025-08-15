@@ -34,14 +34,19 @@ import {
   VolumeOff,
   TabUnselected,
   Fullscreen,
-  FullscreenExit
+  FullscreenExit,
+  Videocam
 } from '@mui/icons-material';
+import { io, Socket } from 'socket.io-client';
 
 interface ProctoringMonitorProps {
   onViolation: (violation: string) => void;
   requireCamera?: boolean;
   aiDetection?: boolean;
   onStatusChange?: (status: 'active' | 'inactive' | 'error') => void;
+  assessmentId?: string;
+  studentId?: string;
+  enableLiveStreaming?: boolean;
 }
 
 interface ViolationEvent {
@@ -55,7 +60,10 @@ const ProctoringMonitor: React.FC<ProctoringMonitorProps> = ({
   onViolation,
   requireCamera = true,
   aiDetection = true,
-  onStatusChange
+  onStatusChange,
+  assessmentId,
+  studentId,
+  enableLiveStreaming = true
 }) => {
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -64,6 +72,8 @@ const ProctoringMonitor: React.FC<ProctoringMonitorProps> = ({
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const socketRef = useRef<Socket | null>(null);
+  const streamingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // State
   const [isActive, setIsActive] = useState(false);
@@ -76,6 +86,8 @@ const ProctoringMonitor: React.FC<ProctoringMonitorProps> = ({
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
 
   // Initialize proctoring
   useEffect(() => {
@@ -93,6 +105,11 @@ const ProctoringMonitor: React.FC<ProctoringMonitorProps> = ({
         await setupCamera();
       }
       await setupAudioMonitoring();
+      
+      if (enableLiveStreaming && assessmentId && studentId) {
+        await setupSocketConnection();
+      }
+      
       setIsActive(true);
       onStatusChange?.('active');
     } catch (error: any) {
@@ -302,7 +319,127 @@ const ProctoringMonitor: React.FC<ProctoringMonitorProps> = ({
   const recordViolation = useCallback((violation: ViolationEvent) => {
     setViolations(prev => [...prev, violation]);
     onViolation(violation.description);
-  }, [onViolation]);
+    
+    // Send violation to admin via socket
+    if (socketRef.current && assessmentId && studentId) {
+      socketRef.current.emit('proctoring_violation', {
+        assessmentId,
+        studentId,
+        violation: {
+          ...violation,
+          timestamp: violation.timestamp.toISOString()
+        }
+      });
+    }
+  }, [onViolation, assessmentId, studentId]);
+
+  // Setup socket connection for live streaming
+  const setupSocketConnection = async () => {
+    try {
+      setConnectionStatus('connecting');
+      
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+      socketRef.current = io(backendUrl, {
+        transports: ['websocket'],
+        upgrade: true
+      });
+
+      socketRef.current.on('connect', () => {
+        console.log('Socket connected for proctoring');
+        setConnectionStatus('connected');
+        
+        // Join proctoring room
+        socketRef.current?.emit('join_proctoring_session', {
+          assessmentId,
+          studentId,
+          role: 'student'
+        });
+        
+        // Start video streaming
+        if (streamRef.current) {
+          startVideoStreaming();
+        }
+      });
+
+      socketRef.current.on('disconnect', () => {
+        console.log('Socket disconnected');
+        setConnectionStatus('disconnected');
+        setIsStreaming(false);
+      });
+
+      socketRef.current.on('admin_message', (data) => {
+        // Handle messages from admin (warnings, auto-submit, etc.)
+        if (data.type === 'warning') {
+          recordViolation({
+            type: 'suspicious_movement',
+            timestamp: new Date(),
+            severity: 'high',
+            description: `Admin Warning: ${data.message}`
+          });
+        } else if (data.type === 'auto_submit') {
+          // Trigger auto-submit
+          window.dispatchEvent(new CustomEvent('admin_auto_submit', { 
+            detail: { reason: data.message } 
+          }));
+        }
+      });
+
+      socketRef.current.on('connect_error', (error) => {
+        console.error('Socket connection error:', error);
+        setConnectionStatus('disconnected');
+      });
+
+    } catch (error) {
+      console.error('Failed to setup socket connection:', error);
+      setConnectionStatus('disconnected');
+    }
+  };
+
+  // Start video streaming to admin
+  const startVideoStreaming = () => {
+    if (!videoRef.current || !canvasRef.current || !socketRef.current) return;
+    
+    setIsStreaming(true);
+    
+    streamingIntervalRef.current = setInterval(() => {
+      captureAndSendFrame();
+    }, 1000); // Send frame every second
+  };
+
+  // Capture video frame and send to admin
+  const captureAndSendFrame = () => {
+    if (!videoRef.current || !canvasRef.current || !socketRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx || video.videoWidth === 0) return;
+
+    // Set canvas size to match video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    // Draw current video frame to canvas
+    ctx.drawImage(video, 0, 0);
+    
+    // Convert to base64 image
+    const imageData = canvas.toDataURL('image/jpeg', 0.7);
+    
+    // Send frame to admin
+    socketRef.current.emit('video_frame', {
+      assessmentId,
+      studentId,
+      frame: imageData,
+      timestamp: new Date().toISOString(),
+      metadata: {
+        faceDetected,
+        audioLevel,
+        violations: violations.length,
+        tabSwitches: tabSwitchCount
+      }
+    });
+  };
 
   const cleanup = () => {
     if (streamRef.current) {
@@ -313,11 +450,21 @@ const ProctoringMonitor: React.FC<ProctoringMonitorProps> = ({
       clearInterval(detectionIntervalRef.current);
     }
     
+    if (streamingIntervalRef.current) {
+      clearInterval(streamingIntervalRef.current);
+    }
+    
     if (audioContextRef.current) {
       audioContextRef.current.close();
     }
     
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
+    
     setIsActive(false);
+    setIsStreaming(false);
+    setConnectionStatus('disconnected');
     onStatusChange?.('inactive');
   };
 
@@ -385,7 +532,7 @@ const ProctoringMonitor: React.FC<ProctoringMonitorProps> = ({
           </IconButton>
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
           <Chip
             icon={faceDetected ? <Person /> : <PersonOff />}
             label="Face"
@@ -404,6 +551,14 @@ const ProctoringMonitor: React.FC<ProctoringMonitorProps> = ({
             color={micPermission ? 'success' : 'error'}
             size="small"
           />
+          {enableLiveStreaming && (
+            <Chip
+              icon={<Videocam />}
+              label={isStreaming ? 'Streaming' : connectionStatus === 'connecting' ? 'Connecting' : 'Offline'}
+              color={isStreaming ? 'success' : connectionStatus === 'connecting' ? 'warning' : 'error'}
+              size="small"
+            />
+          )}
         </Box>
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

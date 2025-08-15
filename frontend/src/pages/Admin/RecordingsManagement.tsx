@@ -121,12 +121,13 @@ const RecordingsManagement: React.FC = () => {
   const theme = useTheme();
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [teacherRecordings, setTeacherRecordings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRecording, setSelectedRecording] = useState<Recording | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
-  const [currentTab, setCurrentTab] = useState<'recorded' | 'not-recorded'>('recorded');
+  const [currentTab, setCurrentTab] = useState<'recorded' | 'not-recorded' | 'teacher-uploaded'>('recorded');
   
   // Pagination
   const [page, setPage] = useState(1);
@@ -162,6 +163,8 @@ const RecordingsManagement: React.FC = () => {
 
       if (currentTab === 'recorded') {
         await fetchRecordings();
+      } else if (currentTab === 'teacher-uploaded') {
+        await fetchTeacherRecordings();
       } else {
         await fetchNonRecordedSessions();
       }
@@ -204,6 +207,22 @@ const RecordingsManagement: React.FC = () => {
     
     if (response.success && response.data) {
       setSessions(response.data.sessions || []);
+      setTotalPages(response.data.pagination?.pages || 1);
+      setTotalRecordings(response.data.pagination?.total || 0);
+    }
+  };
+
+  const fetchTeacherRecordings = async () => {
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      limit: '10',
+      ...Object.fromEntries(Object.entries(filters).filter(([_, value]) => value))
+    });
+
+    const response = await apiService.get(`/recorded-sessions/admin?${queryParams}`);
+    
+    if (response.success && response.data) {
+      setTeacherRecordings(response.data.sessions || []);
       setTotalPages(response.data.pagination?.pages || 1);
       setTotalRecordings(response.data.pagination?.total || 0);
     }
@@ -369,6 +388,16 @@ const RecordingsManagement: React.FC = () => {
             Recorded Sessions ({stats.recordedSessions})
           </Button>
           <Button
+            variant={currentTab === 'teacher-uploaded' ? 'contained' : 'outlined'}
+            onClick={() => {
+              setCurrentTab('teacher-uploaded');
+              setPage(1);
+            }}
+            startIcon={<School />}
+          >
+            Teacher Uploads ({teacherRecordings.length})
+          </Button>
+          <Button
             variant={currentTab === 'not-recorded' ? 'contained' : 'outlined'}
             onClick={() => {
               setCurrentTab('not-recorded');
@@ -397,6 +426,12 @@ const RecordingsManagement: React.FC = () => {
               formatDuration={formatDuration}
               getStatusColor={getStatusColor}
               getStatusIcon={getStatusIcon}
+            />
+          ) : currentTab === 'teacher-uploaded' ? (
+            <TeacherRecordingsTable 
+              recordings={teacherRecordings}
+              formatFileSize={formatFileSize}
+              formatDuration={formatDuration}
             />
           ) : (
             <NotRecordedSessionsTable 
@@ -665,6 +700,131 @@ const NotRecordedSessionsTable: React.FC<{
             <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
               <Typography color="textSecondary">
                 No non-recorded sessions found
+              </Typography>
+            </TableCell>
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
+  </TableContainer>
+);
+
+// Teacher Recordings Table Component
+const TeacherRecordingsTable: React.FC<{
+  recordings: any[];
+  formatFileSize: (bytes?: number) => string;
+  formatDuration: (duration?: string) => string;
+}> = ({ recordings, formatFileSize, formatDuration }) => (
+  <TableContainer component={Paper}>
+    <Table>
+      <TableHead>
+        <TableRow>
+          <TableCell>Title</TableCell>
+          <TableCell>Course</TableCell>
+          <TableCell>Teacher</TableCell>
+          <TableCell>Upload Date</TableCell>
+          <TableCell>Duration</TableCell>
+          <TableCell>File Size</TableCell>
+          <TableCell>Views</TableCell>
+          <TableCell>Status</TableCell>
+          <TableCell align="center">Actions</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {recordings.map((recording) => (
+          <TableRow key={recording._id} hover>
+            <TableCell>
+              <Box display="flex" alignItems="center" gap={2}>
+                <Avatar
+                  variant="rounded"
+                  sx={{ width: 40, height: 30, bgcolor: 'primary.main' }}
+                >
+                  <VideoLibrary fontSize="small" />
+                </Avatar>
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={600}>
+                    {recording.title}
+                  </Typography>
+                  {recording.description && (
+                    <Typography variant="caption" color="textSecondary">
+                      {recording.description.substring(0, 50)}...
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+            </TableCell>
+            <TableCell>
+              <Typography variant="body2">
+                {recording.course?.title || 'Unknown Course'}
+              </Typography>
+            </TableCell>
+            <TableCell>
+              <Typography variant="body2">
+                {recording.teacher?.firstName} {recording.teacher?.lastName}
+              </Typography>
+            </TableCell>
+            <TableCell>
+              <Typography variant="body2">
+                {format(new Date(recording.uploadDate || recording.createdAt), 'MMM dd, yyyy')}
+              </Typography>
+            </TableCell>
+            <TableCell>
+              <Typography variant="body2">
+                {formatDuration(recording.duration)}
+              </Typography>
+            </TableCell>
+            <TableCell>
+              <Typography variant="body2">
+                {formatFileSize(recording.videoSize)}
+              </Typography>
+            </TableCell>
+            <TableCell>
+              <Typography variant="body2">
+                {recording.views || 0} views
+              </Typography>
+            </TableCell>
+            <TableCell>
+              <Chip
+                label={recording.isPublished ? 'Published' : 'Draft'}
+                color={recording.isPublished ? 'success' : 'default'}
+                size="small"
+              />
+            </TableCell>
+            <TableCell align="center">
+              <Stack direction="row" spacing={1}>
+                <Tooltip title="View Recording">
+                  <IconButton
+                    size="small"
+                    onClick={() => window.open(recording.videoUrl, '_blank')}
+                  >
+                    <PlayArrow />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Download">
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = recording.videoUrl;
+                      link.download = `${recording.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.mp4`;
+                      link.target = '_blank';
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                  >
+                    <Download />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+            </TableCell>
+          </TableRow>
+        ))}
+        {recordings.length === 0 && (
+          <TableRow>
+            <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+              <Typography color="textSecondary">
+                No teacher-uploaded recordings found
               </Typography>
             </TableCell>
           </TableRow>

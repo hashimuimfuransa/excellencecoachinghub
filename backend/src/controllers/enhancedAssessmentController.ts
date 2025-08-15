@@ -662,7 +662,9 @@ export const getTeacherCourseProgress = asyncHandler(async (req: Request, res: R
   }
 
   // Get all student progress for this course
-  const allProgress = await UserProgress.findByCourse(courseId);
+  const allProgressRaw = await UserProgress.findByCourse(courseId);
+  // Filter out null users
+  const allProgress = allProgressRaw.filter(progress => progress.user && progress.user.firstName);
 
   // Get assessment statistics
   const assessments = await Assessment.find({ courseId });
@@ -713,7 +715,7 @@ export const getTeacherCourseProgress = asyncHandler(async (req: Request, res: R
         averageAttendance: Math.round(averageAttendance * 100)
       },
       studentProgress: allProgress.map(progress => ({
-        studentId: progress.user,
+        studentId: progress.user._id || progress.user,
         studentName: `${progress.user.firstName} ${progress.user.lastName}`,
         progressPercentage: progress.progressPercentage,
         totalTimeSpent: progress.totalTimeSpent,

@@ -103,16 +103,17 @@ const StudentProgress: React.FC = () => {
           : 0;
 
         // Calculate enhanced statistics
-        const totalAssessments = courseProgressResults.reduce((sum, progress) => 
-          sum + (progress?.progress.assessments.total || 0), 0);
-        const completedAssessments = courseProgressResults.reduce((sum, progress) => 
-          sum + (progress?.progress.assessments.completed || 0), 0);
-        const totalSessions = courseProgressResults.reduce((sum, progress) => 
-          sum + (progress?.progress.sessions.total || 0), 0);
-        const attendedSessions = courseProgressResults.reduce((sum, progress) => 
-          sum + (progress?.progress.sessions.attended || 0), 0);
-        const eligibleCertificates = courseProgressResults.filter(progress => 
-          progress?.progress.requirements.isEligibleForCertificate).length;
+        const validProgressResults = courseProgressResults.filter(progress => progress && progress.progress);
+        const totalAssessments = validProgressResults.reduce((sum, progress) => 
+          sum + (progress.progress?.assessments?.total || 0), 0);
+        const completedAssessments = validProgressResults.reduce((sum, progress) => 
+          sum + (progress.progress?.assessments?.completed || 0), 0);
+        const totalSessions = validProgressResults.reduce((sum, progress) => 
+          sum + (progress.progress?.sessions?.total || 0), 0);
+        const attendedSessions = validProgressResults.reduce((sum, progress) => 
+          sum + (progress.progress?.sessions?.attended || 0), 0);
+        const eligibleCertificates = validProgressResults.filter(progress => 
+          progress.progress?.requirements?.isEligibleForCertificate).length;
 
         setProgressData({
           totalCourses,
@@ -125,8 +126,8 @@ const StudentProgress: React.FC = () => {
           attendedSessions,
           eligibleCertificates,
           averageScore: completedAssessments > 0 
-            ? courseProgressResults.reduce((sum, progress) => 
-                sum + (progress?.progress.assessments.averageScore || 0), 0) / completedAssessments
+            ? validProgressResults.reduce((sum, progress) => 
+                sum + (progress.progress?.assessments?.averageScore || 0), 0) / completedAssessments
             : 0
         });
 

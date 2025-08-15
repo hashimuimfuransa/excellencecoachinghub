@@ -48,7 +48,15 @@ import {
   Refresh,
   Star,
   Group,
-  VideoCall
+  VideoCall,
+  Download,
+  Visibility,
+  Close,
+  CloudUpload,
+  Description,
+  Email,
+  Phone,
+  LocationOn
 } from '@mui/icons-material';
 
 import { teacherService, ITeacher, TeacherStats } from '../../services/teacherService';
@@ -85,6 +93,16 @@ const TeacherManagement: React.FC = () => {
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
   const [sessionsDialogOpen, setSessionsDialogOpen] = useState(false);
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [cvUploadDialogOpen, setCvUploadDialogOpen] = useState(false);
+  
+  // CV upload state
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [cvUploading, setCvUploading] = useState(false);
+  
+  // Approval state
+  const [approvalAction, setApprovalAction] = useState<'approve' | 'reject' | null>(null);
+  const [approvalFeedback, setApprovalFeedback] = useState('');
+  const [approvalReason, setApprovalReason] = useState('');
 
   // Teacher profile state
   const [selectedTeacherProfile, setSelectedTeacherProfile] = useState<ITeacherProfile | null>(null);
@@ -280,6 +298,119 @@ const TeacherManagement: React.FC = () => {
     }
   };
 
+  // CV handling functions
+  const handleCvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        setError('CV file must be less than 10MB');
+        return;
+      }
+      
+      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!allowedTypes.includes(file.type)) {
+        setError('Please select a PDF or Word document for CV');
+        return;
+      }
+
+      setCvFile(file);
+    }
+  };
+
+  const uploadCvForTeacher = async () => {
+    if (!cvFile || !selectedTeacherProfile) return;
+
+    setCvUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('cv', cvFile);
+      formData.append('teacherId', selectedTeacherProfile._id);
+
+      const response = await teacherProfileService.uploadCV(formData);
+      if (response.success) {
+        setSuccess('CV uploaded successfully');
+        setCvFile(null);
+        setCvUploadDialogOpen(false);
+        // Reload the profile to show updated CV
+        await loadTeacherProfile(selectedTeacherProfile.userId as string);
+      } else {
+        setError(response.error || 'Failed to upload CV');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to upload CV');
+    } finally {
+      setCvUploading(false);
+    }
+  };
+
+  const downloadCv = async (cvUrl: string, filename: string) => {
+    try {
+      const response = await fetch(cvUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError('Failed to download CV');
+    }
+  };
+
+  const viewCv = (cvUrl: string) => {
+    window.open(cvUrl, '_blank');
+  };
+
+  // Profile approval functions
+  const handleApproveProfile = async () => {
+    if (!selectedTeacherProfile) return;
+
+    try {
+      await teacherProfileService.approveProfile(selectedTeacherProfile._id, {
+        feedback: approvalFeedback
+      });
+      setSuccess('Teacher profile approved successfully');
+      setApprovalDialogOpen(false);
+      setApprovalFeedback('');
+      // Reload data
+      loadTeachers();
+      loadPendingApprovals();
+    } catch (err: any) {
+      setError(err.message || 'Failed to approve profile');
+    }
+  };
+
+  const handleRejectProfile = async () => {
+    if (!selectedTeacherProfile || !approvalReason.trim()) {
+      setError('Please provide a reason for rejection');
+      return;
+    }
+
+    try {
+      await teacherProfileService.rejectProfile(selectedTeacherProfile._id, {
+        reason: approvalReason,
+        feedback: approvalFeedback
+      });
+      setSuccess('Teacher profile rejected');
+      setApprovalDialogOpen(false);
+      setApprovalFeedback('');
+      setApprovalReason('');
+      // Reload data
+      loadTeachers();
+      loadPendingApprovals();
+    } catch (err: any) {
+      setError(err.message || 'Failed to reject profile');
+    }
+  };
+
+  const openApprovalDialog = (profile: ITeacherProfile, action: 'approve' | 'reject') => {
+    setSelectedTeacherProfile(profile);
+    setApprovalAction(action);
+  };
+
   // Handle teacher approval
   const handleApproveTeacher = () => {
     if (selectedTeacher) {
@@ -473,9 +604,19 @@ const TeacherManagement: React.FC = () => {
                 size="small"
                 variant="contained"
                 color="primary"
-                onClick={() => {
+                onClick={async () => {
                   setSelectedTeacherProfile(profile);
+                  setProfileLoading(true);
                   setApprovalDialogOpen(true);
+                  // Load full profile details if needed
+                  try {
+                    const fullProfile = await teacherProfileService.getProfileById(profile._id);
+                    setSelectedTeacherProfile(fullProfile);
+                  } catch (err) {
+                    console.error('Error loading full profile:', err);
+                  } finally {
+                    setProfileLoading(false);
+                  }
                 }}
               >
                 Review
@@ -1173,18 +1314,38 @@ const TeacherManagement: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Teacher Profile Approval Dialog */}
+      {/* Enhanced Teacher Profile Approval Dialog */}
       <Dialog
         open={approvalDialogOpen}
         onClose={() => {
           setApprovalDialogOpen(false);
-          clearTeacherSelection();
+          setSelectedTeacherProfile(null);
+          setApprovalFeedback('');
+          setApprovalReason('');
         }}
-        maxWidth="md"
+        maxWidth="lg"
         fullWidth
       >
         <DialogTitle>
-          {selectedTeacher && `Review ${selectedTeacher.firstName} ${selectedTeacher.lastName}'s Profile`}
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Typography variant="h6">
+              {selectedTeacherProfile && 
+                `Review ${typeof selectedTeacherProfile.userId === 'object' ? 
+                  `${selectedTeacherProfile.userId.firstName} ${selectedTeacherProfile.userId.lastName}` : 
+                  'Teacher'}'s Profile`
+              }
+            </Typography>
+            {selectedTeacherProfile && (
+              <Chip
+                label={selectedTeacherProfile.profileStatus.charAt(0).toUpperCase() + selectedTeacherProfile.profileStatus.slice(1)}
+                color={
+                  selectedTeacherProfile.profileStatus === 'approved' ? 'success' :
+                  selectedTeacherProfile.profileStatus === 'pending' ? 'warning' :
+                  selectedTeacherProfile.profileStatus === 'rejected' ? 'error' : 'default'
+                }
+              />
+            )}
+          </Box>
         </DialogTitle>
         <DialogContent>
           {profileLoading ? (
@@ -1194,75 +1355,120 @@ const TeacherManagement: React.FC = () => {
           ) : selectedTeacherProfile ? (
             <Box sx={{ pt: 2 }}>
               <Grid container spacing={3}>
-                {/* Profile Status */}
-                <Grid item xs={12}>
-                  <Card sx={{ mb: 2 }}>
-                    <CardContent>
-                      <Box display="flex" justifyContent="space-between" alignItems="center">
-                        <Typography variant="h6">Profile Status</Typography>
-                        <Chip
-                          label={selectedTeacherProfile.profileStatus.charAt(0).toUpperCase() + selectedTeacherProfile.profileStatus.slice(1)}
-                          color={
-                            selectedTeacherProfile.profileStatus === 'approved' ? 'success' :
-                            selectedTeacherProfile.profileStatus === 'pending' ? 'warning' :
-                            selectedTeacherProfile.profileStatus === 'rejected' ? 'error' : 'default'
-                          }
-                        />
-                      </Box>
-                      {selectedTeacherProfile.submittedAt && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                          Submitted: {new Date(selectedTeacherProfile.submittedAt).toLocaleString()}
-                        </Typography>
-                      )}
-                    </CardContent>
-                  </Card>
-                </Grid>
-
-                {/* Personal Information */}
+                {/* Contact Information */}
                 <Grid item xs={12} md={6}>
                   <Card>
                     <CardContent>
-                      <Typography variant="h6" gutterBottom>Personal Information</Typography>
-                      <Typography variant="body2"><strong>Phone:</strong> {selectedTeacherProfile.phone || 'Not provided'}</Typography>
-                      <Typography variant="body2"><strong>Bio:</strong></Typography>
-                      <Typography variant="body2" sx={{ mt: 1, mb: 2 }}>
-                        {selectedTeacherProfile.bio || 'No bio provided'}
+                      <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Person sx={{ mr: 1 }} />
+                        Contact Information
                       </Typography>
-                      {selectedTeacherProfile.socialLinks && (
-                        <>
-                          <Typography variant="body2"><strong>Social Links:</strong></Typography>
-                          {selectedTeacherProfile.socialLinks.linkedin && (
-                            <Typography variant="body2">LinkedIn: {selectedTeacherProfile.socialLinks.linkedin}</Typography>
-                          )}
-                          {selectedTeacherProfile.socialLinks.portfolio && (
-                            <Typography variant="body2">Portfolio: {selectedTeacherProfile.socialLinks.portfolio}</Typography>
-                          )}
-                        </>
-                      )}
-                    </CardContent>
-                  </Card>
-                </Grid>
-
-                {/* Professional Background */}
-                <Grid item xs={12} md={6}>
-                  <Card>
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom>Professional Background</Typography>
-                      <Typography variant="body2"><strong>Experience:</strong> {selectedTeacherProfile.experience} years</Typography>
-                      <Typography variant="body2"><strong>Hourly Rate:</strong> ${selectedTeacherProfile.hourlyRate || 'Not set'}</Typography>
-
-                      <Typography variant="body2" sx={{ mt: 2 }}><strong>Education:</strong></Typography>
-                      {selectedTeacherProfile.education.map((edu, index) => (
-                        <Box key={index} sx={{ ml: 2, mt: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <Email sx={{ mr: 1, fontSize: 16 }} />
+                        <Typography variant="body2">
+                          {typeof selectedTeacherProfile.userId === 'object' ? 
+                            selectedTeacherProfile.userId.email : 'No email'}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <Phone sx={{ mr: 1, fontSize: 16 }} />
+                        <Typography variant="body2">
+                          {selectedTeacherProfile.phone || 'Not provided'}
+                        </Typography>
+                      </Box>
+                      {selectedTeacherProfile.address && (
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
+                          <LocationOn sx={{ mr: 1, fontSize: 16, mt: 0.2 }} />
                           <Typography variant="body2">
-                            {edu.degree} from {edu.institution} ({edu.year})
-                            {edu.field && ` - ${edu.field}`}
+                            {[
+                              selectedTeacherProfile.address.village,
+                              selectedTeacherProfile.address.cell,
+                              selectedTeacherProfile.address.sector,
+                              selectedTeacherProfile.address.district,
+                              selectedTeacherProfile.address.province,
+                              selectedTeacherProfile.address.country
+                            ].filter(Boolean).join(', ')}
                           </Typography>
                         </Box>
-                      ))}
+                      )}
+                      <Typography variant="body2" sx={{ mt: 2 }}>
+                        <strong>National ID:</strong> {selectedTeacherProfile.nationalId || 'Not provided'}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Date of Birth:</strong> {selectedTeacherProfile.dateOfBirth ? 
+                          new Date(selectedTeacherProfile.dateOfBirth).toLocaleDateString() : 'Not provided'}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
 
-                      <Typography variant="body2" sx={{ mt: 2 }}><strong>Skills:</strong></Typography>
-                      <Box display="flex" flexWrap="wrap" gap={1} sx={{ mt: 1 }}>
+                {/* Professional Information */}
+                <Grid item xs={12} md={6}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                        <School sx={{ mr: 1 }} />
+                        Professional Background
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>Experience:</strong> {selectedTeacherProfile.experience} years
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>Hourly Rate:</strong> ${selectedTeacherProfile.hourlyRate || 'Not set'}
+                      </Typography>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        <strong>Payment Type:</strong> {selectedTeacherProfile.paymentType || 'Not specified'}
+                      </Typography>
+                      
+                      <Typography variant="body2" sx={{ mt: 2, mb: 1 }}><strong>Specialization:</strong></Typography>
+                      <Box display="flex" flexWrap="wrap" gap={1} sx={{ mb: 2 }}>
+                        {selectedTeacherProfile.specialization.map((spec, index) => (
+                          <Chip key={index} label={spec} size="small" color="primary" variant="outlined" />
+                        ))}
+                      </Box>
+
+                      <Typography variant="body2" sx={{ mb: 1 }}><strong>Teaching Areas:</strong></Typography>
+                      <Box display="flex" flexWrap="wrap" gap={1} sx={{ mb: 2 }}>
+                        {selectedTeacherProfile.teachingAreas.map((area, index) => (
+                          <Chip key={index} label={area} size="small" color="secondary" variant="outlined" />
+                        ))}
+                      </Box>
+
+                      <Typography variant="body2" sx={{ mb: 1 }}><strong>Preferred Levels:</strong></Typography>
+                      <Box display="flex" flexWrap="wrap" gap={1}>
+                        {selectedTeacherProfile.preferredLevels.map((level, index) => (
+                          <Chip key={index} label={level} size="small" color="info" variant="outlined" />
+                        ))}
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                {/* Education & Skills */}
+                <Grid item xs={12} md={6}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom>Education & Skills</Typography>
+                      
+                      <Typography variant="body2" sx={{ mb: 1 }}><strong>Education:</strong></Typography>
+                      {selectedTeacherProfile.education.length > 0 ? (
+                        selectedTeacherProfile.education.map((edu, index) => (
+                          <Box key={index} sx={{ ml: 1, mb: 1, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                              {edu.degree}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {edu.institution} • {edu.year}
+                              {edu.field && ` • ${edu.field}`}
+                            </Typography>
+                          </Box>
+                        ))
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">No education information provided</Typography>
+                      )}
+
+                      <Typography variant="body2" sx={{ mt: 2, mb: 1 }}><strong>Skills:</strong></Typography>
+                      <Box display="flex" flexWrap="wrap" gap={1}>
                         {selectedTeacherProfile.skills.map((skill, index) => (
                           <Chip key={index} label={skill} size="small" variant="outlined" />
                         ))}
@@ -1271,32 +1477,145 @@ const TeacherManagement: React.FC = () => {
                   </Card>
                 </Grid>
 
-                {/* Teaching Expertise */}
-                <Grid item xs={12}>
+                {/* CV and Documents */}
+                <Grid item xs={12} md={6}>
                   <Card>
                     <CardContent>
-                      <Typography variant="h6" gutterBottom>Teaching Expertise</Typography>
+                      <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Description sx={{ mr: 1 }} />
+                        CV & Documents
+                      </Typography>
+                      
+                      {selectedTeacherProfile.cvDocument ? (
+                        <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, mb: 2 }}>
+                          <Box display="flex" alignItems="center" justifyContent="space-between">
+                            <Box>
+                              <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                                {selectedTeacherProfile.cvDocument.originalName}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Uploaded: {new Date(selectedTeacherProfile.cvDocument.uploadedAt).toLocaleDateString()}
+                              </Typography>
+                            </Box>
+                            <Box>
+                              <Button
+                                size="small"
+                                startIcon={<Visibility />}
+                                onClick={() => viewCv(selectedTeacherProfile.cvDocument!.url)}
+                                sx={{ mr: 1 }}
+                              >
+                                View
+                              </Button>
+                              <Button
+                                size="small"
+                                startIcon={<Download />}
+                                onClick={() => downloadCv(
+                                  selectedTeacherProfile.cvDocument!.url,
+                                  selectedTeacherProfile.cvDocument!.originalName
+                                )}
+                              >
+                                Download
+                              </Button>
+                            </Box>
+                          </Box>
+                        </Box>
+                      ) : (
+                        <Box sx={{ p: 2, border: '1px dashed', borderColor: 'warning.main', borderRadius: 1, mb: 2, bgcolor: 'warning.light' }}>
+                          <Typography variant="body2" color="warning.dark" sx={{ mb: 1 }}>
+                            No CV uploaded
+                          </Typography>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<CloudUpload />}
+                            onClick={() => setCvUploadDialogOpen(true)}
+                          >
+                            Upload CV for Teacher
+                          </Button>
+                        </Box>
+                      )}
 
-                      <Typography variant="body2"><strong>Specializations:</strong></Typography>
-                      <Box display="flex" flexWrap="wrap" gap={1} sx={{ mt: 1, mb: 2 }}>
-                        {selectedTeacherProfile.specialization.map((spec, index) => (
-                          <Chip key={index} label={spec} color="primary" size="small" />
-                        ))}
-                      </Box>
+                      {selectedTeacherProfile.profilePicture && (
+                        <Box sx={{ textAlign: 'center', mt: 2 }}>
+                          <Typography variant="body2" sx={{ mb: 1 }}><strong>Profile Picture:</strong></Typography>
+                          <Avatar
+                            src={selectedTeacherProfile.profilePicture}
+                            sx={{ width: 80, height: 80, mx: 'auto' }}
+                          />
+                        </Box>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
 
-                      <Typography variant="body2"><strong>Teaching Areas:</strong></Typography>
-                      <Box display="flex" flexWrap="wrap" gap={1} sx={{ mt: 1, mb: 2 }}>
-                        {selectedTeacherProfile.teachingAreas.map((area, index) => (
-                          <Chip key={index} label={area} color="secondary" size="small" />
-                        ))}
-                      </Box>
+                {/* Bio and Social Links */}
+                <Grid item xs={12} md={6}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom>Bio & Social Links</Typography>
+                      
+                      <Typography variant="body2" sx={{ mb: 1 }}><strong>Bio:</strong></Typography>
+                      <Typography variant="body2" sx={{ mb: 2, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+                        {selectedTeacherProfile.bio || 'No bio provided'}
+                      </Typography>
 
-                      <Typography variant="body2"><strong>Preferred Levels:</strong></Typography>
-                      <Box display="flex" flexWrap="wrap" gap={1} sx={{ mt: 1 }}>
-                        {selectedTeacherProfile.preferredLevels.map((level, index) => (
-                          <Chip key={index} label={level} variant="outlined" size="small" />
-                        ))}
-                      </Box>
+                      {selectedTeacherProfile.socialLinks && (
+                        <>
+                          <Typography variant="body2" sx={{ mb: 1 }}><strong>Social Links:</strong></Typography>
+                          {selectedTeacherProfile.socialLinks.linkedin && (
+                            <Typography variant="body2" sx={{ mb: 0.5 }}>
+                              <strong>LinkedIn:</strong> 
+                              <Button 
+                                size="small" 
+                                href={selectedTeacherProfile.socialLinks.linkedin} 
+                                target="_blank"
+                                sx={{ ml: 1 }}
+                              >
+                                View Profile
+                              </Button>
+                            </Typography>
+                          )}
+                          {selectedTeacherProfile.socialLinks.github && (
+                            <Typography variant="body2" sx={{ mb: 0.5 }}>
+                              <strong>GitHub:</strong> 
+                              <Button 
+                                size="small" 
+                                href={selectedTeacherProfile.socialLinks.github} 
+                                target="_blank"
+                                sx={{ ml: 1 }}
+                              >
+                                View Profile
+                              </Button>
+                            </Typography>
+                          )}
+                          {selectedTeacherProfile.socialLinks.portfolio && (
+                            <Typography variant="body2" sx={{ mb: 0.5 }}>
+                              <strong>Portfolio:</strong> 
+                              <Button 
+                                size="small" 
+                                href={selectedTeacherProfile.socialLinks.portfolio} 
+                                target="_blank"
+                                sx={{ ml: 1 }}
+                              >
+                                View Portfolio
+                              </Button>
+                            </Typography>
+                          )}
+                          {selectedTeacherProfile.socialLinks.website && (
+                            <Typography variant="body2">
+                              <strong>Website:</strong> 
+                              <Button 
+                                size="small" 
+                                href={selectedTeacherProfile.socialLinks.website} 
+                                target="_blank"
+                                sx={{ ml: 1 }}
+                              >
+                                Visit Website
+                              </Button>
+                            </Typography>
+                          )}
+                        </>
+                      )}
                     </CardContent>
                   </Card>
                 </Grid>
@@ -1334,30 +1653,159 @@ const TeacherManagement: React.FC = () => {
         <DialogActions>
           <Button onClick={() => {
             setApprovalDialogOpen(false);
-            clearTeacherSelection();
+            setSelectedTeacherProfile(null);
+            setApprovalFeedback('');
+            setApprovalReason('');
           }}>Close</Button>
           {selectedTeacherProfile && selectedTeacherProfile.profileStatus === 'pending' && (
             <>
               <Button
                 color="error"
-                onClick={() => {
-                  const reason = prompt('Please provide a reason for rejection:');
-                  if (reason) {
-                    rejectTeacherProfile(reason);
-                  }
-                }}
+                startIcon={<Close />}
+                onClick={() => openApprovalDialog(selectedTeacherProfile, 'reject')}
               >
                 Reject
               </Button>
               <Button
                 color="success"
                 variant="contained"
-                onClick={approveTeacherProfile}
+                startIcon={<CheckCircle />}
+                onClick={() => openApprovalDialog(selectedTeacherProfile, 'approve')}
               >
                 Approve
               </Button>
             </>
           )}
+        </DialogActions>
+      </Dialog>
+
+      {/* CV Upload Dialog */}
+      <Dialog
+        open={cvUploadDialogOpen}
+        onClose={() => {
+          setCvUploadDialogOpen(false);
+          setCvFile(null);
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Upload CV for Teacher</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              Upload a CV document for this teacher. Accepted formats: PDF, DOC, DOCX (Max 10MB)
+            </Typography>
+            
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx"
+              onChange={handleCvUpload}
+              style={{ display: 'none' }}
+              id="cv-upload-input"
+            />
+            <label htmlFor="cv-upload-input">
+              <Button
+                variant="outlined"
+                component="span"
+                startIcon={<CloudUpload />}
+                fullWidth
+                sx={{ mb: 2 }}
+              >
+                Choose CV File
+              </Button>
+            </label>
+
+            {cvFile && (
+              <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                  Selected: {cvFile.name}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Size: {(cvFile.size / 1024 / 1024).toFixed(2)} MB
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setCvUploadDialogOpen(false);
+            setCvFile(null);
+          }}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={uploadCvForTeacher}
+            disabled={!cvFile || cvUploading}
+            startIcon={cvUploading ? <CircularProgress size={20} /> : <CloudUpload />}
+          >
+            {cvUploading ? 'Uploading...' : 'Upload CV'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Approval Action Dialog */}
+      <Dialog
+        open={approvalAction !== null && selectedTeacherProfile !== null}
+        onClose={() => {
+          setApprovalAction('approve');
+          setApprovalFeedback('');
+          setApprovalReason('');
+          setSelectedTeacherProfile(null);
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {approvalAction === 'approve' ? 'Approve Teacher Profile' : 'Reject Teacher Profile'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              {approvalAction === 'approve' 
+                ? 'Are you sure you want to approve this teacher profile?' 
+                : 'Please provide a reason for rejecting this teacher profile:'}
+            </Typography>
+
+            {approvalAction === 'reject' && (
+              <TextField
+                fullWidth
+                label="Rejection Reason *"
+                multiline
+                rows={3}
+                value={approvalReason}
+                onChange={(e) => setApprovalReason(e.target.value)}
+                sx={{ mb: 2 }}
+                required
+              />
+            )}
+
+            <TextField
+              fullWidth
+              label={approvalAction === 'approve' ? 'Approval Message (Optional)' : 'Additional Feedback (Optional)'}
+              multiline
+              rows={3}
+              value={approvalFeedback}
+              onChange={(e) => setApprovalFeedback(e.target.value)}
+              placeholder={approvalAction === 'approve' 
+                ? 'Welcome message or additional notes...' 
+                : 'Additional feedback for improvement...'}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setApprovalDialogOpen(false);
+            setApprovalFeedback('');
+            setApprovalReason('');
+          }}>Cancel</Button>
+          <Button
+            variant="contained"
+            color={approvalAction === 'approve' ? 'success' : 'error'}
+            onClick={approvalAction === 'approve' ? handleApproveProfile : handleRejectProfile}
+            startIcon={approvalAction === 'approve' ? <CheckCircle /> : <Close />}
+          >
+            {approvalAction === 'approve' ? 'Approve Profile' : 'Reject Profile'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Container>

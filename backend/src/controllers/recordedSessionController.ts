@@ -453,3 +453,57 @@ export const getAllRecordedSessionsForStudent = async (req: AuthRequest, res: Re
     });
   }
 };
+
+// Get all recorded sessions for admin (all teacher uploads)
+export const getAdminRecordedSessions = async (req: AuthRequest, res: Response) => {
+  try {
+    const { courseId, search, teacherId, page = 1, limit = 10 } = req.query;
+
+    // Build query
+    const query: any = {};
+    
+    if (courseId) {
+      query.course = courseId;
+    }
+
+    if (teacherId) {
+      query.teacher = teacherId;
+    }
+
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    // Get total count for pagination
+    const total = await RecordedSession.countDocuments(query);
+
+    // Get recorded sessions with pagination
+    const recordedSessions = await RecordedSession.find(query)
+      .populate('course', 'title description thumbnail')
+      .populate('teacher', 'firstName lastName')
+      .sort({ uploadDate: -1 })
+      .limit(Number(limit))
+      .skip((Number(page) - 1) * Number(limit));
+
+    res.json({
+      success: true,
+      data: {
+        sessions: recordedSessions,
+        pagination: {
+          current: Number(page),
+          pages: Math.ceil(total / Number(limit)),
+          total
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching recorded sessions for admin:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch recorded sessions' 
+    });
+  }
+};

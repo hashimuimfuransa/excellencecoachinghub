@@ -25,6 +25,9 @@ import EmailSystemDemo from './pages/Auth/EmailSystemDemo';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import TeacherDashboard from './pages/Teacher/TeacherDashboard';
 import TeacherProfile from './pages/Teacher/TeacherProfile';
+import TeacherProfileComplete from './pages/Teacher/TeacherProfileComplete';
+import TeacherProfileGuard from './guards/TeacherProfileGuard';
+import TeacherApprovalGuard from './guards/TeacherApprovalGuard';
 import TeacherCourses from './pages/Teacher/TeacherCourses';
 import CourseManagement from './pages/Teacher/CourseManagement';
 import CourseContent from './pages/Student/CourseContent';
@@ -73,6 +76,7 @@ import AssessmentResults from './pages/Assessment/AssessmentResults';
 import EnhancedWorkOnAssignment from './pages/Assignment/EnhancedWorkOnAssignment';
 import EnhancedTakeAssignment from './pages/Assignment/EnhancedTakeAssignment';
 import AssignmentResults from './pages/Assignment/AssignmentResults';
+import EnhancedAssignmentPage from './pages/Student/EnhancedAssignmentPage';
 import CoursesPage from './pages/Courses/CoursesPage';
 import CourseDetailPage from './pages/Courses/CourseDetailPage';
 import QuizPage from './pages/Quiz/QuizPage';
@@ -204,21 +208,26 @@ const App: React.FC = () => {
         >
           <Route index element={<TeacherDashboard />} />
           <Route path="profile" element={<TeacherProfile />} />
-          <Route path="courses" element={<TeacherCourses />} />
-          <Route path="courses/create" element={<CreateCourse />} />
-          <Route path="courses/:id/manage" element={<CourseManagement />} />
-          <Route path="courses/:courseId/materials" element={<CourseMaterials />} />
-          <Route path="live-sessions" element={<LiveSessions />} />
-          <Route path="live-sessions/create" element={<CreateLiveSession />} />
-          <Route path="live-sessions/:id/room" element={<LiveSessionRoom />} />
-          <Route path="students" element={<TeacherStudents />} />
-          <Route path="student-management" element={<StudentManagement />} />
-          <Route path="analytics" element={<TeacherAnalytics />} />
-          <Route path="recorded-session/:sessionId" element={<RecordedSessionDetails />} />
-          <Route path="grades" element={<TeacherGradesLeaderboard />} />
-          <Route path="grades/:courseId" element={<TeacherGradesLeaderboard />} />
+          <Route path="profile/complete" element={<TeacherProfileComplete />} />
+          <Route path="profile/edit" element={<TeacherProfileComplete />} />
+          
+          {/* Protected teacher routes - require approved profile */}
+          <Route path="courses" element={<TeacherApprovalGuard><TeacherCourses /></TeacherApprovalGuard>} />
+          <Route path="courses/create" element={<TeacherApprovalGuard><CreateCourse /></TeacherApprovalGuard>} />
+          <Route path="courses/:id/manage" element={<TeacherApprovalGuard><CourseManagement /></TeacherApprovalGuard>} />
+          <Route path="courses/:courseId/materials" element={<TeacherApprovalGuard><CourseMaterials /></TeacherApprovalGuard>} />
+          <Route path="live-sessions" element={<TeacherApprovalGuard><LiveSessions /></TeacherApprovalGuard>} />
+          <Route path="live-sessions/create" element={<TeacherApprovalGuard><CreateLiveSession /></TeacherApprovalGuard>} />
+          <Route path="live-sessions/:id/room" element={<TeacherApprovalGuard><LiveSessionRoom /></TeacherApprovalGuard>} />
+          <Route path="students" element={<TeacherApprovalGuard><TeacherStudents /></TeacherApprovalGuard>} />
+          <Route path="student-management" element={<TeacherApprovalGuard><StudentManagement /></TeacherApprovalGuard>} />
+          <Route path="analytics" element={<TeacherApprovalGuard><TeacherAnalytics /></TeacherApprovalGuard>} />
+          <Route path="recorded-session/:sessionId" element={<TeacherApprovalGuard><RecordedSessionDetails /></TeacherApprovalGuard>} />
+          <Route path="grades" element={<TeacherApprovalGuard><TeacherGradesLeaderboard /></TeacherApprovalGuard>} />
+          <Route path="grades/:courseId" element={<TeacherApprovalGuard><TeacherGradesLeaderboard /></TeacherApprovalGuard>} />
+          <Route path="course-management" element={<TeacherApprovalGuard><CourseManagementSelection /></TeacherApprovalGuard>} />
           <Route path="settings" element={<TeacherSettings />} />
-          <Route path="test" element={<TestPage />} />
+          <Route path="test" element={<TeacherApprovalGuard><TestPage /></TeacherApprovalGuard>} />
         </Route>
 
         {/* Student Dashboard Routes */}
@@ -239,6 +248,7 @@ const App: React.FC = () => {
           <Route path="course/:id/notes" element={<CourseNotesStudyPage />} />
           <Route path="course/:id/live-sessions" element={<StudentLiveSessions />} />
           <Route path="course/:id/announcements" element={<CourseAnnouncementsPage />} />
+          <Route path="assignment/:assignmentId" element={<EnhancedAssignmentPage />} />
           <Route path="live-sessions" element={<StudentLiveSessions />} />
           <Route path="live-sessions/:sessionId/room" element={<StudentLiveSessionRoom />} />
           <Route path="progress" element={<Progress />} />

@@ -4,6 +4,8 @@ import { TeacherProfile } from '../models/TeacherProfile';
 import { User } from '../models/User';
 import { UserRole } from '../../../shared/types';
 import { notificationService } from '../services/notificationService';
+import { TeacherNotificationService } from '../services/teacherNotificationService';
+import { uploadDocumentToCloudinary } from '../config/cloudinary';
 
 // Get teacher profile (for the logged-in teacher)
 export const getMyProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -303,6 +305,17 @@ export const approveProfile = async (req: Request, res: Response, next: NextFunc
 
     // Notify teacher about profile approval
     try {
+      const user = await User.findById(profile.userId);
+      if (user) {
+        await TeacherNotificationService.sendApprovalNotification({
+          teacherName: `${user.firstName} ${user.lastName}`,
+          teacherEmail: user.email,
+          adminName: req.user?.firstName ? `${req.user.firstName} ${req.user.lastName}` : 'Admin',
+          adminFeedback: feedback
+        });
+      }
+      
+      // Also send in-app notification
       await notificationService.notifyTeacherProfileStatus(
         profile.userId.toString(),
         'approved',
@@ -360,6 +373,18 @@ export const rejectProfile = async (req: Request, res: Response, next: NextFunct
 
     // Notify teacher about profile rejection
     try {
+      const user = await User.findById(profile.userId);
+      if (user) {
+        await TeacherNotificationService.sendRejectionNotification({
+          teacherName: `${user.firstName} ${user.lastName}`,
+          teacherEmail: user.email,
+          adminName: req.user?.firstName ? `${req.user.firstName} ${req.user.lastName}` : 'Admin',
+          rejectionReason: reason,
+          adminFeedback: feedback
+        });
+      }
+      
+      // Also send in-app notification
       await notificationService.notifyTeacherProfileStatus(
         profile.userId.toString(),
         'rejected',
@@ -408,6 +433,238 @@ export const getProfileStats = async (req: Request, res: Response, next: NextFun
         recentSubmissions
       }
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Upload CV document
+export const uploadCV = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.file) {
+      res.status(400).json({
+        success: false,
+        error: 'No CV file uploaded'
+      });
+      return;
+    }
+
+    const userId = req.user?._id;
+    
+    // Find or create teacher profile
+    let profile = await TeacherProfile.findOne({ userId });
+    if (!profile) {
+      profile = new TeacherProfile({
+        userId,
+        specialization: [],
+        experience: 0,
+        education: [],
+        certifications: [],
+        skills: [],
+        languages: [],
+        teachingAreas: [],
+        preferredLevels: [],
+        documents: [],
+        profileStatus: 'incomplete'
+      });
+    }
+
+    // Upload CV to Cloudinary
+    const uploadResult = await uploadDocumentToCloudinary(
+      req.file.buffer,
+      userId,
+      req.file.originalname,
+      `excellence-coaching-hub/teacher-profiles/${userId}/cv`
+    );
+
+    // Update profile with CV info
+    profile.cvDocument = {
+      filename: uploadResult.publicId,
+      originalName: req.file.originalname,
+      url: uploadResult.url,
+      uploadedAt: new Date()
+    };
+
+    await profile.save();
+
+    res.status(200).json({
+      success: true,
+      data: { 
+        cvDocument: profile.cvDocument,
+        profile 
+      },
+      message: 'CV uploaded successfully'
+    });
+  } catch (error) {
+    console.error('Error uploading CV:', error);
+    next(error);
+  }
+};
+
+// Submit profile for review
+export const submitProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user?._id;
+    
+    const profile = await TeacherProfile.findOne({ userId });
+    if (!profile) {
+      res.status(404).json({
+        success: false,
+        error: 'Profile not found'
+      });
+      return;
+    }
+
+    // Validate required fields for submission
+    const requiredFields = [
+      'specialization',
+      'bio',
+      'experience',
+      'education',
+      'teachingAreas',
+      'hourlyRate'
+    ];
+
+    const missingFields = requiredFields.filter(field => {
+      const value = profile[field as keyof typeof profile];
+      return !value || (Array.isArray(value) && value.length === 0);
+    });
+
+    if (missingFields.length > 0) {
+      res.status(400).json({
+        success: false,
+        error: 'Profile incomplete',
+        missingFields,
+        message: `Please complete the following fields: ${missingFields.join(', ')}`
+      });
+      return;
+    }
+
+    // Update profile status
+    profile.profileStatus = 'pending';
+    profile.submittedAt = new Date();
+    await profile.save();
+
+    // Send submission confirmation email
+    try {
+      const user = await User.findById(userId);
+      if (user) {
+        await TeacherNotificationService.sendSubmissionConfirmation({
+          teacherName: `${user.firstName} ${user.lastName}`,
+          teacherEmail: user.email
+        });
+      }
+    } catch (emailError) {
+      console.error('❌ Failed to send submission confirmation email:', emailError);
+      // Don't fail the request if email fails
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { profile },
+      message: 'Profile submitted for review successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Upload profile picture
+export const uploadProfilePicture = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.file) {
+      res.status(400).json({
+        success: false,
+        error: 'No profile picture uploaded'
+      });
+      return;
+    }
+
+    const userId = req.user?._id;
+    
+    // Find or create teacher profile
+    let profile = await TeacherProfile.findOne({ userId });
+    if (!profile) {
+      profile = new TeacherProfile({
+        userId,
+        specialization: [],
+        experience: 0,
+        education: [],
+        certifications: [],
+        skills: [],
+        languages: [],
+        teachingAreas: [],
+        preferredLevels: [],
+        documents: [],
+        profileStatus: 'incomplete'
+      });
+    }
+
+    // Upload profile picture to Cloudinary
+    const uploadResult = await uploadDocumentToCloudinary(
+      req.file.buffer,
+      userId,
+      req.file.originalname,
+      `excellence-coaching-hub/teacher-profiles/${userId}/profile-picture`
+    );
+
+    // Update profile with profile picture URL
+    profile.profilePicture = uploadResult.url;
+    await profile.save();
+
+    res.status(200).json({
+      success: true,
+      data: { 
+        profilePicture: profile.profilePicture,
+        profile 
+      },
+      message: 'Profile picture uploaded successfully'
+    });
+  } catch (error) {
+    console.error('Error uploading profile picture:', error);
+    next(error);
+  }
+};
+
+// Download teacher documents (Admin only)
+export const downloadDocument = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { profileId, documentType } = req.params;
+    
+    const profile = await TeacherProfile.findById(profileId);
+    if (!profile) {
+      res.status(404).json({
+        success: false,
+        error: 'Profile not found'
+      });
+      return;
+    }
+
+    let documentUrl = '';
+    let filename = '';
+
+    if (documentType === 'cv' && profile.cvDocument) {
+      documentUrl = profile.cvDocument.url;
+      filename = profile.cvDocument.originalName;
+    } else {
+      // Find document in documents array
+      const document = profile.documents.find(doc => doc.type === documentType);
+      if (document) {
+        documentUrl = document.url;
+        filename = document.originalName;
+      }
+    }
+
+    if (!documentUrl) {
+      res.status(404).json({
+        success: false,
+        error: 'Document not found'
+      });
+      return;
+    }
+
+    // Redirect to the document URL for download
+    res.redirect(documentUrl);
   } catch (error) {
     next(error);
   }

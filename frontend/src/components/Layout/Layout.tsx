@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
@@ -23,7 +23,8 @@ import {
   styled,
   SwipeableDrawer,
   Hidden,
-  alpha
+  alpha,
+  Chip
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -56,6 +57,7 @@ import { UserRole } from '../../shared/types';
 import EmailVerificationBanner from '../Auth/EmailVerificationBanner';
 import FloatingAIAssistant from '../FloatingAIAssistant';
 import { useResponsive, getDrawerWidth } from '../../utils/responsive';
+import { teacherProfileService } from '../../services/teacherProfileService';
 
 // Responsive styled components
 const ResponsiveAppBar = styled(AppBar, {
@@ -136,11 +138,13 @@ interface NavigationItem {
   icon: React.ReactElement;
   path: string;
   roles?: UserRole[];
+  requiresApprovedProfile?: boolean;
 }
 
 const Layout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [teacherProfileStatus, setTeacherProfileStatus] = useState<string | null>(null);
 
   const { user, logout } = useAuth();
   const { unreadCount } = useNotifications();
@@ -148,6 +152,24 @@ const Layout: React.FC = () => {
   const location = useLocation();
   const theme = useTheme();
   const { isMobile, isTablet, isLaptop, isDesktop } = useResponsive();
+
+  // Load teacher profile status if user is a teacher
+  useEffect(() => {
+    const loadTeacherProfileStatus = async () => {
+      if (user?.role === UserRole.TEACHER) {
+        try {
+          const response = await teacherProfileService.getMyProfile();
+          if (response.success) {
+            setTeacherProfileStatus(response.data.profile.profileStatus);
+          }
+        } catch (error) {
+          console.error('Failed to load teacher profile status:', error);
+        }
+      }
+    };
+
+    loadTeacherProfileStatus();
+  }, [user]);
   
   // Dynamic drawer width based on device
   const drawerWidths = getDrawerWidth();
@@ -181,14 +203,15 @@ const Layout: React.FC = () => {
       );
     } else if (user?.role === UserRole.TEACHER) {
       roleSpecificItems.push(
-        { text: 'Course Management', icon: <School />, path: '/dashboard/teacher/course-management' },
-        { text: 'Create Course', icon: <Add />, path: '/dashboard/teacher/courses/create' },
-        { text: 'Live Sessions', icon: <VideoCall />, path: '/dashboard/teacher/live-sessions' },
-        { text: 'Student Management', icon: <ManageAccounts />, path: '/dashboard/teacher/student-management' },
-        { text: 'Grades & Performance', icon: <Grade />, path: '/dashboard/teacher/grades' },
-        { text: 'Analytics', icon: <Analytics />, path: '/dashboard/teacher/analytics' },
+        { text: 'My Courses', icon: <School />, path: '/dashboard/teacher/courses', requiresApprovedProfile: true },
+        { text: 'Course Management', icon: <School />, path: '/dashboard/teacher/course-management', requiresApprovedProfile: true },
+        { text: 'Create Course', icon: <Add />, path: '/dashboard/teacher/courses/create', requiresApprovedProfile: true },
+        { text: 'Live Sessions', icon: <VideoCall />, path: '/dashboard/teacher/live-sessions', requiresApprovedProfile: true },
+        { text: 'Student Management', icon: <ManageAccounts />, path: '/dashboard/teacher/student-management', requiresApprovedProfile: true },
+        { text: 'Grades & Performance', icon: <Grade />, path: '/dashboard/teacher/grades', requiresApprovedProfile: true },
+        { text: 'Analytics', icon: <Analytics />, path: '/dashboard/teacher/analytics', requiresApprovedProfile: true },
         { text: 'Settings', icon: <Settings />, path: '/dashboard/teacher/settings' },
-        { text: 'Profile', icon: <Person />, path: '/dashboard/teacher/profile' }
+        { text: 'Profile', icon: <Person />, path: '/dashboard/teacher/profile/complete' }
       );
     } else if (user?.role === UserRole.STUDENT) {
       roleSpecificItems.push(
@@ -277,6 +300,34 @@ const Layout: React.FC = () => {
         >
           {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'} Portal
         </Typography>
+        
+        {/* Teacher Profile Status Indicator */}
+        {user?.role === UserRole.TEACHER && teacherProfileStatus && (
+          <Box sx={{ mt: 1 }}>
+            <Chip
+              label={
+                teacherProfileStatus === 'approved' ? '✅ Approved' :
+                teacherProfileStatus === 'pending' ? '⏳ Under Review' :
+                teacherProfileStatus === 'rejected' ? '❌ Needs Update' :
+                '📝 Incomplete'
+              }
+              size="small"
+              color={
+                teacherProfileStatus === 'approved' ? 'success' :
+                teacherProfileStatus === 'pending' ? 'info' :
+                teacherProfileStatus === 'rejected' ? 'error' :
+                'warning'
+              }
+              variant="outlined"
+              sx={{ 
+                fontSize: '0.65rem',
+                height: 20,
+                cursor: 'pointer'
+              }}
+              onClick={() => navigate('/dashboard/teacher/profile/complete')}
+            />
+          </Box>
+        )}
       </Box>
 
       {/* Navigation Items */}
@@ -291,20 +342,37 @@ const Layout: React.FC = () => {
       >
         {getNavigationItems().map((item) => {
           const isLiveSession = item.text.includes('Live Sessions');
+          const isDisabled = item.requiresApprovedProfile && 
+                           user?.role === UserRole.TEACHER && 
+                           teacherProfileStatus !== 'approved';
           
           return (
             <ResponsiveListItem key={item.text} disablePadding>
-              <ListItemButton
-                selected={isActivePath(item.path)}
-                onClick={() => handleNavigation(item.path)}
+              <Tooltip 
+                title={isDisabled ? 'Complete and get your profile approved to access this feature' : ''}
+                placement="right"
+              >
+                <Box sx={{ width: '100%' }}>
+                  <ListItemButton
+                    selected={isActivePath(item.path)}
+                    onClick={() => !isDisabled && handleNavigation(item.path)}
+                    disabled={isDisabled}
                 sx={{
                   minHeight: { xs: 40, sm: 48 },
                   px: { xs: 1, sm: 2 },
                   borderRadius: 1,
                   mx: { xs: 0.5, sm: 1 },
                   mb: 0.5,
+                  // Disabled styling
+                  ...(isDisabled && {
+                    opacity: 0.5,
+                    cursor: 'not-allowed',
+                    '&:hover': {
+                      backgroundColor: 'transparent',
+                    },
+                  }),
                   // Special styling for Live Sessions
-                  ...(isLiveSession && {
+                  ...(isLiveSession && !isDisabled && {
                     background: `linear-gradient(135deg, ${alpha(theme.palette.error.main, 0.1)}, ${alpha(theme.palette.error.main, 0.05)})`,
                     border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`,
                     '&:hover': {
@@ -323,7 +391,7 @@ const Layout: React.FC = () => {
                       color: isLiveSession ? 'error.contrastText' : 'primary.contrastText',
                     },
                   },
-                  ...(!isLiveSession && {
+                  ...(!isLiveSession && !isDisabled && {
                     '&:hover': {
                       backgroundColor: 'action.hover',
                       borderRadius: 1,
@@ -349,7 +417,21 @@ const Layout: React.FC = () => {
                   fontWeight: isActivePath(item.path) ? 600 : 400
                 }}
               />
+              {isDisabled && (
+                <Chip 
+                  label="🔒" 
+                  size="small" 
+                  sx={{ 
+                    height: 20, 
+                    fontSize: '0.7rem',
+                    backgroundColor: 'warning.light',
+                    color: 'warning.contrastText'
+                  }} 
+                />
+              )}
             </ListItemButton>
+                </Box>
+              </Tooltip>
           </ResponsiveListItem>
           );
         })}
@@ -456,7 +538,7 @@ const Layout: React.FC = () => {
       >
         <MenuItem onClick={() => handleNavigation(
           user?.role === UserRole.TEACHER
-            ? '/dashboard/teacher/profile'
+            ? '/dashboard/teacher/profile/complete'
             : user?.role === UserRole.ADMIN
               ? '/dashboard/admin/profile'
               : '/dashboard/profile'

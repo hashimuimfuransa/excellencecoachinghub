@@ -166,13 +166,13 @@ const CreateCourse: React.FC = () => {
           case 'PROFILE_NOT_FOUND':
             setError('Please create your teacher profile before creating courses.');
             setTimeout(() => {
-              navigate('/dashboard/teacher/profile');
+              navigate('/dashboard/teacher/profile/complete');
             }, 3000);
             break;
           case 'PROFILE_INCOMPLETE':
             setError('Please complete your teacher profile before creating courses.');
             setTimeout(() => {
-              navigate('/dashboard/teacher/profile');
+              navigate('/dashboard/teacher/profile/complete');
             }, 3000);
             break;
           case 'PROFILE_PENDING':
@@ -181,7 +181,7 @@ const CreateCourse: React.FC = () => {
           case 'PROFILE_REJECTED':
             setError('Your teacher profile has been rejected. Please update your profile and resubmit for approval.');
             setTimeout(() => {
-              navigate('/dashboard/teacher/profile');
+              navigate('/dashboard/teacher/profile/complete');
             }, 3000);
             break;
           default:

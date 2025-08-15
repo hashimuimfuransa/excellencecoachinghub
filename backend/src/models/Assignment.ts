@@ -20,6 +20,24 @@ export interface IAssignment extends Document {
     fileSize: number;
     uploadedAt: Date;
   };
+  // Enhanced AI extraction fields
+  extractedQuestions?: Array<{
+    question: string;
+    type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay';
+    options?: string[];
+    correctAnswer?: string;
+    points: number;
+    aiExtracted: boolean;
+  }>;
+  aiExtractionStatus?: 'pending' | 'completed' | 'failed';
+  aiExtractionError?: string;
+  rubric?: string;
+  gradingCriteria?: Array<{
+    criterion: string;
+    weight: number;
+    description: string;
+  }>;
+  autoGrading: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -42,6 +60,12 @@ export interface IAssignmentSubmission extends Document {
     fileSize: number;
     uploadedAt: Date;
   }>;
+  // For extracted questions assignments
+  extractedAnswers?: Array<{
+    questionIndex: number;
+    answer: string;
+    questionType: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay';
+  }>;
   submittedAt?: Date;
   isLate: boolean;
   status: 'draft' | 'submitted' | 'graded' | 'returned';
@@ -53,6 +77,12 @@ export interface IAssignmentSubmission extends Document {
     feedback: string;
     confidence: number;
     gradedAt: Date;
+    detailedGrading?: Array<{
+      questionIndex: number;
+      earnedPoints: number;
+      maxPoints: number;
+      feedback: string;
+    }>;
   };
   gradedAt?: Date;
   gradedBy?: mongoose.Types.ObjectId;
@@ -154,6 +184,65 @@ const AssignmentSchema = new Schema<IAssignment>({
       type: Date,
       default: Date.now
     }
+  },
+  // Enhanced AI extraction fields
+  extractedQuestions: [{
+    question: {
+      type: String,
+      required: true
+    },
+    type: {
+      type: String,
+      enum: ['multiple-choice', 'true-false', 'short-answer', 'essay'],
+      required: true
+    },
+    options: [{
+      type: String
+    }],
+    correctAnswer: {
+      type: String
+    },
+    points: {
+      type: Number,
+      required: true,
+      min: 1
+    },
+    aiExtracted: {
+      type: Boolean,
+      default: true
+    }
+  }],
+  aiExtractionStatus: {
+    type: String,
+    enum: ['pending', 'completed', 'failed'],
+    default: 'pending'
+  },
+  aiExtractionError: {
+    type: String
+  },
+  rubric: {
+    type: String,
+    maxlength: [5000, 'Rubric cannot exceed 5000 characters']
+  },
+  gradingCriteria: [{
+    criterion: {
+      type: String,
+      required: true
+    },
+    weight: {
+      type: Number,
+      required: true,
+      min: 0,
+      max: 100
+    },
+    description: {
+      type: String,
+      maxlength: [500, 'Criterion description cannot exceed 500 characters']
+    }
+  }],
+  autoGrading: {
+    type: Boolean,
+    default: true
   }
 }, {
   timestamps: true,
@@ -223,6 +312,22 @@ const AssignmentSubmissionSchema = new Schema<IAssignmentSubmission>({
       default: Date.now
     }
   }],
+  // For extracted questions assignments
+  extractedAnswers: [{
+    questionIndex: {
+      type: Number,
+      required: true
+    },
+    answer: {
+      type: String,
+      required: true
+    },
+    questionType: {
+      type: String,
+      enum: ['multiple-choice', 'true-false', 'short-answer', 'essay'],
+      required: true
+    }
+  }],
   submittedAt: {
     type: Date
   },
@@ -280,7 +385,28 @@ const AssignmentSubmissionSchema = new Schema<IAssignmentSubmission>({
     gradedAt: {
       type: Date,
       default: Date.now
-    }
+    },
+    detailedGrading: [{
+      questionIndex: {
+        type: Number,
+        required: true
+      },
+      earnedPoints: {
+        type: Number,
+        required: true,
+        min: 0
+      },
+      maxPoints: {
+        type: Number,
+        required: true,
+        min: 0
+      },
+      feedback: {
+        type: String,
+        trim: true,
+        maxlength: [1000, 'Question feedback cannot exceed 1000 characters']
+      }
+    }]
   },
   version: {
     type: Number,

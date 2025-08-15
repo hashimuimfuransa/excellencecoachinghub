@@ -586,6 +586,82 @@ class AssignmentService {
       return [];
     }
   }
+
+  // AI Extraction Methods
+
+  // Get extracted questions from assignment
+  async getExtractedQuestions(assignmentId: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const response = await api.get(`/assignments/${assignmentId}/extracted-questions`);
+      return { success: true, data: response.data.data };
+    } catch (error: any) {
+      console.error('Failed to get extracted questions:', error);
+      return { 
+        success: false, 
+        error: error.response?.data?.message || 'Failed to get extracted questions' 
+      };
+    }
+  }
+
+  // Submit answers to extracted questions
+  async submitExtractedAssignment(assignmentId: string, answers: { [questionId: string]: any }): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const response = await api.post(`/assignments/${assignmentId}/submit-extracted`, { answers });
+      return { success: true, data: response.data.data };
+    } catch (error: any) {
+      console.error('Failed to submit extracted assignment:', error);
+      return { 
+        success: false, 
+        error: error.response?.data?.message || 'Failed to submit assignment' 
+      };
+    }
+  }
+
+  // Trigger AI extraction for assignment
+  async triggerAIExtraction(assignmentId: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const response = await api.post(`/assignments/${assignmentId}/trigger-extraction`);
+      return { success: true, data: response.data.data };
+    } catch (error: any) {
+      console.error('Failed to trigger AI extraction:', error);
+      return { 
+        success: false, 
+        error: error.response?.data?.message || 'Failed to trigger AI extraction' 
+      };
+    }
+  }
+
+  // Get assignment with extraction status
+  async getAssignmentWithExtraction(assignmentId: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const response = await api.get(`/assignments/${assignmentId}/with-extraction`);
+      return { success: true, data: response.data.data };
+    } catch (error: any) {
+      console.error('Failed to get assignment with extraction:', error);
+      return { 
+        success: false, 
+        error: error.response?.data?.message || 'Failed to get assignment' 
+      };
+    }
+  }
+
+  // Submit assignment (enhanced to handle both traditional and extracted)
+  async submitAssignmentEnhanced(formData: FormData): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      const response = await api.post('/assignments/submit', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return { success: true, data: response.data.data };
+    } catch (error: any) {
+      console.error('Failed to submit assignment:', error);
+      return { 
+        success: false, 
+        error: error.response?.data?.message || 'Failed to submit assignment' 
+      };
+    }
+  }
 }
 
 export const assignmentService = new AssignmentService();

@@ -223,6 +223,43 @@ export const sendBulkEmail = async (recipients: string[], options: Omit<EmailOpt
   }
 };
 
+// Send email with HTML content directly
+export const sendHtmlEmail = async (options: { to: string; subject: string; html: string }): Promise<void> => {
+  try {
+    // Try to send via configured transporter
+    const transporter = await createTransporter();
+
+    // Email options
+    const fromEmail = process.env['EMAIL_FROM'] || process.env['EMAIL_USER'] || 'noreply@excellencecoaching.com';
+    const mailOptions = {
+      from: fromEmail,
+      to: options.to,
+      subject: options.subject,
+      html: options.html
+    };
+
+    // Send email
+    const info = await transporter.sendMail(mailOptions);
+    console.log('HTML Email sent successfully:', info.messageId);
+
+    // If using Ethereal Email, log the preview URL
+    if (info.messageId) {
+      const previewUrl = nodemailer.getTestMessageUrl(info);
+      if (previewUrl) {
+        console.log('Preview URL: %s', previewUrl);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to send HTML email via SMTP, falling back to console logging');
+    // Fallback to console logging
+    console.log('\n=== HTML EMAIL SENT ===');
+    console.log(`To: ${options.to}`);
+    console.log(`Subject: ${options.subject}`);
+    console.log(`HTML: ${options.html.substring(0, 200)}...`);
+    console.log('========================\n');
+  }
+};
+
 // Verify email configuration
 export const verifyEmailConfig = async (): Promise<boolean> => {
   try {

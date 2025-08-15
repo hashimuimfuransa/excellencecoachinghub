@@ -506,17 +506,53 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
       if (message.message.includes('🤚') && message.message.includes('wants to speak')) {
         // Extract student name from message
         const studentName = message.message.split(' wants to speak')[0].replace('🤚 ', '');
-        const studentPeer = peers.find(peer => peer.name.includes(studentName));
+        // Find the peer who sent the message (improved matching)
+        const studentPeer = peers.find(peer => {
+          const peerName = peer.name.toLowerCase().trim();
+          const messageName = studentName.toLowerCase().trim();
+          return peerName.includes(messageName) || messageName.includes(peerName);
+        });
+        
         if (studentPeer && userRole === 'teacher') {
-          setRaiseHandRequests(prev => new Set(prev).add(studentPeer.id));
+          setRaiseHandRequests(prev => {
+            const newSet = new Set(prev);
+            newSet.add(studentPeer.id);
+            return newSet;
+          });
           
           // Show notification for teachers
           if ('Notification' in window && Notification.permission === 'granted') {
             new Notification('Student wants to speak', {
               body: `${studentName} has raised their hand to speak`,
-              icon: '/favicon.ico'
+              icon: '/favicon.ico',
+              tag: 'raise-hand',
+              requireInteraction: true
             });
           }
+          
+          console.log(`🤚 Student ${studentName} (ID: ${studentPeer.id}) raised hand`);
+        }
+      }
+      
+      // Handle student lowering hand
+      if (message.message.includes('🤚') && message.message.includes('has lowered their hand')) {
+        const studentName = message.message.split(' has lowered their hand')[0].replace('🤚 ', '');
+        
+        // Find the peer who sent the message
+        const studentPeer = peers.find(peer => {
+          const peerName = peer.name.toLowerCase().trim();
+          const messageName = studentName.toLowerCase().trim();
+          return peerName.includes(messageName) || messageName.includes(peerName);
+        });
+        
+        if (studentPeer && userRole === 'teacher') {
+          setRaiseHandRequests(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(studentPeer.id);
+            return newSet;
+          });
+          
+          console.log(`🤚 Student ${studentName} (ID: ${studentPeer.id}) lowered hand`);
         }
       }
       
@@ -631,9 +667,60 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
         // Add to local raise hand requests
         setRaiseHandRequests(prev => new Set(prev).add(user?._id || ''));
         
-        console.log('🤚 Raise hand request sent');
+        console.log('🤚 Raise hand request sent successfully');
+        
+        // Show confirmation to student
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('Hand Raised', {
+            body: 'Your request to speak has been sent to the teacher.',
+            icon: '/favicon.ico'
+          });
+        } else {
+          // Fallback: set a temporary success message
+          setError('✋ Hand raised! Waiting for teacher permission...');
+          setTimeout(() => setError(null), 3000);
+        }
+        
       } catch (error) {
         console.error('Error sending raise hand request:', error);
+        setError('Failed to raise hand. Please try again.');
+      }
+    }
+  }, [hmsActions, userRole, user]);
+
+  // Handle lower hand request
+  const handleLowerHand = useCallback(async () => {
+    if (userRole === 'student') {
+      try {
+        const userId = user?._id || '';
+        
+        // Remove from local raise hand requests
+        setRaiseHandRequests(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(userId);
+          return newSet;
+        });
+        
+        // Optionally notify teacher
+        const userName = `${user?.firstName || 'Student'} ${user?.lastName || ''}`.trim();
+        await hmsActions.sendBroadcastMessage(`🤚 ${userName} has lowered their hand`);
+        
+        console.log('🤚 Hand lowered successfully');
+        
+        // Show confirmation to student
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('Hand Lowered', {
+            body: 'You have lowered your hand.',
+            icon: '/favicon.ico'
+          });
+        } else {
+          // Fallback: set a temporary message
+          setError('👋 Hand lowered successfully');
+          setTimeout(() => setError(null), 2000);
+        }
+        
+      } catch (error) {
+        console.error('Error lowering hand:', error);
       }
     }
   }, [hmsActions, userRole, user]);
@@ -882,6 +969,7 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
             participantsOpen={participantsOpen}
             isMobile={isMobile}
             raiseHandRequests={raiseHandRequests}
+            currentUserHandRaised={raiseHandRequests.has(user?._id || '')}
             isFullscreen={isFullscreen}
             fullscreenPeerId={fullscreenPeerId}
             attendance={attendance}
@@ -891,6 +979,7 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
             onToggleChat={() => setChatOpen(!chatOpen)}
             onToggleParticipants={() => setParticipantsOpen(!participantsOpen)}
             onRaiseHand={handleRaiseHand}
+            onLowerHand={handleLowerHand}
             onAllowStudentToSpeak={handleAllowStudentToSpeak}
             onFullscreenToggle={handleFullscreenToggle}
             onFeedbackOpen={() => setFeedbackOpen(true)}
@@ -934,6 +1023,7 @@ interface ResponsiveControlsProps {
   participantsOpen: boolean;
   isMobile: boolean;
   raiseHandRequests: Set<string>;
+  currentUserId?: string;
   isFullscreen?: boolean;
   fullscreenPeerId?: string | null;
   attendance: Map<string, { joinTime: Date; duration: number }>;
@@ -943,6 +1033,7 @@ interface ResponsiveControlsProps {
   onToggleChat: () => void;
   onToggleParticipants: () => void;
   onRaiseHand: () => void;
+  onLowerHand?: () => void;
   onAllowStudentToSpeak: (studentId: string) => void;
   onFullscreenToggle: (peerId: string) => void;
   onFeedbackOpen: () => void;
@@ -960,6 +1051,7 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
   participantsOpen,
   isMobile,
   raiseHandRequests,
+  currentUserId = '',
   isFullscreen = false,
   fullscreenPeerId = null,
   attendance,
@@ -969,6 +1061,7 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
   onToggleChat,
   onToggleParticipants,
   onRaiseHand,
+  onLowerHand,
   onAllowStudentToSpeak,
   onFullscreenToggle,
   onFeedbackOpen,
@@ -1047,16 +1140,44 @@ const ResponsiveControls: React.FC<ResponsiveControlsProps> = ({
             </IconButton>
           </Tooltip>
 
-          {/* Raise hand button (students only) */}
+          {/* Raise/Lower hand button (students only) */}
           {userRole === 'student' && (
-            <Tooltip title="Raise hand to request to speak">
+            <Tooltip title={
+              raiseHandRequests.has(currentUserId) 
+                ? "Click to lower hand" 
+                : "Raise hand to request to speak"
+            }>
               <IconButton
-                onClick={onRaiseHand}
+                onClick={raiseHandRequests.has(currentUserId) ? onLowerHand : onRaiseHand}
                 color="warning"
                 size={isMobile ? 'small' : 'medium'}
                 sx={{
-                  bgcolor: 'warning.light',
-                  '&:hover': { bgcolor: 'warning.main' }
+                  bgcolor: raiseHandRequests.has(currentUserId) 
+                    ? 'warning.main' 
+                    : 'warning.light',
+                  '&:hover': { 
+                    bgcolor: raiseHandRequests.has(currentUserId) 
+                      ? 'warning.dark' 
+                      : 'warning.main' 
+                  },
+                  color: raiseHandRequests.has(currentUserId) ? 'white' : 'inherit',
+                  animation: raiseHandRequests.has(currentUserId) 
+                    ? 'pulse 2s infinite' 
+                    : 'none',
+                  '@keyframes pulse': {
+                    '0%': {
+                      transform: 'scale(1)',
+                      opacity: 0.9,
+                    },
+                    '50%': {
+                      transform: 'scale(1.05)',
+                      opacity: 1,
+                    },
+                    '100%': {
+                      transform: 'scale(1)',
+                      opacity: 0.9,
+                    },
+                  }
                 }}
               >
                 <PanTool />

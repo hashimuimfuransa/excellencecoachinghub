@@ -9,6 +9,7 @@ import {
   incrementViewCount,
   getRecordedSessionsForStudents,
   getAllRecordedSessionsForStudent,
+  getAdminRecordedSessions,
   upload
 } from '../controllers/recordedSessionController';
 import { UserRole } from '../../../shared/types';
@@ -29,6 +30,14 @@ router.post(
   requireRole(UserRole.TEACHER, UserRole.ADMIN),
   upload.single('video'),
   uploadRecordedSession
+);
+
+// Admin routes
+router.get(
+  '/admin',
+  auth,
+  requireRole(UserRole.ADMIN),
+  getAdminRecordedSessions
 );
 
 // Student routes - MUST come before /:id routes to avoid conflicts

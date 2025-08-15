@@ -1,6 +1,7 @@
 import express from 'express';
 import { auth } from '../middleware/auth';
 import { authorizeRoles } from '../middleware/roleAuth';
+import { requireApprovedTeacher } from '../middleware/teacherAuth';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { uploadDocument } from '../config/cloudinary';
 import { Assignment, AssignmentSubmission } from '../models/Assignment';
@@ -21,15 +22,17 @@ import {
   toggleAssignmentStatus,
   saveDraft,
   getSubmissionHistory,
-  updateAIGrade
+  updateAIGrade,
+  getExtractedQuestions,
+  submitExtractedAssignment
 } from '../controllers/assignmentController';
 
 const router = express.Router();
 
-// Assignment CRUD operations
-router.post('/', auth, asyncHandler(createAssignment));
-router.put('/:id', auth, asyncHandler(updateAssignment));
-router.delete('/:id', auth, asyncHandler(deleteAssignment));
+// Assignment CRUD operations (require approved teacher profile)
+router.post('/', auth, requireApprovedTeacher, asyncHandler(createAssignment));
+router.put('/:id', auth, requireApprovedTeacher, asyncHandler(updateAssignment));
+router.delete('/:id', auth, requireApprovedTeacher, asyncHandler(deleteAssignment));
 router.get('/:id', auth, asyncHandler(getAssignmentById));
 
 // Admin route to get all assignments
@@ -92,23 +95,27 @@ router.post('/:assignmentId/submit', auth, asyncHandler(submitAssignment));
 router.get('/:assignmentId/submissions', auth, asyncHandler(getAssignmentSubmissions));
 router.get('/:assignmentId/submission', auth, asyncHandler(getStudentSubmission));
 
+// Extracted questions assignments
+router.get('/:assignmentId/extracted-questions', auth, asyncHandler(getExtractedQuestions));
+router.post('/:assignmentId/submit-extracted', auth, asyncHandler(submitExtractedAssignment));
+
 // File upload for assignments (student submissions)
 router.post('/:assignmentId/upload', auth, uploadDocument.single('file'), asyncHandler(uploadAssignmentFile));
 
-// Upload assignment document (instructor)
-router.post('/:assignmentId/upload-document', auth, uploadDocument.single('file'), asyncHandler(uploadAssignmentDocument));
+// Upload assignment document (instructor - requires approved profile)
+router.post('/:assignmentId/upload-document', auth, requireApprovedTeacher, uploadDocument.single('file'), asyncHandler(uploadAssignmentDocument));
 
-// Replace assignment document (instructor)
-router.put('/:assignmentId/replace-document', auth, uploadDocument.single('file'), asyncHandler(replaceAssignmentDocument));
+// Replace assignment document (instructor - requires approved profile)
+router.put('/:assignmentId/replace-document', auth, requireApprovedTeacher, uploadDocument.single('file'), asyncHandler(replaceAssignmentDocument));
 
-// Grading
-router.post('/submissions/:submissionId/grade', auth, asyncHandler(gradeSubmission));
+// Grading (requires approved teacher profile)
+router.post('/submissions/:submissionId/grade', auth, requireApprovedTeacher, asyncHandler(gradeSubmission));
 
-// Statistics
-router.get('/:assignmentId/stats', auth, asyncHandler(getAssignmentStats));
+// Statistics (requires approved teacher profile)
+router.get('/:assignmentId/stats', auth, requireApprovedTeacher, asyncHandler(getAssignmentStats));
 
-// Status management
-router.patch('/:assignmentId/toggle-status', auth, asyncHandler(toggleAssignmentStatus));
+// Status management (requires approved teacher profile)
+router.patch('/:assignmentId/toggle-status', auth, requireApprovedTeacher, asyncHandler(toggleAssignmentStatus));
 
 // Draft saving and submission history
 router.post('/save-draft', auth, asyncHandler(saveDraft));

@@ -6,12 +6,14 @@ export interface ITeacherProfileDocument extends Document {
   phone?: string;
   dateOfBirth?: Date;
   profilePicture?: string;
+  nationalId?: string;
   address?: {
-    street?: string;
-    city?: string;
-    state?: string;
+    province?: string;
+    district?: string;
+    sector?: string;
+    cell?: string;
+    village?: string;
     country?: string;
-    zipCode?: string;
   };
   
   // Professional Information
@@ -40,6 +42,8 @@ export interface ITeacherProfileDocument extends Document {
   teachingAreas: string[];
   preferredLevels: ('Beginner' | 'Intermediate' | 'Advanced')[];
   hourlyRate?: number;
+  paymentType?: 'per_hour' | 'per_month';
+  monthlyRate?: number;
   availability?: {
     timezone: string;
     schedule: {
@@ -51,12 +55,18 @@ export interface ITeacherProfileDocument extends Document {
   
   // Documents and Verification
   documents: {
-    type: 'resume' | 'certificate' | 'id' | 'degree' | 'other';
+    type: 'resume' | 'cv' | 'certificate' | 'id' | 'degree' | 'other';
     filename: string;
     originalName: string;
     url: string;
     uploadedAt: Date;
   }[];
+  cvDocument?: {
+    filename: string;
+    originalName: string;
+    url: string;
+    uploadedAt: Date;
+  };
   
   // Social Links
   socialLinks?: {
@@ -112,12 +122,20 @@ const teacherProfileSchema = new Schema<ITeacherProfileDocument>({
     type: String,
     trim: true
   },
+  nationalId: {
+    type: String,
+    trim: true,
+    unique: true,
+    sparse: true,
+    match: [/^\d{16}$/, 'National ID must be 16 digits']
+  },
   address: {
-    street: { type: String, trim: true },
-    city: { type: String, trim: true },
-    state: { type: String, trim: true },
-    country: { type: String, trim: true },
-    zipCode: { type: String, trim: true }
+    province: { type: String, trim: true },
+    district: { type: String, trim: true },
+    sector: { type: String, trim: true },
+    cell: { type: String, trim: true },
+    village: { type: String, trim: true },
+    country: { type: String, trim: true, default: 'Rwanda' }
   },
   
   // Professional Information
@@ -196,6 +214,15 @@ const teacherProfileSchema = new Schema<ITeacherProfileDocument>({
     type: Number,
     min: [0, 'Hourly rate cannot be negative']
   },
+  paymentType: {
+    type: String,
+    enum: ['per_hour', 'per_month'],
+    default: 'per_hour'
+  },
+  monthlyRate: {
+    type: Number,
+    min: [0, 'Monthly rate cannot be negative']
+  },
   availability: {
     timezone: {
       type: String,
@@ -215,7 +242,7 @@ const teacherProfileSchema = new Schema<ITeacherProfileDocument>({
   documents: [{
     type: {
       type: String,
-      enum: ['resume', 'certificate', 'id', 'degree', 'other'],
+      enum: ['resume', 'cv', 'certificate', 'id', 'degree', 'other'],
       required: true
     },
     filename: {
@@ -235,6 +262,21 @@ const teacherProfileSchema = new Schema<ITeacherProfileDocument>({
       default: Date.now
     }
   }],
+  cvDocument: {
+    filename: {
+      type: String
+    },
+    originalName: {
+      type: String
+    },
+    url: {
+      type: String
+    },
+    uploadedAt: {
+      type: Date,
+      default: Date.now
+    }
+  },
   
   // Social Links
   socialLinks: {

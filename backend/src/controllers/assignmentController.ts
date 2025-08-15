@@ -476,6 +476,57 @@ const triggerAIGrading = async (submission: any, assignment: any) => {
   }
 };
 
+// Trigger AI extraction for assignment document
+const triggerAIExtraction = async (assignment: any, fileBuffer: Buffer, filename: string) => {
+  try {
+    console.log('🤖 Starting AI extraction for assignment:', assignment.title);
+    
+    // Import AI document service
+    const { AIDocumentService } = await import('../services/aiDocumentService');
+    const aiDocService = new AIDocumentService();
+    
+    // Extract document content based on file type
+    const fileExtension = filename.split('.').pop()?.toLowerCase();
+    let documentContent = '';
+    
+    if (fileExtension === 'pdf') {
+      const pdfParse = await import('pdf-parse');
+      const pdfData = await pdfParse.default(fileBuffer);
+      documentContent = pdfData.text;
+    } else if (fileExtension === 'docx') {
+      const mammoth = await import('mammoth');
+      const result = await mammoth.extractRawText({ buffer: fileBuffer });
+      documentContent = result.value;
+    } else if (fileExtension === 'txt') {
+      documentContent = fileBuffer.toString('utf-8');
+    } else {
+      throw new Error(`Unsupported file type: ${fileExtension}`);
+    }
+
+    // Extract questions using AI
+    const extractedQuestions = await aiDocService.extractQuestionsFromDocument(
+      documentContent,
+      fileExtension as 'pdf' | 'docx' | 'txt'
+    );
+
+    // Update assignment with extracted questions
+    assignment.extractedQuestions = extractedQuestions;
+    assignment.aiExtractionStatus = 'completed';
+    assignment.aiExtractionError = undefined;
+    
+    await assignment.save();
+    
+    console.log('✅ AI extraction completed successfully for assignment:', assignment.title);
+  } catch (error: any) {
+    console.error('❌ AI extraction failed:', error);
+    
+    // Update assignment with error status
+    assignment.aiExtractionStatus = 'failed';
+    assignment.aiExtractionError = error.message;
+    await assignment.save();
+  }
+};
+
 // Upload assignment file (for student submissions)
 export const uploadAssignmentFile = async (req: AuthRequest, res: Response) => {
   try {
@@ -590,12 +641,18 @@ export const uploadAssignmentDocument = async (req: AuthRequest, res: Response) 
       uploadedAt: new Date()
     };
 
+    // Set AI extraction status to pending
+    assignment.aiExtractionStatus = 'pending';
+
     await assignment.save();
+
+    // Trigger AI extraction in background
+    triggerAIExtraction(assignment, req.file.buffer, req.file.originalname);
 
     res.json({
       success: true,
       data: assignment,
-      message: 'Assignment document uploaded successfully'
+      message: 'Assignment document uploaded successfully. AI extraction in progress.'
     });
   } catch (error: any) {
     console.error('Error uploading assignment document:', error);
@@ -603,6 +660,176 @@ export const uploadAssignmentDocument = async (req: AuthRequest, res: Response) 
       success: false,
       error: error.message || 'Failed to upload assignment document'
     });
+  }
+};
+
+// Get extracted questions from assignment
+export const getExtractedQuestions = async (req: AuthRequest, res: Response) => {
+  try {
+    const { assignmentId } = req.params;
+
+    const assignment = await Assignment.findById(assignmentId)
+      .populate('instructor', 'firstName lastName email');
+
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Assignment not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        extractedQuestions: assignment.extractedQuestions || [],
+        aiExtractionStatus: assignment.aiExtractionStatus,
+        aiExtractionError: assignment.aiExtractionError
+      }
+    });
+  } catch (error: any) {
+    console.error('Error fetching extracted questions:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch extracted questions'
+    });
+  }
+};
+
+// Submit assignment with extracted questions answers
+export const submitExtractedAssignment = async (req: AuthRequest, res: Response) => {
+  try {
+    const { assignmentId } = req.params;
+    const { answers, isDraft = false } = req.body;
+
+    console.log('Extracted assignment submission:', {
+      assignmentId,
+      userId: req.user?._id,
+      answersCount: answers?.length || 0,
+      isDraft
+    });
+
+    // Validate user
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    // Find assignment
+    const assignment = await Assignment.findById(assignmentId);
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Assignment not found'
+      });
+    }
+
+    // Check if assignment has extracted questions
+    if (!assignment.extractedQuestions || assignment.extractedQuestions.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Assignment does not have extracted questions'
+      });
+    }
+
+    // Check if already submitted
+    const existingSubmission = await AssignmentSubmission.findOne({
+      assignment: assignmentId,
+      student: req.user._id
+    });
+
+    if (existingSubmission && existingSubmission.status === 'submitted' && !isDraft) {
+      return res.status(400).json({
+        success: false,
+        error: 'Assignment already submitted'
+      });
+    }
+
+    // Create or update submission
+    let submission;
+    if (existingSubmission) {
+      submission = existingSubmission;
+      submission.extractedAnswers = answers;
+      submission.status = isDraft ? 'draft' : 'submitted';
+      submission.submittedAt = isDraft ? submission.submittedAt : new Date();
+    } else {
+      submission = new AssignmentSubmission({
+        assignment: assignmentId,
+        student: req.user._id,
+        extractedAnswers: answers,
+        submittedAt: isDraft ? undefined : new Date(),
+        status: isDraft ? 'draft' : 'submitted'
+      });
+    }
+
+    await submission.save();
+    await submission.populate('student', 'firstName lastName email');
+
+    // Trigger AI grading for submitted assignments with extracted questions
+    if (!isDraft && submission.status === 'submitted') {
+      try {
+        await triggerExtractedAssignmentGrading(submission, assignment);
+      } catch (aiError) {
+        console.error('AI grading failed:', aiError);
+        // Don't fail the submission if AI grading fails
+      }
+    }
+
+    res.status(isDraft ? 200 : 201).json({
+      success: true,
+      data: submission,
+      message: isDraft ? 'Assignment draft saved successfully' : 'Assignment submitted successfully'
+    });
+  } catch (error: any) {
+    console.error('Error submitting extracted assignment:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to submit assignment'
+    });
+  }
+};
+
+// Trigger AI grading for extracted assignment submission
+const triggerExtractedAssignmentGrading = async (submission: any, assignment: any) => {
+  try {
+    console.log('🤖 Starting AI grading for extracted assignment submission');
+    
+    // Import AI document service
+    const { AIDocumentService } = await import('../services/aiDocumentService');
+    const aiDocService = new AIDocumentService();
+    
+    // Grade the assignment using extracted questions and answers
+    const gradingResult = await aiDocService.gradeAssessment(
+      assignment.extractedQuestions,
+      submission.extractedAnswers
+    );
+
+    // Update submission with AI grade
+    submission.aiGrade = {
+      score: gradingResult.score,
+      feedback: gradingResult.feedback,
+      confidence: 0.8, // High confidence for extracted questions
+      gradedAt: new Date(),
+      detailedGrading: gradingResult.detailedFeedback.map((detail, index) => ({
+        questionIndex: index,
+        earnedPoints: detail.earnedPoints,
+        maxPoints: detail.points,
+        feedback: detail.feedback
+      }))
+    };
+    
+    submission.grade = gradingResult.score;
+    submission.feedback = gradingResult.feedback;
+    submission.status = 'graded';
+    submission.gradedAt = new Date();
+    
+    await submission.save();
+    
+    console.log('✅ AI grading completed for extracted assignment submission');
+  } catch (error) {
+    console.error('❌ AI grading failed for extracted assignment:', error);
+    throw error;
   }
 };
 

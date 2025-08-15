@@ -29,7 +29,7 @@ const TestPage: React.FC = () => {
             </Button>
             <Button 
               variant="outlined" 
-              onClick={() => navigate('/dashboard/teacher/profile')}
+              onClick={() => navigate('/dashboard/teacher/profile/complete')}
             >
               Go to Teacher Profile
             </Button>

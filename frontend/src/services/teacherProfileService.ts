@@ -17,7 +17,7 @@ export interface ICertification {
 }
 
 export interface IDocument {
-  type: 'resume' | 'certificate' | 'id' | 'degree' | 'other';
+  type: 'resume' | 'cv' | 'certificate' | 'id' | 'degree' | 'other';
   filename: string;
   originalName: string;
   url: string;
@@ -41,11 +41,12 @@ export interface ISocialLinks {
 }
 
 export interface IAddress {
-  street?: string;
-  city?: string;
-  state?: string;
+  province?: string;
+  district?: string;
+  sector?: string;
+  cell?: string;
+  village?: string;
   country?: string;
-  zipCode?: string;
 }
 
 export interface ITeacherProfile {
@@ -61,6 +62,7 @@ export interface ITeacherProfile {
   phone?: string;
   dateOfBirth?: string;
   profilePicture?: string;
+  nationalId?: string;
   address?: IAddress;
   
   // Professional Information
@@ -78,10 +80,18 @@ export interface ITeacherProfile {
   teachingAreas: string[];
   preferredLevels: ('Beginner' | 'Intermediate' | 'Advanced')[];
   hourlyRate?: number;
+  paymentType?: 'per_hour' | 'per_month';
+  monthlyRate?: number;
   availability?: IAvailability;
   
   // Documents
   documents: IDocument[];
+  cvDocument?: {
+    filename: string;
+    originalName: string;
+    url: string;
+    uploadedAt: string;
+  };
   
   // Social Links
   socialLinks?: ISocialLinks;
@@ -136,6 +146,7 @@ export interface IUpdateTeacherProfileData {
   phone?: string;
   dateOfBirth?: string;
   profilePicture?: string;
+  nationalId?: string;
   address?: IAddress;
   specialization?: string[];
   bio?: string;
@@ -147,6 +158,8 @@ export interface IUpdateTeacherProfileData {
   teachingAreas?: string[];
   preferredLevels?: ('Beginner' | 'Intermediate' | 'Advanced')[];
   hourlyRate?: number;
+  paymentType?: 'per_hour' | 'per_month';
+  monthlyRate?: number;
   availability?: IAvailability;
   socialLinks?: ISocialLinks;
 }
@@ -253,5 +266,73 @@ export const teacherProfileService = {
     }
     
     throw new Error(response.error || 'Failed to fetch teacher profile statistics');
+  },
+
+  // Upload CV
+  uploadCV: async (formData: FormData): Promise<{ success: boolean; data?: any; error?: string }> => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/teacher-profiles/upload-cv`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+      return data;
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Upload profile picture
+  uploadProfilePicture: async (formData: FormData): Promise<{ success: boolean; data?: any; error?: string }> => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/teacher-profiles/upload-profile-picture`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+      return data;
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Submit profile for review
+  submitProfile: async (): Promise<{ success: boolean; data?: any; error?: string }> => {
+    try {
+      const response = await apiService.post<{ profile: ITeacherProfile }>('/teacher-profiles/submit');
+      return response;
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Update profile (using the existing method but with better error handling)
+  updateProfile: async (profileData: IUpdateTeacherProfileData): Promise<{ success: boolean; data?: any; error?: string }> => {
+    try {
+      const response = await apiService.put<{ profile: ITeacherProfile }>('/teacher-profiles/my-profile', profileData);
+      return response;
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Get my profile (using the existing method but with better error handling)
+  getMyProfile: async (): Promise<{ success: boolean; data?: any; error?: string }> => {
+    try {
+      const response = await apiService.get<{ profile: ITeacherProfile }>('/teacher-profiles/my-profile');
+      return response;
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
   }
 };

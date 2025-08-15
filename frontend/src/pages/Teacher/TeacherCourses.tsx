@@ -130,7 +130,7 @@ const TeacherCourses: React.FC = () => {
       if (!profile) {
         setError('Please create your teacher profile before creating courses.');
         setTimeout(() => {
-          navigate('/dashboard/teacher/profile');
+          navigate('/dashboard/teacher/profile/complete');
         }, 3000);
         return;
       }
@@ -155,7 +155,7 @@ const TeacherCourses: React.FC = () => {
 
         if (profile.profileStatus === 'incomplete' || profile.profileStatus === 'rejected') {
           setTimeout(() => {
-            navigate('/dashboard/teacher/profile');
+            navigate('/dashboard/teacher/profile/complete');
           }, 3000);
         }
         return;

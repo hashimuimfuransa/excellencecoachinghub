@@ -124,7 +124,8 @@ const TeacherAnalytics: React.FC = () => {
 
         // Load teacher's recorded sessions
         const recordedSessionsResponse = await recordedSessionService.getTeacherRecordedSessions();
-        setRecordedSessions(recordedSessionsResponse.data);
+        const recordedSessions = recordedSessionsResponse.data?.sessions || [];
+        setRecordedSessions(recordedSessions);
 
         // Calculate analytics data
         const totalStudents = coursesResponse.courses.reduce((sum, course) => sum + (course.enrollmentCount || 0), 0);
@@ -132,9 +133,9 @@ const TeacherAnalytics: React.FC = () => {
         const averageRating = 4.5; // This would come from actual ratings
         
         // Calculate recorded sessions metrics
-        const totalRecordedSessions = recordedSessionsResponse.data.length;
-        const totalVideoViews = recordedSessionsResponse.data.reduce((sum, session) => sum + (session.views || 0), 0);
-        const totalVideoHours = recordedSessionsResponse.data.reduce((sum, session) => {
+        const totalRecordedSessions = recordedSessions.length;
+        const totalVideoViews = recordedSessions.reduce((sum, session) => sum + (session.views || 0), 0);
+        const totalVideoHours = recordedSessions.reduce((sum, session) => {
           const duration = session.duration || '00:00';
           const [minutes, seconds] = duration.split(':').map(Number);
           return sum + (minutes + seconds / 60) / 60;
@@ -170,7 +171,7 @@ const TeacherAnalytics: React.FC = () => {
             metric: course.enrollmentCount || 0,
             metricType: 'enrollments'
           })),
-          recordedSessionsStats: recordedSessionsResponse.data.map(session => ({
+          recordedSessionsStats: recordedSessions.map(session => ({
             sessionId: session._id,
             title: session.title,
             courseName: session.course?.title || 'Unknown Course',

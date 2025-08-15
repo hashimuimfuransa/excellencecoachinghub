@@ -8,11 +8,16 @@ import {
   getProfileById,
   approveProfile,
   rejectProfile,
-  getProfileStats
+  getProfileStats,
+  uploadCV,
+  uploadProfilePicture,
+  submitProfile,
+  downloadDocument
 } from '../controllers/teacherProfileController';
 import { protect } from '../middleware/auth';
 import { authorizeRoles, requireAdmin } from '../middleware/roleAuth';
 import { validateRequest } from '../middleware/validateRequest';
+import { uploadDocument } from '../config/cloudinary';
 import { UserRole } from '../../../shared/types';
 
 const router = Router();
@@ -109,31 +114,51 @@ const updateProfileValidation = [
     .withMessage('Hourly rate must be a number')
     .isFloat({ min: 0 })
     .withMessage('Hourly rate cannot be negative'),
-  body('address.street')
+  body('nationalId')
     .optional()
     .trim()
-    .isLength({ max: 200 })
-    .withMessage('Street address cannot exceed 200 characters'),
-  body('address.city')
+    .matches(/^\d{16}$/)
+    .withMessage('National ID must be 16 digits'),
+  body('paymentType')
+    .optional()
+    .isIn(['per_hour', 'per_month'])
+    .withMessage('Payment type must be per_hour or per_month'),
+  body('monthlyRate')
+    .optional()
+    .isNumeric()
+    .withMessage('Monthly rate must be a number')
+    .isFloat({ min: 0 })
+    .withMessage('Monthly rate cannot be negative'),
+  body('address.province')
     .optional()
     .trim()
     .isLength({ max: 100 })
-    .withMessage('City cannot exceed 100 characters'),
-  body('address.state')
+    .withMessage('Province cannot exceed 100 characters'),
+  body('address.district')
     .optional()
     .trim()
     .isLength({ max: 100 })
-    .withMessage('State cannot exceed 100 characters'),
+    .withMessage('District cannot exceed 100 characters'),
+  body('address.sector')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Sector cannot exceed 100 characters'),
+  body('address.cell')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Cell cannot exceed 100 characters'),
+  body('address.village')
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Village cannot exceed 100 characters'),
   body('address.country')
     .optional()
     .trim()
     .isLength({ max: 100 })
     .withMessage('Country cannot exceed 100 characters'),
-  body('address.zipCode')
-    .optional()
-    .trim()
-    .isLength({ max: 20 })
-    .withMessage('ZIP code cannot exceed 20 characters'),
   body('socialLinks.linkedin')
     .optional({ checkFalsy: true })
     .custom((value) => {
@@ -189,12 +214,16 @@ const rejectProfileValidation = [
 // Teacher routes (for teachers to manage their own profile)
 router.get('/my-profile', authorizeRoles([UserRole.TEACHER]), getMyProfile);
 router.put('/my-profile', authorizeRoles([UserRole.TEACHER]), updateProfileValidation, validateRequest, updateProfile);
+router.post('/upload-cv', authorizeRoles([UserRole.TEACHER]), uploadDocument.single('cv'), uploadCV);
+router.post('/upload-profile-picture', authorizeRoles([UserRole.TEACHER]), uploadDocument.single('profilePicture'), uploadProfilePicture);
+router.post('/submit', authorizeRoles([UserRole.TEACHER]), submitProfile);
 router.post('/submit-for-approval', authorizeRoles([UserRole.TEACHER]), submitForApproval);
 
 // Admin routes (for admins to manage all teacher profiles)
 router.get('/', requireAdmin, getAllProfiles);
 router.get('/stats', requireAdmin, getProfileStats);
 router.get('/:id', requireAdmin, getProfileById);
+router.get('/:profileId/download/:documentType', requireAdmin, downloadDocument);
 router.put('/:id/approve', requireAdmin, approveProfileValidation, validateRequest, approveProfile);
 router.put('/:id/reject', requireAdmin, rejectProfileValidation, validateRequest, rejectProfile);
 

@@ -81,6 +81,13 @@ interface AssignmentData {
   };
 }
 
+interface ExtractedQuestion {
+  id: string;
+  question: string;
+  type: 'text' | 'essay' | 'code' | 'math';
+  points?: number;
+}
+
 interface AssignmentSection {
   id: string;
   title: string;
@@ -129,15 +136,150 @@ const EnhancedWorkOnAssignment: React.FC = () => {
   const [isDirty, setIsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [extractedQuestions, setExtractedQuestions] = useState<ExtractedQuestion[]>([]);
   
   // Timer state
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [showTimeWarning, setShowTimeWarning] = useState(false);
   const [autoSubmitDialog, setAutoSubmitDialog] = useState(false);
 
-  // Default sections based on assignment type
-  const getDefaultSections = useCallback((assignmentTitle: string, instructions: string): AssignmentSection[] => {
-    // Parse instructions to identify sections or create default ones
+  // Extract questions from assignment instructions
+  const extractQuestionsFromInstructions = useCallback((instructions: string, description: string): ExtractedQuestion[] => {
+    const questions: ExtractedQuestion[] = [];
+    const combinedText = `${instructions} ${description}`;
+    
+    // Common question patterns - improved to handle more cases
+    const questionPatterns = [
+      // Numbered questions: 1. 2. 3. etc.
+      /(?:^|\n)\s*(\d+)[\.\)]\s*(.+?)(?=\n\s*\d+[\.\)]|\n\s*[A-Z][\.\)]|\n\s*$|$)/gms,
+      // Lettered questions: A. B. C. etc.
+      /(?:^|\n)\s*([A-Z])[\.\)]\s*(.+?)(?=\n\s*[A-Z][\.\)]|\n\s*\d+[\.\)]|\n\s*$|$)/gms,
+      // Question keywords
+      /(?:^|\n)\s*(?:Question\s*(\d*):?\s*|Q(\d*):?\s*)(.+?)(?=\n\s*(?:Question\s*\d*:?\s*|Q\d*:?\s*)|\n\s*$|$)/gims,
+      // Task/Part keywords
+      /(?:^|\n)\s*(?:Task\s*(\d*):?\s*|Part\s*(\d*):?\s*)(.+?)(?=\n\s*(?:Task\s*\d*:?\s*|Part\s*\d*:?\s*)|\n\s*$|$)/gims,
+      // Problem keywords
+      /(?:^|\n)\s*(?:Problem\s*(\d*):?\s*)(.+?)(?=\n\s*(?:Problem\s*\d*:?\s*)|\n\s*$|$)/gims,
+      // Exercise keywords
+      /(?:^|\n)\s*(?:Exercise\s*(\d*):?\s*)(.+?)(?=\n\s*(?:Exercise\s*\d*:?\s*)|\n\s*$|$)/gims
+    ];
+
+    let questionId = 1;
+    const foundQuestions = new Set(); // To avoid duplicates
+    
+    questionPatterns.forEach(pattern => {
+      let match;
+      while ((match = pattern.exec(combinedText)) !== null) {
+        // Get the question text from the appropriate capture group
+        const questionText = match[3] || match[2] || match[1];
+        if (questionText && questionText.trim().length > 10) {
+          const cleanQuestion = questionText.trim().replace(/\s+/g, ' ');
+          
+          // Skip if we already found this question
+          if (foundQuestions.has(cleanQuestion.toLowerCase())) {
+            continue;
+          }
+          foundQuestions.add(cleanQuestion.toLowerCase());
+          
+          // Determine question type based on content
+          let type: 'text' | 'essay' | 'code' | 'math' = 'text';
+          const lowerQuestion = cleanQuestion.toLowerCase();
+          
+          if (lowerQuestion.includes('code') || 
+              lowerQuestion.includes('program') ||
+              lowerQuestion.includes('algorithm') ||
+              lowerQuestion.includes('function') ||
+              lowerQuestion.includes('implement') ||
+              lowerQuestion.includes('write a') && (lowerQuestion.includes('script') || lowerQuestion.includes('method'))) {
+            type = 'code';
+          } else if (lowerQuestion.includes('essay') ||
+                    lowerQuestion.includes('explain') ||
+                    lowerQuestion.includes('discuss') ||
+                    lowerQuestion.includes('analyze') ||
+                    lowerQuestion.includes('describe') ||
+                    lowerQuestion.includes('compare') ||
+                    lowerQuestion.includes('evaluate') ||
+                    cleanQuestion.length > 150) {
+            type = 'essay';
+          } else if (lowerQuestion.includes('calculate') ||
+                    lowerQuestion.includes('solve') ||
+                    lowerQuestion.includes('equation') ||
+                    lowerQuestion.includes('formula') ||
+                    lowerQuestion.includes('compute') ||
+                    lowerQuestion.includes('find the value') ||
+                    /\d+\s*[\+\-\*\/]\s*\d+/.test(cleanQuestion)) {
+            type = 'math';
+          }
+
+          // Extract points if mentioned
+          const pointsMatch = cleanQuestion.match(/\((\d+)\s*(?:points?|pts?|marks?)\)/i);
+          const points = pointsMatch ? parseInt(pointsMatch[1]) : undefined;
+
+          questions.push({
+            id: `question-${questionId}`,
+            question: cleanQuestion.replace(/\(\d+\s*(?:points?|pts?|marks?)\)/i, '').trim(),
+            type,
+            points
+          });
+          
+          questionId++;
+        }
+      }
+    });
+
+    // If no structured questions found, look for question marks and imperative sentences
+    if (questions.length === 0) {
+      const sentences = combinedText.split(/[.!?]+/);
+      sentences.forEach((sentence, index) => {
+        const trimmed = sentence.trim();
+        if ((trimmed.includes('?') || 
+             trimmed.toLowerCase().startsWith('write') ||
+             trimmed.toLowerCase().startsWith('create') ||
+             trimmed.toLowerCase().startsWith('implement') ||
+             trimmed.toLowerCase().startsWith('solve') ||
+             trimmed.toLowerCase().startsWith('explain') ||
+             trimmed.toLowerCase().startsWith('describe')) && 
+            trimmed.length > 20) {
+          
+          let type: 'text' | 'essay' | 'code' | 'math' = 'text';
+          const lowerSentence = trimmed.toLowerCase();
+          
+          if (lowerSentence.includes('code') || lowerSentence.includes('program')) {
+            type = 'code';
+          } else if (lowerSentence.includes('explain') || lowerSentence.includes('describe')) {
+            type = 'essay';
+          } else if (lowerSentence.includes('calculate') || lowerSentence.includes('solve')) {
+            type = 'math';
+          }
+          
+          questions.push({
+            id: `question-${index + 1}`,
+            question: trimmed + (trimmed.includes('?') ? '' : '?'),
+            type
+          });
+        }
+      });
+    }
+
+    return questions.slice(0, 10); // Limit to 10 questions max
+  }, []);
+
+  // Default sections based on assignment type and extracted questions
+  const getDefaultSections = useCallback((assignmentTitle: string, instructions: string, questions: ExtractedQuestion[]): AssignmentSection[] => {
+    // If we have extracted questions, create sections based on them
+    if (questions.length > 0) {
+      const questionSections: AssignmentSection[] = questions.map((question, index) => ({
+        id: `question-${index + 1}`,
+        title: `Question ${index + 1}`,
+        content: '',
+        type: question.type,
+        completed: false
+      }));
+
+      return questionSections;
+    }
+
+    // Fallback to default sections if no questions extracted
     const defaultSections: AssignmentSection[] = [
       {
         id: 'introduction',
@@ -200,6 +342,10 @@ const EnhancedWorkOnAssignment: React.FC = () => {
         const assignmentData = await assignmentService.getAssignmentById(assignmentId);
         setAssignment(assignmentData);
 
+        // Extract questions from assignment
+        const questions = extractQuestionsFromInstructions(assignmentData.instructions, assignmentData.description);
+        setExtractedQuestions(questions);
+
         // Load existing submission
         const existingSubmission = await assignmentService.getSubmissionByAssignment(assignmentId);
         
@@ -211,11 +357,11 @@ const EnhancedWorkOnAssignment: React.FC = () => {
             setSections(existingSubmission.sections);
           } else {
             // Create default sections
-            setSections(getDefaultSections(assignmentData.title, assignmentData.instructions));
+            setSections(getDefaultSections(assignmentData.title, assignmentData.instructions, questions));
           }
         } else {
           // Create default sections for new submission
-          setSections(getDefaultSections(assignmentData.title, assignmentData.instructions));
+          setSections(getDefaultSections(assignmentData.title, assignmentData.instructions, questions));
         }
 
         // Calculate time remaining
@@ -233,7 +379,7 @@ const EnhancedWorkOnAssignment: React.FC = () => {
     };
 
     loadAssignment();
-  }, [assignmentId, getDefaultSections]);
+  }, [assignmentId, getDefaultSections, extractQuestionsFromInstructions]);
 
   // Timer countdown
   useEffect(() => {
@@ -546,48 +692,121 @@ const EnhancedWorkOnAssignment: React.FC = () => {
         <Grid container spacing={3}>
           {/* Instructions Panel */}
           <Grid item xs={12} md={4}>
-            <Card sx={{ position: 'sticky', top: 100 }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Info sx={{ mr: 1 }} />
-                  Instructions
-                </Typography>
-                <Divider sx={{ mb: 2 }} />
-                
-                <Typography variant="body2" color="text.secondary" paragraph>
-                  <strong>Max Points:</strong> {assignment.maxPoints}
-                </Typography>
-                
-                <Typography variant="body2" paragraph>
-                  {assignment.instructions}
-                </Typography>
-                
-                <Divider sx={{ my: 2 }} />
-                
-                <Typography variant="subtitle2" gutterBottom>
-                  Section Progress
-                </Typography>
-                {sections.map((section) => (
-                  <Box key={section.id} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    {section.completed ? (
-                      <CheckCircle color="success" sx={{ fontSize: 16, mr: 1 }} />
-                    ) : (
-                      <Warning color="warning" sx={{ fontSize: 16, mr: 1 }} />
-                    )}
-                    <Typography variant="body2" color={section.completed ? 'success.main' : 'text.secondary'}>
-                      {section.title}
+            <Stack spacing={2}>
+              {/* Instructions Card */}
+              <Card sx={{ position: 'sticky', top: 100 }}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Info sx={{ mr: 1 }} />
+                    Instructions
+                  </Typography>
+                  <Divider sx={{ mb: 2 }} />
+                  
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    <strong>Max Points:</strong> {assignment.maxPoints}
+                  </Typography>
+                  
+                  <Typography variant="body2" paragraph>
+                    {assignment.instructions}
+                  </Typography>
+                  
+                  <Divider sx={{ my: 2 }} />
+                  
+                  <Typography variant="subtitle2" gutterBottom>
+                    Section Progress
+                  </Typography>
+                  {sections.map((section) => (
+                    <Box key={section.id} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      {section.completed ? (
+                        <CheckCircle color="success" sx={{ fontSize: 16, mr: 1 }} />
+                      ) : (
+                        <Warning color="warning" sx={{ fontSize: 16, mr: 1 }} />
+                      )}
+                      <Typography variant="body2" color={section.completed ? 'success.main' : 'text.secondary'}>
+                        {section.title}
+                      </Typography>
+                    </Box>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Extracted Questions Card */}
+              {extractedQuestions.length > 0 && (
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Help sx={{ mr: 1 }} />
+                      Assignment Questions
                     </Typography>
-                  </Box>
-                ))}
-              </CardContent>
-            </Card>
+                    <Divider sx={{ mb: 2 }} />
+                    
+                    <Typography variant="body2" color="text.secondary" paragraph>
+                      Make sure to address all these questions in your submission:
+                    </Typography>
+                    
+                    {extractedQuestions.map((question, index) => (
+                      <Paper 
+                        key={question.id} 
+                        elevation={0} 
+                        sx={{ 
+                          p: 2, 
+                          mb: 2, 
+                          border: '1px solid', 
+                          borderColor: 'divider',
+                          borderLeft: '4px solid',
+                          borderLeftColor: question.type === 'code' ? 'info.main' : 
+                                          question.type === 'math' ? 'warning.main' :
+                                          question.type === 'essay' ? 'success.main' : 'primary.main'
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', mr: 1 }}>
+                            Q{index + 1}.
+                          </Typography>
+                          <Box sx={{ flexGrow: 1 }}>
+                            <Typography variant="body2" paragraph>
+                              {question.question}
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Chip 
+                                label={question.type} 
+                                size="small" 
+                                variant="outlined"
+                                color={question.type === 'code' ? 'info' : 
+                                      question.type === 'math' ? 'warning' :
+                                      question.type === 'essay' ? 'success' : 'primary'}
+                              />
+                              {question.points && (
+                                <Chip 
+                                  label={`${question.points} pts`} 
+                                  size="small" 
+                                  variant="filled"
+                                  color="secondary"
+                                />
+                              )}
+                            </Box>
+                          </Box>
+                        </Box>
+                      </Paper>
+                    ))}
+                    
+                    <Alert severity="info" sx={{ mt: 2 }}>
+                      <Typography variant="body2">
+                        <strong>Tip:</strong> Structure your response to clearly address each question. 
+                        Use the sections below to organize your answers.
+                      </Typography>
+                    </Alert>
+                  </CardContent>
+                </Card>
+              )}
+            </Stack>
           </Grid>
 
           {/* Work Area */}
           <Grid item xs={12} md={8}>
             <Stack spacing={3}>
-              {/* General Submission Text */}
-              {assignment.submissionType !== 'file' && (
+              {/* General Submission Text - Only show if no questions extracted */}
+              {assignment.submissionType !== 'file' && extractedQuestions.length === 0 && (
                 <Card>
                   <CardContent>
                     <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
@@ -604,27 +823,62 @@ const EnhancedWorkOnAssignment: React.FC = () => {
               )}
 
               {/* Sections */}
-              {sections.map((section, index) => (
-                <Accordion key={section.id} defaultExpanded>
-                  <AccordionSummary expandIcon={<ExpandMore />}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                      {getSectionIcon(section.type)}
-                      <Typography variant="h6" sx={{ ml: 1, flexGrow: 1 }}>
-                        {section.title}
-                      </Typography>
-                      {section.completed && (
-                        <CheckCircle color="success" sx={{ mr: 1 }} />
+              {sections.map((section, index) => {
+                // For question sections, find the corresponding question
+                let correspondingQuestion = null;
+                if (section.id.startsWith('question-')) {
+                  const questionIndex = parseInt(section.id.split('-')[1]) - 1;
+                  correspondingQuestion = extractedQuestions[questionIndex];
+                }
+                return (
+                  <Accordion key={section.id} defaultExpanded>
+                    <AccordionSummary expandIcon={<ExpandMore />}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                        {getSectionIcon(section.type)}
+                        <Typography variant="h6" sx={{ ml: 1, flexGrow: 1 }}>
+                          {correspondingQuestion ? 
+                            `${section.title}: ${correspondingQuestion.question.substring(0, 60)}${correspondingQuestion.question.length > 60 ? '...' : ''}` : 
+                            section.title
+                          }
+                        </Typography>
+                        {section.completed && (
+                          <CheckCircle color="success" sx={{ mr: 1 }} />
+                        )}
+                        <Chip 
+                          label={correspondingQuestion ? `${section.type} - ${correspondingQuestion.points || 'N/A'} pts` : section.type} 
+                          size="small" 
+                          variant="outlined"
+                          color="primary"
+                        />
+                      </Box>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      {/* Show corresponding question if available */}
+                      {correspondingQuestion && (
+                        <Card sx={{ mb: 3, bgcolor: 'primary.light', border: '2px solid', borderColor: 'primary.main' }}>
+                          <CardContent>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2, color: 'primary.dark' }}>
+                              📝 Question:
+                            </Typography>
+                            <Typography variant="body1" sx={{ mb: 2, fontSize: '1.1rem', lineHeight: 1.6 }}>
+                              {correspondingQuestion.question}
+                            </Typography>
+                            {correspondingQuestion.points && (
+                              <Chip 
+                                label={`${correspondingQuestion.points} Points`} 
+                                color="primary" 
+                                size="small"
+                                sx={{ fontWeight: 'bold' }}
+                              />
+                            )}
+                            <Typography variant="body2" sx={{ mt: 2, fontStyle: 'italic', color: 'text.secondary' }}>
+                              💡 Provide your answer in the text area below
+                            </Typography>
+                          </CardContent>
+                        </Card>
                       )}
-                      <Chip 
-                        label={section.type} 
-                        size="small" 
-                        variant="outlined"
-                        color="primary"
-                      />
-                    </Box>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    {section.type === 'code' ? (
+                      
+                      {section.type === 'code' ? (
                       <TextField
                         fullWidth
                         multiline
@@ -662,7 +916,8 @@ const EnhancedWorkOnAssignment: React.FC = () => {
                     </Box>
                   </AccordionDetails>
                 </Accordion>
-              ))}
+                );
+              })}
 
               {/* Submit Button */}
               <Paper sx={{ p: 3, textAlign: 'center' }}>

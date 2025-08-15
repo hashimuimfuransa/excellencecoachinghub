@@ -364,15 +364,28 @@ const FeaturesSection: React.FC = () => {
 // Featured Courses Section Component
 const FeaturedCoursesSection: React.FC = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuth();
 
-  // Fetch real courses from backend
+  // Fetch courses based on authentication status
   const { data: coursesData, isLoading, error } = useQuery(
-    'featuredCourses',
-    () => courseService.getPublicCourses({ 
-      limit: 6, 
-      sortBy: 'enrollmentCount', 
-      sortOrder: 'desc' 
-    }),
+    ['featuredCourses', isAuthenticated, user?.role],
+    () => {
+      if (isAuthenticated && user?.role === 'student') {
+        // Show enrolled courses for authenticated students
+        return courseService.getEnrolledCourses({ 
+          limit: 6, 
+          sortBy: 'enrollmentDate', 
+          sortOrder: 'desc' 
+        });
+      } else {
+        // Show public courses for non-authenticated users or non-students
+        return courseService.getPublicCourses({ 
+          limit: 6, 
+          sortBy: 'enrollmentCount', 
+          sortOrder: 'desc' 
+        });
+      }
+    },
     {
       staleTime: 5 * 60 * 1000, // 5 minutes
       cacheTime: 10 * 60 * 1000, // 10 minutes
@@ -392,13 +405,16 @@ const FeaturedCoursesSection: React.FC = () => {
               gutterBottom
               sx={{ fontWeight: 700, color: 'text.primary' }}
             >
-              Featured Courses
+              {isAuthenticated && user?.role === 'student' ? 'My Enrolled Courses' : 'Featured Courses'}
             </Typography>
             <Typography
               variant="h6"
               sx={{ color: 'text.secondary', maxWidth: 600, mx: 'auto', mb: 4 }}
             >
-              Discover our most popular courses taught by industry experts
+              {isAuthenticated && user?.role === 'student' 
+                ? 'Continue your learning journey with your enrolled courses'
+                : 'Discover our most popular courses taught by industry experts'
+              }
             </Typography>
             <Button
               variant="outlined"
@@ -546,12 +562,23 @@ const FeaturedCoursesSection: React.FC = () => {
                       </Box>
 
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Typography
-                          variant="h6"
-                          sx={{ fontWeight: 700, color: 'primary.main' }}
-                        >
-                          ${course.price}
-                        </Typography>
+                        <Box>
+                          {course.notesPrice > 0 || course.liveSessionPrice > 0 ? (
+                            <Typography
+                              variant="h6"
+                              sx={{ fontWeight: 700, color: 'primary.main' }}
+                            >
+                              From ${Math.min(course.notesPrice || 0, course.liveSessionPrice || 0)}
+                            </Typography>
+                          ) : (
+                            <Typography
+                              variant="h6"
+                              sx={{ fontWeight: 700, color: 'success.main' }}
+                            >
+                              FREE
+                            </Typography>
+                          )}
+                        </Box>
                         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                           {course.duration}h
                         </Typography>

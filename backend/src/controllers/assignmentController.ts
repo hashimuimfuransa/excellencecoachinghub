@@ -3,6 +3,9 @@ import { Assignment, AssignmentSubmission, IAssignment, IAssignmentSubmission } 
 import { Course } from '../models/Course';
 import { User } from '../models/User';
 import { uploadDocumentToCloudinary, deleteDocumentFromCloudinary } from '../config/cloudinary';
+import { aiService } from '../services/aiService';
+import { uploadFile } from '../utils/fileUpload';
+import DocumentParser from '../utils/documentParser';
 import mongoose from 'mongoose';
 
 interface AuthRequest extends Request {
@@ -1283,6 +1286,531 @@ export const updateAIGrade = async (req: AuthRequest, res: Response) => {
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to update AI grade'
+    });
+  }
+};
+
+// AI Question Extraction Methods (like assessments)
+
+// Extract questions from document and add to assignment
+export const extractQuestionsFromDocument = async (req: AuthRequest, res: Response) => {
+  try {
+    const { assignmentId } = req.params;
+    const teacherId = req.user?._id;
+
+    const assignment = await Assignment.findOne({ _id: assignmentId, instructor: teacherId });
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Assignment not found or you do not have permission to modify it'
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No document file provided'
+      });
+    }
+
+    try {
+      // Step 1: Fast parallel document processing (upload + parse simultaneously)
+      console.log(`🚀 Fast processing document for assignment: ${assignmentId}`);
+      const { fastDocumentProcessor } = await import('../services/fastDocumentProcessor');
+      
+      const processingResult = await fastDocumentProcessor.processDocument(
+        req.file.buffer,
+        req.file.mimetype,
+        req.file.originalname,
+        'assignments'
+      );
+
+      if (!processingResult.isValid) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid document',
+          details: processingResult.errors
+        });
+      }
+
+      console.log(`⚡ Document processed in ${processingResult.processingTime}ms`);
+
+      // Step 2: Save assignment with document immediately (fast)
+      assignment.assignmentDocument = {
+        filename: req.file.filename || `assignment_${Date.now()}`,
+        originalName: req.file.originalname,
+        fileUrl: processingResult.documentUrl,
+        fileSize: req.file.size,
+        uploadedAt: new Date()
+      };
+
+      // Mark AI processing as pending
+      assignment.aiProcessingStatus = 'pending';
+      assignment.documentText = processingResult.documentText; // Store for background processing
+      
+      await assignment.save();
+      console.log(`✅ Assignment document uploaded successfully: ${assignmentId}`);
+
+      // Step 3: Return immediate success response (FAST!)
+      res.status(200).json({
+        success: true,
+        data: { 
+          assignment: {
+            ...assignment.toObject(),
+            documentText: undefined // Don't send full text in response
+          },
+          extractedQuestions: 0,
+          documentProcessed: true,
+          aiProcessingStatus: 'pending',
+          processingTime: processingResult.processingTime
+        },
+        message: 'Assignment uploaded successfully! AI question extraction is processing in the background.',
+        info: 'Questions will be automatically extracted and added to your assignment. You can refresh the page in a few moments to see the results.',
+        performance: {
+          uploadTime: `${processingResult.processingTime}ms`,
+          status: 'optimized'
+        }
+      });
+
+      // Step 5: Process AI extraction in background (ASYNC - doesn't block response)
+      setImmediate(async () => {
+        try {
+          console.log(`🤖 Background: Starting AI question extraction for assignment: ${assignmentId}`);
+          
+          const cleanedText = assignment.documentText;
+          if (!cleanedText) {
+            console.error('No document text available for AI processing');
+            return;
+          }
+
+          // Use the retry service for AI processing
+          const extractedQuestions = await aiService.extractQuestionsFromDocument(cleanedText, 'assignment');
+
+          if (extractedQuestions && extractedQuestions.length > 0) {
+            // Add unique IDs to extracted questions
+            const questionsWithIds = extractedQuestions.map((q, index) => ({
+              ...q,
+              id: `extracted_${Date.now()}_${index}`
+            }));
+
+            // Update assignment with questions
+            const updatedAssignment = await Assignment.findById(assignmentId);
+            if (updatedAssignment) {
+              updatedAssignment.questions = [...(updatedAssignment.questions || []), ...questionsWithIds];
+              updatedAssignment.hasQuestions = true;
+              updatedAssignment.extractedQuestions = questionsWithIds;
+              updatedAssignment.aiProcessingStatus = 'completed';
+              updatedAssignment.documentText = undefined; // Clear stored text
+              
+              await updatedAssignment.save();
+              console.log(`✅ Background: ${questionsWithIds.length} questions extracted for assignment: ${assignmentId}`);
+            }
+          } else {
+            // No questions found
+            const updatedAssignment = await Assignment.findById(assignmentId);
+            if (updatedAssignment) {
+              updatedAssignment.aiProcessingStatus = 'no_questions_found';
+              updatedAssignment.documentText = undefined; // Clear stored text
+              await updatedAssignment.save();
+              console.log(`ℹ️ Background: No questions found in document for assignment: ${assignmentId}`);
+            }
+          }
+        } catch (aiError: any) {
+          console.error(`❌ Background: AI processing failed for assignment ${assignmentId}:`, aiError);
+          
+          // Update assignment status to failed
+          try {
+            const updatedAssignment = await Assignment.findById(assignmentId);
+            if (updatedAssignment) {
+              updatedAssignment.aiProcessingStatus = 'failed';
+              updatedAssignment.aiProcessingError = aiError.message;
+              updatedAssignment.documentText = undefined; // Clear stored text
+              await updatedAssignment.save();
+            }
+          } catch (updateError) {
+            console.error('Failed to update assignment status:', updateError);
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('Document processing error:', error);
+      res.status(400).json({
+        success: false,
+        error: 'Failed to process uploaded document',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  } catch (error: any) {
+    console.error('Error extracting questions from document:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to extract questions from document'
+    });
+  }
+};
+
+// Replace questions from document (removes old extracted questions)
+export const replaceQuestionsFromDocument = async (req: AuthRequest, res: Response) => {
+  try {
+    const { assignmentId } = req.params;
+    const teacherId = req.user?._id;
+
+    const assignment = await Assignment.findOne({ _id: assignmentId, instructor: teacherId });
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Assignment not found or you do not have permission to modify it'
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No document file provided'
+      });
+    }
+
+    try {
+      // Upload document to cloud storage
+      const uploadResult = await uploadFile(req.file, 'assignments');
+      const documentUrl = uploadResult.url;
+
+      // Parse document content
+      const parseResult = await DocumentParser.parseDocument(
+        req.file.buffer,
+        req.file.mimetype,
+        req.file.originalname
+      );
+
+      // Validate document
+      const validation = DocumentParser.validateDocument(parseResult);
+      if (!validation.isValid) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid document',
+          details: validation.errors
+        });
+      }
+
+      // Extract questions using AI
+      const cleanedText = DocumentParser.cleanText(parseResult.text);
+      const extractedQuestions = await aiService.extractQuestionsFromDocument(cleanedText, 'assignment');
+
+      // Add unique IDs to extracted questions
+      const questionsWithIds = extractedQuestions.map((q, index) => ({
+        ...q,
+        id: `extracted_${Date.now()}_${index}`
+      }));
+
+      // Remove old extracted questions and add new ones
+      const manualQuestions = (assignment.questions || []).filter(q => !q.id.startsWith('extracted_'));
+      assignment.questions = [...manualQuestions, ...questionsWithIds];
+      assignment.hasQuestions = true;
+      assignment.extractedQuestions = questionsWithIds;
+      assignment.assignmentDocument = {
+        filename: req.file.filename || `assignment_${Date.now()}`,
+        originalName: req.file.originalname,
+        fileUrl: documentUrl,
+        fileSize: req.file.size,
+        uploadedAt: new Date()
+      };
+
+      await assignment.save();
+
+      res.status(200).json({
+        success: true,
+        data: { 
+          assignment,
+          extractedQuestions: questionsWithIds.length,
+          documentProcessed: true
+        },
+        message: `Questions replaced successfully! ${questionsWithIds.length} questions extracted from new document.`
+      });
+
+    } catch (error) {
+      console.error('Document processing error:', error);
+      res.status(400).json({
+        success: false,
+        error: 'Failed to process uploaded document',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  } catch (error: any) {
+    console.error('Error replacing questions from document:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to replace questions from document'
+    });
+  }
+};
+
+// Get assignment submissions for grading (like assessments)
+export const getAssignmentSubmissionsForGrading = async (req: AuthRequest, res: Response) => {
+  try {
+    const { assignmentId } = req.params;
+    const teacherId = req.user?._id;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    const assignment = await Assignment.findOne({ _id: assignmentId, instructor: teacherId });
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Assignment not found or you do not have permission to view submissions'
+      });
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [submissions, total] = await Promise.all([
+      AssignmentSubmission.find({ assignment: assignmentId, status: { $ne: 'draft' } })
+        .populate('student', 'firstName lastName email')
+        .sort({ submittedAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      AssignmentSubmission.countDocuments({ assignment: assignmentId, status: { $ne: 'draft' } })
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        submissions,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+          itemsPerPage: limit
+        }
+      }
+    });
+  } catch (error: any) {
+    console.error('Error fetching assignment submissions:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch submissions'
+    });
+  }
+};
+
+// Grade assignment submission manually (like assessments)
+export const gradeAssignmentSubmission = async (req: AuthRequest, res: Response) => {
+  try {
+    const { submissionId } = req.params;
+    const teacherId = req.user?._id;
+    const { answers, feedback, score, percentage } = req.body;
+
+    const submission = await AssignmentSubmission.findById(submissionId)
+      .populate('assignment');
+
+    if (!submission) {
+      return res.status(404).json({
+        success: false,
+        error: 'Submission not found'
+      });
+    }
+
+    // Verify teacher owns the assignment
+    const assignment = submission.assignment as IAssignment;
+    if (assignment.instructor.toString() !== teacherId) {
+      return res.status(403).json({
+        success: false,
+        error: 'You do not have permission to grade this submission'
+      });
+    }
+
+    // Update answers with grading information if provided
+    if (answers && submission.sections) {
+      submission.sections = submission.sections.map(section => {
+        const gradedAnswer = answers.find((a: any) => a.questionId === section.id);
+        if (gradedAnswer) {
+          return {
+            ...section,
+            feedback: gradedAnswer.feedback,
+            score: gradedAnswer.score,
+            completed: true
+          };
+        }
+        return section;
+      });
+    }
+
+    // Set overall feedback and score
+    if (feedback) submission.feedback = feedback;
+    if (score !== undefined) submission.grade = score;
+    
+    // Calculate percentage if not provided
+    if (percentage !== undefined) {
+      submission.grade = (percentage / 100) * assignment.maxPoints;
+    }
+
+    submission.status = 'graded';
+    submission.gradedAt = new Date();
+    submission.gradedBy = teacherId;
+
+    await submission.save();
+
+    res.status(200).json({
+      success: true,
+      data: { submission },
+      message: 'Submission graded successfully'
+    });
+  } catch (error: any) {
+    console.error('Error grading assignment submission:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to grade submission'
+    });
+  }
+};
+
+// Get submission details for grading
+export const getSubmissionDetails = async (req: AuthRequest, res: Response) => {
+  try {
+    const { submissionId } = req.params;
+    const userId = req.user?._id;
+    const userRole = req.user?.role;
+
+    const submission = await AssignmentSubmission.findById(submissionId)
+      .populate('assignment')
+      .populate('student', 'firstName lastName email');
+
+    if (!submission) {
+      return res.status(404).json({
+        success: false,
+        error: 'Submission not found'
+      });
+    }
+
+    // Check permissions
+    const assignment = submission.assignment as IAssignment;
+    const isTeacher = userRole === 'teacher' && assignment.instructor.toString() === userId;
+    const isStudent = userRole === 'student' && submission.student._id.toString() === userId;
+
+    if (!isTeacher && !isStudent) {
+      return res.status(403).json({
+        success: false,
+        error: 'You do not have permission to view this submission'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { submission }
+    });
+  } catch (error: any) {
+    console.error('Error fetching submission details:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch submission details'
+    });
+  }
+};
+
+// Check AI processing status for an assignment
+export const checkAIProcessingStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const { assignmentId } = req.params;
+    const teacherId = req.user?._id;
+
+    const assignment = await Assignment.findOne({ _id: assignmentId, instructor: teacherId });
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Assignment not found or you do not have permission to view it'
+      });
+    }
+
+    const status = assignment.aiProcessingStatus || 'not_started';
+    const questionsCount = assignment.questions?.length || 0;
+    const extractedQuestionsCount = assignment.extractedQuestions?.length || 0;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        assignmentId,
+        aiProcessingStatus: status,
+        questionsCount,
+        extractedQuestionsCount,
+        hasQuestions: assignment.hasQuestions || false,
+        processingError: assignment.aiProcessingError || null,
+        lastUpdated: assignment.updatedAt
+      }
+    });
+  } catch (error: any) {
+    console.error('Error checking AI processing status:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to check AI processing status'
+    });
+  }
+};
+
+// Retry question extraction for an assignment
+export const retryQuestionExtraction = async (req: AuthRequest, res: Response) => {
+  try {
+    const { assignmentId } = req.params;
+    const teacherId = req.user?._id;
+
+    const assignment = await Assignment.findOne({ _id: assignmentId, instructor: teacherId });
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Assignment not found or you do not have permission to modify it'
+      });
+    }
+
+    if (!assignment.assignmentDocument?.fileUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'No document found for this assignment'
+      });
+    }
+
+    try {
+      console.log(`🔄 Retrying question extraction for assignment: ${assignmentId}`);
+      
+      // Import the retry service to check queue status
+      const { aiRetryService } = await import('../services/aiRetryService');
+      const queueStatus = aiRetryService.getQueueStatus();
+      
+      res.status(200).json({
+        success: true,
+        message: 'Question extraction retry has been queued. This may take a few minutes.',
+        data: {
+          assignmentId,
+          queueStatus,
+          estimatedWaitTime: `${Math.max(1, Math.ceil(queueStatus.queueSize / 2))} minutes`
+        }
+      });
+
+      // Process in background
+      setTimeout(async () => {
+        try {
+          console.log(`🤖 Background processing: Retrying question extraction for ${assignmentId}`);
+          
+          // Update the assignment to indicate retry was attempted
+          assignment.lastQuestionExtractionAttempt = new Date();
+          await assignment.save();
+          
+        } catch (bgError) {
+          console.error('Background question extraction failed:', bgError);
+        }
+      }, 1000);
+
+    } catch (error: any) {
+      console.error('Error retrying question extraction:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retry question extraction',
+        details: error.message
+      });
+    }
+  } catch (error: any) {
+    console.error('Error in retry question extraction:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to retry question extraction'
     });
   }
 };

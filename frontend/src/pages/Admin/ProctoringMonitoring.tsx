@@ -112,6 +112,16 @@ const ProctoringMonitoring: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  // Real-time proctoring state - moved before useMemo
+  const [liveStudents, setLiveStudents] = useState<LiveStudent[]>([]);
+  const [realtimeViolations, setRealtimeViolations] = useState<ProctoringViolation[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<LiveStudent | null>(null);
+  const [studentDialogOpen, setStudentDialogOpen] = useState(false);
+  const [warningMessage, setWarningMessage] = useState('');
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
+  const [showDebug, setShowDebug] = useState(process.env.NODE_ENV === 'development');
+  
   // Derive real data from live students
   const proctoringData = React.useMemo(() => {
     // Group students by assessment to create active exams
@@ -163,19 +173,36 @@ const ProctoringMonitoring: React.FC = () => {
   const [flaggedDialogOpen, setFlaggedDialogOpen] = useState(false);
   const [selectedFlag, setSelectedFlag] = useState<any>(null);
   
-  // Real-time proctoring state
-  const [liveStudents, setLiveStudents] = useState<LiveStudent[]>([]);
-  const [realtimeViolations, setRealtimeViolations] = useState<ProctoringViolation[]>([]);
-  const [selectedStudent, setSelectedStudent] = useState<LiveStudent | null>(null);
-  const [studentDialogOpen, setStudentDialogOpen] = useState(false);
-  const [warningMessage, setWarningMessage] = useState('');
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
-  
   const socketRef = useRef<Socket | null>(null);
 
   // Initialize socket connection
   useEffect(() => {
     initializeSocket();
+    
+    // Add some test data for development (remove in production)
+    if (process.env.NODE_ENV === 'development') {
+      setTimeout(() => {
+        console.log('Adding test student data for development');
+        setLiveStudents([
+          {
+            id: 'test-student-1',
+            name: 'John Doe',
+            email: 'john@example.com',
+            assessmentId: 'test-assessment-1',
+            assessmentTitle: 'Mathematics Final Exam',
+            joinedAt: new Date().toISOString(),
+            violations: 0,
+            tabSwitches: 1,
+            faceDetected: true,
+            audioLevel: 25,
+            status: 'active',
+            lastFrame: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=',
+            lastFrameTime: new Date().toISOString()
+          }
+        ]);
+      }, 2000);
+    }
+    
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
@@ -200,6 +227,11 @@ const ProctoringMonitoring: React.FC = () => {
       socketRef.current?.emit('join_proctoring_session', {
         role: 'admin'
       });
+      
+      // Request current active students
+      socketRef.current?.emit('get_active_students');
+      
+      setSuccess('Connected to proctoring server');
     });
 
     socketRef.current.on('disconnect', () => {
@@ -207,8 +239,32 @@ const ProctoringMonitoring: React.FC = () => {
       setConnectionStatus('disconnected');
     });
 
+    // Handle receiving active students list
+    socketRef.current.on('active_students_list', (data) => {
+      console.log('Received active students:', data);
+      if (data.students && Array.isArray(data.students)) {
+        const students: LiveStudent[] = data.students.map((student: any) => ({
+          id: student.studentId || student.id,
+          name: student.studentName || student.name || 'Unknown Student',
+          email: student.studentEmail || student.email || '',
+          assessmentId: student.assessmentId,
+          assessmentTitle: student.assessmentTitle || 'Unknown Assessment',
+          joinedAt: student.joinedAt || new Date().toISOString(),
+          violations: student.violations || 0,
+          tabSwitches: student.tabSwitches || 0,
+          faceDetected: student.faceDetected ?? true,
+          audioLevel: student.audioLevel || 0,
+          status: student.status || 'active',
+          lastFrame: student.lastFrame,
+          lastFrameTime: student.lastFrameTime
+        }));
+        setLiveStudents(students);
+      }
+    });
+
     // Handle student joining proctoring session
     socketRef.current.on('student_joined_proctoring', (data) => {
+      console.log('Student joined proctoring:', data);
       const newStudent: LiveStudent = {
         id: data.studentId,
         name: data.studentName || 'Unknown Student',
@@ -245,17 +301,18 @@ const ProctoringMonitoring: React.FC = () => {
 
     // Handle video frames from students
     socketRef.current.on('video_frame', (data) => {
+      console.log('Received video frame from student:', data.studentId);
       setLiveStudents(prev => 
         prev.map(student => 
           student.id === data.studentId 
             ? {
                 ...student,
                 lastFrame: data.frame,
-                lastFrameTime: data.timestamp,
-                faceDetected: data.metadata.faceDetected,
-                audioLevel: data.metadata.audioLevel,
-                violations: data.metadata.violations,
-                tabSwitches: data.metadata.tabSwitches,
+                lastFrameTime: data.timestamp || new Date().toISOString(),
+                faceDetected: data.metadata?.faceDetected ?? true,
+                audioLevel: data.metadata?.audioLevel ?? 0,
+                violations: data.metadata?.violations ?? student.violations,
+                tabSwitches: data.metadata?.tabSwitches ?? student.tabSwitches,
                 status: 'active'
               }
             : student
@@ -263,42 +320,153 @@ const ProctoringMonitoring: React.FC = () => {
       );
     });
 
-    // Handle proctoring violations
-    socketRef.current.on('proctoring_violation', (data) => {
-      const violation: ProctoringViolation = {
-        id: Date.now().toString(),
-        studentId: data.studentId,
-        studentName: liveStudents.find(s => s.id === data.studentId)?.name || 'Unknown',
-        assessmentId: data.assessmentId,
-        type: data.violation.type,
-        description: data.violation.description,
-        severity: data.violation.severity,
-        timestamp: data.violation.timestamp
-      };
-
-      setRealtimeViolations(prev => [violation, ...prev]);
-      
-      // Update student status if high severity
-      if (data.violation.severity === 'high') {
+    // Handle proctoring data updates
+    socketRef.current.on('proctoring_data', (data) => {
+      console.log('Received proctoring data:', data);
+      if (data.studentId) {
         setLiveStudents(prev => 
-          prev.map(s => 
-            s.id === data.studentId 
-              ? { ...s, status: 'flagged' } 
-              : s
+          prev.map(student => 
+            student.id === data.studentId 
+              ? {
+                  ...student,
+                  faceDetected: data.faceDetected ?? student.faceDetected,
+                  audioLevel: data.audioLevel ?? student.audioLevel,
+                  violations: data.violations ?? student.violations,
+                  tabSwitches: data.tabSwitches ?? student.tabSwitches,
+                  status: data.status || student.status
+                }
+              : student
           )
         );
       }
     });
 
+    // Handle proctoring violations
+    socketRef.current.on('proctoring_violation', (data) => {
+      // Get student name from current state
+      setLiveStudents(prev => {
+        const student = prev.find(s => s.id === data.studentId);
+        const studentName = student?.name || data.studentName || 'Unknown';
+        
+        const violation: ProctoringViolation = {
+          id: Date.now().toString(),
+          studentId: data.studentId,
+          studentName: studentName,
+          assessmentId: data.assessmentId,
+          type: data.violation.type,
+          description: data.violation.description,
+          severity: data.violation.severity,
+          timestamp: data.violation.timestamp
+        };
+
+        setRealtimeViolations(prevViolations => [violation, ...prevViolations]);
+        
+        // Update student status if high severity
+        if (data.violation.severity === 'high') {
+          return prev.map(s => 
+            s.id === data.studentId 
+              ? { ...s, status: 'flagged' } 
+              : s
+          );
+        }
+        
+        return prev;
+      });
+    });
+
+    // Handle additional socket events
+    socketRef.current.on('student_status_update', (data) => {
+      console.log('Student status update:', data);
+      setLiveStudents(prev => 
+        prev.map(student => 
+          student.id === data.studentId 
+            ? { ...student, status: data.status }
+            : student
+        )
+      );
+    });
+
+    socketRef.current.on('assessment_started', (data) => {
+      console.log('Assessment started:', data);
+      // This could trigger a refresh of active students
+      socketRef.current?.emit('get_active_students');
+    });
+
+    socketRef.current.on('assessment_ended', (data) => {
+      console.log('Assessment ended:', data);
+      setLiveStudents(prev => 
+        prev.filter(student => student.assessmentId !== data.assessmentId)
+      );
+    });
+
+    // Handle ping response
+    socketRef.current.on('pong', (data) => {
+      console.log('Received pong from server:', data);
+      const latency = Date.now() - data.timestamp;
+      setSuccess(`Connection test successful! Latency: ${latency}ms`);
+    });
+
     socketRef.current.on('connect_error', (error) => {
       console.error('Socket connection error:', error);
       setConnectionStatus('disconnected');
+      setError('Failed to connect to proctoring server. Please check your connection.');
+    });
+
+    socketRef.current.on('reconnect', () => {
+      console.log('Socket reconnected');
+      setConnectionStatus('connected');
+      setError(null);
+      setSuccess('Reconnected to proctoring server');
+    });
+
+    socketRef.current.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+      setConnectionStatus('disconnected');
+      if (reason === 'io server disconnect') {
+        // Server disconnected, try to reconnect
+        setTimeout(() => {
+          if (socketRef.current) {
+            socketRef.current.connect();
+          }
+        }, 1000);
+      }
     });
   };
+
+  // Clear messages after timeout
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
+  // Periodic refresh of student data
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (socketRef.current && connectionStatus === 'connected') {
+        console.log('Requesting active students (periodic refresh)');
+        socketRef.current.emit('get_active_students');
+      }
+    }, 10000); // Every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [connectionStatus]);
 
   // Handle refresh
   const handleRefresh = () => {
     setLoading(true);
+    // Reconnect socket if disconnected
+    if (connectionStatus === 'disconnected') {
+      initializeSocket();
+    }
     setTimeout(() => {
       setLoading(false);
       setSuccess('Proctoring data refreshed successfully!');
@@ -425,20 +593,53 @@ const ProctoringMonitoring: React.FC = () => {
         sx={{ mb: 3 }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Typography>
-            Real-time Connection: {connectionStatus === 'connected' ? 'Connected' : connectionStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
-          </Typography>
-          {connectionStatus === 'disconnected' && (
-            <Button size="small" onClick={initializeSocket}>
-              Reconnect
+          <Box>
+            <Typography>
+              Real-time Connection: {connectionStatus === 'connected' ? 'Connected' : connectionStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Students detected: {liveStudents.length} | Backend: {process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000'}
+            </Typography>
+            {showDebug && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                Socket ID: {socketRef.current?.id || 'Not connected'} | 
+                Violations: {realtimeViolations.length} | 
+                Last refresh: {new Date().toLocaleTimeString()}
+              </Typography>
+            )}
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {connectionStatus === 'disconnected' && (
+              <Button size="small" onClick={initializeSocket}>
+                Reconnect
+              </Button>
+            )}
+            <Button 
+              size="small" 
+              variant="outlined"
+              onClick={() => setShowDebug(!showDebug)}
+            >
+              {showDebug ? 'Hide' : 'Show'} Debug
             </Button>
-          )}
+            <Button 
+              size="small" 
+              variant="outlined"
+              onClick={() => {
+                console.log('Testing socket connection...');
+                socketRef.current?.emit('ping', { timestamp: Date.now() });
+                setSuccess('Ping sent to server');
+              }}
+              disabled={connectionStatus !== 'connected'}
+            >
+              Test Connection
+            </Button>
+          </Box>
         </Box>
       </Alert>
 
       {/* Live Statistics */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={3} key="active-students">
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -453,7 +654,7 @@ const ProctoringMonitoring: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={3} key="flagged-students">
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -468,7 +669,7 @@ const ProctoringMonitoring: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={3} key="total-violations">
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -483,7 +684,7 @@ const ProctoringMonitoring: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={3} key="disconnected-students">
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -509,9 +710,29 @@ const ProctoringMonitoring: React.FC = () => {
               <Typography variant="h6" gutterBottom>
                 No students currently taking proctored assessments
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 Live video feeds will appear here when students start proctored assessments.
               </Typography>
+              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+                <Button 
+                  variant="outlined" 
+                  startIcon={<Refresh />}
+                  onClick={() => {
+                    socketRef.current?.emit('get_active_students');
+                    setSuccess('Refreshing student list...');
+                  }}
+                >
+                  Refresh
+                </Button>
+                {connectionStatus === 'disconnected' && (
+                  <Button 
+                    variant="contained" 
+                    onClick={initializeSocket}
+                  >
+                    Reconnect
+                  </Button>
+                )}
+              </Box>
             </Box>
           </CardContent>
         </Card>
@@ -577,6 +798,13 @@ const ProctoringMonitoring: React.FC = () => {
                             width: '100%',
                             height: '100%',
                             objectFit: 'cover'
+                          }}
+                          onError={(e) => {
+                            console.error('Failed to load video frame for student:', student.id);
+                            e.currentTarget.style.display = 'none';
+                          }}
+                          onLoad={() => {
+                            console.log('Video frame loaded for student:', student.id);
                           }}
                         />
                         {/* Live indicator */}
@@ -728,7 +956,7 @@ const ProctoringMonitoring: React.FC = () => {
     <Box>
       {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={3} key="active-exams-count">
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -743,7 +971,7 @@ const ProctoringMonitoring: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={3} key="students-online">
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -760,7 +988,7 @@ const ProctoringMonitoring: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={3} key="active-flags">
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -777,7 +1005,7 @@ const ProctoringMonitoring: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={3} key="video-feeds">
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center">
@@ -835,22 +1063,22 @@ const ProctoringMonitoring: React.FC = () => {
                 </Box>
 
                 <Grid container spacing={2} sx={{ mb: 2 }}>
-                  <Grid item xs={6}>
+                  <Grid item xs={6} key={`${exam.id}-students`}>
                     <Typography variant="body2">
                       <strong>Students:</strong> {exam.activeStudents}/{exam.studentsCount}
                     </Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid item xs={6} key={`${exam.id}-duration`}>
                     <Typography variant="body2">
                       <strong>Duration:</strong> {exam.duration} min
                     </Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid item xs={6} key={`${exam.id}-started`}>
                     <Typography variant="body2">
                       <strong>Started:</strong> {formatTime(exam.startTime)}
                     </Typography>
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid item xs={6} key={`${exam.id}-flags`}>
                     <Typography variant="body2" color={exam.flaggedBehaviors > 0 ? 'error.main' : 'text.secondary'}>
                       <strong>Flags:</strong> {exam.flaggedBehaviors}
                     </Typography>
@@ -1309,13 +1537,13 @@ const ProctoringMonitoring: React.FC = () => {
 
               {/* Student Statistics */}
               <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={6}>
+                <Grid item xs={6} key="student-violations">
                   <Paper sx={{ p: 2, textAlign: 'center' }}>
                     <Typography variant="h4" color="error.main">{selectedStudent.violations}</Typography>
                     <Typography variant="body2">Violations</Typography>
                   </Paper>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid item xs={6} key="student-tab-switches">
                   <Paper sx={{ p: 2, textAlign: 'center' }}>
                     <Typography variant="h4" color="warning.main">{selectedStudent.tabSwitches}</Typography>
                     <Typography variant="body2">Tab Switches</Typography>

@@ -203,14 +203,12 @@ const Layout: React.FC = () => {
       );
     } else if (user?.role === UserRole.TEACHER) {
       roleSpecificItems.push(
-        { text: 'My Courses', icon: <School />, path: '/dashboard/teacher/courses', requiresApprovedProfile: true },
         { text: 'Course Management', icon: <School />, path: '/dashboard/teacher/course-management', requiresApprovedProfile: true },
         { text: 'Create Course', icon: <Add />, path: '/dashboard/teacher/courses/create', requiresApprovedProfile: true },
         { text: 'Live Sessions', icon: <VideoCall />, path: '/dashboard/teacher/live-sessions', requiresApprovedProfile: true },
         { text: 'Student Management', icon: <ManageAccounts />, path: '/dashboard/teacher/student-management', requiresApprovedProfile: true },
         { text: 'Grades & Performance', icon: <Grade />, path: '/dashboard/teacher/grades', requiresApprovedProfile: true },
         { text: 'Analytics', icon: <Analytics />, path: '/dashboard/teacher/analytics', requiresApprovedProfile: true },
-        { text: 'Settings', icon: <Settings />, path: '/dashboard/teacher/settings' },
         { text: 'Profile', icon: <Person />, path: '/dashboard/teacher/profile/complete' }
       );
     } else if (user?.role === UserRole.STUDENT) {
@@ -219,9 +217,7 @@ const Layout: React.FC = () => {
         { text: '🔴 Live Sessions', icon: <VideoCall />, path: '/live-sessions' },
         { text: 'My Grades', icon: <Grade />, path: '/dashboard/student/grades' },
         { text: 'Leaderboard', icon: <EmojiEvents />, path: '/dashboard/student/leaderboard' },
-        { text: 'Progress', icon: <Analytics />, path: '/dashboard/student/progress' },
         { text: 'AI Assistant', icon: <Psychology />, path: '/dashboard/student/ai-assistant' },
-        { text: 'Settings', icon: <Settings />, path: '/dashboard/student/settings' },
         { text: 'Profile', icon: <Person />, path: '/dashboard/profile' }
       );
     }
@@ -452,18 +448,17 @@ const Layout: React.FC = () => {
           </ListItemButton>
         </ListItem>
 
-        <ListItem disablePadding>
-          <ListItemButton onClick={() => handleNavigation(
-            user?.role === UserRole.ADMIN
-              ? '/dashboard/admin/settings'
-              : '/dashboard/settings'
-          )}>
-            <ListItemIcon>
-              <Settings />
-            </ListItemIcon>
-            <ListItemText primary="Settings" />
-          </ListItemButton>
-        </ListItem>
+        {/* Only show Settings for Admin users */}
+        {user?.role === UserRole.ADMIN && (
+          <ListItem disablePadding>
+            <ListItemButton onClick={() => handleNavigation('/dashboard/admin/settings')}>
+              <ListItemIcon>
+                <Settings />
+              </ListItemIcon>
+              <ListItemText primary="Settings" />
+            </ListItemButton>
+          </ListItem>
+        )}
       </List>
     </Box>
   );
@@ -548,14 +543,13 @@ const Layout: React.FC = () => {
           </Avatar>
           Profile
         </MenuItem>
-        <MenuItem onClick={() => handleNavigation(
-          user?.role === UserRole.ADMIN
-            ? '/dashboard/admin/settings'
-            : '/dashboard/settings'
-        )}>
-          <Settings fontSize="small" sx={{ mr: 1 }} />
-          Settings
-        </MenuItem>
+        {/* Only show Settings for Admin users */}
+        {user?.role === UserRole.ADMIN && (
+          <MenuItem onClick={() => handleNavigation('/dashboard/admin/settings')}>
+            <Settings fontSize="small" sx={{ mr: 1 }} />
+            Settings
+          </MenuItem>
+        )}
         <Divider />
         <MenuItem onClick={handleLogout}>
           <Logout fontSize="small" sx={{ mr: 1 }} />

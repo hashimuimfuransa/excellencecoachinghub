@@ -79,6 +79,10 @@ const CourseManagement: React.FC = () => {
   const [approveDialogOpen, setApproveDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectFeedback, setRejectFeedback] = useState('');
+  
+  // Price setting states
+  const [notesPrice, setNotesPrice] = useState<number>(0);
+  const [liveSessionPrice, setLiveSessionPrice] = useState<number>(0);
 
   // Load courses and statistics
   const loadCourses = useCallback(async () => {
@@ -180,8 +184,11 @@ const CourseManagement: React.FC = () => {
   const confirmApproveCourse = async () => {
     if (selectedCourse) {
       try {
-        await courseService.approveCourse(selectedCourse._id);
-        setSuccess('Course approved successfully');
+        await courseService.approveCourse(selectedCourse._id, {
+          notesPrice,
+          liveSessionPrice
+        });
+        setSuccess('Course approved successfully with pricing set');
         loadCourses();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to approve course');
@@ -191,6 +198,8 @@ const CourseManagement: React.FC = () => {
     }
     setApproveDialogOpen(false);
     setSelectedCourse(null);
+    setNotesPrice(0);
+    setLiveSessionPrice(0);
   };
 
   // Confirm reject course
@@ -514,7 +523,20 @@ const CourseManagement: React.FC = () => {
                       />
                     </TableCell>
                     <TableCell>{course.enrollmentCount || 0}</TableCell>
-                    <TableCell>${course.price}</TableCell>
+                    <TableCell>
+                      {course.notesPrice > 0 || course.liveSessionPrice > 0 ? (
+                        <Box>
+                          <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                            Notes: ${course.notesPrice || 0}
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                            Live: ${course.liveSessionPrice || 0}
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <Chip label="FREE" color="success" size="small" />
+                      )}
+                    </TableCell>
                     <TableCell>{formatDate(course.createdAt)}</TableCell>
                     <TableCell>
                       <IconButton
@@ -601,7 +623,10 @@ const CourseManagement: React.FC = () => {
                   <Typography variant="body2"><strong>Duration:</strong> {selectedCourse.duration} hours</Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <Typography variant="body2"><strong>Price:</strong> ${selectedCourse.price}</Typography>
+                  <Typography variant="body2"><strong>Notes Price:</strong> ${selectedCourse.notesPrice || 0}</Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2"><strong>Live Sessions Price:</strong> ${selectedCourse.liveSessionPrice || 0}</Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="body2"><strong>Enrollments:</strong> {selectedCourse.enrollmentCount || 0}</Typography>
@@ -704,25 +729,71 @@ const CourseManagement: React.FC = () => {
       <Dialog open={approveDialogOpen} onClose={() => {
         setApproveDialogOpen(false);
         setSelectedCourse(null);
-      }}>
-        <DialogTitle>Approve Course</DialogTitle>
+        setNotesPrice(0);
+        setLiveSessionPrice(0);
+      }} maxWidth="sm" fullWidth>
+        <DialogTitle>Approve Course & Set Pricing</DialogTitle>
         <DialogContent>
-          <Typography>
-            Are you sure you want to approve the course "{selectedCourse?.title}"?
-            This will make it available to students for enrollment.
+          <Typography variant="body1" sx={{ mb: 3 }}>
+            Approve the course "{selectedCourse?.title}" and set pricing for different access types.
           </Typography>
+          
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Notes & Materials Price"
+                type="number"
+                value={notesPrice}
+                onChange={(e) => setNotesPrice(Number(e.target.value))}
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                }}
+                helperText="Price for accessing course notes, materials, and assignments"
+                inputProps={{ min: 0, step: 0.01 }}
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Live Sessions Price"
+                type="number"
+                value={liveSessionPrice}
+                onChange={(e) => setLiveSessionPrice(Number(e.target.value))}
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                }}
+                helperText="Price for accessing live sessions and recordings"
+                inputProps={{ min: 0, step: 0.01 }}
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <Box sx={{ p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+                <Typography variant="body2" color="info.contrastText">
+                  💡 <strong>Pricing Tips:</strong>
+                  <br />• Set to $0 for free access
+                  <br />• Students can purchase notes only, live sessions only, or both
+                  <br />• Bundle pricing (both) offers 20% discount on live sessions
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => {
             setApproveDialogOpen(false);
             setSelectedCourse(null);
+            setNotesPrice(0);
+            setLiveSessionPrice(0);
           }}>Cancel</Button>
           <Button
             color="success"
             variant="contained"
             onClick={confirmApproveCourse}
           >
-            Approve Course
+            Approve & Set Pricing
           </Button>
         </DialogActions>
       </Dialog>

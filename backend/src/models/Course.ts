@@ -28,7 +28,9 @@ export interface ICourseDocument extends Document {
   tags: string[];
   duration: number; // in hours
   level: 'beginner' | 'intermediate' | 'advanced';
-  price: number;
+  price: number; // Legacy field - will be deprecated
+  notesPrice: number; // Price for accessing notes/materials
+  liveSessionPrice: number; // Price for accessing live sessions
   enrollmentCount: number;
   rating: number;
   ratingCount: number;
@@ -37,6 +39,8 @@ export interface ICourseDocument extends Document {
   learningOutcomes: string[];
   isPublished: boolean;
   publishedAt?: Date;
+  enrollmentDeadline?: Date; // When enrollment closes
+  courseStartDate?: Date; // When the course actually starts
   approvedBy?: mongoose.Types.ObjectId;
   approvedAt?: Date;
   rejectionReason?: string;
@@ -160,8 +164,18 @@ const courseSchema = new Schema<ICourseDocument>({
   },
   price: {
     type: Number,
-    required: [true, 'Course price is required'],
+    default: 0, // Legacy field - will be deprecated
     min: [0, 'Price cannot be negative']
+  },
+  notesPrice: {
+    type: Number,
+    default: 0,
+    min: [0, 'Notes price cannot be negative']
+  },
+  liveSessionPrice: {
+    type: Number,
+    default: 0,
+    min: [0, 'Live session price cannot be negative']
   },
   enrollmentCount: {
     type: Number,
@@ -211,6 +225,33 @@ const courseSchema = new Schema<ICourseDocument>({
     type: String,
     default: null,
     maxlength: [500, 'Rejection reason cannot exceed 500 characters']
+  },
+  enrollmentDeadline: {
+    type: Date,
+    default: null
+  },
+  courseStartDate: {
+    type: Date,
+    default: null
+  },
+  maxEnrollments: {
+    type: Number,
+    default: null,
+    min: [1, 'Max enrollments must be at least 1']
+  },
+  adminFeedback: {
+    type: String,
+    default: null,
+    maxlength: [1000, 'Admin feedback cannot exceed 1000 characters']
+  },
+  rejectedBy: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  rejectedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true,

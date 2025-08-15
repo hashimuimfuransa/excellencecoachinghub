@@ -185,12 +185,12 @@ const StudentDashboard: React.FC = () => {
       // Calculate stats
       const totalCourses = coursesResponse.courses?.length || 0;
       const completedCourses = enrollmentsResponse.enrollments?.filter(
-        (enrollment: IEnrollment) => enrollment.progress >= 100
+        (enrollment: IEnrollment) => enrollment.progress?.totalProgress >= 100
       ).length || 0;
       const averageProgress = enrollmentsResponse.enrollments?.length > 0
         ? Math.round(
             enrollmentsResponse.enrollments.reduce(
-              (sum: number, enrollment: IEnrollment) => sum + (enrollment.progress || 0),
+              (sum: number, enrollment: IEnrollment) => sum + (enrollment.progress?.totalProgress || 0),
               0
             ) / enrollmentsResponse.enrollments.length
           )
@@ -537,7 +537,7 @@ const StudentDashboard: React.FC = () => {
                             </Typography>
                             <LinearProgress
                               variant="determinate"
-                              value={enrollment?.progress || 0}
+                              value={enrollment?.progress?.totalProgress || 0}
                               sx={{ 
                                 height: { xs: 6, sm: 8 },
                                 borderRadius: 1,
@@ -553,7 +553,7 @@ const StudentDashboard: React.FC = () => {
                                 textAlign: { xs: 'center', sm: 'left' }
                               }}
                             >
-                              {enrollment?.progress || 0}% Complete
+                              {enrollment?.progress?.totalProgress || 0}% Complete
                             </Typography>
                           </Box>
                           <ResponsiveButton

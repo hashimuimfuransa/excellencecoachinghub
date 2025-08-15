@@ -314,12 +314,29 @@ const CoursesPage: React.FC = () => {
 
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Box>
-                      <Typography
-                        variant="h6"
-                        sx={{ fontWeight: 700, color: 'primary.main' }}
-                      >
-                        ${course.price}
-                      </Typography>
+                      {course.notesPrice > 0 || course.liveSessionPrice > 0 ? (
+                        <Box>
+                          <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
+                            From
+                          </Typography>
+                          <Typography
+                            variant="h6"
+                            sx={{ fontWeight: 700, color: 'primary.main' }}
+                          >
+                            ${Math.min(course.notesPrice || 0, course.liveSessionPrice || 0)}
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
+                            Notes: ${course.notesPrice || 0} • Live: ${course.liveSessionPrice || 0}
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <Typography
+                          variant="h6"
+                          sx={{ fontWeight: 700, color: 'success.main' }}
+                        >
+                          FREE
+                        </Typography>
+                      )}
                     </Box>
                     <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                       {course.duration} hours

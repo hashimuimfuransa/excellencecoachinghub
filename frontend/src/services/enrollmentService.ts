@@ -2,7 +2,7 @@ import { apiService } from './api';
 
 export interface IEnrollment {
   _id: string;
-  user: string;
+  student: string;
   course: {
     _id: string;
     title: string;
@@ -17,14 +17,33 @@ export interface IEnrollment {
     level: string;
     duration: number;
     price: number;
+    notesPrice: number;
+    liveSessionPrice: number;
     status: string;
     thumbnail?: string;
   };
-  enrollmentDate: string;
-  progress: number;
-  isCompleted: boolean;
-  lastAccessed: string;
-  completionDate?: string;
+  enrollmentType: 'notes' | 'live_sessions' | 'both';
+  paymentAmount: number;
+  paymentStatus: 'pending' | 'completed' | 'failed' | 'refunded';
+  paymentMethod?: string;
+  transactionId?: string;
+  enrolledAt: string;
+  expiresAt?: string;
+  isActive: boolean;
+  progress: {
+    completedLessons: string[];
+    completedAssignments: string[];
+    totalProgress: number;
+    lastAccessedAt?: string;
+  };
+  accessPermissions: {
+    canAccessNotes: boolean;
+    canAccessLiveSessions: boolean;
+    canDownloadMaterials: boolean;
+    canSubmitAssignments: boolean;
+  };
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface EnrollmentListResponse {
@@ -45,9 +64,10 @@ export interface EnrollmentFilters {
 
 export const enrollmentService = {
   // Enroll in a course
-  enrollInCourse: async (courseId: string): Promise<IEnrollment> => {
-    const response = await apiService.post<{ enrollment: IEnrollment }>('/enrollments/enroll', {
-      courseId
+  enrollInCourse: async (courseId: string, enrollmentType: 'notes' | 'live_sessions' | 'both' = 'both', paymentMethod?: 'card' | 'mobile_money' | 'bank_transfer' | 'cash'): Promise<IEnrollment> => {
+    const response = await apiService.post<{ enrollment: IEnrollment }>(`/enrollments/courses/${courseId}/enroll`, {
+      enrollmentType,
+      paymentMethod
     });
     
     if (response.success && response.data) {

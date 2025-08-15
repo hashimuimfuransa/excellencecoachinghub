@@ -35,7 +35,12 @@ import {
   Stepper,
   Step,
   StepLabel,
-  CircularProgress
+  CircularProgress,
+  alpha,
+  useTheme,
+  Avatar,
+  Select,
+  MenuItem
 } from '@mui/material';
 import {
   Timer,
@@ -67,6 +72,7 @@ import { assessmentService } from '../../services/assessmentService';
 import MathInput from '../../components/MathInput/MathInput';
 import ProctoringMonitor from '../../components/Proctoring/ProctoringMonitor';
 import AIGradingService from '../../services/aiGradingService';
+import RichTextEditor from '../../components/RichTextEditor/RichTextEditor';
 
 interface Question {
   _id: string;
@@ -118,6 +124,7 @@ const TakeAssessment: React.FC = () => {
   const { assessmentId } = useParams<{ assessmentId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const theme = useTheme();
   
   // Assessment state
   const [assessment, setAssessment] = useState<Assessment | null>(null);
@@ -395,160 +402,455 @@ const TakeAssessment: React.FC = () => {
     const answer = answers[question._id];
     
     return (
-      <Card key={question._id} sx={{ mb: 3 }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-            <Typography variant="h6" sx={{ flex: 1 }}>
-              Question {index + 1} of {assessment?.questions.length}
-              <Chip 
-                label={`${question.points} pts`} 
-                size="small" 
-                color="primary" 
-                sx={{ ml: 2 }}
-              />
-              <Chip 
-                label={question.difficulty} 
-                size="small" 
-                color={question.difficulty === 'easy' ? 'success' : question.difficulty === 'medium' ? 'warning' : 'error'}
-                sx={{ ml: 1 }}
-              />
-            </Typography>
+      <Box key={question._id} sx={{ mb: 3 }}>
+        {/* Question Header */}
+        <Paper 
+          sx={{ 
+            p: 3, 
+            mb: 2, 
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white'
+          }}
+          elevation={3}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 40, height: 40 }}>
+                <Typography variant="h6" fontWeight="bold">
+                  {index + 1}
+                </Typography>
+              </Avatar>
+              <Box>
+                <Typography variant="h6" fontWeight="bold">
+                  Question {index + 1} of {assessment?.questions.length}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                  <Functions sx={{ fontSize: 16 }} />
+                  <Typography variant="body2">
+                    {question.points} {question.points === 1 ? 'point' : 'points'}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mx: 1 }}>•</Typography>
+                  <Typography variant="body2">{question.difficulty}</Typography>
+                  {question.tags && question.tags.length > 0 && (
+                    <>
+                      <Typography variant="body2" sx={{ mx: 1 }}>•</Typography>
+                      <Typography variant="body2">{question.tags.join(', ')}</Typography>
+                    </>
+                  )}
+                </Box>
+              </Box>
+            </Box>
+
             <Tooltip title={flaggedQuestions.has(index) ? "Remove flag" : "Flag for review"}>
               <IconButton 
                 onClick={() => handleFlagQuestion(index)}
-                color={flaggedQuestions.has(index) ? "warning" : "default"}
+                sx={{ 
+                  color: flaggedQuestions.has(index) ? '#ffc107' : 'rgba(255,255,255,0.7)',
+                  '&:hover': { 
+                    color: flaggedQuestions.has(index) ? '#ff9800' : 'white',
+                    backgroundColor: 'rgba(255,255,255,0.1)'
+                  }
+                }}
               >
                 <Flag />
               </IconButton>
             </Tooltip>
           </Box>
+        </Paper>
 
-          <Typography variant="body1" sx={{ mb: 3, whiteSpace: 'pre-wrap' }}>
-            {question.question}
-          </Typography>
+        {/* Question Content */}
+        <Card elevation={2}>
+          <CardContent sx={{ p: 4 }}>
+            {/* Question Text */}
+            <Box sx={{ mb: 4 }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  mb: 2, 
+                  lineHeight: 1.6,
+                  fontSize: '1.2rem',
+                  fontWeight: 'medium',
+                  color: 'text.primary'
+                }}
+              >
+                {question.question}
+              </Typography>
+              <Divider sx={{ my: 3 }} />
+            </Box>
+
+            {/* Answer Area */}
+            <Box>
 
           {/* Multiple Choice */}
           {question.type === 'multiple-choice' && (
-            <FormControl component="fieldset">
-              <RadioGroup
-                value={answer?.answer || ''}
-                onChange={(e) => handleAnswerChange(question._id, e.target.value)}
-              >
-                {question.options?.map((option, optionIndex) => (
-                  <FormControlLabel
-                    key={optionIndex}
-                    value={option}
-                    control={<Radio />}
-                    label={option}
-                  />
-                ))}
-              </RadioGroup>
-            </FormControl>
+            <Box>
+              {/* Handle different ways options might be stored */}
+              {(() => {
+                const options = question.options || [];
+                
+                if (!options || options.length === 0) {
+                  return (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                      <Typography variant="body2">
+                        <strong>Options not available</strong><br/>
+                        This appears to be a multiple choice question, but no options were provided.
+                        Please contact your instructor.
+                      </Typography>
+                    </Alert>
+                  );
+                }
+                
+                return (
+                  <Box>
+                    <Typography variant="subtitle1" sx={{ mb: 3, fontWeight: 'medium', color: 'text.secondary' }}>
+                      📝 Select one answer:
+                    </Typography>
+                    <RadioGroup
+                      value={answer?.answer || ''}
+                      onChange={(e) => handleAnswerChange(question._id, e.target.value)}
+                    >
+                      {options.map((option, optionIndex) => (
+                        <Box key={optionIndex} sx={{ mb: 1 }}>
+                          <Paper
+                            variant="outlined"
+                            sx={{
+                              p: 2,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              borderColor: answer?.answer === option ? 'primary.main' : 'grey.300',
+                              backgroundColor: answer?.answer === option 
+                                ? alpha(theme.palette.primary.main, 0.08) 
+                                : 'transparent',
+                              '&:hover': {
+                                borderColor: 'primary.main',
+                                backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                                transform: 'translateY(-1px)',
+                                boxShadow: 1
+                              }
+                            }}
+                            onClick={() => handleAnswerChange(question._id, option)}
+                          >
+                            <FormControlLabel
+                              value={option}
+                              control={
+                                <Radio 
+                                  checked={answer?.answer === option}
+                                  sx={{ 
+                                    color: answer?.answer === option ? 'primary.main' : 'grey.400',
+                                    '&.Mui-checked': { color: 'primary.main' }
+                                  }} 
+                                />
+                              }
+                              label={
+                                <Typography variant="body1" sx={{ ml: 1 }}>
+                                  <strong>{String.fromCharCode(65 + optionIndex)}.</strong> {option}
+                                </Typography>
+                              }
+                              sx={{ margin: 0, width: '100%' }}
+                            />
+                          </Paper>
+                        </Box>
+                      ))}
+                    </RadioGroup>
+                  </Box>
+                );
+              })()}
+            </Box>
           )}
 
           {/* Multiple Select */}
           {question.type === 'multiple-select' && (
-            <FormControl component="fieldset">
-              <FormLabel component="legend">Select all that apply:</FormLabel>
-              {question.options?.map((option, optionIndex) => (
-                <FormControlLabel
-                  key={optionIndex}
-                  control={
-                    <Checkbox
-                      checked={(answer?.answer || []).includes(option)}
-                      onChange={(e) => {
-                        const currentAnswers = answer?.answer || [];
-                        const newAnswers = e.target.checked
-                          ? [...currentAnswers, option]
-                          : currentAnswers.filter((a: string) => a !== option);
-                        handleAnswerChange(question._id, newAnswers);
-                      }}
-                    />
-                  }
-                  label={option}
-                />
-              ))}
-            </FormControl>
+            <Box>
+              {(() => {
+                const options = question.options || [];
+                const selectedAnswers = answer?.answer || [];
+                
+                if (!options || options.length === 0) {
+                  return (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                      <Typography variant="body2">
+                        <strong>Options not available</strong><br/>
+                        This appears to be a multiple select question, but no options were provided.
+                        Please contact your instructor.
+                      </Typography>
+                    </Alert>
+                  );
+                }
+                
+                return (
+                  <Box>
+                    <Typography variant="subtitle1" sx={{ mb: 3, fontWeight: 'medium', color: 'text.secondary' }}>
+                      ✅ Select all correct answers:
+                    </Typography>
+                    <Box>
+                      {options.map((option, optionIndex) => (
+                        <Box key={optionIndex} sx={{ mb: 1 }}>
+                          <Paper
+                            variant="outlined"
+                            sx={{
+                              p: 2,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              borderColor: selectedAnswers.includes(option) ? 'primary.main' : 'grey.300',
+                              backgroundColor: selectedAnswers.includes(option)
+                                ? alpha(theme.palette.primary.main, 0.08)
+                                : 'transparent',
+                              '&:hover': {
+                                borderColor: 'primary.main',
+                                backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                                transform: 'translateY(-1px)',
+                                boxShadow: 1
+                              }
+                            }}
+                            onClick={() => {
+                              const currentAnswers = [...selectedAnswers];
+                              if (currentAnswers.includes(option)) {
+                                const optionIndex = currentAnswers.indexOf(option);
+                                currentAnswers.splice(optionIndex, 1);
+                              } else {
+                                currentAnswers.push(option);
+                              }
+                              handleAnswerChange(question._id, currentAnswers);
+                            }}
+                          >
+                            <FormControlLabel
+                              control={
+                                <Checkbox
+                                  checked={selectedAnswers.includes(option)}
+                                  sx={{ 
+                                    color: selectedAnswers.includes(option) ? 'primary.main' : 'grey.400',
+                                    '&.Mui-checked': { color: 'primary.main' }
+                                  }}
+                                />
+                              }
+                              label={
+                                <Typography variant="body1" sx={{ ml: 1 }}>
+                                  <strong>{String.fromCharCode(65 + optionIndex)}.</strong> {option}
+                                </Typography>
+                              }
+                              sx={{ margin: 0, width: '100%', pointerEvents: 'none' }}
+                            />
+                          </Paper>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
+                );
+              })()}
+            </Box>
           )}
 
           {/* True/False */}
           {question.type === 'true-false' && (
-            <FormControl component="fieldset">
-              <RadioGroup
-                value={answer?.answer || ''}
-                onChange={(e) => handleAnswerChange(question._id, e.target.value)}
-              >
-                <FormControlLabel value="true" control={<Radio />} label="True" />
-                <FormControlLabel value="false" control={<Radio />} label="False" />
-              </RadioGroup>
-            </FormControl>
+            <Box>
+              <Typography variant="subtitle1" sx={{ mb: 3, fontWeight: 'medium', color: 'text.secondary' }}>
+                🎯 Select True or False:
+              </Typography>
+              <Grid container spacing={2}>
+                {['true', 'false'].map((option, index) => (
+                  <Grid item xs={6} key={option}>
+                    <Paper
+                      variant="outlined"
+                      sx={{
+                        p: 3,
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        transition: 'all 0.2s ease',
+                        borderColor: answer?.answer === option ? 'primary.main' : 'grey.300',
+                        backgroundColor: answer?.answer === option
+                          ? alpha(theme.palette.primary.main, 0.08)
+                          : 'transparent',
+                        '&:hover': {
+                          borderColor: 'primary.main',
+                          backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                          transform: 'translateY(-2px)',
+                          boxShadow: 2
+                        }
+                      }}
+                      onClick={() => handleAnswerChange(question._id, option)}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+                        <Radio
+                          checked={answer?.answer === option}
+                          sx={{ 
+                            color: answer?.answer === option ? 'primary.main' : 'grey.400',
+                            '&.Mui-checked': { color: 'primary.main' }
+                          }}
+                        />
+                        <Typography variant="h6" sx={{ 
+                          fontWeight: 'bold',
+                          color: answer?.answer === option ? 'primary.main' : 'text.primary'
+                        }}>
+                          {option === 'true' ? '✓ TRUE' : '✗ FALSE'}
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
           )}
 
           {/* Short Answer */}
           {question.type === 'short-answer' && (
-            <TextField
-              fullWidth
-              multiline
-              rows={3}
-              value={answer?.answer || ''}
-              onChange={(e) => handleAnswerChange(question._id, e.target.value)}
-              placeholder="Enter your answer..."
-              variant="outlined"
-            />
+            <Box>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'medium', color: 'text.secondary' }}>
+                ✏️ Enter your answer:
+              </Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                value={answer?.answer || ''}
+                onChange={(e) => handleAnswerChange(question._id, e.target.value)}
+                placeholder="Type your answer here..."
+                variant="outlined"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    '&:hover fieldset': {
+                      borderColor: 'primary.main',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: 'primary.main',
+                    }
+                  }
+                }}
+              />
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                Characters: {(answer?.answer || '').length}
+              </Typography>
+            </Box>
           )}
 
           {/* Essay */}
           {question.type === 'essay' && (
-            <TextField
-              fullWidth
-              multiline
-              rows={8}
-              value={answer?.answer || ''}
-              onChange={(e) => handleAnswerChange(question._id, e.target.value)}
-              placeholder="Write your essay here..."
-              variant="outlined"
-            />
+            <Box>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'medium', color: 'text.secondary' }}>
+                📝 Write your essay response:
+              </Typography>
+              <Paper variant="outlined" sx={{ p: 1, minHeight: 250 }}>
+                <RichTextEditor
+                  value={answer?.answer || ''}
+                  onChange={(value) => handleAnswerChange(question._id, value)}
+                  placeholder="Write your detailed essay response here. Use the toolbar to format your text..."
+                  minHeight={200}
+                  allowMath={true}
+                  allowLinks={false}
+                  allowImages={false}
+                />
+              </Paper>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                💡 Tip: Use formatting tools to structure your response clearly
+              </Typography>
+            </Box>
           )}
 
           {/* Math */}
           {question.type === 'math' && (
             <Box>
-              <MathInput
-                value={answer?.answer || ''}
-                onChange={(value) => handleAnswerChange(question._id, value)}
-                allowSymbols={true}
-                allowCalculator={assessment?.allowCalculator}
-              />
-              {assessment?.allowCalculator && (
-                <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'medium', color: 'text.secondary' }}>
+                🔢 Enter your mathematical expression:
+              </Typography>
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <MathInput
+                  value={answer?.answer || ''}
+                  onChange={(value) => handleAnswerChange(question._id, value)}
+                  allowSymbols={true}
+                  allowCalculator={assessment?.allowCalculator}
+                />
+              </Paper>
+              <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="caption" color="text.secondary">
+                  💡 Use LaTeX syntax for mathematical expressions
+                </Typography>
+                {assessment?.allowCalculator && (
                   <Button startIcon={<Calculate />} variant="outlined" size="small">
                     Open Calculator
                   </Button>
-                </Box>
-              )}
+                )}
+              </Box>
             </Box>
           )}
 
           {/* Code */}
           {question.type === 'code' && (
             <Box>
-              <Typography variant="subtitle2" gutterBottom>
-                Language: {question.codeLanguage}
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'medium', color: 'text.secondary' }}>
+                💻 Write your code:
               </Typography>
+              {question.codeLanguage && (
+                <Chip 
+                  label={`Language: ${question.codeLanguage}`} 
+                  variant="outlined" 
+                  size="small" 
+                  sx={{ mb: 2 }}
+                />
+              )}
               <TextField
                 fullWidth
                 multiline
                 rows={12}
                 value={answer?.answer || ''}
                 onChange={(e) => handleAnswerChange(question._id, e.target.value)}
-                placeholder={`Write your ${question.codeLanguage} code here...`}
+                placeholder={`Write your ${question.codeLanguage || ''} code here...`}
                 variant="outlined"
-                sx={{ fontFamily: 'monospace' }}
+                sx={{
+                  fontFamily: 'monospace',
+                  '& .MuiInputBase-input': {
+                    fontFamily: 'Monaco, Consolas, "Courier New", monospace',
+                    fontSize: '0.9rem'
+                  },
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: 'grey.50',
+                    '&:hover fieldset': {
+                      borderColor: 'primary.main',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: 'primary.main',
+                    }
+                  }
+                }}
               />
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                Lines: {((answer?.answer || '').match(/\n/g) || []).length + 1} • Characters: {(answer?.answer || '').length}
+              </Typography>
             </Box>
           )}
-        </CardContent>
-      </Card>
+
+          {/* Answer Status */}
+          <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'grey.200' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              {answer?.answer ? (
+                <>
+                  <CheckCircle color="success" fontSize="small" />
+                  <Typography variant="body2" color="success.main" fontWeight="medium">
+                    Question answered
+                  </Typography>
+                </>
+              ) : (
+                <>
+                  <Warning color="warning" fontSize="small" />
+                  <Typography variant="body2" color="warning.main" fontWeight="medium">
+                    Not answered yet
+                  </Typography>
+                </>
+              )}
+              {flaggedQuestions.has(index) && (
+                <>
+                  <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
+                  <Flag color="warning" fontSize="small" />
+                  <Typography variant="body2" color="warning.main" fontWeight="medium">
+                    Flagged for review
+                  </Typography>
+                </>
+              )}
+            </Box>
+          </Box>
+
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
     );
   };
 

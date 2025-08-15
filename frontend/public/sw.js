@@ -28,8 +28,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Skip API requests - always go to network
-  if (event.request.url.includes('/api/')) {
+  // Skip API requests and assignment routes - always go to network
+  if (event.request.url.includes('/api/') || event.request.url.includes('/assignment/')) {
     return;
   }
 

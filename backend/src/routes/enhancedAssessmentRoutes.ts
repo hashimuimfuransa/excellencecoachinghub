@@ -127,9 +127,9 @@ router.get(
 );
 
 // Progress tracking routes
-router.get('/course/:courseId/progress/:studentId?', auth, getStudentCourseProgress);
-router.post('/assessment/:assessmentId/progress', auth, updateStudentProgress);
-router.get('/course/:courseId/teacher-progress', auth, authorizeRoles(['teacher']), getTeacherCourseProgress);
+router.get('/course/:courseId/progress/:studentId?', auth, authorizeRoles(['student', 'teacher', 'admin']), getStudentCourseProgress);
+router.post('/assessment/:assessmentId/progress', auth, authorizeRoles(['student']), updateStudentProgress);
+router.get('/course/:courseId/teacher-progress', auth, authorizeRoles(['teacher', 'admin']), getTeacherCourseProgress);
 router.get('/admin/progress-overview', auth, authorizeRoles(['admin']), getAdminProgressOverview);
 
 export default router;

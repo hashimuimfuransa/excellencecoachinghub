@@ -333,11 +333,22 @@ const CourseDetailPage: React.FC = () => {
                     <AttachMoney sx={{ mr: 1, color: 'text.secondary' }} />
                     <Box>
                       <Typography variant="body2" color="text.secondary">
-                        Price
+                        Pricing
                       </Typography>
-                      <Typography variant="h6" fontWeight="bold" color="primary.main">
-                        ${course.price}
-                      </Typography>
+                      {course.notesPrice > 0 || course.liveSessionPrice > 0 ? (
+                        <Box>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                            Notes: ${course.notesPrice || 0}
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                            Live: ${course.liveSessionPrice || 0}
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <Typography variant="h6" fontWeight="bold" color="success.main">
+                          FREE
+                        </Typography>
+                      )}
                     </Box>
                   </Box>
                 </Grid>
@@ -531,7 +542,7 @@ const CourseDetailPage: React.FC = () => {
             Are you sure you want to enroll in "{course.title}"?
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Price: ${course.price}
+            Notes Access: ${course.notesPrice || 0} • Live Sessions: ${course.liveSessionPrice || 0}
           </Typography>
         </DialogContent>
         <DialogActions>

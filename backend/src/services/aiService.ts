@@ -1306,48 +1306,33 @@ Please try again in a moment - I should be back to normal soon!`;
     rightItems?: string[];
     matchingPairs?: Array<{ left: string; right: string; }>;
   }>> {
-    try {
-      const prompt = `
-        Extract assessment questions from the following document text and format them appropriately for a ${assessmentType}.
-        Pay special attention to sections (Section A, Section B, Section C, etc.) and different question types.
-        
-        Document Text:
-        ${documentText}
-        
-        Please analyze the text and create well-structured questions. Format the response as a JSON array with the following structure:
-        [
-          {
-            "question": "Question text here?",
-            "type": "multiple_choice", // or "multiple_choice_multiple", "true_false", "short_answer", "essay", "fill_in_blank", "numerical", "matching"
-            "options": ["Option A", "Option B", "Option C", "Option D"], // for multiple choice questions
-            "correctAnswer": "Option A", // or ["Option A", "Option B"] for multiple answers
-            "points": 10,
-            "aiExtracted": true,
-            "section": "A", // if the question belongs to a section (A, B, C, etc.)
-            "sectionTitle": "Multiple Choice Questions", // section description
-            "leftItems": ["Item 1", "Item 2"], // for matching questions only
-            "rightItems": ["Match A", "Match B"], // for matching questions only
-            "matchingPairs": [{"left": "Item 1", "right": "Match A"}] // correct matches for matching questions
-          }
-        ]
-        
-        Guidelines:
-        - Identify and preserve section structure (Section A, B, C, etc.)
-        - Support all question types: multiple_choice, multiple_choice_multiple, true_false, short_answer, essay, fill_in_blank, numerical, matching
-        - For multiple_choice: provide 4 options with one correct answer
-        - For multiple_choice_multiple: provide 4+ options with multiple correct answers as array
-        - For true_false: don't include options array, use "true" or "false" as correctAnswer
-        - For matching: provide leftItems and rightItems arrays, and matchingPairs for correct answers
-        - For fill_in_blank: question should have blanks marked with _____ or [blank]
-        - For numerical: correctAnswer should be a number
-        - For short_answer and essay: provide sample answers as correctAnswer
-        - Assign appropriate point values based on question complexity
-        - If document has existing questions, extract them exactly as written
-        - If document is content-based, create questions that test comprehension
-        - Preserve section titles and organization from the original document
-        - Ensure questions are clear and unambiguous
-        - For matching questions, ensure equal number of left and right items
-      `;
+    // Import the retry service
+    const { aiRetryService } = await import('./aiRetryService');
+    
+    // Use retry service for AI operations
+    return await aiRetryService.executeWithRetry(async () => {
+      // Truncate document text if too long to reduce processing time
+      const maxTextLength = 8000; // Limit to ~8k characters for faster processing
+      const truncatedText = documentText.length > maxTextLength 
+        ? documentText.substring(0, maxTextLength) + '\n\n[Document truncated for processing...]'
+        : documentText;
+
+      const prompt = `Extract questions from this ${assessmentType} document. Return JSON array only:
+
+Document:
+${truncatedText}
+
+Required JSON format:
+[{"question":"text","type":"multiple_choice|true_false|short_answer|essay","options":["A","B","C","D"],"correctAnswer":"A","points":10,"aiExtracted":true}]
+
+Rules:
+- Extract existing questions exactly as written
+- For content without questions, create comprehension questions
+- Use appropriate point values (5-20 points)
+- Include 4 options for multiple choice
+- Use "true"/"false" for true/false questions
+- Keep questions clear and concise
+- Maximum 20 questions for performance`;
 
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
@@ -1373,10 +1358,11 @@ Please try again in a moment - I should be back to normal soon!`;
         console.error('Failed to parse AI response as JSON:', parseError);
         return [];
       }
-    } catch (error) {
-      console.error('Error extracting questions from document:', error);
-      throw new Error('Failed to extract questions from document');
-    }
+    }, {
+      maxRetries: 3,
+      priority: 5, // High priority for document processing
+      baseDelay: 2000
+    });
   }
 
   // Generate quiz from course notes section

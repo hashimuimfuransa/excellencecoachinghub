@@ -21,16 +21,42 @@ export interface IAssignment extends Document {
     uploadedAt: Date;
   };
   // Enhanced AI extraction fields
+  questions?: Array<{
+    _id?: string;
+    id?: string;
+    question: string;
+    type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay' | 'fill-in-blank' | 'matching' | 'ordering' | 'numerical' | 'code';
+    options?: string[];
+    correctAnswer?: string | string[]; // Array for matching/ordering questions
+    matchingPairs?: Array<{ left: string; right: string }>; // For matching questions
+    codeLanguage?: string; // For code questions
+    numericalRange?: { min: number; max: number }; // For numerical questions with tolerance
+    points: number;
+    aiExtracted?: boolean;
+    explanation?: string; // Explanation for the correct answer
+    difficulty?: 'easy' | 'medium' | 'hard';
+  }>;
   extractedQuestions?: Array<{
     question: string;
-    type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay';
+    type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay' | 'fill-in-blank' | 'matching' | 'ordering' | 'numerical' | 'code';
     options?: string[];
-    correctAnswer?: string;
+    correctAnswer?: string | string[]; // Array for matching/ordering questions
+    matchingPairs?: Array<{ left: string; right: string }>; // For matching questions
+    codeLanguage?: string; // For code questions
+    numericalRange?: { min: number; max: number }; // For numerical questions with tolerance
     points: number;
     aiExtracted: boolean;
+    explanation?: string; // Explanation for the correct answer
+    difficulty?: 'easy' | 'medium' | 'hard';
   }>;
   aiExtractionStatus?: 'pending' | 'completed' | 'failed';
   aiExtractionError?: string;
+  // New AI processing fields for faster uploads
+  aiProcessingStatus?: 'not_started' | 'pending' | 'completed' | 'failed' | 'no_questions_found';
+  aiProcessingError?: string;
+  documentText?: string; // Temporarily store document text for background processing
+  lastQuestionExtractionAttempt?: Date;
+  hasQuestions?: boolean;
   rubric?: string;
   gradingCriteria?: Array<{
     criterion: string;
@@ -63,8 +89,10 @@ export interface IAssignmentSubmission extends Document {
   // For extracted questions assignments
   extractedAnswers?: Array<{
     questionIndex: number;
-    answer: string;
-    questionType: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay';
+    answer: string | string[]; // Array for matching/ordering questions
+    questionType: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay' | 'fill-in-blank' | 'matching' | 'ordering' | 'numerical' | 'code';
+    timeSpent?: number; // Time spent on this question in seconds
+    attempts?: number; // Number of attempts for this question
   }>;
   submittedAt?: Date;
   isLate: boolean;
@@ -193,14 +221,35 @@ const AssignmentSchema = new Schema<IAssignment>({
     },
     type: {
       type: String,
-      enum: ['multiple-choice', 'true-false', 'short-answer', 'essay'],
+      enum: ['multiple-choice', 'true-false', 'short-answer', 'essay', 'fill-in-blank', 'matching', 'ordering', 'numerical', 'code'],
       required: true
     },
     options: [{
       type: String
     }],
     correctAnswer: {
-      type: String
+      type: Schema.Types.Mixed // Can be string or array
+    },
+    matchingPairs: [{
+      left: { type: String },
+      right: { type: String }
+    }],
+    codeLanguage: {
+      type: String,
+      enum: ['javascript', 'python', 'java', 'cpp', 'c', 'html', 'css', 'sql', 'other']
+    },
+    numericalRange: {
+      min: { type: Number },
+      max: { type: Number }
+    },
+    explanation: {
+      type: String,
+      maxlength: [1000, 'Explanation cannot exceed 1000 characters']
+    },
+    difficulty: {
+      type: String,
+      enum: ['easy', 'medium', 'hard'],
+      default: 'medium'
     },
     points: {
       type: Number,
@@ -240,6 +289,25 @@ const AssignmentSchema = new Schema<IAssignment>({
       maxlength: [500, 'Criterion description cannot exceed 500 characters']
     }
   }],
+  // New AI processing fields for faster uploads
+  aiProcessingStatus: {
+    type: String,
+    enum: ['not_started', 'pending', 'completed', 'failed', 'no_questions_found'],
+    default: 'not_started'
+  },
+  aiProcessingError: {
+    type: String
+  },
+  documentText: {
+    type: String // Temporarily store document text for background processing
+  },
+  lastQuestionExtractionAttempt: {
+    type: Date
+  },
+  hasQuestions: {
+    type: Boolean,
+    default: false
+  },
   autoGrading: {
     type: Boolean,
     default: true
@@ -319,12 +387,22 @@ const AssignmentSubmissionSchema = new Schema<IAssignmentSubmission>({
       required: true
     },
     answer: {
-      type: String,
+      type: Schema.Types.Mixed, // Can be string or array
       required: true
+    },
+    timeSpent: {
+      type: Number,
+      default: 0,
+      min: [0, 'Time spent cannot be negative']
+    },
+    attempts: {
+      type: Number,
+      default: 1,
+      min: [1, 'Attempts must be at least 1']
     },
     questionType: {
       type: String,
-      enum: ['multiple-choice', 'true-false', 'short-answer', 'essay'],
+      enum: ['multiple-choice', 'true-false', 'short-answer', 'essay', 'fill-in-blank', 'matching', 'ordering', 'numerical', 'code'],
       required: true
     }
   }],

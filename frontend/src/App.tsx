@@ -92,6 +92,8 @@ import ProctoringMonitoring from './pages/Admin/ProctoringMonitoring';
 import GradesAndLeaderboard from './pages/Student/GradesAndLeaderboard';
 import StudentLeaderboard from './pages/Student/StudentLeaderboard';
 import TeacherGradesLeaderboard from './pages/Teacher/TeacherGradesLeaderboard';
+import AssignmentGradingDashboard from './pages/Teacher/AssignmentGradingDashboard';
+import AssignmentView from './pages/Student/AssignmentView';
 
 
 // Import hooks
@@ -226,6 +228,7 @@ const App: React.FC = () => {
           <Route path="grades" element={<TeacherApprovalGuard><TeacherGradesLeaderboard /></TeacherApprovalGuard>} />
           <Route path="grades/:courseId" element={<TeacherApprovalGuard><TeacherGradesLeaderboard /></TeacherApprovalGuard>} />
           <Route path="course-management" element={<TeacherApprovalGuard><CourseManagementSelection /></TeacherApprovalGuard>} />
+          <Route path="assignments/:assignmentId/grading" element={<TeacherApprovalGuard><AssignmentGradingDashboard /></TeacherApprovalGuard>} />
           <Route path="settings" element={<TeacherSettings />} />
           <Route path="test" element={<TeacherApprovalGuard><TestPage /></TeacherApprovalGuard>} />
         </Route>
@@ -248,7 +251,8 @@ const App: React.FC = () => {
           <Route path="course/:id/notes" element={<CourseNotesStudyPage />} />
           <Route path="course/:id/live-sessions" element={<StudentLiveSessions />} />
           <Route path="course/:id/announcements" element={<CourseAnnouncementsPage />} />
-          <Route path="assignment/:assignmentId" element={<EnhancedAssignmentPage />} />
+          <Route path="assignment/:assignmentId" element={<EnhancedTakeAssignment />} />
+          <Route path="assignments/:assignmentId" element={<AssignmentView />} />
           <Route path="live-sessions" element={<StudentLiveSessions />} />
           <Route path="live-sessions/:sessionId/room" element={<StudentLiveSessionRoom />} />
           <Route path="progress" element={<Progress />} />
@@ -433,7 +437,7 @@ const App: React.FC = () => {
         path="/assignment/:assignmentId/work"
         element={
           <ProtectedRoute requiredRole={UserRole.STUDENT}>
-            <EnhancedWorkOnAssignment />
+            <EnhancedTakeAssignment />
           </ProtectedRoute>
         }
       />

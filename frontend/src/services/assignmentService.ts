@@ -589,6 +589,131 @@ class AssignmentService {
 
   // AI Extraction Methods
 
+  // Extract questions from document (like assessments)
+  async extractQuestionsFromDocument(assignmentId: string, file: File): Promise<Assignment> {
+    try {
+      const formData = new FormData();
+      formData.append('document', file);
+
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/assignments/${assignmentId}/extract-questions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        return result.data.assignment;
+      }
+      
+      throw new Error(result.error || 'Failed to extract questions from document');
+    } catch (error: any) {
+      console.error('Failed to extract questions:', error);
+      throw new Error(error.message || 'Failed to extract questions from document');
+    }
+  }
+
+  // Replace questions from document (like assessments)
+  async replaceQuestionsFromDocument(assignmentId: string, file: File): Promise<Assignment> {
+    try {
+      const formData = new FormData();
+      formData.append('document', file);
+
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/assignments/${assignmentId}/replace-questions`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        return result.data.assignment;
+      }
+      
+      throw new Error(result.error || 'Failed to replace questions from document');
+    } catch (error: any) {
+      console.error('Failed to replace questions:', error);
+      throw new Error(error.message || 'Failed to replace questions from document');
+    }
+  }
+
+  // Check AI processing status
+  async checkAIProcessingStatus(assignmentId: string): Promise<{
+    success: boolean;
+    data: {
+      assignmentId: string;
+      aiProcessingStatus: string;
+      questionsCount: number;
+      extractedQuestionsCount: number;
+      hasQuestions: boolean;
+      processingError?: string;
+      lastUpdated: string;
+    };
+  }> {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/assignments/${assignmentId}/ai-status`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        return result;
+      }
+      
+      throw new Error(result.error || 'Failed to check AI processing status');
+    } catch (error: any) {
+      console.error('Failed to check AI processing status:', error);
+      throw new Error(error.message || 'Failed to check AI processing status');
+    }
+  }
+
+  // Retry question extraction
+  async retryQuestionExtraction(assignmentId: string): Promise<{
+    success: boolean;
+    message: string;
+    data: {
+      assignmentId: string;
+      queueStatus: any;
+      estimatedWaitTime: string;
+    };
+  }> {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/assignments/${assignmentId}/retry-extraction`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        return result;
+      }
+      
+      throw new Error(result.error || 'Failed to retry question extraction');
+    } catch (error: any) {
+      console.error('Failed to retry question extraction:', error);
+      throw new Error(error.message || 'Failed to retry question extraction');
+    }
+  }
+
   // Get extracted questions from assignment
   async getExtractedQuestions(assignmentId: string): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
@@ -660,6 +785,133 @@ class AssignmentService {
         success: false, 
         error: error.response?.data?.message || 'Failed to submit assignment' 
       };
+    }
+  }
+
+  // Grading Methods (like assessments)
+
+  // Get assignment submissions for grading
+  async getAssignmentSubmissions(assignmentId: string, filters: any = {}): Promise<{
+    submissions: AssignmentSubmission[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalItems: number;
+      itemsPerPage: number;
+    };
+  }> {
+    try {
+      const queryParams = new URLSearchParams();
+      
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+
+      const response = await api.get(`/assignments/${assignmentId}/submissions?${queryParams.toString()}`);
+      
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      }
+      
+      throw new Error(response.data.error || 'Failed to fetch submissions');
+    } catch (error: any) {
+      console.error('Failed to fetch assignment submissions:', error);
+      throw new Error(error.response?.data?.message || 'Failed to fetch submissions');
+    }
+  }
+
+  // Grade submission manually (like assessments)
+  async gradeSubmission(submissionId: string, gradingData: {
+    answers?: any[];
+    feedback?: string;
+    score?: number;
+    percentage?: number;
+  }): Promise<AssignmentSubmission> {
+    try {
+      const response = await api.put(`/assignments/submissions/${submissionId}/grade`, gradingData);
+      
+      if (response.data.success && response.data.data) {
+        return response.data.data.submission;
+      }
+      
+      throw new Error(response.data.error || 'Failed to grade submission');
+    } catch (error: any) {
+      console.error('Failed to grade submission:', error);
+      throw new Error(error.response?.data?.message || 'Failed to grade submission');
+    }
+  }
+
+  // Get submission details for grading
+  async getSubmissionDetails(submissionId: string): Promise<AssignmentSubmission> {
+    try {
+      const response = await api.get(`/assignments/submissions/${submissionId}`);
+      
+      if (response.data.success && response.data.data) {
+        return response.data.data.submission;
+      }
+      
+      throw new Error(response.data.error || 'Failed to fetch submission details');
+    } catch (error: any) {
+      console.error('Failed to fetch submission details:', error);
+      throw new Error(error.response?.data?.message || 'Failed to fetch submission details');
+    }
+  }
+
+  // Create assignment with document upload (like assessments)
+  async createAssignmentWithDocument(assignmentData: CreateAssignmentData, file?: File): Promise<Assignment> {
+    try {
+      if (file) {
+        // Create FormData for file upload
+        const formData = new FormData();
+        
+        // Add file
+        formData.append('document', file);
+        
+        // Add assignment data
+        Object.entries(assignmentData).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            if (typeof value === 'object' && !Array.isArray(value)) {
+              formData.append(key, JSON.stringify(value));
+            } else if (Array.isArray(value)) {
+              formData.append(key, JSON.stringify(value));
+            } else {
+              formData.append(key, value.toString());
+            }
+          }
+        });
+
+        // Use fetch directly for file upload
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE_URL}/assignments`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          return result.data;
+        }
+        
+        throw new Error(result.error || 'Failed to create assignment');
+      } else {
+        // Regular JSON request without file
+        const response = await api.post('/assignments', assignmentData);
+        
+        if (response.data.success && response.data.data) {
+          return response.data.data;
+        }
+        
+        throw new Error(response.data.error || 'Failed to create assignment');
+      }
+    } catch (error: any) {
+      console.error('Failed to create assignment:', error);
+      throw new Error(error.message || 'Failed to create assignment');
     }
   }
 }

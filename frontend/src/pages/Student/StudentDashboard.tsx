@@ -220,12 +220,12 @@ const StudentDashboard: React.FC = () => {
       const totalCourses = coursesData.courses?.length || 0;
       const enrollments: IEnrollment[] = enrollmentsData.enrollments || [];
       const completedCourses = enrollments.filter(
-        (enrollment) => enrollment.progress >= 100
+        (enrollment) => enrollment.progress?.totalProgress >= 100
       ).length;
       const averageProgress = enrollments.length > 0
         ? Math.round(
             enrollments.reduce(
-              (sum, enrollment) => sum + (enrollment.progress || 0),
+              (sum, enrollment) => sum + (enrollment.progress?.totalProgress || 0),
               0
             ) / enrollments.length
           )
@@ -728,7 +728,7 @@ const StudentDashboard: React.FC = () => {
                             </Typography>
                             <LinearProgress
                               variant="determinate"
-                              value={enrollment?.progress || 0}
+                              value={enrollment?.progress?.totalProgress || 0}
                               sx={{ 
                                 height: { xs: 6, sm: 8 },
                                 borderRadius: 1,
@@ -744,13 +744,13 @@ const StudentDashboard: React.FC = () => {
                                 textAlign: { xs: 'center', sm: 'left' }
                               }}
                             >
-                              {enrollment?.progress || 0}% Complete
+                              {enrollment?.progress?.totalProgress || 0}% Complete
                             </Typography>
                           </Box>
                           <ResponsiveButton
                             size={buttonSize}
                             variant="outlined"
-                            onClick={() => navigate(`/dashboard/student/course/${course._id}`)}
+                            onClick={() => navigate(`/course/${course._id}`)}
                             sx={{ 
                               minWidth: { xs: '100%', sm: 'auto' },
                               mt: { xs: 1, sm: 0 }

@@ -36,7 +36,9 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow
+  TableRow,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import {
   ArrowBack,
@@ -155,6 +157,8 @@ const CourseAssessmentsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   // State management
   const [course, setCourse] = useState<ICourse | null>(null);
@@ -651,11 +655,22 @@ const CourseAssessmentsPage: React.FC = () => {
                     }
                   }}>
                   <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexDirection: isMobile ? 'column' : 'row',
+                      justifyContent: 'space-between', 
+                      alignItems: isMobile ? 'stretch' : 'flex-start', 
+                      mb: 2 
+                    }}>
                       <Box sx={{ flex: 1 }}>
                         <Typography variant="h6" gutterBottom>
                           {assessment.title}
-                          <Box sx={{ display: 'inline-flex', gap: 1, ml: 1 }}>
+                          <Box sx={{ 
+                            display: 'flex', 
+                            flexWrap: 'wrap',
+                            gap: 1, 
+                            mt: 1
+                          }}>
                             <Chip 
                               label={assessment.type.toUpperCase()} 
                               color="primary" 
@@ -752,46 +767,197 @@ const CourseAssessmentsPage: React.FC = () => {
                         )}
                       </Box>
 
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, ml: 2 }}>
-                        <Button
-                          variant="outlined"
-                          startIcon={<Visibility />}
-                          onClick={() => viewAssessmentDetails(assessment)}
-                        >
-                          View Details
-                        </Button>
-                        
+                      {/* Desktop Button Layout */}
+                      {!isMobile && (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, ml: 2 }}>
+                          <Button
+                            variant="outlined"
+                            startIcon={<Visibility />}
+                            onClick={() => viewAssessmentDetails(assessment)}
+                          >
+                            View Details
+                          </Button>
+                          
+                          {status === 'available' && remainingAttempts > 0 && (
+                            <Button
+                              variant="contained"
+                              startIcon={<PlayArrow />}
+                              onClick={() => startAssessment(assessment)}
+                            >
+                              Start Assessment
+                            </Button>
+                          )}
+                          
+                          {status === 'attempted' && remainingAttempts > 0 && (
+                            <Button
+                              variant="contained"
+                              startIcon={<PlayArrow />}
+                              onClick={() => startAssessment(assessment)}
+                            >
+                              Retry ({remainingAttempts} left)
+                            </Button>
+                          )}
+                          
+                          {bestAttempt && (
+                            <Button
+                              variant="outlined"
+                              startIcon={<Grade />}
+                              onClick={() => viewAttemptResults(assessment, bestAttempt)}
+                            >
+                              View Results
+                            </Button>
+                          )}
+                        </Box>
+                      )}
+                    </Box>
+
+                    {/* Mobile Button Layout - Below Content */}
+                    {isMobile && (
+                      <Box sx={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        gap: 2, 
+                        mt: 3,
+                        pt: 2,
+                        borderTop: '1px solid',
+                        borderColor: 'divider'
+                      }}>
+                        {/* Mobile Status Indicator */}
+                        <Box sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'center', 
+                          mb: 1 
+                        }}>
+                          <Chip
+                            icon={statusInfo.icon}
+                            label={statusInfo.label}
+                            color={statusInfo.color as any}
+                            size="medium"
+                            sx={{ 
+                              fontSize: '0.9rem',
+                              fontWeight: 600,
+                              px: 2,
+                              py: 1
+                            }}
+                          />
+                        </Box>
+
+                        {/* Primary Action Button */}
                         {status === 'available' && remainingAttempts > 0 && (
                           <Button
                             variant="contained"
+                            size="large"
                             startIcon={<PlayArrow />}
                             onClick={() => startAssessment(assessment)}
+                            fullWidth
+                            sx={{
+                              py: 2.5,
+                              fontSize: '1.2rem',
+                              fontWeight: 700,
+                              textTransform: 'none',
+                              borderRadius: 3,
+                              background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                              boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
+                              '&:hover': {
+                                background: `linear-gradient(45deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
+                                transform: 'translateY(-3px)',
+                                boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
+                              },
+                              transition: 'all 0.3s ease'
+                            }}
                           >
-                            Start Assessment
+                            🚀 Start Assessment Now
                           </Button>
                         )}
                         
                         {status === 'attempted' && remainingAttempts > 0 && (
                           <Button
                             variant="contained"
+                            size="large"
                             startIcon={<PlayArrow />}
                             onClick={() => startAssessment(assessment)}
+                            fullWidth
+                            sx={{
+                              py: 2.5,
+                              fontSize: '1.2rem',
+                              fontWeight: 700,
+                              textTransform: 'none',
+                              borderRadius: 3,
+                              background: `linear-gradient(45deg, ${theme.palette.warning.main}, ${theme.palette.warning.dark})`,
+                              boxShadow: '0 6px 20px rgba(255, 152, 0, 0.3)',
+                              '&:hover': {
+                                background: `linear-gradient(45deg, ${theme.palette.warning.dark}, ${theme.palette.warning.main})`,
+                                transform: 'translateY(-3px)',
+                                boxShadow: '0 10px 30px rgba(255, 152, 0, 0.4)'
+                              },
+                              transition: 'all 0.3s ease'
+                            }}
                           >
-                            Retry ({remainingAttempts} left)
+                            🔄 Retry Assessment ({remainingAttempts} left)
                           </Button>
                         )}
-                        
-                        {bestAttempt && (
+
+                        {/* Not Available Message */}
+                        {(status === 'expired' || status === 'not-available' || status === 'scheduled' || (status === 'failed' && remainingAttempts === 0)) && (
+                          <Box sx={{ 
+                            textAlign: 'center', 
+                            py: 2, 
+                            px: 3,
+                            bgcolor: 'grey.100',
+                            borderRadius: 2,
+                            mb: 2
+                          }}>
+                            <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 600 }}>
+                              {status === 'expired' && '⏰ Assessment has expired'}
+                              {status === 'not-available' && '🔒 Assessment not yet available'}
+                              {status === 'scheduled' && '📅 Assessment is scheduled'}
+                              {status === 'failed' && remainingAttempts === 0 && '❌ No more attempts remaining'}
+                            </Typography>
+                          </Box>
+                        )}
+
+                        {/* Passed Status */}
+                        {status === 'passed' && (
+                          <Box sx={{ 
+                            textAlign: 'center', 
+                            py: 2, 
+                            px: 3,
+                            bgcolor: 'success.light',
+                            borderRadius: 2,
+                            mb: 2
+                          }}>
+                            <Typography variant="body1" sx={{ fontWeight: 600, color: 'success.dark' }}>
+                              ✅ Assessment Completed Successfully!
+                            </Typography>
+                          </Box>
+                        )}
+
+                        {/* Secondary Action Buttons */}
+                        <Box sx={{ display: 'flex', gap: 1 }}>
                           <Button
                             variant="outlined"
-                            startIcon={<Grade />}
-                            onClick={() => viewAttemptResults(assessment, bestAttempt)}
+                            startIcon={<Visibility />}
+                            onClick={() => viewAssessmentDetails(assessment)}
+                            fullWidth
+                            sx={{ py: 1.5, fontSize: '0.95rem' }}
                           >
-                            View Results
+                            View Details
                           </Button>
-                        )}
+                          
+                          {bestAttempt && (
+                            <Button
+                              variant="outlined"
+                              startIcon={<Grade />}
+                              onClick={() => viewAttemptResults(assessment, bestAttempt)}
+                              fullWidth
+                              sx={{ py: 1.5, fontSize: '0.95rem' }}
+                            >
+                              View Results
+                            </Button>
+                          )}
+                        </Box>
                       </Box>
-                    </Box>
+                    )}
                   </CardContent>
                 </Card>
               </Grid>

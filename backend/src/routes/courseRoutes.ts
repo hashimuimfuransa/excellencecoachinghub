@@ -49,11 +49,7 @@ const createCourseValidation = [
   body('level')
     .isIn(['Beginner', 'Intermediate', 'Advanced', 'beginner', 'intermediate', 'advanced'])
     .withMessage('Level must be Beginner, Intermediate, or Advanced'),
-  body('price')
-    .isNumeric()
-    .withMessage('Price must be a number')
-    .isFloat({ min: 0 })
-    .withMessage('Price must be positive'),
+  // Price will be set during approval process
   body('duration')
     .isNumeric()
     .withMessage('Duration must be a number')
@@ -98,6 +94,30 @@ const updateCourseValidation = [
 ];
 
 const approveCourseValidation = [
+  body('notesPrice')
+    .optional()
+    .isNumeric()
+    .withMessage('Notes price must be a number')
+    .isFloat({ min: 0 })
+    .withMessage('Notes price must be positive'),
+  body('liveSessionPrice')
+    .optional()
+    .isNumeric()
+    .withMessage('Live session price must be a number')
+    .isFloat({ min: 0 })
+    .withMessage('Live session price must be positive'),
+  body('enrollmentDeadline')
+    .optional()
+    .isISO8601()
+    .withMessage('Invalid enrollment deadline format'),
+  body('courseStartDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Invalid course start date format'),
+  body('maxEnrollments')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Max enrollments must be at least 1'),
   body('feedback')
     .optional()
     .trim()
@@ -123,7 +143,7 @@ const assignModeratorValidation = [
 ];
 
 // Student routes
-router.get('/enrolled', getEnrolledCourses);
+router.get('/enrolled', authorize(UserRole.STUDENT), getEnrolledCourses);
 
 // Routes accessible by teachers and admins
 router.get('/', authorize(UserRole.TEACHER, UserRole.ADMIN), getAllCourses);

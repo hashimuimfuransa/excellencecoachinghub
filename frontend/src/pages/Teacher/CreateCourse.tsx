@@ -66,7 +66,6 @@ const CreateCourse: React.FC = () => {
     description: '',
     category: '',
     level: 'Beginner' as 'Beginner' | 'Intermediate' | 'Advanced',
-    price: 0,
     duration: 0,
     prerequisites: [] as string[],
     learningObjectives: [] as string[],
@@ -114,7 +113,7 @@ const CreateCourse: React.FC = () => {
       case 0: // Basic Information
         return !!(formData.title && formData.description && formData.category);
       case 1: // Course Details
-        return !!(formData.level && formData.price >= 0 && formData.duration > 0);
+        return !!(formData.level && formData.duration > 0);
       default:
         return true;
     }
@@ -319,19 +318,6 @@ const CreateCourse: React.FC = () => {
                   <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
-                      label="Price (USD) *"
-                      type="number"
-                      value={formData.price}
-                      onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
-                      inputProps={{ min: 0, step: 0.01 }}
-                      InputProps={{ startAdornment: '$' }}
-                      helperText="Set to 0 for free courses"
-                    />
-                  </Grid>
-                  
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
                       label="Duration (hours) *"
                       type="number"
                       value={formData.duration}
@@ -339,6 +325,14 @@ const CreateCourse: React.FC = () => {
                       inputProps={{ min: 1, max: 1000 }}
                       helperText="Estimated course duration"
                     />
+                  </Grid>
+                  
+                  <Grid item xs={12} md={6}>
+                    <Alert severity="info" sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+                      <Typography variant="body2">
+                        💰 Course pricing will be set by admin during approval process
+                      </Typography>
+                    </Alert>
                   </Grid>
                   
                   {/* Prerequisites */}

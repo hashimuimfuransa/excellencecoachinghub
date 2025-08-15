@@ -411,7 +411,7 @@ const EnhancedCourseViewPage: React.FC = () => {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="lg" sx={{ pt: 12, pb: 4 }}>
+      <Container maxWidth="lg" sx={{ pt: 12, pb: isMobile ? 12 : 4 }}>
         {/* Course Header */}
         <FloatingCard sx={{ mb: 4, bgcolor: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)' }}>
           <CardContent sx={{ p: 4 }}>
@@ -549,6 +549,22 @@ const EnhancedCourseViewPage: React.FC = () => {
                   Dive into course materials with AI-powered quizzes, progress tracking, and gamified learning experience
                 </Typography>
                 
+                {/* Price Display */}
+                {course?.notesPrice !== undefined && course.notesPrice > 0 && (
+                  <Box sx={{ mb: 2 }}>
+                    <Chip
+                      label={`$${course.notesPrice.toFixed(2)}`}
+                      color="primary"
+                      variant="outlined"
+                      sx={{ 
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        px: 1
+                      }}
+                    />
+                  </Box>
+                )}
+                
                 <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 3 }}>
                   <StatsChip 
                     label={`${courseStats.completedNotes}/${courseStats.totalNotes} Completed`}
@@ -605,6 +621,22 @@ const EnhancedCourseViewPage: React.FC = () => {
                   Join interactive live classes, participate in real-time discussions, and connect with your instructor
                 </Typography>
                 
+                {/* Price Display */}
+                {course?.liveSessionPrice !== undefined && course.liveSessionPrice > 0 && (
+                  <Box sx={{ mb: 2 }}>
+                    <Chip
+                      label={`$${course.liveSessionPrice.toFixed(2)}`}
+                      color="secondary"
+                      variant="outlined"
+                      sx={{ 
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        px: 1
+                      }}
+                    />
+                  </Box>
+                )}
+                
                 <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 3 }}>
                   <StatsChip 
                     label={`${courseStats.upcomingLiveSessions} Upcoming`}
@@ -638,10 +670,108 @@ const EnhancedCourseViewPage: React.FC = () => {
           </Grid>
         </Grid>
 
+        {/* Mobile-First Assessment Section */}
+        {isMobile && (
+          <Box sx={{ mb: 4 }}>
+            <Typography variant="h5" gutterBottom sx={{ fontWeight: 700, color: 'white', mb: 3, textAlign: 'center' }}>
+              📝 Take Assessments
+            </Typography>
+            
+            {/* Assessment Info Card */}
+            <Card sx={{ mb: 3, borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
+              <CardContent sx={{ textAlign: 'center', py: 4 }}>
+                <Quiz sx={{ fontSize: 60, color: 'warning.main', mb: 2 }} />
+                <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
+                  Assessments Available
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                  Test your knowledge with quizzes and exams
+                </Typography>
+                <Badge badgeContent={courseStats.totalQuizzes} color="warning" sx={{ mb: 2 }}>
+                  <Chip 
+                    label={`${courseStats.totalQuizzes} Available`} 
+                    color="warning" 
+                    size="large"
+                    sx={{ fontSize: '1rem', py: 2 }}
+                  />
+                </Badge>
+              </CardContent>
+            </Card>
+
+            {/* Clear Start Button Below Card */}
+            <Box sx={{ px: 2 }}>
+              <Button 
+                variant="contained" 
+                size="large"
+                startIcon={<Quiz />}
+                fullWidth
+                onClick={handleAssessmentsView}
+                sx={{ 
+                  borderRadius: 4,
+                  py: 2.5,
+                  fontSize: '1.2rem',
+                  fontWeight: 700,
+                  textTransform: 'none',
+                  background: `linear-gradient(45deg, ${theme.palette.warning.main}, ${theme.palette.warning.dark})`,
+                  boxShadow: '0 8px 24px rgba(255, 152, 0, 0.4)',
+                  '&:hover': {
+                    background: `linear-gradient(45deg, ${theme.palette.warning.dark}, ${theme.palette.warning.main})`,
+                    boxShadow: '0 12px 32px rgba(255, 152, 0, 0.6)',
+                    transform: 'translateY(-2px)'
+                  },
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                🚀 Start Assessment Now
+              </Button>
+            </Box>
+          </Box>
+        )}
+
+        {/* Mobile Assessment Call-to-Action */}
+        {isMobile && (
+          <Box sx={{ mb: 4, textAlign: 'center' }}>
+            <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: 'white', mb: 2 }}>
+              Ready to Test Your Knowledge? 🎯
+            </Typography>
+            <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.8)', mb: 4, fontSize: '1.1rem' }}>
+              Take assessments to evaluate your understanding and track your progress
+            </Typography>
+            
+            <Box sx={{ maxWidth: 400, mx: 'auto' }}>
+              <Button 
+                variant="contained" 
+                size="large"
+                startIcon={<Quiz />}
+                fullWidth
+                onClick={handleAssessmentsView}
+                sx={{ 
+                  borderRadius: 5,
+                  py: 3,
+                  fontSize: '1.3rem',
+                  fontWeight: 800,
+                  textTransform: 'none',
+                  background: `linear-gradient(135deg, ${theme.palette.warning.main}, ${theme.palette.error.main})`,
+                  boxShadow: '0 12px 40px rgba(255, 152, 0, 0.5)',
+                  border: '2px solid rgba(255,255,255,0.2)',
+                  '&:hover': {
+                    background: `linear-gradient(135deg, ${theme.palette.error.main}, ${theme.palette.warning.main})`,
+                    boxShadow: '0 16px 48px rgba(255, 152, 0, 0.7)',
+                    transform: 'translateY(-4px) scale(1.02)'
+                  },
+                  transition: 'all 0.4s ease'
+                }}
+              >
+                🏆 Start Assessment
+              </Button>
+            </Box>
+          </Box>
+        )}
+
         {/* Additional Learning Options */}
         <Grid container spacing={3}>
           <Grid item xs={12} sm={6} md={3}>
-            <ActionCard onClick={handleAssessmentsView} sx={{ height: '100%' }}>
+            <ActionCard onClick={handleAssessmentsView} sx={{ height: '100%', display: isMobile ? 'none' : 'block' }}>
               <CardContent sx={{ textAlign: 'center', py: 3 }}>
                 <Quiz sx={{ fontSize: 50, color: 'warning.main', mb: 2 }} />
                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
@@ -712,6 +842,24 @@ const EnhancedCourseViewPage: React.FC = () => {
         {/* Floating Action Buttons */}
         <Box sx={{ position: 'fixed', bottom: 20, right: 20, zIndex: 1000 }}>
           <Stack spacing={2}>
+            {/* Mobile Assessment FAB */}
+            {isMobile && (
+              <Tooltip title="Start Assessment" placement="left">
+                <Fab 
+                  color="warning" 
+                  onClick={handleAssessmentsView}
+                  size="large"
+                  sx={{ 
+                    background: `linear-gradient(45deg, ${theme.palette.warning.main}, ${theme.palette.warning.dark})`,
+                    '&:hover': {
+                      background: `linear-gradient(45deg, ${theme.palette.warning.dark}, ${theme.palette.warning.main})`,
+                    }
+                  }}
+                >
+                  <Quiz />
+                </Fab>
+              </Tooltip>
+            )}
             <Tooltip title="Bookmark Course" placement="left">
               <Fab 
                 color={isBookmarked ? "secondary" : "default"} 
@@ -728,6 +876,66 @@ const EnhancedCourseViewPage: React.FC = () => {
             </Tooltip>
           </Stack>
         </Box>
+
+        {/* Mobile Sticky Bottom Bar */}
+        {isMobile && (
+          <Paper 
+            sx={{ 
+              position: 'fixed', 
+              bottom: 0, 
+              left: 0, 
+              right: 0, 
+              zIndex: 1100,
+              borderRadius: '20px 20px 0 0',
+              p: 2,
+              background: `linear-gradient(135deg, ${theme.palette.background.paper}, ${theme.palette.grey[50]})`,
+              backdropFilter: 'blur(10px)',
+              borderTop: `1px solid ${theme.palette.divider}`
+            }}
+            elevation={8}
+          >
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  size="large"
+                  startIcon={<Quiz />}
+                  onClick={handleAssessmentsView}
+                  sx={{
+                    borderRadius: 3,
+                    py: 1.5,
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    background: `linear-gradient(45deg, ${theme.palette.warning.main}, ${theme.palette.warning.dark})`,
+                    '&:hover': {
+                      background: `linear-gradient(45deg, ${theme.palette.warning.dark}, ${theme.palette.warning.main})`,
+                    }
+                  }}
+                >
+                  Assessments
+                </Button>
+              </Grid>
+              <Grid item xs={6}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  size="large"
+                  startIcon={<MenuBook />}
+                  onClick={handleNotesView}
+                  sx={{
+                    borderRadius: 3,
+                    py: 1.5,
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  Study Notes
+                </Button>
+              </Grid>
+            </Grid>
+          </Paper>
+        )}
       </Container>
     </GradientBackground>
   );

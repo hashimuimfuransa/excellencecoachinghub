@@ -5,6 +5,12 @@ export interface IEnrollmentDocument extends Document {
   student: mongoose.Types.ObjectId;
   course: mongoose.Types.ObjectId;
   enrolledAt: Date;
+  enrollmentType: 'notes' | 'live_sessions' | 'both'; // Type of enrollment
+  hasNotesAccess: boolean; // Whether student has paid for notes access
+  hasLiveSessionAccess: boolean; // Whether student has paid for live session access
+  notesPaymentAmount?: number; // Amount paid for notes access
+  liveSessionPaymentAmount?: number; // Amount paid for live session access
+  paymentStatus: 'pending' | 'completed' | 'failed' | 'refunded';
   progressPercentage: number;
   totalPoints: number;
   timeSpent: number; // in minutes
@@ -51,6 +57,34 @@ const enrollmentSchema = new Schema<IEnrollmentDocument>({
   enrolledAt: {
     type: Date,
     default: Date.now
+  },
+  enrollmentType: {
+    type: String,
+    enum: ['notes', 'live_sessions', 'both'],
+    required: [true, 'Enrollment type is required']
+  },
+  hasNotesAccess: {
+    type: Boolean,
+    default: false
+  },
+  hasLiveSessionAccess: {
+    type: Boolean,
+    default: false
+  },
+  notesPaymentAmount: {
+    type: Number,
+    default: 0,
+    min: [0, 'Notes payment amount cannot be negative']
+  },
+  liveSessionPaymentAmount: {
+    type: Number,
+    default: 0,
+    min: [0, 'Live session payment amount cannot be negative']
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'completed', 'failed', 'refunded'],
+    default: 'pending'
   },
   progressPercentage: {
     type: Number,
@@ -137,8 +171,8 @@ const enrollmentSchema = new Schema<IEnrollmentDocument>({
   toObject: { virtuals: true }
 });
 
-// Compound index to ensure a student can only enroll in a course once
-enrollmentSchema.index({ student: 1, course: 1 }, { unique: true });
+// Compound index to ensure a student can only have one enrollment per type per course
+enrollmentSchema.index({ student: 1, course: 1, enrollmentType: 1 }, { unique: true });
 
 // Indexes for performance
 enrollmentSchema.index({ student: 1 });

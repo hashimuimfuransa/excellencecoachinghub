@@ -641,7 +641,7 @@ const EnhancedCourseManagement: React.FC = () => {
     }
   };
 
-  // Handle uploading assignment document
+  // Handle uploading assignment document with AI extraction (like assessments)
   const handleUploadAssignmentDocument = (assignment: AssignmentType) => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -652,18 +652,18 @@ const EnhancedCourseManagement: React.FC = () => {
         try {
           setLoading(true);
           
-          // Check if assignment already has a document - if so, replace it
-          const hasExistingDocument = assignment.assignmentDocument?.fileUrl;
+          // Check if assignment already has extracted questions - if so, replace them
+          const hasExistingQuestions = assignment.questions && assignment.questions.some(q => q._id.startsWith('extracted_'));
           let updatedAssignment;
           
-          if (hasExistingDocument) {
-            // Replace existing document
-            updatedAssignment = await assignmentService.replaceAssignmentDocument(assignment._id, file);
-            setSuccess('Assignment document replaced successfully!');
+          if (hasExistingQuestions) {
+            // Replace existing document-extracted questions
+            updatedAssignment = await assignmentService.replaceQuestionsFromDocument(assignment._id, file);
+            setSuccess('Assignment document replaced and questions updated successfully!');
           } else {
-            // Upload new document
-            updatedAssignment = await assignmentService.uploadAssignmentDocument(assignment._id, file);
-            setSuccess('Assignment document uploaded successfully!');
+            // Extract new questions from document
+            updatedAssignment = await assignmentService.extractQuestionsFromDocument(assignment._id, file);
+            setSuccess('Assignment document uploaded and questions extracted successfully!');
           }
           
           // Update the assignment in the state
@@ -1800,6 +1800,14 @@ const EnhancedCourseManagement: React.FC = () => {
                               icon={<CheckCircleIcon />}
                             />
                           )}
+                          {assignment.questions && assignment.questions.length > 0 && (
+                            <Chip
+                              label={`${assignment.questions.length} Questions`}
+                              color="success"
+                              size="small"
+                              icon={<AutoAwesome />}
+                            />
+                          )}
                         </Box>
                       </Box>
                       
@@ -1908,9 +1916,9 @@ const EnhancedCourseManagement: React.FC = () => {
                           startIcon={<CloudUploadIcon />}
                           onClick={() => handleUploadAssignmentDocument(assignment)}
                           variant="outlined"
-                          color={assignment.assignmentDocument ? "success" : "primary"}
+                          color={assignment.questions && assignment.questions.length > 0 ? "success" : "primary"}
                         >
-                          {assignment.assignmentDocument ? 'Update' : 'Upload'}
+                          {assignment.questions && assignment.questions.length > 0 ? 'Update AI' : 'Extract AI'}
                         </Button>
                         <Button
                           size="small"
@@ -1921,6 +1929,17 @@ const EnhancedCourseManagement: React.FC = () => {
                         >
                           Submissions
                         </Button>
+                        {assignment.questions && assignment.questions.length > 0 && (
+                          <Button
+                            size="small"
+                            startIcon={<Psychology />}
+                            onClick={() => navigate(`/dashboard/teacher/assignments/${assignment._id}/grading`)}
+                            variant="contained"
+                            color="warning"
+                          >
+                            Grade AI
+                          </Button>
+                        )}
                         <Button
                           size="small"
                           startIcon={<DeleteIcon />}

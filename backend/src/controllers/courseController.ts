@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { Course } from '../models/Course';
 import { User } from '../models/User';
 import { UserProgress } from '../models/UserProgress';
+import { CourseEnrollment } from '../models/CourseEnrollment';
 import { validationResult } from 'express-validator';
 import { notificationService } from '../services/notificationService';
 import { CourseStatus } from '../../../shared/types';
@@ -103,8 +104,6 @@ export const getCourseById = async (req: Request, res: Response, next: NextFunct
     if (isPublicRequest) {
       // For public requests, only show approved courses
       filter.status = CourseStatus.APPROVED;
-    } else if (req.user.role === 'teacher') {
-      filter.instructor = req.user._id;
     }
 
     const course = await Course.findOne(filter)
@@ -113,7 +112,7 @@ export const getCourseById = async (req: Request, res: Response, next: NextFunct
     if (!course) {
       res.status(404).json({
         success: false,
-        error: 'Course not found or access denied'
+        error: 'Course not found'
       });
       return;
     }
@@ -235,7 +234,14 @@ export const createCourse = async (req: Request, res: Response, next: NextFuncti
 export const approveCourse = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
-    const { feedback } = req.body;
+    const { 
+      notesPrice, 
+      liveSessionPrice, 
+      enrollmentDeadline, 
+      courseStartDate, 
+      maxEnrollments,
+      feedback 
+    } = req.body;
 
     const course = await Course.findById(id);
     if (!course) {
@@ -246,9 +252,44 @@ export const approveCourse = async (req: Request, res: Response, next: NextFunct
       return;
     }
 
+    // Validate dates if provided
+    if (enrollmentDeadline && courseStartDate) {
+      const enrollmentDate = new Date(enrollmentDeadline);
+      const startDate = new Date(courseStartDate);
+      const now = new Date();
+
+      if (enrollmentDate <= now) {
+        res.status(400).json({
+          success: false,
+          error: 'Enrollment deadline must be in the future'
+        });
+        return;
+      }
+
+      if (startDate <= enrollmentDate) {
+        res.status(400).json({
+          success: false,
+          error: 'Course start date must be after enrollment deadline'
+        });
+        return;
+      }
+      
+      course.enrollmentDeadline = enrollmentDate;
+      course.courseStartDate = startDate;
+    }
+
+    // Update course with approval data
     course.status = CourseStatus.APPROVED;
     course.approvedAt = new Date();
     course.approvedBy = req.user?._id as any;
+    
+    // Set pricing (default to 0 if not provided)
+    course.notesPrice = notesPrice || 0;
+    course.liveSessionPrice = liveSessionPrice || 0;
+    
+    if (maxEnrollments) {
+      course.maxEnrollments = maxEnrollments;
+    }
     if (feedback) {
       course.adminFeedback = feedback;
     }
@@ -519,16 +560,20 @@ export const getEnrolledCourses = async (req: Request, res: Response, next: Next
     const skip = (page - 1) * limit;
 
     // Get enrollments with course details
-    const enrollments = await UserProgress.find({ user: studentId })
+    const enrollments = await CourseEnrollment.find({ 
+      student: studentId, 
+      isActive: true,
+      paymentStatus: 'completed'
+    })
       .populate({
         path: 'course',
-        select: 'title description instructor category level duration price status thumbnail createdAt',
+        select: 'title description instructor category level duration notesPrice liveSessionPrice status thumbnail createdAt',
         populate: {
           path: 'instructor',
           select: 'firstName lastName email'
         }
       })
-      .sort({ enrollmentDate: -1 })
+      .sort({ enrolledAt: -1 })
       .skip(skip)
       .limit(limit);
 
@@ -538,17 +583,18 @@ export const getEnrolledCourses = async (req: Request, res: Response, next: Next
     // Extract courses from enrollments
     const courses = validEnrollments.map(enrollment => ({
       ...enrollment.course.toObject(),
-      enrollmentDate: enrollment.enrollmentDate,
-      progress: enrollment.progressPercentage || 0,
-      isCompleted: enrollment.isCompleted,
-      lastAccessed: enrollment.lastAccessed,
-      enrollmentCount: 0 // This would need to be calculated separately if needed
+      enrollmentDate: enrollment.enrolledAt,
+      enrollmentType: enrollment.enrollmentType,
+      accessPermissions: enrollment.accessPermissions,
+      progress: enrollment.progress?.totalProgress || 0,
+      lastAccessed: enrollment.progress?.lastAccessedAt
     }));
 
     // Get total count
-    const totalEnrollments = await UserProgress.countDocuments({
-      user: studentId,
-      course: { $ne: null }
+    const totalEnrollments = await CourseEnrollment.countDocuments({
+      student: studentId,
+      isActive: true,
+      paymentStatus: 'completed'
     });
     const totalPages = Math.ceil(totalEnrollments / limit);
 

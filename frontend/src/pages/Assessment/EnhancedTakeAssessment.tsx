@@ -30,7 +30,11 @@ import {
   Radio,
   Checkbox,
   TextField,
-  CircularProgress
+  CircularProgress,
+  Select,
+  MenuItem,
+  alpha,
+  useTheme
 } from '@mui/material';
 import {
   Timer,
@@ -115,6 +119,7 @@ const EnhancedTakeAssessment: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const theme = useTheme();
 
   // Redirect to proctored interface
   useEffect(() => {
@@ -370,99 +375,267 @@ const EnhancedTakeAssessment: React.FC = () => {
   const renderQuestion = (question: Question, answer: string) => {
     switch (question.type) {
       case 'multiple_choice':
+        // Handle different ways options might be stored
+        const options = question.options || [];
+        
+        if (!options || options.length === 0) {
+          return (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                <strong>Options not available</strong><br/>
+                This appears to be a multiple choice question, but no options were provided.
+                Please contact your instructor.
+              </Typography>
+            </Alert>
+          );
+        }
+        
         return (
-          <FormControl component="fieldset" fullWidth>
-            <FormLabel component="legend">Select one answer:</FormLabel>
+          <Box>
+            <Typography variant="subtitle1" sx={{ mb: 3, fontWeight: 'medium', color: 'text.secondary' }}>
+              📝 Select one answer:
+            </Typography>
             <RadioGroup
               value={answer}
               onChange={(e) => handleAnswerChange(question._id, e.target.value)}
             >
-              {question.options?.map((option, index) => (
-                <FormControlLabel
-                  key={index}
-                  value={option}
-                  control={<Radio />}
-                  label={option}
-                />
+              {options.map((option, index) => (
+                <Box key={index} sx={{ mb: 1 }}>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      borderColor: answer === option ? 'primary.main' : 'grey.300',
+                      backgroundColor: answer === option 
+                        ? alpha(theme.palette.primary.main, 0.08) 
+                        : 'transparent',
+                      '&:hover': {
+                        borderColor: 'primary.main',
+                        backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                        transform: 'translateY(-1px)',
+                        boxShadow: 1
+                      }
+                    }}
+                    onClick={() => handleAnswerChange(question._id, option)}
+                  >
+                    <FormControlLabel
+                      value={option}
+                      control={
+                        <Radio 
+                          checked={answer === option}
+                          sx={{ 
+                            color: answer === option ? 'primary.main' : 'grey.400',
+                            '&.Mui-checked': { color: 'primary.main' }
+                          }} 
+                        />
+                      }
+                      label={
+                        <Typography variant="body1" sx={{ ml: 1 }}>
+                          <strong>{String.fromCharCode(65 + index)}.</strong> {option}
+                        </Typography>
+                      }
+                      sx={{ margin: 0, width: '100%' }}
+                    />
+                  </Paper>
+                </Box>
               ))}
             </RadioGroup>
-          </FormControl>
+          </Box>
         );
 
       case 'true_false':
         return (
-          <FormControl component="fieldset" fullWidth>
-            <FormLabel component="legend">Select True or False:</FormLabel>
-            <RadioGroup
-              value={answer}
-              onChange={(e) => handleAnswerChange(question._id, e.target.value)}
-            >
-              <FormControlLabel value="true" control={<Radio />} label="True" />
-              <FormControlLabel value="false" control={<Radio />} label="False" />
-            </RadioGroup>
-          </FormControl>
+          <Box>
+            <Typography variant="subtitle1" sx={{ mb: 3, fontWeight: 'medium', color: 'text.secondary' }}>
+              🎯 Select True or False:
+            </Typography>
+            <Grid container spacing={2}>
+              {['true', 'false'].map((option, index) => (
+                <Grid item xs={6} key={option}>
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 3,
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      transition: 'all 0.2s ease',
+                      borderColor: answer === option ? 'primary.main' : 'grey.300',
+                      backgroundColor: answer === option
+                        ? alpha(theme.palette.primary.main, 0.08)
+                        : 'transparent',
+                      '&:hover': {
+                        borderColor: 'primary.main',
+                        backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                        transform: 'translateY(-2px)',
+                        boxShadow: 2
+                      }
+                    }}
+                    onClick={() => handleAnswerChange(question._id, option)}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+                      <Radio
+                        checked={answer === option}
+                        sx={{ 
+                          color: answer === option ? 'primary.main' : 'grey.400',
+                          '&.Mui-checked': { color: 'primary.main' }
+                        }}
+                      />
+                      <Typography variant="h6" sx={{ 
+                        fontWeight: 'bold',
+                        color: answer === option ? 'primary.main' : 'text.primary'
+                      }}>
+                        {option === 'true' ? '✓ TRUE' : '✗ FALSE'}
+                      </Typography>
+                    </Box>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
         );
 
       case 'short_answer':
         return (
-          <TextField
-            fullWidth
-            multiline
-            rows={3}
-            value={answer}
-            onChange={(e) => handleAnswerChange(question._id, e.target.value)}
-            placeholder="Enter your answer..."
-            variant="outlined"
-          />
+          <Box>
+            <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'medium', color: 'text.secondary' }}>
+              ✏️ Enter your answer:
+            </Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              value={answer}
+              onChange={(e) => handleAnswerChange(question._id, e.target.value)}
+              placeholder="Type your answer here..."
+              variant="outlined"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': {
+                    borderColor: 'primary.main',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: 'primary.main',
+                  }
+                }
+              }}
+            />
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              Characters: {answer.length}
+            </Typography>
+          </Box>
         );
 
       case 'essay':
         return (
-          <RichTextEditor
-            value={answer}
-            onChange={(value) => handleAnswerChange(question._id, value)}
-            placeholder="Write your essay answer here..."
-            minHeight={300}
-            allowMath={true}
-            allowLinks={false}
-            allowImages={false}
-          />
+          <Box>
+            <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'medium', color: 'text.secondary' }}>
+              📝 Write your essay response:
+            </Typography>
+            <Paper variant="outlined" sx={{ p: 1, minHeight: 250 }}>
+              <RichTextEditor
+                value={answer}
+                onChange={(value) => handleAnswerChange(question._id, value)}
+                placeholder="Write your detailed essay response here. Use the toolbar to format your text..."
+                minHeight={200}
+                allowMath={true}
+                allowLinks={false}
+                allowImages={false}
+              />
+            </Paper>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              💡 Tip: Use formatting tools to structure your response clearly
+            </Typography>
+          </Box>
         );
 
       case 'math':
         return (
-          <MathInput
-            value={answer}
-            onChange={(value) => handleAnswerChange(question._id, value)}
-            placeholder="Enter your mathematical expression..."
-          />
+          <Box>
+            <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'medium', color: 'text.secondary' }}>
+              🔢 Enter your mathematical expression:
+            </Typography>
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <MathInput
+                value={answer}
+                onChange={(value) => handleAnswerChange(question._id, value)}
+                placeholder="Enter your mathematical expression..."
+              />
+            </Paper>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              💡 Use LaTeX syntax for mathematical expressions
+            </Typography>
+          </Box>
         );
 
       case 'code':
         return (
-          <TextField
-            fullWidth
-            multiline
-            rows={10}
-            value={answer}
-            onChange={(e) => handleAnswerChange(question._id, e.target.value)}
-            placeholder="Write your code here..."
-            variant="outlined"
-            InputProps={{
-              style: { fontFamily: 'monospace' }
-            }}
-          />
+          <Box>
+            <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'medium', color: 'text.secondary' }}>
+              💻 Write your code:
+            </Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={10}
+              value={answer}
+              onChange={(e) => handleAnswerChange(question._id, e.target.value)}
+              placeholder="Write your code here..."
+              variant="outlined"
+              InputProps={{
+                style: { 
+                  fontFamily: 'Monaco, Consolas, "Courier New", monospace',
+                  fontSize: '0.9rem'
+                }
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'grey.50',
+                  '&:hover fieldset': {
+                    borderColor: 'primary.main',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: 'primary.main',
+                  }
+                }
+              }}
+            />
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              Lines: {(answer.match(/\n/g) || []).length + 1} • Characters: {answer.length}
+            </Typography>
+          </Box>
         );
 
       default:
         return (
-          <TextField
-            fullWidth
-            value={answer}
-            onChange={(e) => handleAnswerChange(question._id, e.target.value)}
-            placeholder="Enter your answer..."
-            variant="outlined"
-          />
+          <Box>
+            <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'medium', color: 'text.secondary' }}>
+              💬 Enter your response:
+            </Typography>
+            <TextField
+              fullWidth
+              multiline
+              rows={5}
+              value={answer}
+              onChange={(e) => handleAnswerChange(question._id, e.target.value)}
+              placeholder="Enter your detailed answer here..."
+              variant="outlined"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  '&:hover fieldset': {
+                    borderColor: 'primary.main',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: 'primary.main',
+                  }
+                }
+              }}
+            />
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+              Characters: {answer.length} • Be detailed and clear in your response
+            </Typography>
+          </Box>
         );
     }
   };

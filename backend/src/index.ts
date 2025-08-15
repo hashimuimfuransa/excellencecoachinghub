@@ -56,6 +56,7 @@ import assignmentRoutes from '@/routes/assignmentRoutes';
 import announcementRoutes from '@/routes/announcementRoutes';
 import recordedSessionRoutes from '@/routes/recordedSessions';
 import gradesRoutes from '@/routes/gradesRoutes';
+import testRoutes from '@/routes/testRoutes';
 
 
 
@@ -298,6 +299,7 @@ app.use('/api/assignments', assignmentRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/recorded-sessions', recordedSessionRoutes);
 app.use('/api/grades', gradesRoutes);
+app.use('/api/test', testRoutes);
 
 console.log('✅ All routes mounted successfully');
 
@@ -307,6 +309,23 @@ setupSocketIO(io);
 // Set Socket.IO instance for notification service and proctoring
 setSocketIO(io);
 proctoringService.setSocketIO(io);
+
+// Catch-all handler for frontend routes (SPA support)
+app.get('*', (req, res, next) => {
+  // Skip API routes and let them go to 404 handler
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
+  
+  // For frontend routes, return a simple message instead of trying to serve index.html
+  // This prevents the 404 error for frontend routes like /assignment/:id/work
+  res.status(200).json({
+    success: true,
+    message: 'Frontend route - should be handled by React Router',
+    path: req.path,
+    note: 'This is a backend API server. Frontend routes should be handled by the React application.'
+  });
+});
 
 // Error handling middleware
 app.use(notFound);

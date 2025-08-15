@@ -5,8 +5,9 @@ import * as pdfParse from 'pdf-parse';
 
 export interface ExtractedQuestion {
   question: string;
-  type: 'multiple-choice' | 'true-false' | 'short-answer' | 'essay';
+  type: 'multiple_choice' | 'multiple_choice_multiple' | 'true_false' | 'short_answer' | 'essay' | 'fill_in_blank' | 'numerical' | 'matching';
   options?: string[];
+  choices?: string[];
   correctAnswer?: string;
   points: number;
   aiExtracted: boolean;
@@ -76,8 +77,8 @@ export class AIDocumentService {
           "questions": [
             {
               "question": "Complete question text (include section if relevant)",
-              "type": "multiple-choice|true-false|short-answer|essay",
-              "options": ["option1", "option2", "option3", "option4"] (only for multiple-choice),
+              "type": "multiple_choice|multiple_choice_multiple|true_false|short_answer|essay|fill_in_blank|numerical|matching",
+              "options": ["option1", "option2", "option3", "option4"] (for multiple_choice and multiple_choice_multiple),
               "correctAnswer": "The correct answer if clearly indicated",
               "points": 10
             }
@@ -89,14 +90,22 @@ export class AIDocumentService {
 
         EXTRACTION RULES:
         1. Extract EVERY question from ALL sections (A, B, C, etc.)
-        2. For multiple-choice: extract all options, look for marked/bold correct answers
-        3. For true-false: use "true" or "false" as correct answer
-        4. Clean question text but preserve meaning
-        5. Points: 5 for simple, 10 for medium, 15-20 for complex questions
-        6. If question type unclear, use "short-answer"
-        7. Include section context in question if helpful (e.g., "Section A: What is...")
-        8. Return ONLY valid JSON, no extra text
-        9. If no questions found, return {"questions": []}
+        2. For multiple_choice: Extract ALL options (A, B, C, D or 1, 2, 3, 4, etc.) - CRITICAL: Always include the options array
+        3. For multiple_choice_multiple: When question says "select all that apply" or similar
+        4. For true_false: Use "true" or "false" as correct answer
+        5. Clean question text but preserve meaning
+        6. Points: 5 for simple, 10 for medium, 15-20 for complex questions
+        7. If question type unclear, use "short_answer"
+        8. Include section context in question if helpful (e.g., "Section A: What is...")
+        9. Return ONLY valid JSON, no extra text
+        10. If no questions found, return {"questions": []}
+        
+        CRITICAL FOR MULTIPLE CHOICE:
+        - ALWAYS extract the options into the "options" array
+        - Look for patterns like: A) option1  B) option2  C) option3  D) option4
+        - Or: (a) option1  (b) option2  (c) option3  (d) option4
+        - Or: 1. option1  2. option2  3. option3  4. option4
+        - Even if options are on separate lines, group them with their question
       `;
 
       console.log('🤖 Sending request to Gemini AI...');
@@ -138,17 +147,38 @@ export class AIDocumentService {
           console.warn(`⚠️ Incomplete question at index ${index}:`, q);
         }
         
+        // Convert legacy type formats to current format
+        let questionType = q.type || 'short_answer';
+        if (questionType === 'multiple-choice') questionType = 'multiple_choice';
+        if (questionType === 'true-false') questionType = 'true_false';
+        if (questionType === 'short-answer') questionType = 'short_answer';
+        if (questionType === 'fill-in-blank') questionType = 'fill_in_blank';
+        
+        // Get options from different possible properties
+        const options = q.options || q.choices || [];
+        
         return {
           question: q.question || `Question ${index + 1}`,
-          type: q.type || 'short-answer',
-          options: q.options || [],
+          type: questionType,
+          options: options,
+          choices: options, // Add both for compatibility
           correctAnswer: q.correctAnswer,
           points: q.points || 10,
           aiExtracted: true
         };
       });
 
-      console.log(`✅ Successfully extracted ${questions.length} questions`);
+      // Debug log the extracted questions
+      console.log(`✅ Successfully extracted ${questions.length} questions:`);
+      questions.forEach((q, index) => {
+        console.log(`  Question ${index + 1}: ${q.type} - ${q.question.substring(0, 50)}...`);
+        if (q.options && q.options.length > 0) {
+          console.log(`    Options (${q.options.length}): ${q.options.join(', ')}`);
+        } else if (q.type === 'multiple_choice' || q.type === 'multiple_choice_multiple') {
+          console.warn(`    ⚠️ Multiple choice question without options!`);
+        }
+      });
+      
       return questions;
     } catch (error) {
       console.error('❌ Error extracting questions:', error);

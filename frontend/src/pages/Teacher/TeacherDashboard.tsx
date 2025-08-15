@@ -225,7 +225,7 @@ const TeacherDashboard: React.FC = () => {
                 variant="outlined"
                 size="small"
                 component={Link}
-                to="/dashboard/teacher/courses"
+                to="/dashboard/teacher/course-management"
                 disabled={profileStatus !== 'approved'}
                 color="success"
               >
@@ -253,7 +253,7 @@ const TeacherDashboard: React.FC = () => {
                 variant="outlined"
                 size="small"
                 component={Link}
-                to="/dashboard/teacher/students"
+                to="/dashboard/teacher/student-management"
                 disabled={profileStatus !== 'approved'}
                 color="info"
               >

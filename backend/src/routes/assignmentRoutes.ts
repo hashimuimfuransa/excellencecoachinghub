@@ -24,7 +24,14 @@ import {
   getSubmissionHistory,
   updateAIGrade,
   getExtractedQuestions,
-  submitExtractedAssignment
+  submitExtractedAssignment,
+  extractQuestionsFromDocument,
+  replaceQuestionsFromDocument,
+  getAssignmentSubmissionsForGrading,
+  gradeAssignmentSubmission,
+  getSubmissionDetails,
+  checkAIProcessingStatus,
+  retryQuestionExtraction
 } from '../controllers/assignmentController';
 
 const router = express.Router();
@@ -108,7 +115,20 @@ router.post('/:assignmentId/upload-document', auth, requireApprovedTeacher, uplo
 // Replace assignment document (instructor - requires approved profile)
 router.put('/:assignmentId/replace-document', auth, requireApprovedTeacher, uploadDocument.single('file'), asyncHandler(replaceAssignmentDocument));
 
-// Grading (requires approved teacher profile)
+// AI Question Extraction Routes (like assessments)
+router.post('/:assignmentId/extract-questions', auth, requireApprovedTeacher, uploadDocument.single('document'), asyncHandler(extractQuestionsFromDocument));
+router.put('/:assignmentId/replace-questions', auth, requireApprovedTeacher, uploadDocument.single('document'), asyncHandler(replaceQuestionsFromDocument));
+
+// AI Processing Status and Retry Routes
+router.get('/:assignmentId/ai-status', auth, requireApprovedTeacher, asyncHandler(checkAIProcessingStatus));
+router.post('/:assignmentId/retry-extraction', auth, requireApprovedTeacher, asyncHandler(retryQuestionExtraction));
+
+// Enhanced Grading Routes (like assessments)
+router.get('/:assignmentId/submissions', auth, requireApprovedTeacher, asyncHandler(getAssignmentSubmissionsForGrading));
+router.put('/submissions/:submissionId/grade', auth, requireApprovedTeacher, asyncHandler(gradeAssignmentSubmission));
+router.get('/submissions/:submissionId', auth, asyncHandler(getSubmissionDetails));
+
+// Legacy grading route (keep for backward compatibility)
 router.post('/submissions/:submissionId/grade', auth, requireApprovedTeacher, asyncHandler(gradeSubmission));
 
 // Statistics (requires approved teacher profile)

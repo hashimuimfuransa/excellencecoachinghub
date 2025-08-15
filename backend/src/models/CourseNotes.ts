@@ -11,6 +11,9 @@ export interface INoteSection {
   duration?: number; // for video/audio in seconds
   isRequired: boolean;
   estimatedReadTime?: number; // in minutes
+  hasAudioNarration?: boolean; // Whether this section has text-to-speech
+  audioLanguage?: string; // Language for text-to-speech (e.g., 'en-US', 'fr-FR')
+  audioSpeed?: number; // Speed multiplier for audio (0.5 to 2.0)
 }
 
 // Course notes document interface
@@ -22,6 +25,9 @@ export interface ICourseNotesDocument extends Document {
   chapter: number;
   sections: INoteSection[];
   totalEstimatedTime: number; // in minutes
+  timerEnabled: boolean; // Whether to show timer for this notes
+  recommendedStudyTime: number; // Recommended time to spend on this notes (in minutes)
+  breakInterval?: number; // Suggested break interval in minutes (e.g., 25 for Pomodoro)
   prerequisites?: string[]; // IDs of previous notes that should be read first
   learningObjectives?: string[];
   tags?: string[];
@@ -29,6 +35,11 @@ export interface ICourseNotesDocument extends Document {
   publishedAt?: Date;
   version: number;
   attachments?: string[]; // file URLs
+  audioSettings: {
+    defaultLanguage: string; // Default language for text-to-speech
+    defaultSpeed: number; // Default speed for audio playback
+    enableAutoPlay: boolean; // Whether to auto-play audio when section loads
+  };
   createdAt: Date;
   updatedAt: Date;
 
@@ -89,6 +100,20 @@ const noteSectionSchema = new Schema({
   estimatedReadTime: {
     type: Number,
     min: [0, 'Estimated read time cannot be negative']
+  },
+  hasAudioNarration: {
+    type: Boolean,
+    default: false
+  },
+  audioLanguage: {
+    type: String,
+    default: 'en-US'
+  },
+  audioSpeed: {
+    type: Number,
+    default: 1.0,
+    min: [0.5, 'Audio speed cannot be less than 0.5'],
+    max: [2.0, 'Audio speed cannot be more than 2.0']
   }
 }, { _id: false });
 
@@ -153,7 +178,37 @@ const courseNotesSchema = new Schema<ICourseNotesDocument>({
   attachments: [{
     type: String,
     trim: true
-  }]
+  }],
+  timerEnabled: {
+    type: Boolean,
+    default: true
+  },
+  recommendedStudyTime: {
+    type: Number,
+    default: 30, // 30 minutes default
+    min: [5, 'Recommended study time must be at least 5 minutes']
+  },
+  breakInterval: {
+    type: Number,
+    default: 25, // Pomodoro technique default
+    min: [5, 'Break interval must be at least 5 minutes']
+  },
+  audioSettings: {
+    defaultLanguage: {
+      type: String,
+      default: 'en-US'
+    },
+    defaultSpeed: {
+      type: Number,
+      default: 1.0,
+      min: [0.5, 'Default speed cannot be less than 0.5'],
+      max: [2.0, 'Default speed cannot be more than 2.0']
+    },
+    enableAutoPlay: {
+      type: Boolean,
+      default: false
+    }
+  }
 }, {
   timestamps: true,
   toJSON: { virtuals: true },

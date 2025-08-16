@@ -59,8 +59,8 @@ import AIAssistantPage from './pages/Student/AIAssistantPage';
 import StudentSettings from './pages/Student/StudentSettings';
 import RecordedSessionsPage from './pages/Student/RecordedSessionsPage';
 import CourseViewPage from './pages/Student/CourseViewPage';
-import CourseNotesStudyPage from './pages/Student/CourseNotesStudyPage';
-import EnhancedNotesViewPage from './pages/Student/EnhancedNotesViewPage';
+import CourseMaterialPage from './pages/Student/CourseMaterialPage';
+
 import EnhancedCourseViewPage from './pages/Student/EnhancedCourseViewPage';
 import EnhancedVideoSessionPage from './pages/Student/EnhancedVideoSessionPage';
 import CourseEnrollmentPage from './pages/Student/CourseEnrollmentPage';
@@ -249,7 +249,7 @@ const App: React.FC = () => {
           <Route path="course-content" element={<CourseContent />} />
           <Route path="course-content/:id" element={<CourseContent />} />
           <Route path="course/:id" element={<CourseViewPage />} />
-          <Route path="course/:id/notes" element={<CourseNotesStudyPage />} />
+          <Route path="course/:id/material" element={<CourseMaterialPage />} />
           <Route path="course/:id/live-sessions" element={<StudentLiveSessions />} />
           <Route path="course/:id/announcements" element={<CourseAnnouncementsPage />} />
           <Route path="assignment/:assignmentId" element={<TakeExamNew />} />
@@ -307,7 +307,7 @@ const App: React.FC = () => {
         path="/enhanced-notes/:id"
         element={
           <ProtectedRoute requiredRole={UserRole.STUDENT}>
-            <EnhancedNotesViewPage />
+            <CourseMaterialPage />
           </ProtectedRoute>
         }
       />

@@ -47,7 +47,8 @@ import {
   ThumbUp,
   ThumbDown,
   Lightbulb,
-  EmojiEvents
+  EmojiEvents,
+  Cancel
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { assignmentService } from '../../services/assignmentService';
@@ -90,6 +91,13 @@ interface Submission {
     feedback: string;
     confidence: number;
     gradedAt: Date;
+    detailedGrading?: Array<{
+      questionIndex: number;
+      earnedPoints: number;
+      maxPoints: number;
+      feedback: string;
+      isCorrect?: boolean;
+    }>;
   };
   gradedAt?: Date;
   gradedBy?: string;
@@ -421,6 +429,58 @@ const AssignmentResults: React.FC = () => {
             </Card>
           </Grid>
 
+          {/* Detailed Question Feedback */}
+          {submission.aiGrade?.detailedGrading && submission.aiGrade.detailedGrading.length > 0 && (
+            <Grid item xs={12}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Psychology color="primary" />
+                    Question-by-Question Results
+                  </Typography>
+                  
+                  <List>
+                    {submission.aiGrade.detailedGrading.map((detail, index) => (
+                      <React.Fragment key={index}>
+                        <ListItem>
+                          <ListItemIcon>
+                            {detail.isCorrect ? (
+                              <CheckCircle color="success" />
+                            ) : detail.earnedPoints > 0 ? (
+                              <Warning color="warning" />
+                            ) : (
+                              <Cancel color="error" />
+                            )}
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="subtitle1">
+                                  Question {detail.questionIndex + 1}
+                                </Typography>
+                                <Chip
+                                  label={`${detail.earnedPoints}/${detail.maxPoints} pts`}
+                                  size="small"
+                                  color={detail.isCorrect ? 'success' : detail.earnedPoints > 0 ? 'warning' : 'error'}
+                                />
+                              </Box>
+                            }
+                            secondary={
+                              <Typography variant="body2" sx={{ mt: 1 }}>
+                                {detail.feedback}
+                              </Typography>
+                            }
+                          />
+                        </ListItem>
+                        {index < submission.aiGrade.detailedGrading.length - 1 && <Divider />}
+                      </React.Fragment>
+                    ))}
+                  </List>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+
           {/* Feedback Section */}
           {(submission.aiGrade?.feedback || submission.feedback) && (
             <Grid item xs={12}>
@@ -428,7 +488,7 @@ const AssignmentResults: React.FC = () => {
                 <CardContent>
                   <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Feedback color="primary" />
-                    Feedback
+                    Overall Feedback
                   </Typography>
                   
                   {submission.aiGrade?.feedback && (

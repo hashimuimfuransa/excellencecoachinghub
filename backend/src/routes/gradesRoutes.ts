@@ -196,12 +196,38 @@ router.get('/student', auth, async (req: Request, res: Response) => {
             correctAnswers,
             incorrectAnswers,
             totalQuestions,
-            detailedFeedback: submission.answers.map(answer => ({
-              questionId: answer.questionId,
-              isCorrect: answer.isCorrect,
-              pointsEarned: answer.pointsEarned,
-              feedback: answer.feedback
-            }))
+            detailedFeedback: submission.answers.map((answer, index) => {
+              // Validate feedback consistency
+              const feedback = answer.feedback || '';
+              let isCorrect = answer.isCorrect;
+              
+              // Check for feedback-correctness mismatch and fix it
+              const feedbackLower = feedback.toLowerCase();
+              const hasPositiveFeedback = feedbackLower.includes('excellent') || 
+                                        feedbackLower.includes('correct') || 
+                                        feedbackLower.includes('great') ||
+                                        feedbackLower.includes('well done');
+              const hasNegativeFeedback = feedbackLower.includes('incorrect') || 
+                                        feedbackLower.includes('wrong') || 
+                                        feedbackLower.includes('try again') ||
+                                        feedbackLower.includes('not correct');
+              
+              // If feedback suggests correct but isCorrect is false, or vice versa
+              if (hasPositiveFeedback && isCorrect === false) {
+                console.log(`⚠️ Fixing feedback mismatch for question ${index + 1}: positive feedback but marked incorrect`);
+                isCorrect = true;
+              } else if (hasNegativeFeedback && isCorrect === true) {
+                console.log(`⚠️ Fixing feedback mismatch for question ${index + 1}: negative feedback but marked correct`);
+                isCorrect = false;
+              }
+              
+              return {
+                questionId: answer.questionId,
+                isCorrect: isCorrect,
+                pointsEarned: answer.pointsEarned,
+                feedback: feedback
+              };
+            })
           });
         }
       }
@@ -243,6 +269,10 @@ router.get('/student', auth, async (req: Request, res: Response) => {
         }
 
         if (assignment && student && course) {
+          // Get feedback from AI grading if available, otherwise use manual feedback
+          const feedback = submission.aiGrade?.feedback || submission.feedback || '';
+          const detailedFeedback = submission.aiGrade?.detailedGrading || [];
+          
           grades.push({
             _id: `${assignment._id}_${submission._id}`,
             studentId: userId,
@@ -258,11 +288,20 @@ router.get('/student', auth, async (req: Request, res: Response) => {
             grade: calculateGrade(Math.round(((submission.grade || 0) / (assignment.maxPoints || 100)) * 100)),
             submittedAt: submission.submittedAt,
             gradedAt: submission.gradedAt,
-            feedback: submission.feedback,
+            feedback: feedback,
             timeSpent: submission.timeSpent || 0,
             attempts: 1,
             status: submission.status,
-            type: 'assignment'
+            type: 'assignment',
+            // Additional assignment-specific data
+            aiGraded: !!submission.aiGrade,
+            aiConfidence: submission.aiGrade?.confidence,
+            detailedFeedback: detailedFeedback.map(detail => ({
+              questionIndex: detail.questionIndex,
+              earnedPoints: detail.earnedPoints,
+              maxPoints: detail.maxPoints,
+              feedback: detail.feedback
+            }))
           });
         }
       }
@@ -353,6 +392,10 @@ router.get('/student/course/:courseId', auth, async (req: Request, res: Response
       const course = assignment?.course as any;
 
       if (assignment && student && course) {
+        // Get feedback from AI grading if available, otherwise use manual feedback
+        const feedback = submission.aiGrade?.feedback || submission.feedback || '';
+        const detailedFeedback = submission.aiGrade?.detailedGrading || [];
+        
         grades.push({
           _id: `${assignment._id}_${submission._id}`,
           studentId: userId,
@@ -368,11 +411,20 @@ router.get('/student/course/:courseId', auth, async (req: Request, res: Response
           grade: calculateGrade(Math.round(((submission.grade || 0) / (assignment.maxPoints || 100)) * 100)),
           submittedAt: submission.submittedAt,
           gradedAt: submission.gradedAt,
-          feedback: submission.feedback,
-          timeSpent: 0, // Assignment submissions don't track time spent
+          feedback: feedback,
+          timeSpent: submission.timeSpent || 0,
           attempts: 1,
           status: submission.status,
-          type: 'assignment'
+          type: 'assignment',
+          // Additional assignment-specific data
+          aiGraded: !!submission.aiGrade,
+          aiConfidence: submission.aiGrade?.confidence,
+          detailedFeedback: detailedFeedback.map(detail => ({
+            questionIndex: detail.questionIndex,
+            earnedPoints: detail.earnedPoints,
+            maxPoints: detail.maxPoints,
+            feedback: detail.feedback
+          }))
         });
       }
     }

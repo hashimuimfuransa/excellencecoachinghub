@@ -61,7 +61,15 @@ const ProfileCompletion: React.FC = () => {
     teachingAreas: [],
     preferredLevels: [],
     hourlyRate: 0,
-    socialLinks: {}
+    socialLinks: {},
+    address: {
+      country: '',
+      province: '',
+      district: '',
+      sector: '',
+      cell: '',
+      village: ''
+    }
   });
 
   // Load existing profile
@@ -87,7 +95,15 @@ const ProfileCompletion: React.FC = () => {
         teachingAreas: profileData.teachingAreas || [],
         preferredLevels: profileData.preferredLevels || [],
         hourlyRate: profileData.hourlyRate || 0,
-        socialLinks: profileData.socialLinks || {}
+        socialLinks: profileData.socialLinks || {},
+        address: profileData.address || {
+          country: '',
+          province: '',
+          district: '',
+          sector: '',
+          cell: '',
+          village: ''
+        }
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load profile');
@@ -132,10 +148,16 @@ const ProfileCompletion: React.FC = () => {
 
   const addArrayItem = (field: keyof IUpdateTeacherProfileData, value: string) => {
     if (value.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        [field]: [...(prev[field] as string[] || []), value.trim()]
-      }));
+      // Handle comma-separated values
+      const values = value.split(',').map(v => v.trim()).filter(v => v.length > 0);
+      
+      setFormData(prev => {
+        const currentArray = prev[field] as string[] || [];
+        return {
+          ...prev,
+          [field]: [...currentArray, ...values.filter(v => !currentArray.includes(v))]
+        };
+      });
     }
   };
 
@@ -310,6 +332,85 @@ const ProfileCompletion: React.FC = () => {
           placeholder="https://yourportfolio.com"
         />
       </Grid>
+      
+      {/* Address Section */}
+      <Grid item xs={12}>
+        <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
+          Address Information
+        </Typography>
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField
+          fullWidth
+          label="Country"
+          value={formData.address?.country || ''}
+          onChange={(e) => setFormData(prev => ({ 
+            ...prev, 
+            address: { ...prev.address, country: e.target.value }
+          }))}
+          placeholder="e.g., Rwanda"
+        />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField
+          fullWidth
+          label="Province"
+          value={formData.address?.province || ''}
+          onChange={(e) => setFormData(prev => ({ 
+            ...prev, 
+            address: { ...prev.address, province: e.target.value }
+          }))}
+          placeholder="e.g., Kigali City"
+        />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField
+          fullWidth
+          label="District"
+          value={formData.address?.district || ''}
+          onChange={(e) => setFormData(prev => ({ 
+            ...prev, 
+            address: { ...prev.address, district: e.target.value }
+          }))}
+          placeholder="e.g., Gasabo"
+        />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField
+          fullWidth
+          label="Sector"
+          value={formData.address?.sector || ''}
+          onChange={(e) => setFormData(prev => ({ 
+            ...prev, 
+            address: { ...prev.address, sector: e.target.value }
+          }))}
+          placeholder="e.g., Kimironko"
+        />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField
+          fullWidth
+          label="Cell"
+          value={formData.address?.cell || ''}
+          onChange={(e) => setFormData(prev => ({ 
+            ...prev, 
+            address: { ...prev.address, cell: e.target.value }
+          }))}
+          placeholder="e.g., Kibagabaga"
+        />
+      </Grid>
+      <Grid item xs={12} sm={6}>
+        <TextField
+          fullWidth
+          label="Village"
+          value={formData.address?.village || ''}
+          onChange={(e) => setFormData(prev => ({ 
+            ...prev, 
+            address: { ...prev.address, village: e.target.value }
+          }))}
+          placeholder="e.g., Umudugudu"
+        />
+      </Grid>
     </Grid>
   );
 
@@ -405,7 +506,8 @@ const ProfileCompletion: React.FC = () => {
           <Typography variant="h6" gutterBottom>Skills</Typography>
           <Box display="flex" gap={1} mb={2}>
             <TextField
-              label="Add Skill"
+              fullWidth
+              label="Add Skills"
               value={newSkill}
               onChange={(e) => setNewSkill(e.target.value)}
               onKeyPress={(e) => {
@@ -414,6 +516,8 @@ const ProfileCompletion: React.FC = () => {
                   setNewSkill('');
                 }
               }}
+              placeholder="e.g., JavaScript, Python, React (separate multiple skills with commas)"
+              helperText="You can add multiple skills separated by commas, or add them one by one"
             />
             <Button 
               onClick={() => {
@@ -421,6 +525,7 @@ const ProfileCompletion: React.FC = () => {
                 setNewSkill('');
               }}
               variant="outlined"
+              sx={{ minWidth: 'auto', px: 2 }}
             >
               Add
             </Button>
@@ -443,7 +548,8 @@ const ProfileCompletion: React.FC = () => {
           <Typography variant="h6" gutterBottom>Languages</Typography>
           <Box display="flex" gap={1} mb={2}>
             <TextField
-              label="Add Language"
+              fullWidth
+              label="Add Languages"
               value={newLanguage}
               onChange={(e) => setNewLanguage(e.target.value)}
               onKeyPress={(e) => {
@@ -452,6 +558,8 @@ const ProfileCompletion: React.FC = () => {
                   setNewLanguage('');
                 }
               }}
+              placeholder="e.g., English, French, Kinyarwanda (separate multiple languages with commas)"
+              helperText="You can add multiple languages separated by commas, or add them one by one"
             />
             <Button 
               onClick={() => {
@@ -459,6 +567,7 @@ const ProfileCompletion: React.FC = () => {
                 setNewLanguage('');
               }}
               variant="outlined"
+              sx={{ minWidth: 'auto', px: 2 }}
             >
               Add
             </Button>
@@ -490,7 +599,8 @@ const ProfileCompletion: React.FC = () => {
           <Typography variant="h6" gutterBottom>Specializations *</Typography>
           <Box display="flex" gap={1} mb={2}>
             <TextField
-              label="Add Specialization"
+              fullWidth
+              label="Add Specializations"
               value={newSpecialization}
               onChange={(e) => setNewSpecialization(e.target.value)}
               onKeyPress={(e) => {
@@ -499,6 +609,8 @@ const ProfileCompletion: React.FC = () => {
                   setNewSpecialization('');
                 }
               }}
+              placeholder="e.g., Mathematics, Computer Science, Physics (separate multiple with commas)"
+              helperText="Add your areas of specialization. You can add multiple separated by commas."
             />
             <Button 
               onClick={() => {
@@ -506,6 +618,7 @@ const ProfileCompletion: React.FC = () => {
                 setNewSpecialization('');
               }}
               variant="outlined"
+              sx={{ minWidth: 'auto', px: 2 }}
             >
               Add
             </Button>
@@ -527,7 +640,8 @@ const ProfileCompletion: React.FC = () => {
           <Typography variant="h6" gutterBottom>Teaching Areas *</Typography>
           <Box display="flex" gap={1} mb={2}>
             <TextField
-              label="Add Teaching Area"
+              fullWidth
+              label="Add Teaching Areas"
               value={newTeachingArea}
               onChange={(e) => setNewTeachingArea(e.target.value)}
               onKeyPress={(e) => {
@@ -536,6 +650,8 @@ const ProfileCompletion: React.FC = () => {
                   setNewTeachingArea('');
                 }
               }}
+              placeholder="e.g., Algebra, Web Development, Data Science (separate multiple with commas)"
+              helperText="Add specific areas you teach. You can add multiple separated by commas."
             />
             <Button 
               onClick={() => {
@@ -543,6 +659,7 @@ const ProfileCompletion: React.FC = () => {
                 setNewTeachingArea('');
               }}
               variant="outlined"
+              sx={{ minWidth: 'auto', px: 2 }}
             >
               Add
             </Button>

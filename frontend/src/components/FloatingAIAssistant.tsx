@@ -27,8 +27,7 @@ import {
   FullscreenExit,
   Lightbulb,
   Help,
-  Psychology,
-  Quiz
+  Psychology
 } from '@mui/icons-material';
 import { TransitionProps } from '@mui/material/transitions';
 import { useAuth } from '../hooks/useAuth';
@@ -95,15 +94,15 @@ I'm here to help you succeed on Excellence Coaching Hub. I can assist you with:
 
 📚 **Learning Support:**
 • Explain complex concepts in simple terms
-• Create personalized practice quizzes
-• Provide effective study strategies
+• Provide effective study strategies and tips
 • Help with assignments and homework
+• Break down difficult topics step by step
 
 🎯 **Platform Guidance:**
 • Show you how to use website features
-• Guide you through courses and assessments
+• Guide you through courses and materials
 • Help you navigate live sessions
-• Explain progress tracking
+• Explain progress tracking and features
 
 💬 **Conversational Help:**
 • Answer any questions about your studies
@@ -117,8 +116,8 @@ What would you like to explore today?`,
         suggestions: [
           'How do I use this platform?',
           'Explain a concept',
-          'Create a practice quiz',
-          'Give me study tips'
+          'Give me study tips',
+          'Help with assignments'
         ]
       };
       setMessages([welcomeMessage]);
@@ -185,109 +184,15 @@ What would you like to explore today?`,
   };
 
   const handleSuggestionClick = async (suggestion: string) => {
-    // Handle special suggestions that trigger specific AI functions
-    if (suggestion.includes('Create a quiz')) {
-      await handleQuizGeneration();
-    } else if (suggestion.includes('Explain')) {
+    // Handle special suggestions
+    if (suggestion.includes('Explain')) {
       setInputText(suggestion);
     } else {
       setInputText(suggestion);
     }
   };
 
-  const handleQuizGeneration = async () => {
-    if (loading) return;
 
-    const quizMessage: Message = {
-      id: Date.now().toString(),
-      text: 'Generate a quiz based on my course content',
-      isUser: true,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, quizMessage]);
-    setLoading(true);
-
-    try {
-      // Check if we have course content/notes to generate quiz from
-      const hasContent = context?.courseTitle;
-      const hasNotes = context?.content &&
-                      context.content.length > 0 &&
-                      !context.content.includes('No course content available') &&
-                      context?.hasContent !== false;
-
-      if (!hasContent) {
-        const noContentMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          text: `I'd love to create a quiz for you! However, I need some course content or notes to generate meaningful questions from.
-
-Here's what you can do:
-• Go to "Course Content" to access your learning materials
-• Make sure you're enrolled in a course
-• View some lessons or notes first
-• Then come back and I'll create a quiz based on what you've studied!
-
-Would you like me to help you navigate to your course content instead?`,
-          isUser: false,
-          timestamp: new Date(),
-          suggestions: ['How to access course content?', 'Show me my courses', 'Help with navigation', 'Study tips instead']
-        };
-        setMessages(prev => [...prev, noContentMessage]);
-        return;
-      }
-
-      if (!hasNotes) {
-        const noNotesMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          text: `I can see you're studying "${context?.courseTitle}", but I don't have access to specific course notes or content to generate a quiz from.
-
-To create a meaningful quiz, I need:
-• Course notes or lesson content
-• Study materials you've been working with
-• Specific topics you want to be tested on
-
-You can:
-• Go to your course content and study some materials first
-• Tell me specific topics you want to practice
-• Ask me to explain concepts instead
-
-What specific topic from "${context?.courseTitle}" would you like help with?`,
-          isUser: false,
-          timestamp: new Date(),
-          suggestions: ['Explain course concepts', 'How to access notes?', 'Study strategies', 'Help with topics']
-        };
-        setMessages(prev => [...prev, noNotesMessage]);
-        return;
-      }
-
-      // Generate quiz based on actual content
-      const topic = context?.courseTitle || 'course content';
-      const contentSummary = context?.content || '';
-
-      const response = await aiAssistantService.generateQuiz(topic, 'medium', 3, contentSummary);
-
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: `Great! I've created a quiz based on your "${topic}" course content:\n\n${response.quiz}\n\nThis quiz is based on the materials you've been studying. How did you do?`,
-        isUser: false,
-        timestamp: new Date(),
-        suggestions: ['Make it harder', 'Add more questions', 'Explain the answers', 'Different topics']
-      };
-
-      setMessages(prev => [...prev, aiMessage]);
-    } catch (error) {
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: 'Sorry, I encountered an error generating the quiz. Please make sure you have course content available and try again.',
-        isUser: false,
-        timestamp: new Date(),
-        suggestions: ['Try again', 'Access course content', 'Ask for help', 'Study tips instead']
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleKeyPress = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -306,7 +211,7 @@ What specific topic from "${context?.courseTitle}" would you like help with?`,
 
   return (
     <>
-      {/* Floating Action Button */}
+      {/* Enhanced Floating Action Button */}
       <Fab
         color="primary"
         aria-label="AI Assistant"
@@ -315,14 +220,39 @@ What specific topic from "${context?.courseTitle}" would you like help with?`,
           bottom: 24,
           right: 24,
           zIndex: 1000,
-          background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+          width: 64,
+          height: 64,
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          boxShadow: '0 8px 32px rgba(102, 126, 234, 0.4)',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           '&:hover': {
-            background: 'linear-gradient(45deg, #1976D2 30%, #1CB5E0 90%)',
+            background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
+            transform: 'scale(1.1) translateY(-2px)',
+            boxShadow: '0 12px 40px rgba(102, 126, 234, 0.6)',
+          },
+          '&:active': {
+            transform: 'scale(1.05)',
+          },
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: -2,
+            left: -2,
+            right: -2,
+            bottom: -2,
+            background: 'linear-gradient(135deg, #667eea, #764ba2)',
+            borderRadius: '50%',
+            zIndex: -1,
+            opacity: 0,
+            transition: 'opacity 0.3s ease',
+          },
+          '&:hover::before': {
+            opacity: 0.7,
           }
         }}
         onClick={() => setOpen(true)}
       >
-        <SmartToy />
+        <SmartToy sx={{ fontSize: 32, color: 'white' }} />
       </Fab>
 
       {/* AI Assistant Dialog */}
@@ -342,54 +272,107 @@ What specific topic from "${context?.courseTitle}" would you like help with?`,
           }
         }}
       >
-        {/* Header */}
+        {/* Enhanced Header */}
         <DialogTitle
           sx={{
-            background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             color: 'white',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            py: 1
+            py: 2,
+            position: 'relative',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+              zIndex: 0,
+            }
           }}
         >
-          <Box display="flex" alignItems="center">
-            <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', mr: 1 }}>
-              <Psychology />
+          <Box display="flex" alignItems="center" sx={{ position: 'relative', zIndex: 1 }}>
+            <Avatar 
+              sx={{ 
+                bgcolor: 'rgba(255,255,255,0.2)', 
+                mr: 2,
+                width: 48,
+                height: 48,
+                backdropFilter: 'blur(10px)',
+                border: '2px solid rgba(255,255,255,0.3)'
+              }}
+            >
+              <Psychology sx={{ fontSize: 28 }} />
             </Avatar>
             <Box>
-              <Typography variant="h6">AI Learning Assistant</Typography>
+              <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
+                AI Learning Assistant
+              </Typography>
               {aiServiceStatus === 'overloaded' && (
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.8rem' }}>
                   ⚠️ High demand - responses may be delayed
                 </Typography>
               )}
               {aiServiceStatus === 'available' && (
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-                  ✅ AI service active
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.8rem' }}>
+                  ✅ Ready to help you learn
+                </Typography>
+              )}
+              {aiServiceStatus === 'unknown' && (
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.8rem' }}>
+                  🤖 Your personal study companion
                 </Typography>
               )}
             </Box>
           </Box>
-          <Box>
+          <Box sx={{ position: 'relative', zIndex: 1 }}>
             <IconButton
               size="small"
               onClick={toggleMinimize}
-              sx={{ color: 'white', mr: 1 }}
+              sx={{ 
+                color: 'white', 
+                mr: 1,
+                bgcolor: 'rgba(255,255,255,0.1)',
+                '&:hover': { 
+                  bgcolor: 'rgba(255,255,255,0.2)',
+                  transform: 'scale(1.1)'
+                },
+                transition: 'all 0.2s ease'
+              }}
             >
               <Minimize />
             </IconButton>
             <IconButton
               size="small"
               onClick={toggleFullscreen}
-              sx={{ color: 'white', mr: 1 }}
+              sx={{ 
+                color: 'white', 
+                mr: 1,
+                bgcolor: 'rgba(255,255,255,0.1)',
+                '&:hover': { 
+                  bgcolor: 'rgba(255,255,255,0.2)',
+                  transform: 'scale(1.1)'
+                },
+                transition: 'all 0.2s ease'
+              }}
             >
               {fullscreen ? <FullscreenExit /> : <Fullscreen />}
             </IconButton>
             <IconButton
               size="small"
               onClick={() => setOpen(false)}
-              sx={{ color: 'white' }}
+              sx={{ 
+                color: 'white',
+                bgcolor: 'rgba(255,255,255,0.1)',
+                '&:hover': { 
+                  bgcolor: 'rgba(255,255,255,0.2)',
+                  transform: 'scale(1.1)'
+                },
+                transition: 'all 0.2s ease'
+              }}
             >
               <Close />
             </IconButton>
@@ -486,15 +469,7 @@ What specific topic from "${context?.courseTitle}" would you like help with?`,
                 >
                   Platform Help
                 </Button>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<Quiz />}
-                  onClick={handleQuizGeneration}
-                  disabled={loading}
-                >
-                  Generate Quiz
-                </Button>
+
                 <Button
                   size="small"
                   variant="outlined"

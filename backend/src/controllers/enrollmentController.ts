@@ -360,7 +360,7 @@ export const updateProgress = async (req: Request, res: Response, next: NextFunc
       student: studentId,
       course: courseId,
       isActive: true,
-      paymentStatus: 'completed'
+      paymentStatus: { $in: ['completed', 'pending'] } // Allow both completed and pending for development
     });
 
     if (!enrollment) {
@@ -422,7 +422,7 @@ export const getCourseEnrollments = async (req: Request, res: Response, next: Ne
     const enrollments = await CourseEnrollment.find({
       course: courseId,
       isActive: true,
-      paymentStatus: 'completed'
+      paymentStatus: { $in: ['completed', 'pending'] } // Allow both completed and pending for development
     })
       .populate('student', 'firstName lastName email')
       .sort({ enrolledAt: -1 })
@@ -432,7 +432,7 @@ export const getCourseEnrollments = async (req: Request, res: Response, next: Ne
     const total = await CourseEnrollment.countDocuments({
       course: courseId,
       isActive: true,
-      paymentStatus: 'completed'
+      paymentStatus: { $in: ['completed', 'pending'] } // Allow both completed and pending for development
     });
 
     // Calculate enrollment statistics

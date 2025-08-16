@@ -563,7 +563,7 @@ export const getEnrolledCourses = async (req: Request, res: Response, next: Next
     const enrollments = await CourseEnrollment.find({ 
       student: studentId, 
       isActive: true,
-      paymentStatus: 'completed'
+      paymentStatus: { $in: ['completed', 'pending'] } // Allow both completed and pending for development
     })
       .populate({
         path: 'course',
@@ -594,7 +594,7 @@ export const getEnrolledCourses = async (req: Request, res: Response, next: Next
     const totalEnrollments = await CourseEnrollment.countDocuments({
       student: studentId,
       isActive: true,
-      paymentStatus: 'completed'
+      paymentStatus: { $in: ['completed', 'pending'] } // Allow both completed and pending for development
     });
     const totalPages = Math.ceil(totalEnrollments / limit);
 

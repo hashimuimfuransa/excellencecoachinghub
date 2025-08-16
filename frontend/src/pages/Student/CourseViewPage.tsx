@@ -36,7 +36,8 @@ import {
   RadioButtonUnchecked,
   School,
   LiveTv,
-  NotificationsActive
+  NotificationsActive,
+  VolumeUp
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { courseService, ICourse } from '../../services/courseService';
@@ -214,7 +215,7 @@ const CourseViewPage: React.FC = () => {
 
   // Navigation handlers
   const handleNotesView = () => {
-    navigate(`/enhanced-notes/${id}`);
+    navigate(`/dashboard/student/course/${id}/material`);
   };
 
   const handleLiveSessionsView = () => {
@@ -363,49 +364,98 @@ const CourseViewPage: React.FC = () => {
       </Typography>
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        {/* Notes Study Path */}
+        {/* Course Material Path */}
         <Grid item xs={12} md={6}>
           <Card 
             sx={{ 
               height: '100%', 
               cursor: 'pointer',
-              transition: 'transform 0.2s, box-shadow 0.2s',
+              transition: 'all 0.3s ease',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              position: 'relative',
+              overflow: 'hidden',
               '&:hover': {
-                transform: 'translateY(-4px)',
-                boxShadow: 4
+                transform: 'translateY(-8px)',
+                boxShadow: '0 20px 40px rgba(102, 126, 234, 0.3)'
+              },
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                opacity: 0,
+                transition: 'opacity 0.3s ease',
+              },
+              '&:hover::before': {
+                opacity: 1
               }
             }}
             onClick={handleNotesView}
           >
-            <CardContent sx={{ textAlign: 'center', py: 4 }}>
-              <MenuBook sx={{ fontSize: 64, color: 'primary.main', mb: 2 }} />
-              <Typography variant="h5" gutterBottom>
-                Study Through Notes
+            <CardContent sx={{ textAlign: 'center', py: 4, position: 'relative', zIndex: 1 }}>
+              <Box sx={{ 
+                display: 'inline-flex',
+                p: 2,
+                borderRadius: '50%',
+                bgcolor: 'rgba(255, 255, 255, 0.2)',
+                mb: 2
+              }}>
+                <MenuBook sx={{ fontSize: 48, color: 'white' }} />
+              </Box>
+              <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: 'white' }}>
+                Course Material
               </Typography>
-              <Typography variant="body1" color="text.secondary" paragraph>
-                Access course materials, reading content, and AI-generated quizzes for each section
+              <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.9)', mb: 3, px: 2 }}>
+                Access comprehensive course materials with advanced reading features, voice narration, and interactive learning tools
               </Typography>
-              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 2 }}>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 3, flexWrap: 'wrap' }}>
                 <Chip 
-                  label={`${courseStats.completedNotes}/${courseStats.totalNotes} Notes`}
+                  label={`${courseStats.completedNotes}/${courseStats.totalNotes} Sections`}
                   icon={courseStats.completedNotes === courseStats.totalNotes ? <CheckCircle /> : <RadioButtonUnchecked />}
                   sx={{
-                    backgroundColor: courseStats.completedNotes === courseStats.totalNotes ? '#4caf50' : '#e0e0e0',
-                    color: courseStats.completedNotes === courseStats.totalNotes ? '#ffffff' : '#666666',
+                    backgroundColor: courseStats.completedNotes === courseStats.totalNotes ? 'rgba(76, 175, 80, 0.9)' : 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    fontWeight: 500,
+                    '& .MuiChip-icon': {
+                      color: 'white'
+                    }
+                  }}
+                />
+                <Chip 
+                  label="Voice Reader"
+                  icon={<VolumeUp />}
+                  sx={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    fontWeight: 500,
+                    '& .MuiChip-icon': {
+                      color: 'white'
+                    }
                   }}
                 />
               </Box>
+              
               <Button 
+                variant="contained"
                 startIcon={<PlayArrow />}
                 sx={{
-                  backgroundColor: '#1976d2',
-                  color: '#ffffff',
-                  padding: '8px 16px',
-                  borderRadius: '4px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  padding: '12px 24px',
+                  borderRadius: '25px',
                   textTransform: 'none',
-                  fontWeight: 500,
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
                   '&:hover': {
-                    backgroundColor: '#1565c0',
+                    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                    transform: 'scale(1.05)',
                   },
                 }}
               >
@@ -421,45 +471,94 @@ const CourseViewPage: React.FC = () => {
             sx={{ 
               height: '100%', 
               cursor: 'pointer',
-              transition: 'transform 0.2s, box-shadow 0.2s',
+              transition: 'all 0.3s ease',
+              background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
+              color: 'white',
+              position: 'relative',
+              overflow: 'hidden',
               '&:hover': {
-                transform: 'translateY(-4px)',
-                boxShadow: 4
+                transform: 'translateY(-8px)',
+                boxShadow: '0 20px 40px rgba(255, 107, 107, 0.3)'
+              },
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                opacity: 0,
+                transition: 'opacity 0.3s ease',
+              },
+              '&:hover::before': {
+                opacity: 1
               }
             }}
             onClick={handleLiveSessionsView}
           >
-            <CardContent sx={{ textAlign: 'center', py: 4 }}>
-              <VideoCall sx={{ fontSize: 64, color: 'secondary.main', mb: 2 }} />
-              <Typography variant="h5" gutterBottom>
+            <CardContent sx={{ textAlign: 'center', py: 4, position: 'relative', zIndex: 1 }}>
+              <Box sx={{ 
+                display: 'inline-flex',
+                p: 2,
+                borderRadius: '50%',
+                bgcolor: 'rgba(255, 255, 255, 0.2)',
+                mb: 2
+              }}>
+                <VideoCall sx={{ fontSize: 48, color: 'white' }} />
+              </Box>
+              <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: 'white' }}>
                 Live Sessions & Videos
               </Typography>
-              <Typography variant="body1" color="text.secondary" paragraph>
-                Join live classes, watch recorded sessions, and interact with instructors
+              <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.9)', mb: 3, px: 2 }}>
+                Join live classes, watch recorded sessions, and interact with instructors in real-time
               </Typography>
-              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mb: 2 }}>
-                <Badge badgeContent={courseStats.upcomingLiveSessions} color="error">
+              
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 3, flexWrap: 'wrap' }}>
+                <Badge badgeContent={courseStats.upcomingLiveSessions} color="warning">
                   <Chip 
                     label="Live Sessions"
                     icon={<LiveTv />}
                     sx={{
-                      backgroundColor: '#dc004e',
-                      color: '#ffffff',
+                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                      color: 'white',
+                      fontWeight: 500,
+                      '& .MuiChip-icon': {
+                        color: 'white'
+                      }
                     }}
                   />
                 </Badge>
+                <Chip 
+                  label="Interactive"
+                  icon={<Person />}
+                  sx={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    fontWeight: 500,
+                    '& .MuiChip-icon': {
+                      color: 'white'
+                    }
+                  }}
+                />
               </Box>
+              
               <Button 
+                variant="contained"
                 startIcon={<PlayArrow />}
                 sx={{
-                  backgroundColor: '#dc004e',
-                  color: '#ffffff',
-                  padding: '8px 16px',
-                  borderRadius: '4px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  padding: '12px 24px',
+                  borderRadius: '25px',
                   textTransform: 'none',
-                  fontWeight: 500,
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
                   '&:hover': {
-                    backgroundColor: '#9a0036',
+                    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                    transform: 'scale(1.05)',
                   },
                 }}
               >

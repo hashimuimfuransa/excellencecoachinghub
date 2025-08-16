@@ -144,5 +144,17 @@ export const progressService = {
       console.error('Failed to mark section as completed:', error);
       throw new Error(error.message || 'Failed to mark section as completed');
     }
+  },
+
+  // Update reading progress
+  updateReadingProgress: async (sectionId: string, isCompleted: boolean): Promise<void> => {
+    try {
+      // For now, we'll use a simple approach - you can enhance this later
+      console.log(`Updating reading progress for section ${sectionId}: ${isCompleted ? 'completed' : 'in progress'}`);
+      // This could be enhanced to call a specific API endpoint for reading progress
+    } catch (error: any) {
+      console.error('Failed to update reading progress:', error);
+      throw new Error(error.message || 'Failed to update reading progress');
+    }
   }
 };

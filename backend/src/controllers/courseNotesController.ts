@@ -19,7 +19,7 @@ export const createCourseNotes = async (req: Request, res: Response, next: NextF
       return;
     }
 
-    const teacherId = req.user?.id;
+    const teacherId = req.user?._id;
     const {
       title,
       description,
@@ -93,7 +93,7 @@ export const createCourseNotes = async (req: Request, res: Response, next: NextF
 // Get teacher's course notes
 export const getTeacherCourseNotes = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const teacherId = req.user?.id;
+    const teacherId = req.user?._id;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const courseId = req.query.courseId as string;
@@ -136,7 +136,7 @@ export const getTeacherCourseNotes = async (req: Request, res: Response, next: N
 export const getCourseNotesById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
-    const userId = req.user?.id;
+    const userId = req.user?._id;
     const userRole = req.user?.role;
 
     const courseNotes = await CourseNotes.findById(id)
@@ -163,10 +163,15 @@ export const getCourseNotesById = async (req: Request, res: Response, next: Next
 
     // For students, check if they're enrolled and if notes are published
     if (userRole === 'student') {
-      const enrollment = await UserProgress.findOne({ 
-        user: userId, 
-        course: courseNotes.course._id
+      const { CourseEnrollment } = require('../models/CourseEnrollment');
+      const enrollment = await CourseEnrollment.findOne({ 
+        student: userId, 
+        course: courseNotes.course._id,
+        isActive: true,
+        paymentStatus: { $in: ['completed', 'pending'] } // Allow both completed and pending for development
       });
+      
+      console.log(`🔍 Enrollment check for student ${userId} in course ${courseNotes.course._id}:`, enrollment ? 'FOUND' : 'NOT FOUND');
       
       if (!enrollment) {
         res.status(403).json({
@@ -213,7 +218,7 @@ export const getCourseNotesById = async (req: Request, res: Response, next: Next
 export const updateCourseNotes = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
-    const teacherId = req.user?.id;
+    const teacherId = req.user?._id;
     const updates = req.body;
 
     const courseNotes = await CourseNotes.findOne({ _id: id, instructor: teacherId });
@@ -258,7 +263,7 @@ export const updateCourseNotes = async (req: Request, res: Response, next: NextF
 export const deleteCourseNotes = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
-    const teacherId = req.user?.id;
+    const teacherId = req.user?._id;
 
     const courseNotes = await CourseNotes.findOne({ _id: id, instructor: teacherId });
     if (!courseNotes) {
@@ -294,7 +299,7 @@ export const deleteCourseNotes = async (req: Request, res: Response, next: NextF
 export const togglePublishCourseNotes = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
-    const teacherId = req.user?.id;
+    const teacherId = req.user?._id;
 
     const courseNotes = await CourseNotes.findOne({ _id: id, instructor: teacherId });
     if (!courseNotes) {
@@ -322,14 +327,17 @@ export const togglePublishCourseNotes = async (req: Request, res: Response, next
 export const getCourseNotesByCourse = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { courseId } = req.params;
-    const studentId = req.user?.id;
+    const studentId = req.user?._id;
     
     console.log(`🔍 getCourseNotesByCourse called - Course: ${courseId}, Student: ${studentId}`);
 
     // Check if student is enrolled
-    const enrollment = await UserProgress.findOne({ 
-      user: studentId, 
-      course: courseId
+    const { CourseEnrollment } = require('../models/CourseEnrollment');
+    const enrollment = await CourseEnrollment.findOne({ 
+      student: studentId, 
+      course: courseId,
+      isActive: true,
+      paymentStatus: { $in: ['completed', 'pending'] } // Allow both completed and pending for development
     });
     
     console.log(`🔍 Enrollment check for student ${studentId} in course ${courseId}: ${enrollment ? 'FOUND' : 'NOT FOUND'}`);
@@ -408,7 +416,7 @@ export const generateQuizFromNotes = async (req: Request, res: Response, next: N
   try {
     const { id } = req.params;
     const { difficulty = 'medium', questionCount = 10 } = req.body;
-    const studentId = req.user?.id;
+    const studentId = req.user?._id;
 
     const courseNotes = await CourseNotes.findById(id);
     if (!courseNotes) {
@@ -461,7 +469,7 @@ export const createNotesFromMaterials = async (req: Request, res: Response, next
   try {
     const { courseId } = req.params;
     const { title, description, chapter, materialContent } = req.body;
-    const instructorId = req.user?.id;
+    const instructorId = req.user?._id;
 
     // Check if course exists and user is the instructor
     const course = await Course.findById(courseId);

@@ -660,6 +660,15 @@ export class AIService {
         const studentAnswer = answers.find(a => a.questionIndex === index);
         const answerText = studentAnswer?.answer || '';
 
+        // Debug logging for grading (can be removed in production)
+        // console.log(`🔍 Grading Question ${index + 1}:`, {
+        //   questionType: question.type,
+        //   questionText: question.question?.substring(0, 100),
+        //   correctAnswer: question.correctAnswer,
+        //   studentAnswer: answerText,
+        //   points: question.points
+        // });
+
         let isCorrect = false;
         let pointsEarned = 0;
         let feedback = '';
@@ -674,7 +683,17 @@ export class AIService {
               feedback = 'No answer provided. Please make sure to select an option.';
               pointsEarned = 0;
             } else {
-              isCorrect = answerText.trim() === (question.correctAnswer as string)?.trim();
+              // More robust comparison for multiple choice answers
+              const studentAnswerNormalized = answerText.trim().toLowerCase();
+              const correctAnswerNormalized = (question.correctAnswer as string)?.trim().toLowerCase();
+              
+              // Try different comparison methods
+              isCorrect = studentAnswerNormalized === correctAnswerNormalized ||
+                         answerText.trim() === (question.correctAnswer as string)?.trim() ||
+                         // Check if it's an option index (A, B, C, D) vs full text
+                         (question.options && question.options.includes(answerText.trim()) && 
+                          answerText.trim() === question.correctAnswer);
+              
               pointsEarned = isCorrect ? question.points : 0;
               feedback = isCorrect 
                 ? 'Excellent! You selected the correct answer.' 
@@ -688,7 +707,26 @@ export class AIService {
               feedback = 'No answer provided. Please select either True or False.';
               pointsEarned = 0;
             } else {
-              isCorrect = answerText.toLowerCase().trim() === (question.correctAnswer as string)?.toLowerCase().trim();
+              // More robust true/false comparison
+              const studentAnswerNormalized = answerText.toLowerCase().trim();
+              const correctAnswerNormalized = (question.correctAnswer as string)?.toLowerCase().trim();
+              
+              // Handle various true/false formats
+              const trueVariants = ['true', 't', '1', 'yes', 'correct'];
+              const falseVariants = ['false', 'f', '0', 'no', 'incorrect'];
+              
+              let studentBool = null;
+              let correctBool = null;
+              
+              if (trueVariants.includes(studentAnswerNormalized)) studentBool = true;
+              else if (falseVariants.includes(studentAnswerNormalized)) studentBool = false;
+              
+              if (trueVariants.includes(correctAnswerNormalized)) correctBool = true;
+              else if (falseVariants.includes(correctAnswerNormalized)) correctBool = false;
+              
+              isCorrect = (studentBool !== null && correctBool !== null && studentBool === correctBool) ||
+                         studentAnswerNormalized === correctAnswerNormalized;
+              
               pointsEarned = isCorrect ? question.points : 0;
               feedback = isCorrect 
                 ? 'Correct! Good understanding of the concept.' 
@@ -861,6 +899,14 @@ export class AIService {
             }
         }
 
+        // Debug logging for results (can be removed in production)
+        // console.log(`✅ Question ${index + 1} Result:`, {
+        //   pointsEarned,
+        //   maxPoints: question.points,
+        //   isCorrect,
+        //   feedback: feedback.substring(0, 100)
+        // });
+
         gradedAnswers.push({
           questionIndex: index,
           earnedPoints: pointsEarned,
@@ -874,6 +920,19 @@ export class AIService {
       // Calculate total score
       const totalScore = gradedAnswers.reduce((sum, answer) => sum + answer.earnedPoints, 0);
       const percentage = Math.round((totalScore / maxPoints) * 100);
+      
+      console.log('📊 Final Score Calculation:', {
+        totalScore,
+        maxPoints,
+        percentage,
+        gradedAnswersCount: gradedAnswers.length,
+        pointsBreakdown: gradedAnswers.map(a => ({ 
+          questionIndex: a.questionIndex, 
+          earned: a.earnedPoints, 
+          max: a.maxPoints,
+          isCorrect: a.isCorrect 
+        }))
+      });
 
       // Generate overall teacher feedback
       const overallFeedbackPrompt = `

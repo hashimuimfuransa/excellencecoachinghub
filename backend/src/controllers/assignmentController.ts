@@ -1532,6 +1532,13 @@ export const extractQuestionsFromDocument = async (req: AuthRequest, res: Respon
               updatedAssignment.aiExtractionStatus = 'completed';
               updatedAssignment.documentText = undefined; // Clear stored text
               
+              // Update maxPoints to match the actual points from extracted questions
+              const oldMaxPoints = updatedAssignment.maxPoints;
+              const calculatedMaxPoints = questionsWithIds.reduce((sum, q) => sum + (q.points || 10), 0);
+              updatedAssignment.maxPoints = calculatedMaxPoints;
+              
+              console.log(`📊 Background: Updated assignment maxPoints from ${oldMaxPoints} to ${calculatedMaxPoints} based on extracted questions`);
+              
               await updatedAssignment.save();
               console.log(`✅ Background: Successfully stored ${questionsWithIds.length} questions for assignment: ${assignmentId}`);
               console.log(`📊 Background: Assignment now has ${updatedAssignment.questions?.length || 0} total questions and ${updatedAssignment.extractedQuestions?.length || 0} extracted questions`);
@@ -2192,6 +2199,14 @@ export const extractAssignmentQuestions = async (req: AuthRequest, res: Response
       assignment.hasQuestions = true;
       assignment.aiProcessingStatus = 'completed';
       assignment.aiExtractionStatus = 'completed';
+      
+      // Update maxPoints to match the actual points from extracted questions
+      const oldMaxPoints = assignment.maxPoints;
+      const calculatedMaxPoints = questionsWithIds.reduce((sum, q) => sum + (q.points || 10), 0);
+      assignment.maxPoints = calculatedMaxPoints;
+      
+      console.log(`📊 Updated assignment maxPoints from ${oldMaxPoints} to ${calculatedMaxPoints} based on extracted questions`);
+      
       // Clear error fields and document text
       assignment.set('aiProcessingError', undefined);
       assignment.set('documentText', undefined);
@@ -2522,6 +2537,9 @@ export const submitAssignmentWithExtractedAnswers = async (req: AuthRequest, res
         // Get the questions for grading context
         const questions = assignment.extractedQuestions || assignment.questions || [];
         
+        // Calculate actual max points from questions
+        const actualMaxPoints = questions.reduce((sum, q) => sum + (q.points || 10), 0);
+        
         // Prepare grading data for the new AI method
         const gradingData = {
           assignmentTitle: assignment.title,
@@ -2534,7 +2552,7 @@ export const submitAssignmentWithExtractedAnswers = async (req: AuthRequest, res
             points: q.points || 10
           })),
           answers: extractedAnswers,
-          maxPoints: assignment.maxPoints
+          maxPoints: actualMaxPoints
         };
 
         console.log('📊 Grading data prepared:', {
@@ -2542,6 +2560,8 @@ export const submitAssignmentWithExtractedAnswers = async (req: AuthRequest, res
           questionsCount: gradingData.questions.length,
           answersCount: gradingData.answers.length,
           maxPoints: gradingData.maxPoints,
+          actualMaxPoints: actualMaxPoints,
+          assignmentMaxPoints: assignment.maxPoints,
           sampleQuestion: gradingData.questions[0]?.question?.substring(0, 100),
           sampleAnswer: gradingData.answers[0]?.answer?.substring(0, 100)
         });
@@ -2552,8 +2572,8 @@ export const submitAssignmentWithExtractedAnswers = async (req: AuthRequest, res
             console.log('✅ Grading completed for submission:', submission._id);
             console.log('📊 Grading result:', {
               score: gradingResult.score,
-              maxPoints: assignment.maxPoints,
-              percentage: Math.round((gradingResult.score / assignment.maxPoints) * 100),
+              maxPoints: gradingData.maxPoints,
+              percentage: Math.round((gradingResult.score / gradingData.maxPoints) * 100),
               confidence: gradingResult.confidence
             });
 

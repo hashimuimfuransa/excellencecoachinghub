@@ -285,7 +285,7 @@ const EnhancedCourseViewPage: React.FC = () => {
 
   // Navigation handlers
   const handleNotesView = () => {
-    navigate(`/enhanced-notes/${id}`);
+    navigate(`/dashboard/student/course/${id}/material`);
   };
 
   const handleLiveSessionsView = () => {
@@ -525,56 +525,132 @@ const EnhancedCourseViewPage: React.FC = () => {
         </Typography>
 
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          {/* Enhanced Notes Study Path */}
+          {/* Enhanced Course Material Path */}
           <Grid item xs={12} md={6}>
-            <ActionCard onClick={handleNotesView}>
-              <CardContent sx={{ textAlign: 'center', py: 4 }}>
+            <Card 
+              onClick={handleNotesView}
+              sx={{ 
+                cursor: 'pointer',
+                borderRadius: 4,
+                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                position: 'relative',
+                overflow: 'hidden',
+                boxShadow: '0 20px 40px rgba(102, 126, 234, 0.3)',
+                '&:hover': {
+                  transform: 'translateY(-12px) scale(1.02)',
+                  boxShadow: '0 30px 60px rgba(102, 126, 234, 0.4)',
+                },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                  opacity: 0,
+                  transition: 'opacity 0.3s ease',
+                },
+                '&:hover::before': {
+                  opacity: 1
+                },
+                '&::after': {
+                  content: '""',
+                  position: 'absolute',
+                  top: -50,
+                  right: -50,
+                  width: 100,
+                  height: 100,
+                  background: 'radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%)',
+                  borderRadius: '50%',
+                  transition: 'all 0.3s ease',
+                },
+                '&:hover::after': {
+                  transform: 'scale(1.5)',
+                  opacity: 0.8
+                }
+              }}
+            >
+              <CardContent sx={{ textAlign: 'center', py: 5, position: 'relative', zIndex: 1 }}>
                 <Box sx={{ position: 'relative', mb: 3 }}>
-                  <MenuBook sx={{ fontSize: 80, color: 'primary.main' }} />
+                  <Box sx={{ 
+                    display: 'inline-flex',
+                    p: 3,
+                    borderRadius: '50%',
+                    bgcolor: 'rgba(255, 255, 255, 0.2)',
+                    backdropFilter: 'blur(10px)',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    mb: 2
+                  }}>
+                    <MenuBook sx={{ fontSize: 60, color: 'white' }} />
+                  </Box>
                   <Zoom in={true}>
                     <Fab
                       size="small"
-                      color="secondary"
-                      sx={{ position: 'absolute', top: -10, right: -10 }}
+                      sx={{ 
+                        position: 'absolute', 
+                        top: -5, 
+                        right: -5,
+                        bgcolor: 'rgba(255, 255, 255, 0.9)',
+                        color: 'primary.main',
+                        '&:hover': {
+                          bgcolor: 'white'
+                        }
+                      }}
                     >
                       <AutoAwesome />
                     </Fab>
                   </Zoom>
                 </Box>
                 
-                <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: 'primary.main' }}>
-                  📚 Interactive Study
+                <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: 'white', mb: 2 }}>
+                  📚 Course Material
                 </Typography>
-                <Typography variant="body1" color="text.secondary" paragraph sx={{ fontSize: '1.1rem' }}>
-                  Dive into course materials with AI-powered quizzes, progress tracking, and gamified learning experience
+                <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.9)', mb: 3, px: 2, fontSize: '1.1rem' }}>
+                  Dive into comprehensive course materials with advanced reading features, voice narration, and interactive learning tools
                 </Typography>
                 
                 {/* Price Display */}
                 {course?.notesPrice !== undefined && course.notesPrice > 0 && (
-                  <Box sx={{ mb: 2 }}>
+                  <Box sx={{ mb: 3 }}>
                     <Chip
                       label={`$${course.notesPrice.toFixed(2)}`}
-                      color="primary"
-                      variant="outlined"
                       sx={{ 
-                        fontSize: '1rem',
-                        fontWeight: 600,
-                        px: 1
+                        fontSize: '1.1rem',
+                        fontWeight: 700,
+                        px: 2,
+                        py: 1,
+                        bgcolor: 'rgba(255, 255, 255, 0.2)',
+                        color: 'white',
+                        border: '2px solid rgba(255, 255, 255, 0.3)',
+                        backdropFilter: 'blur(10px)'
                       }}
                     />
                   </Box>
                 )}
                 
-                <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 3 }}>
-                  <StatsChip 
-                    label={`${courseStats.completedNotes}/${courseStats.totalNotes} Completed`}
-                    color={courseStats.completedNotes === courseStats.totalNotes ? 'success' : 'warning'}
+                <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 4, flexWrap: 'wrap', gap: 1 }}>
+                  <Chip 
+                    label={`${courseStats.completedNotes}/${courseStats.totalNotes} Sections`}
                     icon={courseStats.completedNotes === courseStats.totalNotes ? <CheckCircle /> : <RadioButtonUnchecked />}
+                    sx={{
+                      bgcolor: courseStats.completedNotes === courseStats.totalNotes ? 'rgba(76, 175, 80, 0.9)' : 'rgba(255, 255, 255, 0.2)',
+                      color: 'white',
+                      fontWeight: 600,
+                      '& .MuiChip-icon': { color: 'white' }
+                    }}
                   />
-                  <StatsChip 
-                    label="AI Quizzes" 
-                    color="info" 
+                  <Chip 
+                    label="Voice Reader" 
                     icon={<Psychology />}
+                    sx={{
+                      bgcolor: 'rgba(255, 255, 255, 0.2)',
+                      color: 'white',
+                      fontWeight: 600,
+                      '& .MuiChip-icon': { color: 'white' }
+                    }}
                   />
                 </Stack>
                 
@@ -583,70 +659,156 @@ const EnhancedCourseViewPage: React.FC = () => {
                   size="large"
                   startIcon={<PlayArrow />}
                   sx={{ 
-                    borderRadius: 3,
-                    px: 4,
-                    py: 1.5,
-                    fontSize: '1.1rem',
-                    fontWeight: 600,
-                    background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`
+                    borderRadius: 4,
+                    px: 5,
+                    py: 2,
+                    fontSize: '1.2rem',
+                    fontWeight: 700,
+                    textTransform: 'none',
+                    bgcolor: 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    backdropFilter: 'blur(10px)',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                    '&:hover': {
+                      bgcolor: 'rgba(255, 255, 255, 0.3)',
+                      transform: 'scale(1.05)',
+                      boxShadow: '0 12px 40px rgba(0, 0, 0, 0.3)',
+                    },
                   }}
                 >
                   Start Learning
                 </Button>
               </CardContent>
-            </ActionCard>
+            </Card>
           </Grid>
 
           {/* Enhanced Live Sessions Path */}
           <Grid item xs={12} md={6}>
-            <ActionCard onClick={handleLiveSessionsView}>
-              <CardContent sx={{ textAlign: 'center', py: 4 }}>
+            <Card 
+              onClick={handleLiveSessionsView}
+              sx={{ 
+                cursor: 'pointer',
+                borderRadius: 4,
+                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
+                color: 'white',
+                position: 'relative',
+                overflow: 'hidden',
+                boxShadow: '0 20px 40px rgba(255, 107, 107, 0.3)',
+                '&:hover': {
+                  transform: 'translateY(-12px) scale(1.02)',
+                  boxShadow: '0 30px 60px rgba(255, 107, 107, 0.4)',
+                },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                  opacity: 0,
+                  transition: 'opacity 0.3s ease',
+                },
+                '&:hover::before': {
+                  opacity: 1
+                },
+                '&::after': {
+                  content: '""',
+                  position: 'absolute',
+                  top: -50,
+                  right: -50,
+                  width: 100,
+                  height: 100,
+                  background: 'radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%)',
+                  borderRadius: '50%',
+                  transition: 'all 0.3s ease',
+                },
+                '&:hover::after': {
+                  transform: 'scale(1.5)',
+                  opacity: 0.8
+                }
+              }}
+            >
+              <CardContent sx={{ textAlign: 'center', py: 5, position: 'relative', zIndex: 1 }}>
                 <Box sx={{ position: 'relative', mb: 3 }}>
-                  <VideoCall sx={{ fontSize: 80, color: 'secondary.main' }} />
+                  <Box sx={{ 
+                    display: 'inline-flex',
+                    p: 3,
+                    borderRadius: '50%',
+                    bgcolor: 'rgba(255, 255, 255, 0.2)',
+                    backdropFilter: 'blur(10px)',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    mb: 2
+                  }}>
+                    <VideoCall sx={{ fontSize: 60, color: 'white' }} />
+                  </Box>
                   <Zoom in={true}>
                     <Fab
                       size="small"
-                      color="error"
-                      sx={{ position: 'absolute', top: -10, right: -10 }}
+                      sx={{ 
+                        position: 'absolute', 
+                        top: -5, 
+                        right: -5,
+                        bgcolor: 'rgba(255, 255, 255, 0.9)',
+                        color: 'error.main',
+                        '&:hover': {
+                          bgcolor: 'white'
+                        }
+                      }}
                     >
                       <LiveTv />
                     </Fab>
                   </Zoom>
                 </Box>
                 
-                <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: 'secondary.main' }}>
+                <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: 'white', mb: 2 }}>
                   🎥 Live Sessions
                 </Typography>
-                <Typography variant="body1" color="text.secondary" paragraph sx={{ fontSize: '1.1rem' }}>
+                <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.9)', mb: 3, px: 2, fontSize: '1.1rem' }}>
                   Join interactive live classes, participate in real-time discussions, and connect with your instructor
                 </Typography>
                 
                 {/* Price Display */}
                 {course?.liveSessionPrice !== undefined && course.liveSessionPrice > 0 && (
-                  <Box sx={{ mb: 2 }}>
+                  <Box sx={{ mb: 3 }}>
                     <Chip
                       label={`$${course.liveSessionPrice.toFixed(2)}`}
-                      color="secondary"
-                      variant="outlined"
                       sx={{ 
-                        fontSize: '1rem',
-                        fontWeight: 600,
-                        px: 1
+                        fontSize: '1.1rem',
+                        fontWeight: 700,
+                        px: 2,
+                        py: 1,
+                        bgcolor: 'rgba(255, 255, 255, 0.2)',
+                        color: 'white',
+                        border: '2px solid rgba(255, 255, 255, 0.3)',
+                        backdropFilter: 'blur(10px)'
                       }}
                     />
                   </Box>
                 )}
                 
-                <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 3 }}>
-                  <StatsChip 
+                <Stack direction="row" spacing={1} justifyContent="center" sx={{ mb: 4, flexWrap: 'wrap', gap: 1 }}>
+                  <Chip 
                     label={`${courseStats.upcomingLiveSessions} Upcoming`}
-                    color={courseStats.upcomingLiveSessions > 0 ? 'success' : 'default'}
                     icon={<Schedule />}
+                    sx={{
+                      bgcolor: courseStats.upcomingLiveSessions > 0 ? 'rgba(76, 175, 80, 0.9)' : 'rgba(255, 255, 255, 0.2)',
+                      color: 'white',
+                      fontWeight: 600,
+                      '& .MuiChip-icon': { color: 'white' }
+                    }}
                   />
-                  <StatsChip 
+                  <Chip 
                     label="HD Quality" 
-                    color="info" 
                     icon={<Diamond />}
+                    sx={{
+                      bgcolor: 'rgba(255, 255, 255, 0.2)',
+                      color: 'white',
+                      fontWeight: 600,
+                      '& .MuiChip-icon': { color: 'white' }
+                    }}
                   />
                 </Stack>
                 
@@ -655,18 +817,28 @@ const EnhancedCourseViewPage: React.FC = () => {
                   size="large"
                   startIcon={<VideoCall />}
                   sx={{ 
-                    borderRadius: 3,
-                    px: 4,
-                    py: 1.5,
-                    fontSize: '1.1rem',
-                    fontWeight: 600,
-                    background: `linear-gradient(45deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`
+                    borderRadius: 4,
+                    px: 5,
+                    py: 2,
+                    fontSize: '1.2rem',
+                    fontWeight: 700,
+                    textTransform: 'none',
+                    bgcolor: 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    backdropFilter: 'blur(10px)',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                    '&:hover': {
+                      bgcolor: 'rgba(255, 255, 255, 0.3)',
+                      transform: 'scale(1.05)',
+                      boxShadow: '0 12px 40px rgba(0, 0, 0, 0.3)',
+                    },
                   }}
                 >
                   Join Sessions
                 </Button>
               </CardContent>
-            </ActionCard>
+            </Card>
           </Grid>
         </Grid>
 

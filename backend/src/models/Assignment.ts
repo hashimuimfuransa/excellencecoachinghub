@@ -100,6 +100,7 @@ export interface IAssignmentSubmission extends Document {
   grade?: number;
   feedback?: string;
   autoSubmitted?: boolean;
+  timeSpent?: number; // Total time spent on assignment in seconds
   aiGrade?: {
     score: number;
     feedback: string;
@@ -436,6 +437,11 @@ const AssignmentSubmissionSchema = new Schema<IAssignmentSubmission>({
   autoSubmitted: {
     type: Boolean,
     default: false
+  },
+  timeSpent: {
+    type: Number,
+    default: 0,
+    min: [0, 'Time spent cannot be negative']
   },
   gradedAt: {
     type: Date

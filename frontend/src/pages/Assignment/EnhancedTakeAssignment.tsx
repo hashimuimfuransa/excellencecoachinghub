@@ -73,10 +73,12 @@ import { fileUploadService } from '../../services/fileUploadService';
 import RichTextEditor from '../../components/RichTextEditor/RichTextEditor';
 
 interface AssignmentQuestion {
-  _id: string;
+  _id?: string;
+  id?: string;
   question: string;
   type: 'multiple_choice' | 'multiple_choice_multiple' | 'true_false' | 'short_answer' | 'essay' | 'fill_in_blank' | 'numerical' | 'matching';
   options?: string[];
+  choices?: string[]; // Alternative field name for options
   correctAnswer?: string | string[];
   points: number;
   section?: string;
@@ -85,6 +87,7 @@ interface AssignmentQuestion {
   rightItems?: string[];
   matchingPairs?: Array<{ left: string; right: string; }>;
   timeLimit?: number;
+  aiExtracted?: boolean; // Flag to indicate if this was extracted by AI
 }
 
 interface AssignmentAnswer {
@@ -100,6 +103,8 @@ interface EnhancedAssignment extends AssignmentType {
   hasQuestions: boolean;
   autoSubmit: boolean;
   timeLimit?: number; // in minutes
+  shouldHaveQuestions?: boolean;
+  isProcessingQuestions?: boolean;
 }
 
 const EnhancedTakeAssignment: React.FC = () => {
@@ -143,11 +148,76 @@ const EnhancedTakeAssignment: React.FC = () => {
         
         const assignmentData = await assignmentService.getAssignmentById(assignmentId);
         
-        // Check for questions in multiple possible locations
-        const questions = assignmentData.questions || 
-                         assignmentData.extractedQuestions || 
-                         (assignmentData.assignmentDocument?.extractedQuestions) ||
-                         [];
+        // Check for questions in multiple possible locations and combine them
+        let questions: AssignmentQuestion[] = [];
+        
+        // Add manually created questions
+        if (assignmentData.questions && assignmentData.questions.length > 0) {
+          questions = [...questions, ...assignmentData.questions];
+        }
+        
+        // Add extracted questions with proper IDs
+        if (assignmentData.extractedQuestions && assignmentData.extractedQuestions.length > 0) {
+          const extractedWithIds = assignmentData.extractedQuestions.map((q: any, index: number) => ({
+            ...q,
+            _id: q._id || q.id || `extracted_${index}`,
+            id: q.id || q._id || `extracted_${index}`,
+          }));
+          questions = [...questions, ...extractedWithIds];
+        }
+        
+        // Also check assignmentDocument.extractedQuestions as fallback
+        if (questions.length === 0 && assignmentData.assignmentDocument?.extractedQuestions) {
+          const docExtractedWithIds = assignmentData.assignmentDocument.extractedQuestions.map((q: any, index: number) => ({
+            ...q,
+            _id: q._id || q.id || `doc_extracted_${index}`,
+            id: q.id || q._id || `doc_extracted_${index}`,
+          }));
+          questions = [...questions, ...docExtractedWithIds];
+        }
+        
+        // Debug logging to understand the data structure
+        console.log('🔍 Assignment Data Debug:', {
+          assignmentId,
+          hasQuestions: assignmentData.questions?.length || 0,
+          hasExtractedQuestions: assignmentData.extractedQuestions?.length || 0,
+          hasDocumentQuestions: assignmentData.assignmentDocument?.extractedQuestions?.length || 0,
+          finalQuestions: questions.length,
+          questionsStructure: questions.slice(0, 2), // Show first 2 questions for debugging
+          assignmentDocument: assignmentData.assignmentDocument ? {
+            filename: assignmentData.assignmentDocument.filename,
+            hasExtractedQuestions: !!assignmentData.assignmentDocument.extractedQuestions
+          } : null,
+          aiProcessingStatus: assignmentData.aiProcessingStatus,
+          aiExtractionStatus: assignmentData.aiExtractionStatus,
+          hasDocumentFile: !!assignmentData.assignmentDocument?.fileUrl,
+          rawData: {
+            questions: assignmentData.questions,
+            extractedQuestions: assignmentData.extractedQuestions,
+            documentExtractedQuestions: assignmentData.assignmentDocument?.extractedQuestions
+          }
+        });
+
+        // If no questions found, provide detailed feedback
+        if (questions.length === 0) {
+          console.log('⚠️ NO QUESTIONS FOUND - Detailed Analysis:', {
+            aiProcessingStatus: assignmentData.aiProcessingStatus,
+            aiExtractionStatus: assignmentData.aiExtractionStatus,
+            hasDocument: !!assignmentData.assignmentDocument,
+            documentStatus: assignmentData.assignmentDocument ? {
+              hasFile: !!assignmentData.assignmentDocument.fileUrl,
+              filename: assignmentData.assignmentDocument.filename
+            } : 'No document'
+          });
+        }
+        
+        // Determine if this assignment should have questions
+        const shouldHaveQuestions = !!(assignmentData.assignmentDocument?.fileUrl) || 
+                                   !!(assignmentData.extractedQuestions) || 
+                                   !!(assignmentData.questions);
+        
+        const isProcessingQuestions = assignmentData.aiProcessingStatus === 'pending' || 
+                                     assignmentData.aiExtractionStatus === 'pending';
         
         // Check if this is an enhanced assignment with questions
         const enhancedAssignment: EnhancedAssignment = {
@@ -155,7 +225,9 @@ const EnhancedTakeAssignment: React.FC = () => {
           questions: questions,
           hasQuestions: !!(questions && questions.length > 0),
           autoSubmit: assignmentData.autoSubmit || false,
-          timeLimit: assignmentData.timeLimit
+          timeLimit: assignmentData.timeLimit,
+          shouldHaveQuestions,
+          isProcessingQuestions
         };
 
 
@@ -164,13 +236,23 @@ const EnhancedTakeAssignment: React.FC = () => {
 
         // Initialize answers for questions if they exist
         if (enhancedAssignment.questions && enhancedAssignment.questions.length > 0) {
-          const initialAnswers = enhancedAssignment.questions.map(q => ({
-            questionId: q._id || q.id,
-            answer: '',
-            timeSpent: 0,
-            flagged: false,
-            attachments: []
-          }));
+          const initialAnswers = enhancedAssignment.questions.map((q, index) => {
+            const questionId = q._id || q.id || `question_${index}`;
+            console.log(`🔧 Initializing answer for question ${index}:`, {
+              questionId,
+              hasId: !!q._id,
+              hasIdFallback: !!q.id,
+              questionText: q.question?.substring(0, 50) + '...'
+            });
+            return {
+              questionId,
+              answer: '',
+              timeSpent: 0,
+              flagged: false,
+              attachments: []
+            };
+          });
+          console.log('📝 Initialized answers:', initialAnswers.length);
           setAnswers(initialAnswers);
         }
 
@@ -368,6 +450,11 @@ const EnhancedTakeAssignment: React.FC = () => {
     setHasUnsavedChanges(true);
   };
 
+  // Helper function to get consistent question ID
+  const getQuestionId = (question: AssignmentQuestion, index?: number): string => {
+    return question._id || question.id || `question_${index || 0}`;
+  };
+
   const handleAnswerChange = (questionId: string, answer: string) => {
     setAnswers(prev => prev.map(a => 
       a.questionId === questionId 
@@ -377,13 +464,13 @@ const EnhancedTakeAssignment: React.FC = () => {
     setHasUnsavedChanges(true);
   };
 
-  const renderQuestion = (question: AssignmentQuestion, answer: AssignmentAnswer) => {
+  const renderQuestion = (question: AssignmentQuestion, answer: AssignmentAnswer, questionId?: string) => {
+    const effectiveQuestionId = questionId || getQuestionId(question, currentQuestionIndex);
     switch (question.type) {
       case 'multiple_choice':
         // Handle different ways options might be stored
         const options = question.options || 
                        question.choices || 
-                       (question.answers ? question.answers.map((a: any) => a.text || a) : []) ||
                        [];
         
 
@@ -407,9 +494,9 @@ const EnhancedTakeAssignment: React.FC = () => {
             </Typography>
             <RadioGroup
               value={answer.answer}
-              onChange={(e) => handleAnswerChange(question._id, e.target.value)}
+              onChange={(e) => handleAnswerChange(effectiveQuestionId, e.target.value)}
             >
-              {options.map((option, index) => (
+              {options.map((option: string, index: number) => (
                 <Box key={index} sx={{ mb: 1 }}>
                   <Paper
                     variant="outlined"
@@ -428,7 +515,7 @@ const EnhancedTakeAssignment: React.FC = () => {
                         boxShadow: 1
                       }
                     }}
-                    onClick={() => handleAnswerChange(question._id, option)}
+                    onClick={() => handleAnswerChange(effectiveQuestionId, option)}
                   >
                     <FormControlLabel
                       value={option}
@@ -459,7 +546,6 @@ const EnhancedTakeAssignment: React.FC = () => {
         const selectedAnswers = answer.answer ? answer.answer.split(',').filter(a => a.trim()) : [];
         const multipleOptions = question.options || 
                               question.choices || 
-                              (question.answers ? question.answers.map((a: any) => a.text || a) : []) ||
                               [];
         
 
@@ -482,7 +568,7 @@ const EnhancedTakeAssignment: React.FC = () => {
               ✅ Select all correct answers:
             </Typography>
             <Box>
-              {multipleOptions.map((option, index) => (
+              {multipleOptions.map((option: string, index: number) => (
                 <Box key={index} sx={{ mb: 1 }}>
                   <Paper
                     variant="outlined"
@@ -509,7 +595,7 @@ const EnhancedTakeAssignment: React.FC = () => {
                       } else {
                         currentAnswers.push(option);
                       }
-                      handleAnswerChange(question._id, currentAnswers.join(','));
+                      handleAnswerChange(effectiveQuestionId, currentAnswers.join(','));
                     }}
                   >
                     <FormControlLabel
@@ -563,7 +649,7 @@ const EnhancedTakeAssignment: React.FC = () => {
                         boxShadow: 2
                       }
                     }}
-                    onClick={() => handleAnswerChange(question._id, option)}
+                    onClick={() => handleAnswerChange(effectiveQuestionId, option)}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
                       <Radio
@@ -598,7 +684,7 @@ const EnhancedTakeAssignment: React.FC = () => {
               multiline
               rows={4}
               value={answer.answer}
-              onChange={(e) => handleAnswerChange(question._id, e.target.value)}
+              onChange={(e) => handleAnswerChange(effectiveQuestionId, e.target.value)}
               placeholder="Type your answer here..."
               variant="outlined"
               sx={{
@@ -627,7 +713,7 @@ const EnhancedTakeAssignment: React.FC = () => {
             <Paper variant="outlined" sx={{ p: 1, minHeight: 250 }}>
               <RichTextEditor
                 value={answer.answer}
-                onChange={(value) => handleAnswerChange(question._id, value)}
+                onChange={(value) => handleAnswerChange(effectiveQuestionId, value)}
                 placeholder="Write your detailed essay response here. Use the toolbar to format your text..."
                 minHeight={200}
               />
@@ -647,7 +733,7 @@ const EnhancedTakeAssignment: React.FC = () => {
             <TextField
               fullWidth
               value={answer.answer}
-              onChange={(e) => handleAnswerChange(question._id, e.target.value)}
+              onChange={(e) => handleAnswerChange(effectiveQuestionId, e.target.value)}
               placeholder="Type your answer to fill in the blank..."
               variant="outlined"
               sx={{
@@ -676,7 +762,7 @@ const EnhancedTakeAssignment: React.FC = () => {
               fullWidth
               type="number"
               value={answer.answer}
-              onChange={(e) => handleAnswerChange(question._id, e.target.value)}
+              onChange={(e) => handleAnswerChange(effectiveQuestionId, e.target.value)}
               placeholder="Enter your numerical answer..."
               variant="outlined"
               inputProps={{ 
@@ -733,7 +819,7 @@ const EnhancedTakeAssignment: React.FC = () => {
                             onChange={(e) => {
                               const newPairs = { ...matchingPairs };
                               newPairs[leftItem] = e.target.value;
-                              handleAnswerChange(question._id, JSON.stringify(newPairs));
+                              handleAnswerChange(effectiveQuestionId, JSON.stringify(newPairs));
                             }}
                             displayEmpty
                             variant="outlined"
@@ -768,36 +854,9 @@ const EnhancedTakeAssignment: React.FC = () => {
           </Box>
         );
 
-      default:
-        return (
-          <Box>
-            <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 'medium', color: 'text.secondary' }}>
-              💬 Enter your response:
-            </Typography>
-            <TextField
-              fullWidth
-              multiline
-              rows={5}
-              value={answer.answer}
-              onChange={(e) => handleAnswerChange(question._id, e.target.value)}
-              placeholder="Enter your detailed answer here..."
-              variant="outlined"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  '&:hover fieldset': {
-                    borderColor: 'primary.main',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: 'primary.main',
-                  }
-                }
-              }}
-            />
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-              Characters: {answer.answer.length} • Be detailed and clear in your response
-            </Typography>
-          </Box>
-        );
+  
+        
+      
     }
   };
 
@@ -961,7 +1020,29 @@ const EnhancedTakeAssignment: React.FC = () => {
   }
 
   const currentQuestion = assignment.questions?.[currentQuestionIndex];
-  const currentAnswer = answers.find(a => a.questionId === currentQuestion?._id);
+  const currentQuestionId = currentQuestion?._id || currentQuestion?.id || `question_${currentQuestionIndex}`;
+  const currentAnswer = answers.find(a => a.questionId === currentQuestionId);
+  
+  // Debug logging for rendering issues
+  console.log('🎯 Render Debug:', {
+    hasAssignment: !!assignment,
+    hasQuestions: assignment?.hasQuestions,
+    questionsLength: assignment?.questions?.length,
+    currentQuestionIndex,
+    currentQuestionId,
+    currentQuestion: currentQuestion ? {
+      id: currentQuestion._id,
+      idFallback: currentQuestion.id,
+      question: currentQuestion.question?.substring(0, 50) + '...',
+      type: currentQuestion.type
+    } : null,
+    currentAnswer: currentAnswer ? {
+      questionId: currentAnswer.questionId,
+      hasAnswer: !!currentAnswer.answer
+    } : null,
+    answersLength: answers.length,
+    showInstructions
+  });
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
@@ -1043,7 +1124,8 @@ const EnhancedTakeAssignment: React.FC = () => {
         
         {assignment.hasQuestions ? (
           // Show questions interface if assignment has questions
-          currentQuestion && currentAnswer ? (
+          assignment.questions && assignment.questions.length > 0 ? (
+            currentQuestion && currentAnswer ? (
             /* Question-based assignment */
             <Box>
               {/* Question Header */}
@@ -1084,7 +1166,7 @@ const EnhancedTakeAssignment: React.FC = () => {
 
                   <Tooltip title={currentAnswer.flagged ? 'Remove flag' : 'Flag for review'}>
                     <IconButton
-                      onClick={() => toggleFlag(currentQuestion._id)}
+                      onClick={() => toggleFlag(currentQuestionId)}
                       sx={{ 
                         color: currentAnswer.flagged ? '#ffc107' : 'rgba(255,255,255,0.7)',
                         '&:hover': { 
@@ -1120,7 +1202,7 @@ const EnhancedTakeAssignment: React.FC = () => {
 
                 {/* Answer Area */}
                 <Box sx={{ mt: 2 }}>
-                  {renderQuestion(currentQuestion, currentAnswer)}
+                  {renderQuestion(currentQuestion, currentAnswer, currentQuestionId)}
                 </Box>
 
                 {/* Answer Status */}
@@ -1209,6 +1291,59 @@ const EnhancedTakeAssignment: React.FC = () => {
                 Answers Initialized: {answers.length}
               </Typography>
               <CircularProgress />
+            </Paper>
+          )
+        ) : assignment.isProcessingQuestions ? (
+            <Paper sx={{ p: 4, textAlign: 'center' }}>
+              <CircularProgress size={48} sx={{ mb: 2 }} />
+              <Typography variant="h6" color="primary.main" gutterBottom>
+                Processing Questions
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                AI is currently extracting questions from the assignment document.
+                This usually takes 30-60 seconds.
+              </Typography>
+              <Button
+                onClick={() => window.location.reload()}
+                variant="outlined"
+                sx={{ mt: 2 }}
+              >
+                Check Status
+              </Button>
+            </Paper>
+          ) : assignment.shouldHaveQuestions ? (
+            <Paper sx={{ p: 4, textAlign: 'center' }}>
+              <Typography variant="h6" color="warning.main" gutterBottom>
+                No Questions Found
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                This assignment should have questions, but none were found.
+                This might be because:
+              </Typography>
+              <Box component="ul" sx={{ mt: 2, textAlign: 'left', maxWidth: 500, mx: 'auto', pl: 3 }}>
+                <li>Questions are still being extracted from the document</li>
+                <li>No questions could be extracted from the uploaded document</li>
+                <li>The extraction process failed</li>
+                <li>The instructor hasn't added questions yet</li>
+              </Box>
+              <Button
+                onClick={() => window.location.reload()}
+                variant="outlined"
+                color="warning"
+                sx={{ mt: 2 }}
+              >
+                Refresh Page
+              </Button>
+            </Paper>
+          ) : (
+            <Paper sx={{ p: 4, textAlign: 'center' }}>
+              <Typography variant="h6" color="info.main" gutterBottom>
+                Traditional Assignment
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                This assignment doesn't have structured questions.
+                Please submit your work using the text editor and file upload below.
+              </Typography>
             </Paper>
           )
         ) : (

@@ -79,7 +79,9 @@ import {
   Psychology,
   EmojiEvents,
   CloudUpload as CloudUploadIcon,
-  CheckCircle as CheckCircleIcon
+  CheckCircle as CheckCircleIcon,
+  Schedule,
+  Error
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { useAuth } from '../../hooks/useAuth';
@@ -641,8 +643,28 @@ const EnhancedCourseManagement: React.FC = () => {
     }
   };
 
-  // Handle uploading assignment document with AI extraction (like assessments)
+  // Handle assignment AI extraction (upload document or retry existing)
   const handleUploadAssignmentDocument = (assignment: AssignmentType) => {
+    // Check if assignment has document and is stuck in pending/failed state
+    const hasDocument = assignment.assignmentDocument?.fileUrl;
+    const isPending = assignment.aiProcessingStatus === 'pending' || assignment.aiExtractionStatus === 'pending';
+    const isFailed = assignment.aiProcessingStatus === 'failed' || assignment.aiExtractionStatus === 'failed';
+    
+    if (hasDocument && (isPending || isFailed)) {
+      // Show retry option for existing document
+      const shouldRetry = window.confirm(
+        `This assignment already has a document but AI extraction ${isPending ? 'is pending' : 'failed'}. Would you like to:\n\n` +
+        `• Click "OK" to retry extraction on the existing document\n` +
+        `• Click "Cancel" to upload a new document instead`
+      );
+      
+      if (shouldRetry) {
+        handleRetryAIExtraction(assignment);
+        return;
+      }
+    }
+    
+    // Default behavior: upload new document
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.pdf,.doc,.docx,.txt,.jpg,.jpeg,.png';
@@ -657,12 +679,12 @@ const EnhancedCourseManagement: React.FC = () => {
           let updatedAssignment;
           
           if (hasExistingQuestions) {
-            // Replace existing document-extracted questions
-            updatedAssignment = await assignmentService.replaceQuestionsFromDocument(assignment._id, file);
+            // Replace existing document-extracted questions using synchronous method
+            updatedAssignment = await assignmentService.extractAssignmentQuestionsSync(assignment._id, file);
             setSuccess('Assignment document replaced and questions updated successfully!');
           } else {
-            // Extract new questions from document
-            updatedAssignment = await assignmentService.extractQuestionsFromDocument(assignment._id, file);
+            // Extract new questions from document using synchronous method (like assessments)
+            updatedAssignment = await assignmentService.extractAssignmentQuestionsSync(assignment._id, file);
             setSuccess('Assignment document uploaded and questions extracted successfully!');
           }
           
@@ -682,6 +704,110 @@ const EnhancedCourseManagement: React.FC = () => {
       }
     };
     input.click();
+  };
+
+  // Handle retry AI extraction for existing document using synchronous method
+  const handleRetryAIExtraction = async (assignment: AssignmentType) => {
+    try {
+      setLoading(true);
+      setError('');
+      setSuccess('');
+      
+      console.log('🔄 Retrying AI extraction for assignment using synchronous method:', assignment._id);
+      
+      // Check if assignment has a document to re-process
+      if (!assignment.assignmentDocument?.fileUrl) {
+        setError('No document found to retry extraction. Please upload a new document.');
+        return;
+      }
+
+      // Show file picker to re-upload document (since we need file for synchronous processing)
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.pdf,.doc,.docx,.txt,.jpg,.jpeg,.png';
+      input.onchange = async (event) => {
+        const file = (event.target as HTMLInputElement).files?.[0];
+        if (file) {
+          try {
+            console.log('📄 Re-processing assignment with new synchronous method...');
+            
+            // Use synchronous extraction method
+            const updatedAssignment = await assignmentService.extractAssignmentQuestionsSync(assignment._id, file);
+            setSuccess('Assignment document re-processed and questions extracted successfully using the new method!');
+            
+            // Update the assignment in the state
+            setAssignments(prev => 
+              prev.map(a => 
+                a._id === assignment._id ? updatedAssignment : a
+              )
+            );
+            
+          } catch (error: any) {
+            console.error('Failed to retry with synchronous method:', error);
+            setError(`Retry failed: ${error.message}`);
+          }
+        }
+      };
+      
+      // Prompt user about the new method
+      const shouldProceed = window.confirm(
+        'The retry will use the new improved synchronous extraction method. ' +
+        'You will need to re-upload the document. This is faster and more reliable. ' +
+        'Click OK to proceed with file selection.'
+      );
+      
+      if (shouldProceed) {
+        input.click();
+      }
+      
+    } catch (error: any) {
+      console.error('Failed to retry AI extraction:', error);
+      setError(error.message || 'Failed to retry AI extraction');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle refresh assignments
+  const handleRefreshAssignments = async () => {
+    try {
+      const response = await assignmentService.getAssignmentsByCourse(courseId);
+      if (response.success) {
+        setAssignments(response.data.assignments || []);
+      }
+    } catch (error) {
+      console.error('Failed to refresh assignments:', error);
+    }
+  };
+
+  // Handle debug AI processing (manual trigger)
+  const handleDebugAIProcessing = async (assignment: AssignmentType) => {
+    try {
+      setLoading(true);
+      setError('');
+      setSuccess('');
+      
+      console.log('🐞 Manual debug AI processing for assignment:', assignment._id);
+      
+      const response = await assignmentService.debugAIProcessing(assignment._id);
+      
+      if (response.success) {
+        setSuccess('AI processing debug completed successfully! Check the results below.');
+        
+        // Refresh assignments to get updated status
+        setTimeout(() => {
+          handleRefreshAssignments();
+        }, 1000);
+      } else {
+        throw new Error('Debug AI processing failed');
+      }
+      
+    } catch (error: any) {
+      console.error('Failed to debug AI processing:', error);
+      setError(error.message || 'Failed to debug AI processing');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle upload assessment document
@@ -1840,6 +1966,34 @@ const EnhancedCourseManagement: React.FC = () => {
                             variant="outlined"
                           />
                         )}
+                        {/* AI Processing Status */}
+                        {assignment.aiProcessingStatus === 'pending' && (
+                          <Chip
+                            label="AI Processing..."
+                            size="small"
+                            color="info"
+                            variant="outlined"
+                            icon={<Schedule />}
+                          />
+                        )}
+                        {assignment.aiProcessingStatus === 'failed' && (
+                          <Chip
+                            label="AI Failed"
+                            size="small"
+                            color="error"
+                            variant="outlined"
+                            icon={<Error />}
+                          />
+                        )}
+                        {assignment.aiProcessingStatus === 'completed' && assignment.questions && assignment.questions.length > 0 && (
+                          <Chip
+                            label="AI Ready"
+                            size="small"
+                            color="success"
+                            variant="outlined"
+                            icon={<CheckCircle />}
+                          />
+                        )}
                       </Box>
 
                       {/* File Info */}
@@ -1917,9 +2071,24 @@ const EnhancedCourseManagement: React.FC = () => {
                           onClick={() => handleUploadAssignmentDocument(assignment)}
                           variant="outlined"
                           color={assignment.questions && assignment.questions.length > 0 ? "success" : "primary"}
+                          title={assignment.questions && assignment.questions.length > 0 ? 'Update AI questions from document (synchronous method)' : 'Extract AI questions from document (synchronous method - like assessments)'}
                         >
-                          {assignment.questions && assignment.questions.length > 0 ? 'Update AI' : 'Extract AI'}
+                          {assignment.questions && assignment.questions.length > 0 ? '🔄 Update AI (Sync)' : '🤖 Extract AI (Sync)'}
                         </Button>
+                        {/* Debug button for stuck assignments */}
+                        {(assignment.aiProcessingStatus === 'pending' || assignment.aiProcessingStatus === 'failed' || 
+                          assignment.aiExtractionStatus === 'pending' || assignment.aiExtractionStatus === 'failed') && (
+                          <Button
+                            size="small"
+                            startIcon={<Psychology />}
+                            onClick={() => handleDebugAIProcessing(assignment)}
+                            variant="outlined"
+                            color="warning"
+                            sx={{ minWidth: 'auto', px: 1 }}
+                          >
+                            Debug AI
+                          </Button>
+                        )}
                         <Button
                           size="small"
                           startIcon={<DownloadIcon />}

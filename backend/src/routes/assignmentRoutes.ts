@@ -31,7 +31,11 @@ import {
   gradeAssignmentSubmission,
   getSubmissionDetails,
   checkAIProcessingStatus,
-  retryQuestionExtraction
+  retryQuestionExtraction,
+  debugAIProcessing,
+  extractAssignmentQuestions,
+  saveAssignmentProgress,
+  submitAssignmentWithExtractedAnswers
 } from '../controllers/assignmentController';
 
 const router = express.Router();
@@ -104,7 +108,10 @@ router.get('/:assignmentId/submission', auth, asyncHandler(getStudentSubmission)
 
 // Extracted questions assignments
 router.get('/:assignmentId/extracted-questions', auth, asyncHandler(getExtractedQuestions));
-router.post('/:assignmentId/submit-extracted', auth, asyncHandler(submitExtractedAssignment));
+router.post('/:assignmentId/submit-extracted', auth, asyncHandler(submitAssignmentWithExtractedAnswers));
+
+// Assignment progress saving (auto-save functionality)
+router.post('/:assignmentId/save-progress', auth, asyncHandler(saveAssignmentProgress));
 
 // File upload for assignments (student submissions)
 router.post('/:assignmentId/upload', auth, uploadDocument.single('file'), asyncHandler(uploadAssignmentFile));
@@ -119,9 +126,13 @@ router.put('/:assignmentId/replace-document', auth, requireApprovedTeacher, uplo
 router.post('/:assignmentId/extract-questions', auth, requireApprovedTeacher, uploadDocument.single('document'), asyncHandler(extractQuestionsFromDocument));
 router.put('/:assignmentId/replace-questions', auth, requireApprovedTeacher, uploadDocument.single('document'), asyncHandler(replaceQuestionsFromDocument));
 
+// New synchronous assignment extraction (like assessment processing)
+router.post('/:assignmentId/extract-sync', auth, requireApprovedTeacher, uploadDocument.single('document'), asyncHandler(extractAssignmentQuestions));
+
 // AI Processing Status and Retry Routes
 router.get('/:assignmentId/ai-status', auth, requireApprovedTeacher, asyncHandler(checkAIProcessingStatus));
 router.post('/:assignmentId/retry-extraction', auth, requireApprovedTeacher, asyncHandler(retryQuestionExtraction));
+router.post('/:assignmentId/debug-ai', auth, requireApprovedTeacher, asyncHandler(debugAIProcessing));
 
 // Enhanced Grading Routes (like assessments)
 router.get('/:assignmentId/submissions', auth, requireApprovedTeacher, asyncHandler(getAssignmentSubmissionsForGrading));

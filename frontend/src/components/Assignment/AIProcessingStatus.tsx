@@ -70,14 +70,23 @@ const AIProcessingStatus: React.FC<AIProcessingStatusProps> = ({
     try {
       const response = await assignmentService.retryQuestionExtraction(assignmentId);
       if (response.success) {
-        // Update status to pending
-        setStatus(prev => prev ? { ...prev, aiProcessingStatus: 'pending' } : null);
+        // Update status to pending immediately
+        setStatus(prev => prev ? { 
+          ...prev, 
+          aiProcessingStatus: 'pending',
+          processingError: undefined 
+        } : null);
+        
+        // Start auto-refresh to monitor progress
+        setTimeout(() => {
+          fetchStatus();
+        }, 2000);
         
         // Show success message
-        alert('Question extraction retry has been queued. Please check back in a few minutes.');
+        alert('Question extraction has started! The status will update automatically as processing completes.');
       }
     } catch (err: any) {
-      alert(err.message || 'Failed to retry question extraction');
+      alert(err.message || 'Failed to start question extraction');
     } finally {
       setRetrying(false);
     }
@@ -89,7 +98,7 @@ const AIProcessingStatus: React.FC<AIProcessingStatusProps> = ({
     // Auto-refresh for pending status
     let interval: NodeJS.Timeout | null = null;
     if (autoRefresh && status?.aiProcessingStatus === 'pending') {
-      interval = setInterval(fetchStatus, 10000); // Check every 10 seconds
+      interval = setInterval(fetchStatus, 5000); // Check every 5 seconds for faster updates
     }
     
     return () => {
@@ -240,7 +249,7 @@ const AIProcessingStatus: React.FC<AIProcessingStatusProps> = ({
           <Box sx={{ mt: 2 }}>
             <LinearProgress />
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-              This may take 1-3 minutes depending on document size and AI service load
+              Processing time: 1-3 minutes • Status updates every 5 seconds • Last checked: {new Date(status.lastUpdated).toLocaleTimeString()}
             </Typography>
           </Box>
         )}
@@ -248,8 +257,8 @@ const AIProcessingStatus: React.FC<AIProcessingStatusProps> = ({
         {status.aiProcessingStatus === 'pending' && (
           <Alert severity="info" sx={{ mt: 2 }}>
             <Typography variant="body2">
-              <strong>Processing in background:</strong> You can continue working on other parts of your assignment. 
-              Questions will appear automatically once processing is complete.
+              <strong>Processing in progress:</strong> AI is analyzing your document and extracting questions. 
+              This typically takes 1-3 minutes. The page will automatically update when complete - no need to refresh manually!
             </Typography>
           </Alert>
         )}

@@ -75,6 +75,7 @@ import EnhancedTakeAssessment from './pages/Assessment/EnhancedTakeAssessment';
 import AssessmentResults from './pages/Assessment/AssessmentResults';
 import EnhancedWorkOnAssignment from './pages/Assignment/EnhancedWorkOnAssignment';
 import EnhancedTakeAssignment from './pages/Assignment/EnhancedTakeAssignment';
+import TakeExamNew from './pages/Assignment/TakeExam';
 import AssignmentResults from './pages/Assignment/AssignmentResults';
 import EnhancedAssignmentPage from './pages/Student/EnhancedAssignmentPage';
 import CoursesPage from './pages/Courses/CoursesPage';
@@ -251,7 +252,9 @@ const App: React.FC = () => {
           <Route path="course/:id/notes" element={<CourseNotesStudyPage />} />
           <Route path="course/:id/live-sessions" element={<StudentLiveSessions />} />
           <Route path="course/:id/announcements" element={<CourseAnnouncementsPage />} />
-          <Route path="assignment/:assignmentId" element={<EnhancedTakeAssignment />} />
+          <Route path="assignment/:assignmentId" element={<TakeExamNew />} />
+          <Route path="assignment/:assignmentId/enhanced" element={<TakeExamNew />} />
+          <Route path="assignment/:assignmentId/results" element={<AssignmentResults />} />
           <Route path="assignments/:assignmentId" element={<AssignmentView />} />
           <Route path="live-sessions" element={<StudentLiveSessions />} />
           <Route path="live-sessions/:sessionId/room" element={<StudentLiveSessionRoom />} />
@@ -437,7 +440,7 @@ const App: React.FC = () => {
         path="/assignment/:assignmentId/work"
         element={
           <ProtectedRoute requiredRole={UserRole.STUDENT}>
-            <EnhancedTakeAssignment />
+            <TakeExamNew />
           </ProtectedRoute>
         }
       />
@@ -445,7 +448,7 @@ const App: React.FC = () => {
         path="/assignment/:assignmentId/take"
         element={
           <ProtectedRoute requiredRole={UserRole.STUDENT}>
-            <EnhancedTakeAssignment />
+            <TakeExamNew />
           </ProtectedRoute>
         }
       />

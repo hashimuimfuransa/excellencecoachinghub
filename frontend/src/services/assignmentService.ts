@@ -53,13 +53,16 @@ export interface Assignment {
     fileUrl: string;
     fileSize: number;
     uploadedAt: Date;
+    extractedQuestions?: any[];
   };
   // Enhanced assignment features
   questions?: AssignmentQuestion[];
   hasQuestions?: boolean;
   autoSubmit?: boolean;
   timeLimit?: number; // in minutes
-  extractedQuestions?: AssignmentQuestion[];
+  extractedQuestions?: any[];
+  aiProcessingStatus?: 'not_started' | 'pending' | 'completed' | 'failed' | 'no_questions_found';
+  aiExtractionStatus?: 'pending' | 'completed' | 'failed';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -770,6 +773,63 @@ class AssignmentService {
     }
   }
 
+  // Synchronous assignment question extraction (like assessments)
+  async extractAssignmentQuestionsSync(assignmentId: string, file: File): Promise<Assignment> {
+    try {
+      const formData = new FormData();
+      formData.append('document', file);
+
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/assignments/${assignmentId}/extract-sync`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        return result.data.assignment;
+      }
+      
+      throw new Error(result.error || 'Failed to extract questions from document');
+    } catch (error: any) {
+      console.error('Failed to extract questions synchronously:', error);
+      throw new Error(error.message || 'Failed to extract questions from document');
+    }
+  }
+
+  // Debug AI processing (manual trigger)
+  async debugAIProcessing(assignmentId: string): Promise<{
+    success: boolean;
+    message: string;
+    data?: any;
+  }> {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/assignments/${assignmentId}/debug-ai`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        return result;
+      }
+      
+      throw new Error(result.error || 'Failed to debug AI processing');
+    } catch (error: any) {
+      console.error('Failed to debug AI processing:', error);
+      throw new Error(error.message || 'Failed to debug AI processing');
+    }
+  }
+
   // Submit assignment (enhanced to handle both traditional and extracted)
   async submitAssignmentEnhanced(formData: FormData): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
@@ -856,6 +916,82 @@ class AssignmentService {
     } catch (error: any) {
       console.error('Failed to fetch submission details:', error);
       throw new Error(error.response?.data?.message || 'Failed to fetch submission details');
+    }
+  }
+
+  // Save assignment progress (auto-save functionality)
+  async saveAssignmentProgress(progressData: {
+    assignmentId: string;
+    extractedAnswers: Array<{
+      questionIndex: number;
+      answer: string;
+      questionType: string;
+      timeSpent: number;
+      attempts: number;
+    }>;
+    autoSaved?: boolean;
+    status?: string;
+  }): Promise<AssignmentSubmission> {
+    try {
+      const response = await api.post(`/assignments/${progressData.assignmentId}/save-progress`, {
+        extractedAnswers: progressData.extractedAnswers,
+        autoSaved: progressData.autoSaved || true,
+        status: progressData.status || 'draft'
+      });
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Failed to save assignment progress:', error);
+      throw new Error(error.response?.data?.message || 'Failed to save progress');
+    }
+  }
+
+  // Submit assignment with extracted answers for AI grading
+  async submitAssignmentWithExtractedAnswers(submissionData: {
+    assignmentId: string;
+    extractedAnswers: Array<{
+      questionIndex: number;
+      answer: string;
+      questionType: string;
+      timeSpent: number;
+      attempts: number;
+      flagged?: boolean;
+      submittedAt?: Date;
+    }>;
+    submissionText?: string;
+    finalSubmission?: boolean;
+    isAutoSubmit?: boolean;
+    timeSpent?: number;
+    submittedAt?: Date;
+    status?: string;
+  }): Promise<AssignmentSubmission> {
+    try {
+      const response = await api.post(`/assignments/${submissionData.assignmentId}/submit-extracted`, {
+        extractedAnswers: submissionData.extractedAnswers,
+        submissionText: submissionData.submissionText,
+        finalSubmission: submissionData.finalSubmission || true,
+        isAutoSubmit: submissionData.isAutoSubmit || false,
+        timeSpent: submissionData.timeSpent || 0,
+        submittedAt: submissionData.submittedAt || new Date(),
+        status: submissionData.status || 'submitted'
+      });
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Failed to submit assignment with extracted answers:', error);
+      throw new Error(error.response?.data?.message || 'Failed to submit assignment');
+    }
+  }
+
+  // Get assignment submission (for loading existing progress)
+  async getAssignmentSubmission(assignmentId: string): Promise<AssignmentSubmission | null> {
+    try {
+      const response = await api.get(`/assignments/${assignmentId}/submission`);
+      return response.data.data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return null; // No submission found
+      }
+      console.error('Failed to fetch assignment submission:', error);
+      throw new Error(error.response?.data?.message || 'Failed to fetch submission');
     }
   }
 

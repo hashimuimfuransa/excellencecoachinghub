@@ -401,7 +401,7 @@ const CourseDetailPage: React.FC = () => {
                     {/* Progress Info */}
                     <Box sx={{ mt: 2 }}>
                       <Typography variant="body2" color="text.secondary">
-                        Progress: {enrollment.progress}%
+                        Progress: {enrollment.progress?.totalProgress || 0}%
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         Enrolled: {new Date(enrollment.enrollmentDate).toLocaleDateString()}

@@ -1,5 +1,5 @@
 import { DocumentParser } from '../utils/documentParser';
-import { uploadFile } from '../config/cloudinary';
+import { uploadDocumentToCloudinary } from '../config/cloudinary';
 
 interface FastProcessingResult {
   documentUrl: string;
@@ -88,15 +88,15 @@ class FastDocumentProcessor {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        // Create a mock file object for upload
-        const mockFile = {
-          buffer: fileBuffer,
-          mimetype,
+        // Use uploadDocumentToCloudinary with proper parameters
+        const result = await uploadDocumentToCloudinary(
+          fileBuffer,
+          'system', // userId - using 'system' for assignment documents
           originalname,
-          size: fileBuffer.length
-        } as Express.Multer.File;
+          `excellence-coaching-hub/${folder}`
+        );
 
-        return await uploadFile(mockFile, folder);
+        return { url: result.url };
       } catch (error: any) {
         lastError = error;
         console.warn(`Upload attempt ${attempt} failed:`, error.message);

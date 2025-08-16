@@ -42,7 +42,7 @@ import {
   Warning
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 // Styled components
 const QuestionCard = styled(Card)(({ theme }) => ({

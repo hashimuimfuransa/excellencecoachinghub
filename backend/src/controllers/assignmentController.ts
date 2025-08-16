@@ -16,6 +16,98 @@ interface AuthRequest extends Request {
   };
 }
 
+// Direct AI question extraction function (bypasses queue for synchronous processing)
+async function extractQuestionsDirectly(
+  documentText: string,
+  assessmentType: 'quiz' | 'assignment' | 'exam' | 'project' | 'homework' = 'assignment'
+): Promise<Array<{
+  question: string;
+  type: 'multiple_choice' | 'multiple_choice_multiple' | 'true_false' | 'short_answer' | 'essay' | 'fill_in_blank' | 'numerical' | 'matching';
+  options?: string[];
+  correctAnswer?: string | string[];
+  points: number;
+  aiExtracted: boolean;
+  section?: string;
+  sectionTitle?: string;
+  leftItems?: string[];
+  rightItems?: string[];
+  matchingPairs?: Array<{ left: string; right: string; }>;
+}>> {
+  console.log('🚀 Direct AI processing (no queue) - Processing text length:', documentText.length);
+  
+  // Truncate document text if too long for faster processing
+  const maxTextLength = 8000;
+  const truncatedText = documentText.length > maxTextLength 
+    ? documentText.substring(0, maxTextLength) + '\n\n[Document truncated for processing...]'
+    : documentText;
+
+  const prompt = `Extract questions from this ${assessmentType} document. Return JSON array only:
+
+Document:
+${truncatedText}
+
+Required JSON format:
+[{"question":"text","type":"multiple_choice|true_false|short_answer|essay","options":["A","B","C","D"],"correctAnswer":"A","points":10,"aiExtracted":true}]
+
+Rules:
+- Extract existing questions exactly as written
+- For content without questions, create comprehension questions
+- Use appropriate point values (5-20 points)
+- Include 4 options for multiple choice
+- Use "true"/"false" for true/false questions
+- Keep questions clear and concise
+- Maximum 20 questions for performance`;
+
+  try {
+    // Direct call to AI model (same as aiService but without queue)
+    const result = await aiService.model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    console.log('🤖 Direct AI response received, parsing JSON...');
+    
+    // Parse and clean the JSON response
+    let cleanedText = text.trim();
+    
+    // Remove any markdown formatting
+    if (cleanedText.startsWith('```json')) {
+      cleanedText = cleanedText.replace(/```json\n?/, '').replace(/\n?```/, '');
+    } else if (cleanedText.startsWith('```')) {
+      cleanedText = cleanedText.replace(/```\n?/, '').replace(/\n?```/, '');
+    }
+    
+    // Try to find JSON array in the response
+    const jsonMatch = cleanedText.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      cleanedText = jsonMatch[0];
+    }
+    
+    const extractedQuestions = JSON.parse(cleanedText);
+    console.log(`✅ Direct AI extraction completed: ${extractedQuestions.length} questions`);
+    
+    // Validate and normalize questions
+    return extractedQuestions
+      .filter((q: any) => q.question && q.question.trim().length > 0)
+      .map((q: any) => ({
+        question: q.question.trim(),
+        type: q.type || 'short_answer',
+        options: q.options || undefined,
+        correctAnswer: q.correctAnswer || undefined,
+        points: typeof q.points === 'number' ? q.points : 10,
+        aiExtracted: true,
+        section: q.section || undefined,
+        sectionTitle: q.sectionTitle || undefined,
+        leftItems: q.leftItems || undefined,
+        rightItems: q.rightItems || undefined,
+        matchingPairs: q.matchingPairs || undefined
+      }));
+      
+  } catch (error: any) {
+    console.error('❌ Direct AI extraction failed:', error);
+    throw new Error(`AI processing failed: ${error.message}`);
+  }
+}
+
 // Create assignment
 export const createAssignment = async (req: AuthRequest, res: Response) => {
   try {
@@ -299,6 +391,17 @@ export const getAssignmentById = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Add debug information for TakeExam component
+    console.log(`📋 Assignment ${id} requested - Debug info:`, {
+      hasQuestions: assignment.hasQuestions,
+      questionsCount: assignment.extractedQuestions?.length || 0,
+      extractedQuestionsCount: assignment.extractedQuestions?.length || 0,
+      aiProcessingStatus: assignment.aiProcessingStatus,
+      aiExtractionStatus: assignment.aiExtractionStatus,
+      hasAssignmentDocument: !!assignment.assignmentDocument,
+      documentFileName: assignment.assignmentDocument?.originalName
+    });
+
     res.json({
       success: true,
       data: assignment
@@ -515,7 +618,12 @@ const triggerAIExtraction = async (assignment: any, fileBuffer: Buffer, filename
     // Update assignment with extracted questions
     assignment.extractedQuestions = extractedQuestions;
     assignment.aiExtractionStatus = 'completed';
+    assignment.aiProcessingStatus = 'completed';
     assignment.aiExtractionError = undefined;
+    assignment.aiProcessingError = undefined;
+    assignment.hasQuestions = extractedQuestions && extractedQuestions.length > 0;
+    
+    // Note: Only using extractedQuestions field as per schema definition
     
     await assignment.save();
     
@@ -1379,37 +1487,63 @@ export const extractQuestionsFromDocument = async (req: AuthRequest, res: Respon
           
           const cleanedText = assignment.documentText;
           if (!cleanedText) {
-            console.error('No document text available for AI processing');
+            console.error('❌ Background: No document text available for AI processing');
+            
+            // Update assignment status to failed
+            const updatedAssignment = await Assignment.findById(assignmentId);
+            if (updatedAssignment) {
+              updatedAssignment.aiProcessingStatus = 'failed';
+              updatedAssignment.aiProcessingError = 'No document text available';
+              await updatedAssignment.save();
+            }
             return;
           }
 
+          console.log(`📄 Background: Processing ${cleanedText.length} characters of text`);
+
           // Use the retry service for AI processing
           const extractedQuestions = await aiService.extractQuestionsFromDocument(cleanedText, 'assignment');
+
+          console.log(`🔍 Background: AI extraction returned ${extractedQuestions ? extractedQuestions.length : 0} questions`);
 
           if (extractedQuestions && extractedQuestions.length > 0) {
             // Add unique IDs to extracted questions
             const questionsWithIds = extractedQuestions.map((q, index) => ({
               ...q,
-              id: `extracted_${Date.now()}_${index}`
+              id: q.id || `extracted_${Date.now()}_${index}`,
+              _id: q._id || `extracted_${Date.now()}_${index}`,
+              aiExtracted: true
             }));
+
+            console.log(`🎯 Background: Sample questions:`, questionsWithIds.slice(0, 2).map(q => ({ 
+              question: q.question.substring(0, 100), 
+              type: q.type, 
+              options: q.options?.length || 0 
+            })));
 
             // Update assignment with questions
             const updatedAssignment = await Assignment.findById(assignmentId);
             if (updatedAssignment) {
+              // Store questions in both fields for compatibility
               updatedAssignment.questions = [...(updatedAssignment.questions || []), ...questionsWithIds];
-              updatedAssignment.hasQuestions = true;
               updatedAssignment.extractedQuestions = questionsWithIds;
+              updatedAssignment.hasQuestions = true;
               updatedAssignment.aiProcessingStatus = 'completed';
+              updatedAssignment.aiExtractionStatus = 'completed';
               updatedAssignment.documentText = undefined; // Clear stored text
               
               await updatedAssignment.save();
-              console.log(`✅ Background: ${questionsWithIds.length} questions extracted for assignment: ${assignmentId}`);
+              console.log(`✅ Background: Successfully stored ${questionsWithIds.length} questions for assignment: ${assignmentId}`);
+              console.log(`📊 Background: Assignment now has ${updatedAssignment.questions?.length || 0} total questions and ${updatedAssignment.extractedQuestions?.length || 0} extracted questions`);
             }
           } else {
             // No questions found
+            console.log(`⚠️ Background: AI extraction returned empty or null result`);
             const updatedAssignment = await Assignment.findById(assignmentId);
             if (updatedAssignment) {
               updatedAssignment.aiProcessingStatus = 'no_questions_found';
+              updatedAssignment.aiExtractionStatus = 'failed';
+              updatedAssignment.hasQuestions = false;
               updatedAssignment.documentText = undefined; // Clear stored text
               await updatedAssignment.save();
               console.log(`ℹ️ Background: No questions found in document for assignment: ${assignmentId}`);
@@ -1417,18 +1551,22 @@ export const extractQuestionsFromDocument = async (req: AuthRequest, res: Respon
           }
         } catch (aiError: any) {
           console.error(`❌ Background: AI processing failed for assignment ${assignmentId}:`, aiError);
+          console.error(`❌ Background: Error stack:`, aiError.stack);
           
           // Update assignment status to failed
           try {
             const updatedAssignment = await Assignment.findById(assignmentId);
             if (updatedAssignment) {
               updatedAssignment.aiProcessingStatus = 'failed';
+              updatedAssignment.aiExtractionStatus = 'failed';
               updatedAssignment.aiProcessingError = aiError.message;
+              updatedAssignment.hasQuestions = false;
               updatedAssignment.documentText = undefined; // Clear stored text
               await updatedAssignment.save();
+              console.log(`📝 Background: Updated assignment status to failed`);
             }
           } catch (updateError) {
-            console.error('Failed to update assignment status:', updateError);
+            console.error('❌ Background: Failed to update assignment status:', updateError);
           }
         }
       });
@@ -1497,15 +1635,21 @@ export const replaceQuestionsFromDocument = async (req: AuthRequest, res: Respon
       const cleanedText = DocumentParser.cleanText(parseResult.text);
       const extractedQuestions = await aiService.extractQuestionsFromDocument(cleanedText, 'assignment');
 
-      // Add unique IDs to extracted questions
-      const questionsWithIds = extractedQuestions.map((q, index) => ({
-        ...q,
-        id: `extracted_${Date.now()}_${index}`
-      }));
-
-      // Remove old extracted questions and add new ones
-      const manualQuestions = (assignment.questions || []).filter(q => !q.id.startsWith('extracted_'));
-      assignment.questions = [...manualQuestions, ...questionsWithIds];
+      // Add unique IDs to extracted questions and normalize question types
+      const questionsWithIds = extractedQuestions.map((q, index) => {
+        // Normalize question types to match schema enum values (with hyphens)
+        const normalizedType = q.type?.replace(/_/g, '-') || 'short-answer';
+        const validTypes = ['multiple-choice', 'true-false', 'short-answer', 'essay', 'fill-in-blank', 'matching', 'ordering', 'numerical', 'code'];
+        const questionType = validTypes.includes(normalizedType) ? normalizedType as any : 'short-answer';
+        
+        return {
+          ...q,
+          // Don't set _id, let MongoDB generate it automatically
+          id: `extracted_${Date.now()}_${index}`,
+          type: questionType,
+          aiExtracted: true
+        };
+      });
       assignment.hasQuestions = true;
       assignment.extractedQuestions = questionsWithIds;
       assignment.assignmentDocument = {
@@ -1722,7 +1866,7 @@ export const checkAIProcessingStatus = async (req: AuthRequest, res: Response) =
     }
 
     const status = assignment.aiProcessingStatus || 'not_started';
-    const questionsCount = assignment.questions?.length || 0;
+    const questionsCount = assignment.extractedQuestions?.length || 0;
     const extractedQuestionsCount = assignment.extractedQuestions?.length || 0;
 
     res.status(200).json({
@@ -1768,41 +1912,165 @@ export const retryQuestionExtraction = async (req: AuthRequest, res: Response) =
     }
 
     try {
-      console.log(`🔄 Retrying question extraction for assignment: ${assignmentId}`);
+      console.log(`🔄 Starting question extraction retry for assignment: ${assignmentId}`);
       
-      // Import the retry service to check queue status
-      const { aiRetryService } = await import('../services/aiRetryService');
-      const queueStatus = aiRetryService.getQueueStatus();
-      
+      // Mark AI processing as pending immediately
+      assignment.aiProcessingStatus = 'pending';
+      assignment.aiExtractionStatus = 'pending';
+      assignment.lastQuestionExtractionAttempt = new Date();
+      await assignment.save();
+
+      // Return immediate response
       res.status(200).json({
         success: true,
-        message: 'Question extraction retry has been queued. This may take a few minutes.',
+        message: 'Question extraction is starting. Please refresh the page in a few moments to see the results.',
         data: {
           assignmentId,
-          queueStatus,
-          estimatedWaitTime: `${Math.max(1, Math.ceil(queueStatus.queueSize / 2))} minutes`
+          aiProcessingStatus: 'pending',
+          aiExtractionStatus: 'pending'
         }
       });
 
-      // Process in background
-      setTimeout(async () => {
+      // Start processing immediately in background
+      setImmediate(async () => {
         try {
-          console.log(`🤖 Background processing: Retrying question extraction for ${assignmentId}`);
+          console.log(`🤖 Background: Starting AI question extraction retry for assignment: ${assignmentId}`);
           
-          // Update the assignment to indicate retry was attempted
-          assignment.lastQuestionExtractionAttempt = new Date();
-          await assignment.save();
+          let documentText = assignment.documentText;
           
-        } catch (bgError) {
-          console.error('Background question extraction failed:', bgError);
+          // If we don't have document text, try to re-parse the document
+          if (!documentText && assignment.assignmentDocument?.fileUrl) {
+            try {
+              console.log(`📄 Re-downloading and parsing document from: ${assignment.assignmentDocument.fileUrl}`);
+              
+              // Import document parser
+              const DocumentParser = (await import('../utils/documentParser')).default;
+              
+              // Download the document from Cloudinary
+              const response = await fetch(assignment.assignmentDocument.fileUrl);
+              if (!response.ok) {
+                throw new Error(`Failed to download document: ${response.statusText}`);
+              }
+              
+              const buffer = await response.arrayBuffer();
+              const fileBuffer = Buffer.from(buffer);
+              
+              // Parse the document
+              const parser = new DocumentParser();
+              documentText = await parser.extractTextFromBuffer(fileBuffer, assignment.assignmentDocument.originalName);
+              
+              console.log(`📄 Re-parsed document, extracted ${documentText.length} characters`);
+              
+              // Save the document text for future use
+              assignment.documentText = documentText;
+              await assignment.save();
+              
+            } catch (parseError) {
+              console.error(`❌ Failed to re-parse document:`, parseError);
+              
+              // Update assignment status to failed
+              const updatedAssignment = await Assignment.findById(assignmentId);
+              if (updatedAssignment) {
+                updatedAssignment.aiProcessingStatus = 'failed';
+                updatedAssignment.aiExtractionStatus = 'failed';
+                updatedAssignment.aiProcessingError = `Document re-parsing failed: ${parseError.message}`;
+                await updatedAssignment.save();
+              }
+              return;
+            }
+          }
+
+          if (!documentText || documentText.length === 0) {
+            console.error('❌ No document text available for AI processing after retry');
+            
+            // Update assignment status to failed
+            const updatedAssignment = await Assignment.findById(assignmentId);
+            if (updatedAssignment) {
+              updatedAssignment.aiProcessingStatus = 'failed';
+              updatedAssignment.aiExtractionStatus = 'failed';
+              updatedAssignment.aiProcessingError = 'No document text available for processing';
+              await updatedAssignment.save();
+            }
+            return;
+          }
+
+          console.log(`📄 Processing ${documentText.length} characters of text with AI`);
+
+          // Use the AI service to extract questions
+          const extractedQuestions = await aiService.extractQuestionsFromDocument(documentText, 'assignment');
+
+          console.log(`🔍 AI extraction returned ${extractedQuestions ? extractedQuestions.length : 0} questions`);
+
+          if (extractedQuestions && extractedQuestions.length > 0) {
+            // Add unique IDs to extracted questions
+            const questionsWithIds = extractedQuestions.map((q, index) => ({
+              ...q,
+              id: q.id || `retry_${Date.now()}_${index}`,
+              _id: q._id || `retry_${Date.now()}_${index}`,
+              aiExtracted: true
+            }));
+
+            console.log(`🎯 Sample questions:`, questionsWithIds.slice(0, 2).map(q => ({ 
+              question: q.question.substring(0, 100), 
+              type: q.type, 
+              options: q.options?.length || 0 
+            })));
+
+            // Update assignment with questions
+            const updatedAssignment = await Assignment.findById(assignmentId);
+            if (updatedAssignment) {
+              // Replace existing questions with new extracted questions
+              updatedAssignment.questions = questionsWithIds;
+              updatedAssignment.extractedQuestions = questionsWithIds;
+              updatedAssignment.hasQuestions = true;
+              updatedAssignment.aiProcessingStatus = 'completed';
+              updatedAssignment.aiExtractionStatus = 'completed';
+              updatedAssignment.aiProcessingError = undefined;
+              updatedAssignment.documentText = undefined; // Clear stored text
+              
+              await updatedAssignment.save();
+              console.log(`✅ Successfully stored ${questionsWithIds.length} questions for assignment: ${assignmentId}`);
+            }
+          } else {
+            // No questions found
+            console.log(`⚠️ AI extraction returned empty or null result`);
+            const updatedAssignment = await Assignment.findById(assignmentId);
+            if (updatedAssignment) {
+              updatedAssignment.aiProcessingStatus = 'no_questions_found';
+              updatedAssignment.aiExtractionStatus = 'failed';
+              updatedAssignment.aiProcessingError = 'No questions could be extracted from the document';
+              updatedAssignment.hasQuestions = false;
+              updatedAssignment.documentText = undefined; // Clear stored text
+              await updatedAssignment.save();
+              console.log(`ℹ️ No questions found in document for assignment: ${assignmentId}`);
+            }
+          }
+        } catch (aiError: any) {
+          console.error(`❌ Background AI processing failed for assignment ${assignmentId}:`, aiError);
+          
+          // Update assignment status to failed
+          try {
+            const updatedAssignment = await Assignment.findById(assignmentId);
+            if (updatedAssignment) {
+              updatedAssignment.aiProcessingStatus = 'failed';
+              updatedAssignment.aiExtractionStatus = 'failed';
+              updatedAssignment.aiProcessingError = aiError.message;
+              updatedAssignment.hasQuestions = false;
+              updatedAssignment.documentText = undefined; // Clear stored text
+              await updatedAssignment.save();
+              console.log(`📝 Updated assignment status to failed`);
+            }
+          } catch (updateError) {
+            console.error('❌ Failed to update assignment status:', updateError);
+          }
         }
-      }, 1000);
+      });
 
     } catch (error: any) {
-      console.error('Error retrying question extraction:', error);
+      console.error('Error starting question extraction retry:', error);
       res.status(500).json({
         success: false,
-        error: 'Failed to retry question extraction',
+        error: 'Failed to start question extraction retry',
         details: error.message
       });
     }
@@ -1811,6 +2079,532 @@ export const retryQuestionExtraction = async (req: AuthRequest, res: Response) =
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to retry question extraction'
+    });
+  }
+};
+
+// Debug endpoint to manually trigger AI processing
+// Extract questions from assignment document (like assessment) - synchronous processing
+export const extractAssignmentQuestions = async (req: AuthRequest, res: Response) => {
+  try {
+    const { assignmentId } = req.params;
+    const teacherId = req.user?._id;
+
+    if (!teacherId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    // Find assignment
+    const assignment = await Assignment.findOne({ _id: assignmentId, instructor: teacherId });
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Assignment not found or you do not have permission to modify it'
+      });
+    }
+
+    // Check if file was uploaded
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No document file provided'
+      });
+    }
+
+    try {
+      console.log(`📄 Processing assignment document for extraction: ${req.file.originalname}`);
+      
+      // Parse document content using DocumentParser static methods (same as assessments)
+      const parseResult = await DocumentParser.parseDocument(
+        req.file.buffer,
+        req.file.mimetype,
+        req.file.originalname
+      );
+
+      // Validate document
+      const validation = DocumentParser.validateDocument(parseResult);
+      if (!validation.isValid) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid document',
+          details: validation.errors
+        });
+      }
+
+      if (!parseResult.text || parseResult.text.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Could not extract text from document'
+        });
+      }
+
+      console.log(`📄 Document parsed successfully, text length: ${parseResult.text.length}`);
+
+      // Clean text for AI processing (same as assessments)
+      const cleanedText = DocumentParser.cleanText(parseResult.text);
+      console.log(`🤖 Starting DIRECT AI extraction for assignment (bypassing queue)...`);
+      
+      // Direct AI call without queue system (for synchronous processing)
+      const extractedQuestions = await extractQuestionsDirectly(cleanedText, 'assignment');
+      
+      if (!extractedQuestions || extractedQuestions.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'No questions could be extracted from the document'
+        });
+      }
+
+      console.log(`🎯 AI extracted ${extractedQuestions.length} questions`);
+
+      // Add unique IDs to extracted questions and normalize question types
+      const questionsWithIds = extractedQuestions.map((q, index) => {
+        // Normalize question types to match schema enum values (with hyphens)
+        const normalizedType = q.type?.replace(/_/g, '-') || 'short-answer';
+        const validTypes = ['multiple-choice', 'true-false', 'short-answer', 'essay', 'fill-in-blank', 'matching', 'ordering', 'numerical', 'code'];
+        const questionType = validTypes.includes(normalizedType) ? normalizedType as any : 'short-answer';
+        
+        return {
+          ...q,
+          // Don't set _id, let MongoDB generate it automatically
+          id: `extracted_${Date.now()}_${index}`,
+          type: questionType,
+          aiExtracted: true
+        };
+      });
+
+      // Upload document to cloud storage
+      const uploadResult = await uploadDocumentToCloudinary(req.file.buffer, teacherId, req.file.originalname);
+
+      // Update assignment with document and questions
+      assignment.assignmentDocument = {
+        filename: uploadResult.publicId,
+        originalName: req.file.originalname,
+        fileUrl: uploadResult.url,
+        fileSize: req.file.size,
+        uploadedAt: new Date()
+      };
+
+      // Replace existing questions with extracted ones
+      assignment.extractedQuestions = questionsWithIds;
+      assignment.hasQuestions = true;
+      assignment.aiProcessingStatus = 'completed';
+      assignment.aiExtractionStatus = 'completed';
+      // Clear error fields and document text
+      assignment.set('aiProcessingError', undefined);
+      assignment.set('documentText', undefined);
+
+      await assignment.save();
+
+      console.log(`✅ Assignment updated with ${questionsWithIds.length} extracted questions`);
+
+      res.status(200).json({
+        success: true,
+        message: `Successfully extracted ${questionsWithIds.length} questions from document`,
+        data: {
+          assignment,
+          extractedQuestions: questionsWithIds.length,
+          documentProcessed: true,
+          questions: questionsWithIds.slice(0, 5) // Preview first 5 questions
+        }
+      });
+
+    } catch (error: any) {
+      console.error('Document processing error:', error);
+      
+      // Update assignment to failed status
+      assignment.aiProcessingStatus = 'failed';
+      assignment.aiExtractionStatus = 'failed';
+      assignment.aiProcessingError = error.message;
+      assignment.hasQuestions = false;
+      await assignment.save();
+
+      res.status(500).json({
+        success: false,
+        error: 'Failed to process document and extract questions',
+        details: error.message
+      });
+    }
+
+  } catch (error: any) {
+    console.error('Error in extractAssignmentQuestions:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to extract assignment questions'
+    });
+  }
+};
+
+export const debugAIProcessing = async (req: AuthRequest, res: Response) => {
+  try {
+    const { assignmentId } = req.params;
+    
+    const assignment = await Assignment.findById(assignmentId);
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Assignment not found'
+      });
+    }
+
+    console.log(`🐞 Manual Debug: Assignment ${assignmentId}`);
+    console.log('Document Text Length:', assignment.documentText?.length || 0);
+    console.log('AI Processing Status:', assignment.aiProcessingStatus);
+    console.log('Has Document:', !!assignment.assignmentDocument);
+    
+    if (assignment.documentText && assignment.documentText.length > 0) {
+      console.log('Document Text Preview:', assignment.documentText.substring(0, 200) + '...');
+      
+      try {
+        // Try manual AI extraction
+        console.log('🤖 Attempting manual AI extraction...');
+        const extractedQuestions = await aiService.extractQuestionsFromDocument(assignment.documentText, 'assignment');
+        
+        console.log('🎯 Manual extraction result:', {
+          questionsCount: extractedQuestions?.length || 0,
+          sampleQuestion: extractedQuestions?.[0] ? {
+            question: extractedQuestions[0].question.substring(0, 100),
+            type: extractedQuestions[0].type
+          } : null
+        });
+
+        if (extractedQuestions && extractedQuestions.length > 0) {
+          // Update assignment with extracted questions
+          const questionsWithIds = extractedQuestions.map((q, index) => ({
+            ...q,
+            // Don't set _id, let MongoDB generate it automatically
+            id: q.id || `manual_debug_${Date.now()}_${index}`,
+            // Normalize question types to match schema enum values (with hyphens)
+            type: q.type?.replace(/_/g, '-') || 'short-answer',
+            aiExtracted: true
+          }));
+
+          assignment.extractedQuestions = questionsWithIds;
+          assignment.hasQuestions = true;
+          assignment.aiProcessingStatus = 'completed';
+          assignment.aiExtractionStatus = 'completed';
+          assignment.documentText = undefined; // Clear stored text
+          
+          await assignment.save();
+          
+          res.json({
+            success: true,
+            message: 'Manual AI processing completed successfully!',
+            data: {
+              questionsExtracted: questionsWithIds.length,
+              assignment: {
+                ...assignment.toObject(),
+                documentText: undefined
+              }
+            }
+          });
+        } else {
+          res.json({
+            success: false,
+            message: 'No questions could be extracted from the document'
+          });
+        }
+      } catch (aiError: any) {
+        console.error('❌ Manual AI extraction failed:', aiError);
+        res.status(500).json({
+          success: false,
+          error: 'AI extraction failed',
+          details: aiError.message
+        });
+      }
+    } else {
+      res.json({
+        success: false,
+        message: 'No document text available for processing'
+      });
+    }
+  } catch (error: any) {
+    console.error('Debug processing error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Debug processing failed'
+    });
+  }
+};
+
+// Save assignment progress (auto-save functionality)
+export const saveAssignmentProgress = async (req: AuthRequest, res: Response) => {
+  try {
+    const { assignmentId } = req.params;
+    const { extractedAnswers, autoSaved = true, status = 'draft' } = req.body;
+    const studentId = req.user?._id;
+
+    if (!studentId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    console.log('💾 Saving assignment progress:', {
+      assignmentId,
+      studentId,
+      answersCount: extractedAnswers?.length || 0,
+      autoSaved,
+      status
+    });
+
+    // Find the assignment
+    const assignment = await Assignment.findById(assignmentId);
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Assignment not found'
+      });
+    }
+
+    // Find existing submission or create new one
+    let submission = await AssignmentSubmission.findOne({
+      assignment: assignmentId,
+      student: studentId
+    });
+
+    if (!submission) {
+      // Create new submission
+      submission = new AssignmentSubmission({
+        assignment: assignmentId,
+        student: studentId,
+        extractedAnswers: extractedAnswers || [],
+        status: status,
+        autoSavedAt: new Date(),
+        version: 1
+      });
+    } else {
+      // Update existing submission
+      submission.extractedAnswers = extractedAnswers || [];
+      submission.status = status;
+      submission.autoSavedAt = new Date();
+      submission.version = (submission.version || 0) + 1;
+    }
+
+    await submission.save();
+
+    console.log('✅ Assignment progress saved successfully');
+
+    res.json({
+      success: true,
+      message: autoSaved ? 'Progress auto-saved' : 'Progress saved',
+      data: submission
+    });
+
+  } catch (error: any) {
+    console.error('❌ Error saving assignment progress:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to save progress'
+    });
+  }
+};
+
+// Submit assignment with extracted answers for AI grading
+export const submitAssignmentWithExtractedAnswers = async (req: AuthRequest, res: Response) => {
+  try {
+    const { assignmentId } = req.params;
+    const {
+      extractedAnswers,
+      submissionText,
+      finalSubmission = true,
+      isAutoSubmit = false,
+      timeSpent = 0,
+      submittedAt,
+      status = 'submitted'
+    } = req.body;
+    const studentId = req.user?._id;
+
+    if (!studentId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    console.log('📤 Submitting assignment with extracted answers:', {
+      assignmentId,
+      studentId,
+      answersCount: extractedAnswers?.length || 0,
+      finalSubmission,
+      isAutoSubmit,
+      timeSpent
+    });
+
+    // Validate that we have answers
+    if (!extractedAnswers || extractedAnswers.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No answers provided for submission'
+      });
+    }
+
+    // Find the assignment
+    const assignment = await Assignment.findById(assignmentId);
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Assignment not found'
+      });
+    }
+
+    // Check if assignment is still open for submissions
+    if (assignment.status !== 'published') {
+      return res.status(400).json({
+        success: false,
+        error: 'Assignment is not open for submissions'
+      });
+    }
+
+    // Check due date (allow some grace period for auto-submit)
+    const now = new Date();
+    const dueDate = new Date(assignment.dueDate);
+    const gracePeriod = 5 * 60 * 1000; // 5 minutes grace period
+    
+    if (now > dueDate && !isAutoSubmit) {
+      return res.status(400).json({
+        success: false,
+        error: 'Assignment submission deadline has passed'
+      });
+    }
+
+    if (now > new Date(dueDate.getTime() + gracePeriod) && isAutoSubmit) {
+      return res.status(400).json({
+        success: false,
+        error: 'Assignment submission deadline has passed (even with grace period)'
+      });
+    }
+
+    // Find existing submission or create new one
+    let submission = await AssignmentSubmission.findOne({
+      assignment: assignmentId,
+      student: studentId
+    });
+
+    if (submission && submission.status === 'submitted') {
+      return res.status(400).json({
+        success: false,
+        error: 'Assignment has already been submitted'
+      });
+    }
+
+    const submissionData = {
+      assignment: assignmentId,
+      student: studentId,
+      extractedAnswers: extractedAnswers,
+      submissionText: submissionText || `Assignment completed with ${extractedAnswers.length} questions answered`,
+      submittedAt: submittedAt ? new Date(submittedAt) : new Date(),
+      isLate: now > dueDate,
+      status: status,
+      autoSubmitted: isAutoSubmit,
+      timeSpent: timeSpent,
+      version: submission ? (submission.version || 0) + 1 : 1
+    };
+
+    if (!submission) {
+      // Create new submission
+      submission = new AssignmentSubmission(submissionData);
+    } else {
+      // Update existing submission
+      Object.assign(submission, submissionData);
+    }
+
+    await submission.save();
+
+    // Trigger AI grading if the assignment has questions
+    if (assignment.hasQuestions && (assignment.questions?.length > 0 || assignment.extractedQuestions?.length > 0)) {
+      try {
+        console.log('📝 Triggering grading for submission:', submission._id);
+        
+        // Get the questions for grading context
+        const questions = assignment.extractedQuestions || assignment.questions || [];
+        
+        // Prepare grading data for the new AI method
+        const gradingData = {
+          assignmentTitle: assignment.title,
+          assignmentInstructions: assignment.instructions,
+          questions: questions.map(q => ({
+            question: q.question,
+            type: q.type,
+            options: q.options || [],
+            correctAnswer: q.correctAnswer,
+            points: q.points || 10
+          })),
+          answers: extractedAnswers,
+          maxPoints: assignment.maxPoints
+        };
+
+        console.log('📊 Grading data prepared:', {
+          title: gradingData.assignmentTitle,
+          questionsCount: gradingData.questions.length,
+          answersCount: gradingData.answers.length,
+          maxPoints: gradingData.maxPoints,
+          sampleQuestion: gradingData.questions[0]?.question?.substring(0, 100),
+          sampleAnswer: gradingData.answers[0]?.answer?.substring(0, 100)
+        });
+
+        // Call AI grading service (async - don't wait for completion)
+        aiService.gradeExtractedAssignment(gradingData).then(async (gradingResult) => {
+          try {
+            console.log('✅ Grading completed for submission:', submission._id);
+            console.log('📊 Grading result:', {
+              score: gradingResult.score,
+              maxPoints: assignment.maxPoints,
+              percentage: Math.round((gradingResult.score / assignment.maxPoints) * 100),
+              confidence: gradingResult.confidence
+            });
+
+            // Update submission with AI grade
+            const updatedSubmission = await AssignmentSubmission.findById(submission._id);
+            if (updatedSubmission) {
+              updatedSubmission.aiGrade = {
+                score: gradingResult.score,
+                feedback: gradingResult.feedback,
+                confidence: gradingResult.confidence,
+                gradedAt: new Date(),
+                detailedGrading: gradingResult.detailedGrading
+              };
+              updatedSubmission.grade = gradingResult.score;
+              updatedSubmission.status = 'graded';
+              updatedSubmission.gradedAt = new Date();
+              
+              await updatedSubmission.save();
+              console.log('💾 Submission updated with grade');
+            }
+          } catch (updateError: any) {
+            console.error('❌ Failed to update submission with grade:', updateError);
+          }
+        }).catch((gradingError) => {
+          console.error('❌ Grading failed for submission:', submission._id, gradingError);
+        });
+
+      } catch (gradingError: any) {
+        console.error('❌ Error triggering grading:', gradingError);
+        // Don't fail the submission if grading fails
+      }
+    }
+
+    console.log('✅ Assignment submitted successfully for grading');
+
+    res.json({
+      success: true,
+      message: isAutoSubmit 
+        ? 'Assignment auto-submitted successfully and sent for grading' 
+        : 'Assignment submitted successfully and sent for grading',
+      data: {
+        submission,
+        gradingTriggered: assignment.hasQuestions
+      }
+    });
+
+  } catch (error: any) {
+    console.error('❌ Error submitting assignment:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to submit assignment'
     });
   }
 };

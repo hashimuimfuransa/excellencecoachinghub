@@ -141,7 +141,7 @@ const EnhancedAssessments: React.FC = () => {
   const handleStartAssessment = async (assessment: IEnhancedAssessment) => {
     try {
       // Navigate to the enhanced assessment taking page
-      navigate(`/student/enhanced-assessment/${assessment._id}`);
+      navigate(`/assignment/:assignmentId`);
     } catch (error) {
       console.error('Error starting assessment:', error);
     }
@@ -691,7 +691,7 @@ const EnhancedAssessments: React.FC = () => {
 
               {selectedAssessment.autoGrade && (
                 <Alert severity="info" sx={{ mt: 2 }}>
-                  This assessment will be automatically graded using AI.
+                  This assessment will be automatically graded upon submission.
                 </Alert>
               )}
             </DialogContent>

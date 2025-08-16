@@ -340,7 +340,7 @@ export const uploadDocumentToCloudinary = async (
 
     const timestamp = Date.now();
     // Sanitize filename: remove extension, special characters, and normalize
-    const fileName = originalName
+    const fileName = (originalName || 'unnamed_document')
       .replace(/\.[^/.]+$/, "") // Remove extension
       .replace(/[^a-zA-Z0-9\s-_]/g, "") // Remove special characters
       .replace(/\s+/g, "_") // Replace spaces with underscores

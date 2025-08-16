@@ -622,6 +622,12 @@ const TeacherProfile: React.FC = () => {
                       value={formData.phone}
                       onChange={(e) => handleInputChange('phone', e.target.value)}
                       placeholder="+1 (555) 123-4567"
+                      inputProps={{
+                        style: { 
+                          fontSize: '14px',
+                          padding: '12px 14px'
+                        }
+                      }}
                     />
                   </Grid>
 
@@ -648,6 +654,13 @@ const TeacherProfile: React.FC = () => {
                       label="Street Address"
                       value={formData.address.street}
                       onChange={(e) => handleNestedInputChange('address', 'street', e.target.value)}
+                      placeholder="e.g., 123 Main Street, Apt 4B"
+                      inputProps={{
+                        style: { 
+                          fontSize: '14px',
+                          padding: '12px 14px'
+                        }
+                      }}
                     />
                   </Grid>
 
@@ -657,6 +670,13 @@ const TeacherProfile: React.FC = () => {
                       label="City *"
                       value={formData.address.city}
                       onChange={(e) => handleNestedInputChange('address', 'city', e.target.value)}
+                      placeholder="e.g., Kigali, New York"
+                      inputProps={{
+                        style: { 
+                          fontSize: '14px',
+                          padding: '12px 14px'
+                        }
+                      }}
                     />
                   </Grid>
 
@@ -666,6 +686,13 @@ const TeacherProfile: React.FC = () => {
                       label="State/Province"
                       value={formData.address.state}
                       onChange={(e) => handleNestedInputChange('address', 'state', e.target.value)}
+                      placeholder="e.g., Kigali City, California"
+                      inputProps={{
+                        style: { 
+                          fontSize: '14px',
+                          padding: '12px 14px'
+                        }
+                      }}
                     />
                   </Grid>
 
@@ -675,6 +702,13 @@ const TeacherProfile: React.FC = () => {
                       label="Country *"
                       value={formData.address.country}
                       onChange={(e) => handleNestedInputChange('address', 'country', e.target.value)}
+                      placeholder="e.g., Rwanda, United States"
+                      inputProps={{
+                        style: { 
+                          fontSize: '14px',
+                          padding: '12px 14px'
+                        }
+                      }}
                     />
                   </Grid>
 
@@ -684,6 +718,13 @@ const TeacherProfile: React.FC = () => {
                       label="ZIP/Postal Code"
                       value={formData.address.zipCode}
                       onChange={(e) => handleNestedInputChange('address', 'zipCode', e.target.value)}
+                      placeholder="e.g., 12345, KG 123 ST"
+                      inputProps={{
+                        style: { 
+                          fontSize: '14px',
+                          padding: '12px 14px'
+                        }
+                      }}
                     />
                   </Grid>
                 </Grid>
@@ -710,9 +751,21 @@ const TeacherProfile: React.FC = () => {
                       multiline
                       rows={4}
                       value={formData.bio}
-                      onChange={(e) => handleInputChange('bio', e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value.length <= 2000) {
+                          handleInputChange('bio', value);
+                        }
+                      }}
                       placeholder="Tell us about your professional background, teaching philosophy, and what makes you a great teacher..."
                       helperText={`${formData.bio.length}/2000 characters`}
+                      inputProps={{
+                        maxLength: 2000,
+                        style: { 
+                          fontSize: '14px',
+                          lineHeight: '1.5'
+                        }
+                      }}
                     />
                   </Grid>
 
@@ -723,7 +776,16 @@ const TeacherProfile: React.FC = () => {
                       type="number"
                       value={formData.experience}
                       onChange={(e) => handleInputChange('experience', parseInt(e.target.value) || 0)}
-                      inputProps={{ min: 0, max: 50 }}
+                      inputProps={{ 
+                        min: 0, 
+                        max: 50,
+                        style: { 
+                          fontSize: '14px',
+                          padding: '12px 14px'
+                        }
+                      }}
+                      placeholder="e.g., 5"
+                      helperText="Enter your total years of teaching experience"
                     />
                   </Grid>
 
@@ -734,8 +796,18 @@ const TeacherProfile: React.FC = () => {
                       type="number"
                       value={formData.hourlyRate}
                       onChange={(e) => handleInputChange('hourlyRate', parseFloat(e.target.value) || 0)}
-                      inputProps={{ min: 0, step: 0.01 }}
+                      inputProps={{ 
+                        min: 0, 
+                        max: 1000,
+                        step: 0.01,
+                        style: { 
+                          fontSize: '14px',
+                          padding: '12px 14px'
+                        }
+                      }}
                       InputProps={{ startAdornment: '$' }}
+                      placeholder="e.g., 25.00"
+                      helperText="Enter your preferred hourly rate in USD"
                     />
                   </Grid>
 
@@ -850,10 +922,19 @@ const TeacherProfile: React.FC = () => {
                         value={newSpecialization}
                         onChange={(e) => setNewSpecialization(e.target.value)}
                         placeholder="e.g., Web Development, Data Science"
-                        onKeyPress={(e) => {
+                        onKeyDown={(e) => {
                           if (e.key === 'Enter') {
-                            addToArray('specialization', newSpecialization);
-                            setNewSpecialization('');
+                            e.preventDefault();
+                            if (newSpecialization.trim()) {
+                              addToArray('specialization', newSpecialization);
+                              setNewSpecialization('');
+                            }
+                          }
+                        }}
+                        inputProps={{
+                          style: { 
+                            fontSize: '14px',
+                            padding: '12px 14px'
                           }
                         }}
                       />
@@ -898,10 +979,19 @@ const TeacherProfile: React.FC = () => {
                         value={newTeachingArea}
                         onChange={(e) => setNewTeachingArea(e.target.value)}
                         placeholder="e.g., Programming, Mathematics"
-                        onKeyPress={(e) => {
+                        onKeyDown={(e) => {
                           if (e.key === 'Enter') {
-                            addToArray('teachingAreas', newTeachingArea);
-                            setNewTeachingArea('');
+                            e.preventDefault();
+                            if (newTeachingArea.trim()) {
+                              addToArray('teachingAreas', newTeachingArea);
+                              setNewTeachingArea('');
+                            }
+                          }
+                        }}
+                        inputProps={{
+                          style: { 
+                            fontSize: '14px',
+                            padding: '12px 14px'
                           }
                         }}
                       />
@@ -979,10 +1069,19 @@ const TeacherProfile: React.FC = () => {
                         value={newSkill}
                         onChange={(e) => setNewSkill(e.target.value)}
                         placeholder="e.g., JavaScript, Python"
-                        onKeyPress={(e) => {
+                        onKeyDown={(e) => {
                           if (e.key === 'Enter') {
-                            addToArray('skills', newSkill);
-                            setNewSkill('');
+                            e.preventDefault();
+                            if (newSkill.trim()) {
+                              addToArray('skills', newSkill);
+                              setNewSkill('');
+                            }
+                          }
+                        }}
+                        inputProps={{
+                          style: { 
+                            fontSize: '14px',
+                            padding: '12px 14px'
                           }
                         }}
                       />
@@ -1021,10 +1120,19 @@ const TeacherProfile: React.FC = () => {
                         value={newLanguage}
                         onChange={(e) => setNewLanguage(e.target.value)}
                         placeholder="e.g., English, Spanish"
-                        onKeyPress={(e) => {
+                        onKeyDown={(e) => {
                           if (e.key === 'Enter') {
-                            addToArray('languages', newLanguage);
-                            setNewLanguage('');
+                            e.preventDefault();
+                            if (newLanguage.trim()) {
+                              addToArray('languages', newLanguage);
+                              setNewLanguage('');
+                            }
+                          }
+                        }}
+                        inputProps={{
+                          style: { 
+                            fontSize: '14px',
+                            padding: '12px 14px'
                           }
                         }}
                       />

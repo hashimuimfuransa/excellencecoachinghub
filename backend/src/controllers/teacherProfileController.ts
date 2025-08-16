@@ -64,6 +64,29 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
 
     const userId = req.user?._id;
     const updateData = req.body;
+    
+    // Clean up empty strings for optional fields that have validation
+    if (updateData.nationalId === '') {
+      updateData.nationalId = undefined;
+    }
+    
+    // Clean up empty strings in address fields
+    if (updateData.address) {
+      Object.keys(updateData.address).forEach(key => {
+        if (updateData.address[key] === '') {
+          updateData.address[key] = undefined;
+        }
+      });
+    }
+    
+    // Clean up empty strings in social links
+    if (updateData.socialLinks) {
+      Object.keys(updateData.socialLinks).forEach(key => {
+        if (updateData.socialLinks[key] === '') {
+          updateData.socialLinks[key] = undefined;
+        }
+      });
+    }
 
     console.log('Looking for profile with userId:', userId);
     let profile = await TeacherProfile.findOne({ userId });

@@ -498,11 +498,32 @@ const TeacherProfileComplete: React.FC = () => {
 
                   <TextField
                     fullWidth
+                    label="Country *"
+                    value={formData.address?.country || ''}
+                    onChange={(e) => handleInputChange('address.country', e.target.value)}
+                    placeholder="e.g., Rwanda, United States"
+                    sx={{ mb: 2 }}
+                    inputProps={{
+                      style: { 
+                        fontSize: '14px',
+                        padding: '12px 14px'
+                      }
+                    }}
+                  />
+
+                  <TextField
+                    fullWidth
                     label="Province *"
                     value={formData.address?.province || ''}
                     onChange={(e) => handleInputChange('address.province', e.target.value)}
-                    placeholder="Enter your province"
+                    placeholder="e.g., Kigali City, Eastern Province"
                     sx={{ mb: 2 }}
+                    inputProps={{
+                      style: { 
+                        fontSize: '14px',
+                        padding: '12px 14px'
+                      }
+                    }}
                   />
 
                   <TextField
@@ -510,8 +531,14 @@ const TeacherProfileComplete: React.FC = () => {
                     label="District *"
                     value={formData.address?.district || ''}
                     onChange={(e) => handleInputChange('address.district', e.target.value)}
-                    placeholder="Enter your district"
+                    placeholder="e.g., Gasabo, Nyarugenge"
                     sx={{ mb: 2 }}
+                    inputProps={{
+                      style: { 
+                        fontSize: '14px',
+                        padding: '12px 14px'
+                      }
+                    }}
                   />
 
                   <TextField
@@ -519,8 +546,14 @@ const TeacherProfileComplete: React.FC = () => {
                     label="Sector *"
                     value={formData.address?.sector || ''}
                     onChange={(e) => handleInputChange('address.sector', e.target.value)}
-                    placeholder="Enter your sector"
+                    placeholder="e.g., Kimironko, Remera"
                     sx={{ mb: 2 }}
+                    inputProps={{
+                      style: { 
+                        fontSize: '14px',
+                        padding: '12px 14px'
+                      }
+                    }}
                   />
 
                   <TextField
@@ -528,8 +561,14 @@ const TeacherProfileComplete: React.FC = () => {
                     label="Cell *"
                     value={formData.address?.cell || ''}
                     onChange={(e) => handleInputChange('address.cell', e.target.value)}
-                    placeholder="Enter your cell"
+                    placeholder="e.g., Kibagabaga, Nyarutarama"
                     sx={{ mb: 2 }}
+                    inputProps={{
+                      style: { 
+                        fontSize: '14px',
+                        padding: '12px 14px'
+                      }
+                    }}
                   />
 
                   <TextField
@@ -537,7 +576,13 @@ const TeacherProfileComplete: React.FC = () => {
                     label="Village"
                     value={formData.address?.village || ''}
                     onChange={(e) => handleInputChange('address.village', e.target.value)}
-                    placeholder="Enter village name"
+                    placeholder="e.g., Umudugudu wa Mbanza"
+                    inputProps={{
+                      style: { 
+                        fontSize: '14px',
+                        padding: '12px 14px'
+                      }
+                    }}
                   />
                 </Paper>
               </Grid>
@@ -559,18 +604,33 @@ const TeacherProfileComplete: React.FC = () => {
                     label="Specialization *"
                     value={formData.specialization?.join(', ') || ''}
                     onChange={(e) => handleArrayChange('specialization', e.target.value)}
-                    placeholder="Mathematics, Physics, Chemistry"
-                    helperText="Separate multiple specializations with commas"
+                    placeholder="e.g., Mathematics, Physics, Chemistry"
+                    helperText="You can type multiple specializations separated by commas. All characters including spaces and commas are supported."
                     sx={{ mb: 2 }}
+                    inputProps={{
+                      style: { 
+                        fontSize: '14px',
+                        padding: '12px 14px'
+                      }
+                    }}
                   />
 
                   <TextField
                     fullWidth
                     label="Years of Experience *"
                     type="number"
-                    inputProps={{ min: 0 }}
+                    inputProps={{ 
+                      min: 0, 
+                      max: 50,
+                      style: { 
+                        fontSize: '14px',
+                        padding: '12px 14px'
+                      }
+                    }}
                     value={formData.experience}
                     onChange={(e) => handleInputChange('experience', parseInt(e.target.value) || 0)}
+                    placeholder="e.g., 5"
+                    helperText="Enter your total years of teaching experience"
                     sx={{ mb: 2 }}
                   />
 
@@ -580,10 +640,21 @@ const TeacherProfileComplete: React.FC = () => {
                     multiline
                     rows={4}
                     value={formData.bio}
-                    onChange={(e) => handleInputChange('bio', e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value.length <= 2000) {
+                        handleInputChange('bio', value);
+                      }
+                    }}
                     placeholder="Tell us about yourself, your teaching philosophy, and experience..."
-                    inputProps={{ maxLength: 2000 }}
-                    helperText={`${formData.bio?.length || 0}/2000 characters`}
+                    inputProps={{ 
+                      maxLength: 2000,
+                      style: { 
+                        fontSize: '14px',
+                        lineHeight: '1.5'
+                      }
+                    }}
+                    helperText={`${formData.bio?.length || 0}/2000 characters. You can use all characters including commas, spaces, and special characters.`}
                     sx={{ mb: 2 }}
                   />
 
@@ -592,8 +663,15 @@ const TeacherProfileComplete: React.FC = () => {
                     label="Skills"
                     value={formData.skills?.join(', ') || ''}
                     onChange={(e) => handleArrayChange('skills', e.target.value)}
-                    placeholder="Problem Solving, Communication, Leadership"
+                    placeholder="e.g., Problem Solving, Communication, Leadership"
+                    helperText="You can type multiple skills separated by commas. All characters including spaces and commas are supported."
                     sx={{ mb: 2 }}
+                    inputProps={{
+                      style: { 
+                        fontSize: '14px',
+                        padding: '12px 14px'
+                      }
+                    }}
                   />
 
                   <TextField
@@ -601,7 +679,14 @@ const TeacherProfileComplete: React.FC = () => {
                     label="Languages"
                     value={formData.languages?.join(', ') || ''}
                     onChange={(e) => handleArrayChange('languages', e.target.value)}
-                    placeholder="English, Kinyarwanda, French"
+                    placeholder="e.g., English, Kinyarwanda, French"
+                    helperText="You can type multiple languages separated by commas. All characters including spaces and commas are supported."
+                    inputProps={{
+                      style: { 
+                        fontSize: '14px',
+                        padding: '12px 14px'
+                      }
+                    }}
                   />
                 </Paper>
               </Grid>
@@ -622,12 +707,18 @@ const TeacherProfileComplete: React.FC = () => {
                           <TextField
                             fullWidth
                             size="small"
-                            placeholder="Degree"
+                            placeholder="e.g., Bachelor of Science, Master of Arts"
                             value={edu.degree}
                             onChange={(e) => {
                               const newEducation = [...(formData.education || [])];
                               newEducation[index] = { ...edu, degree: e.target.value };
                               handleInputChange('education', newEducation);
+                            }}
+                            inputProps={{
+                              style: { 
+                                fontSize: '14px',
+                                padding: '8px 12px'
+                              }
                             }}
                           />
                         </Grid>
@@ -635,12 +726,18 @@ const TeacherProfileComplete: React.FC = () => {
                           <TextField
                             fullWidth
                             size="small"
-                            placeholder="Institution"
+                            placeholder="e.g., University of Rwanda, Harvard University"
                             value={edu.institution}
                             onChange={(e) => {
                               const newEducation = [...(formData.education || [])];
                               newEducation[index] = { ...edu, institution: e.target.value };
                               handleInputChange('education', newEducation);
+                            }}
+                            inputProps={{
+                              style: { 
+                                fontSize: '14px',
+                                padding: '8px 12px'
+                              }
                             }}
                           />
                         </Grid>
@@ -649,12 +746,20 @@ const TeacherProfileComplete: React.FC = () => {
                             fullWidth
                             size="small"
                             type="number"
-                            placeholder="Year"
+                            placeholder="e.g., 2020"
                             value={edu.year}
                             onChange={(e) => {
                               const newEducation = [...(formData.education || [])];
-                              newEducation[index] = { ...edu, year: parseInt(e.target.value) };
+                              newEducation[index] = { ...edu, year: parseInt(e.target.value) || new Date().getFullYear() };
                               handleInputChange('education', newEducation);
+                            }}
+                            inputProps={{
+                              min: 1950,
+                              max: new Date().getFullYear() + 10,
+                              style: { 
+                                fontSize: '14px',
+                                padding: '8px 12px'
+                              }
                             }}
                           />
                         </Grid>
@@ -692,13 +797,27 @@ const TeacherProfileComplete: React.FC = () => {
                     label="LinkedIn Profile"
                     value={formData.socialLinks?.linkedin || ''}
                     onChange={(e) => handleInputChange('socialLinks.linkedin', e.target.value)}
+                    placeholder="e.g., https://linkedin.com/in/yourprofile"
                     sx={{ mb: 2 }}
+                    inputProps={{
+                      style: { 
+                        fontSize: '14px',
+                        padding: '12px 14px'
+                      }
+                    }}
                   />
                   <TextField
                     fullWidth
                     label="Portfolio Website"
                     value={formData.socialLinks?.portfolio || ''}
                     onChange={(e) => handleInputChange('socialLinks.portfolio', e.target.value)}
+                    placeholder="e.g., https://yourportfolio.com"
+                    inputProps={{
+                      style: { 
+                        fontSize: '14px',
+                        padding: '12px 14px'
+                      }
+                    }}
                   />
                 </Paper>
               </Grid>

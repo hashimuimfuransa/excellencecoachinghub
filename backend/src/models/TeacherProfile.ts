@@ -127,7 +127,13 @@ const teacherProfileSchema = new Schema<ITeacherProfileDocument>({
     trim: true,
     unique: true,
     sparse: true,
-    match: [/^\d{16}$/, 'National ID must be 16 digits']
+    validate: {
+      validator: function(v: string) {
+        // Allow empty/null values or validate 16 digits
+        return !v || /^\d{16}$/.test(v);
+      },
+      message: 'National ID must be 16 digits'
+    }
   },
   address: {
     province: { type: String, trim: true },

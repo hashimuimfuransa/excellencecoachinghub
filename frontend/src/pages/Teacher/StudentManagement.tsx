@@ -68,7 +68,8 @@ import {
   Sort,
   Timeline,
   BarChart,
-  PieChart
+  PieChart,
+  EmojiEvents
 } from '@mui/icons-material';
 import { useAuth } from '../../store/AuthContext';
 import { apiService } from '../../services/apiService';
@@ -402,6 +403,7 @@ const StudentManagement: React.FC = () => {
               } 
               label="All Students" 
             />
+            <Tab icon={<EmojiEvents />} label="Leaderboard" />
             <Tab icon={<BarChart />} label="Performance Analytics" />
             <Tab icon={<Timeline />} label="Progress Tracking" />
           </Tabs>
@@ -668,7 +670,7 @@ const StudentManagement: React.FC = () => {
         </TabPanel>
 
         {/* Performance Analytics Tab */}
-        <TabPanel value={tabValue} index={1}>
+        <TabPanel value={tabValue} index={2}>
           <Grid container spacing={3}>
             {/* Performance Distribution */}
             <Grid item xs={12}>
@@ -784,8 +786,343 @@ const StudentManagement: React.FC = () => {
           </Grid>
         </TabPanel>
 
+        {/* Leaderboard Tab */}
+        <TabPanel value={tabValue} index={1}>
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h6" gutterBottom sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1,
+              color: 'primary.main',
+              fontWeight: 'bold'
+            }}>
+              <EmojiEvents />
+              Top Performers
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Students ranked by their average performance across all assessments and assignments
+            </Typography>
+          </Box>
+          
+          <Grid container spacing={3}>
+            {filteredStudents
+              .sort((a, b) => b.averageScore - a.averageScore)
+              .slice(0, 12)
+              .map((studentData, index) => {
+                const performance = getPerformanceStatus(studentData.averageScore);
+                const isTopThree = index < 3;
+                
+                return (
+                  <Grid item xs={12} sm={6} lg={4} key={studentData.student._id}>
+                    <Card 
+                      elevation={0}
+                      sx={{ 
+                        position: 'relative',
+                        border: '2px solid',
+                        borderColor: isTopThree ? 'warning.main' : 'divider',
+                        borderRadius: 2,
+                        background: isTopThree 
+                          ? 'linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 193, 7, 0.05))'
+                          : 'background.paper',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          boxShadow: 6,
+                          transform: 'translateY(-4px)',
+                          borderColor: isTopThree ? 'warning.dark' : 'primary.main'
+                        }
+                      }}
+                    >
+                      {/* Rank Badge */}
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: -12,
+                          left: 16,
+                          bgcolor: isTopThree ? 'warning.main' : 'primary.main',
+                          color: isTopThree ? 'warning.contrastText' : 'primary.contrastText',
+                          px: 2,
+                          py: 0.5,
+                          borderRadius: 2,
+                          fontSize: '0.875rem',
+                          fontWeight: 'bold',
+                          zIndex: 1,
+                          boxShadow: 2
+                        }}
+                      >
+                        #{index + 1}
+                      </Box>
+                      
+                      <CardContent sx={{ pt: 3 }}>
+                        {/* Student Info */}
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          mb: 3,
+                          flexWrap: 'wrap',
+                          gap: 2
+                        }}>
+                          <Avatar 
+                            src={studentData.student.avatar}
+                            sx={{ 
+                              width: { xs: 56, sm: 64 }, 
+                              height: { xs: 56, sm: 64 },
+                              bgcolor: isTopThree ? 'warning.main' : 'primary.main',
+                              fontSize: '1.5rem',
+                              fontWeight: 'bold',
+                              border: '3px solid',
+                              borderColor: 'background.paper',
+                              boxShadow: 3
+                            }}
+                          >
+                            {studentData.student.firstName.charAt(0)}
+                          </Avatar>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography 
+                              variant="h6" 
+                              sx={{ 
+                                fontWeight: 'bold',
+                                mb: 0.5,
+                                wordBreak: 'break-word',
+                                lineHeight: 1.2
+                              }}
+                            >
+                              {studentData.student.firstName} {studentData.student.lastName}
+                            </Typography>
+                            <Typography 
+                              variant="body2" 
+                              color="text.secondary"
+                              sx={{ 
+                                wordBreak: 'break-all',
+                                fontSize: '0.875rem',
+                                lineHeight: 1.3
+                              }}
+                            >
+                              {studentData.student.email}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        
+                        {/* Performance Score */}
+                        <Box sx={{ mb: 3 }}>
+                          <Box sx={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center', 
+                            mb: 1 
+                          }}>
+                            <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                              Average Score
+                            </Typography>
+                            <Typography 
+                              variant="h5" 
+                              sx={{ 
+                                fontWeight: 'bold',
+                                color: getGradeColor(studentData.averageScore) === 'success' ? 'success.main' :
+                                       getGradeColor(studentData.averageScore) === 'info' ? 'info.main' :
+                                       getGradeColor(studentData.averageScore) === 'warning' ? 'warning.main' :
+                                       getGradeColor(studentData.averageScore) === 'secondary' ? 'secondary.main' :
+                                       'error.main'
+                              }}
+                            >
+                              {studentData.averageScore.toFixed(1)}%
+                            </Typography>
+                          </Box>
+                          <LinearProgress
+                            variant="determinate"
+                            value={studentData.averageScore}
+                            color={getGradeColor(studentData.averageScore) as any}
+                            sx={{ 
+                              height: 8, 
+                              borderRadius: 4,
+                              bgcolor: 'grey.200'
+                            }}
+                          />
+                        </Box>
+                        
+                        {/* Stats Grid */}
+                        <Grid container spacing={2} sx={{ mb: 2 }}>
+                          <Grid item xs={6}>
+                            <Box sx={{ 
+                              textAlign: 'center',
+                              p: 1.5,
+                              bgcolor: 'success.50',
+                              borderRadius: 1,
+                              border: '1px solid',
+                              borderColor: 'success.100'
+                            }}>
+                              <Typography 
+                                variant="h6" 
+                                sx={{ 
+                                  fontWeight: 'bold',
+                                  color: 'success.main',
+                                  mb: 0.5
+                                }}
+                              >
+                                {studentData.totalPoints}
+                              </Typography>
+                              <Typography 
+                                variant="caption" 
+                                color="text.secondary"
+                                sx={{ fontWeight: 'medium' }}
+                              >
+                                Total Points
+                              </Typography>
+                            </Box>
+                          </Grid>
+                          <Grid item xs={6}>
+                            <Box sx={{ 
+                              textAlign: 'center',
+                              p: 1.5,
+                              bgcolor: 'info.50',
+                              borderRadius: 1,
+                              border: '1px solid',
+                              borderColor: 'info.100'
+                            }}>
+                              <Typography 
+                                variant="h6" 
+                                sx={{ 
+                                  fontWeight: 'bold',
+                                  color: 'info.main',
+                                  mb: 0.5
+                                }}
+                              >
+                                {studentData.passedExams}/{studentData.totalExams}
+                              </Typography>
+                              <Typography 
+                                variant="caption" 
+                                color="text.secondary"
+                                sx={{ fontWeight: 'medium' }}
+                              >
+                                Exams Passed
+                              </Typography>
+                            </Box>
+                          </Grid>
+                        </Grid>
+                        
+                        {/* Additional Stats */}
+                        <Grid container spacing={2} sx={{ mb: 2 }}>
+                          <Grid item xs={6}>
+                            <Box sx={{ 
+                              textAlign: 'center',
+                              p: 1.5,
+                              bgcolor: 'primary.50',
+                              borderRadius: 1,
+                              border: '1px solid',
+                              borderColor: 'primary.100'
+                            }}>
+                              <Typography 
+                                variant="h6" 
+                                sx={{ 
+                                  fontWeight: 'bold',
+                                  color: 'primary.main',
+                                  mb: 0.5
+                                }}
+                              >
+                                {studentData.completedCourses}/{studentData.totalCourses}
+                              </Typography>
+                              <Typography 
+                                variant="caption" 
+                                color="text.secondary"
+                                sx={{ fontWeight: 'medium' }}
+                              >
+                                Courses Done
+                              </Typography>
+                            </Box>
+                          </Grid>
+                          <Grid item xs={6}>
+                            <Box sx={{ 
+                              textAlign: 'center',
+                              p: 1.5,
+                              bgcolor: 'warning.50',
+                              borderRadius: 1,
+                              border: '1px solid',
+                              borderColor: 'warning.100'
+                            }}>
+                              <Typography 
+                                variant="h6" 
+                                sx={{ 
+                                  fontWeight: 'bold',
+                                  color: 'warning.main',
+                                  mb: 0.5
+                                }}
+                              >
+                                {formatTime(studentData.totalTimeSpent)}
+                              </Typography>
+                              <Typography 
+                                variant="caption" 
+                                color="text.secondary"
+                                sx={{ fontWeight: 'medium' }}
+                              >
+                                Time Spent
+                              </Typography>
+                            </Box>
+                          </Grid>
+                        </Grid>
+                        
+                        {/* Performance Status */}
+                        <Box sx={{ mt: 2 }}>
+                          <Chip
+                            icon={performance.icon}
+                            label={performance.label}
+                            color={performance.color as any}
+                            size="small"
+                            sx={{ 
+                              width: '100%',
+                              height: 32,
+                              fontSize: '0.875rem',
+                              fontWeight: 'bold'
+                            }}
+                          />
+                        </Box>
+                        
+                        {/* Action Button */}
+                        <Box sx={{ mt: 2 }}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            fullWidth
+                            onClick={() => handleViewStudentDetails(studentData)}
+                            startIcon={<Visibility />}
+                            sx={{ 
+                              borderRadius: 2,
+                              textTransform: 'none',
+                              fontWeight: 'medium'
+                            }}
+                          >
+                            View Details
+                          </Button>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                );
+              })}
+          </Grid>
+          
+          {filteredStudents.length === 0 && (
+            <Paper 
+              elevation={0}
+              sx={{ 
+                textAlign: 'center', 
+                py: 8,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 2
+              }}
+            >
+              <EmojiEvents sx={{ fontSize: 80, color: 'grey.300', mb: 2 }} />
+              <Typography variant="h5" color="text.secondary" gutterBottom sx={{ fontWeight: 'bold' }}>
+                No Students Found
+              </Typography>
+              <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 400, mx: 'auto' }}>
+                No students match your current filters. Try adjusting your search criteria.
+              </Typography>
+            </Paper>
+          )}
+        </TabPanel>
+
         {/* Progress Tracking Tab */}
-        <TabPanel value={tabValue} index={2}>
+        <TabPanel value={tabValue} index={3}>
           <Grid container spacing={3}>
             {/* Top Performers */}
             <Grid item xs={12} md={6}>

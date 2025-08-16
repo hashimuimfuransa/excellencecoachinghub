@@ -128,14 +128,9 @@ const TeacherGradesLeaderboard: React.FC = () => {
   useEffect(() => {
     if (selectedCourse) {
       loadGradesData();
-    }
-  }, [selectedCourse, gradesFilter]);
-
-  useEffect(() => {
-    if (selectedCourse) {
       loadLeaderboardData();
     }
-  }, [selectedCourse, leaderboardFilter]);
+  }, [selectedCourse, gradesFilter, leaderboardFilter]);
 
   const loadInitialData = async () => {
     try {
@@ -145,12 +140,6 @@ const TeacherGradesLeaderboard: React.FC = () => {
       // Load teacher's courses
       const coursesResponse = await courseService.getTeacherCourses();
       setCourses(coursesResponse.courses || []);
-
-      // Load initial grades and leaderboard data
-      await Promise.all([
-        loadGradesData(),
-        loadLeaderboardData()
-      ]);
 
     } catch (err: any) {
       console.error('Failed to load initial data:', err);
@@ -181,14 +170,10 @@ const TeacherGradesLeaderboard: React.FC = () => {
     try {
       let leaderboardData: LeaderboardEntry[];
       
-      console.log('Loading leaderboard for course:', selectedCourse, 'with filters:', leaderboardFilter);
-      
       if (selectedCourse === 'all') {
         leaderboardData = await gradesService.getLeaderboard(leaderboardFilter);
-        console.log('Overall leaderboard data:', leaderboardData);
       } else {
         leaderboardData = await gradesService.getCourseLeaderboard(selectedCourse, leaderboardFilter);
-        console.log('Course leaderboard data:', leaderboardData);
       }
       
       setLeaderboard(leaderboardData);
@@ -205,10 +190,21 @@ const TeacherGradesLeaderboard: React.FC = () => {
 
   // Handle course selection change
   const handleCourseChange = async (courseId: string) => {
-    console.log('Course changed to:', courseId);
     setSelectedCourse(courseId);
-    // Don't set loading to true here - let the useEffect handle the loading
-    // The useEffect will trigger automatically when selectedCourse changes
+    setLoading(true);
+    
+    try {
+      // Load both grades and leaderboard data for the selected course
+      await Promise.all([
+        loadGradesData(),
+        loadLeaderboardData()
+      ]);
+    } catch (err: any) {
+      console.error('Failed to load course data:', err);
+      setError(err.message || 'Failed to load course data');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle pagination

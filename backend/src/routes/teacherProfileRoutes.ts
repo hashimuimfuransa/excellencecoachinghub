@@ -115,9 +115,12 @@ const updateProfileValidation = [
     .isFloat({ min: 0 })
     .withMessage('Hourly rate cannot be negative'),
   body('nationalId')
-    .optional()
+    .optional({ checkFalsy: true })
     .trim()
-    .matches(/^\d{16}$/)
+    .custom((value) => {
+      if (!value) return true; // Allow empty values
+      return /^\d{16}$/.test(value);
+    })
     .withMessage('National ID must be 16 digits'),
   body('paymentType')
     .optional()

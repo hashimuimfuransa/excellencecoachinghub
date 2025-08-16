@@ -92,6 +92,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { gradesService, LeaderboardEntry, LeaderboardFilter } from '../../services/gradesService';
 import { courseService } from '../../services/courseService';
+import ResponsiveLeaderboardCard from '../../components/Leaderboard/ResponsiveLeaderboardCard';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -194,7 +195,9 @@ const StudentLeaderboard: React.FC = () => {
 
   const loadCourseLeaderboard = async (courseId: string) => {
     try {
+      console.log('Loading course leaderboard for courseId:', courseId);
       const leaderboardData = await gradesService.getCourseLeaderboard(courseId, { limit: 50 });
+      console.log('Course leaderboard data received:', leaderboardData);
       setCourseLeaderboards(prev => ({ ...prev, [courseId]: leaderboardData }));
     } catch (err: any) {
       console.error('Failed to load course leaderboard:', err);
@@ -205,6 +208,18 @@ const StudentLeaderboard: React.FC = () => {
   // Handle tab change
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
+  };
+
+  // Handle course selection change
+  const handleCourseChange = async (courseId: string) => {
+    console.log('Student leaderboard: Course changed to:', courseId);
+    setSelectedCourse(courseId);
+    if (courseId !== 'all' && !courseLeaderboards[courseId]) {
+      console.log('Loading course leaderboard for:', courseId);
+      await loadCourseLeaderboard(courseId);
+    } else if (courseId !== 'all') {
+      console.log('Course leaderboard already cached for:', courseId);
+    }
   };
 
   // Get rank display
@@ -219,6 +234,18 @@ const StudentLeaderboard: React.FC = () => {
 
   // Render leaderboard entry
   const renderLeaderboardEntry = (entry: LeaderboardEntry, isCurrentUser: boolean = false) => {
+    return (
+      <ResponsiveLeaderboardCard
+        key={entry.studentId}
+        entry={entry}
+        isCurrentUser={isCurrentUser}
+        showCourse={tabValue === 1} // Show course info in course-specific leaderboard
+      />
+    );
+  };
+
+  // Legacy render function (keeping for reference)
+  const renderLeaderboardEntryOld = (entry: LeaderboardEntry, isCurrentUser: boolean = false) => {
     const rankDisplay = getRankDisplay(entry.rank);
     const isTopThree = entry.rank <= 3;
     
@@ -968,7 +995,7 @@ const StudentLeaderboard: React.FC = () => {
                 <Select
                   value={selectedCourse}
                   label="Select Course"
-                  onChange={(e) => setSelectedCourse(e.target.value)}
+                  onChange={(e) => handleCourseChange(e.target.value)}
                 >
                   <MenuItem value="all">Select a course...</MenuItem>
                   {courses.map((course) => (
@@ -992,12 +1019,58 @@ const StudentLeaderboard: React.FC = () => {
               </Box>
             ) : courseLeaderboards[selectedCourse] ? (
               <Box>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-                  {courses.find(c => c._id === selectedCourse)?.title} Leaderboard
-                </Typography>
-                {courseLeaderboards[selectedCourse].map((entry) => 
-                  renderLeaderboardEntry(entry, entry.studentId === user?.id)
-                )}
+                {/* Course Header */}
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
+                    {courses.find(c => c._id === selectedCourse)?.title} Leaderboard
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Rankings based on performance in this specific course
+                  </Typography>
+                </Box>
+
+                {/* Current User Position (if not in top visible entries) */}
+                {(() => {
+                  const currentUserEntry = getCurrentUserRank(courseLeaderboards[selectedCourse]);
+                  const isInTopEntries = currentUserEntry && currentUserEntry.rank <= 10;
+                  
+                  return currentUserEntry && !isInTopEntries ? (
+                    <Box sx={{ mb: 3 }}>
+                      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                        Your Position:
+                      </Typography>
+                      {renderLeaderboardEntry(currentUserEntry, true)}
+                    </Box>
+                  ) : null;
+                })()}
+
+                {/* Leaderboard Entries */}
+                <Stack spacing={2}>
+                  {courseLeaderboards[selectedCourse].length > 0 ? (
+                    courseLeaderboards[selectedCourse].map((entry) => 
+                      renderLeaderboardEntry(entry, entry.studentId === user?.id)
+                    )
+                  ) : (
+                    <Paper 
+                      elevation={0}
+                      sx={{ 
+                        textAlign: 'center', 
+                        py: 6,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 2
+                      }}
+                    >
+                      <EmojiEvents sx={{ fontSize: 60, color: 'grey.300', mb: 2 }} />
+                      <Typography variant="h6" color="text.secondary" gutterBottom>
+                        No Rankings Yet
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400, mx: 'auto' }}>
+                        Complete assessments and assignments in this course to appear on the leaderboard.
+                      </Typography>
+                    </Paper>
+                  )}
+                </Stack>
               </Box>
             ) : (
               <Box sx={{ textAlign: 'center', py: 4 }}>

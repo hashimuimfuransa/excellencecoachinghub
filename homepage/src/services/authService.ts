@@ -1,0 +1,229 @@
+import { apiService } from './api';
+
+export interface LoginForm {
+  email: string;
+  password: string;
+}
+
+export interface RegisterForm {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  role?: string;
+}
+
+export interface User {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  isEmailVerified: boolean;
+  profilePicture?: string;
+  createdAt: string;
+}
+
+export interface AuthResponse {
+  user: User | null;
+  token: string;
+  refreshToken?: string;
+  requiresRoleSelection?: boolean;
+  googleUserData?: any;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+export const authService = {
+  // Login user
+  login: async (credentials: LoginForm): Promise<AuthResponse> => {
+    try {
+      const response = await apiService.post<AuthResponse>('/auth/login', credentials);
+      
+      if (response.success && response.data) {
+        // Store token and user data
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        
+        if (response.data.refreshToken) {
+          localStorage.setItem('refreshToken', response.data.refreshToken);
+        }
+        
+        return response.data;
+      }
+      
+      throw new Error(response.error || 'Login failed');
+    } catch (error: any) {
+      // Handle axios errors properly
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      } else if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      } else if (error.message) {
+        throw new Error(error.message);
+      } else {
+        throw new Error('Login failed. Please try again.');
+      }
+    }
+  },
+
+  // Register user
+  register: async (userData: RegisterForm): Promise<AuthResponse> => {
+    try {
+      const response = await apiService.post<AuthResponse>('/auth/register', userData);
+
+      if (response.success && response.data) {
+        // Store token and user data
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+
+        if (response.data.refreshToken) {
+          localStorage.setItem('refreshToken', response.data.refreshToken);
+        }
+
+        return response.data;
+      }
+
+      throw new Error(response.error || 'Registration failed');
+    } catch (error: any) {
+      // Handle axios errors properly
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      } else if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      } else if (error.message) {
+        throw new Error(error.message);
+      } else {
+        throw new Error('Registration failed. Please try again.');
+      }
+    }
+  },
+
+  // Get current user
+  getCurrentUser: async (): Promise<User> => {
+    const response = await apiService.get<{ user: User }>('/auth/me');
+    
+    if (response.success && response.data) {
+      // Update stored user data
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      return response.data.user;
+    }
+    
+    throw new Error(response.error || 'Failed to get user data');
+  },
+
+  // Logout user
+  logout: async (): Promise<void> => {
+    try {
+      await apiService.post('/auth/logout');
+    } catch (error) {
+      // Even if logout fails on server, clear local storage
+      console.error('Logout error:', error);
+    } finally {
+      // Clear local storage
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('refreshToken');
+    }
+  },
+
+  // Forgot password
+  forgotPassword: async (email: string): Promise<void> => {
+    try {
+      const response = await apiService.post('/auth/forgot-password', { email });
+
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to send password reset email');
+      }
+    } catch (error: any) {
+      console.error('Forgot password error:', error);
+      throw error;
+    }
+  },
+
+  // Reset password
+  resetPassword: async (token: string, password: string): Promise<AuthResponse> => {
+    const response = await apiService.post<AuthResponse>('/auth/reset-password', { 
+      token, 
+      password 
+    });
+    
+    if (response.success && response.data) {
+      // Store token and user data
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      
+      if (response.data.refreshToken) {
+        localStorage.setItem('refreshToken', response.data.refreshToken);
+      }
+      
+      return response.data;
+    }
+    
+    throw new Error(response.error || 'Password reset failed');
+  },
+
+  // Check if user is authenticated
+  isAuthenticated: (): boolean => {
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    return !!(token && user);
+  },
+
+  // Get stored token
+  getToken: (): string | null => {
+    return localStorage.getItem('token');
+  },
+
+  // Get stored user
+  getStoredUser: (): User | null => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        return JSON.parse(userData);
+      } catch (error) {
+        console.error('Error parsing stored user data:', error);
+        localStorage.removeItem('user');
+      }
+    }
+    return null;
+  },
+
+  // Clear authentication data
+  clearAuth: (): void => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('refreshToken');
+  },
+
+  // Refresh token (if implemented)
+  refreshToken: async (): Promise<string> => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
+    try {
+      const response = await apiService.post<{ token: string }>('/auth/refresh', {
+        refreshToken
+      });
+      
+      if (response.success && response.data) {
+        localStorage.setItem('token', response.data.token);
+        return response.data.token;
+      }
+      
+      throw new Error(response.error || 'Token refresh failed');
+    } catch (error) {
+      // If refresh fails, clear all auth data
+      authService.clearAuth();
+      throw error;
+    }
+  }
+};

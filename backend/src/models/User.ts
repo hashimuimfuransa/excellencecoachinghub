@@ -5,7 +5,7 @@ import { UserRole } from '../../../shared/types';
 // User document interface extending the shared IUser interface
 export interface IUserDocument extends Document {
   email: string;
-  password: string;
+  password?: string; // Optional for Google OAuth users
   firstName: string;
   lastName: string;
   role: UserRole;
@@ -19,6 +19,10 @@ export interface IUserDocument extends Document {
   lastLogin?: Date;
   loginAttempts: number;
   lockUntil?: Date;
+  // Google OAuth fields
+  googleId?: string;
+  provider?: string;
+  registrationCompleted?: boolean;
   // User preferences
   emailNotifications?: boolean;
   pushNotifications?: boolean;
@@ -57,7 +61,10 @@ const userSchema = new Schema<IUserDocument>({
   },
   password: {
     type: String,
-    required: [true, 'Password is required'],
+    required: function(this: IUserDocument) {
+      // Password is required only if not using Google OAuth
+      return !this.googleId;
+    },
     minlength: [8, 'Password must be at least 8 characters long'],
     select: false // Don't include password in queries by default
   },
@@ -119,6 +126,21 @@ const userSchema = new Schema<IUserDocument>({
   lockUntil: {
     type: Date,
     select: false
+  },
+  // Google OAuth fields
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true // Allows multiple null values
+  },
+  provider: {
+    type: String,
+    enum: ['local', 'google'],
+    default: 'local'
+  },
+  registrationCompleted: {
+    type: Boolean,
+    default: true // For regular users, false for Google OAuth users until role selection
   },
   // User preferences
   emailNotifications: {

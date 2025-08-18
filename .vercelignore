@@ -1,9 +1,0 @@
-backend/
-frontend/node_modules/
-frontend/.env
-backend/.env
-*.log
-.DS_Store
-.git/
-build.js
-vercel-build.js

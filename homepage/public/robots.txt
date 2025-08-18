@@ -1,0 +1,61 @@
+User-agent: *
+Allow: /
+
+# Main sitemap
+Sitemap: https://excellencecoachinghub.com/sitemap.xml
+
+# Allow all search engines to crawl the site
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot  
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Baiduspider
+Allow: /
+
+User-agent: YandexBot
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+# Block access to admin and private areas (if any exist)
+Disallow: /admin/
+Disallow: /private/
+Disallow: /_next/
+Disallow: /api/internal/
+
+# Allow important pages and services
+Allow: /elearning
+Allow: /jobs
+Allow: /login
+Allow: /register
+Allow: /about
+Allow: /contact
+Allow: /services/
+Allow: /courses/
+Allow: /africa
+Allow: /rwanda
+Allow: /kigali
+Allow: /success-stories
+Allow: /testimonials
+Allow: /career-coaching
+Allow: /psychometric-tests
+Allow: /mock-interviews
+Allow: /ai-assessments
+
+# Crawl delay (be respectful)
+Crawl-delay: 1

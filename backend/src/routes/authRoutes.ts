@@ -7,7 +7,9 @@ import {
   getMe,
   forgotPassword,
   resetPassword,
-  testEmail
+  testEmail,
+  googleAuth,
+  googleCompleteRegistration
 } from '../controllers/authController';
 import { protect } from '../middleware/auth';
 import { validateRequest } from '../middleware/validateRequest';
@@ -35,8 +37,8 @@ const registerValidation = [
     .withMessage('Last name must be between 2 and 50 characters'),
   body('role')
     .optional()
-    .isIn(['admin', 'teacher', 'student'])
-    .withMessage('Role must be admin, teacher, or student')
+    .isIn(['admin', 'teacher', 'student', 'professional', 'employer'])
+    .withMessage('Role must be admin, teacher, student, professional, or employer')
 ];
 
 const loginValidation = [
@@ -67,6 +69,31 @@ const resetPasswordValidation = [
     .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number')
 ];
 
+const googleRegistrationValidation = [
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email'),
+  body('firstName')
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('First name must be between 1 and 50 characters'),
+  body('lastName')
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Last name must be between 1 and 50 characters'),
+  body('role')
+    .isIn(['student', 'teacher', 'professional', 'employer'])
+    .withMessage('Role must be student, teacher, professional, or employer'),
+  body('googleId')
+    .notEmpty()
+    .withMessage('Google ID is required'),
+  body('profilePicture')
+    .optional()
+    .isURL()
+    .withMessage('Profile picture must be a valid URL')
+];
+
 // Routes
 router.post('/register', registerValidation, validateRequest, register);
 router.post('/login', loginValidation, validateRequest, login);
@@ -74,6 +101,8 @@ router.post('/logout', protect, logout);
 router.get('/me', protect, getMe);
 router.post('/forgot-password', forgotPasswordValidation, validateRequest, forgotPassword);
 router.post('/reset-password', resetPasswordValidation, validateRequest, resetPassword);
+router.post('/google', googleAuth); // Main Google OAuth endpoint
+router.post('/google/complete-registration', googleRegistrationValidation, validateRequest, googleCompleteRegistration);
 router.post('/test-email', testEmail); // Test endpoint for email service
 
 export default router;

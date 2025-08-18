@@ -1,0 +1,6 @@
+Contact: mailto:security@excellencecoachinghub.com
+Expires: 2025-12-31T23:59:59.000Z
+Acknowledgments: https://excellencecoachinghub.com/security-acknowledgments
+Preferred-Languages: en, rw, fr
+Canonical: https://excellencecoachinghub.com/.well-known/security.txt
+Policy: https://excellencecoachinghub.com/security-policy

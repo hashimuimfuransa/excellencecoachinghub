@@ -382,3 +382,170 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
     next(error);
   }
 };
+
+// @desc    Google OAuth authentication
+// @route   POST /api/auth/google
+// @access  Public
+export const googleAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { userInfo, credential, accessToken } = req.body;
+
+    if (!userInfo && !credential) {
+      res.status(400).json({
+        success: false,
+        error: 'User information or credential is required'
+      });
+      return;
+    }
+
+    let userData;
+    
+    // Handle different types of Google auth data
+    if (userInfo) {
+      userData = userInfo;
+    } else if (credential) {
+      // Parse JWT credential if provided
+      try {
+        const base64Url = credential.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        userData = JSON.parse(jsonPayload);
+      } catch (error) {
+        res.status(400).json({
+          success: false,
+          error: 'Invalid credential format'
+        });
+        return;
+      }
+    }
+
+    if (!userData || !userData.email) {
+      res.status(400).json({
+        success: false,
+        error: 'Invalid user data received from Google'
+      });
+      return;
+    }
+
+    // Check if user already exists
+    let user = await User.findOne({ 
+      $or: [
+        { email: userData.email },
+        { googleId: userData.sub || userData.id }
+      ]
+    });
+
+    if (user) {
+      // User exists - check if registration is completed
+      if (!user.registrationCompleted) {
+        // User needs to complete role selection
+        res.status(200).json({
+          success: true,
+          data: {
+            requiresRoleSelection: true,
+            googleUserData: {
+              email: userData.email,
+              firstName: userData.given_name || userData.name?.split(' ')[0] || 'Google',
+              lastName: userData.family_name || userData.name?.split(' ').slice(1).join(' ') || 'User',
+              googleId: userData.sub || userData.id,
+              profilePicture: userData.picture,
+              provider: 'google',
+              isEmailVerified: userData.email_verified || true
+            }
+          }
+        });
+        return;
+      }
+
+      // User exists and registration is complete - log them in
+      sendTokenResponse(user, 200, res);
+    } else {
+      // New user - needs role selection
+      res.status(200).json({
+        success: true,
+        data: {
+          requiresRoleSelection: true,
+          googleUserData: {
+            email: userData.email,
+            firstName: userData.given_name || userData.name?.split(' ')[0] || 'Google',
+            lastName: userData.family_name || userData.name?.split(' ').slice(1).join(' ') || 'User',
+            googleId: userData.sub || userData.id,
+            profilePicture: userData.picture,
+            provider: 'google',
+            isEmailVerified: userData.email_verified || true
+          }
+        }
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Complete Google OAuth registration
+// @route   POST /api/auth/google/complete-registration
+// @access  Public
+export const googleCompleteRegistration = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { 
+      email, 
+      firstName, 
+      lastName, 
+      role, 
+      googleId, 
+      profilePicture, 
+      provider = 'google',
+      isEmailVerified = true 
+    } = req.body;
+
+    // Check if user already exists
+    let user = await User.findOne({ 
+      $or: [
+        { email: email },
+        { googleId: googleId }
+      ]
+    });
+
+    if (user) {
+      // Update existing user with role and complete registration
+      user.role = role;
+      user.registrationCompleted = true;
+      user.isEmailVerified = isEmailVerified;
+      if (profilePicture) {
+        user.avatar = profilePicture;
+      }
+      await user.save();
+    } else {
+      // Create new user
+      user = await User.create({
+        email,
+        firstName,
+        lastName,
+        role,
+        googleId,
+        provider,
+        avatar: profilePicture,
+        isEmailVerified,
+        registrationCompleted: true,
+        // No password required for Google OAuth users
+      });
+    }
+
+    // Send token response
+    sendTokenResponse(user, 201, res);
+  } catch (error: any) {
+    // Handle duplicate key error
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyValue)[0];
+      const message = `User with this ${field} already exists`;
+      res.status(400).json({
+        success: false,
+        error: message
+      });
+      return;
+    }
+    next(error);
+  }
+};

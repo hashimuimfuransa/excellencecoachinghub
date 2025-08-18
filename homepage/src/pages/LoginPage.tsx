@@ -10,16 +10,11 @@ import {
   Divider,
   IconButton,
   InputAdornment,
-  Alert,
   CircularProgress,
-  Avatar,
-  useTheme,
-  useMediaQuery,
 } from '@mui/material';
 import {
   Visibility,
   VisibilityOff,
-  School,
   Google,
   ArrowBack,
 } from '@mui/icons-material';
@@ -48,8 +43,6 @@ interface LoginFormData {
 }
 
 const LoginPage: React.FC = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const { login, loginWithGoogle } = useAuth();
   const [showPassword, setShowPassword] = useState(false);

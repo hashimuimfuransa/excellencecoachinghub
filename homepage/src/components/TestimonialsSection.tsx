@@ -8,8 +8,6 @@ import {
   CardContent,
   Avatar,
   Rating,
-  useTheme,
-  useMediaQuery,
   IconButton,
   Chip,
   Button,
@@ -18,7 +16,6 @@ import {
   FormatQuote,
   ArrowBackIos,
   ArrowForwardIos,
-  Star,
   Verified,
   Work,
   School,
@@ -27,8 +24,6 @@ import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { useRef } from 'react';
 
 const TestimonialsSection: React.FC = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
   const [currentTestimonial, setCurrentTestimonial] = useState(0);

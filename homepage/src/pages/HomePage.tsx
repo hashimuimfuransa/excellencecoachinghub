@@ -1,56 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Container,
-  Typography,
-  Button,
-  Grid,
-  Card,
-  CardContent,
-  AppBar,
-  Toolbar,
-  IconButton,
-  Drawer,
-  List,
-  ListItem,
-  ListItemText,
-  useTheme,
-  useMediaQuery,
-  Chip,
-  Avatar,
-  Paper,
-  Divider,
-  TextField,
-  InputAdornment,
   Fab,
   Zoom,
 } from '@mui/material';
 import {
-  Menu as MenuIcon,
-  Close as CloseIcon,
-  School,
-  Work,
-  Psychology,
-  Verified,
-  TrendingUp,
-  Groups,
-  Star,
-  ArrowForward,
-  PlayArrow,
-  Email,
-  Phone,
-  LocationOn,
-  Facebook,
-  Twitter,
-  LinkedIn,
-  Instagram,
   KeyboardArrowUp,
-  AutoAwesome,
-  EmojiEvents,
-  Speed,
-  Security,
 } from '@mui/icons-material';
-import { motion, useScroll, useTransform } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 // Components
@@ -63,8 +19,6 @@ import Footer from '../components/Footer';
 import Navbar from '../components/Navbar';
 
 const HomePage: React.FC = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const [showScrollTop, setShowScrollTop] = useState(false);
 
@@ -83,16 +37,6 @@ const HomePage: React.FC = () => {
       top: 0,
       behavior: 'smooth'
     });
-  };
-
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-      });
-    }
   };
 
   return (

@@ -9,9 +9,6 @@ import {
   Button,
   IconButton,
   Divider,
-  useTheme,
-  useMediaQuery,
-  Avatar,
   Stack,
   Chip,
 } from '@mui/material';
@@ -24,7 +21,6 @@ import {
   Email,
   Phone,
   LocationOn,
-  School,
   Send,
   ArrowUpward,
 } from '@mui/icons-material';
@@ -32,8 +28,6 @@ import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 
 const Footer: React.FC = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [email, setEmail] = useState('');
   const [subscribing, setSubscribing] = useState(false);
 
@@ -422,12 +416,6 @@ const Footer: React.FC = () => {
               <Stack direction="row" spacing={1.5} flexWrap="wrap">
                 {socialLinks.map((social, index) => (
                   <IconButton
-                    component={motion.button}
-                    whileHover={{ 
-                      scale: 1.1,
-                      rotate: 5,
-                      transition: { duration: 0.2 }
-                    }}
                     key={index}
                     href={social.href}
                     target="_blank"

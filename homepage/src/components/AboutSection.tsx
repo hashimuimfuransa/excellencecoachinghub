@@ -6,27 +6,20 @@ import {
   Grid,
   Card,
   CardContent,
-  useTheme,
-  useMediaQuery,
-  Stack,
   Avatar,
 } from '@mui/material';
 import {
-  Visibility,
-  Flag,
   Favorite,
-  Groups,
   Handshake,
   Security,
   Star,
-  TrendingUp,
+  Visibility,
+  Flag,
 } from '@mui/icons-material';
 import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
 
 const AboutSection: React.FC = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
 

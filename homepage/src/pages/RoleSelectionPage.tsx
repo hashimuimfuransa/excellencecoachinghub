@@ -8,9 +8,6 @@ import {
   Grid,
   Card,
   CardContent,
-  CardActions,
-  useTheme,
-  useMediaQuery,
   Avatar,
   Chip,
   CircularProgress,
@@ -40,8 +37,6 @@ interface RoleOption {
 }
 
 const RoleSelectionPage: React.FC = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const location = useLocation();
   const { updateUser } = useAuth();
@@ -142,13 +137,13 @@ const RoleSelectionPage: React.FC = () => {
 
         if (response.success && response.data) {
           // Update user context
-          updateUser(response.data.user);
+          updateUser((response.data as any).user);
           
           // Store updated tokens
-          localStorage.setItem('token', response.data.token);
-          localStorage.setItem('user', JSON.stringify(response.data.user));
-          if (response.data.refreshToken) {
-            localStorage.setItem('refreshToken', response.data.refreshToken);
+          localStorage.setItem('token', (response.data as any).token);
+          localStorage.setItem('user', JSON.stringify((response.data as any).user));
+          if ((response.data as any).refreshToken) {
+            localStorage.setItem('refreshToken', (response.data as any).refreshToken);
           }
 
           toast.success(`Welcome to Excellence Coaching Hub! Your ${selectedRole} account has been created.`);

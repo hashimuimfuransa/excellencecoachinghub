@@ -9,8 +9,6 @@ import {
   Card,
   CardContent,
   CardMedia,
-  useTheme,
-  useMediaQuery,
 } from '@mui/material';
 import {
   School,
@@ -22,8 +20,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const PostLoginPage: React.FC = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const { user } = useAuth();
 

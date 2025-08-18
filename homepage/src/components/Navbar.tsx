@@ -19,8 +19,6 @@ import {
   Close as CloseIcon,
   Login,
   PersonAdd,
-  Google,
-  Facebook,
   Home,
   Info,
   Work,
@@ -83,16 +81,6 @@ const Navbar: React.FC = () => {
     } catch (error) {
       console.error('Logout error:', error);
     }
-  };
-
-  const handleGoogleLogin = () => {
-    // Implement Google login functionality
-    console.log('Google login clicked');
-  };
-
-  const handleFacebookLogin = () => {
-    // Implement Facebook login functionality
-    console.log('Facebook login clicked');
   };
 
   const navItems = [

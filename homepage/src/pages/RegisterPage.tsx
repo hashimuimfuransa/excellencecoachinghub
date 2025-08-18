@@ -18,18 +18,13 @@ import {
   Checkbox,
   FormControlLabel,
   CircularProgress,
-  Avatar,
-  useTheme,
-  useMediaQuery,
   Grid,
 } from '@mui/material';
 import {
   Visibility,
   VisibilityOff,
-  School,
   Google,
   ArrowBack,
-  PersonAdd,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -69,7 +64,8 @@ const schema = yup.object({
     .required('Please select your role'),
   agreeToTerms: yup
     .boolean()
-    .oneOf([true], 'You must agree to the terms and conditions'),
+    .oneOf([true], 'You must agree to the terms and conditions')
+    .required('You must agree to the terms and conditions'),
 });
 
 interface RegisterFormData {
@@ -83,8 +79,6 @@ interface RegisterFormData {
 }
 
 const RegisterPage: React.FC = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const { register, loginWithGoogle } = useAuth();
   const [showPassword, setShowPassword] = useState(false);

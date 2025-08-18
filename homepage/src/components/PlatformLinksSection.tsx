@@ -7,10 +7,7 @@ import {
   Card,
   CardContent,
   Button,
-  useTheme,
-  useMediaQuery,
   Avatar,
-  Chip,
   Stack,
 } from '@mui/material';
 import {
@@ -18,10 +15,7 @@ import {
   Work,
   ArrowForward,
   AutoAwesome,
-  TrendingUp,
   Groups,
-  Assessment,
-  Psychology,
   Verified,
   Speed,
 } from '@mui/icons-material';
@@ -31,8 +25,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const PlatformLinksSection: React.FC = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
   const navigate = useNavigate();
@@ -99,7 +91,7 @@ const PlatformLinksSection: React.FC = () => {
     },
   };
 
-  const handlePlatformClick = (link: string) => {
+  const handlePlatformClick = () => {
     if (user) {
       // If user is logged in, redirect to the dashboard to choose their path
       navigate('/dashboard');
@@ -421,7 +413,7 @@ const PlatformLinksSection: React.FC = () => {
                         size="large"
                         fullWidth
                         endIcon={<ArrowForward />}
-                        onClick={() => handlePlatformClick(platform.link)}
+                        onClick={() => handlePlatformClick()}
                         sx={{
                           bgcolor: 'white',
                           color: platform.color,
@@ -631,7 +623,7 @@ const PlatformLinksSection: React.FC = () => {
                     whileTap={{ scale: 0.97 }}
                     variant="contained"
                     size="large"
-                    onClick={() => handlePlatformClick('/elearning')}
+                    onClick={() => handlePlatformClick()}
                     sx={{
                       bgcolor: '#ff6b6b',
                       color: 'white',
@@ -656,7 +648,7 @@ const PlatformLinksSection: React.FC = () => {
                     whileTap={{ scale: 0.97 }}
                     variant="outlined"
                     size="large"
-                    onClick={() => handlePlatformClick('/jobs')}
+                    onClick={() => handlePlatformClick()}
                     sx={{
                       borderColor: 'rgba(255, 255, 255, 0.8)',
                       color: 'white',

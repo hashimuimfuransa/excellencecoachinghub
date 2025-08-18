@@ -228,7 +228,7 @@ const HowItWorksSection: React.FC = () => {
                   activeStep={5}
                   connector={<ColorlibConnector />}
                 >
-                  {steps.map((step, index) => (
+                  {steps.map((step) => (
                     <Step key={step.label}>
                       <StepLabel StepIconComponent={ColorlibStepIcon}>
                         <Typography variant="h6" sx={{ fontWeight: 600, mt: 2 }}>

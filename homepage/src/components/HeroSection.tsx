@@ -5,10 +5,7 @@ import {
   Typography,
   Button,
   Grid,
-  useTheme,
-  useMediaQuery,
   Stack,
-  Chip,
 } from '@mui/material';
 import {
   PlayArrow,
@@ -19,16 +16,11 @@ import {
   AutoAwesome,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-
 interface HeroSectionProps {
   onGetStarted: () => void;
 }
 
 const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const navigate = useNavigate();
 
   const stats = [
     { icon: <School />, value: '10,000+', label: 'Students Trained' },

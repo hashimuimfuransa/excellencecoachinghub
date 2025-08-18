@@ -1,4 +1,3 @@
-import { apiService } from './api';
 import { AuthResponse } from './authService';
 
 // Google OAuth types

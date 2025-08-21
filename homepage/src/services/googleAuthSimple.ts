@@ -1,4 +1,4 @@
-import { AuthResponse } from './authService';
+import type { AuthResponse } from '../types/auth';
 
 // Google OAuth types
 declare global {

@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
-import { QuizType } from '../../../shared/types';
+import { QuizType } from '../types';
 
 // Quiz question interface
 export interface IQuizQuestionDocument extends Document {
@@ -61,7 +61,7 @@ const quizQuestionSchema = new Schema<IQuizQuestionDocument>({
   },
   type: {
     type: String,
-    enum: Object.values(QuizType),
+    enum: QuizType ? Object.values(QuizType) : ['multiple_choice', 'true_false', 'short_answer', 'essay', 'fill_in_blank'],
     required: [true, 'Question type is required']
   },
   options: [{

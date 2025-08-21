@@ -43,7 +43,7 @@ const badgeSchema = new Schema<IBadgeDocument>({
   },
   type: {
     type: String,
-    enum: Object.values(BadgeType),
+    enum: BadgeType ? Object.values(BadgeType) : ['course_completion', 'quiz_master', 'perfect_attendance', 'early_bird', 'streak_keeper'],
     required: [true, 'Badge type is required']
   },
   icon: {

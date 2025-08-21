@@ -1,0 +1,1603 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Container,
+  Typography,
+  Grid,
+  Card,
+  CardContent,
+  Button,
+  Chip,
+  LinearProgress,
+  Avatar,
+  Divider,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Paper,
+  Tab,
+  Tabs,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  CircularProgress,
+  Alert,
+  Stack,
+  useTheme,
+  alpha
+} from '@mui/material';
+import {
+  TrendingUp,
+  TrendingDown,
+  CheckCircle,
+  School,
+  Work,
+  Psychology,
+  Assessment,
+  Timeline,
+  EmojiEvents,
+  Insights,
+  Star,
+  Lightbulb,
+  GpsFixed,
+  BarChart,
+  PieChart,
+  ShowChart,
+  CalendarToday,
+  Timer,
+  Grade,
+  Build,
+  Speed,
+  Route,
+  BusinessCenter,
+  QuestionAnswer,
+  ThumbUp,
+  ThumbDown,
+  Warning,
+  Info,
+  KeyboardArrowUp,
+  KeyboardArrowDown,
+  Analytics,
+  MyLocation,
+  Refresh
+} from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+import { psychometricTestService } from '../services/psychometricTestService';
+import { useAuth } from '../contexts/AuthContext';
+
+interface QuestionAnalysis {
+  questionId: string;
+  question: string;
+  userAnswer: any;
+  correctAnswer: any;
+  isCorrect: boolean;
+  questionType: string;
+  category?: string;
+  options?: string[];
+  explanation?: string;
+}
+
+interface TestResult {
+  _id: string;
+  test?: {
+    _id: string;
+    title: string;
+    type: string;
+    industry?: string;
+    jobRole?: string;
+    jobSpecific?: boolean;
+    categories?: string[];
+    targetSkills?: string[];
+  };
+  testMetadata?: {
+    testId: string;
+    title: string;
+    description: string;
+    type: string;
+    jobSpecific?: boolean;
+    industry?: string;
+    jobRole?: string;
+  };
+  user: {
+    _id: string;
+    name: string;
+  };
+  job?: {
+    _id: string;
+    title: string;
+    company: string;
+  };
+  overallScore: number;
+  categoryScores?: Record<string, number>;
+  traitScores?: Record<string, number>;
+  feedback?: {
+    overall: string;
+    strengths: string[];
+    improvements: string[];
+    recommendations: string[];
+  };
+  percentile?: number;
+  grade?: string;
+  timeSpent: number;
+  answersCount: number;
+  totalQuestions: number;
+  createdAt: string;
+  completedAt: string;
+  detailedAnalysis?: Record<string, any>;
+  answers?: Record<string, any>;
+  scores?: Record<string, number>;
+  attempt?: number;
+  // New question analysis fields
+  questionAnalysis?: QuestionAnalysis[];
+  questionsCorrect?: number;
+  questionsIncorrect?: number;
+}
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
+
+const TestResultsPage: React.FC = () => {
+  const navigate = useNavigate();
+  const theme = useTheme();
+  const { user } = useAuth();
+  const [tabValue, setTabValue] = useState(0);
+  const [testResults, setTestResults] = useState<TestResult[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedResult, setSelectedResult] = useState<TestResult | null>(null);
+
+  useEffect(() => {
+    // Check for recent test result from session storage first
+    const recentTestResult = sessionStorage.getItem('testResult');
+    if (recentTestResult) {
+      try {
+        const parsedResult = JSON.parse(recentTestResult);
+        console.log('Found recent test result in session storage:', parsedResult);
+        
+        // Transform the session storage result to match our interface
+        const transformedResult: TestResult = {
+          _id: parsedResult._id || `temp-${Date.now()}`,
+          test: parsedResult.test,
+          testMetadata: parsedResult.testMetadata,
+          user: parsedResult.user || { _id: 'current-user', name: 'You' },
+          job: parsedResult.job,
+          answers: parsedResult.answers || {},
+          scores: parsedResult.scores || parsedResult.detailedAnalysis?.scores || {},
+          // Prioritize backend scores
+          overallScore: parsedResult.overallScore || parsedResult.detailedAnalysis?.overallScore || 0,
+          interpretation: parsedResult.interpretation || '',
+          recommendations: parsedResult.recommendations || [],
+          // Prioritize backend percentile and grade
+          percentile: parsedResult.percentile || parsedResult.detailedAnalysis?.percentile || 0,
+          grade: parsedResult.grade || parsedResult.detailedAnalysis?.grade || 'N/A',
+          timeSpent: parsedResult.timeSpent || 0,
+          answersCount: Object.keys(parsedResult.answers || {}).length,
+          totalQuestions: parsedResult.test?.questions?.length || 0,
+          createdAt: parsedResult.createdAt || new Date().toISOString(),
+          completedAt: parsedResult.createdAt || new Date().toISOString(),
+          // Include all detailed analysis from backend
+          detailedAnalysis: parsedResult.detailedAnalysis || {},
+          // Ensure feedback structure exists
+          feedback: parsedResult.feedback || {
+            overall: parsedResult.detailedAnalysis?.interpretation || '',
+            strengths: parsedResult.detailedAnalysis?.strengths || [],
+            improvements: parsedResult.detailedAnalysis?.developmentAreas || [],
+            recommendations: parsedResult.detailedAnalysis?.nextSteps || []
+          }
+        };
+        
+        // Set this as the selected result for immediate viewing
+        setSelectedResult(transformedResult);
+        
+        // Clear the session storage after reading
+        sessionStorage.removeItem('testResult');
+        
+        // Force refresh to get latest data including the new result
+        fetchTestResults(true);
+      } catch (error) {
+        console.error('Error parsing test result from session storage:', error);
+        fetchTestResults(true);
+      }
+    } else {
+      // No session storage result, just fetch normally
+      fetchTestResults(false);
+    }
+  }, []);
+
+  const fetchTestResults = async (forceRefresh = false) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      if (forceRefresh) {
+        // Clear any cached data
+        setTestResults([]);
+        setSelectedResult(null);
+      }
+      
+      const results = await psychometricTestService.getUserTestResults();
+      console.log('Fetched test results:', results.length, 'results');
+      
+      // Sort results by creation date and attempt number
+      const sortedResults = results.sort((a, b) => {
+        const dateComparison = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        if (dateComparison === 0) {
+          return (b.attempt || 1) - (a.attempt || 1);
+        }
+        return dateComparison;
+      });
+      
+      setTestResults(sortedResults);
+      
+      // If we have a recent result from session storage and no selected result, show the most recent
+      if (!selectedResult && sortedResults.length > 0) {
+        const mostRecent = sortedResults[0];
+        console.log('Setting most recent result as selected:', mostRecent);
+        setSelectedResult(mostRecent);
+      }
+      
+    } catch (error) {
+      console.error('Error fetching test results:', error);
+      setError('Failed to load test results. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
+
+  const getGradeColor = (grade?: string) => {
+    switch(grade) {
+      case 'A+': case 'A': return theme.palette.success.main;
+      case 'B+': case 'B': return theme.palette.info.main;
+      case 'C+': case 'C': return theme.palette.warning.main;
+      case 'D': return theme.palette.error.light;
+      case 'F': return theme.palette.error.main;
+      default: return theme.palette.grey[500];
+    }
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return theme.palette.success.main;
+    if (score >= 70) return theme.palette.info.main;
+    if (score >= 60) return theme.palette.warning.main;
+    return theme.palette.error.main;
+  };
+
+  const calculateAverageScore = () => {
+    if (testResults.length === 0) return 0;
+    return Math.round(testResults.reduce((sum, result) => sum + result.overallScore, 0) / testResults.length);
+  };
+
+  const getTestsByType = () => {
+    const typeCount: Record<string, number> = {};
+    testResults.forEach(result => {
+      // Handle both regular tests and generated tests
+      const type = result.test?.type || result.testMetadata?.type || 'generated';
+      typeCount[type] = (typeCount[type] || 0) + 1;
+    });
+    return typeCount;
+  };
+
+  const getRecentResults = () => {
+    return testResults
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5);
+  };
+
+  const getBestScores = () => {
+    const bestScores: Record<string, TestResult> = {};
+    testResults.forEach(result => {
+      // Handle both regular tests and generated tests
+      const testId = result.test?._id || result.testMetadata?.testId || 'generated';
+      if (!bestScores[testId] || result.overallScore > bestScores[testId].overallScore) {
+        bestScores[testId] = result;
+      }
+    });
+    return Object.values(bestScores);
+  };
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
+  };
+
+  const getGroupedResults = () => {
+    const grouped: Record<string, TestResult[]> = {};
+    testResults.forEach(result => {
+      const testKey = `${result.test?._id || result.testMetadata?.testId || 'generated'}-${result.job?._id || 'general'}`;
+      if (!grouped[testKey]) {
+        grouped[testKey] = [];
+      }
+      grouped[testKey].push(result);
+    });
+    
+    // Sort each group by attempt number (descending to show latest first)
+    Object.keys(grouped).forEach(key => {
+      grouped[key].sort((a, b) => (b.attempt || 1) - (a.attempt || 1));
+    });
+    
+    return grouped;
+  };
+
+  const getAttemptsForJob = (jobId?: string) => {
+    if (!jobId) return testResults.filter(r => !r.job);
+    return testResults.filter(r => r.job?._id === jobId);
+  };
+
+  if (loading) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+          <CircularProgress size={60} />
+        </Box>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+        <Button variant="contained" onClick={() => fetchTestResults(true)}>
+          Retry
+        </Button>
+      </Container>
+    );
+  }
+
+  return (
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+        {/* Header */}
+        <Box mb={4} display="flex" justifyContent="space-between" alignItems="center">
+          <Box>
+            <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+              Test Results & Progress
+            </Typography>
+            <Typography variant="h6" color="text.secondary">
+              Track your psychometric assessment performance and progress over time
+            </Typography>
+          </Box>
+          <Button
+            variant="outlined"
+            startIcon={<Refresh />}
+            onClick={() => fetchTestResults(true)}
+            disabled={loading}
+            sx={{ minWidth: 140 }}
+          >
+            {loading ? 'Refreshing...' : 'Refresh'}
+          </Button>
+        </Box>
+
+        {/* Statistics Cards */}
+        <Grid container spacing={3} mb={4}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ 
+              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+              color: 'white'
+            }}>
+              <CardContent>
+                <Box display="flex" alignItems="center" justifyContent="space-between">
+                  <Box>
+                    <Typography variant="h4" fontWeight="bold">
+                      {testResults.length}
+                    </Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      Tests Completed
+                    </Typography>
+                  </Box>
+                  <Assessment sx={{ fontSize: 40, opacity: 0.8 }} />
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ 
+              background: `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${theme.palette.success.dark} 100%)`,
+              color: 'white'
+            }}>
+              <CardContent>
+                <Box display="flex" alignItems="center" justifyContent="space-between">
+                  <Box>
+                    <Typography variant="h4" fontWeight="bold">
+                      {calculateAverageScore()}%
+                    </Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      Average Score
+                    </Typography>
+                  </Box>
+                  <BarChart sx={{ fontSize: 40, opacity: 0.8 }} />
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ 
+              background: `linear-gradient(135deg, ${theme.palette.info.main} 0%, ${theme.palette.info.dark} 100%)`,
+              color: 'white'
+            }}>
+              <CardContent>
+                <Box display="flex" alignItems="center" justifyContent="space-between">
+                  <Box>
+                    <Typography variant="h4" fontWeight="bold">
+                      {getBestScores().length}
+                    </Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      Unique Tests
+                    </Typography>
+                  </Box>
+                  <EmojiEvents sx={{ fontSize: 40, opacity: 0.8 }} />
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ 
+              background: `linear-gradient(135deg, ${theme.palette.warning.main} 0%, ${theme.palette.warning.dark} 100%)`,
+              color: 'white'
+            }}>
+              <CardContent>
+                <Box display="flex" alignItems="center" justifyContent="space-between">
+                  <Box>
+                    <Typography variant="h4" fontWeight="bold">
+                      {testResults.filter(r => r.test?.jobSpecific || r.testMetadata?.jobSpecific).length}
+                    </Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      Job-Specific
+                    </Typography>
+                  </Box>
+                  <GpsFixed sx={{ fontSize: 40, opacity: 0.8 }} />
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Tabs */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs value={tabValue} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
+            <Tab icon={<Timeline />} label="Overview" />
+            <Tab icon={<QuestionAnswer />} label="Question Analysis" />
+            <Tab icon={<Table />} label="All Results" />
+            <Tab icon={<ShowChart />} label="Progress Analysis" />
+            <Tab icon={<Insights />} label="Detailed Feedback" />
+          </Tabs>
+        </Box>
+
+        {/* Recent Test Result Highlight */}
+        {selectedResult && (
+          <Card sx={{ mb: 4, background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`, color: 'white' }}>
+            <CardContent>
+              <Grid container spacing={3} alignItems="center">
+                <Grid item xs={12} md={3}>
+                  <Box textAlign="center">
+                    <Typography variant="h2" fontWeight="bold" sx={{ fontSize: { xs: '2rem', md: '3rem' } }}>
+                      {selectedResult.overallScore}%
+                    </Typography>
+                    <Typography variant="h5" sx={{ opacity: 0.9 }}>
+                      {selectedResult.grade || 'N/A'}
+                    </Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.7 }}>
+                      Overall Score
+                    </Typography>
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="h5" gutterBottom>
+                    {selectedResult.test?.title || selectedResult.testMetadata?.title || 'Latest Test Results'}
+                  </Typography>
+                  <Typography variant="body1" sx={{ opacity: 0.9 }} paragraph>
+                    {selectedResult.detailedAnalysis?.interpretation || 
+                     selectedResult.feedback?.overall || 
+                     'Your assessment has been completed and analyzed.'}
+                  </Typography>
+                  <Box display="flex" gap={2} flexWrap="wrap">
+                    <Chip 
+                      label={`${selectedResult.answersCount}/${selectedResult.totalQuestions} Questions`} 
+                      sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} 
+                    />
+                    <Chip 
+                      label={formatTime(selectedResult.timeSpent)} 
+                      sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} 
+                    />
+                    {selectedResult.percentile && (
+                      <Chip 
+                        label={`${selectedResult.percentile}th Percentile`} 
+                        sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} 
+                      />
+                    )}
+                  </Box>
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Box textAlign="center">
+                    <Button 
+                      variant="outlined" 
+                      size="large"
+                      sx={{ 
+                        color: 'white', 
+                        borderColor: 'rgba(255,255,255,0.5)',
+                        '&:hover': { 
+                          borderColor: 'white',
+                          bgcolor: 'rgba(255,255,255,0.1)'
+                        }
+                      }}
+                      onClick={() => setTabValue(3)}
+                      startIcon={<Insights />}
+                    >
+                      View Detailed Analysis
+                    </Button>
+                  </Box>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* AI-Powered Quick Insights */}
+        {selectedResult && selectedResult.detailedAnalysis && (
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            {selectedResult.detailedAnalysis.industryBenchmark && (
+              <Grid item xs={12} md={4}>
+                <Card>
+                  <CardContent sx={{ textAlign: 'center' }}>
+                    <Analytics sx={{ fontSize: 40, color: 'info.main', mb: 2 }} />
+                    <Typography variant="h6" gutterBottom>Industry Benchmark</Typography>
+                    <Typography variant="h4" color="info.main" fontWeight="bold" gutterBottom>
+                      {selectedResult.detailedAnalysis.industryBenchmark}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Compared to industry standards
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            )}
+            
+            {selectedResult.detailedAnalysis.jobFitScore && (
+              <Grid item xs={12} md={4}>
+                <Card>
+                  <CardContent sx={{ textAlign: 'center' }}>
+                    <MyLocation sx={{ fontSize: 40, color: 'success.main', mb: 2 }} />
+                    <Typography variant="h6" gutterBottom>Job Fit Score</Typography>
+                    <Typography variant="h4" color="success.main" fontWeight="bold" gutterBottom>
+                      {selectedResult.detailedAnalysis.jobFitScore}%
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Alignment with role requirements
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            )}
+            
+            {selectedResult.detailedAnalysis.confidenceLevel && (
+              <Grid item xs={12} md={4}>
+                <Card>
+                  <CardContent sx={{ textAlign: 'center' }}>
+                    <Speed sx={{ fontSize: 40, color: 'warning.main', mb: 2 }} />
+                    <Typography variant="h6" gutterBottom>AI Confidence</Typography>
+                    <Typography variant="h4" color="warning.main" fontWeight="bold" gutterBottom>
+                      {Math.round(selectedResult.detailedAnalysis.confidenceLevel * 100)}%
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Analysis reliability score
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            )}
+          </Grid>
+        )}
+
+        {/* Tab Panels */}
+        <TabPanel value={tabValue} index={0}>
+          {/* Overview Tab */}
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Recent Test Results
+                  </Typography>
+                  <List>
+                    {getRecentResults().map((result, index) => (
+                      <ListItem key={result._id} divider={index < getRecentResults().length - 1}>
+                        <ListItemIcon>
+                          <Avatar sx={{ 
+                            bgcolor: getScoreColor(result.overallScore),
+                            width: 32, 
+                            height: 32,
+                            fontSize: '0.8rem'
+                          }}>
+                            {result.overallScore}
+                          </Avatar>
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={result.test?.title || result.testMetadata?.title || 'Generated Test'}
+                          secondary={`${new Date(result.createdAt).toLocaleDateString()} • ${formatTime(result.timeSpent)}`}
+                        />
+                        <Chip 
+                          label={result.grade || 'N/A'} 
+                          size="small"
+                          sx={{ 
+                            bgcolor: alpha(getGradeColor(result.grade), 0.2),
+                            color: getGradeColor(result.grade),
+                            fontWeight: 'bold'
+                          }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                  <Button 
+                    fullWidth 
+                    variant="outlined" 
+                    sx={{ mt: 2 }}
+                    onClick={() => setTabValue(1)}
+                  >
+                    View All Results
+                  </Button>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Best Scores by Test
+                  </Typography>
+                  <List>
+                    {getBestScores().slice(0, 5).map((result, index) => (
+                      <ListItem key={result._id} divider={index < getBestScores().slice(0, 5).length - 1}>
+                        <ListItemIcon>
+                          <Star sx={{ color: theme.palette.warning.main }} />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={result.test?.title || result.testMetadata?.title || 'Generated Test'}
+                          secondary={`Best: ${result.overallScore}% • ${result.grade || 'N/A'}`}
+                        />
+                        <Box sx={{ width: 100, mr: 1 }}>
+                          <LinearProgress 
+                            variant="determinate" 
+                            value={result.overallScore} 
+                            sx={{
+                              height: 8,
+                              borderRadius: 4,
+                              bgcolor: alpha(getScoreColor(result.overallScore), 0.2),
+                              '& .MuiLinearProgress-bar': {
+                                bgcolor: getScoreColor(result.overallScore)
+                              }
+                            }}
+                          />
+                        </Box>
+                      </ListItem>
+                    ))}
+                  </List>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={1}>
+          {/* Question Analysis Tab */}
+          {selectedResult?.questionAnalysis ? (
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Question Analysis for {selectedResult.test?.title || selectedResult.testMetadata?.title}
+              </Typography>
+              
+              {/* Summary Stats */}
+              <Grid container spacing={3} mb={3}>
+                <Grid item xs={12} md={4}>
+                  <Card sx={{ bgcolor: theme.palette.success.light, color: 'white' }}>
+                    <CardContent>
+                      <Box display="flex" alignItems="center" gap={2}>
+                        <CheckCircle sx={{ fontSize: 40 }} />
+                        <Box>
+                          <Typography variant="h4" fontWeight="bold">
+                            {selectedResult.questionsCorrect || 0}
+                          </Typography>
+                          <Typography variant="body2">
+                            Questions Correct
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Card sx={{ bgcolor: theme.palette.error.light, color: 'white' }}>
+                    <CardContent>
+                      <Box display="flex" alignItems="center" gap={2}>
+                        <Warning sx={{ fontSize: 40 }} />
+                        <Box>
+                          <Typography variant="h4" fontWeight="bold">
+                            {selectedResult.questionsIncorrect || 0}
+                          </Typography>
+                          <Typography variant="body2">
+                            Questions Incorrect
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} md={4}>
+                  <Card sx={{ bgcolor: theme.palette.info.light, color: 'white' }}>
+                    <CardContent>
+                      <Box display="flex" alignItems="center" gap={2}>
+                        <Assessment sx={{ fontSize: 40 }} />
+                        <Box>
+                          <Typography variant="h4" fontWeight="bold">
+                            {selectedResult.totalQuestions || 0}
+                          </Typography>
+                          <Typography variant="body2">
+                            Total Questions
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+
+              {/* Question Details */}
+              <Grid container spacing={2}>
+                {selectedResult.questionAnalysis.map((qa, index) => {
+                  const formatAnswer = (answer: any, options?: string[]) => {
+                    if (options && typeof answer === 'number') {
+                      return options[answer] || `Option ${answer + 1}`;
+                    }
+                    if (typeof answer === 'boolean') {
+                      return answer ? 'True' : 'False';
+                    }
+                    return String(answer || 'No answer');
+                  };
+
+                  return (
+                    <Grid item xs={12} key={qa.questionId}>
+                      <Card sx={{ 
+                        border: `2px solid ${qa.isCorrect ? theme.palette.success.main : theme.palette.error.main}`,
+                        bgcolor: qa.isCorrect ? alpha(theme.palette.success.main, 0.05) : alpha(theme.palette.error.main, 0.05)
+                      }}>
+                        <CardContent>
+                          <Box display="flex" alignItems="flex-start" gap={2} mb={2}>
+                            {qa.isCorrect ? (
+                              <CheckCircle sx={{ color: theme.palette.success.main, mt: 0.5 }} />
+                            ) : (
+                              <Warning sx={{ color: theme.palette.error.main, mt: 0.5 }} />
+                            )}
+                            <Box flex={1}>
+                              <Typography variant="h6" gutterBottom>
+                                Question {index + 1}
+                                <Chip 
+                                  label={qa.isCorrect ? 'Correct' : 'Incorrect'} 
+                                  size="small" 
+                                  sx={{ 
+                                    ml: 2,
+                                    bgcolor: qa.isCorrect ? theme.palette.success.main : theme.palette.error.main,
+                                    color: 'white'
+                                  }} 
+                                />
+                                {qa.category && (
+                                  <Chip 
+                                    label={qa.category} 
+                                    size="small" 
+                                    variant="outlined"
+                                    sx={{ ml: 1 }} 
+                                  />
+                                )}
+                              </Typography>
+                              <Typography variant="body1" paragraph>
+                                {qa.question}
+                              </Typography>
+                              
+                              <Grid container spacing={2}>
+                                <Grid item xs={12} md={6}>
+                                  <Typography variant="subtitle2" gutterBottom color="text.secondary">
+                                    Your Answer:
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ 
+                                    p: 1, 
+                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                    borderRadius: 1,
+                                    border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
+                                  }}>
+                                    {formatAnswer(qa.userAnswer, qa.options)}
+                                  </Typography>
+                                </Grid>
+                                
+                                {qa.correctAnswer !== null && qa.correctAnswer !== undefined && (
+                                  <Grid item xs={12} md={6}>
+                                    <Typography variant="subtitle2" gutterBottom color="text.secondary">
+                                      Correct Answer:
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ 
+                                      p: 1, 
+                                      bgcolor: alpha(theme.palette.success.main, 0.1),
+                                      borderRadius: 1,
+                                      border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`
+                                    }}>
+                                      {formatAnswer(qa.correctAnswer, qa.options)}
+                                    </Typography>
+                                  </Grid>
+                                )}
+                              </Grid>
+
+                              {qa.explanation && (
+                                <Box mt={2}>
+                                  <Typography variant="subtitle2" gutterBottom color="text.secondary">
+                                    Explanation:
+                                  </Typography>
+                                  <Typography variant="body2" sx={{ 
+                                    p: 2, 
+                                    bgcolor: alpha(theme.palette.info.main, 0.05),
+                                    borderRadius: 1,
+                                    border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`
+                                  }}>
+                                    {qa.explanation}
+                                  </Typography>
+                                </Box>
+                              )}
+                            </Box>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  );
+                })}
+              </Grid>
+            </Box>
+          ) : (
+            <Box textAlign="center" py={8}>
+              <QuestionAnswer sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                Question Analysis Not Available
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {selectedResult ? 'Question details are not available for this test result.' : 'Please select a test result to view question analysis.'}
+              </Typography>
+            </Box>
+          )}
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={2}>
+          {/* All Results Tab */}
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Test Name</TableCell>
+                  <TableCell>Type</TableCell>
+                  <TableCell>Score</TableCell>
+                  <TableCell>Grade</TableCell>
+                  <TableCell>Attempt</TableCell>
+                  <TableCell>Date</TableCell>
+                  <TableCell>Time</TableCell>
+                  <TableCell>Job</TableCell>
+                  <TableCell>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {testResults.map((result) => (
+                  <TableRow key={result._id} hover>
+                    <TableCell>
+                      <Box>
+                        <Typography variant="body2" fontWeight="medium">
+                          {result.test?.title || result.testMetadata?.title || 'Generated Test'}
+                        </Typography>
+                        {(result.test?.jobSpecific || result.testMetadata?.jobSpecific) && (
+                          <Chip label="Job-Specific" size="small" color="primary" sx={{ mt: 0.5 }} />
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Chip label={result.test?.type || result.testMetadata?.type || 'Generated'} size="small" variant="outlined" />
+                    </TableCell>
+                    <TableCell>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Typography 
+                          variant="body2" 
+                          fontWeight="bold"
+                          color={getScoreColor(result.overallScore)}
+                        >
+                          {result.overallScore}%
+                        </Typography>
+                        <LinearProgress 
+                          variant="determinate" 
+                          value={result.overallScore} 
+                          sx={{ width: 50, height: 4 }}
+                        />
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={result.grade || 'N/A'} 
+                        size="small"
+                        sx={{ 
+                          bgcolor: alpha(getGradeColor(result.grade), 0.2),
+                          color: getGradeColor(result.grade),
+                          fontWeight: 'bold'
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight="medium">
+                        #{result.attempt || 1}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {new Date(result.createdAt).toLocaleDateString()}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {formatTime(result.timeSpent)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      {result.job ? (
+                        <Typography variant="body2">
+                          {result.job.title} at {result.job.company}
+                        </Typography>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          General Assessment
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Button 
+                        size="small" 
+                        onClick={() => setSelectedResult(result)}
+                      >
+                        View Details
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={3}>
+          {/* Progress Analysis Tab */}
+          <Grid container spacing={3}>
+            <Grid item xs={12}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Score Progression Over Time
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    Track your improvement across all assessments
+                  </Typography>
+                  {/* Add chart component here */}
+                  <Box sx={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Progress chart would be implemented here with a charting library
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={4}>
+          {/* Detailed Feedback Tab */}
+          <Grid container spacing={3}>
+            {selectedResult ? (
+              <>
+                <Grid item xs={12}>
+                  <Card>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom>
+                        {selectedResult.test?.title || selectedResult.testMetadata?.title || 'Generated Test'} - Detailed Results
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" paragraph>
+                        Completed on {new Date(selectedResult.createdAt).toLocaleDateString()}
+                      </Typography>
+
+                      {/* Overall Performance Summary */}
+                      <Grid container spacing={3} sx={{ mb: 4 }}>
+                        <Grid item xs={12} md={3}>
+                          <Card sx={{ textAlign: 'center', p: 2, bgcolor: 'primary.light', color: 'white' }}>
+                            <Typography variant="h3" fontWeight="bold">{selectedResult.overallScore}%</Typography>
+                            <Typography variant="body2">Overall Score</Typography>
+                          </Card>
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                          <Card sx={{ textAlign: 'center', p: 2, bgcolor: 'success.light', color: 'white' }}>
+                            <Typography variant="h3" fontWeight="bold">{selectedResult.grade || 'N/A'}</Typography>
+                            <Typography variant="body2">Grade</Typography>
+                          </Card>
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                          <Card sx={{ textAlign: 'center', p: 2, bgcolor: 'info.light', color: 'white' }}>
+                            <Typography variant="h3" fontWeight="bold">{selectedResult.percentile || 'N/A'}%</Typography>
+                            <Typography variant="body2">Percentile</Typography>
+                          </Card>
+                        </Grid>
+                        <Grid item xs={12} md={3}>
+                          <Card sx={{ textAlign: 'center', p: 2, bgcolor: 'warning.light', color: 'white' }}>
+                            <Typography variant="h3" fontWeight="bold">{formatTime(selectedResult.timeSpent)}</Typography>
+                            <Typography variant="body2">Time Taken</Typography>
+                          </Card>
+                        </Grid>
+                      </Grid>
+
+                      {/* Category Scores */}
+                      {selectedResult.categoryScores && Object.keys(selectedResult.categoryScores).length > 0 && (
+                        <Card sx={{ mb: 3 }}>
+                          <CardContent>
+                            <Typography variant="h6" gutterBottom>
+                              <BarChart sx={{ mr: 1, verticalAlign: 'middle' }} />
+                              Category Performance
+                            </Typography>
+                            <Grid container spacing={2}>
+                              {Object.entries(selectedResult.categoryScores).map(([category, score]) => (
+                                <Grid item xs={12} sm={6} md={3} key={category}>
+                                  <Box>
+                                    <Typography variant="body2" gutterBottom sx={{ textTransform: 'capitalize' }}>
+                                      {category.replace(/([A-Z])/g, ' $1').trim()}
+                                    </Typography>
+                                    <LinearProgress 
+                                      variant="determinate" 
+                                      value={score as number} 
+                                      sx={{ height: 10, borderRadius: 5, mb: 1 }}
+                                    />
+                                    <Typography variant="body2" color="text.secondary">
+                                      {score}%
+                                    </Typography>
+                                  </Box>
+                                </Grid>
+                              ))}
+                            </Grid>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Detailed Analysis */}
+                      {selectedResult.detailedAnalysis && (
+                        <Grid container spacing={3} sx={{ mb: 3 }}>
+                          {/* Strengths */}
+                          {selectedResult.detailedAnalysis.strengths && selectedResult.detailedAnalysis.strengths.length > 0 && (
+                            <Grid item xs={12} md={6}>
+                              <Card sx={{ height: '100%' }}>
+                                <CardContent>
+                                  <Typography variant="h6" gutterBottom color="success.main">
+                                    <TrendingUp sx={{ mr: 1, verticalAlign: 'middle' }} />
+                                    Key Strengths
+                                  </Typography>
+                                  <List dense>
+                                    {selectedResult.detailedAnalysis.strengths.map((strength: string, index: number) => (
+                                      <ListItem key={index}>
+                                        <ListItemIcon>
+                                          <CheckCircle color="success" fontSize="small" />
+                                        </ListItemIcon>
+                                        <ListItemText 
+                                          primary={strength} 
+                                          primaryTypographyProps={{ variant: 'body2' }}
+                                        />
+                                      </ListItem>
+                                    ))}
+                                  </List>
+                                </CardContent>
+                              </Card>
+                            </Grid>
+                          )}
+
+                          {/* Development Areas */}
+                          {selectedResult.detailedAnalysis.developmentAreas && selectedResult.detailedAnalysis.developmentAreas.length > 0 && (
+                            <Grid item xs={12} md={6}>
+                              <Card sx={{ height: '100%' }}>
+                                <CardContent>
+                                  <Typography variant="h6" gutterBottom color="warning.main">
+                                    <TrendingDown sx={{ mr: 1, verticalAlign: 'middle' }} />
+                                    Development Areas
+                                  </Typography>
+                                  <List dense>
+                                    {selectedResult.detailedAnalysis.developmentAreas.map((area: string, index: number) => (
+                                      <ListItem key={index}>
+                                        <ListItemIcon>
+                                          <Build color="warning" fontSize="small" />
+                                        </ListItemIcon>
+                                        <ListItemText 
+                                          primary={area} 
+                                          primaryTypographyProps={{ variant: 'body2' }}
+                                        />
+                                      </ListItem>
+                                    ))}
+                                  </List>
+                                </CardContent>
+                              </Card>
+                            </Grid>
+                          )}
+                        </Grid>
+                      )}
+
+                      {/* Skill Gaps Analysis */}
+                      {selectedResult.detailedAnalysis?.skillGaps && selectedResult.detailedAnalysis.skillGaps.length > 0 && (
+                        <Card sx={{ mb: 3 }}>
+                          <CardContent>
+                            <Typography variant="h6" gutterBottom>
+                              <GpsFixed sx={{ mr: 1, verticalAlign: 'middle' }} />
+                              Skill Development Plan
+                            </Typography>
+                            <Grid container spacing={2}>
+                              {selectedResult.detailedAnalysis.skillGaps.map((skillGap: any, index: number) => (
+                                <Grid item xs={12} md={6} key={index}>
+                                  <Card variant="outlined">
+                                    <CardContent>
+                                      <Typography variant="h6" gutterBottom color="primary.main">
+                                        {skillGap.skill}
+                                      </Typography>
+                                      <Box display="flex" alignItems="center" gap={2} mb={2}>
+                                        <Chip 
+                                          label={`Current: ${skillGap.currentLevel}`} 
+                                          size="small" 
+                                          color="warning" 
+                                        />
+                                        <Chip 
+                                          label={`Target: ${skillGap.targetLevel}`} 
+                                          size="small" 
+                                          color="success" 
+                                        />
+                                        <Chip 
+                                          label={skillGap.importance} 
+                                          size="small" 
+                                          color={skillGap.importance === 'High' ? 'error' : 'info'} 
+                                        />
+                                      </Box>
+                                      <Typography variant="body2" color="text.secondary">
+                                        {skillGap.learningPath}
+                                      </Typography>
+                                    </CardContent>
+                                  </Card>
+                                </Grid>
+                              ))}
+                            </Grid>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Career Readiness */}
+                      {selectedResult.detailedAnalysis?.careerReadiness && (
+                        <Card sx={{ mb: 3 }}>
+                          <CardContent>
+                            <Typography variant="h6" gutterBottom>
+                              <BusinessCenter sx={{ mr: 1, verticalAlign: 'middle' }} />
+                              Career Readiness Assessment
+                            </Typography>
+                            <Grid container spacing={3}>
+                              <Grid item xs={12} md={3}>
+                                <Box textAlign="center">
+                                  <Typography variant="h4" color="primary.main" fontWeight="bold">
+                                    {selectedResult.detailedAnalysis.careerReadiness.currentRole || 'N/A'}
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">Current Role Fit</Typography>
+                                </Box>
+                              </Grid>
+                              <Grid item xs={12} md={3}>
+                                <Box textAlign="center">
+                                  <Typography variant="h4" color="success.main" fontWeight="bold">
+                                    {selectedResult.detailedAnalysis.careerReadiness.nextLevel || 'N/A'}
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">Next Level Readiness</Typography>
+                                </Box>
+                              </Grid>
+                              <Grid item xs={12} md={3}>
+                                <Box textAlign="center">
+                                  <Typography variant="h4" color="info.main" fontWeight="bold">
+                                    {selectedResult.detailedAnalysis.careerReadiness.timeToPromotion || 'N/A'}
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">Est. Time to Promotion</Typography>
+                                </Box>
+                              </Grid>
+                              <Grid item xs={12} md={3}>
+                                <Box textAlign="center">
+                                  <Typography variant="h4" color="warning.main" fontWeight="bold">
+                                    {selectedResult.detailedAnalysis.jobFitScore || selectedResult.overallScore}%
+                                  </Typography>
+                                  <Typography variant="body2" color="text.secondary">Job Fit Score</Typography>
+                                </Box>
+                              </Grid>
+                            </Grid>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Question-by-Question Breakdown */}
+                      {selectedResult.test?.questions && selectedResult.answers && (
+                        <Card sx={{ mb: 3 }}>
+                          <CardContent>
+                            <Typography variant="h6" gutterBottom>
+                              <QuestionAnswer sx={{ mr: 1, verticalAlign: 'middle' }} />
+                              Question Analysis & Feedback
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                              Detailed breakdown of your responses and areas for improvement
+                            </Typography>
+                            
+                            <Box sx={{ maxHeight: 600, overflowY: 'auto' }}>
+                              {selectedResult.test.questions.map((question: any, index: number) => {
+                                const questionId = question._id || question.id || `q${index + 1}`;
+                                const userAnswer = selectedResult.answers?.[questionId];
+                                const isCorrect = question.correctAnswer ? userAnswer === question.correctAnswer : null;
+                                const hasAnswer = userAnswer !== undefined && userAnswer !== null && userAnswer !== '';
+
+                                return (
+                                  <Card key={index} variant="outlined" sx={{ mb: 2 }}>
+                                    <CardContent>
+                                      <Box display="flex" alignItems="flex-start" justifyContent="space-between" mb={2}>
+                                        <Box sx={{ flex: 1 }}>
+                                          <Typography variant="subtitle1" fontWeight="medium" gutterBottom>
+                                            Q{index + 1}: {question.question}
+                                          </Typography>
+                                          <Box display="flex" gap={1} mb={2}>
+                                            <Chip 
+                                              label={question.category || 'General'} 
+                                              size="small" 
+                                              color="primary" 
+                                              variant="outlined" 
+                                            />
+                                            <Chip 
+                                              label={question.type?.replace('_', ' ') || 'Mixed'} 
+                                              size="small" 
+                                              color="secondary" 
+                                              variant="outlined" 
+                                            />
+                                          </Box>
+                                        </Box>
+                                        
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                          {!hasAnswer ? (
+                                            <Chip icon={<Warning />} label="Skipped" size="small" color="error" />
+                                          ) : isCorrect === true ? (
+                                            <Chip icon={<ThumbUp />} label="Correct" size="small" color="success" />
+                                          ) : isCorrect === false ? (
+                                            <Chip icon={<ThumbDown />} label="Incorrect" size="small" color="error" />
+                                          ) : (
+                                            <Chip icon={<Info />} label="Answered" size="small" color="info" />
+                                          )}
+                                        </Box>
+                                      </Box>
+
+                                      <Grid container spacing={2}>
+                                        <Grid item xs={12} md={6}>
+                                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                                            Your Answer:
+                                          </Typography>
+                                          <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
+                                            <Typography variant="body2">
+                                              {hasAnswer ? (
+                                                typeof userAnswer === 'string' && userAnswer.length > 100 ? 
+                                                  `${userAnswer.substring(0, 100)}...` : 
+                                                  String(userAnswer)
+                                              ) : (
+                                                <em style={{ color: '#999' }}>No answer provided</em>
+                                              )}
+                                            </Typography>
+                                          </Paper>
+                                        </Grid>
+
+                                        {question.correctAnswer && (
+                                          <Grid item xs={12} md={6}>
+                                            <Typography variant="body2" color="text.secondary" gutterBottom>
+                                              Expected Answer:
+                                            </Typography>
+                                            <Paper sx={{ p: 2, bgcolor: 'success.50' }}>
+                                              <Typography variant="body2" color="success.dark">
+                                                {question.correctAnswer}
+                                              </Typography>
+                                            </Paper>
+                                          </Grid>
+                                        )}
+
+                                        {question.explanation && (
+                                          <Grid item xs={12}>
+                                            <Typography variant="body2" color="text.secondary" gutterBottom>
+                                              Explanation:
+                                            </Typography>
+                                            <Alert severity="info" sx={{ '& .MuiAlert-message': { width: '100%' } }}>
+                                              <Typography variant="body2">
+                                                {question.explanation}
+                                              </Typography>
+                                            </Alert>
+                                          </Grid>
+                                        )}
+                                      </Grid>
+                                    </CardContent>
+                                  </Card>
+                                );
+                              })}
+                            </Box>
+
+                            {/* Summary Stats */}
+                            <Card variant="outlined" sx={{ mt: 3, bgcolor: 'background.default' }}>
+                              <CardContent>
+                                <Typography variant="h6" gutterBottom>Question Summary</Typography>
+                                <Grid container spacing={2}>
+                                  <Grid item xs={6} sm={3}>
+                                    <Box textAlign="center">
+                                      <Typography variant="h4" color="primary.main" fontWeight="bold">
+                                        {selectedResult.answersCount || Object.keys(selectedResult.answers || {}).length}
+                                      </Typography>
+                                      <Typography variant="caption" color="text.secondary">
+                                        Answered
+                                      </Typography>
+                                    </Box>
+                                  </Grid>
+                                  <Grid item xs={6} sm={3}>
+                                    <Box textAlign="center">
+                                      <Typography variant="h4" color="error.main" fontWeight="bold">
+                                        {selectedResult.totalQuestions - (selectedResult.answersCount || Object.keys(selectedResult.answers || {}).length)}
+                                      </Typography>
+                                      <Typography variant="caption" color="text.secondary">
+                                        Skipped
+                                      </Typography>
+                                    </Box>
+                                  </Grid>
+                                  <Grid item xs={6} sm={3}>
+                                    <Box textAlign="center">
+                                      <Typography variant="h4" color="success.main" fontWeight="bold">
+                                        {selectedResult.test.questions?.filter((q: any, i: number) => {
+                                          const qId = q._id || q.id || `q${i + 1}`;
+                                          const userAnswer = selectedResult.answers?.[qId];
+                                          return q.correctAnswer && userAnswer === q.correctAnswer;
+                                        }).length || 0}
+                                      </Typography>
+                                      <Typography variant="caption" color="text.secondary">
+                                        Correct
+                                      </Typography>
+                                    </Box>
+                                  </Grid>
+                                  <Grid item xs={6} sm={3}>
+                                    <Box textAlign="center">
+                                      <Typography variant="h4" color="warning.main" fontWeight="bold">
+                                        {Math.round(((selectedResult.answersCount || Object.keys(selectedResult.answers || {}).length) / selectedResult.totalQuestions) * 100)}%
+                                      </Typography>
+                                      <Typography variant="caption" color="text.secondary">
+                                        Completion Rate
+                                      </Typography>
+                                    </Box>
+                                  </Grid>
+                                </Grid>
+                              </CardContent>
+                            </Card>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Learning Recommendations */}
+                      {selectedResult.detailedAnalysis?.learningRecommendations && selectedResult.detailedAnalysis.learningRecommendations.length > 0 && (
+                        <Card sx={{ mb: 3 }}>
+                          <CardContent>
+                            <Typography variant="h6" gutterBottom>
+                              <Route sx={{ mr: 1, verticalAlign: 'middle' }} />
+                              Learning Pathway Recommendations
+                            </Typography>
+                            <Grid container spacing={2}>
+                              {selectedResult.detailedAnalysis.learningRecommendations.map((rec: any, index: number) => (
+                                <Grid item xs={12} key={index}>
+                                  <Card variant="outlined" sx={{ 
+                                    borderLeft: `4px solid ${rec.priority === 'High' ? theme.palette.error.main : theme.palette.info.main}` 
+                                  }}>
+                                    <CardContent>
+                                      <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                                        <Typography variant="h6" color="primary.main">
+                                          {rec.type}
+                                        </Typography>
+                                        <Chip 
+                                          label={`${rec.priority} Priority`} 
+                                          size="small" 
+                                          color={rec.priority === 'High' ? 'error' : 'info'} 
+                                        />
+                                      </Box>
+                                      <Typography variant="body1" paragraph>
+                                        {rec.recommendation}
+                                      </Typography>
+                                      <Box display="flex" alignItems="center" gap={2}>
+                                        <Chip 
+                                          icon={<Timer />} 
+                                          label={rec.timeline} 
+                                          size="small" 
+                                          variant="outlined" 
+                                        />
+                                        <Typography variant="body2" color="text.secondary">
+                                          Resources: {rec.resources?.join(', ') || 'To be defined'}
+                                        </Typography>
+                                      </Box>
+                                    </CardContent>
+                                  </Card>
+                                </Grid>
+                              ))}
+                            </Grid>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Next Steps */}
+                      {selectedResult.detailedAnalysis?.nextSteps && selectedResult.detailedAnalysis.nextSteps.length > 0 && (
+                        <Card>
+                          <CardContent>
+                            <Typography variant="h6" gutterBottom>
+                              <EmojiEvents sx={{ mr: 1, verticalAlign: 'middle' }} />
+                              Recommended Next Steps
+                            </Typography>
+                            <List>
+                              {selectedResult.detailedAnalysis.nextSteps.map((step: string, index: number) => (
+                                <ListItem key={index}>
+                                  <ListItemIcon>
+                                    <Avatar sx={{ bgcolor: 'primary.main', width: 24, height: 24, fontSize: '0.75rem' }}>
+                                      {index + 1}
+                                    </Avatar>
+                                  </ListItemIcon>
+                                  <ListItemText 
+                                    primary={step} 
+                                    primaryTypographyProps={{ variant: 'body1' }}
+                                  />
+                                </ListItem>
+                              ))}
+                            </List>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Fallback for basic feedback */}
+                      {selectedResult.feedback && !selectedResult.detailedAnalysis && (
+                        <Box>
+                          <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+                            Overall Performance
+                          </Typography>
+                          <Typography variant="body1" paragraph>
+                            {selectedResult.feedback.overall}
+                          </Typography>
+
+                          <Grid container spacing={3} sx={{ mt: 2 }}>
+                            <Grid item xs={12} md={4}>
+                              <Typography variant="h6" gutterBottom color="success.main">
+                                <TrendingUp sx={{ mr: 1, verticalAlign: 'middle' }} />
+                                Strengths
+                              </Typography>
+                              <List dense>
+                                {selectedResult.feedback.strengths?.map((strength: string, index: number) => (
+                                  <ListItem key={index}>
+                                    <ListItemIcon>
+                                      <CheckCircle color="success" fontSize="small" />
+                                    </ListItemIcon>
+                                    <ListItemText primary={strength} />
+                                  </ListItem>
+                                ))}
+                              </List>
+                            </Grid>
+
+                            <Grid item xs={12} md={4}>
+                              <Typography variant="h6" gutterBottom color="warning.main">
+                                <TrendingDown sx={{ mr: 1, verticalAlign: 'middle' }} />
+                                Areas for Improvement
+                              </Typography>
+                              <List dense>
+                                {selectedResult.feedback.improvements?.map((improvement: string, index: number) => (
+                                  <ListItem key={index}>
+                                    <ListItemIcon>
+                                      <Build color="warning" fontSize="small" />
+                                    </ListItemIcon>
+                                    <ListItemText primary={improvement} />
+                                  </ListItem>
+                                ))}
+                              </List>
+                            </Grid>
+
+                            <Grid item xs={12} md={4}>
+                              <Typography variant="h6" gutterBottom color="info.main">
+                                <Lightbulb sx={{ mr: 1, verticalAlign: 'middle' }} />
+                                Recommendations
+                              </Typography>
+                              <List dense>
+                                {selectedResult.feedback.recommendations?.map((recommendation: string, index: number) => (
+                                  <ListItem key={index}>
+                                    <ListItemIcon>
+                                      <Star color="info" fontSize="small" />
+                                    </ListItemIcon>
+                                    <ListItemText primary={recommendation} />
+                                  </ListItem>
+                                ))}
+                              </List>
+                            </Grid>
+                          </Grid>
+                        </Box>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </>
+            ) : (
+              <Grid item xs={12}>
+                <Alert severity="info">
+                  Select a test result from the "All Results" tab to view detailed feedback.
+                </Alert>
+              </Grid>
+            )}
+          </Grid>
+        </TabPanel>
+
+        {/* Quick Actions */}
+        <Box mt={4}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Continue Your Assessment Journey
+              </Typography>
+              <Stack direction="row" spacing={2}>
+                <Button 
+                  variant="contained" 
+                  startIcon={<Assessment />}
+                  onClick={() => navigate('/app/tests')}
+                >
+                  Take New Assessment
+                </Button>
+                <Button 
+                  variant="outlined" 
+                  startIcon={<Work />}
+                  onClick={() => navigate('/app/jobs')}
+                >
+                  Find Job-Specific Tests
+                </Button>
+                <Button 
+                  variant="outlined" 
+                  startIcon={<School />}
+                  onClick={() => navigate('/app/certificates')}
+                >
+                  View Certificates
+                </Button>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Box>
+      </Container>
+  );
+};
+
+export default TestResultsPage;

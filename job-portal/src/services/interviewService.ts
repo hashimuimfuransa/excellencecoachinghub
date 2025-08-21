@@ -1,0 +1,264 @@
+import api from './api';
+
+export interface InterviewQuestion {
+  _id: string;
+  question: string;
+  type: 'behavioral' | 'technical' | 'situational' | 'general';
+  expectedDuration: number; // in seconds
+  followUpQuestions?: string[];
+  tips?: string[];
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+}
+
+export interface InterviewSession {
+  _id: string;
+  title: string;
+  description: string;
+  job: {
+    _id: string;
+    title: string;
+    company: string;
+    location: string;
+    skills: string[];
+    requirements: string[];
+    responsibilities: string[];
+  };
+  questions: InterviewQuestion[];
+  totalDuration: number;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  type: 'general' | 'technical' | 'behavioral' | 'mixed';
+  createdAt: string;
+}
+
+export interface InterviewResult {
+  _id: string;
+  session: InterviewSession;
+  user: string;
+  answers: Record<string, any>;
+  scores: {
+    communication: number;
+    confidence: number;
+    technical: number;
+    clarity: number;
+    relevance: number;
+  };
+  overallScore: number;
+  feedback: string[];
+  recommendations: string[];
+  completedAt: string;
+  timeSpent: number;
+}
+
+class InterviewService {
+  async generateInterviewSession(jobId: string, difficulty: 'Easy' | 'Medium' | 'Hard' = 'Medium'): Promise<InterviewSession> {
+    try {
+      // For now, generate questions based on job requirements
+      // In a real implementation, this would call an AI service
+      const job = await this.getJobDetails(jobId);
+      const questions = this.generateQuestionsForJob(job, difficulty);
+      
+      const session: InterviewSession = {
+        _id: `session-${Date.now()}`,
+        title: `${job.title} Interview Practice`,
+        description: `Practice interview session for ${job.title} position at ${job.company}`,
+        job,
+        questions,
+        totalDuration: questions.reduce((total, q) => total + q.expectedDuration, 0),
+        difficulty,
+        type: 'mixed',
+        createdAt: new Date().toISOString()
+      };
+      
+      return session;
+    } catch (error) {
+      console.error('Error generating interview session:', error);
+      throw error;
+    }
+  }
+
+  private async getJobDetails(jobId: string) {
+    try {
+      const response = await api.get(`/jobs/${jobId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching job details:', error);
+      throw error;
+    }
+  }
+
+  private generateQuestionsForJob(job: any, difficulty: 'Easy' | 'Medium' | 'Hard'): InterviewQuestion[] {
+    const questions: InterviewQuestion[] = [];
+    
+    // General questions
+    questions.push({
+      _id: `q-general-1`,
+      question: `Tell me about yourself and why you're interested in the ${job.title} position.`,
+      type: 'general',
+      expectedDuration: 120,
+      tips: [
+        'Keep your answer concise and relevant to the role',
+        'Highlight your key achievements and experiences',
+        'Connect your background to the job requirements'
+      ],
+      difficulty
+    });
+
+    // Behavioral questions
+    questions.push({
+      _id: `q-behavioral-1`,
+      question: 'Describe a challenging project you worked on and how you overcame the obstacles.',
+      type: 'behavioral',
+      expectedDuration: 180,
+      tips: [
+        'Use the STAR method (Situation, Task, Action, Result)',
+        'Focus on your specific contributions',
+        'Quantify your results when possible'
+      ],
+      difficulty
+    });
+
+    // Technical questions based on job skills
+    if (job.skills && job.skills.length > 0) {
+      const primarySkill = job.skills[0];
+      questions.push({
+        _id: `q-technical-1`,
+        question: `How would you approach a problem involving ${primarySkill}? Walk me through your thought process.`,
+        type: 'technical',
+        expectedDuration: 240,
+        tips: [
+          'Break down the problem into smaller parts',
+          'Explain your reasoning clearly',
+          'Consider edge cases and alternatives'
+        ],
+        difficulty
+      });
+    }
+
+    // Situational questions
+    questions.push({
+      _id: `q-situational-1`,
+      question: `Imagine you're working on a tight deadline for a ${job.title} project, but you discover a significant issue that could delay the delivery. How would you handle this situation?`,
+      type: 'situational',
+      expectedDuration: 150,
+      tips: [
+        'Consider all stakeholders involved',
+        'Prioritize communication and transparency',
+        'Propose concrete solutions'
+      ],
+      difficulty
+    });
+
+    // Company-specific question
+    questions.push({
+      _id: `q-general-2`,
+      question: `What do you know about ${job.company} and why do you want to work here?`,
+      type: 'general',
+      expectedDuration: 120,
+      tips: [
+        'Research the company beforehand',
+        'Mention specific aspects that appeal to you',
+        'Connect your values with the company culture'
+      ],
+      difficulty
+    });
+
+    // Role-specific question
+    if (job.responsibilities && job.responsibilities.length > 0) {
+      const primaryResponsibility = job.responsibilities[0];
+      questions.push({
+        _id: `q-technical-2`,
+        question: `This role involves ${primaryResponsibility.toLowerCase()}. Can you share your experience with similar responsibilities?`,
+        type: 'technical',
+        expectedDuration: 180,
+        tips: [
+          'Provide specific examples from your experience',
+          'Highlight relevant achievements',
+          'Show enthusiasm for the responsibility'
+        ],
+        difficulty
+      });
+    }
+
+    // Closing question
+    questions.push({
+      _id: `q-general-3`,
+      question: 'Do you have any questions about the role or the company?',
+      type: 'general',
+      expectedDuration: 120,
+      tips: [
+        'Always have thoughtful questions prepared',
+        'Ask about growth opportunities and team culture',
+        'Show genuine interest in the role'
+      ],
+      difficulty
+    });
+
+    return questions;
+  }
+
+  async saveInterviewResult(result: Omit<InterviewResult, '_id' | 'createdAt'>): Promise<InterviewResult> {
+    try {
+      const response = await api.post('/interview-results', result);
+      return response.data;
+    } catch (error) {
+      console.error('Error saving interview result:', error);
+      // Return mock result for now
+      return {
+        ...result,
+        _id: `result-${Date.now()}`,
+        completedAt: new Date().toISOString()
+      } as InterviewResult;
+    }
+  }
+
+  async getUserInterviewResults(): Promise<InterviewResult[]> {
+    try {
+      const response = await api.get('/interview-results');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching interview results:', error);
+      return [];
+    }
+  }
+
+  async analyzeInterviewPerformance(answers: Record<string, any>, questions: InterviewQuestion[]): Promise<{
+    scores: InterviewResult['scores'];
+    overallScore: number;
+    feedback: string[];
+    recommendations: string[];
+  }> {
+    // Simulate analysis - in real implementation, this would use AI/ML
+    const scores = {
+      communication: Math.floor(Math.random() * 30) + 70,
+      confidence: Math.floor(Math.random() * 30) + 70,
+      technical: Math.floor(Math.random() * 30) + 70,
+      clarity: Math.floor(Math.random() * 30) + 70,
+      relevance: Math.floor(Math.random() * 30) + 70
+    };
+
+    const overallScore = Math.floor(Object.values(scores).reduce((a, b) => a + b, 0) / Object.values(scores).length);
+
+    const feedback = [
+      'Demonstrated strong communication skills throughout the interview',
+      'Provided relevant examples to support your answers',
+      'Showed good understanding of the role requirements',
+      'Maintained professional demeanor and confidence'
+    ];
+
+    const recommendations = [
+      'Practice more technical scenarios specific to the role',
+      'Prepare more detailed examples for behavioral questions',
+      'Research the company culture and values more deeply',
+      'Work on structuring your answers more clearly'
+    ];
+
+    return {
+      scores,
+      overallScore,
+      feedback,
+      recommendations
+    };
+  }
+}
+
+export const interviewService = new InterviewService();

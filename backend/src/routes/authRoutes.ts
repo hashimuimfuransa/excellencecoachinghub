@@ -9,7 +9,8 @@ import {
   resetPassword,
   testEmail,
   googleAuth,
-  googleCompleteRegistration
+  googleCompleteRegistration,
+  updateProfile
 } from '../controllers/authController';
 import { protect } from '../middleware/auth';
 import { validateRequest } from '../middleware/validateRequest';
@@ -104,5 +105,6 @@ router.post('/reset-password', resetPasswordValidation, validateRequest, resetPa
 router.post('/google', googleAuth); // Main Google OAuth endpoint
 router.post('/google/complete-registration', googleRegistrationValidation, validateRequest, googleCompleteRegistration);
 router.post('/test-email', testEmail); // Test endpoint for email service
+router.post('/update-profile', protect, updateProfile); // Profile update endpoint
 
 export default router;

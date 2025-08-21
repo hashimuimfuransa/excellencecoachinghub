@@ -121,8 +121,20 @@ const updateProfileValidation = [
     .normalizeEmail(),
   body('avatar')
     .optional()
-    .isURL()
-    .withMessage('Avatar must be a valid URL')
+    .custom((value) => {
+      // Allow null, undefined, or empty string
+      if (value === null || value === undefined || value === '') {
+        return true;
+      }
+      // If value is provided, it must be a valid URL
+      if (typeof value === 'string' && value.length > 0) {
+        const urlRegex = /^https?:\/\/.+/;
+        if (!urlRegex.test(value)) {
+          throw new Error('Avatar must be a valid URL');
+        }
+      }
+      return true;
+    })
 ];
 
 const changePasswordValidation = [
@@ -148,6 +160,10 @@ router.get('/profile', getCurrentProfile);
 router.put('/profile', updateProfileValidation, validateRequest, updateProfile);
 router.put('/change-password', changePasswordValidation, validateRequest, changePassword);
 router.post('/upload-avatar', multerUpload.single('avatar'), uploadAvatar);
+
+// Profile routes with user ID parameter (for frontend compatibility)
+router.get('/:id/profile', getCurrentProfile);
+router.put('/:id/profile', updateProfileValidation, validateRequest, updateProfile);
 
 // Debug route to check environment variables (remove in production)
 router.get('/debug/env', (req, res) => {

@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
-import { NotificationType } from '../../../shared/types';
+import { NotificationType } from '../types';
 
 // Notification document interface
 export interface INotificationDocument extends Document {
@@ -42,7 +42,7 @@ const notificationSchema = new Schema<INotificationDocument>({
   },
   type: {
     type: String,
-    enum: Object.values(NotificationType),
+    enum: NotificationType ? Object.values(NotificationType) : ['course_enrollment', 'assignment_due', 'grade_posted', 'course_update', 'exam_reminder', 'proctoring_alert', 'general'],
     required: [true, 'Notification type is required']
   },
   title: {

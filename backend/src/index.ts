@@ -58,6 +58,16 @@ import recordedSessionRoutes from '@/routes/recordedSessions';
 import gradesRoutes from '@/routes/gradesRoutes';
 import testRoutes from '@/routes/testRoutes';
 
+// Job Portal routes
+import jobRoutes from '@/routes/jobRoutes';
+import jobApplicationRoutes from '@/routes/jobApplicationRoutes';
+import psychometricTestRoutes from '@/routes/psychometricTestRoutes';
+import aiInterviewRoutes from '@/routes/aiInterviewRoutes';
+import jobCertificateRoutes from '@/routes/jobCertificateRoutes';
+import profileRoutes from '@/routes/profileRoutes';
+import uploadRoutes from '@/routes/uploadRoutes';
+import superAdminRoutes from '@/routes/superAdminRoutes';
+
 
 
 const app = express();
@@ -68,6 +78,10 @@ const io = new Server(server, {
   cors: {
     origin: [
       'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:3002',
+      'http://localhost:5173',
+      'http://localhost:5174',
       'https://excellencecoachinghub.onrender.com',
       process.env['FRONTEND_URL'] || 'http://localhost:3000'
     ],
@@ -119,6 +133,10 @@ const corsOptions = {
     
     const allowedOrigins = [
       'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:3002',
+      'http://localhost:5173',
+      'http://localhost:5174',
       'https://excellencecoachinghub.onrender.com',
       process.env['FRONTEND_URL'] || 'http://localhost:3000'
     ];
@@ -300,6 +318,18 @@ app.use('/api/announcements', announcementRoutes);
 app.use('/api/recorded-sessions', recordedSessionRoutes);
 app.use('/api/grades', gradesRoutes);
 app.use('/api/test', testRoutes);
+
+// Job Portal routes
+app.use('/api/jobs', jobRoutes);
+app.use('/api/job-applications', jobApplicationRoutes);
+app.use('/api/psychometric-tests', psychometricTestRoutes);
+app.use('/api/ai-interviews', aiInterviewRoutes);
+app.use('/api/job-certificates', jobCertificateRoutes);
+app.use('/api/profiles', profileRoutes);
+app.use('/api/upload', uploadRoutes);
+
+// Super Admin routes
+app.use('/api/admin', superAdminRoutes);
 
 console.log('✅ All routes mounted successfully');
 

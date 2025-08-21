@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
-import { UserRole } from '../../../shared/types';
+import { UserRole } from '../types';
 
 // User document interface extending the shared IUser interface
 export interface IUserDocument extends Document {
@@ -28,6 +28,116 @@ export interface IUserDocument extends Document {
   pushNotifications?: boolean;
   theme?: string;
   language?: string;
+  // Job Portal fields
+  company?: string; // For employers
+  jobTitle?: string; // For employers
+  
+  // Job Seeker Profile fields
+  bio?: string;
+  phone?: string;
+  location?: string;
+  profilePicture?: string;
+  resume?: string;
+  cvFile?: string;
+  resumeFile?: string;
+  portfolioFiles?: string[];
+  skills?: string[];
+  experience?: Array<{
+    _id?: string;
+    company: string;
+    position: string;
+    startDate: string;
+    endDate?: string;
+    current: boolean;
+    description?: string;
+    location?: string;
+    achievements?: string[];
+    employmentType?: string;
+    industry?: string;
+    responsibilities?: string[];
+    technologies?: string[];
+  }>;
+  education?: Array<{
+    _id?: string;
+    institution: string;
+    degree: string;
+    fieldOfStudy: string;
+    startDate: string;
+    endDate?: string;
+    current: boolean;
+    gpa?: number;
+    description?: string;
+    achievements?: string[];
+  }>;
+  certifications?: Array<{
+    _id?: string;
+    name: string;
+    issuer: string;
+    issueDate: string;
+    expiryDate?: string;
+    credentialId?: string;
+    credentialUrl?: string;
+    description?: string;
+  }>;
+  languages?: Array<{
+    name: string;
+    proficiency: string;
+  }>;
+  socialLinks?: {
+    linkedin?: string;
+    github?: string;
+    portfolio?: string;
+    twitter?: string;
+    website?: string;
+  };
+  jobPreferences?: {
+    jobTypes?: string[];
+    preferredJobTypes?: string[];
+    salaryRange?: {
+      min: number;
+      max: number;
+      currency: string;
+    };
+    locations?: string[];
+    preferredLocations?: string[];
+    remoteWork?: boolean;
+    willingToRelocate?: boolean;
+    industries?: string[];
+    preferredIndustries?: string[];
+    experienceLevel?: string;
+  };
+  employmentStatus?: string;
+  experienceLevel?: string;
+  yearsOfExperience?: number;
+  noticePeriod?: string;
+  summary?: string;
+  currentSalary?: number;
+  expectedSalary?: number;
+  preferredJobType?: string;
+  workPreference?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  nationality?: string;
+  address?: string;
+  industry?: string;
+  department?: string;
+  
+  // Profile completion tracking
+  profileCompletion?: {
+    percentage: number;
+    status: string;
+    missingFields: string[];
+    lastUpdated: string;
+  };
+  lastProfileUpdate?: string;
+  
+  // Statistics
+  applicationCount?: number;
+  savedJobsCount?: number;
+  certificatesCount?: number;
+  testsCompletedCount?: number;
+  interviewsCount?: number;
+  
   createdAt: Date;
   updatedAt: Date;
   
@@ -82,7 +192,7 @@ const userSchema = new Schema<IUserDocument>({
   },
   role: {
     type: String,
-    enum: Object.values(UserRole),
+    enum: UserRole ? Object.values(UserRole) : ['admin', 'super_admin', 'teacher', 'student', 'professional', 'employer'],
     required: [true, 'User role is required'],
     default: UserRole.STUDENT
   },
@@ -159,7 +269,202 @@ const userSchema = new Schema<IUserDocument>({
   language: {
     type: String,
     default: 'en'
-  }
+  },
+  // Job Portal fields
+  company: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Company name cannot exceed 200 characters']
+  },
+  jobTitle: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Job title cannot exceed 200 characters']
+  },
+  
+  // Job Seeker Profile fields
+  bio: {
+    type: String,
+    trim: true,
+    maxlength: [1000, 'Bio cannot exceed 1000 characters']
+  },
+  phone: {
+    type: String,
+    trim: true,
+    maxlength: [20, 'Phone number cannot exceed 20 characters']
+  },
+  location: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Location cannot exceed 200 characters']
+  },
+  profilePicture: {
+    type: String,
+    trim: true
+  },
+  resume: {
+    type: String,
+    trim: true
+  },
+  cvFile: {
+    type: String,
+    trim: true
+  },
+  resumeFile: {
+    type: String,
+    trim: true
+  },
+  portfolioFiles: [{
+    type: String,
+    trim: true
+  }],
+  skills: [{
+    type: String,
+    trim: true
+  }],
+  experience: [{
+    _id: { type: String },
+    company: { type: String, trim: true },
+    position: { type: String, trim: true },
+    startDate: { type: String },
+    endDate: { type: String },
+    current: { type: Boolean, default: false },
+    description: { type: String, trim: true },
+    location: { type: String, trim: true },
+    achievements: [{ type: String, trim: true }],
+    employmentType: { type: String, trim: true },
+    industry: { type: String, trim: true },
+    responsibilities: [{ type: String, trim: true }],
+    technologies: [{ type: String, trim: true }]
+  }],
+  education: [{
+    _id: { type: String },
+    institution: { type: String, trim: true },
+    degree: { type: String, trim: true },
+    fieldOfStudy: { type: String, trim: true },
+    startDate: { type: String },
+    endDate: { type: String },
+    current: { type: Boolean, default: false },
+    gpa: { type: Number, min: 0, max: 4 },
+    description: { type: String, trim: true },
+    achievements: [{ type: String, trim: true }]
+  }],
+  certifications: [{
+    _id: { type: String },
+    name: { type: String, trim: true },
+    issuer: { type: String, trim: true },
+    issueDate: { type: String },
+    expiryDate: { type: String },
+    credentialId: { type: String, trim: true },
+    credentialUrl: { type: String, trim: true },
+    description: { type: String, trim: true }
+  }],
+  languages: [{
+    name: { type: String, trim: true },
+    proficiency: { type: String, trim: true }
+  }],
+  socialLinks: {
+    linkedin: { type: String, trim: true },
+    github: { type: String, trim: true },
+    portfolio: { type: String, trim: true },
+    twitter: { type: String, trim: true },
+    website: { type: String, trim: true }
+  },
+  jobPreferences: {
+    jobTypes: [{ type: String, trim: true }],
+    preferredJobTypes: [{ type: String, trim: true }],
+    salaryRange: {
+      min: { type: Number, min: 0 },
+      max: { type: Number, min: 0 },
+      currency: { type: String, default: 'USD', trim: true }
+    },
+    locations: [{ type: String, trim: true }],
+    preferredLocations: [{ type: String, trim: true }],
+    remoteWork: { type: Boolean, default: false },
+    willingToRelocate: { type: Boolean, default: false },
+    industries: [{ type: String, trim: true }],
+    preferredIndustries: [{ type: String, trim: true }],
+    experienceLevel: { type: String, trim: true }
+  },
+  employmentStatus: {
+    type: String,
+    trim: true
+  },
+  experienceLevel: {
+    type: String,
+    trim: true
+  },
+  yearsOfExperience: {
+    type: Number,
+    min: 0
+  },
+  noticePeriod: {
+    type: String,
+    trim: true
+  },
+  summary: {
+    type: String,
+    trim: true,
+    maxlength: [2000, 'Summary cannot exceed 2000 characters']
+  },
+  currentSalary: {
+    type: Number,
+    min: 0
+  },
+  expectedSalary: {
+    type: Number,
+    min: 0
+  },
+  preferredJobType: {
+    type: String,
+    trim: true
+  },
+  workPreference: {
+    type: String,
+    trim: true
+  },
+  dateOfBirth: {
+    type: String,
+    trim: true
+  },
+  gender: {
+    type: String,
+    trim: true
+  },
+  nationality: {
+    type: String,
+    trim: true
+  },
+  address: {
+    type: String,
+    trim: true
+  },
+  industry: {
+    type: String,
+    trim: true
+  },
+  department: {
+    type: String,
+    trim: true
+  },
+  
+  // Profile completion tracking
+  profileCompletion: {
+    percentage: { type: Number, default: 0, min: 0, max: 100 },
+    status: { type: String, default: 'incomplete' },
+    missingFields: [{ type: String }],
+    lastUpdated: { type: String }
+  },
+  lastProfileUpdate: {
+    type: String
+  },
+  
+  // Statistics
+  applicationCount: { type: Number, default: 0, min: 0 },
+  savedJobsCount: { type: Number, default: 0, min: 0 },
+  certificatesCount: { type: Number, default: 0, min: 0 },
+  testsCompletedCount: { type: Number, default: 0, min: 0 },
+  interviewsCount: { type: Number, default: 0, min: 0 }
 }, {
   timestamps: true,
   toJSON: {

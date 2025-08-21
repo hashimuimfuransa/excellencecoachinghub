@@ -57,7 +57,7 @@ export interface IProctoringSessionModel extends Model<IProctoringSessionDocumen
 const proctoringEventSchema = new Schema<IProctoringEventDocument>({
   type: {
     type: String,
-    enum: Object.values(ProctoringEventType),
+    enum: ProctoringEventType ? Object.values(ProctoringEventType) : ['face_not_detected', 'multiple_faces', 'looking_away', 'suspicious_movement', 'audio_detected', 'window_focus_lost'],
     required: [true, 'Event type is required']
   },
   timestamp: {

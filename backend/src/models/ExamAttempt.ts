@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
-import { ExamStatus } from '../../../shared/types';
+import { ExamStatus } from '../types';
 
 // Exam attempt document interface
 export interface IExamAttemptDocument extends Document {
@@ -99,7 +99,7 @@ const examAttemptSchema = new Schema<IExamAttemptDocument>({
   },
   status: {
     type: String,
-    enum: Object.values(ExamStatus),
+    enum: ExamStatus ? Object.values(ExamStatus) : ['scheduled', 'in_progress', 'completed', 'cancelled'],
     default: ExamStatus.IN_PROGRESS
   },
   proctoringSession: {

@@ -1,0 +1,1525 @@
+import express from 'express';
+import { auth } from '../middleware/auth';
+import { authorizeRoles } from '../middleware/roleAuth';
+import { UserRole } from '../types';
+import { User } from '../models/User';
+import { Job } from '../models/Job';
+import { JobApplication } from '../models/JobApplication';
+import { AIInterview } from '../models/AIInterview';
+import { JobCertificate } from '../models/JobCertificate';
+import { PsychometricTest } from '../models/PsychometricTest';
+import { Course } from '../models/Course';
+import { asyncHandler } from '../middleware/asyncHandler';
+
+const router = express.Router();
+
+// Test endpoint without auth for debugging
+router.get('/test', asyncHandler(async (req, res) => {
+  // Also check what users exist and their roles
+  const users = await User.find({}, 'firstName lastName email role').limit(5);
+  res.json({
+    success: true,
+    data: {
+      message: 'Test endpoint working',
+      timestamp: new Date().toISOString(),
+      sampleUsers: users
+    }
+  });
+}));
+
+// Apply authentication and super admin authorization to all routes
+router.use(auth);
+router.use(authorizeRoles([UserRole.SUPER_ADMIN]));
+
+// Dashboard Statistics
+router.get('/dashboard/stats', asyncHandler(async (req, res) => {
+  try {
+    // Get user statistics
+    const totalUsers = await User.countDocuments();
+    const activeUsers = await User.countDocuments({ isActive: true });
+    const newUsersThisMonth = await User.countDocuments({
+      createdAt: { $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) }
+    });
+    const suspendedUsers = await User.countDocuments({ isActive: false });
+
+    // Get users by role
+    const usersByRole = await User.aggregate([
+      { $group: { _id: '$role', count: { $sum: 1 } } },
+      { $project: { role: '$_id', count: 1, _id: 0 } }
+    ]);
+
+    // Get job statistics
+    const totalJobs = await Job.countDocuments();
+    const activeJobs = await Job.countDocuments({ status: 'active' });
+    
+    // Get jobs by status
+    const jobsByStatus = await Job.aggregate([
+      { $group: { _id: '$status', count: { $sum: 1 } } },
+      { $project: { status: '$_id', count: 1, _id: 0 } }
+    ]);
+
+    // Get application statistics
+    const totalApplications = await JobApplication.countDocuments();
+    const pendingApplications = await JobApplication.countDocuments({ status: 'pending' });
+    
+    // Get applications by status
+    const applicationsByStatus = await JobApplication.aggregate([
+      { $group: { _id: '$status', count: { $sum: 1 } } },
+      { $project: { status: '$_id', count: 1, _id: 0 } }
+    ]);
+
+    // Get other statistics
+    const totalCourses = await Course.countDocuments();
+    const totalTests = await PsychometricTest.countDocuments();
+    const totalInterviews = await AIInterview.countDocuments();
+    const totalCertificates = await JobCertificate.countDocuments();
+
+    // Calculate monthly growth (simplified)
+    const lastMonth = new Date();
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    
+    const lastMonthUsers = await User.countDocuments({ createdAt: { $gte: lastMonth } });
+    const lastMonthJobs = await Job.countDocuments({ createdAt: { $gte: lastMonth } });
+    const lastMonthApplications = await JobApplication.countDocuments({ createdAt: { $gte: lastMonth } });
+
+    // Determine system health (simplified logic)
+    let systemHealth: 'excellent' | 'good' | 'warning' | 'critical' = 'good';
+    if (activeUsers / totalUsers > 0.9) systemHealth = 'excellent';
+    else if (activeUsers / totalUsers < 0.7) systemHealth = 'warning';
+    else if (activeUsers / totalUsers < 0.5) systemHealth = 'critical';
+
+    const stats = {
+      totalUsers,
+      totalJobs,
+      totalApplications,
+      totalCourses,
+      totalTests,
+      totalInterviews,
+      totalCertificates,
+      activeUsers,
+      pendingApplications,
+      systemHealth,
+      usersByRole: usersByRole.reduce((acc, item) => {
+        acc[item.role] = item.count;
+        return acc;
+      }, {} as Record<string, number>),
+      jobsByStatus: jobsByStatus.reduce((acc, item) => {
+        acc[item.status] = item.count;
+        return acc;
+      }, {} as Record<string, number>),
+      applicationsByStatus: applicationsByStatus.reduce((acc, item) => {
+        acc[item.status] = item.count;
+        return acc;
+      }, {} as Record<string, number>),
+      monthlyGrowth: {
+        users: lastMonthUsers,
+        jobs: lastMonthJobs,
+        applications: lastMonthApplications
+      }
+    };
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch dashboard statistics'
+    });
+  }
+}));
+
+// Recent Activity
+router.get('/activity/recent', asyncHandler(async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 10;
+    
+    // Get recent users
+    const recentUsers = await User.find()
+      .sort({ createdAt: -1 })
+      .limit(limit / 2)
+      .select('firstName lastName email role createdAt');
+
+    // Get recent jobs
+    const recentJobs = await Job.find()
+      .populate('employer', 'firstName lastName company')
+      .sort({ createdAt: -1 })
+      .limit(limit / 2)
+      .select('title company createdAt employer');
+
+    // Combine and format activities
+    const activities = [
+      ...recentUsers.map(user => ({
+        id: user._id.toString(),
+        type: 'user_registered' as const,
+        title: 'New user registered',
+        description: `${user.firstName} ${user.lastName} joined as ${user.role}`,
+        timestamp: user.createdAt.toISOString(),
+        userId: user._id.toString(),
+        userName: `${user.firstName} ${user.lastName}`,
+        metadata: { role: user.role, email: user.email }
+      })),
+      ...recentJobs.map(job => ({
+        id: job._id.toString(),
+        type: 'job_posted' as const,
+        title: 'Job posted',
+        description: `${job.title} at ${job.company}`,
+        timestamp: job.createdAt.toISOString(),
+        userId: job.employer?._id?.toString(),
+        userName: job.employer ? `${job.employer.firstName} ${job.employer.lastName}` : 'Unknown',
+        metadata: { jobTitle: job.title, company: job.company }
+      }))
+    ];
+
+    // Sort by timestamp and limit
+    activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const limitedActivities = activities.slice(0, limit);
+
+    res.json({
+      success: true,
+      data: limitedActivities
+    });
+  } catch (error) {
+    console.error('Error fetching recent activity:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch recent activity'
+    });
+  }
+}));
+
+// System Alerts (mock implementation)
+router.get('/system/alerts', asyncHandler(async (req, res) => {
+  try {
+    // This would typically come from a monitoring system
+    const alerts = [
+      {
+        id: '1',
+        type: 'warning',
+        title: 'High Server Load',
+        message: 'Server CPU usage is at 85%. Consider scaling resources.',
+        timestamp: new Date().toISOString(),
+        isRead: false,
+        priority: 'high'
+      },
+      {
+        id: '2',
+        type: 'info',
+        title: 'Scheduled Maintenance',
+        message: 'System maintenance scheduled for tomorrow at 2 AM UTC.',
+        timestamp: new Date().toISOString(),
+        isRead: false,
+        priority: 'medium'
+      }
+    ];
+
+    res.json({
+      success: true,
+      data: alerts
+    });
+  } catch (error) {
+    console.error('Error fetching system alerts:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch system alerts'
+    });
+  }
+}));
+
+// User Management
+router.get('/users', asyncHandler(async (req, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = req.query.search as string;
+    const role = req.query.role as string;
+    const status = req.query.status as string;
+    const sortBy = req.query.sortBy as string || 'createdAt';
+    const sortOrder = req.query.sortOrder as string || 'desc';
+
+    console.log('👥 Fetching users with params:', { page, limit, search, role, status, sortBy, sortOrder });
+
+    // Build query
+    const query: any = {};
+    
+    if (search) {
+      query.$or = [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { company: { $regex: search, $options: 'i' } },
+        { jobTitle: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (role) {
+      query.role = role;
+    }
+    
+    if (status === 'active') {
+      query.isActive = true;
+    } else if (status === 'inactive') {
+      query.isActive = false;
+    }
+
+    // Build sort object
+    const sort: any = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    // Execute query
+    const skip = (page - 1) * limit;
+    const users = await User.find(query)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .select('-password -emailVerificationToken -passwordResetToken -__v')
+      .lean(); // Use lean for better performance
+
+    const total = await User.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
+
+    console.log(`👥 Found ${users.length} users out of ${total} total`);
+
+    res.json({
+      success: true,
+      data: {
+        users,
+        total,
+        page,
+        totalPages
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch users',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}));
+
+// Get user by ID
+router.get('/users/:id', asyncHandler(async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .select('-password -emailVerificationToken -passwordResetToken');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch user'
+    });
+  }
+}));
+
+// Create user
+router.post('/users', asyncHandler(async (req, res) => {
+  try {
+    const userData = req.body;
+    const user = new User(userData);
+    await user.save();
+
+    // Remove sensitive data
+    const userResponse = user.toJSON();
+    delete userResponse.password;
+
+    res.status(201).json({
+      success: true,
+      data: userResponse
+    });
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create user'
+    });
+  }
+}));
+
+// Update user
+router.put('/users/:id', asyncHandler(async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    ).select('-password -emailVerificationToken -passwordResetToken');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update user'
+    });
+  }
+}));
+
+// Delete user
+router.delete('/users/:id', asyncHandler(async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'User deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete user'
+    });
+  }
+}));
+
+// Suspend user
+router.put('/users/:id/suspend', asyncHandler(async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { isActive: false },
+      { new: true }
+    ).select('-password -emailVerificationToken -passwordResetToken');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user,
+      message: 'User suspended successfully'
+    });
+  } catch (error) {
+    console.error('Error suspending user:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to suspend user'
+    });
+  }
+}));
+
+// Activate user
+router.put('/users/:id/activate', asyncHandler(async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { isActive: true },
+      { new: true }
+    ).select('-password -emailVerificationToken -passwordResetToken');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user,
+      message: 'User activated successfully'
+    });
+  } catch (error) {
+    console.error('Error activating user:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to activate user'
+    });
+  }
+}));
+
+// Bulk user actions
+router.post('/users/bulk-action', asyncHandler(async (req, res) => {
+  try {
+    const { userIds, action, reason } = req.body;
+
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'User IDs are required'
+      });
+    }
+
+    let updateData: any = {};
+    let message = '';
+
+    switch (action) {
+      case 'activate':
+        updateData = { isActive: true };
+        message = 'Users activated successfully';
+        break;
+      case 'suspend':
+        updateData = { isActive: false };
+        message = 'Users suspended successfully';
+        break;
+      case 'delete':
+        await User.deleteMany({ _id: { $in: userIds } });
+        return res.json({
+          success: true,
+          message: 'Users deleted successfully'
+        });
+      default:
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid action'
+        });
+    }
+
+    await User.updateMany(
+      { _id: { $in: userIds } },
+      updateData
+    );
+
+    res.json({
+      success: true,
+      message
+    });
+  } catch (error) {
+    console.error('Error performing bulk action:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to perform bulk action'
+    });
+  }
+}));
+
+// Job Management
+router.get('/jobs', asyncHandler(async (req, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = req.query.search as string;
+    const status = req.query.status as string;
+    const employerId = req.query.employerId as string;
+    const sortBy = req.query.sortBy as string || 'createdAt';
+    const sortOrder = req.query.sortOrder as string || 'desc';
+
+    console.log('💼 Fetching jobs with params:', { page, limit, search, status, employerId, sortBy, sortOrder });
+
+    // Build query
+    const query: any = {};
+    
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { company: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { location: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (status) {
+      query.status = status;
+    }
+    
+    if (employerId) {
+      query.employer = employerId;
+    }
+
+    // Build sort object
+    const sort: any = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    // Execute query
+    const skip = (page - 1) * limit;
+    const jobs = await Job.find(query)
+      .populate('employer', 'firstName lastName email company avatar')
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean(); // Use lean for better performance
+
+    const total = await Job.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
+
+    console.log(`💼 Found ${jobs.length} jobs out of ${total} total`);
+
+    res.json({
+      success: true,
+      data: {
+        jobs,
+        total,
+        page,
+        totalPages
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching jobs:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch jobs',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}));
+
+// Get job by ID
+router.get('/jobs/:id', asyncHandler(async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.id)
+      .populate('employer', 'firstName lastName email company avatar');
+    
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        error: 'Job not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: job
+    });
+  } catch (error) {
+    console.error('Error fetching job:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch job'
+    });
+  }
+}));
+
+// Create job
+router.post('/jobs', asyncHandler(async (req, res) => {
+  try {
+    const jobData = req.body;
+    
+    // Set the employer to the current user if not specified
+    if (!jobData.employer) {
+      jobData.employer = req.user._id;
+    }
+    
+    const job = new Job(jobData);
+    await job.save();
+
+    // Populate employer data for response
+    await job.populate('employer', 'firstName lastName email company avatar');
+
+    console.log('💼 Created new job:', job.title);
+
+    res.status(201).json({
+      success: true,
+      data: job,
+      message: 'Job created successfully'
+    });
+  } catch (error) {
+    console.error('Error creating job:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create job',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}));
+
+// Update job
+router.put('/jobs/:id', asyncHandler(async (req, res) => {
+  try {
+    const job = await Job.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    ).populate('employer', 'firstName lastName email company avatar');
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        error: 'Job not found'
+      });
+    }
+
+    console.log('💼 Updated job:', job.title);
+
+    res.json({
+      success: true,
+      data: job,
+      message: 'Job updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating job:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update job',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}));
+
+// Delete job
+router.delete('/jobs/:id', asyncHandler(async (req, res) => {
+  try {
+    const job = await Job.findByIdAndDelete(req.params.id);
+    
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        error: 'Job not found'
+      });
+    }
+
+    console.log('💼 Deleted job:', job.title);
+
+    res.json({
+      success: true,
+      message: 'Job deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting job:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete job'
+    });
+  }
+}));
+
+// Update job status
+router.put('/jobs/:id/status', asyncHandler(async (req, res) => {
+  try {
+    const { status } = req.body;
+    
+    const job = await Job.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true, runValidators: true }
+    ).populate('employer', 'firstName lastName email company avatar');
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        error: 'Job not found'
+      });
+    }
+
+    console.log('💼 Updated job status:', job.title, 'to', status);
+
+    res.json({
+      success: true,
+      data: job,
+      message: `Job ${status} successfully`
+    });
+  } catch (error) {
+    console.error('Error updating job status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update job status'
+    });
+  }
+}));
+
+// Feature/unfeature job
+router.put('/jobs/:id/feature', asyncHandler(async (req, res) => {
+  try {
+    const { featured } = req.body;
+    
+    const job = await Job.findByIdAndUpdate(
+      req.params.id,
+      { isCurated: featured },
+      { new: true, runValidators: true }
+    ).populate('employer', 'firstName lastName email company avatar');
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        error: 'Job not found'
+      });
+    }
+
+    console.log('💼 Updated job featured status:', job.title, 'to', featured);
+
+    res.json({
+      success: true,
+      data: job,
+      message: `Job ${featured ? 'featured' : 'unfeatured'} successfully`
+    });
+  } catch (error) {
+    console.error('Error updating job featured status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update job featured status'
+    });
+  }
+}));
+
+// Bulk job actions
+router.post('/jobs/bulk-action', asyncHandler(async (req, res) => {
+  try {
+    const { jobIds, action } = req.body;
+
+    if (!jobIds || !Array.isArray(jobIds) || jobIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Job IDs are required'
+      });
+    }
+
+    let updateData: any = {};
+    let message = '';
+
+    switch (action) {
+      case 'activate':
+        updateData = { status: 'active' };
+        message = 'Jobs activated successfully';
+        break;
+      case 'pause':
+        updateData = { status: 'paused' };
+        message = 'Jobs paused successfully';
+        break;
+      case 'archive':
+        updateData = { status: 'closed' };
+        message = 'Jobs archived successfully';
+        break;
+      case 'delete':
+        await Job.deleteMany({ _id: { $in: jobIds } });
+        return res.json({
+          success: true,
+          message: 'Jobs deleted successfully'
+        });
+      default:
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid action'
+        });
+    }
+
+    await Job.updateMany(
+      { _id: { $in: jobIds } },
+      updateData
+    );
+
+    console.log('💼 Bulk action performed:', action, 'on', jobIds.length, 'jobs');
+
+    res.json({
+      success: true,
+      message
+    });
+  } catch (error) {
+    console.error('Error performing bulk job action:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to perform bulk action'
+    });
+  }
+}));
+
+// Application Management
+router.get('/applications', asyncHandler(async (req, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = req.query.search as string;
+    const status = req.query.status as string;
+    const jobId = req.query.jobId as string;
+    const applicantId = req.query.applicantId as string;
+    const sortBy = req.query.sortBy as string || 'createdAt';
+    const sortOrder = req.query.sortOrder as string || 'desc';
+
+    console.log('📋 Fetching applications with params:', { page, limit, search, status, jobId, applicantId, sortBy, sortOrder });
+
+    // Build query
+    const query: any = {};
+    
+    if (search) {
+      query.$or = [
+        { jobTitle: { $regex: search, $options: 'i' } },
+        { applicantName: { $regex: search, $options: 'i' } },
+        { applicantEmail: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (status) {
+      query.status = status;
+    }
+    
+    if (jobId) {
+      query.jobId = jobId;
+    }
+    
+    if (applicantId) {
+      query.applicantId = applicantId;
+    }
+
+    // Build sort object
+    const sort: any = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    // Execute query
+    const skip = (page - 1) * limit;
+    const applications = await JobApplication.find(query)
+      .populate('jobId', 'title company location type salary')
+      .populate('applicantId', 'firstName lastName email avatar')
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean(); // Use lean for better performance
+
+    const total = await JobApplication.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
+
+    console.log(`📋 Found ${applications.length} applications out of ${total} total`);
+
+    res.json({
+      success: true,
+      data: {
+        applications,
+        total,
+        page,
+        totalPages
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching applications:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch applications',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}));
+
+// Test Management
+router.get('/tests', asyncHandler(async (req, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = req.query.search as string;
+    const status = req.query.status as string;
+    const type = req.query.type as string;
+    const sortBy = req.query.sortBy as string || 'createdAt';
+    const sortOrder = req.query.sortOrder as string || 'desc';
+
+    console.log('🧠 Fetching tests with params:', { page, limit, search, status, type, sortBy, sortOrder });
+
+    // Build query
+    const query: any = {};
+    
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (status) {
+      query.status = status;
+    }
+    
+    if (type) {
+      query.type = type;
+    }
+
+    // Build sort object
+    const sort: any = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    // Execute query
+    const skip = (page - 1) * limit;
+    const tests = await PsychometricTest.find(query)
+      .populate('createdBy', 'firstName lastName email')
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean(); // Use lean for better performance
+
+    const total = await PsychometricTest.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
+
+    console.log(`🧠 Found ${tests.length} tests out of ${total} total`);
+
+    res.json({
+      success: true,
+      data: {
+        tests,
+        total,
+        page,
+        totalPages
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching tests:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch tests',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}));
+
+// Certificate Management
+router.get('/certificates', asyncHandler(async (req, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = req.query.search as string;
+    const status = req.query.status as string;
+    const type = req.query.type as string;
+    const sortBy = req.query.sortBy as string || 'createdAt';
+    const sortOrder = req.query.sortOrder as string || 'desc';
+
+    console.log('🏆 Fetching certificates with params:', { page, limit, search, status, type, sortBy, sortOrder });
+
+    // Build query
+    const query: any = {};
+    
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { recipientName: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (status) {
+      query.status = status;
+    }
+    
+    if (type) {
+      query.type = type;
+    }
+
+    // Build sort object
+    const sort: any = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    // Execute query
+    const skip = (page - 1) * limit;
+    const certificates = await JobCertificate.find(query)
+      .populate('recipientId', 'firstName lastName email avatar')
+      .populate('issuedBy', 'firstName lastName email')
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean(); // Use lean for better performance
+
+    const total = await JobCertificate.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
+
+    console.log(`🏆 Found ${certificates.length} certificates out of ${total} total`);
+
+    res.json({
+      success: true,
+      data: {
+        certificates,
+        total,
+        page,
+        totalPages
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching certificates:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch certificates',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}));
+
+// Course Management
+router.get('/courses', asyncHandler(async (req, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = req.query.search as string;
+    const status = req.query.status as string;
+    const category = req.query.category as string;
+    const sortBy = req.query.sortBy as string || 'createdAt';
+    const sortOrder = req.query.sortOrder as string || 'desc';
+
+    console.log('📚 Fetching courses with params:', { page, limit, search, status, category, sortBy, sortOrder });
+
+    // Build query
+    const query: any = {};
+    
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (status) {
+      query.status = status;
+    }
+    
+    if (category) {
+      query.category = category;
+    }
+
+    // Build sort object
+    const sort: any = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    // Execute query
+    const skip = (page - 1) * limit;
+    const courses = await Course.find(query)
+      .populate('instructor', 'firstName lastName email avatar')
+      .populate('approvedBy', 'firstName lastName email')
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean(); // Use lean for better performance
+
+    const total = await Course.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
+
+    console.log(`📚 Found ${courses.length} courses out of ${total} total`);
+
+    res.json({
+      success: true,
+      data: {
+        courses,
+        total,
+        page,
+        totalPages
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching courses:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch courses',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}));
+
+// Interview Management
+router.get('/interviews', asyncHandler(async (req, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = req.query.search as string;
+    const status = req.query.status as string;
+    const sortBy = req.query.sortBy as string || 'createdAt';
+    const sortOrder = req.query.sortOrder as string || 'desc';
+
+    console.log('🎤 Fetching interviews with params:', { page, limit, search, status, sortBy, sortOrder });
+
+    // Build query
+    const query: any = {};
+    
+    if (search) {
+      query.$or = [
+        { candidateName: { $regex: search, $options: 'i' } },
+        { jobTitle: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (status) {
+      query.status = status;
+    }
+
+    // Build sort object
+    const sort: any = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    // Execute query
+    const skip = (page - 1) * limit;
+    const interviews = await AIInterview.find(query)
+      .populate('candidateId', 'firstName lastName email avatar')
+      .populate('jobId', 'title company location')
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .lean(); // Use lean for better performance
+
+    const total = await AIInterview.countDocuments(query);
+    const totalPages = Math.ceil(total / limit);
+
+    console.log(`🎤 Found ${interviews.length} interviews out of ${total} total`);
+
+    res.json({
+      success: true,
+      data: {
+        interviews,
+        total,
+        page,
+        totalPages
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching interviews:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch interviews',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}));
+
+// System Settings
+router.get('/system/settings', asyncHandler(async (req, res) => {
+  try {
+    // Mock system settings data - in a real app, this would come from a database
+    const settings = {
+      maintenance: {
+        enabled: false,
+        message: 'System under maintenance. Please try again later.',
+        scheduledStart: '',
+        scheduledEnd: ''
+      },
+      features: {
+        userRegistration: true,
+        jobPosting: true,
+        aiInterviews: true,
+        psychometricTests: true,
+        certificates: true
+      },
+      limits: {
+        maxJobsPerEmployer: 50,
+        maxApplicationsPerUser: 100,
+        maxFileUploadSize: 10,
+        sessionTimeout: 30
+      },
+      notifications: {
+        emailEnabled: true,
+        pushEnabled: true,
+        smsEnabled: false
+      }
+    };
+
+    res.json({
+      success: true,
+      data: settings
+    });
+  } catch (error) {
+    console.error('Error fetching system settings:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch system settings'
+    });
+  }
+}));
+
+// Update System Settings
+router.put('/system/settings', asyncHandler(async (req, res) => {
+  try {
+    const settings = req.body;
+    // In a real app, you would save these to a database
+    console.log('Updating system settings:', settings);
+
+    res.json({
+      success: true,
+      data: settings,
+      message: 'System settings updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating system settings:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update system settings'
+    });
+  }
+}));
+
+// Reset System Settings
+router.post('/system/settings/reset', asyncHandler(async (req, res) => {
+  try {
+    const defaultSettings = {
+      maintenance: {
+        enabled: false,
+        message: 'System under maintenance. Please try again later.',
+        scheduledStart: '',
+        scheduledEnd: ''
+      },
+      features: {
+        userRegistration: true,
+        jobPosting: true,
+        aiInterviews: true,
+        psychometricTests: true,
+        certificates: true
+      },
+      limits: {
+        maxJobsPerEmployer: 50,
+        maxApplicationsPerUser: 100,
+        maxFileUploadSize: 10,
+        sessionTimeout: 30
+      },
+      notifications: {
+        emailEnabled: true,
+        pushEnabled: true,
+        smsEnabled: false
+      }
+    };
+
+    res.json({
+      success: true,
+      data: defaultSettings,
+      message: 'System settings reset to defaults'
+    });
+  } catch (error) {
+    console.error('Error resetting system settings:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to reset system settings'
+    });
+  }
+}));
+
+// System Health
+router.get('/system/health', asyncHandler(async (req, res) => {
+  try {
+    // Mock system health data
+    const health = {
+      status: 'good' as const,
+      services: {
+        database: {
+          status: 'healthy' as const,
+          responseTime: 45,
+          lastCheck: new Date().toISOString()
+        },
+        redis: {
+          status: 'healthy' as const,
+          responseTime: 12,
+          lastCheck: new Date().toISOString()
+        },
+        email: {
+          status: 'healthy' as const,
+          responseTime: 234,
+          lastCheck: new Date().toISOString()
+        }
+      },
+      metrics: {
+        cpuUsage: 65,
+        memoryUsage: 78,
+        diskUsage: 45,
+        activeConnections: 1247
+      }
+    };
+
+    res.json({
+      success: true,
+      data: health
+    });
+  } catch (error) {
+    console.error('Error fetching system health:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch system health'
+    });
+  }
+}));
+
+// Analytics
+router.get('/analytics', asyncHandler(async (req, res) => {
+  try {
+    const timeRange = req.query.timeRange as string || '30d';
+    
+    // Calculate date range
+    const now = new Date();
+    let startDate = new Date();
+    
+    switch (timeRange) {
+      case '7d':
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case '30d':
+        startDate.setDate(now.getDate() - 30);
+        break;
+      case '90d':
+        startDate.setDate(now.getDate() - 90);
+        break;
+      case '1y':
+        startDate.setFullYear(now.getFullYear() - 1);
+        break;
+    }
+
+    // Get user growth data
+    const userGrowth = await User.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: startDate }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: {
+              format: '%Y-%m-%d',
+              date: '$createdAt'
+            }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { _id: 1 }
+      },
+      {
+        $project: {
+          date: '$_id',
+          count: 1,
+          _id: 0
+        }
+      }
+    ]);
+
+    // Get job postings data
+    const jobPostings = await Job.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: startDate }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: {
+              format: '%Y-%m-%d',
+              date: '$createdAt'
+            }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { _id: 1 }
+      },
+      {
+        $project: {
+          date: '$_id',
+          count: 1,
+          _id: 0
+        }
+      }
+    ]);
+
+    // Get applications data
+    const applications = await JobApplication.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: startDate }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: {
+              format: '%Y-%m-%d',
+              date: '$createdAt'
+            }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { _id: 1 }
+      },
+      {
+        $project: {
+          date: '$_id',
+          count: 1,
+          _id: 0
+        }
+      }
+    ]);
+
+    // Get top employers
+    const topEmployers = await Job.aggregate([
+      {
+        $group: {
+          _id: '$company',
+          jobCount: { $sum: 1 }
+        }
+      },
+      {
+        $lookup: {
+          from: 'jobapplications',
+          localField: '_id',
+          foreignField: 'job.company',
+          as: 'applications'
+        }
+      },
+      {
+        $project: {
+          name: '$_id',
+          jobCount: 1,
+          applicationCount: { $size: '$applications' },
+          _id: 0
+        }
+      },
+      {
+        $sort: { jobCount: -1 }
+      },
+      {
+        $limit: 10
+      }
+    ]);
+
+    const analyticsData = {
+      userGrowth,
+      jobPostings,
+      applications,
+      topEmployers,
+      popularSkills: [
+        { skill: 'JavaScript', count: 1247 },
+        { skill: 'Python', count: 1156 },
+        { skill: 'React', count: 987 },
+        { skill: 'Node.js', count: 876 },
+        { skill: 'SQL', count: 765 }
+      ],
+      geographicDistribution: [
+        { location: 'New York', count: 2847 },
+        { location: 'San Francisco', count: 2156 },
+        { location: 'London', count: 1876 },
+        { location: 'Toronto', count: 1654 },
+        { location: 'Berlin', count: 1432 }
+      ],
+      conversionRates: {
+        applicationToInterview: 0.25,
+        interviewToHire: 0.35,
+        courseCompletion: 0.78,
+        testCompletion: 0.82
+      }
+    };
+
+    res.json({
+      success: true,
+      data: analyticsData
+    });
+  } catch (error) {
+    console.error('Error fetching analytics:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch analytics data'
+    });
+  }
+}));
+
+export default router;

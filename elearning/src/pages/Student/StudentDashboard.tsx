@@ -873,6 +873,114 @@ const StudentDashboard: React.FC = () => {
             </ResponsiveCardContent>
           </ResponsiveCard>
         </Grid>
+
+        {/* Job Portal Integration Section */}
+        <Grid item xs={12} sx={{ mt: 4 }}>
+          <Paper 
+            elevation={4}
+            sx={{ 
+              p: { xs: 3, sm: 4 },
+              borderRadius: 3,
+              background: 'linear-gradient(135deg, #6a1b9a08, #4a148c15)',
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '4px',
+                background: 'linear-gradient(90deg, #6a1b9a, #4a148c)',
+              }
+            }}
+          >
+            <Grid container spacing={3} alignItems="center">
+              <Grid item xs={12} md={7}>
+                <Typography 
+                  variant={isMobile ? "h5" : "h4"} 
+                  component="h2" 
+                  sx={{ 
+                    fontWeight: 700,
+                    color: '#6a1b9a',
+                    mb: 2
+                  }}
+                >
+                  Ready to Start Your Career Journey?
+                </Typography>
+                <Typography variant="body1" paragraph sx={{ mb: 3 }}>
+                  As a student of Excellence Coaching Hub, you have exclusive access to our Job Portal. 
+                  Find internships, part-time positions, and full-time career opportunities that match your skills and interests.
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
+                  <Chip 
+                    icon={<School />} 
+                    label="Student-Friendly Jobs" 
+                    sx={{ bgcolor: '#f3e5f5', color: '#6a1b9a' }}
+                  />
+                  <Chip 
+                    icon={<Assignment />} 
+                    label="Internship Opportunities" 
+                    sx={{ bgcolor: '#f3e5f5', color: '#6a1b9a' }}
+                  />
+                  <Chip 
+                    icon={<EmojiEvents />} 
+                    label="Career Development" 
+                    sx={{ bgcolor: '#f3e5f5', color: '#6a1b9a' }}
+                  />
+                </Box>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <Button 
+                    variant="contained" 
+                    size={buttonSize}
+                    sx={{ 
+                      bgcolor: '#6a1b9a', 
+                      '&:hover': { bgcolor: '#4a148c' },
+                      px: { xs: 3, sm: 4 },
+                      py: { xs: 1, sm: 1.5 }
+                    }}
+                    onClick={() => window.open('/job-portal/app/dashboard', '_blank')}
+                  >
+                    Explore Job Portal
+                  </Button>
+                  <Button 
+                    variant="outlined" 
+                    size={buttonSize}
+                    sx={{ 
+                      borderColor: '#6a1b9a', 
+                      color: '#6a1b9a',
+                      '&:hover': { borderColor: '#4a148c', color: '#4a148c' },
+                      px: { xs: 3, sm: 4 },
+                      py: { xs: 1, sm: 1.5 }
+                    }}
+                    onClick={() => window.open('/job-portal/app/profile', '_blank')}
+                  >
+                    Complete Job Profile
+                  </Button>
+                </Stack>
+              </Grid>
+              <Grid item xs={12} md={5} sx={{ display: 'flex', justifyContent: 'center' }}>
+                <Box 
+                  component="img"
+                  src="/assets/images/job-portal-promo.png"
+                  alt="Job Portal"
+                  sx={{ 
+                    maxWidth: '100%',
+                    height: 'auto',
+                    maxHeight: { xs: '200px', sm: '250px', md: '300px' },
+                    borderRadius: 2,
+                    boxShadow: 3,
+                    display: { xs: 'none', sm: 'block' }
+                  }}
+                  onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                    // Fallback if image doesn't exist
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </Grid>
+            </Grid>
+          </Paper>
+        </Grid>
       </Grid>
     </ResponsiveDashboard>
   );

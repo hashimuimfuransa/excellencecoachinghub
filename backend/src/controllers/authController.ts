@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { User, IUserDocument } from '../models/User';
-import { UserRole } from '../../../shared/types';
+import { UserRole } from '../types';
 import { sendEmail } from '../services/emailService';
 import * as simpleEmailService from '../services/simpleEmailService';
 
@@ -139,7 +139,12 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     if (!user) {
       res.status(401).json({
         success: false,
-        error: 'No account found with this email address. Please check your email or register for a new account.'
+        error: 'Login Failed',
+        message: 'We couldn\'t find an account with that email address. Please check your email and try again, or create a new account if you haven\'t registered yet.',
+        details: {
+          type: 'EMAIL_NOT_FOUND',
+          suggestion: 'Double-check your email address or register for a new account'
+        }
       });
       return;
     }
@@ -148,7 +153,12 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     if (!user.isActive) {
       res.status(401).json({
         success: false,
-        error: 'Account is deactivated. Please contact support.'
+        error: 'Account Suspended',
+        message: 'Your account has been temporarily deactivated. This could be due to security reasons or administrative action.',
+        details: {
+          type: 'ACCOUNT_INACTIVE',
+          suggestion: 'Please contact our support team for assistance in reactivating your account'
+        }
       });
       return;
     }
@@ -159,7 +169,12 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     if (!isMatch) {
       res.status(401).json({
         success: false,
-        error: 'Incorrect password. Please try again.'
+        error: 'Invalid Credentials',
+        message: 'The password you entered is incorrect. Please check your password and try again.',
+        details: {
+          type: 'INVALID_PASSWORD',
+          suggestion: 'Make sure Caps Lock is off and try typing your password again. If you\'ve forgotten your password, use the "Forgot Password" option.'
+        }
       });
       return;
     }
@@ -537,6 +552,71 @@ export const googleCompleteRegistration = async (req: Request, res: Response, ne
     sendTokenResponse(user, 201, res);
   } catch (error: any) {
     // Handle duplicate key error
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyValue)[0];
+      const message = `User with this ${field} already exists`;
+      res.status(400).json({
+        success: false,
+        error: message
+      });
+      return;
+    }
+    next(error);
+  }
+};
+
+// @desc    Update user profile
+// @route   POST /api/auth/update-profile
+// @access  Private
+export const updateProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = (req as any).user.id;
+    const updateData = req.body;
+
+    // Remove sensitive fields that shouldn't be updated via this endpoint
+    delete updateData.password;
+    delete updateData.role;
+    delete updateData.isEmailVerified;
+    delete updateData.isActive;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      updateData,
+      {
+        new: true,
+        runValidators: true
+      }
+    ).select('-password');
+
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        user: {
+          _id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          avatar: user.avatar,
+          isEmailVerified: user.isEmailVerified,
+          isActive: user.isActive,
+          lastLogin: user.lastLogin,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+          // Include any additional profile fields
+          ...updateData
+        }
+      }
+    });
+  } catch (error: any) {
     if (error.code === 11000) {
       const field = Object.keys(error.keyValue)[0];
       const message = `User with this ${field} already exists`;

@@ -4,6 +4,8 @@ import { UserRole, CourseStatus } from '../../../shared/types';
 import { validationResult } from 'express-validator';
 import bcrypt from 'bcryptjs';
 import { uploadToCloudinary, deleteOldAvatar } from '../config/cloudinary';
+import { profileCompletionService } from '../services/profileCompletionService';
+import { simpleProfileCompletionService } from '../services/simpleProfileCompletion';
 
 // Get all users (Admin only)
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -714,7 +716,20 @@ export const getCurrentProfile = async (req: Request, res: Response, next: NextF
       return;
     }
 
-    const user = await User.findById(req.user._id)
+    // Use user ID from params if provided, otherwise use authenticated user ID
+    const userId = req.params.id || req.user._id;
+    
+    // If a specific user ID is requested, ensure it matches the authenticated user
+    // (users can only access their own profile)
+    if (req.params.id && req.params.id !== req.user._id.toString()) {
+      res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only access your own profile.'
+      });
+      return;
+    }
+
+    const user = await User.findById(userId)
       .select('-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil');
 
     if (!user) {
@@ -725,9 +740,15 @@ export const getCurrentProfile = async (req: Request, res: Response, next: NextF
       return;
     }
 
+    // Calculate current profile completion
+    const profileCompletion = simpleProfileCompletionService.calculateCompletion(user);
+
     res.status(200).json({
       success: true,
-      data: { user }
+      data: { 
+        user,
+        profileCompletion
+      }
     });
   } catch (error) {
     next(error);
@@ -737,7 +758,15 @@ export const getCurrentProfile = async (req: Request, res: Response, next: NextF
 // Update current user profile
 export const updateProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    console.log('🔄 Profile update request received:', {
+      userId: req.user?._id,
+      paramsId: req.params.id,
+      bodyKeys: Object.keys(req.body),
+      timestamp: new Date().toISOString()
+    });
+
     if (!req.user) {
+      console.log('❌ User not authenticated');
       res.status(401).json({
         success: false,
         message: 'User not authenticated'
@@ -745,11 +774,36 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
       return;
     }
 
-    const { firstName, lastName, email, avatar } = req.body;
+    // Use user ID from params if provided, otherwise use authenticated user ID
+    const userId = req.params.id || req.user._id;
+    
+    // If a specific user ID is requested, ensure it matches the authenticated user
+    // (users can only update their own profile)
+    if (req.params.id && req.params.id !== req.user._id.toString()) {
+      console.log('❌ Access denied - user trying to update different profile');
+      res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only update your own profile.'
+      });
+      return;
+    }
+
+    // Accept all profile fields from the request body
+    const updateData: any = { ...req.body };
+    console.log('📝 Update data received:', updateData);
+    
+    // Remove sensitive fields that shouldn't be updated via this endpoint
+    delete updateData.password;
+    delete updateData.role;
+    delete updateData.isActive;
+    delete updateData.emailVerificationToken;
+    delete updateData.passwordResetToken;
+    delete updateData.loginAttempts;
+    delete updateData.lockUntil;
 
     // Check if email is being changed and if it's already taken
-    if (email && email !== req.user.email) {
-      const existingUser = await User.findOne({ email, _id: { $ne: req.user._id } });
+    if (updateData.email && updateData.email !== req.user.email) {
+      const existingUser = await User.findOne({ email: updateData.email, _id: { $ne: userId } });
       if (existingUser) {
         res.status(400).json({
           success: false,
@@ -759,19 +813,16 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
       }
     }
 
-    const updateData: any = {};
-    if (firstName) updateData.firstName = firstName;
-    if (lastName) updateData.lastName = lastName;
-    if (email) updateData.email = email;
-    if (avatar) updateData.avatar = avatar;
-
+    console.log('💾 Attempting to update user in database:', { userId, updateData });
+    
     const updatedUser = await User.findByIdAndUpdate(
-      req.user._id,
+      userId,
       updateData,
       { new: true, runValidators: true }
     ).select('-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil');
 
     if (!updatedUser) {
+      console.log('❌ User not found in database');
       res.status(404).json({
         success: false,
         message: 'User not found'
@@ -779,11 +830,51 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
       return;
     }
 
+    console.log('✅ User updated successfully in database:', {
+      userId: updatedUser._id,
+      updatedFields: Object.keys(updateData)
+    });
+
+    // Reload user from database to ensure we have the latest data
+    const freshUser = await User.findById(userId).select('-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil');
+    
+    if (!freshUser) {
+      console.log('❌ Could not reload user from database');
+      res.status(404).json({
+        success: false,
+        message: 'User not found after update'
+      });
+      return;
+    }
+
+    console.log('🔄 Reloaded user data for profile completion calculation');
+
+    // Calculate profile completion using simple service
+    const simpleCompletion = simpleProfileCompletionService.calculateCompletion(freshUser);
+    
+    // Update the user's profile completion data
+    freshUser.profileCompletion = {
+      percentage: simpleCompletion.percentage,
+      status: simpleCompletion.status,
+      missingFields: simpleCompletion.missingFields,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    freshUser.lastProfileUpdate = new Date().toISOString();
+    await freshUser.save();
+    
+    console.log('📊 Simple profile completion result:', simpleCompletion);
+
     res.status(200).json({
       success: true,
-      data: { user: updatedUser },
+      data: { 
+        user: freshUser,
+        profileCompletion: simpleCompletion
+      },
       message: 'Profile updated successfully'
     });
+
+    console.log('✅ Profile update response sent successfully');
   } catch (error) {
     next(error);
   }

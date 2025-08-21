@@ -2,10 +2,12 @@
 
 export enum UserRole {
   ADMIN = 'admin',
+  SUPER_ADMIN = 'super_admin',
   TEACHER = 'teacher',
   STUDENT = 'student',
   PROFESSIONAL = 'professional',
-  EMPLOYER = 'employer'
+  EMPLOYER = 'employer',
+  JOB_SEEKER = 'job_seeker'
 }
 
 export enum CourseStatus {
@@ -303,4 +305,277 @@ export interface QuizForm {
   passingScore: number;
   isProctored: boolean;
   questions: Omit<IQuizQuestion, '_id'>[];
+}
+
+// Job Portal Types
+export enum JobStatus {
+  DRAFT = 'draft',
+  ACTIVE = 'active',
+  PAUSED = 'paused',
+  CLOSED = 'closed',
+  EXPIRED = 'expired'
+}
+
+export enum JobType {
+  FULL_TIME = 'full_time',
+  PART_TIME = 'part_time',
+  CONTRACT = 'contract',
+  INTERNSHIP = 'internship',
+  FREELANCE = 'freelance'
+}
+
+export enum ExperienceLevel {
+  ENTRY_LEVEL = 'entry_level',
+  MID_LEVEL = 'mid_level',
+  SENIOR_LEVEL = 'senior_level',
+  EXECUTIVE = 'executive'
+}
+
+export enum EducationLevel {
+  HIGH_SCHOOL = 'high_school',
+  ASSOCIATE = 'associate',
+  BACHELOR = 'bachelor',
+  MASTER = 'master',
+  DOCTORATE = 'doctorate',
+  PROFESSIONAL = 'professional'
+}
+
+export enum ApplicationStatus {
+  APPLIED = 'applied',
+  UNDER_REVIEW = 'under_review',
+  SHORTLISTED = 'shortlisted',
+  INTERVIEW_SCHEDULED = 'interview_scheduled',
+  INTERVIEWED = 'interviewed',
+  OFFERED = 'offered',
+  REJECTED = 'rejected',
+  WITHDRAWN = 'withdrawn'
+}
+
+export enum PsychometricTestType {
+  PERSONALITY = 'personality',
+  COGNITIVE = 'cognitive',
+  APTITUDE = 'aptitude',
+  SKILLS = 'skills',
+  BEHAVIORAL = 'behavioral'
+}
+
+export enum InterviewType {
+  TECHNICAL = 'technical',
+  BEHAVIORAL = 'behavioral',
+  CASE_STUDY = 'case_study',
+  GENERAL = 'general'
+}
+
+export enum CertificateType {
+  JOB_PREPARATION = 'job_preparation',
+  COURSE_COMPLETION = 'course_completion',
+  SKILL_VERIFICATION = 'skill_verification',
+  INTERVIEW_READINESS = 'interview_readiness'
+}
+
+// Job Interface
+export interface IJob {
+  _id: string;
+  title: string;
+  description: string;
+  company: string;
+  employer: string; // User ID
+  location: string;
+  jobType: JobType;
+  experienceLevel: ExperienceLevel;
+  educationLevel: EducationLevel;
+  salary?: {
+    min: number;
+    max: number;
+    currency: string;
+  };
+  skills: string[];
+  requirements: string[];
+  benefits: string[];
+  applicationDeadline?: Date;
+  status: JobStatus;
+  isCurated: boolean; // True if added by Super Admin
+  curatedBy?: string; // Super Admin User ID
+  relatedCourses: string[]; // Course IDs
+  psychometricTestRequired: boolean;
+  psychometricTests: string[]; // PsychometricTest IDs
+  applicationsCount: number;
+  viewsCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Job Application Interface
+export interface IJobApplication {
+  _id: string;
+  job: string; // Job ID
+  applicant: string; // User ID
+  resume: string; // File path or URL
+  coverLetter?: string;
+  status: ApplicationStatus;
+  appliedAt: Date;
+  psychometricTestResults: string[]; // PsychometricTestResult IDs
+  interviewResults: string[]; // InterviewResult IDs
+  certificates: string[]; // Certificate IDs
+  notes?: string; // Employer notes
+  updatedAt: Date;
+}
+
+// Psychometric Test Interface
+export interface IPsychometricTest {
+  _id: string;
+  title: string;
+  description: string;
+  type: PsychometricTestType;
+  questions: IPsychometricQuestion[];
+  timeLimit: number; // in minutes
+  industry?: string;
+  jobRole?: string;
+  createdBy: string; // Super Admin User ID
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Psychometric Question Interface
+export interface IPsychometricQuestion {
+  _id: string;
+  question: string;
+  type: 'multiple_choice' | 'scale' | 'text' | 'scenario';
+  options?: string[];
+  scaleRange?: { min: number; max: number; labels: string[] };
+  correctAnswer?: string | number;
+  traits?: string[]; // Personality traits this question measures
+  weight: number; // Importance weight
+}
+
+// Psychometric Test Result Interface
+export interface IPsychometricTestResult {
+  _id: string;
+  test: string; // PsychometricTest ID
+  user: string; // User ID
+  job?: string; // Job ID (if taken for specific job)
+  answers: Record<string, any>;
+  scores: Record<string, number>; // Trait scores
+  overallScore: number;
+  interpretation: string;
+  recommendations: string[];
+  completedAt: Date;
+  timeSpent: number; // in minutes
+}
+
+// AI Interview Interface
+export interface IAIInterview {
+  _id: string;
+  user: string; // User ID
+  job?: string; // Job ID (if for specific job)
+  type: InterviewType;
+  questions: IAIInterviewQuestion[];
+  responses: IAIInterviewResponse[];
+  overallScore: number;
+  feedback: string;
+  recommendations: string[];
+  strengths: string[];
+  areasForImprovement: string[];
+  completedAt: Date;
+  duration: number; // in minutes
+}
+
+// AI Interview Question Interface
+export interface IAIInterviewQuestion {
+  _id: string;
+  question: string;
+  type: InterviewType;
+  expectedKeywords: string[];
+  difficulty: 'easy' | 'medium' | 'hard';
+  timeLimit?: number; // in seconds
+}
+
+// AI Interview Response Interface
+export interface IAIInterviewResponse {
+  questionId: string;
+  response: string;
+  audioUrl?: string; // If voice response
+  score: number;
+  feedback: string;
+  keywordsFound: string[];
+  responseTime: number; // in seconds
+}
+
+// Job Certificate Interface
+export interface IJobCertificate {
+  _id: string;
+  user: string; // User ID
+  type: CertificateType;
+  title: string;
+  description: string;
+  skills: string[];
+  issuedBy: string; // System or User ID
+  issuedAt: Date;
+  expiresAt?: Date;
+  verificationCode: string;
+  isVerified: boolean;
+  relatedJob?: string; // Job ID
+  relatedCourse?: string; // Course ID
+  psychometricTestResults?: string[]; // PsychometricTestResult IDs
+  interviewResults?: string[]; // AIInterview IDs
+}
+
+// User Profile Extension for Job Seekers
+export interface IJobSeekerProfile {
+  _id: string;
+  user: string; // User ID
+  resume: string; // File path or URL
+  skills: string[];
+  experience: {
+    company: string;
+    position: string;
+    duration: string;
+    description: string;
+  }[];
+  education: {
+    institution: string;
+    degree: string;
+    field: string;
+    year: number;
+  }[];
+  certifications: string[]; // Certificate IDs
+  interests: string[];
+  preferredJobTypes: JobType[];
+  preferredLocations: string[];
+  salaryExpectation?: {
+    min: number;
+    max: number;
+    currency: string;
+  };
+  availability: Date;
+  linkedInProfile?: string;
+  portfolioUrl?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Student Profile Extension
+export interface IStudentProfile {
+  _id: string;
+  user: string; // User ID
+  age?: number;
+  educationLevel: EducationLevel;
+  completedCourses: string[]; // Course IDs
+  certificates: string[]; // Certificate IDs
+  jobInterests: string[];
+  careerGoals: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Job-Course Matching Interface
+export interface IJobCourseMatch {
+  _id: string;
+  job: string; // Job ID
+  course: string; // Course ID
+  relevanceScore: number; // 0-100
+  matchingSkills: string[];
+  createdBy: string; // Super Admin User ID
+  createdAt: Date;
 }

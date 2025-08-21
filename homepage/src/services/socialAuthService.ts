@@ -1,5 +1,5 @@
-import { AuthResponse } from './authService';
 import { simpleGoogleAuth } from './googleAuthSimple';
+import type { AuthResponse } from '../types/auth';
 
 
 

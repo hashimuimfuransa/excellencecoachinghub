@@ -1,5 +1,5 @@
 import { apiService } from './api';
-import { AuthResponse } from './authService';
+import type { AuthResponse } from '../types/auth';
 
 interface GoogleAuthConfig {
   clientId: string;

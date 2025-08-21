@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
-import { CourseStatus } from '../../../shared/types';
+import { CourseStatus } from '../types';
 
 // Course content interface for lessons, videos, etc.
 export interface ICourseContent {
@@ -134,7 +134,7 @@ const courseSchema = new Schema<ICourseDocument>({
   },
   status: {
     type: String,
-    enum: Object.values(CourseStatus),
+    enum: CourseStatus ? Object.values(CourseStatus) : ['draft', 'pending_approval', 'approved', 'rejected', 'archived'],
     default: CourseStatus.DRAFT
   },
   thumbnail: {

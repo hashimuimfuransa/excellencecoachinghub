@@ -1,17 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authService, AuthResponse } from '../services/authService';
 import { socialAuthService } from '../services/socialAuthService';
-
-interface User {
-  _id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: string;
-  isEmailVerified: boolean;
-  profilePicture?: string;
-  createdAt: string;
-}
+import type { User, AuthResponse } from '../types/auth';
 
 interface AuthContextType {
   user: User | null;
@@ -55,6 +44,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        const { authService } = await import('../services/authService');
         const token = authService.getToken();
         const storedUser = authService.getStoredUser();
         
@@ -71,6 +61,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
+        const { authService } = await import('../services/authService');
         authService.clearAuth();
         setUser(null);
       } finally {
@@ -84,6 +75,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (email: string, password: string): Promise<void> => {
     try {
       setLoading(true);
+      const { authService } = await import('../services/authService');
       const response = await authService.login({ email, password });
       setUser(response.user);
     } catch (error) {
@@ -96,6 +88,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (userData: RegisterData): Promise<void> => {
     try {
       setLoading(true);
+      const { authService } = await import('../services/authService');
       const response = await authService.register({
         ...userData,
         role: userData.role || 'student'
@@ -111,6 +104,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async (): Promise<void> => {
     try {
       setLoading(true);
+      const { authService } = await import('../services/authService');
       await authService.logout();
       setUser(null);
     } catch (error) {
@@ -123,12 +117,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const forgotPassword = async (email: string): Promise<void> => {
+    const { authService } = await import('../services/authService');
     await authService.forgotPassword(email);
   };
 
   const resetPassword = async (token: string, password: string): Promise<void> => {
     try {
       setLoading(true);
+      const { authService } = await import('../services/authService');
       const response = await authService.resetPassword(token, password);
       setUser(response.user);
     } catch (error) {

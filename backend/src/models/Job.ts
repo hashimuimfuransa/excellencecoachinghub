@@ -1,0 +1,279 @@
+import mongoose, { Schema, Document, Model } from 'mongoose';
+import { JobStatus, JobType, ExperienceLevel, EducationLevel } from '../types';
+
+export interface IJobDocument extends Document {
+  title: string;
+  description: string;
+  company: string;
+  employer: string; // User ID
+  location: string;
+  jobType: JobType;
+  experienceLevel: ExperienceLevel;
+  educationLevel: EducationLevel;
+  salary?: {
+    min: number;
+    max: number;
+    currency: string;
+  };
+  skills: string[];
+  requirements: string[];
+  responsibilities: string[];
+  benefits: string[];
+  applicationDeadline?: Date;
+  status: JobStatus;
+  isCurated: boolean;
+  curatedBy?: string;
+  relatedCourses: string[];
+  psychometricTestRequired: boolean;
+  psychometricTests: string[];
+  applicationsCount: number;
+  viewsCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IJobModel extends Model<IJobDocument> {
+  findActiveJobs(): Promise<IJobDocument[]>;
+  findJobsByEmployer(employerId: string): Promise<IJobDocument[]>;
+  findCuratedJobs(): Promise<IJobDocument[]>;
+  findJobsBySkills(skills: string[]): Promise<IJobDocument[]>;
+  findJobsByEducationLevel(educationLevel: EducationLevel): Promise<IJobDocument[]>;
+}
+
+const jobSchema = new Schema<IJobDocument>({
+  title: {
+    type: String,
+    required: [true, 'Job title is required'],
+    trim: true,
+    maxlength: [200, 'Job title cannot exceed 200 characters']
+  },
+  description: {
+    type: String,
+    required: [true, 'Job description is required'],
+    trim: true,
+    maxlength: [5000, 'Job description cannot exceed 5000 characters']
+  },
+  company: {
+    type: String,
+    required: [true, 'Company name is required'],
+    trim: true,
+    maxlength: [200, 'Company name cannot exceed 200 characters']
+  },
+  employer: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'Employer is required']
+  },
+  location: {
+    type: String,
+    required: [true, 'Job location is required'],
+    trim: true,
+    maxlength: [200, 'Location cannot exceed 200 characters']
+  },
+  jobType: {
+    type: String,
+    enum: JobType ? Object.values(JobType) : ['full_time', 'part_time', 'contract', 'internship', 'freelance'],
+    required: [true, 'Job type is required']
+  },
+  experienceLevel: {
+    type: String,
+    enum: ExperienceLevel ? Object.values(ExperienceLevel) : ['entry_level', 'mid_level', 'senior_level', 'executive'],
+    required: [true, 'Experience level is required']
+  },
+  educationLevel: {
+    type: String,
+    enum: EducationLevel ? Object.values(EducationLevel) : ['high_school', 'associate', 'bachelor', 'master', 'doctorate', 'professional'],
+    required: [true, 'Education level is required']
+  },
+  salary: {
+    min: {
+      type: Number,
+      min: [0, 'Minimum salary cannot be negative']
+    },
+    max: {
+      type: Number,
+      min: [0, 'Maximum salary cannot be negative']
+    },
+    currency: {
+      type: String,
+      default: 'USD',
+      maxlength: [3, 'Currency code cannot exceed 3 characters']
+    }
+  },
+  skills: [{
+    type: String,
+    trim: true,
+    maxlength: [1000, 'Skill name cannot exceed 1000 characters']
+  }],
+  requirements: [{
+    type: String,
+    trim: true,
+    maxlength: [2000, 'Requirement cannot exceed 2000 characters']
+  }],
+  responsibilities: [{
+    type: String,
+    trim: true,
+    maxlength: [2000, 'Responsibility cannot exceed 2000 characters']
+  }],
+  benefits: [{
+    type: String,
+    trim: true,
+    maxlength: [1000, 'Benefit cannot exceed 1000 characters']
+  }],
+  applicationDeadline: {
+    type: Date,
+    validate: {
+      validator: function(this: IJobDocument, value: Date) {
+        return !value || value > new Date();
+      },
+      message: 'Application deadline must be in the future'
+    }
+  },
+  status: {
+    type: String,
+    enum: JobStatus ? Object.values(JobStatus) : ['draft', 'active', 'paused', 'closed', 'expired'],
+    default: JobStatus.DRAFT
+  },
+  isCurated: {
+    type: Boolean,
+    default: false
+  },
+  curatedBy: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: function(this: IJobDocument) {
+      return this.isCurated;
+    }
+  },
+  relatedCourses: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Course'
+  }],
+  psychometricTestRequired: {
+    type: Boolean,
+    default: false
+  },
+  psychometricTests: [{
+    type: Schema.Types.ObjectId,
+    ref: 'PsychometricTest'
+  }],
+  applicationsCount: {
+    type: Number,
+    default: 0,
+    min: [0, 'Applications count cannot be negative']
+  },
+  viewsCount: {
+    type: Number,
+    default: 0,
+    min: [0, 'Views count cannot be negative']
+  }
+}, {
+  timestamps: true,
+  toJSON: {
+    transform: function(doc, ret) {
+      delete ret.__v;
+      return ret;
+    }
+  }
+});
+
+// Indexes for performance
+jobSchema.index({ status: 1 });
+jobSchema.index({ employer: 1 });
+jobSchema.index({ isCurated: 1 });
+jobSchema.index({ skills: 1 });
+jobSchema.index({ educationLevel: 1 });
+jobSchema.index({ jobType: 1 });
+jobSchema.index({ experienceLevel: 1 });
+jobSchema.index({ createdAt: -1 });
+jobSchema.index({ applicationDeadline: 1 });
+
+// Compound indexes
+jobSchema.index({ status: 1, educationLevel: 1 });
+jobSchema.index({ status: 1, isCurated: 1 });
+
+// Virtual for checking if job is expired
+jobSchema.virtual('isExpired').get(function(this: IJobDocument) {
+  return this.applicationDeadline && this.applicationDeadline < new Date();
+});
+
+// Pre-save middleware to update status if expired
+jobSchema.pre<IJobDocument>('save', function(next) {
+  if (this.applicationDeadline && this.applicationDeadline < new Date() && this.status === JobStatus.ACTIVE) {
+    this.status = JobStatus.EXPIRED;
+  }
+  next();
+});
+
+// Static methods
+jobSchema.statics.findActiveJobs = function(): Promise<IJobDocument[]> {
+  return this.find({ 
+    status: JobStatus.ACTIVE,
+    $or: [
+      { applicationDeadline: { $exists: false } },
+      { applicationDeadline: { $gt: new Date() } }
+    ]
+  }).populate('employer', 'firstName lastName company')
+    .populate('relatedCourses', 'title description')
+    .sort({ createdAt: -1 });
+};
+
+jobSchema.statics.findJobsByEmployer = function(employerId: string): Promise<IJobDocument[]> {
+  return this.find({ employer: employerId })
+    .populate('relatedCourses', 'title description')
+    .sort({ createdAt: -1 });
+};
+
+jobSchema.statics.findCuratedJobs = function(): Promise<IJobDocument[]> {
+  return this.find({ 
+    isCurated: true,
+    status: JobStatus.ACTIVE,
+    $or: [
+      { applicationDeadline: { $exists: false } },
+      { applicationDeadline: { $gt: new Date() } }
+    ]
+  }).populate('curatedBy', 'firstName lastName')
+    .populate('relatedCourses', 'title description')
+    .sort({ createdAt: -1 });
+};
+
+jobSchema.statics.findJobsBySkills = function(skills: string[]): Promise<IJobDocument[]> {
+  return this.find({
+    status: JobStatus.ACTIVE,
+    skills: { $in: skills },
+    $or: [
+      { applicationDeadline: { $exists: false } },
+      { applicationDeadline: { $gt: new Date() } }
+    ]
+  }).populate('employer', 'firstName lastName company')
+    .populate('relatedCourses', 'title description')
+    .sort({ createdAt: -1 });
+};
+
+jobSchema.statics.findJobsByEducationLevel = function(educationLevel: EducationLevel): Promise<IJobDocument[]> {
+  // Find jobs that require this education level or lower
+  const educationHierarchy = [
+    EducationLevel.HIGH_SCHOOL,
+    EducationLevel.ASSOCIATE,
+    EducationLevel.BACHELOR,
+    EducationLevel.MASTER,
+    EducationLevel.DOCTORATE,
+    EducationLevel.PROFESSIONAL
+  ];
+  
+  const userLevelIndex = educationHierarchy.indexOf(educationLevel);
+  const eligibleLevels = educationHierarchy.slice(0, userLevelIndex + 1);
+  
+  return this.find({
+    status: JobStatus.ACTIVE,
+    educationLevel: { $in: eligibleLevels },
+    $or: [
+      { applicationDeadline: { $exists: false } },
+      { applicationDeadline: { $gt: new Date() } }
+    ]
+  }).populate('employer', 'firstName lastName company')
+    .populate('relatedCourses', 'title description')
+    .sort({ createdAt: -1 });
+};
+
+export const Job = mongoose.model<IJobDocument, IJobModel>('Job', jobSchema);

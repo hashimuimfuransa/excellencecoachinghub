@@ -23,6 +23,20 @@ export { default as Certificate, ICertificate } from './Certificate';
 export { default as RecordedSession, IRecordedSession } from './RecordedSession';
 export { Assignment, AssignmentSubmission, IAssignment, IAssignmentSubmission } from './Assignment';
 
+// Job Portal Models
+export { Job, IJobDocument, IJobModel } from './Job';
+export { JobApplication, IJobApplicationDocument, IJobApplicationModel } from './JobApplication';
+export { PsychometricTest, IPsychometricTestDocument, IPsychometricTestModel, IPsychometricQuestionDocument } from './PsychometricTest';
+export { PsychometricTestResult, IPsychometricTestResultDocument, IPsychometricTestResultModel } from './PsychometricTestResult';
+export { GeneratedPsychometricTest, IGeneratedPsychometricTestDocument, IGeneratedPsychometricTestModel } from './GeneratedPsychometricTest';
+export { TestPurchase, ITestPurchaseDocument, ITestPurchaseModel } from './TestPurchase';
+export { TestSession, ITestSessionDocument, ITestSessionModel } from './TestSession';
+export { AIInterview, IAIInterviewDocument, IAIInterviewModel, IAIInterviewQuestionDocument, IAIInterviewResponseDocument } from './AIInterview';
+export { JobCertificate, IJobCertificateDocument, IJobCertificateModel } from './JobCertificate';
+export { JobSeekerProfile, IJobSeekerProfileDocument, IJobSeekerProfileModel } from './JobSeekerProfile';
+export { StudentProfile, IStudentProfileDocument, IStudentProfileModel } from './StudentProfile';
+export { JobCourseMatch, IJobCourseMatchDocument, IJobCourseMatchModel } from './JobCourseMatch';
+
 // Re-export shared types for convenience
 export {
   UserRole,
@@ -31,5 +45,14 @@ export {
   ExamStatus,
   ProctoringEventType,
   NotificationType,
-  BadgeType
-} from '../../../shared/types';
+  BadgeType,
+  // Job Portal Types
+  JobStatus,
+  JobType,
+  ExperienceLevel,
+  EducationLevel,
+  ApplicationStatus,
+  PsychometricTestType,
+  InterviewType,
+  CertificateType
+} from '../types';

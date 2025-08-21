@@ -136,7 +136,7 @@ const assessmentSubmissionSchema = new Schema<IAssessmentSubmissionDocument>({
   },
   status: {
     type: String,
-    enum: Object.values(SubmissionStatus),
+    enum: SubmissionStatus ? Object.values(SubmissionStatus) : ['draft', 'submitted', 'graded', 'returned'],
     default: SubmissionStatus.DRAFT
   },
   score: {

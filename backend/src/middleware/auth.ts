@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { User, IUserDocument } from '../models/User';
 import { ITeacherProfileDocument } from '../models/TeacherProfile';
-import { UserRole } from '../../../shared/types';
+import { UserRole } from '../types';
 
 // Extend Request interface to include user and teacherProfile
 declare global {

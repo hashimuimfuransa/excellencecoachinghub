@@ -1,5 +1,5 @@
 // Comprehensive user types for job portal
-export const enum UserRole {
+export enum UserRole {
   ADMIN = 'admin',
   SUPER_ADMIN = 'super_admin',
   TEACHER = 'teacher',
@@ -9,14 +9,14 @@ export const enum UserRole {
   JOB_SEEKER = 'job_seeker'
 }
 
-export const enum ProfileCompletionStatus {
+export enum ProfileCompletionStatus {
   INCOMPLETE = 'incomplete',
   BASIC = 'basic',
   INTERMEDIATE = 'intermediate',
   COMPLETE = 'complete'
 }
 
-export const enum EmploymentStatus {
+export enum EmploymentStatus {
   EMPLOYED = 'employed',
   UNEMPLOYED = 'unemployed',
   STUDENT = 'student',
@@ -24,14 +24,14 @@ export const enum EmploymentStatus {
   SELF_EMPLOYED = 'self_employed'
 }
 
-export const enum ExperienceLevel {
+export enum ExperienceLevel {
   ENTRY_LEVEL = 'entry_level',
   MID_LEVEL = 'mid_level',
   SENIOR_LEVEL = 'senior_level',
   EXECUTIVE = 'executive'
 }
 
-export const enum EducationLevel {
+export enum EducationLevel {
   HIGH_SCHOOL = 'high_school',
   ASSOCIATE = 'associate',
   BACHELOR = 'bachelor',
@@ -40,7 +40,7 @@ export const enum EducationLevel {
   PROFESSIONAL = 'professional'
 }
 
-export const enum JobType {
+export enum JobType {
   FULL_TIME = 'full_time',
   PART_TIME = 'part_time',
   CONTRACT = 'contract',
@@ -50,6 +50,7 @@ export const enum JobType {
 
 export interface User {
   _id: string;
+  id?: string; // Add id property as optional for backward compatibility
   firstName: string;
   lastName: string;
   email: string;

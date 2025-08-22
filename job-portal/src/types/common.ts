@@ -1,9 +1,8 @@
 import type { User } from './user';
 import type { Job } from './job';
 import type { Course } from './course';
-import type { PsychometricTest } from './test';
 
-export const enum ApplicationStatus {
+export enum ApplicationStatus {
   APPLIED = 'applied',
   UNDER_REVIEW = 'under_review',
   SHORTLISTED = 'shortlisted',
@@ -14,14 +13,14 @@ export const enum ApplicationStatus {
   WITHDRAWN = 'withdrawn'
 }
 
-export const enum InterviewType {
+export enum InterviewType {
   TECHNICAL = 'technical',
   BEHAVIORAL = 'behavioral',
   CASE_STUDY = 'case_study',
   GENERAL = 'general'
 }
 
-export const enum CertificateType {
+export enum CertificateType {
   JOB_PREPARATION = 'job_preparation',
   COURSE_COMPLETION = 'course_completion',
   SKILL_VERIFICATION = 'skill_verification',

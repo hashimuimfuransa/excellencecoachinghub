@@ -253,9 +253,9 @@ export function validateProfile(user: User): ProfileValidationResult {
     contact: hasValue(user.email) && hasValue(user.phone),
     personal: hasValue(user.firstName) && hasValue(user.lastName) && hasValue(user.dateOfBirth),
     professional: hasValue(user.jobTitle) && hasValue(user.experienceLevel),
-    education: hasValue(user.education) && user.education && user.education.length > 0,
-    experience: hasValue(user.experience) && user.experience && user.experience.length > 0,
-    skills: hasValue(user.skills) && user.skills && user.skills.length > 0,
+    education: Boolean(hasValue(user.education) && user.education && user.education.length > 0),
+    experience: Boolean(hasValue(user.experience) && user.experience && user.experience.length > 0),
+    skills: Boolean(hasValue(user.skills) && user.skills && user.skills.length > 0),
     preferences: hasValue(user.jobPreferences),
     documents: hasValue(user.resume)
   };
@@ -348,7 +348,7 @@ export function getCompletionStatusColor(status: ProfileCompletionStatus): strin
  * Get next steps for profile completion
  */
 export function getNextSteps(validationResult: ProfileValidationResult): string[] {
-  const { status, missingFields, canAccessFeatures } = validationResult;
+  const { status, canAccessFeatures } = validationResult;
   const nextSteps: string[] = [];
 
   if (status === ProfileCompletionStatus.INCOMPLETE) {

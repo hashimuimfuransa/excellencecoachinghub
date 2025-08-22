@@ -1,5 +1,5 @@
 import { apiService } from './api';
-import type { LoginForm, RegisterForm, User, AuthResponse, ApiResponse } from '../types/auth';
+import type { LoginForm, RegisterForm, User, AuthResponse } from '../types/auth';
 
 export const authService = {
   // Login user

@@ -16,13 +16,9 @@ import {
   Analytics,
   Business,
   AccountBalance,
-  Engineering,
   Psychology,
   School,
   Support,
-  Language,
-  Work,
-  FamilyRestroom,
   TrendingUp,
 } from '@mui/icons-material';
 import { useInView } from 'react-intersection-observer';

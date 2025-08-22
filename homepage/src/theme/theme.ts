@@ -3,9 +3,9 @@ import { createTheme } from '@mui/material/styles';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#3f51b5',
-      light: '#7986cb',
-      dark: '#303f9f',
+      main: '#22c55e',
+      light: '#4ade80',
+      dark: '#16a34a',
       contrastText: '#ffffff',
     },
     secondary: {
@@ -171,15 +171,15 @@ const theme = createTheme({
             transition: 'all 0.3s ease',
             '&:hover': {
               '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: '#3f51b5',
+                borderColor: '#22c55e',
                 borderWidth: '2px',
               },
             },
             '&.Mui-focused': {
               '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: '#3f51b5',
+                borderColor: '#22c55e',
                 borderWidth: '2px',
-                boxShadow: '0 0 0 3px rgba(63, 81, 181, 0.12)',
+                boxShadow: '0 0 0 3px rgba(34, 197, 94, 0.12)',
               },
             },
           },

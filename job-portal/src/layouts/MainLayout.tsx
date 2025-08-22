@@ -54,7 +54,8 @@ import {
   Star,
   AccountCircle,
   BarChart,
-  Lightbulb
+  Lightbulb,
+  History
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -103,7 +104,7 @@ const MainLayout: React.FC = () => {
     const commonItems: NavItem[] = [
       {
         label: 'Dashboard',
-        path: '/app/dashboard',
+        path: isEmployer ? '/app/employer/dashboard' : '/app/dashboard',
         icon: <Dashboard />,
       }
     ];
@@ -145,6 +146,11 @@ const MainLayout: React.FC = () => {
             label: 'AI Interview Practice',
             path: '/app/interviews',
             icon: <Assessment />,
+          },
+          {
+            label: 'Interview History',
+            path: '/app/interviews/history',
+            icon: <History />,
           },
           {
             label: 'Courses',
@@ -229,18 +235,18 @@ const MainLayout: React.FC = () => {
     
     if (isJobSeekerView) {
       items = [...items, ...jobSeekerItems];
+      // Add profile for job seekers only
+      items.push({
+        label: 'Profile',
+        path: '/app/profile',
+        icon: <AccountCircle />,
+      });
     }
     
     if (isEmployer) {
       items = [...items, ...employerItems];
+      // Employers use Company Profile instead of regular Profile
     }
-    
-    // Add profile at the end for all users
-    items.push({
-      label: 'Profile',
-      path: '/app/profile',
-      icon: <AccountCircle />,
-    });
     
     return items;
   };

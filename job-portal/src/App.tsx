@@ -28,7 +28,19 @@ import TestDetailsPage from './pages/TestDetailsPage';
 import CreateJobPage from './pages/CreateJobPage';
 import EmployerJobsPage from './pages/EmployerJobsPage';
 import EmployerCandidatesPage from './pages/EmployerCandidatesPage';
+import EmployerDashboardPage from './pages/EmployerDashboardPage';
+import JobApplicationsPage from './pages/JobApplicationsPage';
 import TestResultsPage from './pages/TestResultsPage';
+import InterviewResultsPage from './pages/InterviewResultsPage';
+import InterviewHistoryPage from './pages/InterviewHistoryPage';
+import EmployerTalentPoolPage from './pages/EmployerTalentPoolPage';
+import EmployerSavedCandidatesPage from './pages/EmployerSavedCandidatesPage';
+import EmployerHiredPage from './pages/EmployerHiredPage';
+import EmployerInterviewsPage from './pages/EmployerInterviewsPage';
+import EmployerAnalyticsPage from './pages/EmployerAnalyticsPage';
+import EmployerCompanyProfilePage from './pages/EmployerCompanyProfilePage';
+import CompaniesPage from './pages/CompaniesPage';
+import SupportPage from './pages/SupportPage';
 
 function App() {
   return (
@@ -40,6 +52,8 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/companies" element={<CompaniesPage />} />
+            <Route path="/support" element={<SupportPage />} />
             
             {/* Test Pages - Standalone */}
             <Route 
@@ -104,6 +118,8 @@ function App() {
               <Route path="certificates" element={<CertificatesPage />} />
               <Route path="courses" element={<CoursesPage />} />
               <Route path="interviews" element={<AIInterviewsPage />} />
+              <Route path="interviews/history" element={<InterviewHistoryPage />} />
+              <Route path="interviews/results/:sessionId" element={<InterviewResultsPage />} />
               <Route path="tests" element={<PsychometricTestsPage />} />
               <Route path="test-results" element={<TestResultsPage />} />
               
@@ -113,6 +129,14 @@ function App() {
                 element={
                   <ProtectedRoute roles={[UserRole.EMPLOYER]}>
                     <CreateJobPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="employer/dashboard" 
+                element={
+                  <ProtectedRoute roles={[UserRole.EMPLOYER]}>
+                    <EmployerDashboardPage />
                   </ProtectedRoute>
                 } 
               />
@@ -129,6 +153,70 @@ function App() {
                 element={
                   <ProtectedRoute roles={[UserRole.EMPLOYER]}>
                     <EmployerCandidatesPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="employer/jobs/:jobId/applications" 
+                element={
+                  <ProtectedRoute roles={[UserRole.EMPLOYER]}>
+                    <JobApplicationsPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="employer/candidates/:candidateId" 
+                element={
+                  <ProtectedRoute roles={[UserRole.EMPLOYER]}>
+                    <EmployerCandidatesPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="employer/talent-pool" 
+                element={
+                  <ProtectedRoute roles={[UserRole.EMPLOYER]}>
+                    <EmployerTalentPoolPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="employer/saved-candidates" 
+                element={
+                  <ProtectedRoute roles={[UserRole.EMPLOYER]}>
+                    <EmployerSavedCandidatesPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="employer/hired" 
+                element={
+                  <ProtectedRoute roles={[UserRole.EMPLOYER]}>
+                    <EmployerHiredPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="employer/interviews" 
+                element={
+                  <ProtectedRoute roles={[UserRole.EMPLOYER]}>
+                    <EmployerInterviewsPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="employer/analytics" 
+                element={
+                  <ProtectedRoute roles={[UserRole.EMPLOYER]}>
+                    <EmployerAnalyticsPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="employer/company-profile" 
+                element={
+                  <ProtectedRoute roles={[UserRole.EMPLOYER]}>
+                    <EmployerCompanyProfilePage />
                   </ProtectedRoute>
                 } 
               />

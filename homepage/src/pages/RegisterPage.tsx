@@ -174,7 +174,7 @@ const RegisterPage: React.FC = () => {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #3f51b5 0%, #6a1b9a 100%)',
+        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
         display: 'flex',
         alignItems: 'center',
         py: 4,
@@ -267,7 +267,7 @@ const RegisterPage: React.FC = () => {
                 right: -80,
                 width: 200,
                 height: 200,
-                background: 'linear-gradient(135deg, #3f51b5 0%, #ff6b6b 100%)',
+                background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
                 borderRadius: '50%',
                 opacity: 0.1,
               }}
@@ -304,7 +304,7 @@ const RegisterPage: React.FC = () => {
                 sx={{
                   fontWeight: 800,
                   mb: 1,
-                  background: 'linear-gradient(45deg, #3f51b5, #ff6b6b)',
+                  background: 'linear-gradient(45deg, #22c55e, #16a34a)',
                   backgroundClip: 'text',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
@@ -318,7 +318,7 @@ const RegisterPage: React.FC = () => {
                     transform: 'translateX(-50%)',
                     width: '60px',
                     height: '4px',
-                    background: 'linear-gradient(45deg, #3f51b5, #ff6b6b)',
+                    background: 'linear-gradient(45deg, #22c55e, #16a34a)',
                     borderRadius: '2px',
                   }
                 }}
@@ -542,10 +542,10 @@ const RegisterPage: React.FC = () => {
                   fontSize: '1.1rem',
                   fontWeight: 600,
                   borderRadius: '30px',
-                  background: 'linear-gradient(45deg, #3f51b5, #6a1b9a)',
-                  boxShadow: '0 4px 15px rgba(63, 81, 181, 0.3)',
+                  background: 'linear-gradient(45deg, #22c55e, #16a34a)',
+                  boxShadow: '0 4px 15px rgba(34, 197, 94, 0.3)',
                   '&:hover': {
-                    background: 'linear-gradient(45deg, #303f9f, #4a148c)',
+                    background: 'linear-gradient(45deg, #16a34a, #15803d)',
                   },
                 }}
               >

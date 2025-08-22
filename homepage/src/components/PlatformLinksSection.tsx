@@ -33,13 +33,13 @@ const PlatformLinksSection: React.FC = () => {
   const platforms = [
     {
       title: 'E-Learning Platform',
-      description: 'Transform your career with our comprehensive learning ecosystem featuring AI-powered personalization, industry-expert instructors, and hands-on projects.',
+      description: 'Transform your career with our comprehensive learning ecosystem featuring personalized live video coaching, industry-expert instructors, assessments, and hands-on projects.',
       icon: <School />,
       color: '#3f51b5',
       gradient: 'linear-gradient(135deg, #3f51b5 0%, #536dfe 100%)',
       features: [
         'Interactive Video Courses',
-        'AI-Powered Learning Paths',
+        'Live Video Coaching Sessions',
         'Progress Tracking',
         'Peer Collaboration',
         'Expert Instructors',
@@ -51,13 +51,13 @@ const PlatformLinksSection: React.FC = () => {
     },
     {
       title: 'Job Preparation Platform',
-      description: 'Prepare for your dream job with psychometric tests, AI mock interviews, and access to curated job opportunities.',
+      description: 'Prepare for your dream job with psychometric assessments, live video coaching for interviews, tests, and access to curated job opportunities.',
       icon: <Work />,
-      color: '#ff6b6b',
-      gradient: 'linear-gradient(135deg, #ff6b6b 0%, #ff9e9e 100%)',
+      color: '#22c55e',
+      gradient: 'linear-gradient(135deg, #22c55e 0%, #4ade80 100%)',
       features: [
         'Psychometric Assessments',
-        'AI Mock Interviews',
+        'Live Video Interview Coaching',
         'Resume Builder',
         'Job Matching',
         'Interview Coaching',
@@ -126,7 +126,7 @@ const PlatformLinksSection: React.FC = () => {
                   fontWeight: 800,
                   mb: 3,
                   fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.75rem', lg: '3rem' },
-                  background: 'linear-gradient(45deg, #3f51b5, #ff6b6b)',
+                  background: 'linear-gradient(45deg, #22c55e, #16a34a)',
                   backgroundClip: 'text',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
@@ -140,7 +140,7 @@ const PlatformLinksSection: React.FC = () => {
                     transform: 'translateX(-50%)',
                     width: { xs: '60px', md: '80px' },
                     height: '4px',
-                    background: 'linear-gradient(45deg, #3f51b5, #ff6b6b)',
+                    background: 'linear-gradient(45deg, #22c55e, #16a34a)',
                     borderRadius: '2px',
                   }
                 }}
@@ -525,9 +525,9 @@ const PlatformLinksSection: React.FC = () => {
                 {[
                   {
                     icon: <AutoAwesome />,
-                    title: 'AI-Powered',
-                    description: 'Smart recommendations and personalized learning paths',
-                    color: '#ff6b6b',
+                    title: 'Expert-Powered',
+                    description: 'Smart recommendations and personalized live coaching sessions',
+                    color: '#22c55e',
                   },
                   {
                     icon: <Speed />,
@@ -625,7 +625,7 @@ const PlatformLinksSection: React.FC = () => {
                     size="large"
                     onClick={() => handlePlatformClick()}
                     sx={{
-                      bgcolor: '#ff6b6b',
+                      bgcolor: '#22c55e',
                       color: 'white',
                       py: 1.8,
                       px: 4,

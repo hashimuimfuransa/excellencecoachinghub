@@ -6,7 +6,8 @@ import {
   completeAIInterview,
   getUserInterviews,
   getJobInterviews,
-  getInterviewDetails
+  getInterviewDetails,
+  generateQuestions
 } from '@/controllers/aiInterviewController';
 
 const router = express.Router();
@@ -15,6 +16,7 @@ const router = express.Router();
 router.use(auth);
 
 // User routes
+router.post('/generate-questions', generateQuestions);
 router.post('/start', startAIInterview);
 router.post('/:interviewId/response', submitInterviewResponse);
 router.post('/:interviewId/complete', completeAIInterview);

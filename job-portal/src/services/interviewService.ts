@@ -76,6 +76,37 @@ class InterviewService {
     }
   }
 
+  // New method that takes the full job object directly
+  async generateInterviewSessionWithJob(job: any, difficulty: 'Easy' | 'Medium' | 'Hard' = 'Medium'): Promise<InterviewSession> {
+    try {
+      console.log('🎯 Generating session with job:', job);
+      
+      if (!job || !job.title || !job.company) {
+        throw new Error('Invalid job object provided');
+      }
+
+      const questions = this.generateQuestionsForJob(job, difficulty);
+      
+      const session: InterviewSession = {
+        _id: `session-${Date.now()}`,
+        title: `${job.title} Interview Practice`,
+        description: `Practice interview session for ${job.title} position at ${job.company}`,
+        job,
+        questions,
+        totalDuration: questions.reduce((total, q) => total + q.expectedDuration, 0),
+        difficulty,
+        type: 'mixed',
+        createdAt: new Date().toISOString()
+      };
+      
+      console.log('✅ Generated session:', session);
+      return session;
+    } catch (error) {
+      console.error('Error generating interview session with job object:', error);
+      throw error;
+    }
+  }
+
   private async getJobDetails(jobId: string) {
     try {
       const response = await api.get(`/jobs/${jobId}`);
@@ -198,8 +229,16 @@ class InterviewService {
 
   async saveInterviewResult(result: Omit<InterviewResult, '_id' | 'createdAt'>): Promise<InterviewResult> {
     try {
-      const response = await api.post('/interview-results', result);
-      return response.data;
+      // For now, use the AI interview completion endpoint
+      // This should be adapted to the actual AI interview structure
+      console.log('Interview result to save:', result);
+      
+      // Return mock result for now until we integrate with AI interviews
+      return {
+        ...result,
+        _id: `result-${Date.now()}`,
+        completedAt: new Date().toISOString()
+      } as InterviewResult;
     } catch (error) {
       console.error('Error saving interview result:', error);
       // Return mock result for now
@@ -213,8 +252,31 @@ class InterviewService {
 
   async getUserInterviewResults(): Promise<InterviewResult[]> {
     try {
-      const response = await api.get('/interview-results');
-      return response.data;
+      // Use the correct AI interview endpoint
+      const response = await api.get('/ai-interviews/my-interviews');
+      
+      // Transform AI interview data to InterviewResult format
+      const aiInterviews = response.data || [];
+      return aiInterviews.map((interview: any) => ({
+        _id: interview._id,
+        userId: interview.user,
+        jobId: interview.job,
+        type: interview.type,
+        questions: interview.questions || [],
+        responses: interview.responses || [],
+        scores: interview.analysis || {
+          technical: 0,
+          communication: 0,
+          problemSolving: 0,
+          cultural: 0
+        },
+        overallScore: interview.overallScore || 0,
+        feedback: interview.feedback ? [interview.feedback] : [],
+        recommendations: interview.recommendations || [],
+        completedAt: interview.completedAt || interview.createdAt,
+        createdAt: interview.createdAt
+      })) as InterviewResult[];
+      
     } catch (error) {
       console.error('Error fetching interview results:', error);
       return [];

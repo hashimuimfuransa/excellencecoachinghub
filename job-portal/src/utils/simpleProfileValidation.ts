@@ -20,6 +20,32 @@ export interface SimpleProfileValidationResult {
  * Simple profile validation that matches backend logic
  */
 export function validateProfileSimple(user: User): SimpleProfileValidationResult {
+  if (!user) {
+    console.warn('⚠️ validateProfileSimple called with null/undefined user');
+    return {
+      isValid: false,
+      completionPercentage: 0,
+      status: 'incomplete',
+      missingFields: ['All fields are missing'],
+      recommendations: ['Please complete your profile'],
+      canAccessFeatures: {
+        psychometricTests: false,
+        aiInterviews: false,
+        premiumJobs: false,
+      },
+      completedSections: {
+        basic: false,
+        contact: false,
+        professional: false,
+        skills: false,
+        experience: false,
+        education: false,
+        preferences: false,
+        documents: false
+      }
+    };
+  }
+  
   console.log('🔍 Simple frontend profile validation for user:', user._id || user.id);
   console.log('📋 User data:', {
     firstName: user.firstName,

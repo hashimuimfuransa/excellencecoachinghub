@@ -63,10 +63,13 @@ import jobRoutes from '@/routes/jobRoutes';
 import jobApplicationRoutes from '@/routes/jobApplicationRoutes';
 import psychometricTestRoutes from '@/routes/psychometricTestRoutes';
 import aiInterviewRoutes from '@/routes/aiInterviewRoutes';
+import quickInterviewRoutes from '@/routes/quickInterviewRoutes';
+import modernInterviewRoutes from '@/routes/modernInterviewRoutes';
 import jobCertificateRoutes from '@/routes/jobCertificateRoutes';
 import profileRoutes from '@/routes/profileRoutes';
 import uploadRoutes from '@/routes/uploadRoutes';
 import superAdminRoutes from '@/routes/superAdminRoutes';
+import employerRoutes from '@/routes/employerRoutes';
 
 
 
@@ -324,12 +327,32 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/job-applications', jobApplicationRoutes);
 app.use('/api/psychometric-tests', psychometricTestRoutes);
 app.use('/api/ai-interviews', aiInterviewRoutes);
+app.use('/api/quick-interviews', quickInterviewRoutes);
+app.use('/api', modernInterviewRoutes);
 app.use('/api/job-certificates', jobCertificateRoutes);
 app.use('/api/profiles', profileRoutes);
 app.use('/api/upload', uploadRoutes);
 
+// Employer routes
+app.use('/api/employer', employerRoutes);
+
 // Super Admin routes
 app.use('/api/admin', superAdminRoutes);
+
+// Placeholder image endpoint for avatar videos
+app.get('/api/placeholder/:width/:height', (req, res) => {
+  const { width, height } = req.params;
+  
+  // Create a simple SVG placeholder
+  const svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="#2c3e50"/>
+    <circle cx="${parseInt(width)/2}" cy="${parseInt(height)/2 - 20}" r="40" fill="#34495e"/>
+    <text x="${parseInt(width)/2}" y="${parseInt(height)/2 + 30}" font-family="Arial" font-size="16" fill="white" text-anchor="middle">AI Avatar Loading...</text>
+  </svg>`;
+  
+  res.set('Content-Type', 'image/svg+xml');
+  res.send(svg);
+});
 
 console.log('✅ All routes mounted successfully');
 

@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 // Components
 import HeroSection from '../components/HeroSection';
 import AboutSection from '../components/AboutSection';
+import ServicesSection from '../components/ServicesSection';
 import HowItWorksSection from '../components/HowItWorksSection';
 import PlatformLinksSection from '../components/PlatformLinksSection';
 import TestimonialsSection from '../components/TestimonialsSection';
@@ -49,6 +50,9 @@ const HomePage: React.FC = () => {
 
       {/* About Section */}
       <AboutSection />
+
+      {/* Services Section */}
+      <ServicesSection />
 
       {/* How It Works Section */}
       <HowItWorksSection />

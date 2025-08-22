@@ -97,7 +97,7 @@ const AboutSection: React.FC = () => {
                   fontWeight: 800,
                   mb: 3,
                   fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.75rem', lg: '3rem' },
-                  background: 'linear-gradient(45deg, #3f51b5, #ff6b6b)',
+                  background: 'linear-gradient(45deg, #22c55e, #16a34a)',
                   backgroundClip: 'text',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
@@ -111,7 +111,7 @@ const AboutSection: React.FC = () => {
                     transform: 'translateX(-50%)',
                     width: { xs: '60px', md: '80px' },
                     height: '4px',
-                    background: 'linear-gradient(45deg, #3f51b5, #ff6b6b)',
+                    background: 'linear-gradient(45deg, #22c55e, #16a34a)',
                     borderRadius: '2px',
                   }
                 }}
@@ -207,7 +207,7 @@ const AboutSection: React.FC = () => {
                 <Card
                   sx={{
                     height: '100%',
-                    background: 'linear-gradient(135deg, #ff6b6b 0%, #ff9e9e 100%)',
+                    background: 'linear-gradient(135deg, #22c55e 0%, #4ade80 100%)',
                     color: 'white',
                     position: 'relative',
                     overflow: 'hidden',
@@ -258,8 +258,8 @@ const AboutSection: React.FC = () => {
                     </Box>
                     <Typography variant="body1" sx={{ lineHeight: 1.7, fontSize: '1.1rem' }}>
                       ECH is dedicated to empowering individuals across Africa with high-quality, 
-                      tailored coaching, online courses, psychometric assessments, AI-driven 
-                      interview preparation, and verified certifications, enabling them to gain 
+                      tailored coaching, online courses, psychometric assessments, live video coaching 
+                      for interview preparation, and verified certifications, enabling them to gain 
                       the skills, confidence, and opportunities needed to secure meaningful 
                       employment and thrive in a dynamic global workforce.
                     </Typography>

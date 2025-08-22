@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { AIInterview, Job, JobApplication } from '@/models';
 import { InterviewType, UserRole } from '../../../shared/types';
 import { AuthRequest } from '@/middleware/auth';
+import { AIService } from '@/services/aiService';
 
 // Start AI interview
 export const startAIInterview = async (req: AuthRequest, res: Response) => {
@@ -144,8 +145,8 @@ export const submitInterviewResponse = async (req: AuthRequest, res: Response) =
       });
     }
 
-    // Analyze response and generate score/feedback
-    const analysis = analyzeInterviewResponse(question, response);
+    // Analyze response using AI service
+    const analysis = await analyzeInterviewResponseWithAI(question, response);
 
     // Create response object
     const responseObj = {
@@ -383,6 +384,56 @@ export const getInterviewDetails = async (req: AuthRequest, res: Response) => {
   }
 };
 
+/**
+ * Generate AI questions for job interviews
+ * POST /api/ai-interviews/generate-questions
+ */
+export const generateQuestions = async (req: AuthRequest, res: Response) => {
+  try {
+    const { job, difficulty = 'medium', count = 5 } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    if (!job || !job.title || !job.company) {
+      return res.status(400).json({
+        success: false,
+        error: 'Job details (title, company) are required'
+      });
+    }
+
+    console.log('🎯 Generating AI questions for job:', job.title, 'at', job.company);
+
+    // Generate questions using AI service
+    const questions = await generateJobSpecificQuestions(job, difficulty, count);
+
+    res.status(200).json({
+      success: true,
+      questions: questions.map((q, index) => ({
+        id: `ai_q_${index + 1}`,
+        question: q.question,
+        type: q.type,
+        expectedDuration: q.expectedDuration,
+        difficulty: q.difficulty,
+        keywords: q.keywords || []
+      }))
+    });
+
+  } catch (error: any) {
+    console.error('Error generating AI questions:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate questions',
+      message: error.message
+    });
+  }
+};
+
 // Helper function to generate interview questions
 function generateInterviewQuestions(type: InterviewType, job: any): any[] {
   const baseQuestions: Record<InterviewType, any[]> = {
@@ -479,8 +530,36 @@ function generateInterviewQuestions(type: InterviewType, job: any): any[] {
   }));
 }
 
-// Helper function to analyze interview response
-function analyzeInterviewResponse(question: any, response: string): {
+// Enhanced AI-powered response analysis
+async function analyzeInterviewResponseWithAI(question: any, response: string): Promise<{
+  score: number;
+  feedback: string;
+  keywordsFound: string[];
+}> {
+  const aiService = new AIService();
+  
+  try {
+    const analysis = await aiService.analyzeInterviewResponse(
+      question.question,
+      question.type,
+      response,
+      question.expectedKeywords
+    );
+    
+    return {
+      score: analysis.score,
+      feedback: analysis.feedback,
+      keywordsFound: analysis.keywordsFound
+    };
+  } catch (error) {
+    console.error('AI analysis failed, using fallback:', error);
+    // Fallback to basic analysis
+    return analyzeInterviewResponseBasic(question, response);
+  }
+}
+
+// Fallback basic analysis function
+function analyzeInterviewResponseBasic(question: any, response: string): {
   score: number;
   feedback: string;
   keywordsFound: string[];
@@ -491,29 +570,44 @@ function analyzeInterviewResponse(question: any, response: string): {
     responseWords.some(word => word.includes(keyword.toLowerCase()))
   );
 
-  // Calculate score based on keyword matching and response length
-  const keywordScore = (keywordsFound.length / keywords.length) * 60;
-  const lengthScore = Math.min(response.length / 100, 1) * 40; // Up to 40 points for adequate length
-  const score = Math.min(keywordScore + lengthScore, 100);
+  // Enhanced scoring algorithm
+  const keywordScore = keywords.length > 0 ? (keywordsFound.length / keywords.length) * 40 : 30;
+  const lengthScore = Math.min(response.length / 150, 1) * 30; // Up to 30 points for adequate length
+  const structureScore = response.includes('.') && response.split('.').length > 2 ? 20 : 10; // Sentence structure
+  const exampleScore = (response.includes('example') || response.includes('experience') || 
+                       response.includes('project') || response.includes('time when')) ? 10 : 0;
+  
+  const score = Math.min(keywordScore + lengthScore + structureScore + exampleScore, 100);
 
-  // Generate feedback
+  // Generate contextual feedback
   let feedback = '';
-  if (score >= 80) {
-    feedback = 'Excellent response! You covered the key points comprehensively.';
-  } else if (score >= 60) {
-    feedback = 'Good response. Consider elaborating on some key aspects.';
+  if (score >= 85) {
+    feedback = 'Outstanding response! You demonstrated excellent understanding and provided comprehensive details with relevant examples.';
+  } else if (score >= 70) {
+    feedback = 'Strong response showing good knowledge. Your answer addressed the key points effectively.';
+  } else if (score >= 55) {
+    feedback = 'Good response with room for improvement. Consider providing more specific examples and details.';
   } else if (score >= 40) {
-    feedback = 'Fair response. Try to include more relevant details and examples.';
+    feedback = 'Fair response. Try to elaborate more on your experience and include specific examples to strengthen your answer.';
   } else {
-    feedback = 'Your response could be improved. Focus on addressing the question more directly.';
+    feedback = 'Your response needs development. Focus on directly addressing the question with detailed examples and relevant experience.';
   }
 
+  // Add specific suggestions based on analysis
   if (keywordsFound.length < keywords.length / 2) {
-    feedback += ' Try to include more relevant technical terms and concepts.';
+    feedback += ' Include more relevant technical terms and industry-specific concepts in your response.';
+  }
+  
+  if (response.length < 100) {
+    feedback += ' Provide more detailed explanations to fully demonstrate your knowledge and experience.';
+  }
+
+  if (!response.includes('example') && !response.includes('experience')) {
+    feedback += ' Consider using the STAR method (Situation, Task, Action, Result) to structure your examples.';
   }
 
   return {
-    score,
+    score: Math.round(score),
     feedback,
     keywordsFound
   };
@@ -604,4 +698,140 @@ function generateComprehensiveFeedback(
     strengths,
     areasForImprovement
   };
+}
+
+// Helper function to generate job-specific questions using AI
+async function generateJobSpecificQuestions(job: any, difficulty: string, count: number): Promise<any[]> {
+  try {
+    const prompt = `Generate ${count} professional interview questions for a ${job.title} position at ${job.company}. 
+    
+Job Details:
+- Title: ${job.title}
+- Company: ${job.company}
+- Description: ${job.description || 'Not provided'}
+- Requirements: ${Array.isArray(job.requirements) ? job.requirements.join(', ') : job.requirements || 'Not provided'}
+- Skills: ${Array.isArray(job.skills) ? job.skills.join(', ') : job.skills || 'Not provided'}
+
+Difficulty Level: ${difficulty}
+
+Please generate questions that are:
+- Specific to the role and company
+- Appropriate for the ${difficulty} difficulty level
+- Mix of behavioral, technical, and situational questions
+- Professional and relevant
+
+Return as JSON array with this format:
+{
+  "questions": [
+    {
+      "question": "Question text",
+      "type": "behavioral|technical|situational",
+      "difficulty": "${difficulty}",
+      "expectedDuration": 120,
+      "keywords": ["keyword1", "keyword2"]
+    }
+  ]
+}`;
+
+    // Try to use AI service if available
+    try {
+      const aiService = new AIService();
+      const result = await aiService.model.generateContent(prompt);
+      const response = await result.response;
+      const aiResponse = response.text();
+      
+      // Parse AI response - try to extract JSON from possible markdown
+      let parsed;
+      try {
+        // Remove markdown code blocks if present
+        let jsonText = aiResponse.trim();
+        if (jsonText.startsWith('```json') && jsonText.endsWith('```')) {
+          jsonText = jsonText.slice(7, -3).trim();
+        } else if (jsonText.startsWith('```') && jsonText.endsWith('```')) {
+          jsonText = jsonText.slice(3, -3).trim();
+        }
+        
+        parsed = JSON.parse(jsonText);
+      } catch (parseError) {
+        console.warn('Could not parse AI response as JSON:', parseError);
+        parsed = null;
+      }
+
+      if (parsed && parsed.questions && Array.isArray(parsed.questions)) {
+        return parsed.questions.slice(0, count).map((q: any) => ({
+          question: q.question,
+          type: q.type || 'behavioral',
+          difficulty: q.difficulty || difficulty,
+          expectedDuration: q.expectedDuration || 120,
+          keywords: q.keywords || []
+        }));
+      }
+    } catch (aiError) {
+      console.warn('AI service unavailable, using template questions:', aiError);
+    }
+
+    // Fallback to template-based questions
+    return generateTemplateJobQuestions(job, difficulty, count);
+    
+  } catch (error) {
+    console.error('Error generating job-specific questions:', error);
+    return generateTemplateJobQuestions(job, difficulty, count);
+  }
+}
+
+// Fallback template questions
+function generateTemplateJobQuestions(job: any, difficulty: string, count: number): any[] {
+  const baseQuestions = [
+    {
+      question: `Tell me about your experience that makes you suitable for the ${job.title} position at ${job.company}.`,
+      type: 'behavioral',
+      difficulty,
+      expectedDuration: 120,
+      keywords: ['experience', 'suitable', 'position']
+    },
+    {
+      question: `What interests you most about working as a ${job.title} at ${job.company}?`,
+      type: 'motivational',
+      difficulty,
+      expectedDuration: 90,
+      keywords: ['interests', 'working', 'company']
+    },
+    {
+      question: `How would you handle a challenging situation in the ${job.title} role?`,
+      type: 'situational',
+      difficulty,
+      expectedDuration: 150,
+      keywords: ['handle', 'challenging', 'situation']
+    },
+    {
+      question: `What skills do you bring that would be valuable for this ${job.title} position?`,
+      type: 'technical',
+      difficulty,
+      expectedDuration: 120,
+      keywords: ['skills', 'valuable', 'position']
+    },
+    {
+      question: `Why do you want to work at ${job.company} specifically?`,
+      type: 'motivational',
+      difficulty,
+      expectedDuration: 90,
+      keywords: ['work', 'company', 'specifically']
+    }
+  ];
+
+  // Add technical questions based on job requirements
+  if (job.requirements) {
+    const requirements = Array.isArray(job.requirements) ? job.requirements : [job.requirements];
+    requirements.slice(0, 2).forEach((req: string) => {
+      baseQuestions.push({
+        question: `Can you explain your experience with ${req}? How would you apply it in this role?`,
+        type: 'technical',
+        difficulty,
+        expectedDuration: 180,
+        keywords: ['experience', req.toLowerCase(), 'apply']
+      });
+    });
+  }
+
+  return baseQuestions.slice(0, count);
 }

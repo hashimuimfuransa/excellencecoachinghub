@@ -26,6 +26,17 @@ export class AIService {
     return JSON.parse(jsonText);
   }
 
+  // General content generation method
+  async generateContent(prompt: string): Promise<string> {
+    try {
+      const result = await this.model.generateContent(prompt);
+      return result.response.text();
+    } catch (error) {
+      console.error('Error generating content with AI:', error);
+      throw error;
+    }
+  }
+
   // Generate quiz questions from course content
   async generateQuizQuestions(
     courseContent: string,
@@ -299,6 +310,69 @@ export class AIService {
     } catch (error) {
       console.error('Error generating course content:', error);
       throw new Error('Failed to generate course content');
+    }
+  }
+
+  // Analyze interview response with AI
+  async analyzeInterviewResponse(
+    question: string, 
+    questionType: string, 
+    response: string, 
+    expectedKeywords?: string[]
+  ): Promise<{
+    score: number;
+    feedback: string;
+    keywordsFound: string[];
+    strengths: string[];
+    improvements: string[];
+  }> {
+    try {
+      const prompt = `
+        You are an expert interview coach and hiring manager. Analyze this interview response thoroughly.
+        
+        **Question:** ${question}
+        **Question Type:** ${questionType}
+        **Expected Keywords:** ${expectedKeywords?.join(', ') || 'N/A'}
+        **Candidate Response:** ${response}
+        
+        Evaluate the response on:
+        1. Relevance and directness in answering the question (30%)
+        2. Depth, detail, and examples provided (25%) 
+        3. Professional communication and clarity (20%)
+        4. Use of relevant keywords and technical concepts (15%)
+        5. Structure and logical flow (10%)
+        
+        Provide detailed constructive feedback as JSON:
+        {
+          "score": <number 0-100>,
+          "feedback": "<comprehensive feedback with specific suggestions>",
+          "keywordsFound": ["<keywords from response>"],
+          "strengths": ["<specific strengths identified>"],
+          "improvements": ["<specific areas for improvement>"]
+        }
+        
+        Be encouraging yet constructive. Focus on actionable advice.
+      `;
+
+      const result = await this.model.generateContent(prompt);
+      const response_text = await result.response.text();
+      
+      try {
+        const analysis = this.extractJsonFromResponse(response_text);
+        return {
+          score: Math.max(0, Math.min(100, analysis.score)),
+          feedback: analysis.feedback || 'Response analyzed',
+          keywordsFound: analysis.keywordsFound || [],
+          strengths: analysis.strengths || [],
+          improvements: analysis.improvements || []
+        };
+      } catch (parseError) {
+        console.error('Failed to parse interview analysis:', parseError);
+        throw parseError;
+      }
+    } catch (error) {
+      console.error('Error analyzing interview response:', error);
+      throw new Error('Failed to analyze interview response');
     }
   }
 
@@ -2870,6 +2944,18 @@ Rules:
     }
     
     return Math.min(baseScore + qualityBonus, 100);
+  }
+
+  // General method to generate content using AI
+  async generateContent(prompt: string): Promise<string> {
+    try {
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      return response.text();
+    } catch (error) {
+      console.error('Error generating content with AI:', error);
+      throw new Error('Failed to generate content with AI');
+    }
   }
 }
 

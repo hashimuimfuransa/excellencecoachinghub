@@ -105,7 +105,7 @@ const LoginPage: React.FC = () => {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -123,7 +123,7 @@ const LoginPage: React.FC = () => {
           {/* Header */}
           <Box
             sx={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
               color: 'white',
               p: 4,
               textAlign: 'center'
@@ -221,9 +221,9 @@ const LoginPage: React.FC = () => {
                 startIcon={<LoginIcon />}
                 sx={{
                   py: 1.5,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
                   '&:hover': {
-                    background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                    background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
                   }
                 }}
               >

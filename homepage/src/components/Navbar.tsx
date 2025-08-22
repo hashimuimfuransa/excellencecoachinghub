@@ -86,6 +86,7 @@ const Navbar: React.FC = () => {
   const navItems = [
     { label: 'Home', action: () => scrollToSection('hero'), icon: <Home /> },
     { label: 'About', action: () => scrollToSection('about'), icon: <Info /> },
+    { label: 'Services', action: () => scrollToSection('services'), icon: <Handyman /> },
     { label: 'How It Works', action: () => scrollToSection('how-it-works'), icon: <Work /> },
     { label: 'Platforms', action: () => scrollToSection('platforms'), icon: <Handyman /> },
     { label: 'Testimonials', action: () => scrollToSection('testimonials'), icon: <Star /> },
@@ -96,7 +97,7 @@ const Navbar: React.FC = () => {
       sx={{ 
         width: 280, 
         height: '100%',
-        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%)',
+        background: 'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5530 100%)',
         position: 'relative',
         overflow: 'hidden'
       }}
@@ -110,8 +111,8 @@ const Navbar: React.FC = () => {
           right: 0,
           bottom: 0,
           background: `
-            radial-gradient(circle at 20% 80%, rgba(63, 81, 181, 0.15) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(255, 107, 107, 0.1) 0%, transparent 50%)
+            radial-gradient(circle at 20% 80%, rgba(34, 197, 94, 0.15) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(34, 197, 94, 0.1) 0%, transparent 50%)
           `,
           zIndex: 0,
         }}
@@ -235,7 +236,7 @@ const Navbar: React.FC = () => {
                   borderRadius: '12px',
                   transition: 'all 0.3s ease',
                   '&:hover': {
-                    bgcolor: 'rgba(63, 81, 181, 0.2)',
+                    bgcolor: 'rgba(34, 197, 94, 0.2)',
                     transform: 'translateX(8px)',
                   }
                 }}
@@ -262,12 +263,12 @@ const Navbar: React.FC = () => {
                   mx: 2,
                   mb: 1,
                   borderRadius: '12px',
-                  background: 'linear-gradient(45deg, #ff6b6b, #ff8e53)',
+                  background: 'linear-gradient(45deg, #22c55e, #16a34a)',
                   transition: 'all 0.3s ease',
                   '&:hover': {
-                    background: 'linear-gradient(45deg, #ff5252, #ff7043)',
+                    background: 'linear-gradient(45deg, #16a34a, #15803d)',
                     transform: 'translateX(8px) scale(1.02)',
-                    boxShadow: '0 8px 20px rgba(255, 107, 107, 0.3)',
+                    boxShadow: '0 8px 20px rgba(34, 197, 94, 0.3)',
                   }
                 }}
               >
@@ -442,7 +443,7 @@ const Navbar: React.FC = () => {
                         fontWeight: 500,
                         textTransform: 'none',
                         '&:hover': {
-                          bgcolor: scrolled ? 'rgba(25, 118, 210, 0.08)' : 'rgba(255, 255, 255, 0.1)',
+                          bgcolor: scrolled ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.1)',
                         }
                       }}
                     >
@@ -472,7 +473,7 @@ const Navbar: React.FC = () => {
                         px: 2,
                         '&:hover': {
                           borderColor: scrolled ? 'primary.dark' : 'rgba(255, 255, 255, 0.8)',
-                          bgcolor: scrolled ? 'rgba(63, 81, 181, 0.08)' : 'rgba(255, 255, 255, 0.1)',
+                          bgcolor: scrolled ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.1)',
                           transform: 'translateY(-2px)',
                           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                         }
@@ -534,7 +535,7 @@ const Navbar: React.FC = () => {
                         borderWidth: '1px',
                         '&:hover': {
                           borderColor: scrolled ? 'primary.dark' : 'rgba(255, 255, 255, 0.8)',
-                          bgcolor: scrolled ? 'rgba(63, 81, 181, 0.08)' : 'rgba(255, 255, 255, 0.1)',
+                          bgcolor: scrolled ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.1)',
                           transform: 'translateY(-2px)',
                           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                         }

@@ -34,12 +34,12 @@ const ColorlibConnector = styled(StepConnector)(({ theme }) => ({
   },
   [`&.${stepConnectorClasses.active}`]: {
     [`& .${stepConnectorClasses.line}`]: {
-      backgroundImage: 'linear-gradient(95deg, #3f51b5 0%, #6a1b9a 50%, #ff6b6b 100%)',
+      backgroundImage: 'linear-gradient(95deg, #22c55e 0%, #16a34a 50%, #22c55e 100%)',
     },
   },
   [`&.${stepConnectorClasses.completed}`]: {
     [`& .${stepConnectorClasses.line}`]: {
-      backgroundImage: 'linear-gradient(95deg, #3f51b5 0%, #6a1b9a 50%, #ff6b6b 100%)',
+      backgroundImage: 'linear-gradient(95deg, #22c55e 0%, #16a34a 50%, #22c55e 100%)',
     },
   },
   [`& .${stepConnectorClasses.line}`]: {
@@ -66,12 +66,12 @@ const ColorlibStepIconRoot = styled('div')<{
   transition: 'all 0.3s ease',
   border: '2px solid transparent',
   ...(ownerState.active && {
-    backgroundImage: 'linear-gradient(136deg, #3f51b5 0%, #6a1b9a 50%, #ff6b6b 100%)',
+    backgroundImage: 'linear-gradient(136deg, #22c55e 0%, #16a34a 50%, #22c55e 100%)',
     boxShadow: '0 8px 20px rgba(106, 27, 154, 0.3)',
     transform: 'scale(1.1)',
   }),
   ...(ownerState.completed && {
-    backgroundImage: 'linear-gradient(136deg, #3f51b5 0%, #6a1b9a 50%, #ff6b6b 100%)',
+    backgroundImage: 'linear-gradient(136deg, #22c55e 0%, #16a34a 50%, #22c55e 100%)',
     boxShadow: '0 4px 15px rgba(106, 27, 154, 0.2)',
   }),
   '&:hover': {
@@ -119,7 +119,7 @@ const HowItWorksSection: React.FC = () => {
     },
     {
       label: 'Complete Assessments',
-      description: 'Take psychometric tests and AI-powered mock interviews to evaluate your skills.',
+      description: 'Take psychometric tests and live video coaching sessions to evaluate and improve your skills.',
       icon: <Psychology />,
       color: '#ed6c02',
     },
@@ -184,7 +184,7 @@ const HowItWorksSection: React.FC = () => {
                   fontWeight: 800,
                   mb: 3,
                   fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.75rem', lg: '3rem' },
-                  background: 'linear-gradient(45deg, #3f51b5, #ff6b6b)',
+                  background: 'linear-gradient(45deg, #22c55e, #16a34a)',
                   backgroundClip: 'text',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
@@ -198,7 +198,7 @@ const HowItWorksSection: React.FC = () => {
                     transform: 'translateX(-50%)',
                     width: { xs: '60px', md: '80px' },
                     height: '4px',
-                    background: 'linear-gradient(45deg, #3f51b5, #ff6b6b)',
+                    background: 'linear-gradient(45deg, #22c55e, #16a34a)',
                     borderRadius: '2px',
                   }
                 }}
@@ -449,8 +449,8 @@ const HowItWorksSection: React.FC = () => {
                 {[
                   {
                     icon: <CheckCircle />,
-                    title: 'AI-Powered Learning',
-                    description: 'Personalized learning paths powered by artificial intelligence',
+                    title: 'Expert-Led Learning',
+                    description: 'Personalized learning paths with live video coaching and expert guidance',
                   },
                   {
                     icon: <Verified />,

@@ -33,7 +33,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
       id="hero"
       sx={{
         minHeight: { xs: 'calc(100vh + env(safe-area-inset-bottom))', sm: '100vh' },
-        background: 'linear-gradient(135deg, #3f51b5 0%, #6a1b9a 100%)',
+        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
         position: 'relative',
         display: 'flex',
         alignItems: 'center',
@@ -233,7 +233,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
                     }}
                   >
                     Join 12,500+ graduates with 94% job placement success rate. Expert e-learning, 
-                    psychometric tests, AI mock interviews, and direct job placement across Africa's top companies.
+                    psychometric tests, live video coaching for interviews, and direct job placement across Africa's top companies.
                   </Typography>
                 </motion.div>
 

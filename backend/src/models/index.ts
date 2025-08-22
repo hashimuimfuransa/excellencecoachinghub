@@ -36,6 +36,7 @@ export { JobCertificate, IJobCertificateDocument, IJobCertificateModel } from '.
 export { JobSeekerProfile, IJobSeekerProfileDocument, IJobSeekerProfileModel } from './JobSeekerProfile';
 export { StudentProfile, IStudentProfileDocument, IStudentProfileModel } from './StudentProfile';
 export { JobCourseMatch, IJobCourseMatchDocument, IJobCourseMatchModel } from './JobCourseMatch';
+export { InterviewSession, IInterviewSessionDocument, IInterviewSessionModel } from './InterviewSession';
 
 // Re-export shared types for convenience
 export {

@@ -119,7 +119,7 @@ const LoginPage: React.FC = () => {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #3f51b5 0%, #6a1b9a 100%)',
+        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
         display: 'flex',
         alignItems: 'center',
         py: 4,
@@ -161,7 +161,7 @@ const LoginPage: React.FC = () => {
           width: '250px',
           height: '250px',
           borderRadius: '50%',
-          background: 'rgba(255, 107, 107, 0.1)',
+          background: 'rgba(34, 197, 94, 0.1)',
           filter: 'blur(30px)',
           zIndex: 0,
         }}
@@ -212,7 +212,7 @@ const LoginPage: React.FC = () => {
                 right: -80,
                 width: 200,
                 height: 200,
-                background: 'linear-gradient(135deg, #3f51b5 0%, #ff6b6b 100%)',
+                background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
                 borderRadius: '50%',
                 opacity: 0.1,
               }}
@@ -249,7 +249,7 @@ const LoginPage: React.FC = () => {
                 sx={{
                   fontWeight: 800,
                   mb: 1,
-                  background: 'linear-gradient(45deg, #3f51b5, #ff6b6b)',
+                  background: 'linear-gradient(45deg, #22c55e, #16a34a)',
                   backgroundClip: 'text',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
@@ -263,7 +263,7 @@ const LoginPage: React.FC = () => {
                     transform: 'translateX(-50%)',
                     width: '60px',
                     height: '4px',
-                    background: 'linear-gradient(45deg, #3f51b5, #ff6b6b)',
+                    background: 'linear-gradient(45deg, #22c55e, #16a34a)',
                     borderRadius: '2px',
                   }
                 }}
@@ -355,7 +355,7 @@ const LoginPage: React.FC = () => {
                 component={motion.button}
                 whileHover={{ 
                   scale: 1.02,
-                  boxShadow: '0 6px 20px rgba(63, 81, 181, 0.4)',
+                  boxShadow: '0 6px 20px rgba(34, 197, 94, 0.4)',
                 }}
                 whileTap={{ scale: 0.98 }}
                 type="submit"
@@ -368,10 +368,10 @@ const LoginPage: React.FC = () => {
                   fontSize: '1.1rem',
                   fontWeight: 600,
                   borderRadius: '30px',
-                  background: 'linear-gradient(45deg, #3f51b5, #6a1b9a)',
-                  boxShadow: '0 4px 15px rgba(63, 81, 181, 0.3)',
+                  background: 'linear-gradient(45deg, #22c55e, #16a34a)',
+                  boxShadow: '0 4px 15px rgba(34, 197, 94, 0.3)',
                   '&:hover': {
-                    background: 'linear-gradient(45deg, #303f9f, #4a148c)',
+                    background: 'linear-gradient(45deg, #16a34a, #15803d)',
                   },
                 }}
               >

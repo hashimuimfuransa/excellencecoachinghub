@@ -36,6 +36,7 @@ import ProfileCompletionDashboard from '../components/ProfileCompletionDashboard
 import {
   Work,
   Person,
+  People,
   Assessment,
   EmojiEvents,
   TrendingUp,
@@ -746,7 +747,7 @@ const DashboardPage: React.FC = () => {
           {loading ? (
             // Loading skeletons
             Array.from({ length: 4 }).map((_, index) => (
-              <Grid item xs={12} sm={6} md={3} key={index}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
                 <Card sx={{ height: '100%' }}>
                   <CardContent>
                     <Skeleton variant="rectangular" height={40} sx={{ mb: 2 }} />
@@ -759,7 +760,7 @@ const DashboardPage: React.FC = () => {
           ) : isJobSeekerView ? (
             // Job Seeker Stats
             <>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Zoom in={!loading} timeout={600}>
                   <div>
                     <StatCard
@@ -773,7 +774,7 @@ const DashboardPage: React.FC = () => {
                   </div>
                 </Zoom>
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Zoom in={!loading} timeout={800}>
                   <div>
                     <StatCard
@@ -787,7 +788,7 @@ const DashboardPage: React.FC = () => {
                   </div>
                 </Zoom>
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Zoom in={!loading} timeout={1000}>
                   <div>
                     <StatCard
@@ -801,7 +802,7 @@ const DashboardPage: React.FC = () => {
                   </div>
                 </Zoom>
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Zoom in={!loading} timeout={1200}>
                   <div>
                     <StatCard
@@ -819,7 +820,7 @@ const DashboardPage: React.FC = () => {
           ) : (
             // Employer Stats
             <>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Zoom in={!loading} timeout={600}>
                   <div>
                     <StatCard
@@ -833,7 +834,7 @@ const DashboardPage: React.FC = () => {
                   </div>
                 </Zoom>
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Zoom in={!loading} timeout={800}>
                   <div>
                     <StatCard
@@ -847,7 +848,7 @@ const DashboardPage: React.FC = () => {
                   </div>
                 </Zoom>
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Zoom in={!loading} timeout={1000}>
                   <div>
                     <StatCard
@@ -861,7 +862,7 @@ const DashboardPage: React.FC = () => {
                   </div>
                 </Zoom>
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Zoom in={!loading} timeout={1200}>
                   <div>
                     <StatCard
@@ -882,7 +883,7 @@ const DashboardPage: React.FC = () => {
         {/* Main Content Area */}
         <Grid container spacing={3}>
           {/* Left Column */}
-          <Grid item xs={12} md={8}>
+          <Grid size={{ xs: 12, md: 8 }}>
             {/* Job Seeker View */}
             {isJobSeekerView && (
               <>
@@ -1067,7 +1068,7 @@ const DashboardPage: React.FC = () => {
           </Grid>
 
           {/* Right Column - Sidebar */}
-          <Grid item xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
             {/* Job Seeker Sidebar */}
             {isJobSeekerView && (
               <>
@@ -1194,7 +1195,7 @@ const DashboardPage: React.FC = () => {
                   {recommendedCourses.length > 0 ? (
                     <Grid container spacing={2}>
                       {recommendedCourses.map(course => (
-                        <Grid item xs={12} key={course.id}>
+                        <Grid size={{ xs: 12 }} key={course.id}>
                           <Card variant="outlined" sx={{ display: 'flex', height: '100%' }}>
                             <CardContent sx={{ flex: 1, p: 2 }}>
                               <Typography variant="subtitle1" fontWeight="medium">
@@ -1339,7 +1340,7 @@ const DashboardPage: React.FC = () => {
                   </Box>
                   
                   <Grid container spacing={2} mb={2}>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                       <Box textAlign="center" p={1.5} bgcolor={alpha(theme.palette.primary.main, 0.1)} borderRadius={1}>
                         <Typography variant="h4" color="primary.main" fontWeight="bold">
                           {applications.length}
@@ -1347,7 +1348,7 @@ const DashboardPage: React.FC = () => {
                         <Typography variant="body2">Applications</Typography>
                       </Box>
                     </Grid>
-                    <Grid item xs={6}>
+                    <Grid size={{ xs: 6 }}>
                       <Box textAlign="center" p={1.5} bgcolor={alpha(theme.palette.success.main, 0.1)} borderRadius={1}>
                         <Typography variant="h4" color="success.main" fontWeight="bold">
                           {recentJobs.length}
@@ -1427,7 +1428,7 @@ const DashboardPage: React.FC = () => {
               }}
             >
               <Grid container spacing={3} alignItems="center">
-                <Grid item xs={12} md={8}>
+                <Grid size={{ xs: 12, md: 8 }}>
                   <Typography variant="h5" component="h2" fontWeight="bold" color="secondary.main" gutterBottom>
                     Student Career Advantage Program
                   </Typography>
@@ -1436,7 +1437,7 @@ const DashboardPage: React.FC = () => {
                     internships, and career development resources designed specifically for students.
                   </Typography>
                   <Grid container spacing={2} sx={{ mb: 3 }}>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <Box display="flex" alignItems="center" gap={1} mb={1}>
                         <School color="secondary" fontSize="small" />
                         <Typography variant="subtitle2">Student-Friendly Jobs</Typography>
@@ -1445,7 +1446,7 @@ const DashboardPage: React.FC = () => {
                         Find part-time positions that work with your class schedule
                       </Typography>
                     </Grid>
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                       <Box display="flex" alignItems="center" gap={1} mb={1}>
                         <MenuBook color="secondary" fontSize="small" />
                         <Typography variant="subtitle2">Course-Aligned Internships</Typography>
@@ -1464,7 +1465,7 @@ const DashboardPage: React.FC = () => {
                     Browse Student Opportunities
                   </Button>
                 </Grid>
-                <Grid item xs={12} md={4} sx={{ display: { xs: 'none', md: 'block' } }}>
+                <Grid size={{ xs: 12, md: 4 }} sx={{ display: { xs: 'none', md: 'block' } }}>
                   <Box 
                     sx={{ 
                       display: 'flex',

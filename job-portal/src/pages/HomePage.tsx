@@ -56,7 +56,9 @@ import {
   AccessTime,
   AttachMoney,
   FiberNew,
-  Description
+  Description,
+  Email,
+  Phone
 } from '@mui/icons-material';
 import { useNavigate, Link } from 'react-router-dom';
 import PublicLayout from '../layouts/PublicLayout';
@@ -118,7 +120,7 @@ const HomePage: React.FC = () => {
     {
       icon: <Work sx={{ fontSize: 48, color: '#4caf50' }} />,
       title: 'Smart Job Matching',
-      description: 'AI-powered job recommendations based on your skills, experience, and career goals.',
+      description: 'Smart job recommendations based on your skills, experience, and career goals.',
       action: () => navigate('/app/jobs'),
       color: '#4caf50',
       bgColor: 'rgba(76, 175, 80, 0.1)',
@@ -126,8 +128,8 @@ const HomePage: React.FC = () => {
     },
     {
       icon: <Psychology sx={{ fontSize: 48, color: '#66bb6a' }} />,
-      title: 'AI Interview Coach',
-      description: 'Practice with our AI interview coach and get real-time feedback to ace your interviews.',
+      title: 'Interview Coach',
+      description: 'Practice with our smart interview coach and get real-time feedback to ace your interviews.',
       action: () => navigate('/app/interviews'),
       color: '#66bb6a',
       bgColor: 'rgba(102, 187, 106, 0.1)',
@@ -169,14 +171,14 @@ const HomePage: React.FC = () => {
     {
       step: '01',
       title: 'Create Your Profile',
-      description: 'Sign up and build your professional profile with our AI-guided setup process.',
+      description: 'Sign up and build your professional profile with our guided setup process.',
       icon: <Person sx={{ fontSize: 40 }} />,
       color: '#4caf50'
     },
     {
       step: '02',
       title: 'Get Matched',
-      description: 'Our AI analyzes your skills and preferences to find the perfect job opportunities.',
+      description: 'Our system analyzes your skills and preferences to find the perfect job opportunities.',
       icon: <AutoAwesome sx={{ fontSize: 40 }} />,
       color: '#66bb6a'
     },
@@ -258,11 +260,13 @@ const HomePage: React.FC = () => {
         sx={{
           background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)',
           color: 'white',
-          py: { xs: 8, sm: 10, md: 16 },
+          py: { xs: 6, sm: 8, md: 12, lg: 16 },
+          px: { xs: 1, sm: 2 },
           position: 'relative',
           overflow: 'hidden',
           borderRadius: { xs: 0, md: '0 0 50px 50px' },
           boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+          minHeight: { xs: '100vh', md: 'auto' },
           '&::before': {
             content: '""',
             position: 'absolute',
@@ -270,7 +274,10 @@ const HomePage: React.FC = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'url("/find job.jpg")',
+            backgroundImage: 'url("/find job.jpg")',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
             opacity: 0.3,
             animation: 'pulse 15s infinite alternate'
           },
@@ -280,22 +287,89 @@ const HomePage: React.FC = () => {
           }
         }}
       >
+        {/* Floating Decorative Elements */}
+        <Box sx={{ 
+          position: 'absolute', 
+          top: '20%', 
+          left: '10%', 
+          animation: 'float1 6s ease-in-out infinite',
+          zIndex: 0,
+          '@keyframes float1': {
+            '0%, 100%': { transform: 'translate(0, 0) rotate(0deg)' },
+            '50%': { transform: 'translate(20px, -30px) rotate(180deg)' }
+          }
+        }}>
+          <Box sx={{ 
+            width: 40, 
+            height: 40, 
+            borderRadius: '50%', 
+            background: 'rgba(255,255,255,0.1)', 
+            backdropFilter: 'blur(10px)',
+            border: '2px solid rgba(255,255,255,0.2)'
+          }} />
+        </Box>
+        
+        <Box sx={{ 
+          position: 'absolute', 
+          top: '60%', 
+          right: '15%', 
+          animation: 'float2 8s ease-in-out infinite reverse',
+          zIndex: 0,
+          '@keyframes float2': {
+            '0%, 100%': { transform: 'translate(0, 0) rotate(0deg)' },
+            '50%': { transform: 'translate(-30px, -20px) rotate(-180deg)' }
+          }
+        }}>
+          <Box sx={{ 
+            width: 60, 
+            height: 60, 
+            borderRadius: '20px', 
+            background: 'rgba(255,255,255,0.08)', 
+            backdropFilter: 'blur(15px)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            transform: 'rotate(45deg)'
+          }} />
+        </Box>
+
+        <Box sx={{ 
+          position: 'absolute', 
+          top: '30%', 
+          right: '25%', 
+          animation: 'float3 10s ease-in-out infinite',
+          zIndex: 0,
+          '@keyframes float3': {
+            '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+            '33%': { transform: 'translate(15px, -25px) scale(1.2)' },
+            '66%': { transform: 'translate(-10px, -15px) scale(0.8)' }
+          }
+        }}>
+          <Box sx={{ 
+            width: 30, 
+            height: 30, 
+            borderRadius: '50%', 
+            background: 'rgba(200,230,201,0.3)', 
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 0 20px rgba(200,230,201,0.2)'
+          }} />
+        </Box>
+
         <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
           <Fade in={animationTrigger} timeout={1000}>
             <Box textAlign="center">
               <Box sx={{ 
                 display: 'flex', 
-                flexDirection: { xs: 'column', md: 'row' },
+                flexDirection: { xs: 'column', lg: 'row' },
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                gap: { xs: 4, sm: 6, md: 4 },
-                mb: { xs: 4, sm: 6 },
-                px: { xs: 2, sm: 0 }
+                gap: { xs: 3, sm: 4, md: 5, lg: 4 },
+                mb: { xs: 3, sm: 4, md: 6 },
+                px: { xs: 1, sm: 2, md: 0 }
               }}>
                 <Zoom in={animationTrigger} timeout={1200}>
                   <Box sx={{ 
-                    textAlign: { xs: 'center', md: 'left' },
-                    maxWidth: { md: '600px' }
+                    textAlign: { xs: 'center', lg: 'left' },
+                    maxWidth: { xs: '100%', sm: '90%', md: '80%', lg: '600px' },
+                    mx: { xs: 'auto', lg: 0 }
                   }}>
                     <Typography 
                       variant="h1" 
@@ -303,17 +377,51 @@ const HomePage: React.FC = () => {
                       gutterBottom 
                       fontWeight="900"
                       sx={{ 
-                        fontSize: { xs: '2.25rem', sm: '3rem', md: '4rem', lg: '4.5rem' },
-                        background: 'linear-gradient(45deg, #fff 30%, #f0f0f0 90%)',
+                        fontSize: { xs: '2rem', sm: '2.5rem', md: '3.2rem', lg: '4rem', xl: '5rem' },
+                        background: 'linear-gradient(45deg, #fff 20%, #e8f5e8 50%, #c8e6c9 90%)',
                         backgroundClip: 'text',
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent',
-                        textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                        textShadow: '0 4px 20px rgba(255,255,255,0.4)',
                         lineHeight: 1.1,
-                        letterSpacing: '-0.02em'
+                        letterSpacing: '-0.02em',
+                        position: 'relative',
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          width: '120%',
+                          height: '120%',
+                          background: 'radial-gradient(ellipse, rgba(255,255,255,0.1) 0%, transparent 70%)',
+                          borderRadius: '50%',
+                          zIndex: -1,
+                          animation: 'glow 3s ease-in-out infinite alternate'
+                        },
+                        '@keyframes glow': {
+                          '0%': { opacity: 0.3, transform: 'translate(-50%, -50%) scale(1)' },
+                          '100%': { opacity: 0.6, transform: 'translate(-50%, -50%) scale(1.1)' }
+                        }
                       }}
                     >
-                      Find Your <Box component="span" sx={{ color: '#8eff8e', textShadow: '0 0 10px rgba(76, 175, 80, 0.5)' }}>Dream Job</Box> Today
+                      Find Your <Box component="span" sx={{ 
+                        color: '#8eff8e', 
+                        textShadow: '0 0 30px rgba(76, 175, 80, 0.8)',
+                        position: 'relative',
+                        '&::before': {
+                          content: '"✨"',
+                          position: 'absolute',
+                          top: '-10px',
+                          right: '-15px',
+                          fontSize: '0.4em',
+                          animation: 'sparkle 2s ease-in-out infinite'
+                        },
+                        '@keyframes sparkle': {
+                          '0%, 100%': { opacity: 0.5, transform: 'rotate(0deg) scale(1)' },
+                          '50%': { opacity: 1, transform: 'rotate(180deg) scale(1.2)' }
+                        }
+                      }}>Dream Job</Box> Today 🚀
                     </Typography>
                     <Typography 
                       variant="h4" 
@@ -321,81 +429,163 @@ const HomePage: React.FC = () => {
                       gutterBottom 
                       sx={{ 
                         mb: 3,
-                        fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem', lg: '2rem' },
-                        fontWeight: 300,
-                        opacity: 0.9
+                        fontSize: { xs: '1.3rem', sm: '1.6rem', md: '1.8rem', lg: '2.1rem' },
+                        fontWeight: 400,
+                        opacity: 0.95,
+                        background: 'linear-gradient(45deg, #ffffff 30%, #c8e6c9 90%)',
+                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        textShadow: '0 2px 15px rgba(255,255,255,0.3)'
                       }}
                     >
-                      Your AI-Powered Career Success Platform
+                      🎯 Your Smart Career Success Platform
                     </Typography>
                     <Typography 
                       variant="h6" 
                       sx={{ 
-                        mb: 4, 
-                        opacity: 0.8,
-                        maxWidth: '600px',
-                        mx: { xs: 'auto', md: 0 },
-                        lineHeight: 1.6,
-                        fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' }
+                        mb: 3, 
+                        opacity: 0.9,
+                        maxWidth: { xs: '95%', sm: '90%', md: '600px' },
+                        mx: { xs: 'auto', lg: 0 },
+                        lineHeight: { xs: 1.5, md: 1.7 },
+                        fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem', lg: '1.2rem' },
+                        fontWeight: 300,
+                        textShadow: '0 2px 10px rgba(0,0,0,0.3)',
+                        px: { xs: 1, sm: 0 }
                       }}
                     >
-                      Connect with top employers, develop in-demand skills, and accelerate your career with our intelligent job matching and AI-powered interview preparation
+                      🌟 Connect with top employers, develop in-demand skills, and accelerate your career with our intelligent job matching and smart interview preparation
                     </Typography>
+
+                    {/* Key Benefits Pills */}
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexWrap: 'wrap', 
+                      gap: { xs: 1, sm: 1.5 }, 
+                      mb: { xs: 3, md: 4 },
+                      justifyContent: { xs: 'center', lg: 'flex-start' },
+                      px: { xs: 1, sm: 0 }
+                    }}>
+                      {[
+                        { icon: '🎯', text: 'Smart Job Matching', color: '#4caf50' },
+                        { icon: '⚡', text: 'Instant Apply', color: '#66bb6a' },
+                        { icon: '📈', text: '95% Success Rate', color: '#81c784' },
+                        { icon: '💎', text: 'Premium Support', color: '#388e3c' }
+                      ].map((benefit, index) => (
+                        <Chip
+                          key={index}
+                          label={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <span style={{ fontSize: '1.1em' }}>{benefit.icon}</span>
+                              <span>{benefit.text}</span>
+                            </Box>
+                          }
+                          sx={{
+                            backgroundColor: alpha('#fff', 0.15),
+                            color: 'white',
+                            fontWeight: 600,
+                            fontSize: { xs: '0.75rem', sm: '0.85rem' },
+                            py: { xs: 1, sm: 1.5 },
+                            px: { xs: 1.5, sm: 2 },
+                            backdropFilter: 'blur(15px)',
+                            border: `1px solid ${alpha(benefit.color, 0.4)}`,
+                            boxShadow: `0 4px 15px ${alpha(benefit.color, 0.2)}`,
+                            '&:hover': {
+                              backgroundColor: alpha('#fff', 0.25),
+                              transform: 'translateY(-3px)',
+                              boxShadow: `0 8px 25px ${alpha(benefit.color, 0.3)}`
+                            },
+                            transition: 'all 0.3s ease'
+                          }}
+                        />
+                      ))}
+                    </Box>
                     
                     {/* Hero CTA Buttons */}
                     <Box sx={{ 
                       display: 'flex', 
                       gap: { xs: 1.5, sm: 2 }, 
-                      flexWrap: 'wrap',
-                      justifyContent: { xs: 'center', md: 'flex-start' }
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      alignItems: 'center',
+                      justifyContent: { xs: 'center', lg: 'flex-start' },
+                      px: { xs: 1, sm: 0 }
                     }}>
                       <Button
                         variant="contained"
-                        size={isMobile ? "medium" : "large"}
-                        startIcon={<RocketLaunch />}
+                        size="large"
+                        fullWidth={isMobile}
+                        startIcon={<RocketLaunch sx={{ fontSize: '1.2em' }} />}
                         sx={{ 
-                          bgcolor: 'white', 
+                          background: 'linear-gradient(45deg, #ffffff 0%, #f8f9fa 50%, #ffffff 100%)', 
                           color: 'primary.main',
-                          px: { xs: 2, sm: 3, md: 4 },
-                          py: { xs: 1.2, sm: 1.5 },
-                          borderRadius: 3,
+                          px: { xs: 3, sm: 4, md: 5 },
+                          py: { xs: 1.5, sm: 2 },
+                          borderRadius: 4,
                           fontWeight: 'bold',
-                          boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
-                          fontSize: { xs: '0.85rem', sm: '0.9rem', md: '1rem' },
+                          boxShadow: '0 8px 25px rgba(255,255,255,0.3), 0 4px 15px rgba(0,0,0,0.1)',
+                          fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' },
+                          border: '2px solid rgba(255,255,255,0.5)',
+                          backdropFilter: 'blur(10px)',
                           '&:hover': { 
-                            bgcolor: 'grey.100',
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 6px 20px rgba(0,0,0,0.3)'
+                            background: 'linear-gradient(45deg, #f0f0f0 0%, #e8e8e8 50%, #f0f0f0 100%)',
+                            transform: 'translateY(-4px) scale(1.02)',
+                            boxShadow: '0 12px 35px rgba(255,255,255,0.4), 0 8px 25px rgba(0,0,0,0.15)',
+                            border: '2px solid rgba(255,255,255,0.8)'
                           },
-                          transition: 'all 0.3s'
+                          transition: 'all 0.3s ease',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: '-100%',
+                            width: '100%',
+                            height: '100%',
+                            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+                            animation: 'shine 3s ease-in-out infinite'
+                          },
+                          '@keyframes shine': {
+                            '0%': { left: '-100%' },
+                            '100%': { left: '100%' }
+                          }
                         }}
                         onClick={() => navigate('/app/jobs')}
                       >
-                        Explore Jobs
+                        🚀 Explore Jobs
                       </Button>
                       <Button
                         variant="outlined"
-                        size={isMobile ? "medium" : "large"}
-                        startIcon={<PlayArrow />}
+                        size="large"
+                        fullWidth={isMobile}
+                        startIcon={<PlayArrow sx={{ fontSize: '1.2em' }} />}
                         sx={{ 
-                          borderColor: 'white', 
+                          borderColor: 'rgba(255,255,255,0.7)', 
                           color: 'white',
-                          px: { xs: 2, sm: 3, md: 4 },
-                          py: { xs: 1.2, sm: 1.5 },
-                          borderRadius: 3,
+                          px: { xs: 3, sm: 4, md: 5 },
+                          py: { xs: 1.5, sm: 2 },
+                          borderRadius: 4,
                           fontWeight: 'bold',
                           borderWidth: 2,
-                          fontSize: { xs: '0.85rem', sm: '0.9rem', md: '1rem' },
+                          fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' },
+                          backdropFilter: 'blur(15px)',
+                          background: 'rgba(255,255,255,0.1)',
+                          boxShadow: '0 4px 15px rgba(255,255,255,0.1)',
                           '&:hover': { 
                             borderColor: 'white', 
-                            bgcolor: 'rgba(255,255,255,0.1)',
-                            transform: 'translateY(-2px)'
+                            bgcolor: 'rgba(255,255,255,0.2)',
+                            transform: 'translateY(-4px) scale(1.02)',
+                            boxShadow: '0 8px 25px rgba(255,255,255,0.2)',
+                            background: 'rgba(255,255,255,0.15)'
                           },
-                          transition: 'all 0.3s'
+                          transition: 'all 0.3s ease',
+                          position: 'relative',
+                          overflow: 'hidden'
                         }}
                         onClick={() => navigate('/register')}
                       >
-                        Get Started Free
+                        ✨ Get Started Free
                       </Button>
                     </Box>
                   </Box>
@@ -404,11 +594,13 @@ const HomePage: React.FC = () => {
                 {/* Hero Image/Illustration */}
                 <Zoom in={animationTrigger} timeout={1500}>
                   <Box sx={{ 
-                    display: { xs: 'none', md: 'block' },
+                    display: { xs: 'none', sm: 'block' },
                     position: 'relative',
                     width: '100%',
-                    maxWidth: '500px',
-                    height: '400px'
+                    maxWidth: { sm: '300px', md: '400px', lg: '500px' },
+                    height: { sm: '250px', md: '350px', lg: '400px' },
+                    mt: { sm: 3, md: 0 },
+                    mx: 'auto'
                   }}>
                     <Box
                       component="img"
@@ -476,7 +668,7 @@ const HomePage: React.FC = () => {
                       >
                         <Star sx={{ color: '#FFD700' }} />
                         <Typography variant="body2" fontWeight="bold" color="text.primary">
-                          AI Powered
+                          Smart Powered
                         </Typography>
                       </Paper>
                     </Box>
@@ -597,48 +789,80 @@ const HomePage: React.FC = () => {
                   }
                 }}
               >
-                <Grid container spacing={2} alignItems="center">
-                  <Grid item xs={12} sm={6} md={5}>
+                <Grid container spacing={{ xs: 2, md: 2 }} alignItems="stretch">
+                  <Grid item xs={12} md={5}>
                     <TextField
                       fullWidth
-                      placeholder="Job title, keywords, or company"
+                      placeholder="💼 Job title, keywords, or company"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
-                            <Search color="primary" />
+                            <Search sx={{ color: '#4caf50' }} />
                           </InputAdornment>
                         ),
                       }}
                       sx={{ 
                         '& .MuiOutlinedInput-root': { 
-                          borderRadius: 2,
-                          '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'primary.main',
+                          borderRadius: 3,
+                          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                          backdropFilter: 'blur(10px)',
+                          height: { xs: '56px', md: '64px' },
+                          fontSize: { xs: '0.9rem', md: '1rem' },
+                          boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+                          border: '1px solid rgba(76, 175, 80, 0.2)',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            boxShadow: '0 6px 20px rgba(76, 175, 80, 0.15)',
+                            transform: 'translateY(-2px)',
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: '#4caf50',
+                              borderWidth: '2px'
+                            }
+                          },
+                          '&.Mui-focused': {
+                            boxShadow: '0 8px 25px rgba(76, 175, 80, 0.2)',
+                            transform: 'translateY(-2px)'
                           }
                         } 
                       }}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6} md={4}>
+                  <Grid item xs={12} md={4}>
                     <TextField
                       fullWidth
-                      placeholder="Location"
+                      placeholder="📍 Location (Remote, City, State)"
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
-                            <LocationOn color="primary" />
+                            <LocationOn sx={{ color: '#4caf50' }} />
                           </InputAdornment>
                         ),
                       }}
                       sx={{ 
                         '& .MuiOutlinedInput-root': { 
-                          borderRadius: 2,
-                          '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'primary.main',
+                          borderRadius: 3,
+                          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                          backdropFilter: 'blur(10px)',
+                          height: { xs: '56px', md: '64px' },
+                          fontSize: { xs: '0.9rem', md: '1rem' },
+                          boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+                          border: '1px solid rgba(76, 175, 80, 0.2)',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            boxShadow: '0 6px 20px rgba(76, 175, 80, 0.15)',
+                            transform: 'translateY(-2px)',
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: '#4caf50',
+                              borderWidth: '2px'
+                            }
+                          },
+                          '&.Mui-focused': {
+                            boxShadow: '0 8px 25px rgba(76, 175, 80, 0.2)',
+                            transform: 'translateY(-2px)'
                           }
                         } 
                       }}
@@ -650,21 +874,25 @@ const HomePage: React.FC = () => {
                       variant="contained"
                       size="large"
                       onClick={handleSearch}
-                      startIcon={<Search />}
+                      startIcon={<Search sx={{ fontSize: '1.2em' }} />}
                       sx={{
-                        py: { xs: 1.5, md: 1.8 },
-                        borderRadius: 2,
-                        background: 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)',
-                        boxShadow: '0 3px 5px 2px rgba(76, 175, 80, .3)',
+                        height: { xs: '56px', md: '64px' },
+                        borderRadius: 3,
+                        background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)',
+                        boxShadow: '0 6px 20px rgba(76, 175, 80, 0.3)',
+                        fontSize: { xs: '0.9rem', md: '1rem' },
+                        fontWeight: 'bold',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        transition: 'all 0.3s ease',
                         '&:hover': {
-                          background: 'linear-gradient(45deg, #66bb6a 30%, #388e3c 90%)',
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 6px 10px 2px rgba(76, 175, 80, .3)',
-                        },
-                        transition: 'all 0.3s'
+                          background: 'linear-gradient(135deg, #66bb6a 0%, #388e3c 100%)',
+                          transform: 'translateY(-3px) scale(1.02)',
+                          boxShadow: '0 8px 25px rgba(76, 175, 80, 0.4)',
+                        }
                       }}
                     >
-                      Find Jobs
+                      🚀 Find Jobs
                     </Button>
                   </Grid>
                 </Grid>
@@ -672,9 +900,9 @@ const HomePage: React.FC = () => {
             </Box>
             
             {loadingJobs ? (
-              <Grid container spacing={3}>
+              <Grid container spacing={{ xs: 2, sm: 3 }}>
                 {[1, 2, 3, 4, 5, 6].map((item) => (
-                  <Grid item xs={12} sm={6} md={4} key={item}>
+                  <Grid item xs={12} sm={6} lg={4} key={item}>
                     <Paper sx={{ p: 3, borderRadius: 3 }}>
                       <Skeleton variant="text" width="60%" height={40} />
                       <Skeleton variant="text" width="40%" height={30} />
@@ -705,16 +933,16 @@ const HomePage: React.FC = () => {
               </Paper>
             ) : (
               <>
-                <Grid container spacing={3}>
+                <Grid container spacing={{ xs: 2, sm: 3 }}>
                   {featuredJobs.map((job, index) => (
-                    <Grid item xs={12} sm={6} md={4} key={index}>
+                    <Grid item xs={12} sm={6} lg={4} key={index}>
                       <Zoom in={animationTrigger} timeout={1500 + index * 150}>
                         <Paper 
                           component="div"
                           elevation={3} 
                           sx={{ 
-                            p: 3, 
-                            borderRadius: 3,
+                            p: { xs: 2.5, sm: 3 }, 
+                            borderRadius: { xs: 2, sm: 3 },
                             height: '100%',
                             display: 'flex',
                             flexDirection: 'column',
@@ -744,24 +972,55 @@ const HomePage: React.FC = () => {
                           )}
                           
                           {/* Company logo */}
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                          <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: { xs: 'flex-start', sm: 'center' },
+                            mb: 2,
+                            gap: 1.5
+                          }}>
                             <Avatar 
                               src={job.companyLogo} 
                               alt={job.company}
                               sx={{ 
-                                width: 50, 
-                                height: 50, 
-                                mr: 2,
-                                bgcolor: job.companyLogo ? 'transparent' : 'primary.main'
+                                width: { xs: 40, sm: 50 }, 
+                                height: { xs: 40, sm: 50 }, 
+                                flexShrink: 0,
+                                bgcolor: job.companyLogo ? 'transparent' : 'primary.main',
+                                fontSize: { xs: '0.9rem', sm: '1.2rem' }
                               }}
                             >
                               {!job.companyLogo && job.company?.charAt(0)}
                             </Avatar>
-                            <Box>
-                              <Typography variant="h6" fontWeight="bold" noWrap>
+                            <Box sx={{ minWidth: 0, flex: 1 }}>
+                              <Typography 
+                                variant="h6" 
+                                fontWeight="bold" 
+                                sx={{ 
+                                  fontSize: { xs: '0.95rem', sm: '1.1rem', md: '1.25rem' },
+                                  lineHeight: { xs: 1.3, sm: 1.4 },
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: { xs: 2, sm: 1 },
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                  wordBreak: 'break-word',
+                                  hyphens: 'auto'
+                                }}
+                                title={job.title}
+                              >
                                 {job.title}
                               </Typography>
-                              <Typography variant="body2" color="text.secondary" noWrap>
+                              <Typography 
+                                variant="body2" 
+                                color="text.secondary" 
+                                sx={{
+                                  fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 1,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden'
+                                }}
+                                title={job.company}
+                              >
                                 {job.company}
                               </Typography>
                             </Box>
@@ -769,33 +1028,117 @@ const HomePage: React.FC = () => {
                           
                           {/* Job details */}
                           <Box sx={{ mb: 2, flex: 1 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                              <LocationOn fontSize="small" color="action" sx={{ mr: 1 }} />
-                              <Typography variant="body2" color="text.secondary" noWrap>
+                            <Box sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              mb: { xs: 0.8, sm: 1 },
+                              minHeight: { xs: 'auto', sm: '20px' }
+                            }}>
+                              <LocationOn 
+                                fontSize="small" 
+                                color="action" 
+                                sx={{ 
+                                  mr: 1, 
+                                  fontSize: { xs: '0.9rem', sm: '1.2rem' },
+                                  flexShrink: 0
+                                }} 
+                              />
+                              <Typography 
+                                variant="body2" 
+                                color="text.secondary" 
+                                sx={{ 
+                                  fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 1,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden'
+                                }}
+                                title={job.location}
+                              >
                                 {job.location}
                               </Typography>
                             </Box>
                             
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                              <Work fontSize="small" color="action" sx={{ mr: 1 }} />
-                              <Typography variant="body2" color="text.secondary" noWrap>
+                            <Box sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              mb: { xs: 0.8, sm: 1 },
+                              minHeight: { xs: 'auto', sm: '20px' }
+                            }}>
+                              <Work 
+                                fontSize="small" 
+                                color="action" 
+                                sx={{ 
+                                  mr: 1,
+                                  fontSize: { xs: '0.9rem', sm: '1.2rem' },
+                                  flexShrink: 0
+                                }} 
+                              />
+                              <Typography 
+                                variant="body2" 
+                                color="text.secondary" 
+                                sx={{ 
+                                  fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                                }}
+                              >
                                 {job.jobType || 'Full-time'}
                               </Typography>
                             </Box>
                             
                             {job.salary && (
-                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                <AttachMoney fontSize="small" color="action" sx={{ mr: 1 }} />
-                                <Typography variant="body2" color="text.secondary" noWrap>
+                              <Box sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                mb: { xs: 0.8, sm: 1 },
+                                minHeight: { xs: 'auto', sm: '20px' }
+                              }}>
+                                <AttachMoney 
+                                  fontSize="small" 
+                                  color="action" 
+                                  sx={{ 
+                                    mr: 1,
+                                    fontSize: { xs: '0.9rem', sm: '1.2rem' },
+                                    flexShrink: 0
+                                  }} 
+                                />
+                                <Typography 
+                                  variant="body2" 
+                                  color="text.secondary" 
+                                  sx={{ 
+                                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 1,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden'
+                                  }}
+                                >
                                   {formatSalary(job.salary)}
                                 </Typography>
                               </Box>
                             )}
                             
                             {job.postedAt && (
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <AccessTime fontSize="small" color="action" sx={{ mr: 1 }} />
-                                <Typography variant="body2" color="text.secondary" noWrap>
+                              <Box sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center',
+                                minHeight: { xs: 'auto', sm: '20px' }
+                              }}>
+                                <AccessTime 
+                                  fontSize="small" 
+                                  color="action" 
+                                  sx={{ 
+                                    mr: 1,
+                                    fontSize: { xs: '0.9rem', sm: '1.2rem' },
+                                    flexShrink: 0
+                                  }} 
+                                />
+                                <Typography 
+                                  variant="body2" 
+                                  color="text.secondary" 
+                                  sx={{ 
+                                    fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                                  }}
+                                >
                                   {new Date(job.postedAt).toLocaleDateString()}
                                 </Typography>
                               </Box>
@@ -803,8 +1146,13 @@ const HomePage: React.FC = () => {
                           </Box>
                           
                           {/* Skills/tags */}
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-                            {job.skills?.slice(0, 3).map((skill, idx) => (
+                          <Box sx={{ 
+                            display: 'flex', 
+                            flexWrap: 'wrap', 
+                            gap: { xs: 0.5, sm: 1 }, 
+                            mb: { xs: 1.5, sm: 2 } 
+                          }}>
+                            {job.skills?.slice(0, isMobile ? 2 : 3).map((skill, idx) => (
                               <Chip 
                                 key={idx} 
                                 label={skill} 
@@ -812,16 +1160,22 @@ const HomePage: React.FC = () => {
                                 sx={{ 
                                   bgcolor: 'primary.light',
                                   color: 'primary.dark',
-                                  fontWeight: 500
+                                  fontWeight: 500,
+                                  fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                                  height: { xs: 20, sm: 24 }
                                 }} 
                               />
                             ))}
-                            {job.skills?.length > 3 && (
+                            {job.skills?.length > (isMobile ? 2 : 3) && (
                               <Chip 
-                                label={`+${job.skills.length - 3}`} 
+                                label={`+${job.skills.length - (isMobile ? 2 : 3)}`} 
                                 size="small" 
                                 variant="outlined"
-                                sx={{ fontWeight: 500 }} 
+                                sx={{ 
+                                  fontWeight: 500,
+                                  fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                                  height: { xs: 20, sm: 24 }
+                                }} 
                               />
                             )}
                           </Box>
@@ -830,13 +1184,15 @@ const HomePage: React.FC = () => {
                           <Button
                             variant="outlined"
                             color="primary"
-                            endIcon={<ArrowForward />}
+                            endIcon={<ArrowForward sx={{ fontSize: { xs: '0.9rem', sm: '1.2rem' } }} />}
                             fullWidth
                             sx={{ 
                               mt: 'auto',
-                              borderRadius: 2,
-                              py: 1,
+                              borderRadius: { xs: 1.5, sm: 2 },
+                              py: { xs: 0.8, sm: 1 },
                               fontWeight: 'bold',
+                              fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                              minHeight: { xs: 32, sm: 40 },
                               '&:hover': {
                                 bgcolor: 'primary.light',
                                 borderColor: 'primary.main'
@@ -857,23 +1213,40 @@ const HomePage: React.FC = () => {
                 
                 {/* Pagination Controls */}
                 {totalPages > 1 && (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4, mb: 2 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    mt: { xs: 3, md: 4 }, 
+                    mb: 2,
+                    px: { xs: 2, sm: 0 }
+                  }}>
                     <Pagination
                       count={totalPages}
                       page={currentPage}
                       onChange={handlePageChange}
                       color="primary"
                       size={isMobile ? "small" : "medium"}
+                      showFirstButton={!isMobile}
+                      showLastButton={!isMobile}
+                      siblingCount={isMobile ? 0 : 1}
+                      boundaryCount={isMobile ? 1 : 2}
                       sx={{
                         '& .MuiPaginationItem-root': {
-                          borderRadius: 2,
+                          borderRadius: { xs: 1.5, sm: 2 },
                           fontWeight: 'bold',
+                          fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                          minWidth: { xs: 28, sm: 32 },
+                          height: { xs: 28, sm: 32 },
+                          margin: { xs: '0 1px', sm: '0 2px' },
                           '&.Mui-selected': {
                             background: 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)',
                             color: 'white',
                             '&:hover': {
                               background: 'linear-gradient(45deg, #66bb6a 30%, #388e3c 90%)',
                             }
+                          },
+                          '&:hover': {
+                            backgroundColor: alpha('#4caf50', 0.08)
                           }
                         }
                       }}
@@ -938,73 +1311,129 @@ const HomePage: React.FC = () => {
             >
               Why Choose Our Platform?
             </Typography>
-            <Typography variant="h5" color="text.secondary" sx={{ maxWidth: '600px', mx: 'auto' }}>
-              Everything you need to succeed in your career journey, powered by cutting-edge AI technology
+            <Typography variant="h5" color="text.secondary" sx={{ 
+              maxWidth: '650px', 
+              mx: 'auto',
+              fontSize: { xs: '1.1rem', sm: '1.2rem', md: '1.3rem' },
+              lineHeight: 1.6,
+              fontWeight: 300
+            }}>
+              Everything you need to succeed in your career journey, powered by cutting-edge intelligent technology 🚀
             </Typography>
           </Box>
         </Fade>
 
-        <Grid container spacing={4} mb={8}>
+        <Grid container spacing={{ xs: 3, md: 4 }} mb={8}>
           {features.map((feature, index) => (
-            <Grid item xs={12} md={6} key={index}>
+            <Grid item xs={12} sm={6} md={6} key={index}>
               <Zoom in={animationTrigger} timeout={1000 + index * 200}>
                 <Card 
-                  elevation={4}
+                  elevation={6}
                   sx={{ 
                     height: '100%',
-                    borderRadius: 4,
+                    borderRadius: { xs: 3, md: 4 },
                     overflow: 'hidden',
-                    transition: 'all 0.3s',
+                    transition: 'all 0.4s ease',
+                    background: 'linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%)',
+                    border: '1px solid rgba(76, 175, 80, 0.1)',
+                    cursor: 'pointer',
+                    position: 'relative',
                     '&:hover': { 
-                      transform: 'translateY(-8px)',
-                      boxShadow: '0 12px 20px rgba(0,0,0,0.1)'
+                      transform: { xs: 'translateY(-4px)', md: 'translateY(-8px)' },
+                      boxShadow: '0 15px 40px rgba(76, 175, 80, 0.15)',
+                      '& .feature-icon': {
+                        transform: 'scale(1.1) rotate(5deg)',
+                        color: feature.color
+                      }
+                    },
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: '4px',
+                      background: feature.gradient || 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)',
+                      borderRadius: '4px 4px 0 0'
                     }
                   }}
                 >
-                  <Box sx={{ 
-                    height: 8, 
-                    background: feature.gradient
-                  }} />
-                  <CardContent sx={{ p: 4 }}>
+                  <CardContent sx={{ p: { xs: 3, md: 4 }, display: 'flex', flexDirection: 'column', height: '100%' }}>
                     <Box sx={{ 
                       display: 'flex',
-                      alignItems: 'flex-start',
-                      mb: 2
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      alignItems: { xs: 'center', sm: 'flex-start' },
+                      textAlign: { xs: 'center', sm: 'left' },
+                      mb: 3
                     }}>
                       <Avatar
+                        className="feature-icon"
                         sx={{ 
                           bgcolor: feature.bgColor,
                           color: feature.color,
-                          width: 60,
-                          height: 60,
-                          mr: 3,
-                          boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                          width: { xs: 70, md: 80 },
+                          height: { xs: 70, md: 80 },
+                          mb: { xs: 2, sm: 0 },
+                          mr: { sm: 3 },
+                          boxShadow: '0 6px 20px rgba(0,0,0,0.1)',
+                          transition: 'all 0.3s ease',
+                          fontSize: '2.5rem'
                         }}
                       >
                         {feature.icon}
                       </Avatar>
-                      <Box>
-                        <Typography variant="h5" component="h3" gutterBottom fontWeight="bold">
+                      <Box sx={{ flex: 1 }}>
+                        <Typography 
+                          variant="h5" 
+                          component="h3" 
+                          gutterBottom 
+                          fontWeight="bold"
+                          sx={{ 
+                            fontSize: { xs: '1.3rem', md: '1.5rem' },
+                            color: feature.color,
+                            mb: 2
+                          }}
+                        >
                           {feature.title}
                         </Typography>
-                        <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+                        <Typography 
+                          variant="body1" 
+                          color="text.secondary" 
+                          sx={{ 
+                            fontSize: { xs: '0.95rem', md: '1rem' },
+                            lineHeight: 1.6,
+                            fontWeight: 300
+                          }}
+                        >
                           {feature.description}
                         </Typography>
                       </Box>
                     </Box>
                   </CardContent>
-                  <CardActions sx={{ px: 4, pb: 3 }}>
+                  <CardActions sx={{ px: { xs: 3, md: 4 }, pb: { xs: 3, md: 3 }, mt: 'auto' }}>
                     <Button 
-                      variant="text" 
+                      variant="outlined" 
                       color="primary" 
                       endIcon={<KeyboardArrowRight />}
                       onClick={feature.action}
+                      fullWidth
                       sx={{ 
                         fontWeight: 'bold',
-                        '&:hover': { bgcolor: feature.bgColor }
+                        borderRadius: 3,
+                        py: 1.2,
+                        borderColor: feature.color,
+                        color: feature.color,
+                        fontSize: { xs: '0.85rem', md: '0.9rem' },
+                        '&:hover': { 
+                          bgcolor: feature.bgColor,
+                          borderColor: feature.color,
+                          transform: 'translateY(-2px)',
+                          boxShadow: `0 6px 20px ${alpha(feature.color, 0.2)}`
+                        },
+                        transition: 'all 0.3s ease'
                       }}
                     >
-                      Learn More
+                      Explore Now
                     </Button>
                   </CardActions>
                 </Card>
@@ -1035,16 +1464,16 @@ const HomePage: React.FC = () => {
               We've designed our platform to make your job search experience seamless and effective
             </Typography>
             
-            <Grid container spacing={4}>
+            <Grid container spacing={{ xs: 3, md: 4 }}>
               {benefits.map((benefit, index) => (
                 <Grid item xs={12} sm={6} md={3} key={index}>
                   <Zoom in={animationTrigger} timeout={1500 + index * 200}>
                     <Paper
                       elevation={3}
                       sx={{
-                        p: 3,
+                        p: { xs: 2.5, md: 3 },
                         height: '100%',
-                        borderRadius: 4,
+                        borderRadius: { xs: 3, md: 4 },
                         transition: 'all 0.3s',
                         '&:hover': {
                           transform: 'translateY(-5px)',
@@ -1061,17 +1490,33 @@ const HomePage: React.FC = () => {
                         <Avatar
                           sx={{
                             bgcolor: 'primary.light',
-                            width: 60,
-                            height: 60,
-                            mb: 2
+                            width: { xs: 50, md: 60 },
+                            height: { xs: 50, md: 60 },
+                            mb: { xs: 1.5, md: 2 }
                           }}
                         >
                           {React.cloneElement(benefit.icon, { sx: { color: 'primary.main' } })}
                         </Avatar>
-                        <Typography variant="h6" gutterBottom fontWeight="bold">
+                        <Typography 
+                          variant="h6" 
+                          gutterBottom 
+                          fontWeight="bold"
+                          sx={{ 
+                            fontSize: { xs: '1.1rem', md: '1.25rem' },
+                            textAlign: 'center'
+                          }}
+                        >
                           {benefit.title}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary" align="center">
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary" 
+                          align="center"
+                          sx={{ 
+                            fontSize: { xs: '0.85rem', md: '0.875rem' },
+                            lineHeight: 1.5
+                          }}
+                        >
                           {benefit.description}
                         </Typography>
                       </Box>
@@ -1088,37 +1533,69 @@ const HomePage: React.FC = () => {
           <Paper 
             elevation={8}
             sx={{ 
-              p: 6, 
-              mb: 8, 
-              borderRadius: 4,
+              p: { xs: 3, sm: 4, md: 6 }, 
+              mb: { xs: 6, md: 8 }, 
+              borderRadius: { xs: 2, md: 4 },
               background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)',
               color: 'white',
               position: 'relative',
               overflow: 'hidden'
             }}
           >
-            <Typography variant="h3" component="h2" textAlign="center" gutterBottom fontWeight="bold" sx={{ mb: 6 }}>
+            <Typography 
+              variant="h3" 
+              component="h2" 
+              textAlign="center" 
+              gutterBottom 
+              fontWeight="bold" 
+              sx={{ 
+                mb: { xs: 4, md: 6 },
+                fontSize: { xs: '1.8rem', sm: '2.2rem', md: '3rem' }
+              }}
+            >
               Our Impact in Numbers
             </Typography>
-            <Grid container spacing={4} textAlign="center">
+            <Grid container spacing={{ xs: 2, md: 4 }} textAlign="center">
               <Grid item xs={6} md={3}>
                 <Box>
-                  <EmojiEvents sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
-                  <Typography variant="h2" fontWeight="bold" gutterBottom>
+                  <EmojiEvents sx={{ fontSize: { xs: 36, md: 48 }, mb: { xs: 1, md: 2 }, opacity: 0.9 }} />
+                  <Typography 
+                    variant="h2" 
+                    fontWeight="bold" 
+                    gutterBottom
+                    sx={{ fontSize: { xs: '2rem', sm: '2.5rem', md: '3.5rem' } }}
+                  >
                     10K+
                   </Typography>
-                  <Typography variant="h6" sx={{ opacity: 0.9 }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      opacity: 0.9,
+                      fontSize: { xs: '0.9rem', sm: '1rem', md: '1.25rem' }
+                    }}
+                  >
                     Job Opportunities
                   </Typography>
                 </Box>
               </Grid>
               <Grid item xs={6} md={3}>
                 <Box>
-                  <Groups sx={{ fontSize: 48, mb: 2, opacity: 0.9 }} />
-                  <Typography variant="h2" fontWeight="bold" gutterBottom>
+                  <Groups sx={{ fontSize: { xs: 36, md: 48 }, mb: { xs: 1, md: 2 }, opacity: 0.9 }} />
+                  <Typography 
+                    variant="h2" 
+                    fontWeight="bold" 
+                    gutterBottom
+                    sx={{ fontSize: { xs: '2rem', sm: '2.5rem', md: '3.5rem' } }}
+                  >
                     5K+
                   </Typography>
-                  <Typography variant="h6" sx={{ opacity: 0.9 }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      opacity: 0.9,
+                      fontSize: { xs: '0.9rem', sm: '1rem', md: '1.25rem' }
+                    }}
+                  >
                     Active Users
                   </Typography>
                 </Box>
@@ -1417,6 +1894,388 @@ const HomePage: React.FC = () => {
                   Explore All Services
                 </Button>
               </Box>
+            </Container>
+          </Box>
+        </Fade>
+
+        {/* Training Features Section */}
+        <Fade in={animationTrigger} timeout={2800}>
+          <Box sx={{ py: 8, mb: 8, bgcolor: alpha('#4caf50', 0.03) }}>
+            <Container maxWidth="lg">
+              <Box sx={{ textAlign: 'center', mb: 6 }}>
+                <Typography variant="h3" component="h2" gutterBottom fontWeight="bold" sx={{ mb: 2 }}>
+                  How Job Seekers Get <Box component="span" sx={{ color: 'primary.main' }}>Trained</Box>
+                </Typography>
+                <Typography variant="h6" color="text.secondary" sx={{ maxWidth: '600px', mx: 'auto', mb: 4 }}>
+                  Our comprehensive training platform prepares you for success with cutting-edge AI technology and personalized learning paths
+                </Typography>
+              </Box>
+
+              <Grid container spacing={4}>
+                {[
+                  {
+                    icon: <Psychology sx={{ fontSize: 48, color: '#4caf50' }} />,
+                    title: 'Psychometric Testing',
+                    description: 'Take scientifically-designed assessments to understand your personality, cognitive abilities, and career preferences. Get detailed insights to help employers and yourself understand your strengths.',
+                    features: ['Personality Assessment', 'Cognitive Ability Tests', 'Career Interest Profiling', 'Behavioral Analysis'],
+                    color: '#4caf50'
+                  },
+                  {
+                    icon: <Work sx={{ fontSize: 48, color: '#66bb6a' }} />,
+                    title: 'AI-Powered Interviews',
+                    description: 'Practice with our advanced AI interview coach that simulates real interview scenarios. Get real-time feedback on your responses, body language, and communication skills.',
+                    features: ['Mock Interviews', 'Real-time Feedback', 'Industry-specific Questions', 'Performance Analytics'],
+                    color: '#66bb6a'
+                  },
+                  {
+                    icon: <School sx={{ fontSize: 48, color: '#81c784' }} />,
+                    title: 'Live Learning Sessions',
+                    description: 'Join interactive courses and workshops led by industry experts. Learn in-demand skills through hands-on projects and collaborative learning experiences.',
+                    features: ['Expert-led Workshops', 'Interactive Projects', 'Peer Collaboration', 'Live Q&A Sessions'],
+                    color: '#81c784'
+                  },
+                  {
+                    icon: <EmojiEvents sx={{ fontSize: 48, color: '#388e3c' }} />,
+                    title: 'Skill Certification',
+                    description: 'Earn industry-recognized certificates that validate your expertise. Showcase your achievements to potential employers and advance your career.',
+                    features: ['Industry Recognition', 'Portfolio Building', 'LinkedIn Integration', 'Employer Verification'],
+                    color: '#388e3c'
+                  }
+                ].map((training, index) => (
+                  <Grid item xs={12} md={6} key={index}>
+                    <Zoom in={animationTrigger} timeout={2000 + index * 200}>
+                      <Paper
+                        elevation={4}
+                        sx={{
+                          p: 4,
+                          height: '100%',
+                          borderRadius: 3,
+                          transition: 'all 0.3s ease',
+                          border: `2px solid transparent`,
+                          '&:hover': {
+                            transform: 'translateY(-8px)',
+                            borderColor: training.color,
+                            boxShadow: `0 20px 40px ${alpha(training.color, 0.1)}`
+                          }
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 3, mb: 3 }}>
+                          <Avatar
+                            sx={{
+                              bgcolor: alpha(training.color, 0.1),
+                              width: 80,
+                              height: 80,
+                              flexShrink: 0
+                            }}
+                          >
+                            {training.icon}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="h5" fontWeight="bold" gutterBottom>
+                              {training.title}
+                            </Typography>
+                            <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                              {training.description}
+                            </Typography>
+                          </Box>
+                        </Box>
+
+                        <Box sx={{ mt: 3 }}>
+                          <Typography variant="h6" gutterBottom sx={{ color: training.color, fontSize: '1.1rem', fontWeight: 600 }}>
+                            Key Features:
+                          </Typography>
+                          <Grid container spacing={1}>
+                            {training.features.map((feature, featureIndex) => (
+                              <Grid item xs={12} sm={6} key={featureIndex}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <CheckCircle sx={{ fontSize: 18, color: training.color }} />
+                                  <Typography variant="body2" sx={{ fontSize: '0.9rem' }}>
+                                    {feature}
+                                  </Typography>
+                                </Box>
+                              </Grid>
+                            ))}
+                          </Grid>
+                        </Box>
+
+                        <Box sx={{ mt: 3, pt: 3, borderTop: `1px solid ${alpha(training.color, 0.2)}` }}>
+                          <Button
+                            variant="contained"
+                            fullWidth
+                            sx={{
+                              bgcolor: training.color,
+                              py: 1.2,
+                              borderRadius: 2,
+                              fontWeight: 'bold',
+                              '&:hover': { bgcolor: training.color }
+                            }}
+                            onClick={() => navigate('/app/tests')}
+                          >
+                            Start Training
+                          </Button>
+                        </Box>
+                      </Paper>
+                    </Zoom>
+                  </Grid>
+                ))}
+              </Grid>
+
+              {/* Training CTA */}
+              <Box sx={{ textAlign: 'center', mt: 6 }}>
+                <Paper
+                  elevation={6}
+                  sx={{
+                    p: 4,
+                    borderRadius: 3,
+                    background: 'linear-gradient(135deg, #e8f5e8 0%, #f3e5f5 100%)',
+                    border: '1px solid',
+                    borderColor: alpha('#4caf50', 0.2)
+                  }}
+                >
+                  <Typography variant="h5" fontWeight="bold" gutterBottom>
+                    Ready to Start Your Training Journey?
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: '600px', mx: 'auto' }}>
+                    Join thousands of successful job seekers who improved their interview skills and landed their dream jobs through our comprehensive training platform.
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <Button
+                      variant="contained"
+                      size="large"
+                      startIcon={<Psychology />}
+                      onClick={() => navigate('/app/tests')}
+                      sx={{ borderRadius: 2, px: 3 }}
+                    >
+                      Take Free Assessment
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="large"
+                      startIcon={<PlayArrow />}
+                      onClick={() => navigate('/app/interviews')}
+                      sx={{ borderRadius: 2, px: 3 }}
+                    >
+                      Try AI Interview
+                    </Button>
+                  </Box>
+                </Paper>
+              </Box>
+            </Container>
+          </Box>
+        </Fade>
+
+        {/* Enhanced Contact Us Section */}
+        <Fade in={animationTrigger} timeout={3000}>
+          <Box sx={{ py: 8, mb: 8, bgcolor: alpha('#2e7d32', 0.02) }}>
+            <Container maxWidth="lg">
+              <Grid container spacing={6} alignItems="center">
+                {/* Contact Information */}
+                <Grid item xs={12} md={6}>
+                  <Box>
+                    <Typography variant="h3" component="h2" gutterBottom fontWeight="bold">
+                      Get in <Box component="span" sx={{ color: 'primary.main' }}>Touch</Box>
+                    </Typography>
+                    <Typography variant="h6" color="text.secondary" sx={{ mb: 4, lineHeight: 1.6 }}>
+                      Have questions? Need support? Ready to transform your career? We're here to help you every step of the way.
+                    </Typography>
+
+                    {/* Contact Methods */}
+                    <Box sx={{ mb: 4 }}>
+                      {[
+                        {
+                          icon: <Email sx={{ fontSize: 24, color: '#4caf50' }} />,
+                          title: 'Email Us',
+                          description: 'Get detailed support via email',
+                          contact: 'support@excellencehub.com',
+                          action: 'mailto:support@excellencehub.com'
+                        },
+                        {
+                          icon: <Phone sx={{ fontSize: 24, color: '#66bb6a' }} />,
+                          title: 'Call Us',
+                          description: 'Speak directly with our team',
+                          contact: '+1 (555) 123-4567',
+                          action: 'tel:+15551234567'
+                        },
+                        {
+                          icon: <LocationOn sx={{ fontSize: 24, color: '#81c784' }} />,
+                          title: 'Visit Us',
+                          description: 'Meet us at our office',
+                          contact: '123 Innovation Street, Tech City',
+                          action: '#'
+                        }
+                      ].map((contact, index) => (
+                        <Paper
+                          key={index}
+                          elevation={2}
+                          sx={{
+                            p: 3,
+                            mb: 2,
+                            borderRadius: 2,
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            '&:hover': {
+                              transform: 'translateX(8px)',
+                              bgcolor: alpha('#4caf50', 0.02),
+                              borderLeft: '4px solid #4caf50'
+                            }
+                          }}
+                          onClick={() => contact.action !== '#' && window.open(contact.action)}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Avatar sx={{ bgcolor: alpha(contact.icon.props.sx.color, 0.1), width: 50, height: 50 }}>
+                              {contact.icon}
+                            </Avatar>
+                            <Box>
+                              <Typography variant="h6" fontWeight="bold">
+                                {contact.title}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                {contact.description}
+                              </Typography>
+                              <Typography variant="body2" color="primary" fontWeight="medium">
+                                {contact.contact}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </Paper>
+                      ))}
+                    </Box>
+
+                    {/* Quick Stats */}
+                    <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                      {[
+                        { number: '50,000+', label: 'Happy Job Seekers' },
+                        { number: '24/7', label: 'Support Available' },
+                        { number: '< 2hrs', label: 'Average Response Time' }
+                      ].map((stat, index) => (
+                        <Box key={index} sx={{ textAlign: 'center' }}>
+                          <Typography variant="h4" fontWeight="bold" color="primary.main">
+                            {stat.number}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {stat.label}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Box>
+                </Grid>
+
+                {/* Contact Form */}
+                <Grid item xs={12} md={6}>
+                  <Paper
+                    elevation={6}
+                    sx={{
+                      p: 4,
+                      borderRadius: 3,
+                      background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                      border: '1px solid',
+                      borderColor: alpha('#4caf50', 0.1)
+                    }}
+                  >
+                    <Typography variant="h5" fontWeight="bold" gutterBottom>
+                      Send us a Message
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                      Fill out the form below and we'll get back to you within 24 hours.
+                    </Typography>
+
+                    <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            fullWidth
+                            label="First Name"
+                            variant="outlined"
+                            sx={{ bgcolor: 'white', borderRadius: 1 }}
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <TextField
+                            fullWidth
+                            label="Last Name"
+                            variant="outlined"
+                            sx={{ bgcolor: 'white', borderRadius: 1 }}
+                          />
+                        </Grid>
+                      </Grid>
+                      
+                      <TextField
+                        fullWidth
+                        label="Email Address"
+                        type="email"
+                        variant="outlined"
+                        sx={{ bgcolor: 'white', borderRadius: 1 }}
+                      />
+                      
+                      <TextField
+                        fullWidth
+                        label="Subject"
+                        variant="outlined"
+                        sx={{ bgcolor: 'white', borderRadius: 1 }}
+                      />
+                      
+                      <TextField
+                        fullWidth
+                        label="Message"
+                        multiline
+                        rows={4}
+                        variant="outlined"
+                        sx={{ bgcolor: 'white', borderRadius: 1 }}
+                      />
+                      
+                      <Button
+                        variant="contained"
+                        size="large"
+                        endIcon={<ArrowForward />}
+                        sx={{
+                          mt: 2,
+                          py: 1.5,
+                          borderRadius: 2,
+                          fontWeight: 'bold',
+                          background: 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)',
+                          boxShadow: '0 3px 5px 2px rgba(76, 175, 80, .3)',
+                          '&:hover': {
+                            background: 'linear-gradient(45deg, #66bb6a 30%, #388e3c 90%)',
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 6px 10px 2px rgba(76, 175, 80, .3)',
+                          },
+                          transition: 'all 0.3s'
+                        }}
+                      >
+                        Send Message
+                      </Button>
+                    </Box>
+
+                    {/* Trust Indicators */}
+                    <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid', borderColor: alpha('#4caf50', 0.1) }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
+                        <Chip
+                          icon={<Verified />}
+                          label="Secure & Private"
+                          size="small"
+                          variant="outlined"
+                          color="success"
+                        />
+                        <Chip
+                          icon={<AccessTime />}
+                          label="Quick Response"
+                          size="small"
+                          variant="outlined"
+                          color="primary"
+                        />
+                        <Chip
+                          icon={<Support />}
+                          label="Expert Support"
+                          size="small"
+                          variant="outlined"
+                          color="info"
+                        />
+                      </Box>
+                    </Box>
+                  </Paper>
+                </Grid>
+              </Grid>
             </Container>
           </Box>
         </Fade>

@@ -36,7 +36,7 @@ const TestimonialsSection: React.FC = () => {
       location: 'Kigali, Rwanda',
       image: '/api/placeholder/80/80',
       rating: 5,
-      quote: 'Excellence Coaching Hub transformed my career completely. The AI-powered learning paths helped me transition from teaching to software development in just 6 months. The practical projects and mentorship prepared me to contribute to Rwanda\'s digital transformation.',
+      quote: 'Excellence Coaching Hub transformed my career completely. The expert-led live video coaching sessions helped me transition from teaching to software development in just 6 months. The practical projects and mentorship prepared me to contribute to Rwanda\'s digital transformation.',
       achievement: 'Career transformation',
       course: 'Full Stack Development',
       salary: '75% salary increase',
@@ -50,7 +50,7 @@ const TestimonialsSection: React.FC = () => {
       rating: 5,
       quote: 'The comprehensive data science program at ECH opened doors I never imagined. From learning Python to deploying machine learning models, every module was designed with real-world applications. Now I lead a team of 8 data scientists.',
       achievement: 'Team leadership role',
-      course: 'Data Science & AI Bootcamp',
+      course: 'Data Science & Analytics Bootcamp',
       salary: '80% salary increase',
     },
     {
@@ -218,7 +218,7 @@ const TestimonialsSection: React.FC = () => {
                   fontWeight: 800,
                   mb: 3,
                   fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.75rem', lg: '3rem' },
-                  background: 'linear-gradient(45deg, #3f51b5, #ff6b6b)',
+                  background: 'linear-gradient(45deg, #22c55e, #16a34a)',
                   backgroundClip: 'text',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
@@ -232,7 +232,7 @@ const TestimonialsSection: React.FC = () => {
                     transform: 'translateX(-50%)',
                     width: { xs: '60px', md: '80px' },
                     height: '4px',
-                    background: 'linear-gradient(45deg, #3f51b5, #ff6b6b)',
+                    background: 'linear-gradient(45deg, #22c55e, #16a34a)',
                     borderRadius: '2px',
                   }
                 }}

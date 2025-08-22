@@ -134,7 +134,6 @@ export const generatePlaceholderUrl = (options: CourseImageOptions): string => {
   
   // Use a placeholder service with custom colors and text
   const encodedTitle = encodeURIComponent(options.title.substring(0, 30));
-  const encodedCategory = encodeURIComponent(options.category);
   
   return `https://via.placeholder.com/400x225/${primaryColor}/${secondaryColor}?text=${encodedTitle}`;
 };

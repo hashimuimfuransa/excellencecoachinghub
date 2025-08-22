@@ -1494,14 +1494,12 @@ const PsychometricTestsPage: React.FC = () => {
                       height: '100%',
                       '&:hover': { 
                         transform: 'translateY(-4px)',
-                        boxShadow: theme.shadows[8]
+                        boxShadow: theme.shadows[8],
+                        borderColor: category.color
                       },
                       transition: 'all 0.3s',
                       border: '2px solid',
-                      borderColor: 'transparent',
-                      '&:hover': {
-                        borderColor: category.color
-                      }
+                      borderColor: 'transparent'
                     }}
                   >
                     <CardContent sx={{ p: 3 }}>

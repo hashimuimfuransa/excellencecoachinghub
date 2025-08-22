@@ -1,6 +1,6 @@
 import type { User } from './user';
 
-export const enum JobStatus {
+export enum JobStatus {
   DRAFT = 'draft',
   ACTIVE = 'active',
   PAUSED = 'paused',
@@ -8,7 +8,7 @@ export const enum JobStatus {
   EXPIRED = 'expired'
 }
 
-export const enum JobType {
+export enum JobType {
   FULL_TIME = 'full_time',
   PART_TIME = 'part_time',
   CONTRACT = 'contract',
@@ -16,14 +16,14 @@ export const enum JobType {
   FREELANCE = 'freelance'
 }
 
-export const enum ExperienceLevel {
+export enum ExperienceLevel {
   ENTRY_LEVEL = 'entry_level',
   MID_LEVEL = 'mid_level',
   SENIOR_LEVEL = 'senior_level',
   EXECUTIVE = 'executive'
 }
 
-export const enum EducationLevel {
+export enum EducationLevel {
   HIGH_SCHOOL = 'high_school',
   ASSOCIATE = 'associate',
   BACHELOR = 'bachelor',

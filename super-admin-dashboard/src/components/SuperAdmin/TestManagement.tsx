@@ -315,8 +315,6 @@ const TestManagement: React.FC<TestManagementProps> = ({ onTestSelect }) => {
 
       setTests(mockTests);
       setTotalTests(mockTests.length);
-    } catch (error) {
-      console.error('Error loading tests:', error);
     } finally {
       setLoading(false);
     }

@@ -77,7 +77,7 @@ const AvatarInterviewInterface: React.FC<AvatarInterviewInterfaceProps> = ({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [state, setState] = useState<InterviewState>({
     currentQuestionIndex: -1, // -1 means showing welcome message

@@ -682,67 +682,7 @@ class EmployerService {
     return response.json();
   }
 
-  // Job Management
-  async createJob(jobData: {
-    title: string;
-    description: string;
-    company: string;
-    location: string;
-    jobType: string;
-    experienceLevel: string;
-    educationLevel: string;
-    salary?: {
-      min: number;
-      max: number;
-      currency: string;
-    };
-    skills: string[];
-    requirements: string[];
-    responsibilities: string[];
-    benefits: string[];
-    applicationDeadline?: string;
-    psychometricTestRequired: boolean;
-    psychometricTests: string[];
-  }) {
-    const response = await fetch(`${API_BASE_URL}/employer/jobs`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(jobData),
-    });
 
-    if (!response.ok) {
-      throw new Error('Failed to create job');
-    }
-
-    return response.json();
-  }
-
-  async updateJob(jobId: string, jobData: any) {
-    const response = await fetch(`${API_BASE_URL}/employer/jobs/${jobId}`, {
-      method: 'PUT',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(jobData),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to update job');
-    }
-
-    return response.json();
-  }
-
-  async deleteJob(jobId: string) {
-    const response = await fetch(`${API_BASE_URL}/employer/jobs/${jobId}`, {
-      method: 'DELETE',
-      headers: this.getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to delete job');
-    }
-
-    return response.json();
-  }
 
   async getJobById(jobId: string) {
     const response = await fetch(`${API_BASE_URL}/employer/jobs/${jobId}`, {

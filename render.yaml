@@ -1,0 +1,54 @@
+services:
+  - type: web
+    name: excellencecoachinghub-backend
+    env: node
+    plan: free
+    buildCommand: cd backend && npm install && npm run build
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  - type: web
+    name: excellencecoachinghub-elearning
+    env: static
+    plan: free
+    buildCommand: cd elearning && npm install && npm run build
+    staticPublishPath: ./elearning/build
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  - type: web
+    name: excellencecoachinghub-homepage
+    env: static
+    plan: free
+    buildCommand: cd homepage && npm install && npm run build
+    staticPublishPath: ./homepage/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  - type: web
+    name: excellencecoachinghub-job-portal
+    env: static
+    plan: free
+    buildCommand: cd job-portal && npm install && npm run build
+    staticPublishPath: ./job-portal/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  - type: web
+    name: excellencecoachinghub-super-admin
+    env: static
+    plan: free
+    buildCommand: cd super-admin-dashboard && npm install && npm run build
+    staticPublishPath: ./super-admin-dashboard/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

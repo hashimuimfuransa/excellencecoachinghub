@@ -399,8 +399,12 @@ const HomePage: React.FC = () => {
                     >
                       Unlock Your <Box component="span" sx={{ 
                         color: '#8eff8e', 
+                        WebkitTextFillColor: '#8eff8e',
                         textShadow: '0 0 30px rgba(76, 175, 80, 0.8)',
                         position: 'relative',
+                        backgroundClip: 'unset',
+                        WebkitBackgroundClip: 'unset',
+                        fontWeight: 'inherit',
                         '&::before': {
                           content: '"✨"',
                           position: 'absolute',

@@ -29,6 +29,7 @@ import {
   useTheme,
   alpha
 } from '@mui/material';
+import { useAuth } from '../contexts/AuthContext';
 import {
   ArrowBack,
   LocationOn,
@@ -45,6 +46,7 @@ import {
   Quiz,
   School,
   Work,
+  Assessment,
   Close,
   MoreVert,
   CalendarToday,
@@ -118,6 +120,7 @@ interface Job {
 const JobDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const theme = useTheme();
   
   const [job, setJob] = useState<Job | null>(null);
@@ -192,24 +195,32 @@ const JobDetailsPage: React.FC = () => {
   };
 
   const handleApply = () => {
+    // Always show the apply dialog, authentication is handled within the dialog
     setApplyDialogOpen(true);
   };
 
   const handlePrepare = () => {
+    if (!user) {
+      navigate('/login', { 
+        state: { from: { pathname: `/jobs/${id}` } }
+      });
+      return;
+    }
     setPrepareDialogOpen(true);
   };
 
-  const handleInterviewPrep = () => {
-    setPrepareDialogOpen(false);
-    navigate('/app/interviews');
-  };
-
-  const handlePsychometricTest = () => {
-    setPrepareDialogOpen(false);
-    navigate('/app/assessments');
+  const handleGetPrepared = (selectedJob: Job) => {
+    setApplyDialogOpen(false);
+    setPrepareDialogOpen(true);
   };
 
   const handleSaveJob = () => {
+    if (!user) {
+      navigate('/login', { 
+        state: { from: { pathname: `/jobs/${id}` } }
+      });
+      return;
+    }
     setIsSaved(!isSaved);
     // TODO: Implement save job functionality
   };
@@ -435,12 +446,12 @@ const JobDetailsPage: React.FC = () => {
               <Stack direction="row" spacing={1}>
                 <Button
                   variant="outlined"
-                  startIcon={isSaved ? <Bookmark /> : <BookmarkBorder />}
+                  startIcon={user && isSaved ? <Bookmark /> : <BookmarkBorder />}
                   onClick={handleSaveJob}
-                  color={isSaved ? "primary" : "inherit"}
+                  color={user && isSaved ? "primary" : "inherit"}
                   fullWidth
                 >
-                  {isSaved ? 'Saved' : 'Save Job'}
+                  {user && isSaved ? 'Saved' : 'Save Job'}
                 </Button>
                 <IconButton onClick={handleShare}>
                   <Share />
@@ -538,111 +549,177 @@ const JobDetailsPage: React.FC = () => {
       {/* Apply Dialog */}
       <Dialog open={applyDialogOpen} onClose={() => setApplyDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
-          <Box display="flex" alignItems="center" justifyContent="space-between">
-            <Typography variant="h5" fontWeight="bold">
-              Apply for Position
-            </Typography>
-            <IconButton onClick={() => setApplyDialogOpen(false)}>
-              <Close />
-            </IconButton>
-          </Box>
+          <Typography variant="h5" fontWeight="bold" color="primary.main">
+            Ready to Apply for {job?.title}?
+          </Typography>
         </DialogTitle>
         <DialogContent>
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Your profile information will be used for this application. Make sure your profile is up to date.
-          </Alert>
-          <Paper sx={{ p: 2, mb: 2 }}>
-            <Typography variant="h6" fontWeight="bold">
-              {job.title}
+          <Typography variant="body1" paragraph>
+            Before you apply, we recommend getting prepared to increase your chances of success.
+            Our preparation program helps you:
+          </Typography>
+          <Box sx={{ pl: 2, mb: 3 }}>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              • Understand the job requirements better
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {job.company} • {job.location}
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              • Prepare for technical and behavioral interviews
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              • Build relevant skills through targeted courses
+            </Typography>
+            <Typography variant="body2">
+              • Practice with mock interviews and assessments
+            </Typography>
+          </Box>
+          <Paper sx={{ p: 2, bgcolor: alpha(theme.palette.info.main, 0.05), border: `1px solid ${alpha(theme.palette.info.main, 0.2)}` }}>
+            <Typography variant="body2" color="info.main" fontWeight="medium">
+              💡 Candidates who complete our preparation program have 3x higher success rates!
             </Typography>
           </Paper>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setApplyDialogOpen(false)}>
-            Cancel
+        <DialogActions sx={{ p: 3, gap: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              if (!user) {
+                setApplyDialogOpen(false);
+                navigate('/login', { 
+                  state: { from: { pathname: `/jobs/${id}` } }
+                });
+                return;
+              }
+              handleGetPrepared(job!);
+            }}
+            sx={{ flex: 1 }}
+          >
+            Get Prepared First
           </Button>
-          <Button variant="contained" startIcon={<Send />}>
-            Submit Application
+          <Button
+            variant="contained"
+            onClick={() => {
+              if (!user) {
+                setApplyDialogOpen(false);
+                navigate('/login', { 
+                  state: { from: { pathname: `/jobs/${id}` } }
+                });
+                return;
+              }
+              setApplyDialogOpen(false);
+              // Redirect to actual application process
+              window.open('https://jobs.excellencecoachinghub.com/', '_blank');
+            }}
+            sx={{ flex: 1 }}
+          >
+            Apply Now
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Prepare Dialog */}
-      <Dialog open={prepareDialogOpen} onClose={() => setPrepareDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          <Box display="flex" alignItems="center" justifyContent="space-between">
-            <Typography variant="h5" fontWeight="bold">
-              Prepare for This Job
-            </Typography>
-            <IconButton onClick={() => setPrepareDialogOpen(false)}>
-              <Close />
-            </IconButton>
-          </Box>
+      <Dialog open={prepareDialogOpen} onClose={() => setPrepareDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ textAlign: 'center' }}>
+          <Typography variant="h4" fontWeight="bold" color="primary.main">
+            Get Prepared for {job?.title}
+          </Typography>
+          <Typography variant="subtitle1" color="text.secondary">
+            Choose your preparation path
+          </Typography>
         </DialogTitle>
         <DialogContent>
-          <Typography variant="body1" paragraph>
-            Choose how you'd like to prepare for this position:
-          </Typography>
-          
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={4}>
               <Card 
                 sx={{ 
+                  height: '100%',
                   cursor: 'pointer',
-                  '&:hover': { boxShadow: theme.shadows[4] }
+                  transition: 'all 0.3s ease',
+                  '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 }
                 }}
-                onClick={handleInterviewPrep}
+                onClick={() => {
+                  setPrepareDialogOpen(false);
+                  navigate('/app/tests');
+                }}
               >
                 <CardContent sx={{ textAlign: 'center', p: 3 }}>
-                  <Psychology sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+                  <Assessment sx={{ fontSize: 48, color: theme.palette.warning.main, mb: 2 }} />
                   <Typography variant="h6" fontWeight="bold" gutterBottom>
-                    AI Interview Coach
+                    Psychometric Tests
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Practice with our AI-powered interview simulator and get personalized feedback
+                    Assess your skills and personality fit for this role
                   </Typography>
                 </CardContent>
-                <CardActions sx={{ justifyContent: 'center', pb: 2 }}>
-                  <Button variant="outlined" startIcon={<Psychology />}>
-                    Start Interview Prep
-                  </Button>
-                </CardActions>
               </Card>
             </Grid>
-            
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} md={4}>
               <Card 
                 sx={{ 
+                  height: '100%',
                   cursor: 'pointer',
-                  '&:hover': { boxShadow: theme.shadows[4] }
+                  transition: 'all 0.3s ease',
+                  '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 }
                 }}
-                onClick={handlePsychometricTest}
+                onClick={() => {
+                  setPrepareDialogOpen(false);
+                  navigate('/app/interviews');
+                }}
               >
                 <CardContent sx={{ textAlign: 'center', p: 3 }}>
-                  <Quiz sx={{ fontSize: 48, color: 'secondary.main', mb: 2 }} />
+                  <Person sx={{ fontSize: 48, color: theme.palette.success.main, mb: 2 }} />
                   <Typography variant="h6" fontWeight="bold" gutterBottom>
-                    Psychometric Test
+                    Interview Practice
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Take assessments to evaluate your skills and personality fit for this role
+                    Practice with AI-powered mock interviews
                   </Typography>
                 </CardContent>
-                <CardActions sx={{ justifyContent: 'center', pb: 2 }}>
-                  <Button variant="outlined" startIcon={<Quiz />} color="secondary">
-                    Take Assessment
-                  </Button>
-                </CardActions>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Card 
+                sx={{ 
+                  height: '100%',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 }
+                }}
+                onClick={() => {
+                  window.open('https://www.elearning.excellencecoachinghub.com/', '_blank');
+                  setPrepareDialogOpen(false);
+                }}
+              >
+                <CardContent sx={{ textAlign: 'center', p: 3 }}>
+                  <School sx={{ fontSize: 48, color: theme.palette.primary.main, mb: 2 }} />
+                  <Typography variant="h6" fontWeight="bold" gutterBottom>
+                    Skill Courses
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Learn the skills required for this position
+                  </Typography>
+                </CardContent>
               </Card>
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
-          <Button onClick={() => setPrepareDialogOpen(false)}>
-            Cancel
+        <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
+          <Button
+            onClick={() => setPrepareDialogOpen(false)}
+            variant="outlined"
+          >
+            Close
           </Button>
+          {!user && (
+            <Button
+              onClick={() => {
+                setPrepareDialogOpen(false);
+                navigate('/register');
+              }}
+              variant="contained"
+            >
+              Register to Start
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 

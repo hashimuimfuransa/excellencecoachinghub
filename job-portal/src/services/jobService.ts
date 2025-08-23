@@ -166,27 +166,27 @@ interface PaginatedResponse<T> {
 
 class JobService {
   // Get all jobs with filtering and pagination
-  async getJobs(filters: JobFilters = {}, page = 1, limit = 10): Promise<PaginatedResponse<Job>> {
+  async getJobs(filters: JobFilters = {}, page = 1, limit = 10, signal?: AbortSignal): Promise<PaginatedResponse<Job>> {
     const params = {
       ...filters,
       page,
       limit
     };
-    const response = await apiGet<PaginatedResponse<Job>>('/jobs', params);
+    const response = await apiGet<PaginatedResponse<Job>>('/jobs', params, signal);
     return handlePaginatedResponse(response);
   }
 
   // Get jobs for students (filtered by education level)
-  async getJobsForStudent(page = 1, limit = 10): Promise<PaginatedResponse<Job>> {
+  async getJobsForStudent(page = 1, limit = 10, signal?: AbortSignal): Promise<PaginatedResponse<Job>> {
     const params = { page, limit };
-    const response = await apiGet<PaginatedResponse<Job>>('/jobs/student/available', params);
+    const response = await apiGet<PaginatedResponse<Job>>('/jobs/student/available', params, signal);
     return handlePaginatedResponse(response);
   }
 
   // Get curated jobs
-  async getCuratedJobs(page = 1, limit = 10): Promise<PaginatedResponse<Job>> {
+  async getCuratedJobs(page = 1, limit = 10, signal?: AbortSignal): Promise<PaginatedResponse<Job>> {
     const params = { page, limit };
-    const response = await apiGet<PaginatedResponse<Job>>('/jobs/curated', params);
+    const response = await apiGet<PaginatedResponse<Job>>('/jobs/curated', params, signal);
     return handlePaginatedResponse(response);
   }
 

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import axios from 'axios';
 import { Job, JobFilters, PaginatedResponse } from '../types';
 import jobService from '../services/jobService';
 
@@ -13,24 +14,54 @@ export const useJobs = (filters: JobFilters = {}, page = 1, limit = 10) => {
     pages: 0
   });
 
-  const fetchJobs = async () => {
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const fetchJobs = useCallback(async () => {
     try {
+      // Cancel previous request if still pending
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      // Create new abort controller for this request
+      abortControllerRef.current = new AbortController();
+
       setLoading(true);
       setError(null);
-      const response: PaginatedResponse<Job> = await jobService.getJobs(filters, page, limit);
+      
+      const response: PaginatedResponse<Job> = await jobService.getJobs(
+        filters, 
+        page, 
+        limit, 
+        abortControllerRef.current.signal
+      );
+      
       setJobs(response.data);
       setPagination(response.pagination);
     } catch (err: any) {
+      // Handle axios cancellation using axios.isCancel()
+      if (axios.isCancel(err)) {
+        // Request was cancelled, don't update state
+        return;
+      }
       setError(err.message || 'Failed to fetch jobs');
       setJobs([]);
     } finally {
+      abortControllerRef.current = null;
       setLoading(false);
     }
-  };
+  }, [filters.status, filters.jobType, filters.experienceLevel, filters.educationLevel, filters.location, filters.skills, filters.isCurated, filters.search, page, limit]);
 
   useEffect(() => {
     fetchJobs();
-  }, [JSON.stringify(filters), page, limit]);
+    
+    // Cleanup function to cancel request on unmount
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [fetchJobs]);
 
   const refetch = () => {
     fetchJobs();

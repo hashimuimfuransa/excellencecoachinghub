@@ -232,7 +232,10 @@ const ProfileCompletionDashboard: React.FC<ProfileCompletionDashboardProps> = ({
                   variant="contained"
                   size="large"
                   startIcon={<Edit />}
-                  onClick={onEditProfile}
+                  onClick={() => {
+                    console.log('🚀 Complete Profile button clicked - navigating to profile');
+                    onEditProfile();
+                  }}
                   sx={{ mb: 2, minWidth: 200 }}
                 >
                   Complete Profile

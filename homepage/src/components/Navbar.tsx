@@ -89,6 +89,7 @@ const Navbar: React.FC = () => {
     { label: 'Services', action: () => scrollToSection('services'), icon: <Handyman /> },
     { label: 'How It Works', action: () => scrollToSection('how-it-works'), icon: <Work /> },
     { label: 'Platforms', action: () => scrollToSection('platforms'), icon: <Handyman /> },
+    { label: 'Trending Jobs', action: () => scrollToSection('trending-jobs'), icon: <Work /> },
     { label: 'Testimonials', action: () => scrollToSection('testimonials'), icon: <Star /> },
   ];
 
@@ -131,9 +132,9 @@ const Navbar: React.FC = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Box
             component="img"
-            src="/logo.webp"
+            src="/icon-minimal.svg"
             alt="ECH Logo"
-            sx={{ height: 32, filter: 'brightness(0) invert(1)' }}
+            sx={{ height: 32 }}
           />
           <Typography
             variant="h6"
@@ -391,8 +392,7 @@ const Navbar: React.FC = () => {
                   sx={{
                     height: { xs: 32, sm: 38, md: 42 },
                     mr: { xs: 1.5, sm: 2 },
-                    filter: scrolled ? 'none' : 'brightness(0) invert(1)',
-                    transition: 'filter 0.3s ease-in-out'
+                    transition: 'all 0.3s ease-in-out'
                   }}
                 />
                 <Typography

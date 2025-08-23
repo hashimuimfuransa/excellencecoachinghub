@@ -62,6 +62,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { userService } from '../services/userService';
 import type { User } from '../types/user';
+import { useLocation } from 'react-router-dom';
 import ProfileCompletion from '../components/ProfileCompletion';
 import ComprehensiveProfileForm from '../components/ComprehensiveProfileForm';
 import { validateProfile } from '../utils/profileValidation';
@@ -90,6 +91,7 @@ function TabPanel(props: TabPanelProps) {
 
 const ProfilePage: React.FC = () => {
   const { user, updateUser, setUserData } = useAuth();
+  const location = useLocation();
   const [currentTab, setCurrentTab] = useState(0);
   const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -118,6 +120,21 @@ const ProfilePage: React.FC = () => {
     allowMessages: true,
     allowJobAlerts: true
   });
+
+  // Force component re-mount on location change
+  useEffect(() => {
+    console.log('🚀 ProfilePage mounted/remounted on location:', location.pathname);
+    if (user && location.pathname === '/app/profile') {
+      console.log('🔄 ProfilePage initializing for user:', user.email);
+      // Reset all states to ensure fresh render
+      setLoading(true);
+      setProfile(null);
+      setProfileValidation(null);
+      setEditMode(false);
+      setCurrentTab(0);
+      loadUserProfile();
+    }
+  }, [location.key, user]); // Using location.key instead of pathname for better detection
 
   useEffect(() => {
     if (user) {

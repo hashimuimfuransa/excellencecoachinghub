@@ -1,0 +1,54 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Modern gradient -->
+    <linearGradient id="iconGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6"/>
+      <stop offset="50%" style="stop-color:#2563eb"/>
+      <stop offset="100%" style="stop-color:#1d4ed8"/>
+    </linearGradient>
+    
+    <!-- Success accent -->
+    <linearGradient id="iconAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981"/>
+      <stop offset="100%" style="stop-color:#059669"/>
+    </linearGradient>
+    
+    <!-- Subtle shadow -->
+    <filter id="iconShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="rgba(0,0,0,0.15)"/>
+    </filter>
+  </defs>
+  
+  <!-- Background with rounded corners -->
+  <rect width="64" height="64" rx="16" fill="url(#iconGrad)" filter="url(#iconShadow)"/>
+  
+  <!-- Main content -->
+  <g transform="translate(32, 32)">
+    
+    <!-- Central upward arrow (growth/excellence) -->
+    <g transform="scale(1.2)">
+      <path d="M-6,-10 L0,-16 L6,-10 L4,-10 L4,2 L-4,2 L-4,-10 Z" 
+            fill="white" opacity="0.95"/>
+    </g>
+    
+    <!-- Excellence diamond -->
+    <path d="M0,8 L5,13 L0,18 L-5,13 Z" fill="url(#iconAccent)"/>
+    
+    <!-- Side connection elements -->
+    <g opacity="0.8">
+      <circle cx="-14" cy="4" r="2" fill="white"/>
+      <circle cx="14" cy="4" r="2" fill="white"/>
+      <!-- Connecting lines -->
+      <line x1="-12" y1="4" x2="-6" y2="2" stroke="white" stroke-width="1.5" opacity="0.6"/>
+      <line x1="12" y1="4" x2="6" y2="2" stroke="white" stroke-width="1.5" opacity="0.6"/>
+    </g>
+    
+    <!-- Top accent dots -->
+    <g opacity="0.7">
+      <circle cx="-8" cy="-20" r="1.5" fill="white"/>
+      <circle cx="0" cy="-22" r="1.5" fill="url(#iconAccent)"/>
+      <circle cx="8" cy="-20" r="1.5" fill="white"/>
+    </g>
+    
+  </g>
+</svg>

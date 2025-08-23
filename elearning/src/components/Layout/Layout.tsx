@@ -49,7 +49,8 @@ import {
   Add,
   Grade,
   Leaderboard,
-  EmojiEvents
+  EmojiEvents,
+  TrendingUp
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { useNotifications } from '../../hooks/useNotifications';
@@ -58,6 +59,8 @@ import EmailVerificationBanner from '../Auth/EmailVerificationBanner';
 import FloatingAIAssistant from '../FloatingAIAssistant';
 import { useResponsive, getDrawerWidth } from '../../utils/responsive';
 import { teacherProfileService } from '../../services/teacherProfileService';
+import CareerGuidancePopup from '../Career/CareerGuidancePopup';
+import careerGuidanceService from '../../services/careerGuidanceService';
 
 // Responsive styled components
 const ResponsiveAppBar = styled(AppBar, {
@@ -145,6 +148,10 @@ const Layout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [teacherProfileStatus, setTeacherProfileStatus] = useState<string | null>(null);
+  
+  // Career guidance popup state
+  const [showCareerPopup, setShowCareerPopup] = useState(false);
+  const [hasCheckedCareerTest, setHasCheckedCareerTest] = useState(false);
 
   const { user, logout } = useAuth();
   const { unreadCount } = useNotifications();
@@ -170,6 +177,101 @@ const Layout: React.FC = () => {
 
     loadTeacherProfileStatus();
   }, [user]);
+
+  // Reset career test check when navigating to dashboard pages
+  useEffect(() => {
+    const isDashboardPage = location.pathname === '/dashboard' || 
+                          location.pathname === '/dashboard/student' || 
+                          location.pathname === '/dashboard/';
+    if (isDashboardPage && hasCheckedCareerTest && user?.role === UserRole.STUDENT) {
+      console.log('🔄 [E-Learning] Resetting career test check for student dashboard visit');
+      setHasCheckedCareerTest(false);
+    }
+  }, [location.pathname, hasCheckedCareerTest, user?.role]);
+
+  // Check for career test completion and show popup for students
+  useEffect(() => {
+    const checkCareerTestStatus = async () => {
+      console.log('📚 [E-Learning] Checking career test status...', {
+        user: user?.email,
+        role: user?.role,
+        isStudent: user?.role === UserRole.STUDENT,
+        hasCheckedCareerTest,
+        pathname: location.pathname
+      });
+
+      if (!user || user.role !== UserRole.STUDENT) {
+        console.log('❌ [E-Learning] Skipping career popup - user not eligible (no user or not student)');
+        return;
+      }
+
+      if (hasCheckedCareerTest) {
+        console.log('❌ [E-Learning] Skipping career popup - already checked this session');
+        return;
+      }
+      
+      // Only show popup on student dashboard pages
+      const dashboardPages = ['/dashboard', '/dashboard/student', '/dashboard/'];
+      const isDashboard = dashboardPages.includes(location.pathname);
+      if (!isDashboard) {
+        console.log('❌ [E-Learning] Skipping career popup - not on dashboard page');
+        return;
+      }
+
+      // Skip career popup on certain pages
+      const skipPages = ['/dashboard/student/career', '/login', '/register'];
+      if (skipPages.some(page => location.pathname.includes(page))) {
+        console.log('❌ [E-Learning] Skipping career popup - on excluded page');
+        setHasCheckedCareerTest(true);
+        return;
+      }
+
+      // Check if dismissed recently (within 2 hours only, not 24 hours)
+      const lastDismissed = localStorage.getItem('careerPopupLastDismissed');
+      if (lastDismissed) {
+        const dismissedTime = new Date(lastDismissed).getTime();
+        const now = new Date().getTime();
+        const hoursSinceDismissed = (now - dismissedTime) / (1000 * 60 * 60);
+        
+        if (hoursSinceDismissed < 2) {
+          console.log('❌ [E-Learning] Skipping career popup - dismissed recently (within 2 hours)');
+          setHasCheckedCareerTest(true);
+          return;
+        }
+      }
+
+      try {
+        console.log('🔄 [E-Learning] Checking if user has completed career test...');
+        const hasCompletedTest = await careerGuidanceService.checkHasCompletedCareerTest();
+        console.log('📊 [E-Learning] Career test completion status:', hasCompletedTest);
+        
+        if (!hasCompletedTest) {
+          console.log('✅ [E-Learning] User has not completed test - showing popup in 3 seconds');
+          setTimeout(() => {
+            console.log('🎯 [E-Learning] Showing career guidance popup!');
+            setShowCareerPopup(true);
+            setHasCheckedCareerTest(true);
+          }, 3000);
+        } else {
+          console.log('✅ [E-Learning] User has completed test - no popup needed');
+          setHasCheckedCareerTest(true);
+        }
+      } catch (error) {
+        console.error('❌ [E-Learning] Error checking career test status:', error);
+        // For testing, show popup if there's an error (user likely hasn't completed test)
+        console.log('🔧 [E-Learning] Error occurred - showing popup as fallback');
+        setTimeout(() => {
+          setShowCareerPopup(true);
+          setHasCheckedCareerTest(true);
+        }, 3000);
+      }
+    };
+
+    // Only check after user is loaded and we're authenticated
+    if (user && !hasCheckedCareerTest) {
+      checkCareerTestStatus();
+    }
+  }, [user, location.pathname, hasCheckedCareerTest]);
   
   // Dynamic drawer width based on device
   const drawerWidths = getDrawerWidth();
@@ -217,6 +319,7 @@ const Layout: React.FC = () => {
         { text: '🔴 Live Sessions', icon: <VideoCall />, path: '/live-sessions' },
         { text: 'My Grades', icon: <Grade />, path: '/dashboard/student/grades' },
         { text: 'Leaderboard', icon: <EmojiEvents />, path: '/dashboard/student/leaderboard' },
+        { text: 'Career Guidance', icon: <TrendingUp />, path: '/dashboard/student/career' },
         { text: 'AI Assistant', icon: <Psychology />, path: '/dashboard/student/ai-assistant' },
         { text: 'Profile', icon: <Person />, path: '/dashboard/profile' }
       );
@@ -259,6 +362,18 @@ const Layout: React.FC = () => {
       return location.pathname === '/';
     }
     return location.pathname.startsWith(path);
+  };
+
+  const handleCareerPopupClose = () => {
+    setShowCareerPopup(false);
+    // Only set dismissal time, no session storage to allow showing on dashboard visits
+    localStorage.setItem('careerPopupLastDismissed', new Date().toISOString());
+    console.log('🚫 [E-Learning] Career popup dismissed - will show again in 2 hours');
+  };
+
+  const handleTakeCareerTest = () => {
+    setShowCareerPopup(false);
+    navigate('/dashboard/student/career');
   };
 
   // Drawer content
@@ -616,6 +731,16 @@ const Layout: React.FC = () => {
           />
         )}
       </ResponsiveMain>
+
+      {/* Career Guidance Popup - Available for students */}
+      {user?.role === UserRole.STUDENT && (
+        <CareerGuidancePopup
+          open={showCareerPopup}
+          onClose={handleCareerPopupClose}
+          onTakeCareerTest={handleTakeCareerTest}
+          userFirstName={user?.firstName}
+        />
+      )}
     </Box>
   );
 };

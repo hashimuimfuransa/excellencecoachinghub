@@ -4,27 +4,27 @@
   "description": "Africa's premier career transformation platform - E-learning, job preparation, and career coaching globally with focus on Africa",
   "icons": [
     {
-      "src": "favicon.svg",
+      "src": "logo.webp",
       "sizes": "32x32",
-      "type": "image/svg+xml",
+      "type": "image/webp",
       "purpose": "any"
     },
     {
-      "src": "app-icon-simple.svg",
+      "src": "logo.webp",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/webp",
       "purpose": "any"
     },
     {
-      "src": "app-icon.svg",
+      "src": "logo.webp",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/webp",
       "purpose": "any"
     },
     {
-      "src": "app-icon.svg",
+      "src": "logo.webp",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/webp",
       "purpose": "maskable"
     }
   ],
@@ -43,21 +43,21 @@
       "short_name": "Learn",
       "description": "Access courses and learning materials",
       "url": "/elearning",
-      "icons": [{ "src": "app-icon-simple.svg", "sizes": "192x192" }]
+      "icons": [{ "src": "logo.webp", "sizes": "192x192" }]
     },
     {
       "name": "Job Search",
       "short_name": "Jobs",
       "description": "Find career opportunities",
       "url": "/jobs",
-      "icons": [{ "src": "app-icon-simple.svg", "sizes": "192x192" }]
+      "icons": [{ "src": "logo.webp", "sizes": "192x192" }]
     },
     {
       "name": "Dashboard",
       "short_name": "Dashboard",
       "description": "Your learning dashboard",
       "url": "/dashboard",
-      "icons": [{ "src": "app-icon-simple.svg", "sizes": "192x192" }]
+      "icons": [{ "src": "logo.webp", "sizes": "192x192" }]
     }
   ]
 }

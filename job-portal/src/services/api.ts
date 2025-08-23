@@ -40,8 +40,8 @@ api.interceptors.response.use(
 );
 
 // Generic API functions
-export const apiGet = async <T>(url: string, params?: any): Promise<T> => {
-  const response = await api.get<T>(url, { params });
+export const apiGet = async <T>(url: string, params?: any, signal?: AbortSignal): Promise<T> => {
+  const response = await api.get<T>(url, { params, signal });
   return response.data;
 };
 

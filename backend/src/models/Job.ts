@@ -191,6 +191,22 @@ jobSchema.index({ applicationDeadline: 1 });
 // Compound indexes
 jobSchema.index({ status: 1, educationLevel: 1 });
 jobSchema.index({ status: 1, isCurated: 1 });
+jobSchema.index({ status: 1, createdAt: -1 }); // For active jobs sorted by date
+jobSchema.index({ status: 1, jobType: 1, createdAt: -1 }); // For filtered job type queries
+jobSchema.index({ status: 1, experienceLevel: 1, createdAt: -1 }); // For experience level queries
+
+// Text indexes for search functionality
+jobSchema.index({ 
+  title: 'text', 
+  description: 'text', 
+  company: 'text' 
+}, {
+  weights: {
+    title: 10,
+    company: 5,
+    description: 1
+  }
+});
 
 // Virtual for checking if job is expired
 jobSchema.virtual('isExpired').get(function(this: IJobDocument) {

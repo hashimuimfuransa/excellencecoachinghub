@@ -219,7 +219,7 @@ const HomePage: React.FC = () => {
   ];
 
   const handleSearch = () => {
-    navigate(`/app/jobs?search=${searchTerm}&location=${location}`);
+    navigate(`/jobs?search=${searchTerm}&location=${location}`);
   };
 
   const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
@@ -228,19 +228,11 @@ const HomePage: React.FC = () => {
   };
 
   const handleViewMore = () => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
-    } else {
-      navigate('/app/jobs');
-    }
+    navigate('/jobs');
   };
 
   const handleViewJobDetails = (jobId: string) => {
-    if (isAuthenticated) {
-      navigate(`/dashboard/jobs/${jobId}`);
-    } else {
-      navigate(`/app/jobs/${jobId}`);
-    }
+    navigate('/jobs');
   };
 
   const formatSalary = (salary: any): string => {
@@ -405,7 +397,7 @@ const HomePage: React.FC = () => {
                         }
                       }}
                     >
-                      Find Your <Box component="span" sx={{ 
+                      Unlock Your <Box component="span" sx={{ 
                         color: '#8eff8e', 
                         textShadow: '0 0 30px rgba(76, 175, 80, 0.8)',
                         position: 'relative',
@@ -421,7 +413,7 @@ const HomePage: React.FC = () => {
                           '0%, 100%': { opacity: 0.5, transform: 'rotate(0deg) scale(1)' },
                           '50%': { opacity: 1, transform: 'rotate(180deg) scale(1.2)' }
                         }
-                      }}>Dream Job</Box> Today 🚀
+                      }}>Career Potential</Box> Today 🚀
                     </Typography>
                     <Typography 
                       variant="h4" 
@@ -439,7 +431,7 @@ const HomePage: React.FC = () => {
                         textShadow: '0 2px 15px rgba(255,255,255,0.3)'
                       }}
                     >
-                      🎯 Your Smart Career Success Platform
+                      🎯 Where Talent Meets Opportunity - Excellence Starts Here
                     </Typography>
                     <Typography 
                       variant="h6" 
@@ -455,7 +447,7 @@ const HomePage: React.FC = () => {
                         px: { xs: 1, sm: 0 }
                       }}
                     >
-                      🌟 Connect with top employers, develop in-demand skills, and accelerate your career with our intelligent job matching and smart interview preparation
+                      🌟 Join Africa's premier career transformation platform where over 12,500 professionals have achieved career success. Get matched with vetted opportunities, master skills through personalized coaching, and land your dream role with our AI-powered interview preparation.
                     </Typography>
 
                     {/* Key Benefits Pills */}
@@ -551,9 +543,9 @@ const HomePage: React.FC = () => {
                             '100%': { left: '100%' }
                           }
                         }}
-                        onClick={() => navigate('/app/jobs')}
+                        onClick={() => navigate('/jobs')}
                       >
-                        🚀 Explore Jobs
+                        🚀 Find Your Dream Job
                       </Button>
                       <Button
                         variant="outlined"
@@ -1180,31 +1172,57 @@ const HomePage: React.FC = () => {
                             )}
                           </Box>
                           
-                          {/* Apply button */}
-                          <Button
-                            variant="outlined"
-                            color="primary"
-                            endIcon={<ArrowForward sx={{ fontSize: { xs: '0.9rem', sm: '1.2rem' } }} />}
-                            fullWidth
-                            sx={{ 
-                              mt: 'auto',
-                              borderRadius: { xs: 1.5, sm: 2 },
-                              py: { xs: 0.8, sm: 1 },
-                              fontWeight: 'bold',
-                              fontSize: { xs: '0.8rem', sm: '0.9rem' },
-                              minHeight: { xs: 32, sm: 40 },
-                              '&:hover': {
-                                bgcolor: 'primary.light',
-                                borderColor: 'primary.main'
-                              }
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewJobDetails(job._id || job.id);
-                            }}
-                          >
-                            View Details
-                          </Button>
+                          {/* Action Buttons */}
+                          <Box sx={{ mt: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            <Button
+                              variant="contained"
+                              color="primary"
+                              endIcon={<ArrowForward sx={{ fontSize: { xs: '0.9rem', sm: '1.2rem' } }} />}
+                              fullWidth
+                              sx={{ 
+                                borderRadius: { xs: 1.5, sm: 2 },
+                                py: { xs: 0.8, sm: 1 },
+                                fontWeight: 'bold',
+                                fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                                minHeight: { xs: 32, sm: 40 },
+                                background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
+                                '&:hover': {
+                                  background: `linear-gradient(45deg, ${theme.palette.primary.dark} 30%, ${theme.palette.secondary.dark} 90%)`,
+                                }
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate('/jobs');
+                              }}
+                            >
+                              View More Details
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              color="secondary"
+                              startIcon={<Psychology sx={{ fontSize: { xs: '0.9rem', sm: '1.1rem' } }} />}
+                              fullWidth
+                              sx={{ 
+                                borderRadius: { xs: 1.5, sm: 2 },
+                                py: { xs: 0.7, sm: 0.9 },
+                                fontWeight: 500,
+                                fontSize: { xs: '0.75rem', sm: '0.85rem' },
+                                minHeight: { xs: 30, sm: 36 },
+                                borderWidth: 1.5,
+                                '&:hover': {
+                                  bgcolor: alpha(theme.palette.secondary.main, 0.05),
+                                  borderWidth: 1.5,
+                                  borderColor: theme.palette.secondary.main
+                                }
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate('/register');
+                              }}
+                            >
+                              Get Prepared
+                            </Button>
+                          </Box>
                         </Paper>
                       </Zoom>
                     </Grid>

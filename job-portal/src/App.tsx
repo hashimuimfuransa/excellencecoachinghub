@@ -10,7 +10,7 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
-import JobsPage from './pages/JobsPage';
+import JobsPage from './pages/ModernJobsPage';
 import JobDetailsPage from './pages/JobDetailsPage';
 import ApplicationsPage from './pages/ApplicationsPage';
 import ApplicationDetailsPage from './pages/ApplicationDetailsPage';
@@ -33,6 +33,7 @@ import JobApplicationsPage from './pages/JobApplicationsPage';
 import TestResultsPage from './pages/TestResultsPage';
 import InterviewResultsPage from './pages/InterviewResultsPage';
 import InterviewHistoryPage from './pages/InterviewHistoryPage';
+import AllJobsPage from './pages/AllJobsPage';
 import EmployerTalentPoolPage from './pages/EmployerTalentPoolPage';
 import EmployerSavedCandidatesPage from './pages/EmployerSavedCandidatesPage';
 import EmployerHiredPage from './pages/EmployerHiredPage';
@@ -41,6 +42,9 @@ import EmployerAnalyticsPage from './pages/EmployerAnalyticsPage';
 import EmployerCompanyProfilePage from './pages/EmployerCompanyProfilePage';
 import CompaniesPage from './pages/CompaniesPage';
 import SupportPage from './pages/SupportPage';
+import CareerGuidancePage from './pages/CareerGuidancePage';
+import CareerAssessmentFlow from './pages/CareerAssessmentFlow';
+import CareerAssessmentResultsPage from './pages/CareerAssessmentResultsPage';
 
 function App() {
   return (
@@ -50,6 +54,8 @@ function App() {
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<HomePage />} />
+            <Route path="/jobs" element={<AllJobsPage />} />
+            <Route path="/jobs/:id" element={<JobDetailsPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/companies" element={<CompaniesPage />} />
@@ -95,6 +101,7 @@ function App() {
               
               {/* Jobs */}
               <Route path="jobs" element={<JobsPage />} />
+              <Route path="jobs/all" element={<AllJobsPage />} />
               <Route path="jobs/:id" element={<JobDetailsPage />} />
               <Route path="saved-jobs" element={<SavedJobsPage />} />
               
@@ -122,6 +129,9 @@ function App() {
               <Route path="interviews/results/:sessionId" element={<InterviewResultsPage />} />
               <Route path="tests" element={<PsychometricTestsPage />} />
               <Route path="test-results" element={<TestResultsPage />} />
+              <Route path="career-guidance" element={<CareerGuidancePage />} />
+              <Route path="career/assessment/:assessmentId" element={<CareerAssessmentFlow />} />
+              <Route path="career/assessment/:assessmentId/results" element={<CareerAssessmentResultsPage />} />
               
               {/* Employer Only Routes */}
               <Route 

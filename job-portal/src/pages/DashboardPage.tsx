@@ -30,7 +30,11 @@ import {
   CardHeader,
   Fade,
   Slide,
-  Zoom
+  Zoom,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import ProfileCompletionDashboard from '../components/ProfileCompletionDashboard';
 import {
@@ -278,6 +282,7 @@ const DashboardPage: React.FC = () => {
   const [recommendedCourses] = useState<RecommendedCourse[]>(mockRecommendedCourses); // Keep mock for now
   const [freshUserData, setFreshUserData] = useState<any>(null);
   const [userDataVersion, setUserDataVersion] = useState(0);
+  const [preparationDialogOpen, setPreparationDialogOpen] = useState(false);
 
   const isStudent = hasRole(UserRole.STUDENT);
   const isJobSeeker = hasRole(UserRole.PROFESSIONAL) || hasRole(UserRole.JOB_SEEKER);
@@ -703,15 +708,39 @@ const DashboardPage: React.FC = () => {
     <Container maxWidth="xl">
       <Box mb={4}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Box>
+          <Box flex={1}>
             <Typography variant="h3" component="h1" fontWeight="bold" gutterBottom>
               Welcome back, {user?.firstName}! 👋
             </Typography>
-            <Typography variant="h6" color="text.secondary">
+            <Typography variant="h6" color="text.secondary" gutterBottom>
               {isJobSeekerView 
                 ? "Your personalized job search dashboard" 
                 : "Manage your recruitment activities"}
             </Typography>
+            {isJobSeekerView && (
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<Psychology />}
+                onClick={() => setPreparationDialogOpen(true)}
+                sx={{
+                  mt: 2,
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  px: 3,
+                  py: 1.5,
+                  background: `linear-gradient(45deg, ${theme.palette.success.main} 30%, ${theme.palette.primary.main} 90%)`,
+                  boxShadow: `0 4px 14px 0 ${alpha(theme.palette.success.main, 0.3)}`,
+                  '&:hover': {
+                    background: `linear-gradient(45deg, ${theme.palette.success.dark} 30%, ${theme.palette.primary.dark} 90%)`,
+                    boxShadow: `0 6px 20px 0 ${alpha(theme.palette.success.main, 0.4)}`,
+                  }
+                }}
+              >
+                Start Prepare for Job
+              </Button>
+            )}
           </Box>
           <Tooltip title="Refresh data">
             <IconButton onClick={handleRefresh} disabled={refreshing}>
@@ -735,7 +764,10 @@ const DashboardPage: React.FC = () => {
               <ProfileCompletionDashboard
                 key={`profile-completion-${userDataVersion}`}
                 user={freshUserData || user}
-                onEditProfile={() => navigate('/app/profile')}
+                onEditProfile={() => {
+                  console.log('🚀 DashboardPage onEditProfile called - navigating to /app/profile');
+                  navigate('/app/profile');
+                }}
                 showRecommendations={true}
               />
             </Box>
@@ -975,6 +1007,258 @@ const DashboardPage: React.FC = () => {
                       </Button>
                     </Box>
                   )}
+                </Paper>
+
+                {/* E-Learning Promotion Section */}
+                <Paper 
+                  sx={{ 
+                    p: 4, 
+                    mb: 3, 
+                    borderRadius: 3, 
+                    background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
+                    border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
+                  }}
+                >
+                  <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={3}>
+                    <Box flex={1}>
+                      <Box display="flex" alignItems="center" mb={2}>
+                        <Box
+                          sx={{
+                            p: 1.5,
+                            bgcolor: alpha(theme.palette.primary.main, 0.1),
+                            borderRadius: '12px',
+                            mr: 2,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <School sx={{ color: theme.palette.primary.main, fontSize: '28px' }} />
+                        </Box>
+                        <Box>
+                          <Typography variant="h5" component="h2" fontWeight="bold" color="primary.main">
+                            Boost Your Career with Our E-Learning Platform
+                          </Typography>
+                          <Typography variant="subtitle1" color="text.secondary" sx={{ mt: 0.5 }}>
+                            Get job-ready with comprehensive courses and personalized coaching
+                          </Typography>
+                        </Box>
+                      </Box>
+                      
+                      <Typography variant="body1" color="text.secondary" paragraph>
+                        Transform your career with our comprehensive e-learning platform designed specifically to prepare you for your dream job. 
+                        Access expert-led courses, live coaching sessions, and practice materials tailored to your industry.
+                      </Typography>
+
+                      {/* Features Grid */}
+                      <Grid container spacing={2} sx={{ mb: 3 }}>
+                        <Grid item xs={12} sm={6}>
+                          <Box display="flex" alignItems="center" mb={1}>
+                            <PlayCircleOutline sx={{ color: theme.palette.success.main, mr: 1, fontSize: '20px' }} />
+                            <Typography variant="body2" fontWeight="medium">
+                              Live Video Sessions with Expert Instructors
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Box display="flex" alignItems="center" mb={1}>
+                            <MenuBook sx={{ color: theme.palette.info.main, mr: 1, fontSize: '20px' }} />
+                            <Typography variant="body2" fontWeight="medium">
+                              Comprehensive Study Materials & Resources
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Box display="flex" alignItems="center" mb={1}>
+                            <Assessment sx={{ color: theme.palette.warning.main, mr: 1, fontSize: '20px' }} />
+                            <Typography variant="body2" fontWeight="medium">
+                              Practice Tests & Skill Assessments
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Box display="flex" alignItems="center" mb={1}>
+                            <Psychology sx={{ color: theme.palette.secondary.main, mr: 1, fontSize: '20px' }} />
+                            <Typography variant="body2" fontWeight="medium">
+                              Interview Preparation & Mock Sessions
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Box display="flex" alignItems="center" mb={1}>
+                            <EmojiEvents sx={{ color: theme.palette.error.main, mr: 1, fontSize: '20px' }} />
+                            <Typography variant="body2" fontWeight="medium">
+                              Industry-Recognized Certifications
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Box display="flex" alignItems="center" mb={1}>
+                            <Group sx={{ color: theme.palette.primary.main, mr: 1, fontSize: '20px' }} />
+                            <Typography variant="body2" fontWeight="medium">
+                              Peer Learning & Community Support
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      </Grid>
+
+                      {/* Specialization Options */}
+                      <Box 
+                        sx={{ 
+                          bgcolor: alpha(theme.palette.background.paper, 0.7), 
+                          borderRadius: 2, 
+                          p: 2.5, 
+                          mb: 3,
+                          border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+                        }}
+                      >
+                        <Typography variant="subtitle1" fontWeight="bold" color="primary.main" gutterBottom>
+                          Choose Your Learning Path:
+                        </Typography>
+                        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ gap: 1 }}>
+                          {[
+                            'Technical Skills', 
+                            'Soft Skills', 
+                            'Leadership', 
+                            'Data Analysis', 
+                            'Programming', 
+                            'Digital Marketing',
+                            'Project Management',
+                            'Communication Skills'
+                          ].map((skill) => (
+                            <Chip 
+                              key={skill}
+                              label={skill}
+                              variant="outlined"
+                              size="small"
+                              sx={{ 
+                                bgcolor: alpha(theme.palette.primary.main, 0.05),
+                                borderColor: alpha(theme.palette.primary.main, 0.2),
+                                '&:hover': {
+                                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                  borderColor: theme.palette.primary.main
+                                }
+                              }}
+                            />
+                          ))}
+                        </Stack>
+                      </Box>
+
+                      {/* Call to Action */}
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                        <Button
+                          variant="contained"
+                          size="large"
+                          startIcon={<School />}
+                          onClick={() => window.open('https://www.elearning.excellencecoachinghub.com/', '_blank')}
+                          sx={{
+                            borderRadius: 2,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            px: 3,
+                            py: 1.5,
+                            background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
+                            boxShadow: `0 4px 14px 0 ${alpha(theme.palette.primary.main, 0.3)}`,
+                            '&:hover': {
+                              background: `linear-gradient(45deg, ${theme.palette.primary.dark} 30%, ${theme.palette.secondary.dark} 90%)`,
+                              boxShadow: `0 6px 20px 0 ${alpha(theme.palette.primary.main, 0.4)}`,
+                            }
+                          }}
+                        >
+                          Start Learning Today
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="large"
+                          startIcon={<Visibility />}
+                          onClick={() => window.open('https://www.elearning.excellencecoachinghub.com/', '_blank')}
+                          sx={{
+                            borderRadius: 2,
+                            textTransform: 'none',
+                            fontWeight: 500,
+                            px: 3,
+                            py: 1.5,
+                            borderWidth: 2,
+                            '&:hover': {
+                              borderWidth: 2,
+                              bgcolor: alpha(theme.palette.primary.main, 0.05)
+                            }
+                          }}
+                        >
+                          Browse Courses
+                        </Button>
+                      </Stack>
+                    </Box>
+
+                    {/* Right side illustration/icon */}
+                    <Box 
+                      sx={{ 
+                        display: { xs: 'none', md: 'flex' },
+                        ml: 3,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minWidth: '120px'
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 80,
+                          height: 80,
+                          borderRadius: '20px',
+                          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.3)}`
+                        }}
+                      >
+                        <AutoAwesome sx={{ color: 'white', fontSize: '36px' }} />
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  {/* Bottom Stats/Highlights */}
+                  <Box 
+                    sx={{ 
+                      bgcolor: alpha(theme.palette.background.paper, 0.5), 
+                      borderRadius: 2, 
+                      p: 2,
+                      border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+                    }}
+                  >
+                    <Grid container spacing={3}>
+                      <Grid item xs={12} sm={4}>
+                        <Box textAlign="center">
+                          <Typography variant="h6" fontWeight="bold" color="primary.main">
+                            500+
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Expert-Led Courses
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={12} sm={4}>
+                        <Box textAlign="center">
+                          <Typography variant="h6" fontWeight="bold" color="success.main">
+                            95%
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Job Placement Rate
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={12} sm={4}>
+                        <Box textAlign="center">
+                          <Typography variant="h6" fontWeight="bold" color="info.main">
+                            24/7
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Learning Support
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    </Grid>
+                  </Box>
                 </Paper>
               </>
             )}
@@ -1482,6 +1766,238 @@ const DashboardPage: React.FC = () => {
           </Box>
         )}
       </Box>
+
+      {/* Job Preparation Dialog */}
+      <Dialog
+        open={preparationDialogOpen}
+        onClose={() => setPreparationDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+        sx={{
+          '& .MuiDialog-paper': {
+            borderRadius: 3,
+            p: 1
+          }
+        }}
+      >
+        <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
+          <Box display="flex" alignItems="center" justifyContent="center" mb={2}>
+            <Box
+              sx={{
+                p: 2,
+                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                borderRadius: '16px',
+                mr: 2
+              }}
+            >
+              <Psychology sx={{ color: theme.palette.primary.main, fontSize: '32px' }} />
+            </Box>
+            <Box textAlign="left">
+              <Typography variant="h4" fontWeight="bold" color="primary.main">
+                Prepare for Your Dream Job
+              </Typography>
+              <Typography variant="subtitle1" color="text.secondary">
+                Choose your preparation path and get ready for success
+              </Typography>
+            </Box>
+          </Box>
+        </DialogTitle>
+
+        <DialogContent sx={{ px: 3 }}>
+          <Typography variant="body1" color="text.secondary" paragraph sx={{ textAlign: 'center', mb: 4 }}>
+            Our comprehensive preparation program helps you build the skills, confidence, and knowledge needed to excel in job applications and interviews. 
+            Choose the areas you'd like to focus on:
+          </Typography>
+
+          <Grid container spacing={3}>
+            {/* Psychometric Tests Card */}
+            <Grid item xs={12} md={4}>
+              <Card 
+                sx={{ 
+                  height: '100%',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  border: `2px solid ${alpha(theme.palette.warning.main, 0.1)}`,
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: `0 8px 25px ${alpha(theme.palette.warning.main, 0.3)}`,
+                    border: `2px solid ${theme.palette.warning.main}`,
+                  }
+                }}
+                onClick={() => {
+                  setPreparationDialogOpen(false);
+                  navigate('/app/tests');
+                }}
+              >
+                <CardContent sx={{ textAlign: 'center', p: 3 }}>
+                  <Box
+                    sx={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: '16px',
+                      bgcolor: alpha(theme.palette.warning.main, 0.1),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mx: 'auto',
+                      mb: 2
+                    }}
+                  >
+                    <Assessment sx={{ color: theme.palette.warning.main, fontSize: '28px' }} />
+                  </Box>
+                  <Typography variant="h6" fontWeight="bold" gutterBottom>
+                    Psychometric Tests
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    Assess your cognitive abilities, personality traits, and problem-solving skills with professional-grade tests.
+                  </Typography>
+                  <Chip
+                    label="Skill Assessment"
+                    size="small"
+                    sx={{ 
+                      bgcolor: alpha(theme.palette.warning.main, 0.1),
+                      color: theme.palette.warning.main,
+                      fontWeight: 600
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Interview Preparation Card */}
+            <Grid item xs={12} md={4}>
+              <Card 
+                sx={{ 
+                  height: '100%',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  border: `2px solid ${alpha(theme.palette.success.main, 0.1)}`,
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: `0 8px 25px ${alpha(theme.palette.success.main, 0.3)}`,
+                    border: `2px solid ${theme.palette.success.main}`,
+                  }
+                }}
+                onClick={() => {
+                  setPreparationDialogOpen(false);
+                  navigate('/app/interviews');
+                }}
+              >
+                <CardContent sx={{ textAlign: 'center', p: 3 }}>
+                  <Box
+                    sx={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: '16px',
+                      bgcolor: alpha(theme.palette.success.main, 0.1),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mx: 'auto',
+                      mb: 2
+                    }}
+                  >
+                    <Person sx={{ color: theme.palette.success.main, fontSize: '28px' }} />
+                  </Box>
+                  <Typography variant="h6" fontWeight="bold" gutterBottom>
+                    Interview Practice
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    Master interview techniques with AI-powered mock interviews and personalized feedback.
+                  </Typography>
+                  <Chip
+                    label="Communication Skills"
+                    size="small"
+                    sx={{ 
+                      bgcolor: alpha(theme.palette.success.main, 0.1),
+                      color: theme.palette.success.main,
+                      fontWeight: 600
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Courses Card */}
+            <Grid item xs={12} md={4}>
+              <Card 
+                sx={{ 
+                  height: '100%',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  border: `2px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: `0 8px 25px ${alpha(theme.palette.primary.main, 0.3)}`,
+                    border: `2px solid ${theme.palette.primary.main}`,
+                  }
+                }}
+                onClick={() => {
+                  window.open('https://www.elearning.excellencecoachinghub.com/', '_blank');
+                  setPreparationDialogOpen(false);
+                }}
+              >
+                <CardContent sx={{ textAlign: 'center', p: 3 }}>
+                  <Box
+                    sx={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: '16px',
+                      bgcolor: alpha(theme.palette.primary.main, 0.1),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mx: 'auto',
+                      mb: 2
+                    }}
+                  >
+                    <School sx={{ color: theme.palette.primary.main, fontSize: '28px' }} />
+                  </Box>
+                  <Typography variant="h6" fontWeight="bold" gutterBottom>
+                    Professional Courses
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    Enhance your skills with expert-led courses, live sessions, and industry-recognized certifications.
+                  </Typography>
+                  <Chip
+                    label="Skill Development"
+                    size="small"
+                    sx={{ 
+                      bgcolor: alpha(theme.palette.primary.main, 0.1),
+                      color: theme.palette.primary.main,
+                      fontWeight: 600
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+
+          <Box 
+            sx={{ 
+              mt: 4, 
+              p: 2, 
+              bgcolor: alpha(theme.palette.info.main, 0.05), 
+              borderRadius: 2,
+              border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`
+            }}
+          >
+            <Typography variant="body2" color="info.main" textAlign="center" fontWeight="medium">
+              💡 Pro Tip: Combining all three preparation methods gives you the best chance of landing your dream job!
+            </Typography>
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
+          <Button
+            onClick={() => setPreparationDialogOpen(false)}
+            variant="outlined"
+            sx={{ borderRadius: 2, textTransform: 'none', px: 3 }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

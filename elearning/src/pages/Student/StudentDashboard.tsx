@@ -46,6 +46,8 @@ import { getCourseImageUrl } from '../../utils/courseImageGenerator';
 import RecordedSessions from '../../components/Student/RecordedSessions';
 import ResponsiveDashboard from '../../components/Layout/ResponsiveDashboard';
 import { useResponsive, getCardDimensions, getButtonSize } from '../../utils/responsive';
+import CareerGuidancePopup from '../../components/Career/CareerGuidancePopup';
+import careerGuidanceService from '../../services/careerGuidanceService';
 
 // Responsive styled components
 const ResponsiveCard = styled(Card)(({ theme }) => ({
@@ -168,6 +170,10 @@ const StudentDashboard: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<StudentDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Career guidance popup state
+  const [showCareerPopup, setShowCareerPopup] = useState(false);
+  const [hasCheckedCareerTest, setHasCheckedCareerTest] = useState(false);
 
   // Fetch dashboard data
   const fetchDashboardData = async () => {
@@ -293,6 +299,51 @@ const StudentDashboard: React.FC = () => {
   useEffect(() => {
     fetchDashboardData();
   }, [user]);
+
+  // Check for career test completion and show popup
+  useEffect(() => {
+    const checkCareerTestStatus = async () => {
+      if (!user || user.role !== 'student' || hasCheckedCareerTest) return;
+      
+      // Check if user has dismissed the popup in this session
+      const dismissedInSession = sessionStorage.getItem('careerPopupDismissed');
+      if (dismissedInSession) {
+        setHasCheckedCareerTest(true);
+        return;
+      }
+
+      try {
+        const hasCompletedTest = await careerGuidanceService.checkHasCompletedCareerTest();
+        
+        // Only show popup if user hasn't completed career test and has some courses enrolled
+        if (!hasCompletedTest && dashboardData?.stats.totalCourses > 0) {
+          // Add a slight delay to ensure dashboard has loaded
+          setTimeout(() => {
+            setShowCareerPopup(true);
+            setHasCheckedCareerTest(true);
+          }, 2000);
+        } else {
+          setHasCheckedCareerTest(true);
+        }
+      } catch (error) {
+        console.error('Error checking career test status:', error);
+        setHasCheckedCareerTest(true);
+      }
+    };
+
+    if (dashboardData && !loading && !error) {
+      checkCareerTestStatus();
+    }
+  }, [user, dashboardData, loading, error, hasCheckedCareerTest]);
+
+  const handleCareerPopupClose = () => {
+    setShowCareerPopup(false);
+    sessionStorage.setItem('careerPopupDismissed', 'true');
+  };
+
+  const handleTakeCareerTest = () => {
+    navigate('/dashboard/student/career');
+  };
 
   if (loading) {
     return (
@@ -982,6 +1033,14 @@ const StudentDashboard: React.FC = () => {
           </Paper>
         </Grid>
       </Grid>
+      
+      {/* Career Guidance Popup */}
+      <CareerGuidancePopup
+        open={showCareerPopup}
+        onClose={handleCareerPopupClose}
+        onTakeCareerTest={handleTakeCareerTest}
+        userFirstName={user?.firstName}
+      />
     </ResponsiveDashboard>
   );
 };

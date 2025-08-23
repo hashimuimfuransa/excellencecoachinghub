@@ -33,7 +33,8 @@ import {
   Brightness4,
   Brightness7,
   Close,
-  AdminPanelSettings
+  AdminPanelSettings,
+  TrendingUp
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -71,7 +72,8 @@ const Navbar: React.FC = () => {
 
   const menuItems = [
     { text: 'Home', icon: <Home />, path: '/' },
-    { text: 'Jobs', icon: <Work />, path: '/app/jobs' },
+    { text: 'Jobs', icon: <Work />, path: '/jobs' },
+    { text: 'Career Guidance', icon: <TrendingUp />, path: '/app/career-guidance' },
     { text: 'Certificates', icon: <School />, path: '/app/certificates' },
     { text: 'Companies', icon: <Business />, path: '/companies' },
     { text: 'Support', icon: <Support />, path: '/support' },
@@ -82,7 +84,7 @@ const Navbar: React.FC = () => {
       <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <img 
-            src="/logo.webp" 
+            src="/icon-minimal.svg" 
             alt="Excellence Coaching Hub" 
             style={{ height: 30, width: 'auto' }}
           />
@@ -318,6 +320,10 @@ const Navbar: React.FC = () => {
                 <MenuItem onClick={() => { navigate('/app/dashboard'); handleClose(); }}>
                   <Work sx={{ mr: 1 }} />
                   Dashboard
+                </MenuItem>
+                <MenuItem onClick={() => { navigate('/app/career-guidance'); handleClose(); }}>
+                  <TrendingUp sx={{ mr: 1 }} />
+                  Career Guidance
                 </MenuItem>
                 <Divider />
                 <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>

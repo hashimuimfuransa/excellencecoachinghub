@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import HeroSection from '../components/HeroSection';
 import AboutSection from '../components/AboutSection';
 import ServicesSection from '../components/ServicesSection';
+import TrendingJobsSection from '../components/TrendingJobsSection';
 import HowItWorksSection from '../components/HowItWorksSection';
 import PlatformLinksSection from '../components/PlatformLinksSection';
 import TestimonialsSection from '../components/TestimonialsSection';
@@ -53,6 +54,9 @@ const HomePage: React.FC = () => {
 
       {/* Services Section */}
       <ServicesSection />
+
+      {/* Trending Jobs Section */}
+      <TrendingJobsSection />
 
       {/* How It Works Section */}
       <HowItWorksSection />

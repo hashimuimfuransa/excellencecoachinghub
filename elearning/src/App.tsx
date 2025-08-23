@@ -96,6 +96,11 @@ import TeacherGradesLeaderboard from './pages/Teacher/TeacherGradesLeaderboard';
 import AssignmentGradingDashboard from './pages/Teacher/AssignmentGradingDashboard';
 import AssignmentView from './pages/Student/AssignmentView';
 
+// Career Guidance Pages
+import CareerGuidancePage from './pages/Career/CareerGuidancePage';
+import CareerAssessmentFlow from './pages/Career/CareerAssessmentFlow';
+import CareerAssessmentResults from './pages/CareerAssessment/CareerAssessmentResults';
+
 
 // Import hooks
 import { useAuth } from './hooks/useAuth';
@@ -263,6 +268,9 @@ const App: React.FC = () => {
           <Route path="recorded-sessions" element={<RecordedSessionsPage />} />
           <Route path="grades" element={<GradesAndLeaderboard />} />
           <Route path="leaderboard" element={<StudentLeaderboard />} />
+          <Route path="career" element={<CareerGuidancePage />} />
+          <Route path="career/assessment/:assessmentId" element={<CareerAssessmentFlow />} />
+          <Route path="career/assessment/:assessmentId/results" element={<CareerAssessmentResults />} />
           <Route path="settings" element={<StudentSettings />} />
         </Route>
 

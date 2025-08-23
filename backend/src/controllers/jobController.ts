@@ -33,25 +33,29 @@ export const getJobs = async (req: Request, res: Response) => {
       query.skills = { $in: skillsArray };
     }
 
-    // Search functionality
+    // Search functionality - use text search for better performance
     if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { company: { $regex: search, $options: 'i' } }
-      ];
+      query.$text = { $search: search };
     }
 
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
-    const jobs = await Job.find(query)
+    let jobQuery = Job.find(query)
       .populate('employer', 'firstName lastName company')
-      .populate('relatedCourses', 'title description category')
-      .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limitNum);
+      .limit(limitNum)
+      .lean(); // Use lean() for faster queries when we don't need Mongoose methods
+
+    // Sort by text search score if searching, otherwise by creation date
+    if (search) {
+      jobQuery = jobQuery.sort({ score: { $meta: 'textScore' }, createdAt: -1 });
+    } else {
+      jobQuery = jobQuery.sort({ createdAt: -1 });
+    }
+
+    const jobs = await jobQuery;
 
     const total = await Job.countDocuments(query);
 
@@ -87,10 +91,36 @@ export const getJobsForStudent = async (req: AuthRequest, res: Response) => {
 
     // Get student profile to check education level
     const studentProfile = await StudentProfile.findOne({ user: userId });
+    
+    // If no student profile exists, return general jobs with a warning
     if (!studentProfile) {
-      return res.status(404).json({
-        success: false,
-        error: 'Student profile not found. Please complete your profile first.'
+      console.log(`⚠️ No student profile found for user ${userId}, returning general jobs`);
+      
+      const { page = 1, limit = 10 } = req.query;
+      const pageNum = parseInt(page as string);
+      const limitNum = parseInt(limit as string);
+      const skip = (pageNum - 1) * limitNum;
+
+      // Return basic active jobs as fallback
+      const jobs = await Job.find({ status: JobStatus.ACTIVE })
+        .populate('employer', 'firstName lastName company')
+        .populate('relatedCourses', 'title description category')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum);
+
+      const total = await Job.countDocuments({ status: JobStatus.ACTIVE });
+
+      return res.status(200).json({
+        success: true,
+        data: jobs,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          pages: Math.ceil(total / limitNum)
+        },
+        message: 'Complete your profile to get personalized job recommendations.'
       });
     }
 
@@ -107,24 +137,52 @@ export const getJobsForStudent = async (req: AuthRequest, res: Response) => {
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
-    // Get jobs suitable for student's education level
-    const jobs = await Job.findJobsByEducationLevel(studentProfile.educationLevel);
+    // Helper function to get eligible education levels
+    const getEligibleEducationLevels = (educationLevel: string) => {
+      const educationHierarchy = [
+        'high_school',
+        'associate', 
+        'bachelor',
+        'master',
+        'doctorate',
+        'professional'
+      ];
+      
+      const userLevelIndex = educationHierarchy.indexOf(educationLevel);
+      return educationHierarchy.slice(0, userLevelIndex + 1);
+    };
 
-    // Filter jobs related to completed courses
-    const relatedJobs = await Job.find({
+    // Create a more efficient query that combines both conditions
+    const query = {
       status: JobStatus.ACTIVE,
-      relatedCourses: { $in: studentProfile.completedCourses }
-    }).populate('employer', 'firstName lastName company')
-      .populate('relatedCourses', 'title description category');
+      $and: [
+        {
+          $or: [
+            // Jobs suitable for education level
+            { educationLevel: { $in: getEligibleEducationLevels(studentProfile.educationLevel) } },
+            // Jobs related to completed courses
+            { relatedCourses: { $in: studentProfile.completedCourses } }
+          ]
+        },
+        // Exclude expired jobs
+        {
+          $or: [
+            { applicationDeadline: { $exists: false } },
+            { applicationDeadline: { $gt: new Date() } }
+          ]
+        }
+      ]
+    };
 
-    // Combine and deduplicate
-    const allJobs = [...jobs, ...relatedJobs];
-    const uniqueJobs = allJobs.filter((job, index, self) => 
-      index === self.findIndex(j => j._id.toString() === job._id.toString())
-    );
+    const jobs = await Job.find(query)
+      .populate('employer', 'firstName lastName company')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
 
-    // Apply pagination
-    const paginatedJobs = uniqueJobs.slice(skip, skip + limitNum);
+    const total = await Job.countDocuments(query);
+    const paginatedJobs = jobs;
 
     res.status(200).json({
       success: true,
@@ -132,8 +190,8 @@ export const getJobsForStudent = async (req: AuthRequest, res: Response) => {
       pagination: {
         page: pageNum,
         limit: limitNum,
-        total: uniqueJobs.length,
-        pages: Math.ceil(uniqueJobs.length / limitNum)
+        total,
+        pages: Math.ceil(total / limitNum)
       }
     });
   } catch (error: any) {

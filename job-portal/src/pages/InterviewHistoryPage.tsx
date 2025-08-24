@@ -314,7 +314,7 @@ const InterviewHistoryPage: React.FC = () => {
                 <CardContent sx={{ textAlign: 'center' }}>
                   <School sx={{ fontSize: 40, color: theme.palette.info.main, mb: 1 }} />
                   <Typography variant="h4" fontWeight="bold">
-                    {sessions.filter(s => s.jobRole.interviewType === 'free').length}
+                    {sessions.filter(s => s.jobRole?.interviewType === 'free').length}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Free Interviews

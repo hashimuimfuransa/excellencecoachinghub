@@ -146,7 +146,7 @@ const CoursesPage: React.FC = () => {
     return {
       ...course,
       instructor: {
-        name: `${course.instructor.firstName} ${course.instructor.lastName}`,
+        name: course.instructor ? `${course.instructor.firstName} ${course.instructor.lastName}` : 'Unknown Instructor',
         avatar: '',
         rating: 4.5 // Default instructor rating
       },

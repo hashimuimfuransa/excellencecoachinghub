@@ -47,14 +47,39 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setError('');
     setLoading(true);
 
     try {
       await login(email, password);
+      // Only navigate on successful login
       navigate(from, { replace: true });
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Login failed');
+      // Extract detailed error message from backend
+      const errorData = err.response?.data;
+      
+      if (errorData) {
+        // Use the detailed message from the backend if available
+        const errorMessage = errorData.message || errorData.error;
+        const suggestion = errorData.details?.suggestion;
+        
+        if (errorMessage && suggestion) {
+          setError(`${errorMessage}\n\n💡 ${suggestion}`);
+        } else {
+          setError(errorMessage || 'Login failed');
+        }
+      } else {
+        setError(err.message || 'Login failed. Please check your connection and try again.');
+      }
+      
+      // Scroll to error message for better visibility
+      setTimeout(() => {
+        const errorElement = document.querySelector('[role="alert"]');
+        if (errorElement) {
+          errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
     } finally {
       setLoading(false);
     }
@@ -243,14 +268,19 @@ const LoginPage: React.FC = () => {
                     sx={{ 
                       mb: 3,
                       borderRadius: 2,
-                      '& .MuiAlert-icon': { alignItems: 'center' }
+                      '& .MuiAlert-icon': { alignItems: 'flex-start', mt: 0.5 },
+                      '& .MuiAlert-message': { 
+                        whiteSpace: 'pre-line',
+                        fontSize: '0.95rem',
+                        lineHeight: 1.5
+                      }
                     }}
                   >
                     {error}
                   </Alert>
                 )}
 
-                <Box component="form" onSubmit={handleSubmit}>
+                <Box component="form" onSubmit={handleSubmit} noValidate>
                   <TextField
                     margin="normal"
                     required

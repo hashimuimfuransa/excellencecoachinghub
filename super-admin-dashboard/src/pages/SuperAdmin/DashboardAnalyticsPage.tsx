@@ -12,7 +12,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Button
+  Button,
+  Alert,
+  Chip
 } from '@mui/material';
 import {
   Analytics,
@@ -38,47 +40,46 @@ import {
   Cell,
   AreaChart,
   Area
-} from 'recharts';
+} from '../../components/Charts/RechartsWrapper';
+import { superAdminService, DashboardStats } from '../../services/superAdminService';
 
 const DashboardAnalyticsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('7d');
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data
-  const userGrowthData = [
-    { date: '2024-01-14', users: 1200, newUsers: 45 },
-    { date: '2024-01-15', users: 1245, newUsers: 52 },
-    { date: '2024-01-16', users: 1297, newUsers: 38 },
-    { date: '2024-01-17', users: 1335, newUsers: 67 },
-    { date: '2024-01-18', users: 1402, newUsers: 43 },
-    { date: '2024-01-19', users: 1445, newUsers: 59 },
-    { date: '2024-01-20', users: 1504, newUsers: 71 }
-  ];
+  // Generate chart data from real stats
+  const getUserRoleData = () => {
+    if (!dashboardStats?.usersByRole) return [];
+    
+    const roleColors = {
+      'job_seeker': '#8884d8',
+      'employer': '#82ca9d', 
+      'student': '#ffc658',
+      'teacher': '#ff7300',
+      'admin': '#8dd1e1',
+      'super_admin': '#ff0000'
+    };
 
-  const jobApplicationData = [
-    { date: '2024-01-14', applications: 234 },
-    { date: '2024-01-15', applications: 267 },
-    { date: '2024-01-16', applications: 198 },
-    { date: '2024-01-17', applications: 289 },
-    { date: '2024-01-18', applications: 245 },
-    { date: '2024-01-19', applications: 321 },
-    { date: '2024-01-20', applications: 356 }
-  ];
+    return Object.entries(dashboardStats.usersByRole).map(([role, count]) => ({
+      name: role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      value: count,
+      color: roleColors[role as keyof typeof roleColors] || '#cccccc'
+    }));
+  };
 
-  const userRoleData = [
-    { name: 'Job Seekers', value: 8934, color: '#8884d8' },
-    { name: 'Employers', value: 2847, color: '#82ca9d' },
-    { name: 'Students', value: 2034, color: '#ffc658' },
-    { name: 'Teachers', value: 1456, color: '#ff7300' },
-    { name: 'Admins', value: 149, color: '#8dd1e1' }
-  ];
-
-  const platformActivityData = [
-    { name: 'Jobs Posted', value: 245, change: 12 },
-    { name: 'Applications', value: 1876, change: 23 },
-    { name: 'Interviews', value: 432, change: -5 },
-    { name: 'Certificates', value: 189, change: 18 }
-  ];
+  const getPlatformActivityData = () => {
+    if (!dashboardStats) return [];
+    
+    return [
+      { name: 'Total Users', value: dashboardStats.totalUsers, change: dashboardStats.monthlyGrowth.users },
+      { name: 'Jobs Posted', value: dashboardStats.totalJobs, change: dashboardStats.monthlyGrowth.jobs },
+      { name: 'Applications', value: dashboardStats.totalApplications, change: dashboardStats.monthlyGrowth.applications },
+      { name: 'Interviews', value: dashboardStats.totalInterviews, change: 0 },
+      { name: 'Certificates', value: dashboardStats.totalCertificates, change: 0 }
+    ];
+  };
 
   useEffect(() => {
     loadAnalytics();
@@ -86,11 +87,13 @@ const DashboardAnalyticsPage: React.FC = () => {
 
   const loadAnalytics = async () => {
     setLoading(true);
+    setError(null);
     try {
-      // Mock loading delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const stats = await superAdminService.getDashboardStats();
+      setDashboardStats(stats);
     } catch (error) {
       console.error('Error loading analytics:', error);
+      setError('Failed to load dashboard analytics. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -181,9 +184,16 @@ const DashboardAnalyticsPage: React.FC = () => {
         </Box>
       </Box>
 
+      {/* Error Alert */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
       {/* Stats Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        {platformActivityData.map((stat, index) => (
+        {getPlatformActivityData().map((stat, index) => (
           <Grid item xs={12} sm={6} md={3} key={index}>
             <StatCard
               title={stat.name}
@@ -198,23 +208,72 @@ const DashboardAnalyticsPage: React.FC = () => {
 
       {/* Charts */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        {/* User Growth Chart */}
+        {/* System Health Status */}
         <Grid item xs={12} lg={8}>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                User Growth Trend
+                System Health Status
               </Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={userGrowthData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="users" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
-                  <Area type="monotone" dataKey="newUsers" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.6} />
-                </AreaChart>
-              </ResponsiveContainer>
+              <Box sx={{ mt: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="body1" sx={{ minWidth: 120 }}>
+                    Overall Health:
+                  </Typography>
+                  <Chip 
+                    label={dashboardStats?.systemHealth?.toUpperCase() || 'UNKNOWN'}
+                    color={
+                      dashboardStats?.systemHealth === 'excellent' ? 'success' :
+                      dashboardStats?.systemHealth === 'good' ? 'primary' :
+                      dashboardStats?.systemHealth === 'warning' ? 'warning' : 'error'
+                    }
+                    variant="filled"
+                  />
+                </Box>
+                
+                <Grid container spacing={2}>
+                  <Grid item xs={6} sm={3}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="h4" color="primary">
+                        {dashboardStats?.totalUsers.toLocaleString() || '0'}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        Total Users
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6} sm={3}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="h4" color="success.main">
+                        {dashboardStats?.activeUsers.toLocaleString() || '0'}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        Active Users
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6} sm={3}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="h4" color="info.main">
+                        {dashboardStats?.totalJobs.toLocaleString() || '0'}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        Total Jobs
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6} sm={3}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="h4" color="warning.main">
+                        {dashboardStats?.pendingApplications.toLocaleString() || '0'}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        Pending Apps
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
@@ -229,7 +288,7 @@ const DashboardAnalyticsPage: React.FC = () => {
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={userRoleData}
+                    data={getUserRoleData()}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
@@ -238,7 +297,7 @@ const DashboardAnalyticsPage: React.FC = () => {
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {userRoleData.map((entry, index) => (
+                    {getUserRoleData().map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>

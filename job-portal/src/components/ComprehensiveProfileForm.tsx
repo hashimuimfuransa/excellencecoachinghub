@@ -85,6 +85,7 @@ interface ComprehensiveProfileFormProps {
   onSave: (updatedUser: Partial<User>) => Promise<void>;
   onCancel?: () => void;
   loading?: boolean;
+  onFileUploadStateChange?: (isUploading: boolean) => void;
 }
 
 const steps = [
@@ -140,7 +141,8 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
   user,
   onSave,
   onCancel,
-  loading = false
+  loading = false,
+  onFileUploadStateChange
 }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [formData, setFormData] = useState<Partial<User>>(user);
@@ -154,14 +156,10 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
   
   // File upload states
   const [cvFile, setCvFile] = useState<File | null>(null);
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
-  const [portfolioFiles, setPortfolioFiles] = useState<File[]>([]);
   
   // Upload progress states
   const [uploadStates, setUploadStates] = useState({
-    cv: { uploading: false, progress: 0, success: false, error: null as string | null },
-    resume: { uploading: false, progress: 0, success: false, error: null as string | null },
-    portfolio: { uploading: false, progress: 0, success: false, error: null as string | null }
+    cv: { uploading: false, progress: 0, success: false, error: null as string | null }
   });
   
   // Dialog states
@@ -222,9 +220,12 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
     }));
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, fileType: 'cv' | 'resume' | 'portfolio') => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, fileType: 'cv') => {
     const files = event.target.files;
     if (!files) return;
+
+    // Notify parent component that file upload is starting
+    onFileUploadStateChange?.(true);
 
     // Reset upload state
     setUploadStates(prev => ({
@@ -235,122 +236,60 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
     try {
       const formData = new FormData();
       
-      if (fileType === 'cv' || fileType === 'resume') {
-        // Validate file size (10MB limit)
-        if (files[0].size > 10 * 1024 * 1024) {
-          throw new Error('File size must be less than 10MB');
-        }
+      // Validate file size (10MB limit)
+      if (files[0].size > 10 * 1024 * 1024) {
+        throw new Error('File size must be less than 10MB');
+      }
 
-        // Validate file type
-        const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-        if (!allowedTypes.includes(files[0].type)) {
-          throw new Error('Only PDF, DOC, and DOCX files are allowed');
-        }
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!allowedTypes.includes(files[0].type)) {
+        throw new Error('Only PDF, DOC, and DOCX files are allowed');
+      }
 
-        formData.append(fileType, files[0]);
+      formData.append(fileType, files[0]);
+      
+      // Simulate progress for better UX
+      const progressInterval = setInterval(() => {
+        setUploadStates(prev => ({
+          ...prev,
+          [fileType]: { ...prev[fileType], progress: Math.min(prev[fileType].progress + 10, 90) }
+        }));
+      }, 200);
+
+      const response = await fetch(`/api/upload/${fileType}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formData
+      });
+
+      clearInterval(progressInterval);
+
+      if (response.ok) {
+        const result = await response.json();
+        const fileUrl = result.data[fileType].url;
         
-        // Simulate progress for better UX
-        const progressInterval = setInterval(() => {
-          setUploadStates(prev => ({
-            ...prev,
-            [fileType]: { ...prev[fileType], progress: Math.min(prev[fileType].progress + 10, 90) }
-          }));
-        }, 200);
-
-        const response = await fetch(`/api/upload/${fileType}`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: formData
-        });
-
-        clearInterval(progressInterval);
-
-        if (response.ok) {
-          const result = await response.json();
-          const fileUrl = result.data[fileType].url;
-          
-          // Update progress to 100%
-          setUploadStates(prev => ({
-            ...prev,
-            [fileType]: { uploading: false, progress: 100, success: true, error: null }
-          }));
-          
-          if (fileType === 'cv') {
-            setCvFile(files[0]);
-            handleInputChange('cvFile', fileUrl);
-          } else if (fileType === 'resume') {
-            setResumeFile(files[0]);
-            handleInputChange('resumeFile', fileUrl);
-          }
-
-          // Reset success state after 3 seconds
-          setTimeout(() => {
-            setUploadStates(prev => ({
-              ...prev,
-              [fileType]: { ...prev[fileType], success: false }
-            }));
-          }, 3000);
-        } else {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Failed to upload ${fileType}`);
-        }
-      } else if (fileType === 'portfolio') {
-        // Validate files
-        const fileArray = Array.from(files);
-        for (const file of fileArray) {
-          if (file.size > 10 * 1024 * 1024) {
-            throw new Error(`File "${file.name}" is too large. Maximum size is 10MB.`);
-          }
-        }
-
-        fileArray.forEach(file => {
-          formData.append('files', file);
-        });
+        // Update progress to 100%
+        setUploadStates(prev => ({
+          ...prev,
+          [fileType]: { uploading: false, progress: 100, success: true, error: null }
+        }));
         
-        // Simulate progress
-        const progressInterval = setInterval(() => {
+        setCvFile(files[0]);
+        handleInputChange('cvFile', fileUrl);
+
+        // Reset success state after 3 seconds
+        setTimeout(() => {
           setUploadStates(prev => ({
             ...prev,
-            [fileType]: { ...prev[fileType], progress: Math.min(prev[fileType].progress + 10, 90) }
+            [fileType]: { ...prev[fileType], success: false }
           }));
-        }, 300);
-
-        const response = await fetch('/api/upload/documents', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: formData
-        });
-
-        clearInterval(progressInterval);
-
-        if (response.ok) {
-          const result = await response.json();
-          const fileUrls = result.data.files.map((file: any) => file.url);
-          
-          // Update progress to 100%
-          setUploadStates(prev => ({
-            ...prev,
-            [fileType]: { uploading: false, progress: 100, success: true, error: null }
-          }));
-          
-          setPortfolioFiles(prev => [...prev, ...fileArray]);
-          handleInputChange('portfolioFiles', [...(formData.portfolioFiles || []), ...fileUrls]);
-
-          // Reset success state after 3 seconds
-          setTimeout(() => {
-            setUploadStates(prev => ({
-              ...prev,
-              [fileType]: { ...prev[fileType], success: false }
-            }));
-          }, 3000);
-        } else {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to upload portfolio files');
-        }
+        }, 3000);
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to upload ${fileType}`);
       }
     } catch (error: any) {
       console.error('File upload error:', error);
@@ -366,20 +305,18 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
           [fileType]: { ...prev[fileType], error: null }
         }));
       }, 5000);
+    } finally {
+      // Notify parent component that file upload is complete
+      onFileUploadStateChange?.(false);
     }
 
     // Reset file input
     event.target.value = '';
   };
 
-  const removeFile = (fileType: 'cv' | 'resume' | 'portfolio', index?: number) => {
-    if (fileType === 'cv') {
-      setCvFile(null);
-    } else if (fileType === 'resume') {
-      setResumeFile(null);
-    } else if (fileType === 'portfolio' && index !== undefined) {
-      setPortfolioFiles(prev => prev.filter((_, i) => i !== index));
-    }
+  const removeFile = (fileType: 'cv') => {
+    setCvFile(null);
+    handleInputChange('cvFile', null);
   };
 
   const validateStep = (step: number): boolean => {
@@ -798,9 +735,17 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
                   value={formData.phone || ''}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
                   error={!!errors.phone}
-                  helperText={errors.phone}
+                  helperText={errors.phone || "Include country code (e.g., +250 123 456 789 for Rwanda)"}
                   required
+                  placeholder="+250 123 456 789"
                   sx={{ mb: 2 }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        📞
+                      </InputAdornment>
+                    ),
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -898,13 +843,13 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
 
             {/* Document Upload Section */}
             <Typography variant="h6" gutterBottom sx={{ mb: 3, color: 'primary.main', fontWeight: 'bold' }}>
-              Documents & Portfolio
+              CV Upload
             </Typography>
             <Grid container spacing={4}>
               {/* CV Upload */}
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12}>
                 <Paper sx={{ 
-                  p: 3, 
+                  p: 4, 
                   border: '2px dashed', 
                   borderColor: uploadStates.cv.success ? 'success.light' : uploadStates.cv.error ? 'error.light' : 'primary.light', 
                   borderRadius: 2,
@@ -922,11 +867,11 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
                     )}
                     
                     <Typography variant="h6" gutterBottom>
-                      {uploadStates.cv.uploading ? 'Uploading CV...' : 'Upload CV'}
+                      {uploadStates.cv.uploading ? 'Uploading CV...' : 'Upload Your CV'}
                     </Typography>
                     
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Upload your current CV (PDF, DOC, DOCX - Max 10MB)
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                      Upload your most current CV/Resume (PDF, DOC, DOCX - Max 10MB)
                     </Typography>
 
                     {/* Upload Progress */}
@@ -967,10 +912,12 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
                     />
                     <label htmlFor="cv-upload">
                       <Button 
-                        variant="outlined" 
+                        variant="contained" 
                         component="span" 
                         startIcon={uploadStates.cv.uploading ? <CircularProgress size={20} /> : <Upload />}
                         disabled={uploadStates.cv.uploading}
+                        size="large"
+                        sx={{ mr: 2 }}
                       >
                         {uploadStates.cv.uploading ? 'Uploading...' : 'Choose CV File'}
                       </Button>
@@ -991,193 +938,7 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
                 </Paper>
               </Grid>
 
-              {/* Resume Upload */}
-              <Grid item xs={12} sm={6}>
-                <Paper sx={{ 
-                  p: 3, 
-                  border: '2px dashed', 
-                  borderColor: uploadStates.resume.success ? 'success.light' : uploadStates.resume.error ? 'error.light' : 'secondary.light', 
-                  borderRadius: 2,
-                  bgcolor: uploadStates.resume.success ? 'success.50' : uploadStates.resume.error ? 'error.50' : 'transparent'
-                }}>
-                  <Box sx={{ textAlign: 'center' }}>
-                    {uploadStates.resume.uploading ? (
-                      <CircularProgress sx={{ fontSize: 48, mb: 2 }} />
-                    ) : uploadStates.resume.success ? (
-                      <CheckCircle sx={{ fontSize: 48, color: 'success.main', mb: 2 }} />
-                    ) : uploadStates.resume.error ? (
-                      <Error sx={{ fontSize: 48, color: 'error.main', mb: 2 }} />
-                    ) : (
-                      <CloudUpload sx={{ fontSize: 48, color: 'secondary.main', mb: 2 }} />
-                    )}
-                    
-                    <Typography variant="h6" gutterBottom>
-                      {uploadStates.resume.uploading ? 'Uploading Resume...' : 'Upload Resume'}
-                    </Typography>
-                    
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Upload your tailored resume (PDF, DOC, DOCX - Max 10MB)
-                    </Typography>
 
-                    {/* Upload Progress */}
-                    {uploadStates.resume.uploading && (
-                      <Box sx={{ mb: 2 }}>
-                        <LinearProgress 
-                          variant="determinate" 
-                          value={uploadStates.resume.progress} 
-                          sx={{ mb: 1 }}
-                          color="secondary"
-                        />
-                        <Typography variant="caption" color="text.secondary">
-                          {uploadStates.resume.progress}% uploaded
-                        </Typography>
-                      </Box>
-                    )}
-
-                    {/* Success Message */}
-                    {uploadStates.resume.success && (
-                      <Alert severity="success" sx={{ mb: 2 }}>
-                        Resume uploaded successfully!
-                      </Alert>
-                    )}
-
-                    {/* Error Message */}
-                    {uploadStates.resume.error && (
-                      <Alert severity="error" sx={{ mb: 2 }}>
-                        {uploadStates.resume.error}
-                      </Alert>
-                    )}
-                    
-                    <input
-                      accept=".pdf,.doc,.docx"
-                      style={{ display: 'none' }}
-                      id="resume-upload"
-                      type="file"
-                      onChange={(e) => handleFileUpload(e, 'resume')}
-                      disabled={uploadStates.resume.uploading}
-                    />
-                    <label htmlFor="resume-upload">
-                      <Button 
-                        variant="outlined" 
-                        component="span" 
-                        startIcon={uploadStates.resume.uploading ? <CircularProgress size={20} /> : <Upload />} 
-                        color="secondary"
-                        disabled={uploadStates.resume.uploading}
-                      >
-                        {uploadStates.resume.uploading ? 'Uploading...' : 'Choose Resume File'}
-                      </Button>
-                    </label>
-                    
-                    {resumeFile && !uploadStates.resume.uploading && (
-                      <Box sx={{ mt: 2 }}>
-                        <Chip
-                          label={resumeFile.name}
-                          onDelete={() => removeFile('resume')}
-                          color="secondary"
-                          variant="outlined"
-                          icon={<CheckCircle />}
-                        />
-                      </Box>
-                    )}
-                  </Box>
-                </Paper>
-              </Grid>
-
-              {/* Portfolio Upload */}
-              <Grid item xs={12}>
-                <Paper sx={{ 
-                  p: 3, 
-                  border: '2px dashed', 
-                  borderColor: uploadStates.portfolio.success ? 'success.light' : uploadStates.portfolio.error ? 'error.light' : 'success.light', 
-                  borderRadius: 2,
-                  bgcolor: uploadStates.portfolio.success ? 'success.50' : uploadStates.portfolio.error ? 'error.50' : 'transparent'
-                }}>
-                  <Box sx={{ textAlign: 'center' }}>
-                    {uploadStates.portfolio.uploading ? (
-                      <CircularProgress sx={{ fontSize: 48, mb: 2 }} />
-                    ) : uploadStates.portfolio.success ? (
-                      <CheckCircle sx={{ fontSize: 48, color: 'success.main', mb: 2 }} />
-                    ) : uploadStates.portfolio.error ? (
-                      <Error sx={{ fontSize: 48, color: 'error.main', mb: 2 }} />
-                    ) : (
-                      <CloudUpload sx={{ fontSize: 48, color: 'success.main', mb: 2 }} />
-                    )}
-                    
-                    <Typography variant="h6" gutterBottom>
-                      {uploadStates.portfolio.uploading ? 'Uploading Portfolio Files...' : 'Portfolio Files (Optional)'}
-                    </Typography>
-                    
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Upload portfolio files, certificates, or work samples (PDF, DOC, DOCX, JPG, PNG - Max 10MB each)
-                    </Typography>
-
-                    {/* Upload Progress */}
-                    {uploadStates.portfolio.uploading && (
-                      <Box sx={{ mb: 2 }}>
-                        <LinearProgress 
-                          variant="determinate" 
-                          value={uploadStates.portfolio.progress} 
-                          sx={{ mb: 1 }}
-                          color="success"
-                        />
-                        <Typography variant="caption" color="text.secondary">
-                          {uploadStates.portfolio.progress}% uploaded
-                        </Typography>
-                      </Box>
-                    )}
-
-                    {/* Success Message */}
-                    {uploadStates.portfolio.success && (
-                      <Alert severity="success" sx={{ mb: 2 }}>
-                        Portfolio files uploaded successfully!
-                      </Alert>
-                    )}
-
-                    {/* Error Message */}
-                    {uploadStates.portfolio.error && (
-                      <Alert severity="error" sx={{ mb: 2 }}>
-                        {uploadStates.portfolio.error}
-                      </Alert>
-                    )}
-                    
-                    <input
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      style={{ display: 'none' }}
-                      id="portfolio-upload"
-                      type="file"
-                      multiple
-                      onChange={(e) => handleFileUpload(e, 'portfolio')}
-                      disabled={uploadStates.portfolio.uploading}
-                    />
-                    <label htmlFor="portfolio-upload">
-                      <Button 
-                        variant="outlined" 
-                        component="span" 
-                        startIcon={uploadStates.portfolio.uploading ? <CircularProgress size={20} /> : <Upload />} 
-                        color="success"
-                        disabled={uploadStates.portfolio.uploading}
-                      >
-                        {uploadStates.portfolio.uploading ? 'Uploading...' : 'Add Portfolio Files'}
-                      </Button>
-                    </label>
-                    
-                    {portfolioFiles.length > 0 && !uploadStates.portfolio.uploading && (
-                      <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                        {portfolioFiles.map((file, index) => (
-                          <Chip
-                            key={index}
-                            label={file.name}
-                            onDelete={() => removeFile('portfolio', index)}
-                            color="success"
-                            variant="outlined"
-                            icon={<CheckCircle />}
-                          />
-                        ))}
-                      </Box>
-                    )}
-                  </Box>
-                </Paper>
-              </Grid>
             </Grid>
           </Box>
         );
@@ -1937,52 +1698,12 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
       </Snackbar>
 
       <Snackbar
-        open={uploadStates.resume.success}
-        autoHideDuration={3000}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert severity="success" sx={{ width: '100%' }}>
-          Resume uploaded successfully to Cloudinary!
-        </Alert>
-      </Snackbar>
-
-      <Snackbar
-        open={uploadStates.portfolio.success}
-        autoHideDuration={3000}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert severity="success" sx={{ width: '100%' }}>
-          Portfolio files uploaded successfully to Cloudinary!
-        </Alert>
-      </Snackbar>
-
-      <Snackbar
         open={!!uploadStates.cv.error}
         autoHideDuration={5000}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
         <Alert severity="error" sx={{ width: '100%' }}>
           CV upload failed: {uploadStates.cv.error}
-        </Alert>
-      </Snackbar>
-
-      <Snackbar
-        open={!!uploadStates.resume.error}
-        autoHideDuration={5000}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert severity="error" sx={{ width: '100%' }}>
-          Resume upload failed: {uploadStates.resume.error}
-        </Alert>
-      </Snackbar>
-
-      <Snackbar
-        open={!!uploadStates.portfolio.error}
-        autoHideDuration={5000}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert severity="error" sx={{ width: '100%' }}>
-          Portfolio upload failed: {uploadStates.portfolio.error}
         </Alert>
       </Snackbar>
     </Box>

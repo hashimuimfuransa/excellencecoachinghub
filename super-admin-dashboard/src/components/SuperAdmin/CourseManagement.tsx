@@ -347,31 +347,33 @@ const CourseManagement: React.FC<CourseManagementProps> = ({ onCourseSelect }) =
 
   const loadStats = async () => {
     try {
-      // Mock stats
+      console.log('🔍 CourseManagement: Loading real course stats...');
+      const statsData = await superAdminService.getCourseStats();
+      console.log('📊 CourseManagement: Loaded stats:', statsData);
+      
       setStats({
-        totalCourses: 456,
-        activeCourses: 342,
-        draftCourses: 114,
-        totalEnrollments: 12847,
-        completionRate: 68.5,
-        averageRating: 4.3,
-        topInstructors: [
-          { instructor: 'Dr. Sarah Johnson', courses: 12, students: 3456, rating: 4.8 },
-          { instructor: 'Prof. Michael Chen', courses: 8, students: 2847, rating: 4.6 },
-          { instructor: 'Lisa Rodriguez', courses: 6, students: 1923, rating: 4.5 },
-          { instructor: 'David Kim', courses: 10, students: 2134, rating: 4.4 },
-          { instructor: 'Emma Wilson', courses: 7, students: 1756, rating: 4.7 }
-        ],
-        topCategories: [
-          { category: 'Web Development', courses: 89, enrollments: 4567 },
-          { category: 'Data Science', courses: 67, enrollments: 3456 },
-          { category: 'Marketing', courses: 45, enrollments: 2345 },
-          { category: 'Design', courses: 56, enrollments: 1987 },
-          { category: 'Business', courses: 34, enrollments: 1654 }
-        ]
+        totalCourses: statsData.totalCourses || 0,
+        activeCourses: statsData.activeCourses || 0,
+        draftCourses: statsData.draftCourses || 0,
+        totalEnrollments: statsData.totalEnrollments || 0,
+        completionRate: statsData.completionRate || 0,
+        averageRating: statsData.averageRating || 0,
+        topInstructors: statsData.topInstructors || [],
+        topCategories: statsData.topCategories || []
       });
     } catch (error) {
       console.error('Error loading stats:', error);
+      // Fallback to basic stats if API fails
+      setStats({
+        totalCourses: 0,
+        activeCourses: 0,
+        draftCourses: 0,
+        totalEnrollments: 0,
+        completionRate: 0,
+        averageRating: 0,
+        topInstructors: [],
+        topCategories: []
+      });
     }
   };
 

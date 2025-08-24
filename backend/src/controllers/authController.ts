@@ -62,7 +62,12 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     if (!email || !password || !firstName || !lastName) {
       res.status(400).json({
         success: false,
-        error: 'Please provide email, password, first name, and last name'
+        error: 'Missing Required Information',
+        message: 'Please fill in all required fields: email, password, first name, and last name.',
+        details: {
+          type: 'MISSING_REQUIRED_FIELDS',
+          suggestion: 'Make sure all fields are completed before submitting'
+        }
       });
       return;
     }
@@ -71,7 +76,12 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     if (password.length < 8) {
       res.status(400).json({
         success: false,
-        error: 'Password must be at least 8 characters long'
+        error: 'Password Too Short',
+        message: 'Your password must be at least 8 characters long for security purposes.',
+        details: {
+          type: 'WEAK_PASSWORD',
+          suggestion: 'Use a combination of letters, numbers, and special characters for a strong password'
+        }
       });
       return;
     }
@@ -81,7 +91,12 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     if (existingUser) {
       res.status(400).json({
         success: false,
-        error: 'User with this email already exists'
+        error: 'Account Already Exists',
+        message: 'An account with this email address already exists. Please use a different email or sign in to your existing account.',
+        details: {
+          type: 'DUPLICATE_EMAIL',
+          suggestion: 'Try signing in instead, or use the "Forgot Password" feature if you can\'t remember your password'
+        }
       });
       return;
     }

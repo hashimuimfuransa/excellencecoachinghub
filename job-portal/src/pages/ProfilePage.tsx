@@ -103,6 +103,8 @@ const ProfilePage: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [profileValidation, setProfileValidation] = useState<any>(null);
+  const [isFileUploading, setIsFileUploading] = useState(false);
+  const [recentFileUpload, setRecentFileUpload] = useState(false);
 
   // Password change form
   const [passwordForm, setPasswordForm] = useState({
@@ -121,7 +123,7 @@ const ProfilePage: React.FC = () => {
     allowJobAlerts: true
   });
 
-  // Force component re-mount on location change
+  // Initialize profile on mount and user change
   useEffect(() => {
     console.log('🚀 ProfilePage mounted/remounted on location:', location.pathname);
     if (user && location.pathname === '/app/profile') {
@@ -134,39 +136,27 @@ const ProfilePage: React.FC = () => {
       setCurrentTab(0);
       loadUserProfile();
     }
-  }, [location.key, user]); // Using location.key instead of pathname for better detection
+  }, [user]); // Only depend on user, not location.key to prevent unwanted refreshes
 
-  useEffect(() => {
-    if (user) {
-      console.log('🔄 ProfilePage user changed, loading profile');
-      loadUserProfile();
-    }
-  }, [user]);
 
-  // Also refresh when the page becomes visible (user navigates back)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && user) {
-        console.log('🔄 ProfilePage became visible, refreshing profile');
-        loadUserProfile();
-      }
-    };
 
-    const handleFocus = () => {
-      if (user) {
-        console.log('🔄 ProfilePage window focused, refreshing profile');
-        loadUserProfile();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
+  // Handle file upload state changes with delay
+  const handleFileUploadStateChange = (isUploading: boolean) => {
+    console.log('🔄 ProfilePage file upload state changed:', isUploading);
+    setIsFileUploading(isUploading);
     
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [user]);
+    if (!isUploading) {
+      // Mark recent file upload for 5 seconds to prevent auto-refresh
+      setRecentFileUpload(true);
+      setTimeout(() => {
+        console.log('🔄 ProfilePage recent file upload cooldown expired');
+        setRecentFileUpload(false);
+      }, 5000);
+    }
+  };
+
+  // Removed aggressive auto-refresh to prevent form data loss
+  // Profile will only refresh on explicit user actions or mount
 
   useEffect(() => {
     if (profile) {
@@ -400,6 +390,7 @@ const ProfilePage: React.FC = () => {
           onSave={handleComprehensiveProfileSave}
           onCancel={() => setComprehensiveEditMode(false)}
           loading={loading}
+          onFileUploadStateChange={handleFileUploadStateChange}
         />
       </Container>
     );

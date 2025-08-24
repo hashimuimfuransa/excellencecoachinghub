@@ -451,6 +451,38 @@ class SuperAdminService {
     return apiPost('/admin/users/bulk-action', { userIds, action, reason });
   }
 
+  async getUserStats(): Promise<{
+    totalUsers: number;
+    activeUsers: number;
+    newUsersThisMonth: number;
+    suspendedUsers: number;
+    usersByRole: Record<string, number>;
+  }> {
+    return apiGet('/admin/users/stats');
+  }
+
+  async getCourseStats(): Promise<{
+    totalCourses: number;
+    activeCourses: number;
+    draftCourses: number;
+    totalEnrollments: number;
+    completionRate: number;
+    averageRating: number;
+    topInstructors: Array<{
+      instructor: string;
+      courses: number;
+      students: number;
+      rating: number;
+    }>;
+    topCategories: Array<{
+      category: string;
+      courses: number;
+      enrollments: number;
+    }>;
+  }> {
+    return apiGet('/admin/courses/stats');
+  }
+
   // Job Management
   async getAllJobs(params?: {
     page?: number;

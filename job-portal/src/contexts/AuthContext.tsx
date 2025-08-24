@@ -60,9 +60,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
-        // Clear invalid auth data
-        const { default: authService } = await import('../services/authService');
-        authService.logout();
+        // Clear invalid auth data without redirecting
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
       } finally {
         setIsLoading(false);
       }
@@ -78,7 +78,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const authData = await authService.login({ email, password });
       setUser(authData.user);
     } catch (error) {
-      throw error;
+      console.error('❌ Login error in AuthContext:', error);
+      throw error; // Re-throw the error to preserve error details
     } finally {
       setIsLoading(false);
     }
@@ -91,7 +92,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const authData = await authService.register(userData);
       setUser(authData.user);
     } catch (error) {
-      throw error;
+      console.error('❌ Registration error in AuthContext:', error);
+      throw error; // Re-throw the error to preserve error details
     } finally {
       setIsLoading(false);
     }

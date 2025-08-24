@@ -47,7 +47,7 @@ import {
   PieChart,
   Pie,
   Cell
-} from 'recharts';
+} from '../../components/Charts/RechartsWrapper';
 
 const UsageStatisticsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);

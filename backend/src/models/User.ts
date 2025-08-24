@@ -39,8 +39,6 @@ export interface IUserDocument extends Document {
   profilePicture?: string;
   resume?: string;
   cvFile?: string;
-  resumeFile?: string;
-  portfolioFiles?: string[];
   skills?: string[];
   experience?: Array<{
     _id?: string;
@@ -310,14 +308,6 @@ const userSchema = new Schema<IUserDocument>({
     type: String,
     trim: true
   },
-  resumeFile: {
-    type: String,
-    trim: true
-  },
-  portfolioFiles: [{
-    type: String,
-    trim: true
-  }],
   skills: [{
     type: String,
     trim: true

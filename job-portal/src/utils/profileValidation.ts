@@ -94,7 +94,7 @@ function getNestedValue(obj: any, path: string): any {
   // Handle special cases for fields that might have different names
   if (path === 'resume') {
     // Check multiple possible resume field names
-    return obj.resume || obj.cvFile || obj.resumeFile;
+    return obj.resume || obj.cvFile;
   }
   
   if (path === 'skills') {
@@ -143,7 +143,6 @@ export function validateProfile(user: User): ProfileValidationResult {
     education: user.education?.length || 0,
     resume: user.resume,
     cvFile: (user as any).cvFile,
-    resumeFile: (user as any).resumeFile,
     jobPreferences: user.jobPreferences
   });
 

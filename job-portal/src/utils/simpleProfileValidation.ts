@@ -60,7 +60,6 @@ export function validateProfileSimple(user: User): SimpleProfileValidationResult
     education: user.education?.length || 0,
     resume: user.resume,
     cvFile: (user as any).cvFile,
-    resumeFile: (user as any).resumeFile,
     jobPreferences: user.jobPreferences
   });
 
@@ -181,7 +180,7 @@ function hasFieldValue(user: User, fieldName: string): boolean {
         return Boolean(user.education && Array.isArray(user.education) && user.education.length > 0);
       
       case 'resume':
-        return Boolean(user.resume || (user as any).cvFile || (user as any).resumeFile);
+        return Boolean(user.resume || (user as any).cvFile);
       
       case 'jobPreferences':
         if (!user.jobPreferences) return false;

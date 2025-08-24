@@ -86,7 +86,10 @@ const TrendingJobsSection: React.FC = () => {
         const result = await response.json();
         if (result.success && result.data) {
           // The API returns a paginated response, so result.data is an array
-          setJobs(Array.isArray(result.data) ? result.data : []);
+          const jobsData = Array.isArray(result.data) ? result.data : [];
+          // Filter out any null or invalid job entries
+          const validJobs = jobsData.filter(job => job && job._id && job.title);
+          setJobs(validJobs);
         } else {
           throw new Error('Failed to fetch jobs data');
         }
@@ -234,7 +237,7 @@ const TrendingJobsSection: React.FC = () => {
           </Box>
         ) : (
           <Grid container spacing={3}>
-            {jobs.slice(0, 6).map((job) => (
+            {jobs.filter(job => job && job._id).slice(0, 6).map((job) => (
               <Grid item xs={12} md={4} key={job._id}>
                 <Card 
                   sx={{ 
@@ -295,7 +298,7 @@ const TrendingJobsSection: React.FC = () => {
                       {job.title}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" gutterBottom>
-                      {job.employer.company || `${job.employer.firstName} ${job.employer.lastName}`}
+                      {job.employer?.company || (job.employer ? `${job.employer.firstName} ${job.employer.lastName}` : 'Company Name Not Available')}
                     </Typography>
 
                     {/* Job Details */}
@@ -322,7 +325,7 @@ const TrendingJobsSection: React.FC = () => {
 
                     {/* Skills */}
                     <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5, mb: 3 }}>
-                      {job.skills.slice(0, 3).map((skill) => (
+                      {(job.skills || []).slice(0, 3).map((skill) => (
                         <Chip
                           key={skill}
                           label={skill}
@@ -339,9 +342,9 @@ const TrendingJobsSection: React.FC = () => {
                           }}
                         />
                       ))}
-                      {job.skills.length > 3 && (
+                      {(job.skills || []).length > 3 && (
                         <Chip
-                          label={`+${job.skills.length - 3}`}
+                          label={`+${(job.skills || []).length - 3}`}
                           size="small"
                           variant="outlined"
                           sx={{

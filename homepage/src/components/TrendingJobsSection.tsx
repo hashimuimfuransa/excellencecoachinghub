@@ -88,7 +88,7 @@ const TrendingJobsSection: React.FC = () => {
           // The API returns a paginated response, so result.data is an array
           const jobsData = Array.isArray(result.data) ? result.data : [];
           // Filter out any null or invalid job entries
-          const validJobs = jobsData.filter(job => job && job._id && job.title);
+          const validJobs = jobsData.filter((job: any) => job && job._id && job.title);
           setJobs(validJobs);
         } else {
           throw new Error('Failed to fetch jobs data');

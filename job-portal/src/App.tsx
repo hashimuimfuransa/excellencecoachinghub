@@ -10,6 +10,7 @@ import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
+import ModernDashboardPage from './pages/ModernDashboardPage';
 import JobsPage from './pages/ModernJobsPage';
 import JobDetailsPage from './pages/JobDetailsPage';
 import ApplicationsPage from './pages/ApplicationsPage';
@@ -96,8 +97,12 @@ function App() {
                 </ProtectedRoute>
               }
             >
+              {/* Default redirect to dashboard */}
+              <Route index element={<Navigate to="dashboard" replace />} />
+              
               {/* Dashboard */}
-              <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="dashboard" element={<ModernDashboardPage />} />
+              <Route path="dashboard/legacy" element={<DashboardPage />} />
               
               {/* Jobs */}
               <Route path="jobs" element={<JobsPage />} />

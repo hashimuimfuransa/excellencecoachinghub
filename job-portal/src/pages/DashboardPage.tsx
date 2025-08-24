@@ -339,7 +339,10 @@ const DashboardPage: React.FC = () => {
       setApplicationsLoading(true);
       const userApplications = await jobApplicationService.getUserApplications();
       setApplications(userApplications || []);
-      setDashboardStats(prev => ({ ...prev, totalApplications: userApplications?.length || 0 }));
+      // Use real application count from user profile or fetched applications count
+      const userData = freshUserData || user;
+      const applicationCount = userData?.applicationCount || userApplications?.length || 0;
+      setDashboardStats(prev => ({ ...prev, totalApplications: applicationCount }));
     } catch (error) {
       console.error('Error fetching applications:', error);
       setApplications(mockApplications); // Fallback to mock data
@@ -386,12 +389,14 @@ const DashboardPage: React.FC = () => {
         : profileStatus.jobSeeker.completionPercentage;
       
       setProfileCompletion(completionPercentage);
+      // Get real stats from user data
+      const userData = freshUserData || user;
       setDashboardStats(prev => ({ 
         ...prev, 
         profileCompleteness: completionPercentage,
-        profileViews: Math.floor(Math.random() * 50) + 10, // Mock for now
-        savedJobs: Math.floor(Math.random() * 20) + 5, // Mock for now
-        completedTests: Math.floor(Math.random() * 5) + 1 // Mock for now
+        profileViews: userData?.profileViews || 0,
+        savedJobs: userData?.savedJobsCount || 0,
+        completedTests: userData?.testsCompletedCount || 0
       }));
 
       // Fetch skills if job seeker profile exists

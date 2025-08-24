@@ -75,7 +75,9 @@ class AuthService {
         return JSON.parse(userStr);
       } catch (error) {
         console.error('Error parsing user data:', error);
-        this.logout();
+        // Just clear the invalid data, don't redirect
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
         return null;
       }
     }

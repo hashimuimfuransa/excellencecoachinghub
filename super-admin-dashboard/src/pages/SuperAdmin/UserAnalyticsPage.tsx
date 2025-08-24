@@ -57,7 +57,7 @@ import {
   Cell,
   BarChart as RechartsBarChart,
   Bar
-} from 'recharts';
+} from '../../components/Charts/RechartsWrapper';
 import { superAdminService } from '../../services/superAdminService';
 
 interface UserAnalytics {

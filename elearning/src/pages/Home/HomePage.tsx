@@ -547,10 +547,16 @@ const FeaturedCoursesSection: React.FC = () => {
 
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                         <Avatar sx={{ width: 32, height: 32, mr: 1 }}>
-                          {course.instructor.firstName[0]}{course.instructor.lastName[0]}
+                          {course.instructor && course.instructor.firstName && course.instructor.lastName 
+                            ? `${course.instructor.firstName[0]}${course.instructor.lastName[0]}`
+                            : 'IN'
+                          }
                         </Avatar>
                         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                          {course.instructor.firstName} {course.instructor.lastName}
+                          {course.instructor && course.instructor.firstName 
+                            ? `${course.instructor.firstName} ${course.instructor.lastName}`
+                            : 'Unknown Instructor'
+                          }
                         </Typography>
                       </Box>
 

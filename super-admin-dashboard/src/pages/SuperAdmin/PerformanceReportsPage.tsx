@@ -40,7 +40,7 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area
-} from 'recharts';
+} from '../../components/Charts/RechartsWrapper';
 
 const PerformanceReportsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);

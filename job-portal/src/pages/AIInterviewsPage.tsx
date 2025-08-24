@@ -105,11 +105,13 @@ const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
   const loadJobs = async () => {
     try {
       setLoadingJobs(true);
-      const fetchedJobs = await jobService.getJobs();
-      setJobs(fetchedJobs.slice(0, 12)); // Limit to 12 jobs for better UX
+      const response = await jobService.getJobs({}, 1, 12); // Get first 12 jobs
+      const fetchedJobs = response.data || [];
+      setJobs(fetchedJobs);
     } catch (error) {
       console.error('Error loading jobs:', error);
       setError('Failed to load jobs');
+      setJobs([]); // Set empty array on error
     } finally {
       setLoadingJobs(false);
     }

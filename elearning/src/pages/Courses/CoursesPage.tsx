@@ -102,6 +102,7 @@ const CoursesPage: React.FC = () => {
   // Get instructor display name
   const getInstructorName = (instructor: any) => {
     if (typeof instructor === 'string') return instructor;
+    if (!instructor || !instructor.firstName) return 'Unknown Instructor';
     return `${instructor.firstName} ${instructor.lastName}`;
   };
 

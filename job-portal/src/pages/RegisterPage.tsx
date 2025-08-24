@@ -110,6 +110,7 @@ const RegisterPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setError('');
 
     // Validation
@@ -128,9 +129,33 @@ const RegisterPage: React.FC = () => {
     try {
       const { confirmPassword, ...registerData } = formData;
       await register(registerData);
+      // Only navigate on successful registration
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Registration failed');
+      // Extract detailed error message from backend
+      const errorData = err.response?.data;
+      
+      if (errorData) {
+        // Use the detailed message from the backend if available
+        const errorMessage = errorData.message || errorData.error;
+        const suggestion = errorData.details?.suggestion;
+        
+        if (errorMessage && suggestion) {
+          setError(`${errorMessage}\n\n💡 ${suggestion}`);
+        } else {
+          setError(errorMessage || 'Registration failed');
+        }
+      } else {
+        setError(err.message || 'Registration failed. Please check your connection and try again.');
+      }
+      
+      // Scroll to error message for better visibility
+      setTimeout(() => {
+        const errorElement = document.querySelector('[role="alert"]');
+        if (errorElement) {
+          errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
     } finally {
       setLoading(false);
     }
@@ -264,14 +289,19 @@ const RegisterPage: React.FC = () => {
                 sx={{ 
                   mb: 4,
                   borderRadius: 2,
-                  '& .MuiAlert-icon': { alignItems: 'center' }
+                  '& .MuiAlert-icon': { alignItems: 'flex-start', mt: 0.5 },
+                  '& .MuiAlert-message': { 
+                    whiteSpace: 'pre-line',
+                    fontSize: '0.95rem',
+                    lineHeight: 1.5
+                  }
                 }}
               >
                 {error}
               </Alert>
             )}
 
-            <Box component="form" onSubmit={activeStep === 2 ? handleSubmit : undefined}>
+            <Box component="form" onSubmit={activeStep === 2 ? handleSubmit : undefined} noValidate>
               {activeStep === 0 && (
                 <Fade in={true} timeout={500}>
                   <Box>

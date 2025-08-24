@@ -57,7 +57,7 @@ import {
   CartesianGrid,
   Tooltip as RechartsTooltip,
   ResponsiveContainer
-} from 'recharts';
+} from '../../components/Charts/RechartsWrapper';
 import { superAdminService } from '../../services/superAdminService';
 
 interface UserReport {

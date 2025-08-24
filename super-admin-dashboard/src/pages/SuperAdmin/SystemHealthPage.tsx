@@ -60,7 +60,7 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area
-} from 'recharts';
+} from '../../components/Charts/RechartsWrapper';
 import { superAdminService } from '../../services/superAdminService';
 
 interface SystemMetrics {

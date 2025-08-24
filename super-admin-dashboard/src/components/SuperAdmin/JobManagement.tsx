@@ -803,7 +803,7 @@ const JobManagement: React.FC<JobManagementProps> = ({ onJobSelect }) => {
                             {job.company}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            {job.employer.firstName} {job.employer.lastName}
+                            {job.employer ? `${job.employer.firstName} ${job.employer.lastName}` : 'Unknown Employer'}
                           </Typography>
                         </Box>
                       </Box>

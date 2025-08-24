@@ -135,6 +135,17 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUserSelect }) => {
     selectAll: false
   });
 
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    role: UserRole.STUDENT,
+    isActive: true,
+    company: '',
+    jobTitle: ''
+  });
+
   useEffect(() => {
     loadUsers();
     loadStats();
@@ -264,22 +275,27 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUserSelect }) => {
 
   const loadStats = async () => {
     try {
-      // Mock stats
+      console.log('🔍 UserManagement: Loading real user stats...');
+      const statsData = await superAdminService.getUserStats();
+      console.log('📊 UserManagement: Loaded stats:', statsData);
+      
       setStats({
-        totalUsers: 15420,
-        activeUsers: 14876,
-        newUsersThisMonth: 1247,
-        suspendedUsers: 544,
-        usersByRole: {
-          [UserRole.JOB_SEEKER]: 8934,
-          [UserRole.EMPLOYER]: 2847,
-          [UserRole.TEACHER]: 1456,
-          [UserRole.STUDENT]: 2034,
-          [UserRole.ADMIN]: 149
-        }
+        totalUsers: statsData.totalUsers || 0,
+        activeUsers: statsData.activeUsers || 0,
+        newUsersThisMonth: statsData.newUsersThisMonth || 0,
+        suspendedUsers: statsData.suspendedUsers || 0,
+        usersByRole: statsData.usersByRole || {}
       });
     } catch (error) {
       console.error('Error loading stats:', error);
+      // Fallback to basic stats if API fails
+      setStats({
+        totalUsers: 0,
+        activeUsers: 0,
+        newUsersThisMonth: 0,
+        suspendedUsers: 0,
+        usersByRole: {}
+      });
     }
   };
 
@@ -352,6 +368,42 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUserSelect }) => {
     if (window.confirm(`Impersonate ${user.firstName} ${user.lastName}? This will log you in as this user.`)) {
       // Implement impersonation logic
       console.log('Impersonating user:', user.email);
+    }
+  };
+
+  const handleCreateUser = async () => {
+    try {
+      await superAdminService.createUser({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+        isActive: formData.isActive,
+        company: formData.company || undefined,
+        jobTitle: formData.jobTitle || undefined
+      });
+      
+      console.log('User created successfully:', formData.email);
+      
+      // Reset form
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        password: '',
+        role: UserRole.STUDENT,
+        isActive: true,
+        company: '',
+        jobTitle: ''
+      });
+      
+      // Close dialog and refresh users
+      setUserDialog({ open: false, mode: 'view', user: null });
+      loadUsers();
+    } catch (error) {
+      console.error('Error creating user:', error);
+      alert('Failed to create user. Please try again.');
     }
   };
 
@@ -815,7 +867,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUserSelect }) => {
                 fullWidth
                 label="First Name"
                 variant="outlined"
-                defaultValue={userDialog.user?.firstName}
+                value={userDialog.mode === 'create' ? formData.firstName : userDialog.user?.firstName || ''}
+                onChange={(e) => userDialog.mode === 'create' && setFormData(prev => ({ ...prev, firstName: e.target.value }))}
                 disabled={userDialog.mode === 'view'}
               />
             </Grid>
@@ -824,7 +877,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUserSelect }) => {
                 fullWidth
                 label="Last Name"
                 variant="outlined"
-                defaultValue={userDialog.user?.lastName}
+                value={userDialog.mode === 'create' ? formData.lastName : userDialog.user?.lastName || ''}
+                onChange={(e) => userDialog.mode === 'create' && setFormData(prev => ({ ...prev, lastName: e.target.value }))}
                 disabled={userDialog.mode === 'view'}
               />
             </Grid>
@@ -834,16 +888,31 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUserSelect }) => {
                 label="Email"
                 type="email"
                 variant="outlined"
-                defaultValue={userDialog.user?.email}
+                value={userDialog.mode === 'create' ? formData.email : userDialog.user?.email || ''}
+                onChange={(e) => userDialog.mode === 'create' && setFormData(prev => ({ ...prev, email: e.target.value }))}
                 disabled={userDialog.mode === 'view'}
               />
             </Grid>
+            {userDialog.mode === 'create' && (
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Password"
+                  type="password"
+                  variant="outlined"
+                  value={formData.password}
+                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                  helperText="Minimum 8 characters required"
+                />
+              </Grid>
+            )}
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
                 <InputLabel>Role</InputLabel>
                 <Select
                   label="Role"
-                  defaultValue={userDialog.user?.role || ''}
+                  value={userDialog.mode === 'create' ? formData.role : userDialog.user?.role || ''}
+                  onChange={(e) => userDialog.mode === 'create' && setFormData(prev => ({ ...prev, role: e.target.value as UserRole }))}
                   disabled={userDialog.mode === 'view'}
                 >
                   <MenuItem value={UserRole.JOB_SEEKER}>Job Seeker</MenuItem>
@@ -859,7 +928,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUserSelect }) => {
               <FormControlLabel
                 control={
                   <Switch
-                    defaultChecked={userDialog.user?.isActive}
+                    checked={userDialog.mode === 'create' ? formData.isActive : userDialog.user?.isActive}
+                    onChange={(e) => userDialog.mode === 'create' && setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
                     disabled={userDialog.mode === 'view'}
                   />
                 }
@@ -895,7 +965,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUserSelect }) => {
             Cancel
           </Button>
           {userDialog.mode !== 'view' && (
-            <Button variant="contained">
+            <Button 
+              variant="contained"
+              onClick={userDialog.mode === 'create' ? handleCreateUser : undefined}
+            >
               {userDialog.mode === 'create' ? 'Create User' : 'Save Changes'}
             </Button>
           )}

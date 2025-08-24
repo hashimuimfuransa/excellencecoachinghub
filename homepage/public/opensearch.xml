@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/"
+                      xmlns:moz="http://www.mozilla.org/2006/browser/search/">
+  
+  <!-- Excellence Coaching Hub OpenSearch Configuration -->
+  <!-- Enables direct search from browser address bar -->
+  
+  <ShortName>Excellence Hub</ShortName>
+  <Description>Search Excellence Coaching Hub - Africa's Premier Career Transformation Platform</Description>
+  <LongName>Excellence Coaching Hub - Career Courses, Jobs, and Professional Development</LongName>
+  
+  <!-- Search URLs -->
+  <Url type="text/html" template="https://excellencecoachinghub.com/search?q={searchTerms}&amp;source=opensearch"/>
+  <Url type="application/rss+xml" template="https://excellencecoachinghub.com/search/rss?q={searchTerms}"/>
+  <Url type="application/json" template="https://excellencecoachinghub.com/api/search?q={searchTerms}&amp;format=json"/>
+  
+  <!-- Auto-suggest for search -->
+  <Url type="application/x-suggestions+json" template="https://excellencecoachinghub.com/api/suggest?q={searchTerms}"/>
+  
+  <!-- Search parameters -->
+  <Query role="example" searchTerms="career coaching africa" />
+  <Query role="example" searchTerms="data science courses" />
+  <Query role="example" searchTerms="psychometric tests" />
+  <Query role="example" searchTerms="mock interviews" />
+  <Query role="example" searchTerms="jobs rwanda" />
+  
+  <!-- Contact and attribution -->
+  <Contact>info@excellencecoachinghub.com</Contact>
+  <Developer>Excellence Coaching Hub Development Team</Developer>
+  <Attribution>Excellence Coaching Hub © 2024. All rights reserved.</Attribution>
+  
+  <!-- Branding -->
+  <Image height="16" width="16" type="image/x-icon">https://excellencecoachinghub.com/favicon.ico</Image>
+  <Image height="32" width="32" type="image/png">https://excellencecoachinghub.com/icon-32x32.png</Image>
+  <Image height="64" width="64" type="image/png">https://excellencecoachinghub.com/icon-64x64.png</Image>
+  
+  <!-- Language and encoding -->
+  <Language>en-us</Language>
+  <Language>en-rw</Language>
+  <Language>fr-rw</Language>
+  <OutputEncoding>UTF-8</OutputEncoding>
+  <InputEncoding>UTF-8</InputEncoding>
+  
+  <!-- Search behavior -->
+  <AdultContent>false</AdultContent>
+  <SyndicationRight>open</SyndicationRight>
+  
+  <!-- Tags for discoverability -->
+  <Tags>career development africa education elearning jobs coaching training professional development skills certification</Tags>
+  
+</OpenSearchDescription>

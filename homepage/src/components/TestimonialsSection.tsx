@@ -365,7 +365,7 @@ const TestimonialsSection: React.FC = () => {
                               {testimonials[currentTestimonial].role}
                             </Typography>
                             <Typography variant="body2" sx={{ opacity: 0.8, mb: 2 }}>
-                              {testimonials[currentTestimonial].company}
+                              {testimonials[currentTestimonial]?.company || 'Company'}
                             </Typography>
                             <Typography variant="body2" sx={{ opacity: 0.7 }}>
                               {testimonials[currentTestimonial].location}

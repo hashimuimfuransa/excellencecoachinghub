@@ -132,9 +132,9 @@ const Navbar: React.FC = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Box
             component="img"
-            src="/icon-minimal.svg"
+            src="/logo1.png"
             alt="ECH Logo"
-            sx={{ height: 32 }}
+            sx={{ height: 50, mr: 1 }}
           />
           <Typography
             variant="h6"
@@ -421,7 +421,7 @@ const Navbar: React.FC = () => {
                     display: { xs: 'block', sm: 'none' }
                   }}
                 >
-                  ECH
+                
                 </Typography>
               </Box>
             </motion.div>

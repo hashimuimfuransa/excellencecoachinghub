@@ -79,7 +79,7 @@ import {
   JobType
 } from '../types/user';
 import { validateProfileSimple } from '../utils/simpleProfileValidation';
-import { uploadFileRobustly } from '../utils/robustFileUpload';
+import { uploadCV } from '../utils/simpleFileUpload';
 
 interface ComprehensiveProfileFormProps {
   user: User;
@@ -297,14 +297,18 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
     }));
 
     try {
-      const fileUrl = await uploadFileRobustly(file, fileType, (progress) => {
+      console.log('Starting CV upload with simplified method...');
+      
+      const fileUrl = await uploadCV(file, (progress) => {
         setUploadStates(prev => ({
           ...prev,
           [fileType]: { ...prev[fileType], progress }
         }));
       });
       
-      // Update progress to 100%
+      console.log('CV upload successful:', fileUrl);
+      
+      // Update states
       setUploadStates(prev => ({
         ...prev,
         [fileType]: { uploading: false, progress: 100, success: true, error: null }
@@ -312,7 +316,7 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
       
       setCvFile(file);
       
-      // Update form data without triggering validation immediately
+      // Update form data
       setFormData(prev => ({
         ...prev,
         cvFile: fileUrl
@@ -327,7 +331,7 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
       }, 3000);
 
     } catch (error: any) {
-      console.error('File upload error:', error);
+      console.error('CV upload error:', error);
       
       setUploadStates(prev => ({
         ...prev,

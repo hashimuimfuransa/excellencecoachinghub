@@ -27,6 +27,7 @@ import {
 import { styled } from '@mui/material/styles';
 import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
+import { useThemeContext } from '../contexts/ThemeContext';
 
 const ColorlibConnector = styled(StepConnector)(({ theme }) => ({
   [`&.${stepConnectorClasses.alternativeLabel}`]: {
@@ -100,6 +101,7 @@ function ColorlibStepIcon(props: StepIconProps) {
 
 const HowItWorksSection: React.FC = () => {
   const theme = useTheme();
+  const { isDarkMode } = useThemeContext();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
@@ -165,7 +167,7 @@ const HowItWorksSection: React.FC = () => {
       ref={ref}
       sx={{
         py: { xs: 6, sm: 8, md: 12 },
-        bgcolor: 'grey.50',
+        bgcolor: isDarkMode ? '#0f0f23' : 'grey.50',
         position: 'relative',
       }}
     >
@@ -184,7 +186,9 @@ const HowItWorksSection: React.FC = () => {
                   fontWeight: 800,
                   mb: 3,
                   fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.75rem', lg: '3rem' },
-                  background: 'linear-gradient(45deg, #22c55e, #16a34a)',
+                  background: isDarkMode 
+                    ? 'linear-gradient(45deg, #4ade80, #22c55e)'
+                    : 'linear-gradient(45deg, #22c55e, #16a34a)',
                   backgroundClip: 'text',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
@@ -198,7 +202,9 @@ const HowItWorksSection: React.FC = () => {
                     transform: 'translateX(-50%)',
                     width: { xs: '60px', md: '80px' },
                     height: '4px',
-                    background: 'linear-gradient(45deg, #22c55e, #16a34a)',
+                    background: isDarkMode 
+                      ? 'linear-gradient(45deg, #4ade80, #22c55e)'
+                      : 'linear-gradient(45deg, #22c55e, #16a34a)',
                     borderRadius: '2px',
                   }
                 }}

@@ -6,6 +6,7 @@ import {
   Button,
   Grid,
   Stack,
+  useTheme,
 } from '@mui/material';
 import {
   PlayArrow,
@@ -16,11 +17,14 @@ import {
   AutoAwesome,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import { useThemeContext } from '../contexts/ThemeContext';
 interface HeroSectionProps {
   onGetStarted: () => void;
 }
 
 const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
+  const theme = useTheme();
+  const { isDarkMode } = useThemeContext();
 
   const stats = [
     { icon: <School />, value: '10,000+', label: 'Students Trained' },
@@ -33,7 +37,9 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
       id="hero"
       sx={{
         minHeight: { xs: 'calc(100vh + env(safe-area-inset-bottom))', sm: '100vh' },
-        background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+        background: isDarkMode 
+          ? 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)'
+          : 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
         position: 'relative',
         display: 'flex',
         alignItems: 'center',
@@ -232,8 +238,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
                       textAlign: { xs: 'center', md: 'left' },
                     }}
                   >
-                    Join 12,500+ graduates with 94% job placement success rate. Expert e-learning, 
-                    psychometric tests, live video coaching for interviews, and direct job placement across Africa's top companies.
+                    We prepare you for career success through comprehensive job preparation and diverse professional training programs. From tech and business to finance and leadership, we provide expert coaching with study materials, live video sessions, interactive assessments, personalized mentoring, and practical hands-on experience across multiple industries to transform your career journey.
                   </Typography>
                 </motion.div>
 

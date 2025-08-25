@@ -26,10 +26,14 @@ import {
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
+import { useThemeContext } from '../contexts/ThemeContext';
+import { useTheme } from '@mui/material';
 
 const Footer: React.FC = () => {
   const [email, setEmail] = useState('');
   const [subscribing, setSubscribing] = useState(false);
+  const theme = useTheme();
+  const { isDarkMode } = useThemeContext();
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,7 +103,7 @@ const Footer: React.FC = () => {
 
   const contactInfo = [
     { icon: <Email />, text: 'info@excellencecoachinghub.com', href: 'mailto:info@excellencecoachinghub.com' },
-    { icon: <Phone />, text: '+250 123 456 789', href: 'tel:+250123456789' },
+    { icon: <Phone />, text: '+250 788 123 456', href: 'tel:+250788123456' },
     { icon: <LocationOn />, text: 'Kigali, Rwanda (HQ) • Serving All of Africa', href: '#' },
   ];
 
@@ -107,7 +111,7 @@ const Footer: React.FC = () => {
     <Box
       component="footer"
       sx={{
-        bgcolor: '#1a1a2e',
+        bgcolor: isDarkMode ? '#0f0f23' : '#1a1a2e',
         color: 'white',
         pt: { xs: 6, sm: 8 },
         pb: { xs: 3, sm: 4 },
@@ -123,7 +127,10 @@ const Footer: React.FC = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          background: `
+          background: isDarkMode ? `
+            radial-gradient(circle at 20% 80%, rgba(74, 222, 128, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(34, 197, 94, 0.08) 0%, transparent 50%)
+          ` : `
             radial-gradient(circle at 20% 80%, rgba(63, 81, 181, 0.15) 0%, transparent 50%),
             radial-gradient(circle at 80% 20%, rgba(255, 107, 107, 0.1) 0%, transparent 50%)
           `,
@@ -140,7 +147,9 @@ const Footer: React.FC = () => {
           width: '300px',
           height: '300px',
           borderRadius: '50%',
-          background: 'rgba(63, 81, 181, 0.03)',
+          background: isDarkMode 
+            ? 'rgba(74, 222, 128, 0.05)'
+            : 'rgba(63, 81, 181, 0.03)',
           filter: 'blur(40px)',
           zIndex: 0,
         }}
@@ -164,7 +173,9 @@ const Footer: React.FC = () => {
           width: '250px',
           height: '250px',
           borderRadius: '50%',
-          background: 'rgba(255, 107, 107, 0.03)',
+          background: isDarkMode 
+            ? 'rgba(34, 197, 94, 0.04)'
+            : 'rgba(255, 107, 107, 0.03)',
           filter: 'blur(30px)',
           zIndex: 0,
         }}

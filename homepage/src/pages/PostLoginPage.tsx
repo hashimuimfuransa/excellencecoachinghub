@@ -11,7 +11,6 @@ import {
   CardMedia,
   Chip,
   Stack,
-  IconButton,
 } from '@mui/material';
 import {
   School,
@@ -19,7 +18,6 @@ import {
   ArrowForward,
   Home,
   AutoAwesome,
-  Verified,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';

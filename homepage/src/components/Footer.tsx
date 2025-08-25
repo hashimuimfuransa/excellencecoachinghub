@@ -27,12 +27,10 @@ import {
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { useThemeContext } from '../contexts/ThemeContext';
-import { useTheme } from '@mui/material';
 
 const Footer: React.FC = () => {
   const [email, setEmail] = useState('');
   const [subscribing, setSubscribing] = useState(false);
-  const theme = useTheme();
   const { isDarkMode } = useThemeContext();
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {

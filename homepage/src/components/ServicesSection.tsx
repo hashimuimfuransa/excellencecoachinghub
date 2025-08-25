@@ -9,8 +9,6 @@ import {
   Chip,
   Stack,
   Fade,
-  IconButton,
-  useTheme,
 } from '@mui/material';
 import {
   Code,
@@ -22,16 +20,12 @@ import {
   Support,
   TrendingUp,
   Work,
-  CampaignRounded,
-  PersonRounded,
   BuildRounded,
   LocalLibraryRounded,
   GroupsRounded,
   AutoAwesome,
   DesignServicesRounded,
-  SecurityRounded,
   Language,
-  ArrowForward,
 } from '@mui/icons-material';
 import { useInView } from 'react-intersection-observer';
 import { motion } from 'framer-motion';
@@ -42,7 +36,6 @@ const ServicesSection: React.FC = () => {
     threshold: 0.1,
     triggerOnce: true
   });
-  const theme = useTheme();
   const { isDarkMode } = useThemeContext();
 
   const [selectedCategory, setSelectedCategory] = useState(0);

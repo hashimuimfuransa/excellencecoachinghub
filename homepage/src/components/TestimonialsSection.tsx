@@ -11,7 +11,6 @@ import {
   IconButton,
   Chip,
   Button,
-  useTheme,
 } from '@mui/material';
 import {
   FormatQuote,
@@ -29,7 +28,6 @@ const TestimonialsSection: React.FC = () => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
-  const theme = useTheme();
   const { isDarkMode } = useThemeContext();
 
   const testimonials = [

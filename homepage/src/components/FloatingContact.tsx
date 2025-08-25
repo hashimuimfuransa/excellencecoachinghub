@@ -32,7 +32,7 @@ import {
   Twitter,
   Schedule,
 } from '@mui/icons-material';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 const FloatingContact: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -198,7 +198,11 @@ const FloatingContact: React.FC = () => {
           },
         }}
         TransitionComponent={Slide}
-        TransitionProps={{ direction: 'up' }}
+        slotProps={{
+          backdrop: {
+            timeout: 500,
+          },
+        }}
       >
         <DialogTitle
           sx={{

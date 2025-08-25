@@ -154,49 +154,74 @@ export function validateProfileSimple(user: User): SimpleProfileValidationResult
  * Check if a field has a meaningful value (matching backend logic)
  */
 function hasFieldValue(user: User, fieldName: string): boolean {
+  if (!user || typeof user !== 'object') {
+    console.warn(`hasFieldValue called with invalid user object for field ${fieldName}`);
+    return false;
+  }
+
   try {
     switch (fieldName) {
       case 'firstName':
       case 'lastName':
       case 'email':
-        return Boolean(user[fieldName] && typeof user[fieldName] === 'string' && user[fieldName].trim().length > 0);
+        const basicValue = user[fieldName];
+        return basicValue !== null && basicValue !== undefined && typeof basicValue === 'string' && basicValue.trim().length > 0;
       
       case 'phone':
       case 'location':
       case 'jobTitle':
       case 'bio':
-        return Boolean(user[fieldName] && typeof user[fieldName] === 'string' && user[fieldName].trim().length > 0);
+        const stringValue = user[fieldName as keyof User];
+        return stringValue !== null && stringValue !== undefined && typeof stringValue === 'string' && stringValue.trim().length > 0;
       
       case 'expectedSalary':
-        return Boolean(user.expectedSalary && typeof user.expectedSalary === 'number' && user.expectedSalary > 0);
+        const salaryValue = user.expectedSalary;
+        return salaryValue !== null && salaryValue !== undefined && typeof salaryValue === 'number' && !isNaN(salaryValue) && salaryValue > 0;
       
       case 'skills':
-        return Boolean(user.skills && Array.isArray(user.skills) && user.skills.length > 0);
+        const skillsValue = user.skills;
+        return skillsValue !== null && skillsValue !== undefined && Array.isArray(skillsValue) && skillsValue.length > 0;
       
       case 'experience':
-        return Boolean(user.experience && Array.isArray(user.experience) && user.experience.length > 0);
+        const expValue = user.experience;
+        return expValue !== null && expValue !== undefined && Array.isArray(expValue) && expValue.length > 0;
       
       case 'education':
-        return Boolean(user.education && Array.isArray(user.education) && user.education.length > 0);
+        const eduValue = user.education;
+        return eduValue !== null && eduValue !== undefined && Array.isArray(eduValue) && eduValue.length > 0;
       
       case 'resume':
-        return Boolean(user.resume || (user as any).cvFile);
+        const resumeValue = user.resume;
+        const cvFileValue = (user as any).cvFile;
+        return (resumeValue !== null && resumeValue !== undefined && resumeValue.trim && resumeValue.trim().length > 0) ||
+               (cvFileValue !== null && cvFileValue !== undefined && cvFileValue.trim && cvFileValue.trim().length > 0);
       
       case 'jobPreferences':
-        if (!user.jobPreferences) return false;
         const prefs = user.jobPreferences;
-        return Boolean(
-          (prefs.preferredJobTypes && prefs.preferredJobTypes.length > 0) ||
-          (prefs.preferredLocations && prefs.preferredLocations.length > 0) ||
-          ((prefs as any).jobTypes && (prefs as any).jobTypes.length > 0) ||
-          ((prefs as any).locations && (prefs as any).locations.length > 0) ||
-          prefs.remoteWork !== undefined ||
-          prefs.willingToRelocate !== undefined
-        );
+        if (!prefs || typeof prefs !== 'object') return false;
+        
+        try {
+          return Boolean(
+            (prefs.preferredJobTypes && Array.isArray(prefs.preferredJobTypes) && prefs.preferredJobTypes.length > 0) ||
+            (prefs.preferredLocations && Array.isArray(prefs.preferredLocations) && prefs.preferredLocations.length > 0) ||
+            ((prefs as any).jobTypes && Array.isArray((prefs as any).jobTypes) && (prefs as any).jobTypes.length > 0) ||
+            ((prefs as any).locations && Array.isArray((prefs as any).locations) && (prefs as any).locations.length > 0) ||
+            (prefs.remoteWork !== undefined && prefs.remoteWork !== null) ||
+            (prefs.willingToRelocate !== undefined && prefs.willingToRelocate !== null)
+          );
+        } catch (prefsError) {
+          console.warn(`Error checking jobPreferences:`, prefsError);
+          return false;
+        }
       
       default:
-        const value = user[fieldName as keyof User];
-        return Boolean(value);
+        try {
+          const value = user[fieldName as keyof User];
+          return value !== null && value !== undefined && Boolean(value);
+        } catch (defaultError) {
+          console.warn(`Error checking default field ${fieldName}:`, defaultError);
+          return false;
+        }
     }
   } catch (error) {
     console.error(`Error checking field ${fieldName}:`, error);

@@ -24,14 +24,12 @@ import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemeContext } from '../contexts/ThemeContext';
-import { useTheme } from '@mui/material';
 
 const PlatformLinksSection: React.FC = () => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
   const navigate = useNavigate();
   const { user } = useAuth();
-  const theme = useTheme();
   const { isDarkMode } = useThemeContext();
 
   const platforms = [

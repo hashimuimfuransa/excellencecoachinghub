@@ -228,7 +228,7 @@ const RegisterPage: React.FC = () => {
               <img 
                 src="/logo1.png" 
                 alt="Excellence Coaching Hub" 
-                style={{ height: 80, marginBottom: 16 }}
+                style={{ height: 120, marginBottom: 16 }}
               />
               <Typography 
                 variant="h4" 

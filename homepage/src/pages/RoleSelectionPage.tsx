@@ -255,7 +255,7 @@ const RoleSelectionPage: React.FC = () => {
                 src="/logo1.png"
                 alt="Excellence Coaching Hub Logo"
                 sx={{
-                  height: 60,
+                  height: 100,
                   mx: 'auto',
                   mb: 2,
                   display: 'block',

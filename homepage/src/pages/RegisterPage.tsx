@@ -292,7 +292,7 @@ const RegisterPage: React.FC = () => {
                 src="/logo1.png"
                 alt="Excellence Coaching Hub Logo"
                 sx={{
-                  height: 70,
+                  height: 110,
                   mx: 'auto',
                   mb: 2,
                   display: 'block',

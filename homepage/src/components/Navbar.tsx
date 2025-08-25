@@ -144,7 +144,7 @@ const Navbar: React.FC = () => {
               fontSize: '1rem'
             }}
           >
-            ECH
+      
           </Typography>
         </Box>
         <IconButton 
@@ -390,7 +390,7 @@ const Navbar: React.FC = () => {
                   src="/logo1.png"
                   alt="Excellence Coaching Hub Logo"
                   sx={{
-                    height: { xs: 32, sm: 38, md: 42 },
+                    height: { xs: 60, sm: 70, md: 80 },
                     mr: { xs: 1.5, sm: 2 },
                     transition: 'all 0.3s ease-in-out'
                   }}

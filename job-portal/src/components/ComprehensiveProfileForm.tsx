@@ -82,6 +82,7 @@ import { validateProfileSimple } from '../utils/simpleProfileValidation';
 import { uploadCV } from '../utils/simpleFileUpload';
 import { uploadCVWithFetch } from '../utils/fetchUpload';
 import { uploadCVRenderWorkaround } from '../utils/renderUpload';
+import { uploadCVSimple } from '../utils/workingUpload';
 
 interface ComprehensiveProfileFormProps {
   user: User;
@@ -299,9 +300,9 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
     }));
 
     try {
-      console.log('Starting CV upload with Render workaround...');
+      console.log('Starting CV upload with simple working method...');
       
-      const fileUrl = await uploadCVRenderWorkaround(file, (progress) => {
+      const fileUrl = await uploadCVSimple(file, (progress) => {
         setUploadStates(prev => ({
           ...prev,
           [fileType]: { ...prev[fileType], progress }

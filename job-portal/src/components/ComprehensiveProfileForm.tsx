@@ -169,11 +169,38 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
 
   // Update validation when formData or user changes
   useEffect(() => {
-    const combinedUserData = { ...user, ...formData };
-    console.log('🔍 ComprehensiveProfileForm updating validation for:', combinedUserData);
-    const result = validateProfileSimple(combinedUserData);
-    console.log('📊 ComprehensiveProfileForm validation result:', result);
-    setValidationResult(result);
+    try {
+      const combinedUserData = { ...user, ...formData };
+      console.log('🔍 ComprehensiveProfileForm updating validation for:', combinedUserData);
+      const result = validateProfileSimple(combinedUserData);
+      console.log('📊 ComprehensiveProfileForm validation result:', result);
+      setValidationResult(result);
+    } catch (error) {
+      console.error('❌ Validation error in ComprehensiveProfileForm:', error);
+      // Set a default validation result if validation fails
+      setValidationResult({
+        isValid: false,
+        completionPercentage: 0,
+        status: 'incomplete',
+        missingFields: ['Profile validation error'],
+        recommendations: ['Please refresh the page and try again'],
+        canAccessFeatures: {
+          psychometricTests: false,
+          aiInterviews: false,
+          premiumJobs: false,
+        },
+        completedSections: {
+          basic: false,
+          contact: false,
+          professional: false,
+          skills: false,
+          experience: false,
+          education: false,
+          preferences: false,
+          documents: false
+        }
+      });
+    }
   }, [user, formData]);
 
   const handleInputChange = (field: string, value: any) => {
@@ -222,7 +249,7 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, fileType: 'cv') => {
     const files = event.target.files;
-    if (!files) return;
+    if (!files || !files[0]) return;
 
     // Notify parent component that file upload is starting
     onFileUploadStateChange?.(true);
@@ -233,95 +260,117 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
       [fileType]: { uploading: true, progress: 0, success: false, error: null }
     }));
 
+    let progressInterval: NodeJS.Timeout;
+
     try {
-      const formData = new FormData();
+      const file = files[0];
       
       // Validate file size (10MB limit)
-      if (files[0].size > 10 * 1024 * 1024) {
+      if (file.size > 10 * 1024 * 1024) {
         throw new Error('File size must be less than 10MB');
       }
 
       // Validate file type
       const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-      if (!allowedTypes.includes(files[0].type)) {
+      if (!allowedTypes.includes(file.type)) {
         throw new Error('Only PDF, DOC, and DOCX files are allowed');
       }
 
-      formData.append(fileType, files[0]);
+      const formData = new FormData();
+      formData.append(fileType, file);
       
       // Simulate progress for better UX
-      const progressInterval = setInterval(() => {
+      progressInterval = setInterval(() => {
         setUploadStates(prev => ({
           ...prev,
           [fileType]: { ...prev[fileType], progress: Math.min(prev[fileType].progress + 10, 90) }
         }));
       }, 200);
 
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication token not found. Please log in again.');
+      }
+
       const response = await fetch(`/api/upload/${fileType}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: formData
       });
 
       clearInterval(progressInterval);
 
-      if (response.ok) {
-        let result;
-        try {
-          const responseText = await response.text();
-          if (responseText.trim()) {
-            result = JSON.parse(responseText);
-          } else {
-            throw new Error('Empty response from server');
-          }
-        } catch (parseError) {
-          console.error('Failed to parse response:', parseError);
-          throw new Error('Invalid response format from server');
-        }
-
-        const fileUrl = result.data?.[fileType]?.url;
-        if (!fileUrl) {
-          throw new Error('No file URL received from server');
-        }
+      if (!response.ok) {
+        let errorMessage = `Upload failed with status ${response.status}`;
         
-        // Update progress to 100%
-        setUploadStates(prev => ({
-          ...prev,
-          [fileType]: { uploading: false, progress: 100, success: true, error: null }
-        }));
-        
-        setCvFile(files[0]);
-        handleInputChange('cvFile', fileUrl);
-
-        // Reset success state after 3 seconds
-        setTimeout(() => {
-          setUploadStates(prev => ({
-            ...prev,
-            [fileType]: { ...prev[fileType], success: false }
-          }));
-        }, 3000);
-      } else {
-        let errorData;
         try {
           const errorText = await response.text();
           if (errorText.trim()) {
-            errorData = JSON.parse(errorText);
-          } else {
-            errorData = { error: `Server returned ${response.status} status` };
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.error || errorData.message || errorMessage;
           }
         } catch (parseError) {
-          console.error('Failed to parse error response:', parseError);
-          errorData = { error: `Server error (${response.status})` };
+          console.warn('Could not parse error response:', parseError);
         }
-        throw new Error(errorData.error || `Failed to upload ${fileType}`);
+        
+        throw new Error(errorMessage);
       }
-    } catch (error: any) {
-      console.error('File upload error:', error);
+
+      // Parse successful response
+      const responseText = await response.text();
+      if (!responseText.trim()) {
+        throw new Error('Empty response from server');
+      }
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse response:', parseError);
+        console.error('Response text:', responseText);
+        throw new Error('Invalid response format from server');
+      }
+
+      // Validate response structure
+      if (!result.success) {
+        throw new Error(result.error || result.message || 'Upload failed');
+      }
+
+      const fileUrl = result.data?.[fileType]?.url;
+      if (!fileUrl) {
+        console.error('Invalid response structure:', result);
+        throw new Error('No file URL received from server');
+      }
+      
+      // Update progress to 100%
       setUploadStates(prev => ({
         ...prev,
-        [fileType]: { uploading: false, progress: 0, success: false, error: error.message }
+        [fileType]: { uploading: false, progress: 100, success: true, error: null }
+      }));
+      
+      setCvFile(file);
+      handleInputChange('cvFile', fileUrl);
+
+      // Reset success state after 3 seconds
+      setTimeout(() => {
+        setUploadStates(prev => ({
+          ...prev,
+          [fileType]: { ...prev[fileType], success: false }
+        }));
+      }, 3000);
+
+    } catch (error: any) {
+      console.error('File upload error:', error);
+      
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+      
+      setUploadStates(prev => ({
+        ...prev,
+        [fileType]: { uploading: false, progress: 0, success: false, error: error.message || 'Upload failed' }
       }));
 
       // Clear error after 5 seconds

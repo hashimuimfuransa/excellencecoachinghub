@@ -27,7 +27,6 @@ import {
   School,
   Psychology
 } from '@mui/icons-material';
-import { useThemeContext } from '../contexts/ThemeContext';
 
 interface Job {
   _id: string;
@@ -64,7 +63,6 @@ interface Job {
 
 const TrendingJobsSection: React.FC = () => {
   const theme = useTheme();
-  const { isDarkMode } = useThemeContext();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
 

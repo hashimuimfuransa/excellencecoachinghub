@@ -6,7 +6,6 @@ import {
   Button,
   Grid,
   Stack,
-  useTheme,
 } from '@mui/material';
 import {
   PlayArrow,
@@ -23,7 +22,6 @@ interface HeroSectionProps {
 }
 
 const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
-  const theme = useTheme();
   const { isDarkMode } = useThemeContext();
 
   const stats = [

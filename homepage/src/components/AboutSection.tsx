@@ -7,7 +7,6 @@ import {
   Card,
   CardContent,
   Avatar,
-  useTheme,
 } from '@mui/material';
 import {
   Favorite,
@@ -24,7 +23,6 @@ import { useThemeContext } from '../contexts/ThemeContext';
 const AboutSection: React.FC = () => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
-  const theme = useTheme();
   const { isDarkMode } = useThemeContext();
 
   const values = [

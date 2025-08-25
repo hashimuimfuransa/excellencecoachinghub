@@ -91,6 +91,7 @@ export async function uploadFile(
     let result: UploadResponse;
     try {
       result = JSON.parse(responseText);
+      console.log('✅ Upload response:', result);
     } catch (parseError) {
       console.error('Failed to parse response:', parseError);
       console.error('Response text:', responseText);
@@ -102,10 +103,24 @@ export async function uploadFile(
       throw new Error(result.error || result.message || 'Upload failed');
     }
 
-    const fileUrl = result.data?.[fileType]?.url;
+    // Handle different response structures based on file type
+    let fileUrl: string;
+    
+    if (fileType === 'cv') {
+      fileUrl = result.data?.cv?.url;
+    } else if (fileType === 'resume') {
+      fileUrl = result.data?.resume?.url;
+    } else if (fileType === 'profilePicture') {
+      fileUrl = result.data?.profilePicture?.url;
+    } else {
+      // Generic fallback
+      fileUrl = result.data?.[fileType]?.url;
+    }
+    
     if (!fileUrl) {
-      console.error('Invalid response structure:', result);
-      throw new Error('No file URL received from server');
+      console.error('Invalid response structure for fileType:', fileType);
+      console.error('Full response:', result);
+      throw new Error(`No file URL received from server for ${fileType}`);
     }
 
     return fileUrl;

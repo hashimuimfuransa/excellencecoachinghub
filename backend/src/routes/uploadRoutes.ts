@@ -188,21 +188,64 @@ router.post('/cv-debug', protect, (req, res) => {
 
 // EMERGENCY: No middleware test - raw response
 router.post('/cv-raw', (req, res) => {
-  console.log('🆘 Raw endpoint hit - no middleware');
+  console.log('🆘 Raw POST endpoint hit - no middleware');
   try {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       success: true,
-      message: 'Raw endpoint working - no auth, no multer',
+      message: 'Raw POST endpoint working - no auth, no multer',
       timestamp: new Date().toISOString()
     }));
   } catch (error) {
-    console.error('Raw endpoint error:', error);
+    console.error('Raw POST endpoint error:', error);
     res.writeHead(500, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       success: false,
-      error: 'Raw endpoint failed'
+      error: 'Raw POST endpoint failed'
     }));
+  }
+});
+
+// TEST: GET endpoint to bypass POST response body stripping
+router.get('/cv-test', (req, res) => {
+  console.log('🔍 GET test endpoint hit');
+  try {
+    res.status(200).json({
+      success: true,
+      message: 'GET endpoint working - proxy allows GET responses',
+      timestamp: new Date().toISOString(),
+      userAgent: req.headers['user-agent'],
+      host: req.headers.host
+    });
+  } catch (error) {
+    console.error('GET test endpoint error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'GET test endpoint failed'
+    });
+  }
+});
+
+// WORKAROUND: Use GET with query params for upload status
+router.get('/cv-upload-status/:uploadId', (req, res) => {
+  console.log('📊 Upload status check for:', req.params.uploadId);
+  try {
+    res.status(200).json({
+      success: true,
+      data: {
+        url: 'https://test-url.com/test.pdf',
+        originalName: 'test.pdf',
+        size: 1024,
+        uploadId: req.params.uploadId
+      },
+      message: 'GET-based upload response working'
+    });
+  } catch (error) {
+    console.error('Upload status error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Upload status failed'
+    });
   }
 });
 

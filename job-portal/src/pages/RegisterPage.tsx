@@ -226,7 +226,7 @@ const RegisterPage: React.FC = () => {
           >
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4, justifyContent: 'center' }}>
               <img 
-                src="/logo.webp" 
+                src="/logo1.png" 
                 alt="Excellence Coaching Hub" 
                 style={{ height: 80, marginBottom: 16 }}
               />

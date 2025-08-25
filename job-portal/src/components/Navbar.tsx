@@ -208,7 +208,7 @@ const Navbar: React.FC = () => {
             onClick={() => navigate('/')}
           >
             <img 
-              src="/logo.webp" 
+              src="/logo1.png" 
               alt="Excellence Coaching Hub" 
               style={{ height: 40, width: 'auto' }}
             />

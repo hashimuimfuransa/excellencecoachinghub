@@ -195,7 +195,7 @@ const Footer: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                   <Box
                     component="img"
-                    src="/logo.webp"
+                    src="/logo1.png"
                     alt="Excellence Coaching Hub Logo"
                     sx={{
                       height: 50,

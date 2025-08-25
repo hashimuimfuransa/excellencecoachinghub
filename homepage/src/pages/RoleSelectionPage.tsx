@@ -252,7 +252,7 @@ const RoleSelectionPage: React.FC = () => {
             <Box sx={{ textAlign: 'center', mb: 4 }}>
               <Box
                 component="img"
-                src="/logo.webp"
+                src="/logo1.png"
                 alt="Excellence Coaching Hub Logo"
                 sx={{
                   height: 60,

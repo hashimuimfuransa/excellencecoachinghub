@@ -206,6 +206,34 @@ router.post('/cv-raw', (req, res) => {
   }
 });
 
+// TEMPORARY: No-auth version to test if auth middleware is the problem
+router.post('/cv-no-auth', (req, res) => {
+  console.log('🔓 CV upload endpoint hit (no auth)');
+  
+  try {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      success: true,
+      data: {
+        url: 'https://test-url.com/test.pdf',
+        originalName: 'test.pdf',
+        size: 1024
+      },
+      message: 'No-auth test response working'
+    }));
+    
+    console.log('✅ No-auth test response sent successfully');
+    
+  } catch (error: any) {
+    console.error('❌ No-auth response failed:', error);
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      success: false,
+      error: 'No-auth test failed'
+    }));
+  }
+});
+
 // @desc    Upload single CV file (step-by-step debugging)
 // @route   POST /api/upload/cv
 // @access  Private
@@ -216,10 +244,11 @@ router.post('/cv', protect, (req, res) => {
   const forceResponse = setTimeout(() => {
     if (!res.headersSent) {
       console.error('⏰ FORCE TIMEOUT - Sending emergency response');
-      res.status(500).json({
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
         success: false,
         error: 'Server processing timeout'
-      });
+      }));
     }
   }, 5000);
 
@@ -230,28 +259,30 @@ router.post('/cv', protect, (req, res) => {
     // Clear the force timeout
     clearTimeout(forceResponse);
     
-    // Send immediate test response
-    res.status(200).json({
+    // Use res.writeHead + res.end instead of res.json to bypass any middleware
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
       success: true,
       data: {
         url: 'https://test-url.com/test.pdf',
         originalName: 'test.pdf',
         size: 1024
       },
-      message: 'Test response - file processing temporarily disabled'
-    });
+      message: 'Raw HTTP response test - bypassing Express JSON middleware'
+    }));
     
-    console.log('✅ Test response sent successfully');
+    console.log('✅ Raw HTTP test response sent successfully');
     
   } catch (error: any) {
     clearTimeout(forceResponse);
-    console.error('❌ Even basic response failed:', error);
+    console.error('❌ Raw HTTP response failed:', error);
     
     if (!res.headersSent) {
-      res.status(500).json({
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
         success: false,
-        error: 'Basic response test failed'
-      });
+        error: 'Raw HTTP test failed'
+      }));
     }
   }
 });

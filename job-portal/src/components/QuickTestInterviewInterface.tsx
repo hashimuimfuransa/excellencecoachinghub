@@ -22,7 +22,8 @@ import {
   List,
   ListItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  Avatar
 } from '@mui/material';
 import {
   PlayArrow,
@@ -45,6 +46,29 @@ import {
   VolumeUp
 } from '@mui/icons-material';
 import { QuickInterviewSession, QuickInterviewQuestion, quickInterviewService } from '../services/quickInterviewService';
+import { speechToTextService, SpeechToTextResult } from '../services/speechToTextService';
+import StreamingAvatarVideo from './StreamingAvatarVideo';
+
+// Add Web Speech API types
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
+interface SpeechRecognitionEvent {
+  resultIndex: number;
+  results: {
+    [index: number]: {
+      [index: number]: {
+        transcript: string;
+      };
+      isFinal: boolean;
+    };
+    length: number;
+  };
+}
 
 interface QuickTestInterviewInterfaceProps {
   open: boolean;
@@ -77,9 +101,16 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
   const [showWelcome, setShowWelcome] = useState(true);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
+  const [currentAvatarText, setCurrentAvatarText] = useState("Welcome to your quick interview test! This is a 3-minute assessment to help you practice your interview skills. I'll ask you a few questions to evaluate your responses. Are you ready to begin?");
+  const [isProcessingAudio, setIsProcessingAudio] = useState(false);
+  const [recordingStartTime, setRecordingStartTime] = useState(0);
+  const [currentTranscript, setCurrentTranscript] = useState('');
+  const [awaitingNextQuestion, setAwaitingNextQuestion] = useState(false);
+  const [useRealTimeTranscription, setUseRealTimeTranscription] = useState(true);
+  const [showingCompletionMessage, setShowingCompletionMessage] = useState(false);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   
   // Media refs
-  const avatarVideoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingChunksRef = useRef<Blob[]>([]);
   const questionTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -146,9 +177,12 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
     }
     
     // Clean up audio context
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      audioContextRef.current.close().catch(console.error);
     }
+    
+    // Stop real-time transcription
+    stopRealTimeTranscription();
   }, [isRecording]);
 
   const initializeTestInterview = async () => {
@@ -163,7 +197,8 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
       
       // Show welcome message if available
       if (session.welcomeMessage) {
-        playAvatarVideo(session.welcomeMessage);
+        // Welcome message is already set in initial state
+        console.log('🎬 Welcome message ready for streaming avatar');
       } else {
         setShowWelcome(false);
       }
@@ -187,21 +222,9 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
         setCurrentQuestion(question);
         setQuestionTime(question.expectedDuration);
         
-        // Auto-play question avatar if available - prioritize stream_url for faster loading
-        const videoUrl = question.avatarResponse?.stream_url || question.avatarResponse?.mp4_url;
-        if (videoUrl) {
-          console.log('🎬 Test question has avatar video, preparing to play:', {
-            hasStream: !!question.avatarResponse?.stream_url,
-            hasMp4: !!question.avatarResponse?.mp4_url,
-            using: videoUrl.includes('stream') ? 'stream_url' : 'mp4_url'
-          });
-          
-          setTimeout(() => {
-            playAvatarVideo(videoUrl);
-          }, showWelcome ? 3000 : 500);
-        } else {
-          console.warn('⚠️ Test question has no avatar video available');
-        }
+        // Set the avatar text to speak the question
+        setCurrentAvatarText(question.text);
+        console.log('🎬 Updated avatar text for question:', question.text);
       } else {
         // No more questions, complete the test
         handleCompleteTest();
@@ -214,46 +237,66 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
     }
   };
 
-  const playAvatarVideo = (videoUrl: string) => {
-    console.log('🎬 Playing test avatar video:', videoUrl);
-    
-    if (avatarVideoRef.current && videoUrl) {
-      setAvatarLoading(true);
-      setIsPlaying(false);
+
+
+  const startRealTimeTranscription = () => {
+    if (!useRealTimeTranscription) return;
+
+    try {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       
-      // Set video source
-      avatarVideoRef.current.src = videoUrl;
-      
-      // Load and play the video
-      avatarVideoRef.current.load(); // Ensure video is loaded
-      
-      const playPromise = avatarVideoRef.current.play();
-      
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            console.log('✅ Test avatar video playing successfully');
-            setIsPlaying(true);
-            setShowWelcome(false);
-            setAvatarLoading(false);
-            if (!hasStarted) {
-              setHasStarted(true); // Start the timer when first video plays
-            }
-          })
-          .catch(error => {
-            console.warn('❌ Failed to play test avatar video:', error);
-            setIsPlaying(false);
-            setAvatarLoading(false);
-            if (!hasStarted) {
-              setHasStarted(true); // Start anyway if video fails
-            }
-          });
+      if (!SpeechRecognition) {
+        console.log('⚠️ Real-time speech recognition not supported in this browser');
+        return;
       }
-    } else {
-      console.warn('⚠️ No video URL or video element not available');
-      if (!hasStarted) {
-        setHasStarted(true);
-      }
+
+      const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
+
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        console.log('🎙️ Real-time speech recognition started');
+      };
+
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + ' ';
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+
+        // Update current transcript with both final and interim results
+        setCurrentTranscript(finalTranscript + interimTranscript);
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Real-time speech recognition error:', event.error);
+      };
+
+      recognition.onend = () => {
+        console.log('🎙️ Real-time speech recognition ended');
+      };
+
+      recognition.start();
+    } catch (error) {
+      console.error('Failed to start real-time transcription:', error);
+    }
+  };
+
+  const stopRealTimeTranscription = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
     }
   };
 
@@ -263,6 +306,7 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
+          autoGainControl: true,
           sampleRate: 44100
         }
       });
@@ -276,7 +320,9 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
       // Start volume monitoring
       monitorVolume();
       
-      const mediaRecorder = new MediaRecorder(stream);
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus'
+      });
       mediaRecorderRef.current = mediaRecorder;
       recordingChunksRef.current = [];
       
@@ -284,21 +330,35 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
         recordingChunksRef.current.push(event.data);
       };
       
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(recordingChunksRef.current, { type: 'audio/wav' });
-        console.log('Test recording completed:', blob.size, 'bytes');
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(recordingChunksRef.current, { type: 'audio/webm' });
+        console.log('🎙️ Test recording completed:', blob.size, 'bytes');
         
-        // Stop volume monitoring
+        // Stop volume monitoring (if not already stopped)
         if (volumeIntervalRef.current) {
           clearInterval(volumeIntervalRef.current);
+          volumeIntervalRef.current = null;
         }
         
         // Clean up stream
         stream.getTracks().forEach(track => track.stop());
+        
+        // Clean up audio context
+        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+          audioContextRef.current.close().catch(console.error);
+        }
+        
+        // Process the audio recording
+        await handleRecordingComplete(blob);
       };
       
       mediaRecorder.start();
       setIsRecording(true);
+      setRecordingStartTime(Date.now());
+      setCurrentTranscript('');
+      
+      // Start real-time transcription
+      startRealTimeTranscription();
     } catch (error) {
       console.error('Failed to start recording:', error);
       setError('Failed to access microphone. Please check permissions.');
@@ -310,6 +370,16 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       setRecordingVolume(0);
+      setIsProcessingAudio(true);
+      
+      // Stop real-time transcription
+      stopRealTimeTranscription();
+      
+      // Clean up volume monitoring
+      if (volumeIntervalRef.current) {
+        clearInterval(volumeIntervalRef.current);
+        volumeIntervalRef.current = null;
+      }
     }
   };
 
@@ -327,6 +397,104 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
     }, 100);
   };
 
+  const handleRecordingComplete = async (audioBlob: Blob) => {
+    try {
+      console.log('🎙️ Processing quick test audio recording...', {
+        size: audioBlob.size,
+        type: audioBlob.type,
+        questionIndex: currentQuestionIndex
+      });
+
+      // Calculate recording duration
+      const recordingDuration = (Date.now() - recordingStartTime) / 1000;
+
+      // Use real-time transcript if available, otherwise fall back to API
+      let finalTranscript = currentTranscript.trim();
+      let confidence = 0.9; // Higher confidence for real-time transcription
+
+      if (!finalTranscript || finalTranscript.length < 5) {
+        console.log('🔄 Real-time transcript insufficient, trying backend API...');
+        
+        try {
+          const transcriptionResult: SpeechToTextResult = await speechToTextService.transcribeAudio(audioBlob, {
+            language: 'en-US',
+            enableWordTimestamps: true,
+            enhancedModel: true
+          });
+          
+          finalTranscript = transcriptionResult.transcript;
+          confidence = transcriptionResult.confidence || 0.8;
+          
+          console.log('✅ Backend transcription completed:', transcriptionResult);
+        } catch (error) {
+          console.error('Backend transcription failed:', error);
+          finalTranscript = '[Audio response recorded - transcription unavailable]';
+          confidence = 0.5;
+        }
+      } else {
+        console.log('✅ Using real-time transcript:', { transcript: finalTranscript, length: finalTranscript.length });
+      }
+
+      // Update state with final transcript
+      setCurrentTranscript(finalTranscript);
+      setIsProcessingAudio(false);
+      setAwaitingNextQuestion(true);
+
+      // Submit response to the quick interview service
+      if (currentQuestion) {
+        const response = {
+          questionId: currentQuestion.id,
+          answer: finalTranscript,
+          audioBlob,
+          duration: recordingDuration,
+          confidence,
+          timestamp: new Date()
+        };
+
+        console.log('📤 Submitting quick test response:', {
+          question: currentQuestion.text.substring(0, 50),
+          answerLength: response.answer.length,
+          confidence: response.confidence
+        });
+
+        // Submit and automatically move to next question or show completion
+        setTimeout(async () => {
+          try {
+            await quickInterviewService.submitQuickResponse(session!.id, response);
+            
+            // Check if this is the last question (index 2 for 3 questions: 0, 1, 2)
+            const isLastQuestion = currentQuestionIndex >= 2;
+            
+            if (isLastQuestion) {
+              // Show completion processing message
+              setCurrentAvatarText("Thank you for that final response. I'm now analyzing all your answers and preparing your comprehensive interview results...");
+              setShowingCompletionMessage(true);
+              setAwaitingNextQuestion(false);
+            } else {
+              // Show processing message for next question
+              setCurrentAvatarText("Thank you for that response. I'm analyzing your answer and preparing the next question...");
+            }
+            
+            // The next action will be triggered by the onVideoEnd callback
+          } catch (error) {
+            console.error('Failed to submit quick test response:', error);
+            setError('Failed to submit your response. Please try again.');
+            setIsProcessingAudio(false);
+            setAwaitingNextQuestion(false);
+          }
+        }, 1000);
+      }
+
+    } catch (error) {
+      console.error('❌ Quick test audio processing failed:', error);
+      
+      // Fallback: handle without transcription
+      setIsProcessingAudio(false);
+      setAwaitingNextQuestion(false);
+      setError('Audio processing failed. Please try recording again or use text input.');
+    }
+  };
+
   const handleNextQuestion = async () => {
     if (!session) return;
     
@@ -340,7 +508,8 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
       if (hasMore) {
         await loadCurrentQuestion();
       } else {
-        handleCompleteTest();
+        // Show completion message with avatar before closing
+        showInterviewCompletionMessage();
       }
     } catch (error) {
       console.error('Failed to move to next question:', error);
@@ -348,6 +517,20 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const showInterviewCompletionMessage = () => {
+    console.log('🎯 Showing interview completion message');
+    setShowingCompletionMessage(true);
+    setAwaitingNextQuestion(false);
+    setCurrentTranscript('');
+    
+    // Avatar completion message
+    const completionMessage = "Congratulations! You have successfully completed your interview assessment. I have analyzed all your responses and will now prepare your detailed results and feedback. Your interview performance report will be available shortly. Thank you for participating in this interview!";
+    
+    setCurrentAvatarText(completionMessage);
+    
+    console.log('🎬 Avatar will announce interview completion');
   };
 
   const handleCompleteTest = async () => {
@@ -616,131 +799,62 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
                     overflow: 'hidden'
                   }}
                 >
-                  {/* Avatar Video Container */}
+                  {/* Streaming Avatar Video */}
                   <Box
                     sx={{
                       width: '100%',
                       height: '100%',
-                      position: 'relative',
-                      background: 'linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)',
                       borderRadius: isMobile ? 0 : theme.spacing(2),
-                      overflow: 'hidden',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
+                      overflow: 'hidden'
                     }}
                   >
-                    {/* Default Avatar Background */}
-                    {((!currentQuestion?.avatarResponse?.mp4_url && !currentQuestion?.avatarResponse?.stream_url) || avatarLoading || showWelcome || !isPlaying) && (
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)',
-                          color: 'white',
-                          zIndex: 1
-                        }}
-                      >
-                        <Avatar
-                          sx={{
-                            width: 120,
-                            height: 120,
-                            mb: 3,
-                            background: 'linear-gradient(135deg, #4caf50 0%, #66bb6a 100%)',
-                            fontSize: '3rem'
-                          }}
-                        >
-                          🎓
-                        </Avatar>
-                        {avatarLoading ? (
-                          <>
-                            <CircularProgress size={40} sx={{ color: '#4caf50', mb: 2 }} />
-                            <Typography variant="h6" textAlign="center">
-                              Preparing your test interviewer...
-                            </Typography>
-                          </>
-                        ) : showWelcome ? (
-                          <>
-                            <Typography variant="h5" fontWeight="bold" mb={2} textAlign="center">
-                              Welcome to Quick Test
-                            </Typography>
-                            <Typography variant="body1" textAlign="center" sx={{ opacity: 0.8 }}>
-                              Get ready for your 3-minute practice session
-                            </Typography>
-                          </>
-                        ) : (
-                          <>
-                            <Typography variant="h5" fontWeight="bold" mb={2} textAlign="center">
-                              Test Interviewer
-                            </Typography>
-                            <Typography variant="body1" textAlign="center" sx={{ opacity: 0.8 }}>
-                              Ready for your next question
-                            </Typography>
-                          </>
-                        )}
-                      </Box>
-                    )}
-
-                    {/* Avatar Video */}
-                    <video
-                      ref={avatarVideoRef}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        position: 'relative',
-                        zIndex: 2
-                      }}
-                      onEnded={() => setIsPlaying(false)}
-                      onLoadStart={() => setAvatarLoading(true)}
-                      onCanPlay={() => setAvatarLoading(false)}
-                      onError={() => {
+                    <StreamingAvatarVideo
+                      text={currentAvatarText}
+                      avatar="black_man"
+                      emotion="happy"
+                      language="en"
+                      autoPlay={true}
+                      onVideoStart={() => {
+                        console.log('🎬 Quick test avatar started');
+                        setIsPlaying(true);
+                        setShowWelcome(false);
                         setAvatarLoading(false);
-                        console.error('Avatar video failed to load');
+                        if (!hasStarted) {
+                          setHasStarted(true);
+                        }
                       }}
-                      controls={false}
-                      playsInline
-                      preload="auto"
+                      onVideoEnd={() => {
+                        console.log('🎬 Quick test avatar ended');
+                        setIsPlaying(false);
+                        
+                        // If showing completion message, complete the test
+                        if (showingCompletionMessage) {
+                          console.log('🎬 Avatar finished completion message, completing test');
+                          setTimeout(() => {
+                            handleCompleteTest();
+                          }, 1500); // Slightly longer delay for completion
+                          return;
+                        }
+                        
+                        // If we're awaiting next question and avatar finished speaking, move to next question
+                        if (awaitingNextQuestion) {
+                          console.log('🎬 Avatar finished analysis message, moving to next question');
+                          setTimeout(async () => {
+                            await handleNextQuestion();
+                            setAwaitingNextQuestion(false);
+                            setCurrentTranscript('');
+                          }, 1000); // Small delay to ensure smooth transition
+                        }
+                      }}
+                      onError={(error) => {
+                        console.error('Quick test avatar error:', error);
+                        setError(`Avatar error: ${error}`);
+                        setAvatarLoading(false);
+                        if (!hasStarted) {
+                          setHasStarted(true);
+                        }
+                      }}
                     />
-
-                    {/* Speaking Indicator */}
-                    {isPlaying && (
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          bottom: 20,
-                          left: 20,
-                          background: 'rgba(76, 175, 80, 0.9)',
-                          borderRadius: 2,
-                          px: 2,
-                          py: 1,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1,
-                          zIndex: 3
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            width: 8,
-                            height: 8,
-                            background: '#4caf50',
-                            borderRadius: '50%',
-                            animation: 'pulse 1s infinite'
-                          }}
-                        />
-                        <Typography variant="caption" color="white" fontWeight="bold">
-                          Speaking...
-                        </Typography>
-                      </Box>
-                    )}
                   </Box>
                   
                   {/* Question Counter */}
@@ -833,12 +947,13 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
                               startIcon={<Mic />}
                               onClick={startRecording}
                               size="large"
+                              disabled={isProcessingAudio || awaitingNextQuestion}
                               sx={{
                                 background: 'linear-gradient(45deg, #4caf50 30%, #66bb6a 90%)',
                                 flex: 1
                               }}
                             >
-                              Record Answer
+                              {isProcessingAudio ? 'Processing...' : 'Record Answer'}
                             </Button>
                           ) : (
                             <Button
@@ -857,7 +972,7 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
                             variant="outlined"
                             endIcon={<ArrowForward />}
                             onClick={handleNextQuestion}
-                            disabled={isLoading}
+                            disabled={isLoading || isProcessingAudio || awaitingNextQuestion}
                             size="large"
                           >
                             {currentQuestionIndex === 2 ? 'Finish' : 'Next'}
@@ -865,6 +980,39 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
                         </Stack>
                       </CardContent>
                     </Card>
+
+                    {/* Audio Processing Status */}
+                    {(isProcessingAudio || awaitingNextQuestion || showingCompletionMessage) && (
+                      <Card elevation={3} sx={{ mb: 3, border: showingCompletionMessage ? '2px solid #ff9800' : 'none' }}>
+                        <CardContent>
+                          <Stack direction="row" alignItems="center" spacing={2}>
+                            <CircularProgress size={24} color={showingCompletionMessage ? "warning" : "primary"} />
+                            <Typography variant="body2">
+                              {showingCompletionMessage 
+                                ? '🎯 Finalizing your interview results and preparing detailed feedback...'
+                                : isProcessingAudio 
+                                  ? '🎙️ Processing your audio response...' 
+                                  : '🤖 AI is analyzing your response and preparing next question...'}
+                            </Typography>
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Current Transcript Display */}
+                    {currentTranscript && (
+                      <Card elevation={3} sx={{ mb: 3, border: '2px solid #4caf50' }}>
+                        <CardContent>
+                          <Typography variant="subtitle2" color="success.main" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <CheckCircle fontSize="small" />
+                            Your Response (Transcribed):
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
+                            "{currentTranscript}"
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    )}
 
                     {/* Quick Tips */}
                     <Card elevation={2} sx={{ background: 'rgba(79, 172, 254, 0.05)' }}>
@@ -907,6 +1055,41 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
               {currentQuestion.text}
             </Typography>
             
+            {/* Audio Processing Status - Mobile */}
+            {(isProcessingAudio || awaitingNextQuestion || showingCompletionMessage) && (
+              <Box sx={{ 
+                mt: 2, 
+                mb: 2, 
+                p: 2, 
+                borderRadius: 2, 
+                bgcolor: showingCompletionMessage ? 'rgba(255, 152, 0, 0.1)' : 'rgba(33, 150, 243, 0.1)',
+                border: showingCompletionMessage ? '1px solid #ff9800' : 'none'
+              }}>
+                <Stack direction="row" alignItems="center" spacing={2}>
+                  <CircularProgress size={20} color={showingCompletionMessage ? "warning" : "primary"} />
+                  <Typography variant="body2" fontSize="0.8rem">
+                    {showingCompletionMessage 
+                      ? '🎯 Preparing results...'
+                      : isProcessingAudio 
+                        ? '🎙️ Processing audio...' 
+                        : '🤖 Preparing next question...'}
+                  </Typography>
+                </Stack>
+              </Box>
+            )}
+
+            {/* Current Transcript - Mobile */}
+            {currentTranscript && (
+              <Box sx={{ mt: 2, mb: 2, p: 2, borderRadius: 2, bgcolor: 'rgba(76, 175, 80, 0.1)', border: '1px solid #4caf50' }}>
+                <Typography variant="caption" color="success.main" sx={{ mb: 1, display: 'block', fontWeight: 'bold' }}>
+                  Your Response:
+                </Typography>
+                <Typography variant="body2" sx={{ fontStyle: 'italic', fontSize: '0.8rem' }}>
+                  "{currentTranscript.length > 100 ? currentTranscript.substring(0, 100) + '...' : currentTranscript}"
+                </Typography>
+              </Box>
+            )}
+            
             <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
               {!isRecording ? (
                 <Button
@@ -914,12 +1097,13 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
                   startIcon={<Mic />}
                   onClick={startRecording}
                   size="small"
+                  disabled={isProcessingAudio || awaitingNextQuestion}
                   sx={{
                     background: 'linear-gradient(45deg, #4caf50 30%, #66bb6a 90%)',
                     flex: 1
                   }}
                 >
-                  Record
+                  {isProcessingAudio ? 'Processing...' : 'Record'}
                 </Button>
               ) : (
                 <Button
@@ -937,7 +1121,7 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
               <Button
                 variant="outlined"
                 onClick={handleNextQuestion}
-                disabled={isLoading}
+                disabled={isLoading || isProcessingAudio || awaitingNextQuestion}
                 size="small"
               >
                 {currentQuestionIndex === 2 ? 'Finish' : 'Next'}

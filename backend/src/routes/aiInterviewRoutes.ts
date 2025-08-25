@@ -21,6 +21,7 @@ router.post('/start', startAIInterview);
 router.post('/:interviewId/response', submitInterviewResponse);
 router.post('/:interviewId/complete', completeAIInterview);
 router.get('/my-interviews', getUserInterviews);
+router.get('/history', getUserInterviews); // Alias for interview history
 
 // Employer routes
 router.get('/job/:jobId', getJobInterviews);

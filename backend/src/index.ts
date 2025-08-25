@@ -66,11 +66,13 @@ import careerGuidanceRoutes from '@/routes/careerGuidanceRoutes';
 import aiInterviewRoutes from '@/routes/aiInterviewRoutes';
 import quickInterviewRoutes from '@/routes/quickInterviewRoutes';
 import modernInterviewRoutes from '@/routes/modernInterviewRoutes';
+import speechRoutes from '@/routes/speechRoutes';
 import jobCertificateRoutes from '@/routes/jobCertificateRoutes';
 import profileRoutes from '@/routes/profileRoutes';
 import uploadRoutes from '@/routes/uploadRoutes';
 import superAdminRoutes from '@/routes/superAdminRoutes';
 import employerRoutes from '@/routes/employerRoutes';
+import testRequestRoutes from '@/routes/testRequestRoutes';
 
 
 
@@ -337,9 +339,13 @@ app.use('/api/career-guidance', careerGuidanceRoutes);
 app.use('/api/ai-interviews', aiInterviewRoutes);
 app.use('/api/quick-interviews', quickInterviewRoutes);
 app.use('/api', modernInterviewRoutes);
+app.use('/api/speech', speechRoutes);
 app.use('/api/job-certificates', jobCertificateRoutes);
 app.use('/api/profiles', profileRoutes);
 app.use('/api/upload', uploadRoutes);
+
+// Test Request routes
+app.use('/api/test-requests', testRequestRoutes);
 
 // Employer routes
 app.use('/api/employer', employerRoutes);

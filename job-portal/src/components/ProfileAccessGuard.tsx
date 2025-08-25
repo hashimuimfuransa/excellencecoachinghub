@@ -12,7 +12,8 @@ import {
   ListItemIcon,
   ListItemText,
   Chip,
-  Divider
+  Divider,
+  CircularProgress
 } from '@mui/material';
 import {
   Lock,
@@ -32,6 +33,7 @@ import { User } from '../types/user';
 import { validateProfile, getFieldDisplayName } from '../utils/profileValidation';
 import { validateProfileSimple } from '../utils/simpleProfileValidation';
 import { useNavigate } from 'react-router-dom';
+import { useFreshUserData } from '../hooks/useFreshUserData';
 
 interface ProfileAccessGuardProps {
   user: User;
@@ -45,10 +47,53 @@ const ProfileAccessGuard: React.FC<ProfileAccessGuardProps> = ({
   children
 }) => {
   const navigate = useNavigate();
-  console.log('🔍 ProfileAccessGuard validating user for feature:', feature, user);
-  const validationResult = validateProfileSimple(user);
+  const { freshUser, loading, error, refetch } = useFreshUserData(user);
+
+  // Show loading state while fetching fresh data
+  if (loading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '200px',
+        flexDirection: 'column',
+        gap: 2
+      }}>
+        <CircularProgress />
+        <Typography color="textSecondary">
+          Checking your latest profile status...
+        </Typography>
+      </Box>
+    );
+  }
+
+  const currentUser = freshUser || user;
+  console.log('🔍 ProfileAccessGuard validating user for feature:', feature, currentUser);
+  const validationResult = validateProfileSimple(currentUser);
   console.log('📊 ProfileAccessGuard validation result:', validationResult);
   const canAccess = validationResult.canAccessFeatures[feature];
+
+  // Show error state if there was an error fetching fresh data
+  if (error && !currentUser) {
+    return (
+      <Box sx={{ py: 4 }}>
+        <Card sx={{ maxWidth: 800, mx: 'auto' }}>
+          <CardContent sx={{ textAlign: 'center', p: 4 }}>
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+            <Button
+              variant="contained"
+              onClick={() => refetch()}
+            >
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  }
 
   const getFeatureInfo = (feature: string) => {
     switch (feature) {
@@ -115,7 +160,7 @@ const ProfileAccessGuard: React.FC<ProfileAccessGuardProps> = ({
   };
 
   const getMissingFields = () => {
-    return featureInfo.requiredFields.filter(field => !hasValue(user, field));
+    return featureInfo.requiredFields.filter(field => !hasValue(currentUser, field));
   };
 
   const getFieldIcon = (field: string) => {
@@ -269,7 +314,7 @@ const ProfileAccessGuard: React.FC<ProfileAccessGuardProps> = ({
               variant="contained"
               size="large"
               startIcon={<Person />}
-              onClick={() => navigate('/app/profile')}
+              onClick={() => window.location.href = '/app/profile'}
               sx={{ minWidth: 200 }}
             >
               Complete Profile
@@ -277,7 +322,7 @@ const ProfileAccessGuard: React.FC<ProfileAccessGuardProps> = ({
             <Button
               variant="outlined"
               size="large"
-              onClick={() => navigate('/app/dashboard')}
+              onClick={() => window.location.href = '/app/dashboard'}
             >
               Back to Dashboard
             </Button>

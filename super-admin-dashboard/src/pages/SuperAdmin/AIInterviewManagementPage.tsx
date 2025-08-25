@@ -36,7 +36,10 @@ import {
   Divider,
   Stack,
   Paper,
-  Badge
+  Badge,
+  Tabs,
+  Tab,
+  CircularProgress
 } from '@mui/material';
 import {
   VideoCall,
@@ -74,7 +77,10 @@ import {
   SmartToy,
   Analytics,
   Report,
-  Share
+  Share,
+  PendingActions,
+  Approval,
+  Schedule as ScheduleIcon
 } from '@mui/icons-material';
 import { superAdminService } from '../../services/superAdminService';
 import type { AIInterview } from '../../types/common';
@@ -109,7 +115,10 @@ interface CreateInterviewDialog {
 }
 
 const AIInterviewManagementPage: React.FC = () => {
+  const [activeTab, setActiveTab] = useState(0);
   const [interviews, setInterviews] = useState<AIInterview[]>([]);
+  const [interviewRequests, setInterviewRequests] = useState<any[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
@@ -148,9 +157,13 @@ const AIInterviewManagementPage: React.FC = () => {
   });
 
   useEffect(() => {
-    loadInterviews();
-    loadStats();
-  }, [page, rowsPerPage, filters]);
+    if (activeTab === 0) {
+      loadInterviews();
+      loadStats();
+    } else if (activeTab === 1) {
+      loadInterviewRequests();
+    }
+  }, [page, rowsPerPage, filters, activeTab]);
 
   const loadInterviews = async () => {
     setLoading(true);
@@ -365,6 +378,122 @@ const AIInterviewManagementPage: React.FC = () => {
     }
   };
 
+  const loadInterviewRequests = async () => {
+    setRequestsLoading(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/test-requests/pending`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Filter for interview requests only
+        setInterviewRequests((result.success ? result.data : []).filter((req: any) => 
+          req.requestType === 'ai_interview'
+        ));
+      } else {
+        // Mock data for development - interview requests only
+        setInterviewRequests([
+          {
+            _id: 'int_req1',
+            user: {
+              _id: 'user1',
+              firstName: 'Alex',
+              lastName: 'Johnson',
+              email: 'alex.johnson@example.com'
+            },
+            requestType: 'ai_interview',
+            title: 'Senior React Developer Interview',
+            description: 'Need AI-powered interview for evaluating React development skills',
+            job: {
+              _id: 'job1',
+              title: 'Senior React Developer',
+              company: 'TechStart Inc'
+            },
+            priority: 'high',
+            requestedAt: new Date().toISOString(),
+            status: 'pending',
+            specifications: {
+              interviewType: 'technical',
+              duration: 45,
+              questionCount: 8,
+              difficulty: 'hard',
+              focusAreas: ['React', 'JavaScript', 'State Management', 'Performance']
+            }
+          },
+          {
+            _id: 'int_req2',
+            user: {
+              _id: 'user2',
+              firstName: 'Maria',
+              lastName: 'Garcia',
+              email: 'maria.garcia@example.com'
+            },
+            requestType: 'ai_interview',
+            title: 'Product Manager Assessment',
+            description: 'Behavioral and strategic thinking interview for PM role',
+            job: {
+              _id: 'job2',
+              title: 'Senior Product Manager',
+              company: 'InnovateCorp'
+            },
+            priority: 'normal',
+            requestedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+            status: 'pending',
+            specifications: {
+              interviewType: 'behavioral',
+              duration: 60,
+              questionCount: 10,
+              difficulty: 'medium',
+              focusAreas: ['Leadership', 'Strategy', 'Communication', 'Analytics']
+            }
+          }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error loading interview requests:', error);
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
+
+  const handleInterviewRequestAction = async (requestId: string, action: 'approve' | 'reject', notes?: string) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/test-requests/${requestId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: action === 'approve' ? 'approved' : 'rejected',
+          adminNotes: notes
+        })
+      });
+
+      if (response.ok) {
+        // Remove the request from the list
+        setInterviewRequests(prev => prev.filter(req => req._id !== requestId));
+        
+        if (action === 'approve') {
+          // Generate the interview setup
+          await fetch(`${import.meta.env.VITE_API_URL}/test-requests/${requestId}/generate`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              'Content-Type': 'application/json'
+            }
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error handling interview request action:', error);
+    }
+  };
+
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
   };
@@ -546,9 +675,37 @@ const AIInterviewManagementPage: React.FC = () => {
         </Grid>
       </Grid>
 
-      {/* Filters and Actions */}
+      {/* Tabs */}
       <Card sx={{ mb: 3 }}>
-        <CardContent>
+        <Tabs 
+          value={activeTab} 
+          onChange={(e, newValue) => setActiveTab(newValue)}
+          variant="fullWidth"
+          sx={{ borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Tab 
+            icon={<VideoCall />} 
+            label="Interview Management" 
+            sx={{ textTransform: 'none', fontWeight: 'bold' }}
+          />
+          <Tab 
+            icon={
+              <Badge badgeContent={interviewRequests.length} color="error" max={99}>
+                <PendingActions />
+              </Badge>
+            } 
+            label="Pending Requests" 
+            sx={{ textTransform: 'none', fontWeight: 'bold' }}
+          />
+        </Tabs>
+      </Card>
+
+      {/* Tab Content */}
+      {activeTab === 0 && (
+        <>
+          {/* Filters and Actions */}
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
           <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} md={3}>
               <TextField
@@ -762,6 +919,209 @@ const AIInterviewManagementPage: React.FC = () => {
           />
         </CardContent>
       </Card>
+
+        </>
+      )}
+
+      {/* Tab 2: Interview Requests */}
+      {activeTab === 1 && (
+        <Card>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+              <Typography variant="h6">
+                Pending Interview Requests ({interviewRequests.length})
+              </Typography>
+              <Button
+                startIcon={<Refresh />}
+                onClick={loadInterviewRequests}
+                disabled={requestsLoading}
+              >
+                Refresh
+              </Button>
+            </Box>
+
+            {requestsLoading ? (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <CircularProgress />
+                <Typography variant="body2" sx={{ mt: 2 }}>
+                  Loading interview requests...
+                </Typography>
+              </Box>
+            ) : interviewRequests.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 8 }}>
+                <PendingActions sx={{ fontSize: 80, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="h6" gutterBottom>
+                  No Pending Requests
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  All interview requests have been processed.
+                </Typography>
+              </Box>
+            ) : (
+              <Grid container spacing={3}>
+                {interviewRequests.map((request) => (
+                  <Grid item xs={12} md={6} lg={4} key={request._id}>
+                    <Card 
+                      variant="outlined"
+                      sx={{ 
+                        height: '100%',
+                        position: 'relative',
+                        '&:hover': {
+                          borderColor: 'primary.main',
+                          boxShadow: 2
+                        }
+                      }}
+                    >
+                      {/* Priority Badge */}
+                      <Chip
+                        label={request.priority.toUpperCase()}
+                        color={request.priority === 'high' ? 'error' : request.priority === 'normal' ? 'warning' : 'default'}
+                        size="small"
+                        sx={{
+                          position: 'absolute',
+                          top: 12,
+                          right: 12,
+                          zIndex: 1
+                        }}
+                      />
+
+                      <CardContent sx={{ pb: 1 }}>
+                        <Stack spacing={2}>
+                          {/* Header */}
+                          <Box>
+                            <Typography variant="h6" sx={{ pr: 8 }}>
+                              {request.title}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" noWrap>
+                              {request.description}
+                            </Typography>
+                          </Box>
+
+                          {/* User Info */}
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Avatar sx={{ width: 32, height: 32, mr: 1, bgcolor: 'secondary.main' }}>
+                              <VideoCall />
+                            </Avatar>
+                            <Box>
+                              <Typography variant="subtitle2">
+                                {request.user.firstName} {request.user.lastName}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {request.user.email}
+                              </Typography>
+                            </Box>
+                          </Box>
+
+                          {/* Job Info */}
+                          {request.job && (
+                            <Box sx={{ bgcolor: 'grey.50', p: 1.5, borderRadius: 1 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                <Work sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
+                                <Typography variant="subtitle2">
+                                  {request.job.title}
+                                </Typography>
+                              </Box>
+                              <Typography variant="caption" color="text.secondary">
+                                {request.job.company}
+                              </Typography>
+                            </Box>
+                          )}
+
+                          {/* Interview Specifications */}
+                          {request.specifications && (
+                            <Box>
+                              <Typography variant="subtitle2" gutterBottom>
+                                Interview Specifications
+                              </Typography>
+                              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
+                                <Chip 
+                                  size="small" 
+                                  label={request.specifications.interviewType} 
+                                  color="info"
+                                />
+                                <Chip 
+                                  size="small" 
+                                  label={`${request.specifications.duration}min`} 
+                                  variant="outlined"
+                                />
+                                <Chip 
+                                  size="small" 
+                                  label={`${request.specifications.questionCount}Q`} 
+                                  variant="outlined"
+                                />
+                                <Chip 
+                                  size="small" 
+                                  label={request.specifications.difficulty} 
+                                  color={
+                                    request.specifications.difficulty === 'hard' ? 'error' :
+                                    request.specifications.difficulty === 'medium' ? 'warning' : 'success'
+                                  }
+                                />
+                              </Stack>
+                              {request.specifications.focusAreas && (
+                                <Box>
+                                  <Typography variant="caption" color="text.secondary" display="block">
+                                    Focus Areas:
+                                  </Typography>
+                                  <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                                    {request.specifications.focusAreas.map((area: string) => (
+                                      <Chip 
+                                        key={area}
+                                        size="small" 
+                                        label={area}
+                                        variant="outlined"
+                                        sx={{ fontSize: '0.7rem', height: '20px' }}
+                                      />
+                                    ))}
+                                  </Stack>
+                                </Box>
+                              )}
+                            </Box>
+                          )}
+
+                          {/* Requested Date */}
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <ScheduleIcon sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
+                            <Typography variant="caption" color="text.secondary">
+                              Requested {new Date(request.requestedAt).toLocaleDateString()}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </CardContent>
+
+                      {/* Actions */}
+                      <Box sx={{ p: 2, pt: 0 }}>
+                        <Stack direction="row" spacing={1}>
+                          <Button
+                            variant="contained"
+                            color="success"
+                            size="small"
+                            startIcon={<Approval />}
+                            onClick={() => handleInterviewRequestAction(request._id, 'approve')}
+                            sx={{ flex: 1 }}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            size="small"
+                            startIcon={<Delete />}
+                            onClick={() => handleInterviewRequestAction(request._id, 'reject')}
+                            sx={{ flex: 1 }}
+                          >
+                            Reject
+                          </Button>
+                        </Stack>
+                      </Box>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Action Menu */}
       <Menu

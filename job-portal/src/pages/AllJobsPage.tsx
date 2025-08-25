@@ -492,7 +492,7 @@ const AllJobsPage: React.FC = () => {
                     {job.title}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" gutterBottom>
-                    {job.employer.company || `${job.employer.firstName} ${job.employer.lastName}`}
+                    {job.employer?.company || (job.employer ? `${job.employer.firstName} ${job.employer.lastName}` : 'Unknown Employer')}
                   </Typography>
 
                   {/* Job Details */}
@@ -519,7 +519,7 @@ const AllJobsPage: React.FC = () => {
 
                   {/* Skills */}
                   <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5, mb: 3 }}>
-                    {job.skills.slice(0, 3).map((skill) => (
+                    {job.skills && job.skills.slice(0, 3).map((skill) => (
                       <Chip
                         key={skill}
                         label={skill}
@@ -528,7 +528,7 @@ const AllJobsPage: React.FC = () => {
                         sx={{ fontSize: '0.7rem' }}
                       />
                     ))}
-                    {job.skills.length > 3 && (
+                    {job.skills && job.skills.length > 3 && (
                       <Chip
                         label={`+${job.skills.length - 3}`}
                         size="small"
@@ -542,7 +542,7 @@ const AllJobsPage: React.FC = () => {
                   
                   {/* Description Preview */}
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    {job.description.substring(0, 100)}...
+                    {job.description ? `${job.description.substring(0, 100)}...` : 'No description available'}
                   </Typography>
                 </CardContent>
 

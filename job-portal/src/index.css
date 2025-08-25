@@ -31,3 +31,68 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+
+/* Avatar video loading animations */
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 8px 32px rgba(79, 195, 247, 0.3);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.08);
+    box-shadow: 0 12px 48px rgba(79, 195, 247, 0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 8px 32px rgba(79, 195, 247, 0.3);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes glow {
+  0% {
+    box-shadow: 0 0 20px rgba(79, 195, 247, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(79, 195, 247, 0.6), 0 0 60px rgba(79, 195, 247, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(79, 195, 247, 0.4);
+  }
+}
+
+.avatar-video-container {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.avatar-video-container .avatar-placeholder {
+  animation: slideUp 0.4s ease-out;
+}
+
+.avatar-video-container .avatar-icon {
+  animation: glow 3s ease-in-out infinite;
+}

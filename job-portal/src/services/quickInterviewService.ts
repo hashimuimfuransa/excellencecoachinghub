@@ -375,6 +375,51 @@ class QuickInterviewService {
   }
 
   /**
+   * Submit quick interview response
+   * @param sessionId - Session ID
+   * @param response - User response data
+   * @returns Promise<void>
+   */
+  async submitQuickResponse(sessionId: string, response: {
+    questionId: string;
+    answer: string;
+    audioBlob?: Blob;
+    duration: number;
+    confidence: number;
+    timestamp: Date;
+  }): Promise<void> {
+    try {
+      const session = await this.getSession(sessionId);
+      if (!session) {
+        throw new Error('Session not found');
+      }
+
+      // Store the response locally (for now - can be enhanced to send to backend later)
+      const responses = JSON.parse(localStorage.getItem(`quick_responses_${sessionId}`) || '[]');
+      responses.push({
+        ...response,
+        sessionId,
+        questionIndex: session.currentQuestionIndex,
+        submittedAt: new Date().toISOString()
+      });
+      
+      localStorage.setItem(`quick_responses_${sessionId}`, JSON.stringify(responses));
+      
+      console.log('✅ Quick response submitted:', {
+        sessionId,
+        questionId: response.questionId,
+        answerLength: response.answer.length,
+        confidence: response.confidence,
+        duration: response.duration
+      });
+
+    } catch (error) {
+      console.error('Error submitting quick response:', error);
+      throw new Error('Failed to submit response');
+    }
+  }
+
+  /**
    * Complete the interview session and generate results
    * @param sessionId - Session ID
    * @param userAnswers - User's recorded answers (optional for now)

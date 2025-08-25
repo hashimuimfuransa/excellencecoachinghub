@@ -57,6 +57,29 @@ import {
   Send
 } from '@mui/icons-material';
 import { QuickInterviewSession, QuickInterviewQuestion, optimizedQuickInterviewService } from '../services/optimizedQuickInterviewService';
+import { speechToTextService, SpeechToTextResult } from '../services/speechToTextService';
+import StreamingAvatarVideo from './StreamingAvatarVideo';
+
+// Add Web Speech API types
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
+interface SpeechRecognitionEvent {
+  resultIndex: number;
+  results: {
+    [index: number]: {
+      [index: number]: {
+        transcript: string;
+      };
+      isFinal: boolean;
+    };
+    length: number;
+  };
+}
 
 interface JobInterviewInterfaceProps {
   open: boolean;
@@ -76,6 +99,22 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
   
   // State management
   const [session, setSession] = useState<QuickInterviewSession | null>(initialSession);
+  
+  // Debug: Log initial session
+  React.useEffect(() => {
+    if (initialSession) {
+      console.log('🚀 Job Interview Session initialized:', {
+        id: initialSession.id,
+        totalQuestions: initialSession.questions.length,
+        questions: initialSession.questions.map((q, i) => ({ 
+          index: i, 
+          id: q.id, 
+          questionNumber: q.questionNumber,
+          text: q.text.substring(0, 80) + '...' 
+        }))
+      });
+    }
+  }, [initialSession]);
   const [currentQuestion, setCurrentQuestion] = useState<QuickInterviewQuestion | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -92,9 +131,17 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
   const [showJobInfo, setShowJobInfo] = useState(true);
   const [inputMode, setInputMode] = useState<'voice' | 'text'>('voice');
   const [textAnswer, setTextAnswer] = useState('');
+  const [currentAvatarText, setCurrentAvatarText] = useState("Welcome to your job interview! I'm your AI interviewer and I'll be conducting this comprehensive interview today. This interview will assess your qualifications, experience, and fit for the position. Are you ready to begin?");
+  const [isProcessingAudio, setIsProcessingAudio] = useState(false);
+  const [recordingStartTime, setRecordingStartTime] = useState(0);
+  const [currentTranscript, setCurrentTranscript] = useState('');
+  const [awaitingNextQuestion, setAwaitingNextQuestion] = useState(false);
+  const [useRealTimeTranscription, setUseRealTimeTranscription] = useState(true);
+  const [showingCompletionMessage, setShowingCompletionMessage] = useState(false);
+  const [allResponses, setAllResponses] = useState<any[]>([]);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
   
   // Media refs
-  const avatarVideoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingChunksRef = useRef<Blob[]>([]);
   const questionTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -146,9 +193,12 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
     }
     
     // Clean up audio context
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
+    if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+      audioContextRef.current.close().catch(console.error);
     }
+    
+    // Stop real-time transcription
+    stopRealTimeTranscription();
   }, [isRecording]);
 
   const initializeJobInterview = async () => {
@@ -172,90 +222,111 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
     }
   };
 
-  const loadCurrentQuestion = async () => {
+  const loadCurrentQuestion = async (questionIndex?: number) => {
     if (!session) return;
     
+    // Use provided index or current state index
+    const indexToLoad = questionIndex !== undefined ? questionIndex : currentQuestionIndex;
+    
+    let question = null;
     try {
+      // Debug: Log session information
+      console.log('🔍 Loading question - Index to load:', indexToLoad);
+      console.log('🔍 Current state index:', currentQuestionIndex);
+      console.log('🔍 Total questions in session:', session.questions.length);
+      console.log('🔍 All questions:', session.questions.map((q, i) => ({ index: i, id: q.id, text: q.text.substring(0, 50) + '...' })));
+      
+      // Only show avatar loading, don't hide other content
       setAvatarLoading(true);
-      const question = session.questions[currentQuestionIndex]; // Questions are pre-generated
+      question = session.questions[indexToLoad]; // Questions are pre-generated
       
       if (question) {
+        console.log('🎯 Loaded question:', { index: indexToLoad, id: question.id, text: question.text });
         setCurrentQuestion(question);
         setQuestionTime(question.expectedDuration);
         
-        // Auto-play question avatar immediately (pre-generated for instant access)
-        const videoUrl = question.avatarResponse?.stream_url || question.avatarResponse?.mp4_url;
-        if (videoUrl) {
-          console.log('🎬 Playing pre-generated question avatar:', {
-            questionNumber: session.currentQuestionIndex + 1,
-            hasStream: !!question.avatarResponse?.stream_url,
-            hasMp4: !!question.avatarResponse?.mp4_url,
-            using: videoUrl.includes('stream') ? 'stream_url' : 'mp4_url'
-          });
-          
-          // Play immediately - no delay needed since questions are pre-generated
-          playAvatarVideo(videoUrl);
-        } else {
-          console.warn('⚠️ Question has no avatar video available, showing text-only');
-          setAvatarLoading(false);
-          if (!hasStarted) {
-            setHasStarted(true);
-          }
+        // Set the avatar text to speak the question
+        setCurrentAvatarText(question.text);
+        console.log('🎬 Updated job interview avatar text for question:', question.text);
+        if (!hasStarted) {
+          setHasStarted(true);
         }
+        
+        // Give avatar some time to prepare before removing loading state
+        setTimeout(() => {
+          setAvatarLoading(false);
+        }, 2000); // 2 second loading state to show preparation
       } else {
         // No more questions, complete the interview
+        console.log('❌ No question found at index:', indexToLoad);
+        setAvatarLoading(false);
         handleCompleteInterview();
       }
     } catch (error) {
       console.error('Failed to load question:', error);
       setError('Failed to load question. Please try again.');
-    } finally {
-      if (!question?.avatarResponse) {
-        setAvatarLoading(false);
-      }
+      setAvatarLoading(false);
     }
   };
 
-  const playAvatarVideo = (videoUrl: string) => {
-    console.log('🎬 Playing avatar video:', videoUrl);
-    
-    if (avatarVideoRef.current && videoUrl) {
-      setAvatarLoading(true);
-      setIsPlaying(false);
+  const startRealTimeTranscription = () => {
+    if (!useRealTimeTranscription) return;
+
+    try {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       
-      // Set video source
-      avatarVideoRef.current.src = videoUrl;
-      
-      // Load and play the video
-      avatarVideoRef.current.load(); // Ensure video is loaded
-      
-      const playPromise = avatarVideoRef.current.play();
-      
-      if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            console.log('✅ Avatar video playing successfully');
-            setIsPlaying(true);
-            setShowWelcome(false);
-            setAvatarLoading(false);
-            if (!hasStarted) {
-              setHasStarted(true);
-            }
-          })
-          .catch(error => {
-            console.warn('❌ Failed to play avatar video:', error);
-            setIsPlaying(false);
-            setAvatarLoading(false);
-            if (!hasStarted) {
-              setHasStarted(true);
-            }
-          });
+      if (!SpeechRecognition) {
+        console.log('⚠️ Real-time speech recognition not supported in this browser');
+        return;
       }
-    } else {
-      console.warn('⚠️ No video URL or video element not available');
-      if (!hasStarted) {
-        setHasStarted(true);
-      }
+
+      const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
+
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        console.log('🎙️ Real-time speech recognition started');
+      };
+
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + ' ';
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+
+        // Update current transcript with both final and interim results
+        setCurrentTranscript(finalTranscript + interimTranscript);
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Real-time speech recognition error:', event.error);
+      };
+
+      recognition.onend = () => {
+        console.log('🎙️ Real-time speech recognition ended');
+      };
+
+      recognition.start();
+    } catch (error) {
+      console.error('Failed to start real-time transcription:', error);
+    }
+  };
+
+  const stopRealTimeTranscription = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
     }
   };
 
@@ -265,6 +336,7 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
+          autoGainControl: true,
           sampleRate: 44100
         }
       });
@@ -278,7 +350,9 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
       // Start volume monitoring
       monitorVolume();
       
-      const mediaRecorder = new MediaRecorder(stream);
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus'
+      });
       mediaRecorderRef.current = mediaRecorder;
       recordingChunksRef.current = [];
       
@@ -286,21 +360,35 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
         recordingChunksRef.current.push(event.data);
       };
       
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(recordingChunksRef.current, { type: 'audio/wav' });
-        console.log('Job interview recording completed:', blob.size, 'bytes');
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(recordingChunksRef.current, { type: 'audio/webm' });
+        console.log('🎙️ Job interview recording completed:', blob.size, 'bytes');
         
-        // Stop volume monitoring
+        // Stop volume monitoring (if not already stopped)
         if (volumeIntervalRef.current) {
           clearInterval(volumeIntervalRef.current);
+          volumeIntervalRef.current = null;
         }
         
         // Clean up stream
         stream.getTracks().forEach(track => track.stop());
+        
+        // Clean up audio context
+        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+          audioContextRef.current.close().catch(console.error);
+        }
+        
+        // Process the audio recording
+        await handleRecordingComplete(blob);
       };
       
       mediaRecorder.start();
       setIsRecording(true);
+      setRecordingStartTime(Date.now());
+      setCurrentTranscript('');
+      
+      // Start real-time transcription
+      startRealTimeTranscription();
     } catch (error) {
       console.error('Failed to start recording:', error);
       setError('Failed to access microphone. Please check permissions.');
@@ -312,6 +400,16 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       setRecordingVolume(0);
+      setIsProcessingAudio(true);
+      
+      // Stop real-time transcription
+      stopRealTimeTranscription();
+      
+      // Clean up volume monitoring
+      if (volumeIntervalRef.current) {
+        clearInterval(volumeIntervalRef.current);
+        volumeIntervalRef.current = null;
+      }
     }
   };
 
@@ -329,21 +427,99 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
     }, 100);
   };
 
+  const handleRecordingComplete = async (audioBlob: Blob) => {
+    if (!currentQuestion || !session) return;
+
+    setIsProcessingAudio(true);
+    setAwaitingNextQuestion(true);
+
+    try {
+      console.log('🎙️ Processing job interview recording...');
+      
+      const recordingDuration = Date.now() - recordingStartTime;
+      const response = {
+        questionId: currentQuestion.id,
+        audioBlob,
+        transcript: currentTranscript,
+        duration: recordingDuration,
+        timestamp: new Date().toISOString()
+      };
+
+      // Add to responses
+      setAllResponses(prev => [...prev, response]);
+
+      console.log('✅ Job interview recording processed successfully');
+      
+      // Check if there are more questions and set appropriate avatar message
+      const hasMoreQuestions = currentQuestionIndex + 1 < session.questions.length;
+      
+      if (hasMoreQuestions) {
+        setCurrentAvatarText("Thank you for your response. I'm analyzing your answer and preparing the next question.");
+        
+        // Delay processing state removal to allow avatar to speak
+        setTimeout(() => {
+          setIsProcessingAudio(false);
+        }, 1500);
+        
+        // Keep awaitingNextQuestion true so avatar onVideoEnd will handle the transition
+        // Add fallback timeout in case avatar doesn't trigger the transition
+        setTimeout(async () => {
+          if (awaitingNextQuestion) {
+            console.log('⏰ Fallback: Auto-moving to next question after timeout');
+            await handleNextQuestion();
+            setAwaitingNextQuestion(false);
+            setCurrentTranscript('');
+          }
+        }, 8000); // 8 second fallback timeout
+      } else {
+        // This is the last question - prepare completion
+        setCurrentAvatarText("Thank you for your final response. I'm now preparing your interview results.");
+        
+        setTimeout(() => {
+          setIsProcessingAudio(false);
+          setAwaitingNextQuestion(false);
+          setCurrentTranscript('');
+          
+          // Trigger completion flow after a brief delay
+          setTimeout(() => {
+            showInterviewCompletionMessage();
+          }, 1000);
+        }, 1500);
+      }
+
+    } catch (error) {
+      console.error('Failed to process job interview recording:', error);
+      setError('Failed to process your response. Please try again.');
+      setIsProcessingAudio(false);
+      setAwaitingNextQuestion(false);
+    }
+  };
+
   const handleNextQuestion = async () => {
     if (!session) return;
+    
+    console.log('🔄 Moving to next question - Current index before increment:', currentQuestionIndex);
+    console.log('🔄 Total questions available:', session.questions.length);
     
     setIsLoading(true);
     stopRecording();
     setTextAnswer(''); // Clear text answer when moving to next question
     
     try {
-      const hasMore = currentQuestionIndex + 1 < session.questions.length;
-      setCurrentQuestionIndex(prev => prev + 1);
+      const nextIndex = currentQuestionIndex + 1;
+      const hasMore = nextIndex < session.questions.length;
+      
+      console.log('🔄 Next index will be:', nextIndex, 'Has more questions:', hasMore);
+      
+      setCurrentQuestionIndex(nextIndex);
       
       if (hasMore) {
-        await loadCurrentQuestion();
+        console.log('✅ Moving to next question at index:', nextIndex);
+        await loadCurrentQuestion(nextIndex);
       } else {
-        handleCompleteInterview();
+        // Show completion message with avatar before closing
+        console.log('🏁 No more questions - showing completion');
+        showInterviewCompletionMessage();
       }
     } catch (error) {
       console.error('Failed to move to next question:', error);
@@ -351,6 +527,20 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const showInterviewCompletionMessage = () => {
+    console.log('🎯 Showing job interview completion message');
+    setShowingCompletionMessage(true);
+    setAwaitingNextQuestion(false);
+    setCurrentTranscript('');
+    
+    // Avatar completion message for job interview
+    const completionMessage = "Excellent! You have successfully completed your comprehensive job interview. I have thoroughly analyzed all your responses and am now preparing your detailed performance evaluation and personalized feedback. Your complete interview assessment report will be ready shortly. Thank you for your time and thoughtful responses!";
+    
+    setCurrentAvatarText(completionMessage);
+    
+    console.log('🎬 Avatar will announce job interview completion');
   };
 
   const handleCompleteInterview = async () => {
@@ -473,17 +663,18 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
             borderRadius: 0
           }}
         >
-          <Box display="flex" alignItems="center" justifyContent="between" flexWrap="wrap">
-            <Box display="flex" alignItems="center" gap={2} flex={1}>
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Box display="flex" alignItems="center" gap={2}>
               <Work sx={{ color: '#667eea' }} />
-              <Typography variant="h6" sx={{ color: '#667eea' }} fontWeight="bold" noWrap>
-                {job?.title} Interview
+              <Typography variant="h6" sx={{ color: '#667eea' }} fontWeight="bold">
+                Job Interview - {job?.title}
               </Typography>
               <Chip 
-                label={job?.company} 
+                label={`${job?.company}`} 
                 sx={{ 
-                  background: 'rgba(102, 126, 234, 0.1)',
-                  color: '#667eea'
+                  background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                  color: 'white',
+                  fontWeight: 'bold'
                 }}
                 size="small" 
               />
@@ -728,19 +919,16 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
         ) : (
           /* Interview Interface */
           <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-            <Grid container sx={{ height: '100%' }}>
-              {/* Avatar Section */}
-              <Grid 
-                item 
-                xs={12} 
-                md={7} 
-                sx={{ 
-                  display: 'flex', 
-                  flexDirection: 'column',
-                  background: 'rgba(0, 0, 0, 0.8)',
-                  position: 'relative'
-                }}
-              >
+            {/* Avatar Section */}
+            <Box
+              sx={{
+                flex: isMobile ? 1 : 0.6,
+                display: 'flex',
+                flexDirection: 'column',
+                background: 'rgba(0, 0, 0, 0.8)',
+                position: 'relative'
+              }}
+            >
                 <Box
                   sx={{
                     flex: 1,
@@ -751,132 +939,92 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
                     overflow: 'hidden'
                   }}
                 >
-                  {/* Avatar Video Container */}
+                  {/* Avatar Loading State */}
+                  {avatarLoading && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'rgba(0, 0, 0, 0.9)',
+                        backdropFilter: 'blur(10px)',
+                        zIndex: 10
+                      }}
+                    >
+                      <CircularProgress size={60} sx={{ mb: 3, color: '#667eea' }} />
+                      <Typography variant="h6" color="white" gutterBottom>
+                        Preparing AI Interviewer...
+                      </Typography>
+                      <Typography variant="body2" color="rgba(255, 255, 255, 0.7)" textAlign="center">
+                        Setting up your personalized interview experience
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  {/* Streaming Avatar Video */}
                   <Box
                     sx={{
                       width: '100%',
                       height: '100%',
-                      position: 'relative',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                       borderRadius: isMobile ? 0 : theme.spacing(2),
                       overflow: 'hidden',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
+                      opacity: avatarLoading ? 0.3 : 1,
+                      transition: 'opacity 0.3s ease'
                     }}
                   >
-                    {/* Default Avatar Background */}
-                    {((!currentQuestion?.avatarResponse?.mp4_url && !currentQuestion?.avatarResponse?.stream_url) || avatarLoading || !isPlaying) && (
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)',
-                          color: 'white',
-                          zIndex: 1
-                        }}
-                      >
-                        <Avatar
-                          sx={{
-                            width: 120,
-                            height: 120,
-                            mb: 3,
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            fontSize: '3rem'
-                          }}
-                        >
-                          👤
-                        </Avatar>
-                        {isLoading ? (
-                          <>
-                            <CircularProgress size={40} sx={{ color: '#667eea', mb: 2 }} />
-                            <Typography variant="h6" textAlign="center" mb={1}>
-                              Preparing Your Interview...
-                            </Typography>
-                            <Typography variant="body2" textAlign="center" sx={{ opacity: 0.8, px: 2 }}>
-                              Questions and AI avatars are being optimized for seamless experience
-                            </Typography>
-                          </>
-                        ) : avatarLoading ? (
-                          <>
-                            <CircularProgress size={40} sx={{ color: '#667eea', mb: 2 }} />
-                            <Typography variant="h6" textAlign="center">
-                              Loading Question...
-                            </Typography>
-                          </>
-                        ) : (
-                          <>
-                            <Typography variant="h5" fontWeight="bold" mb={2} textAlign="center">
-                              AI Interviewer
-                            </Typography>
-                            <Typography variant="body1" textAlign="center" sx={{ opacity: 0.8 }}>
-                              Questions are ready! Starting interview...
-                            </Typography>
-                          </>
-                        )}
-                      </Box>
-                    )}
-
-                    {/* Avatar Video */}
-                    <video
-                      ref={avatarVideoRef}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        position: 'relative',
-                        zIndex: 2
-                      }}
-                      onEnded={() => setIsPlaying(false)}
-                      onLoadStart={() => setAvatarLoading(true)}
-                      onCanPlay={() => setAvatarLoading(false)}
-                      onError={() => {
+                    <StreamingAvatarVideo
+                      text={currentAvatarText}
+                      avatar="black_man"
+                      emotion="serious"
+                      language="en"
+                      autoPlay={true}
+                      onVideoStart={() => {
+                        console.log('🎬 Job interview avatar started');
+                        setIsPlaying(true);
+                        setShowWelcome(false);
                         setAvatarLoading(false);
-                        console.error('Avatar video failed to load');
+                        if (!hasStarted) {
+                          setHasStarted(true);
+                        }
                       }}
-                      controls={false}
-                      playsInline
-                      preload="auto"
+                      onVideoEnd={() => {
+                        console.log('🎬 Job interview avatar ended');
+                        setIsPlaying(false);
+                        
+                        // If showing completion message, complete the interview
+                        if (showingCompletionMessage) {
+                          console.log('🎬 Avatar finished completion message, completing interview');
+                          setTimeout(() => {
+                            handleCompleteInterview();
+                          }, 1500); // Slightly longer delay for completion
+                          return;
+                        }
+                        
+                        // If we're awaiting next question and avatar finished speaking, move to next question
+                        if (awaitingNextQuestion) {
+                          console.log('🎬 Avatar finished analysis message, moving to next question');
+                          setTimeout(async () => {
+                            await handleNextQuestion();
+                            setAwaitingNextQuestion(false);
+                            setCurrentTranscript('');
+                          }, 1000); // Small delay to ensure smooth transition
+                        }
+                      }}
+                      onError={(error) => {
+                        console.error('Job interview avatar error:', error);
+                        setError(`Avatar error: ${error}`);
+                        setAvatarLoading(false);
+                        if (!hasStarted) {
+                          setHasStarted(true);
+                        }
+                      }}
                     />
-
-                    {/* Speaking Indicator */}
-                    {isPlaying && (
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          bottom: 20,
-                          left: 20,
-                          background: 'rgba(76, 175, 80, 0.9)',
-                          borderRadius: 2,
-                          px: 2,
-                          py: 1,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1,
-                          zIndex: 3
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            width: 8,
-                            height: 8,
-                            background: '#4caf50',
-                            borderRadius: '50%',
-                            animation: 'pulse 1s infinite'
-                          }}
-                        />
-                        <Typography variant="caption" color="white" fontWeight="bold">
-                          Speaking...
-                        </Typography>
-                      </Box>
-                    )}
                   </Box>
 
                   
@@ -914,198 +1062,165 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
                     </Typography>
                   </Box>
                 </Box>
-              </Grid>
+            </Box>
 
-              {/* Question Panel */}
-              <Grid 
-                item 
-                xs={12} 
-                md={5} 
-                sx={{ 
-                  display: 'flex', 
+            {/* Question Panel */}
+            {!isMobile && (
+              <Box
+                sx={{
+                  flex: 0.4,
+                  display: 'flex',
                   flexDirection: 'column',
                   background: 'rgba(255, 255, 255, 0.95)',
                   backdropFilter: 'blur(10px)'
                 }}
               >
                 <Container sx={{ py: 3, flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  {currentQuestion && (
-                    <>
-                      {/* Question */}
-                      <Card elevation={4} sx={{ mb: 3, background: 'linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%)' }}>
-                        <CardContent>
-                          <Box display="flex" alignItems="center" justifyContent="between" mb={2}>
-                            <Typography variant="overline" sx={{ color: '#667eea' }} fontWeight="bold">
-                              {currentQuestion.category} Question
+                    {/* Question */}
+                    <Card elevation={4} sx={{ mb: 3, background: 'linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%)' }}>
+                      <CardContent>
+                        <Typography variant="overline" sx={{ color: '#667eea' }} fontWeight="bold" gutterBottom>
+                          Job Interview Question {currentQuestionIndex + 1}
+                        </Typography>
+                        
+                        <Typography variant="h6" sx={{ lineHeight: 1.6, mb: 2 }}>
+                          {currentQuestion ? currentQuestion.text : 'Preparing your personalized interview question...'}
+                        </Typography>
+                        
+                        {currentQuestion ? (
+                          <Chip 
+                            label={currentQuestion.category} 
+                            size="small" 
+                            sx={{ 
+                              background: 'rgba(102, 126, 234, 0.1)',
+                              color: '#667eea'
+                            }}
+                          />
+                        ) : (
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <CircularProgress size={16} sx={{ color: '#667eea' }} />
+                            <Typography variant="body2" color="text.secondary">
+                              Loading question...
                             </Typography>
-                            {questionTime > 0 && (
-                              <Chip
-                                icon={<Timer />}
-                                label={`${Math.floor(questionTime / 60)}:${(questionTime % 60).toString().padStart(2, '0')}`}
-                                size="small"
-                                color="primary"
-                                variant="outlined"
-                              />
-                            )}
                           </Box>
-                          
-                          <Typography variant="h6" sx={{ lineHeight: 1.6, mb: 2 }}>
-                            {currentQuestion.text}
-                          </Typography>
-                          
-                          <Box display="flex" gap={1}>
-                            <Chip 
-                              label={currentQuestion.category} 
-                              size="small" 
+                        )}
+                      </CardContent>
+                    </Card>
+
+                  {/* Recording Controls - Always Visible */}
+                  <Card elevation={3} sx={{ mb: 3 }}>
+                    <CardContent>
+                      <Typography variant="h6" gutterBottom display="flex" alignItems="center" gap={1}>
+                        <RecordVoiceOver color="primary" />
+                        Your Answer
+                      </Typography>
+                        
+                        {/* Volume Indicator */}
+                        {isRecording && (
+                          <Box sx={{ mb: 2 }}>
+                            <Typography variant="body2" color="success.main" gutterBottom fontWeight="bold">
+                              🎤 Recording... Speak clearly and confidently
+                            </Typography>
+                            <LinearProgress
+                              variant="determinate"
+                              value={recordingVolume}
                               sx={{ 
-                                background: 'rgba(102, 126, 234, 0.1)',
-                                color: '#667eea'
+                                height: 10, 
+                                borderRadius: 5,
+                                backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                                '& .MuiLinearProgress-bar': {
+                                  backgroundColor: recordingVolume > 70 ? '#f44336' : recordingVolume > 40 ? '#ff9800' : '#4caf50'
+                                }
                               }}
                             />
-                            {currentQuestion.type && (
-                              <Chip 
-                                label={currentQuestion.type} 
-                                size="small" 
-                                color="secondary" 
-                                variant="outlined" 
-                              />
-                            )}
                           </Box>
-                        </CardContent>
-                      </Card>
+                        )}
 
-                      {/* Recording Controls */}
-                      <Card elevation={3} sx={{ mb: 3 }}>
-                        <CardContent>
-                          <Box display="flex" alignItems="center" justifyContent="between" mb={2}>
-                            <Typography variant="h6" display="flex" alignItems="center" gap={1}>
-                              {inputMode === 'voice' ? <RecordVoiceOver color="primary" /> : <Keyboard color="primary" />}
-                              Your Response
+                        {/* Real-time transcript display */}
+                        {currentTranscript && (
+                          <Box sx={{ mb: 2, p: 2, bgcolor: 'rgba(76, 175, 80, 0.1)', borderRadius: 1, border: '1px solid rgba(76, 175, 80, 0.3)' }}>
+                            <Typography variant="body2" color="success.main" fontWeight="bold" gutterBottom>
+                              📝 Live Transcript:
                             </Typography>
-                            
-                            <ToggleButtonGroup
-                              value={inputMode}
-                              exclusive
-                              onChange={(e, newMode) => newMode && setInputMode(newMode)}
-                              size="small"
-                              aria-label="response input mode"
-                            >
-                              <ToggleButton value="voice" aria-label="voice response">
-                                <Mic fontSize="small" />
-                              </ToggleButton>
-                              <ToggleButton value="text" aria-label="text response">
-                                <Keyboard fontSize="small" />
-                              </ToggleButton>
-                            </ToggleButtonGroup>
+                            <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+                              {currentTranscript}
+                            </Typography>
                           </Box>
-                          
-                          {inputMode === 'voice' ? (
-                            <>
-                              {/* Volume Indicator */}
-                              {isRecording && (
-                                <Box sx={{ mb: 2 }}>
-                                  <Typography variant="body2" color="success.main" gutterBottom fontWeight="bold">
-                                    🎤 Recording... Speak confidently
-                                  </Typography>
-                                  <LinearProgress
-                                    variant="determinate"
-                                    value={recordingVolume}
-                                    sx={{ 
-                                      height: 10, 
-                                      borderRadius: 5,
-                                      backgroundColor: 'rgba(76, 175, 80, 0.2)',
-                                      '& .MuiLinearProgress-bar': {
-                                        backgroundColor: recordingVolume > 70 ? '#f44336' : recordingVolume > 40 ? '#ff9800' : '#4caf50'
-                                      }
-                                    }}
-                                  />
-                                </Box>
-                              )}
-                            </>
+                        )}
+                        
+                        {/* Controls */}
+                        <Stack direction="row" spacing={2} justifyContent="center">
+                          {!isRecording ? (
+                            <Button
+                              variant="contained"
+                              startIcon={<Mic />}
+                              onClick={startRecording}
+                              size="large"
+                              disabled={isProcessingAudio || awaitingNextQuestion || !currentQuestion}
+                              sx={{
+                                background: 'linear-gradient(45deg, #4caf50 30%, #66bb6a 90%)',
+                                flex: 1
+                              }}
+                            >
+                              {!currentQuestion ? 'Loading Question...' : isProcessingAudio ? 'Processing...' : 'Record Answer'}
+                            </Button>
                           ) : (
-                            <Box sx={{ mb: 2 }}>
-                              <TextField
-                                fullWidth
-                                multiline
-                                rows={4}
-                                value={textAnswer}
-                                onChange={(e) => setTextAnswer(e.target.value)}
-                                placeholder="Type your answer here... Be specific and provide examples when possible."
-                                variant="outlined"
-                                sx={{
-                                  '& .MuiOutlinedInput-root': {
-                                    backgroundColor: 'rgba(102, 126, 234, 0.05)'
-                                  }
-                                }}
-                              />
-                              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                                Characters: {textAnswer.length} | Words: {textAnswer.trim().split(/\s+/).filter(word => word.length > 0).length}
-                              </Typography>
-                            </Box>
+                            <Button
+                              variant="contained"
+                              startIcon={<Stop />}
+                              onClick={stopRecording}
+                              color="error"
+                              size="large"
+                              sx={{ flex: 1 }}
+                            >
+                              Stop Recording
+                            </Button>
                           )}
                           
-                          {/* Controls */}
-                          <Stack direction="row" spacing={2} justifyContent="center">
-                            {inputMode === 'voice' ? (
-                              !isRecording ? (
-                                <Button
-                                  variant="contained"
-                                  startIcon={<Mic />}
-                                  onClick={startRecording}
-                                  size="large"
-                                  sx={{
-                                    background: 'linear-gradient(45deg, #4caf50 30%, #66bb6a 90%)',
-                                    flex: 1
-                                  }}
-                                >
-                                  Record Answer
-                                </Button>
-                              ) : (
-                                <Button
-                                  variant="contained"
-                                  startIcon={<Stop />}
-                                  onClick={stopRecording}
-                                  color="error"
-                                  size="large"
-                                  sx={{ flex: 1 }}
-                                >
-                                  Stop Recording
-                                </Button>
-                              )
-                            ) : (
-                              <Button
-                                variant="contained"
-                                startIcon={<Send />}
-                                onClick={() => {
-                                  if (textAnswer.trim()) {
-                                    console.log('Text answer submitted:', textAnswer);
-                                    setTextAnswer(''); // Clear the answer
-                                  }
-                                }}
-                                disabled={!textAnswer.trim()}
-                                size="large"
-                                sx={{
-                                  background: 'linear-gradient(45deg, #2196f3 30%, #64b5f6 90%)',
-                                  flex: 1
-                                }}
-                              >
-                                Submit Answer
-                              </Button>
-                            )}
-                            
-                            <Button
-                              variant="outlined"
-                              endIcon={<ArrowForward />}
-                              onClick={handleNextQuestion}
-                              disabled={isLoading}
-                              size="large"
-                            >
-                              {currentQuestionIndex === 4 ? 'Complete' : 'Next'}
-                            </Button>
-                          </Stack>
-                        </CardContent>
-                      </Card>
-                    </>
+                          <Button
+                            variant="outlined"
+                            endIcon={<ArrowForward />}
+                            onClick={handleNextQuestion}
+                            disabled={isLoading || isProcessingAudio || awaitingNextQuestion || !currentQuestion}
+                            size="large"
+                          >
+                            {currentQuestionIndex === 4 ? 'Finish' : 'Next'}
+                          </Button>
+                        </Stack>
+                      </CardContent>
+                    </Card>
+
+                  {/* Audio Processing Status - Always Visible When Active */}
+                  {(isProcessingAudio || awaitingNextQuestion || showingCompletionMessage) && (
+                    <Card elevation={3} sx={{ mb: 3, border: showingCompletionMessage ? '2px solid #ff9800' : 'none' }}>
+                      <CardContent>
+                        <Stack direction="row" alignItems="center" spacing={2}>
+                          <CircularProgress size={24} color={showingCompletionMessage ? "warning" : "primary"} />
+                          <Typography variant="body2">
+                            {showingCompletionMessage 
+                              ? '🎯 Finalizing your job interview results and preparing comprehensive feedback...'
+                              : isProcessingAudio 
+                                ? '🎙️ Processing your audio response...' 
+                                : '🤖 AI is analyzing your response and preparing the next question...'}
+                          </Typography>
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Current Transcript Display */}
+                  {currentTranscript && (
+                    <Card elevation={3} sx={{ mb: 3, border: '2px solid #4caf50' }}>
+                      <CardContent>
+                        <Typography variant="subtitle2" color="success.main" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <CheckCircle fontSize="small" />
+                          Your Response (Transcribed):
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
+                          "{currentTranscript}"
+                        </Typography>
+                      </CardContent>
+                    </Card>
                   )}
 
                   {/* Interview Progress */}
@@ -1138,8 +1253,8 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
                     </CardContent>
                   </Card>
                 </Container>
-              </Grid>
-            </Grid>
+              </Box>
+            )}
           </Box>
         )}
 

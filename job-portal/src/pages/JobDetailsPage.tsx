@@ -310,15 +310,15 @@ const JobDetailsPage: React.FC = () => {
             </Grid>
             <Grid item xs>
               <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
-                {job.title}
+                {job.title || 'Untitled Job'}
               </Typography>
               <Typography variant="h6" color="primary.main" gutterBottom>
-                {job.company}
+                {job.company || 'Company not specified'}
               </Typography>
               <Stack direction="row" spacing={2} flexWrap="wrap">
                 <Box display="flex" alignItems="center">
                   <LocationOn fontSize="small" color="action" sx={{ mr: 0.5 }} />
-                  <Typography variant="body2">{job.location}</Typography>
+                  <Typography variant="body2">{job.location || 'Location not specified'}</Typography>
                 </Box>
                 {job.salary && (
                   <Box display="flex" alignItems="center">
@@ -355,12 +355,12 @@ const JobDetailsPage: React.FC = () => {
               Job Description
             </Typography>
             <Typography variant="body1" paragraph sx={{ whiteSpace: 'pre-line' }}>
-              {job.description}
+              {job.description || 'No description available'}
             </Typography>
           </Paper>
 
           {/* Requirements */}
-          {job.requirements.length > 0 && (
+          {job.requirements && job.requirements.length > 0 && (
             <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="h5" fontWeight="bold" gutterBottom>
                 Requirements
@@ -379,7 +379,7 @@ const JobDetailsPage: React.FC = () => {
           )}
 
           {/* Responsibilities */}
-          {job.responsibilities.length > 0 && (
+          {job.responsibilities && job.responsibilities.length > 0 && (
             <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="h5" fontWeight="bold" gutterBottom>
                 Responsibilities
@@ -398,7 +398,7 @@ const JobDetailsPage: React.FC = () => {
           )}
 
           {/* Benefits */}
-          {job.benefits.length > 0 && (
+          {job.benefits && job.benefits.length > 0 && (
             <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="h5" fontWeight="bold" gutterBottom>
                 Benefits
@@ -508,7 +508,7 @@ const JobDetailsPage: React.FC = () => {
           </Paper>
 
           {/* Skills Required */}
-          {job.skills.length > 0 && (
+          {job.skills && job.skills.length > 0 && (
             <Paper sx={{ p: 3, mb: 3 }}>
               <Typography variant="h6" fontWeight="bold" gutterBottom>
                 Skills Required
@@ -535,7 +535,7 @@ const JobDetailsPage: React.FC = () => {
                   {job.company}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {job.employer.firstName} {job.employer.lastName}
+                  {job.employer ? `${job.employer.firstName} ${job.employer.lastName}` : 'Contact information not available'}
                 </Typography>
               </Box>
             </Box>

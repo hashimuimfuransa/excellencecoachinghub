@@ -373,12 +373,12 @@ const MainLayout: React.FC = () => {
   const handleLogout = () => {
     handleProfileMenuClose();
     logout();
-    navigate('/login');
+    window.location.href = '/login';
   };
 
   const handleNavigation = (path: string) => {
     if (path !== '#') {
-      navigate(path);
+      window.location.href = path;
       if (mobileOpen) {
         setMobileOpen(false);
       }
@@ -394,7 +394,7 @@ const MainLayout: React.FC = () => {
 
   const handleTakeJobReadinessTest = () => {
     setShowCareerPopup(false);
-    navigate('/app/career-guidance');
+    window.location.href = '/app/career-guidance';
   };
 
   // Recursive function to render navigation items with nested submenus
@@ -647,19 +647,19 @@ const MainLayout: React.FC = () => {
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
-        <MenuItem onClick={() => navigate('/app/profile')}>
+        <MenuItem onClick={() => window.location.href = '/app/profile'}>
           <ListItemIcon>
             <Person fontSize="small" />
           </ListItemIcon>
           My Profile
         </MenuItem>
-        <MenuItem onClick={() => navigate('/app/applications')}>
+        <MenuItem onClick={() => window.location.href = '/app/applications'}>
           <ListItemIcon>
             <Work fontSize="small" />
           </ListItemIcon>
           My Applications
         </MenuItem>
-        <MenuItem onClick={() => navigate('/app/settings')}>
+        <MenuItem onClick={() => window.location.href = '/app/settings'}>
           <ListItemIcon>
             <Settings fontSize="small" />
           </ListItemIcon>

@@ -322,7 +322,26 @@ const TestManagement: React.FC<TestManagementProps> = ({ onTestSelect }) => {
 
   const loadStats = async () => {
     try {
-      // Mock stats
+      console.log('🔍 TestManagement: Loading real test stats...');
+      const statsData = await superAdminService.getTestStats();
+      console.log('📊 TestManagement: Loaded stats:', statsData);
+
+      setStats({
+        totalTests: statsData.totalTests || 0,
+        activeTests: statsData.activeTests || 0,
+        draftTests: statsData.draftTests || 0,
+        totalAttempts: statsData.totalAttempts || 0,
+        averageScore: statsData.averageScore || 0,
+        passRate: statsData.passRate || 0,
+        topTestTypes: (statsData.topPerformingTests || []).map(test => ({
+          type: test.testTitle,
+          count: test.attempts,
+          averageScore: test.averageScore
+        })).slice(0, 4)
+      });
+    } catch (error) {
+      console.error('Error loading test stats:', error);
+      // Fallback to mock stats if API fails
       setStats({
         totalTests: 234,
         activeTests: 189,
@@ -337,8 +356,6 @@ const TestManagement: React.FC<TestManagementProps> = ({ onTestSelect }) => {
           { type: 'Skills', count: 33, averageScore: 79.8 }
         ]
       });
-    } catch (error) {
-      console.error('Error loading stats:', error);
     }
   };
 

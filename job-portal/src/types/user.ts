@@ -65,13 +65,8 @@ export interface User {
   gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
   nationality?: string;
   location?: string;
-  address?: {
-    street?: string;
-    city?: string;
-    state?: string;
-    country?: string;
-    zipCode?: string;
-  };
+  idNumber?: string;
+  address?: string;
   
   // Professional Information
   jobTitle?: string;
@@ -125,7 +120,7 @@ export interface User {
   };
   
   // Documents
-  resume?: string; // File path or URL
+  cvFile?: string; // CV file path or URL
   coverLetter?: string;
   portfolio?: string;
   

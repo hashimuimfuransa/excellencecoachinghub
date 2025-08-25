@@ -70,6 +70,15 @@ interface InterviewFilters {
   sortOrder: 'asc' | 'desc';
 }
 
+interface InterviewStats {
+  totalInterviews: number;
+  completedInterviews: number;
+  scheduledInterviews: number;
+  inProgressInterviews: number;
+  averageScore: number;
+  completionRate: number;
+}
+
 const InterviewManagement: React.FC = () => {
   const [interviews, setInterviews] = useState<AIInterview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +89,14 @@ const InterviewManagement: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedInterview, setSelectedInterview] = useState<AIInterview | null>(null);
   const [detailDialog, setDetailDialog] = useState(false);
+  const [stats, setStats] = useState<InterviewStats>({
+    totalInterviews: 0,
+    completedInterviews: 0,
+    scheduledInterviews: 0,
+    inProgressInterviews: 0,
+    averageScore: 0,
+    completionRate: 0
+  });
 
   const [filters, setFilters] = useState<InterviewFilters>({
     search: '',
@@ -91,6 +108,7 @@ const InterviewManagement: React.FC = () => {
 
   useEffect(() => {
     loadInterviews();
+    loadStats();
   }, [page, rowsPerPage, filters]);
 
   const loadInterviews = async () => {

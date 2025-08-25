@@ -7,6 +7,108 @@ import { uploadToCloudinary, deleteOldAvatar } from '../config/cloudinary';
 import { profileCompletionService } from '../services/profileCompletionService';
 import { simpleProfileCompletionService } from '../services/simpleProfileCompletion';
 
+// Get all job seekers (Admin only)
+export const getAllJobSeekers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const search = req.query.search as string || '';
+    const status = req.query.status as string;
+    const completion = req.query.completion as string;
+
+    // Build filter object - only get job seekers (students)
+    const filter: any = { 
+      role: UserRole.STUDENT // Job seekers are students in our system
+    };
+    
+    if (search) {
+      filter.$or = [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { jobTitle: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (status === 'active') {
+      filter.isActive = true;
+    } else if (status === 'inactive') {
+      filter.isActive = false;
+    }
+
+    // Calculate skip value for pagination
+    const skip = (page - 1) * limit;
+
+    // Get job seekers with all profile data
+    const jobSeekers = await User.find(filter)
+      .select('-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    // Calculate profile completion for each job seeker
+    const jobSeekersWithCompletion = await Promise.all(
+      jobSeekers.map(async (jobSeeker: any) => {
+        const completionResult = profileCompletionService.calculateProfileCompletion(jobSeeker);
+        
+        return {
+          ...jobSeeker,
+          profileCompletion: {
+            percentage: completionResult.percentage,
+            status: completionResult.status
+          },
+          verification: {
+            email: jobSeeker.isEmailVerified || false,
+            phone: !!jobSeeker.phone,
+            identity: !!jobSeeker.idNumber
+          },
+          // Mock application counts - replace with real data when available
+          applicationCount: Math.floor(Math.random() * 20),
+          savedJobsCount: Math.floor(Math.random() * 15),
+          certificatesCount: jobSeeker.certifications?.length || 0,
+          testsCompletedCount: Math.floor(Math.random() * 10),
+          interviewsCount: Math.floor(Math.random() * 8)
+        };
+      })
+    );
+
+    // Filter by completion if specified
+    const filteredJobSeekers = completion === 'complete' 
+      ? jobSeekersWithCompletion.filter(js => js.profileCompletion.percentage >= 80)
+      : completion === 'incomplete'
+      ? jobSeekersWithCompletion.filter(js => js.profileCompletion.percentage < 80)
+      : jobSeekersWithCompletion;
+
+    // Get total count
+    const totalJobSeekers = await User.countDocuments(filter);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        jobSeekers: filteredJobSeekers,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalJobSeekers / limit),
+          totalJobSeekers,
+          hasNextPage: page * limit < totalJobSeekers,
+          hasPrevPage: page > 1
+        },
+        stats: {
+          total: filteredJobSeekers.length,
+          active: filteredJobSeekers.filter(js => js.isActive).length,
+          completed: filteredJobSeekers.filter(js => js.profileCompletion.percentage >= 80).length,
+          averageCompletion: Math.round(
+            filteredJobSeekers.reduce((sum, js) => sum + js.profileCompletion.percentage, 0) / filteredJobSeekers.length
+          )
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Get all users (Admin only)
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {

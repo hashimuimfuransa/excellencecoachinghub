@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { body } from 'express-validator';
 import {
   getAllUsers,
+  getAllJobSeekers,
   getUserById,
   createUser,
   updateUser,
@@ -183,6 +184,7 @@ router.get('/debug/env', (req, res) => {
 
 // Admin-only routes
 router.get('/', requireAdmin, getAllUsers);
+router.get('/job-seekers', requireAdmin, getAllJobSeekers);
 router.get('/stats', requireAdmin, getUserStats);
 router.get('/teachers', requireAdmin, getAllTeachers);
 router.get('/teacher-stats', requireAdmin, getTeacherStats);

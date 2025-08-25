@@ -57,7 +57,7 @@ export class ProfileCompletionService {
 
     // Professional Information (40% weight)
     const professionalFields = [
-      { field: 'resume', weight: 10, label: 'Resume/CV' },
+      { field: 'cvFile', weight: 10, label: 'CV File' },
       { field: 'skills', weight: 8, label: 'Skills (at least 3)' },
       { field: 'experience', weight: 8, label: 'Work Experience' },
       { field: 'education', weight: 6, label: 'Education Background' },
@@ -76,7 +76,8 @@ export class ProfileCompletionService {
       { field: 'dateOfBirth', weight: 2, label: 'Date of Birth' },
       { field: 'gender', weight: 2, label: 'Gender' },
       { field: 'nationality', weight: 2, label: 'Nationality' },
-      { field: 'expectedSalary', weight: 3, label: 'Expected Salary' }
+      { field: 'idNumber', weight: 2, label: 'ID Number' },
+      { field: 'expectedSalary', weight: 1, label: 'Expected Salary' }
     ];
 
     let totalScore = 0;

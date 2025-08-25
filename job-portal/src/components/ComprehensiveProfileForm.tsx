@@ -268,8 +268,23 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
       clearInterval(progressInterval);
 
       if (response.ok) {
-        const result = await response.json();
-        const fileUrl = result.data[fileType].url;
+        let result;
+        try {
+          const responseText = await response.text();
+          if (responseText.trim()) {
+            result = JSON.parse(responseText);
+          } else {
+            throw new Error('Empty response from server');
+          }
+        } catch (parseError) {
+          console.error('Failed to parse response:', parseError);
+          throw new Error('Invalid response format from server');
+        }
+
+        const fileUrl = result.data?.[fileType]?.url;
+        if (!fileUrl) {
+          throw new Error('No file URL received from server');
+        }
         
         // Update progress to 100%
         setUploadStates(prev => ({
@@ -288,7 +303,18 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
           }));
         }, 3000);
       } else {
-        const errorData = await response.json();
+        let errorData;
+        try {
+          const errorText = await response.text();
+          if (errorText.trim()) {
+            errorData = JSON.parse(errorText);
+          } else {
+            errorData = { error: `Server returned ${response.status} status` };
+          }
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+          errorData = { error: `Server error (${response.status})` };
+        }
         throw new Error(errorData.error || `Failed to upload ${fileType}`);
       }
     } catch (error: any) {
@@ -757,6 +783,23 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
                     slotProps={{ textField: { fullWidth: true, sx: { mb: 2 } } }}
                   />
                 </LocalizationProvider>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="National ID Number"
+                  value={formData.idNumber || ''}
+                  onChange={(e) => handleInputChange('idNumber', e.target.value)}
+                  helperText="Enter your national identification number"
+                  sx={{ mb: 2 }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        🆔
+                      </InputAdornment>
+                    ),
+                  }}
+                />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth sx={{ mb: 2 }}>

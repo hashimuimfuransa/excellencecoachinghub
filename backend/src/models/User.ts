@@ -119,6 +119,8 @@ export interface IUserDocument extends Document {
   address?: string;
   industry?: string;
   department?: string;
+  idNumber?: string;
+  cvFile?: string;
   
   // Profile completion tracking
   profileCompletion?: {
@@ -434,6 +436,15 @@ const userSchema = new Schema<IUserDocument>({
     trim: true
   },
   department: {
+    type: String,
+    trim: true
+  },
+  idNumber: {
+    type: String,
+    trim: true,
+    maxlength: [50, 'ID number cannot exceed 50 characters']
+  },
+  cvFile: {
     type: String,
     trim: true
   },

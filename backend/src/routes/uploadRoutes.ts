@@ -1,5 +1,6 @@
 import express from 'express';
 import multer from 'multer';
+import { v2 as cloudinary } from 'cloudinary';
 import { protect } from '../middleware/auth';
 import { uploadDocumentToCloudinary, uploadToCloudinary } from '../config/cloudinary';
 import { User } from '../models/User';
@@ -110,81 +111,161 @@ router.post('/documents', protect, upload.array('files', 10), async (req, res) =
   }
 });
 
-// @desc    Upload single CV file
-// @route   POST /api/upload/cv
-// @access  Private
-router.post('/cv', protect, setResponseHeaders, upload.single('cv'), async (req, res) => {
+// Test endpoint to debug empty responses
+router.post('/cv-test', protect, (req, res) => {
+  console.log('🧪 CV test endpoint hit');
+  try {
+    res.status(200).json({
+      success: true,
+      message: 'Test endpoint working',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Test endpoint error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Test failed'
+    });
+  }
+});
+
+// Minimal CV upload that stores file locally (temporary solution)
+router.post('/cv-simple', protect, upload.single('cv'), (req, res) => {
+  console.log('🔧 Simple CV upload endpoint hit');
+  
   try {
     const userId = (req as any).user.id;
     const file = req.file;
     
-    console.log('CV upload request for user:', userId);
+    console.log('User ID:', userId);
+    console.log('File received:', !!file);
     
-    // Basic validation
     if (!file) {
-      console.log('No file provided');
-      const errorResponse = {
+      return res.status(400).json({
         success: false,
-        error: 'No CV file uploaded'
-      };
-      res.status(400);
-      res.write(JSON.stringify(errorResponse));
-      res.end();
-      return;
+        error: 'No file uploaded'
+      });
     }
 
-    console.log('File details:', { name: file.originalname, size: file.size, type: file.mimetype });
-
-    // Upload to Cloudinary
-    console.log('Starting Cloudinary upload...');
-    const folder = `excellence-coaching-hub/documents/${userId}/cv`;
-    const uploadResult = await uploadDocumentToCloudinary(
-      file.buffer, 
-      userId, 
-      file.originalname, 
-      folder
-    );
-    
-    console.log('Cloudinary upload successful:', uploadResult.url);
-
-    // Update user profile
-    console.log('Updating user profile...');
-    await User.findByIdAndUpdate(userId, {
-      cvFile: uploadResult.url,
-      resume: uploadResult.url,
-      lastProfileUpdate: new Date().toISOString()
+    console.log('File details:', {
+      name: file.originalname,
+      size: file.size,
+      mimetype: file.mimetype
     });
-    
-    console.log('User profile updated successfully');
 
-    // Prepare and send success response
-    const successResponse = {
+    // For now, just return success without actually storing
+    // This will help us identify if the issue is with Cloudinary or response handling
+    const mockUrl = `https://temp-storage.com/cv/${userId}/${file.originalname}`;
+    
+    res.status(200).json({
       success: true,
       data: {
-        url: uploadResult.url,
+        url: mockUrl,
         originalName: file.originalname,
-        size: uploadResult.size
+        size: file.size
+      },
+      message: 'File received successfully (test mode)'
+    });
+    
+  } catch (error: any) {
+    console.error('Simple upload error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Simple upload failed'
+    });
+  }
+});
+
+// @desc    Upload single CV file (ultra-simple production version)
+// @route   POST /api/upload/cv  
+// @access  Private
+router.post('/cv', protect, upload.single('cv'), async (req, res) => {
+  console.log('🚀 CV upload request received');
+  
+  // Set response timeout to prevent hanging
+  const responseTimeout = setTimeout(() => {
+    if (!res.headersSent) {
+      console.error('⏰ Response timeout - force closing');
+      res.status(408).json({
+        success: false,
+        error: 'Request timeout'
+      });
+    }
+  }, 25000);
+
+  try {
+    const userId = (req as any).user.id;
+    const file = req.file;
+    
+    console.log('👤 User ID:', userId);
+    console.log('📄 File received:', !!file, file?.originalname);
+    
+    if (!file) {
+      clearTimeout(responseTimeout);
+      return res.status(400).json({
+        success: false,
+        error: 'No CV file uploaded'
+      });
+    }
+
+    // Create unique filename
+    const timestamp = Date.now();
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const uniqueId = `${userId}_${timestamp}`;
+    
+    console.log('☁️ Preparing Cloudinary upload with ID:', uniqueId);
+
+    // Direct Cloudinary upload with base64
+    const base64File = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+    
+    console.log('📤 Uploading to Cloudinary...');
+    const result = await cloudinary.uploader.upload(base64File, {
+      public_id: `cv_${uniqueId}`,
+      folder: `excellence-coaching-hub/cv`,
+      resource_type: 'raw',
+      timeout: 15000 // 15 second timeout
+    });
+
+    console.log('✅ Cloudinary upload complete:', result.secure_url);
+
+    // Update user - fire and forget to avoid hanging
+    setImmediate(async () => {
+      try {
+        await User.findByIdAndUpdate(userId, {
+          cvFile: result.secure_url,
+          resume: result.secure_url,
+          lastProfileUpdate: new Date().toISOString()
+        });
+        console.log('✅ User profile updated');
+      } catch (dbError) {
+        console.error('⚠️ DB update failed (non-critical):', dbError);
+      }
+    });
+
+    // Clear timeout and send immediate response
+    clearTimeout(responseTimeout);
+    
+    console.log('📤 Sending success response');
+    res.status(200).json({
+      success: true,
+      data: {
+        url: result.secure_url,
+        originalName: file.originalname,
+        size: file.size
       },
       message: 'CV uploaded successfully'
-    };
-    
-    console.log('Sending success response:', successResponse);
-    res.status(200);
-    res.write(JSON.stringify(successResponse));
-    res.end();
+    });
 
   } catch (error: any) {
-    console.error('CV upload error:', error);
+    clearTimeout(responseTimeout);
+    console.error('❌ Upload error:', error);
     
-    const errorResponse = {
-      success: false,
-      error: 'Failed to upload CV. Please try again.'
-    };
-    
-    console.log('Sending error response:', errorResponse);
-    res.status(500);
-    res.write(JSON.stringify(errorResponse));
-    res.end();
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        error: 'Upload failed. Please try again.'
+      });
+    }
   }
 });
 

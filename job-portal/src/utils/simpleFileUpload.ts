@@ -1,6 +1,5 @@
 /**
- * Simple, production-ready file upload utility
- * Focuses on reliability over complex retry mechanisms
+ * Ultra-simple CV upload for production reliability
  */
 
 interface UploadResponse {
@@ -15,129 +14,82 @@ interface UploadResponse {
 }
 
 /**
- * Upload a file to the server with simple error handling
- */
-export const uploadFile = async (
-  file: File,
-  fileType: 'cv' | 'resume' | 'avatar',
-  onProgress?: (progress: number) => void
-): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    const formData = new FormData();
-    
-    // Get auth token
-    const token = localStorage.getItem('token');
-    if (!token) {
-      reject(new Error('Authentication required. Please log in again.'));
-      return;
-    }
-
-    // Setup progress tracking
-    if (onProgress) {
-      xhr.upload.addEventListener('progress', (event) => {
-        if (event.lengthComputable) {
-          const progress = Math.round((event.loaded / event.total) * 100);
-          onProgress(progress);
-        }
-      });
-    }
-
-    // Handle completion
-    xhr.addEventListener('load', () => {
-      console.log('Upload completed with status:', xhr.status);
-      console.log('Response text length:', xhr.responseText?.length || 0);
-      
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          // Check if we got a response
-          if (!xhr.responseText || xhr.responseText.trim() === '') {
-            console.error('Empty response from server');
-            reject(new Error('Server returned empty response. Please try again or contact support.'));
-            return;
-          }
-
-          const result: UploadResponse = JSON.parse(xhr.responseText);
-          
-          if (result.success && result.data?.url) {
-            console.log('Upload successful:', result.data.url);
-            resolve(result.data.url);
-          } else {
-            reject(new Error(result.error || 'Upload failed'));
-          }
-        } catch (parseError) {
-          console.error('Failed to parse response:', parseError);
-          console.error('Raw response:', xhr.responseText.substring(0, 500));
-          reject(new Error('Invalid response from server'));
-        }
-      } else {
-        console.error('Upload failed with status:', xhr.status);
-        reject(new Error(`Upload failed (${xhr.status}). Please try again.`));
-      }
-    });
-
-    // Handle errors
-    xhr.addEventListener('error', () => {
-      console.error('Network error during upload');
-      reject(new Error('Network error. Please check your connection and try again.'));
-    });
-
-    // Handle timeout
-    xhr.addEventListener('timeout', () => {
-      console.error('Upload timeout');
-      reject(new Error('Upload timed out. Please try again.'));
-    });
-
-    // Setup request
-    const endpoint = `/api/upload/${fileType}`;
-    xhr.open('POST', endpoint, true);
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-    xhr.timeout = 60000; // 1 minute timeout
-    
-    // Prepare form data
-    formData.append(fileType, file);
-    
-    console.log(`Starting ${fileType} upload:`, {
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type,
-      endpoint
-    });
-    
-    // Start upload
-    xhr.send(formData);
-  });
-};
-
-/**
- * Upload CV file specifically
+ * Upload CV file with minimal complexity
  */
 export const uploadCV = async (
   file: File,
   onProgress?: (progress: number) => void
 ): Promise<string> => {
-  // Validate file before upload
+  // Basic validation
   if (!file) {
     throw new Error('No file selected');
   }
   
-  if (file.size > 100 * 1024 * 1024) { // 100MB
-    throw new Error('File size too large. Please choose a file under 100MB.');
+  if (file.size > 50 * 1024 * 1024) { // 50MB limit for production
+    throw new Error('File too large. Please choose a file under 50MB.');
   }
-  
-  const allowedTypes = [
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'text/plain',
-    'image/jpeg',
-    'image/jpg',
-    'image/png'
-  ];
-  
-  if (!allowedTypes.includes(file.type)) {
-    throw new Error('Invalid file type. Please upload a PDF, Word document, text file, or image.');
+
+  // Get auth token
+  const token = localStorage.getItem('token');
+  if (!token) {
+    throw new Error('Please log in to upload files');
   }
-  
-  return uploadFile(file, 'cv', onProgress);
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const formData = new FormData();
+    
+    // Set up progress tracking
+    if (onProgress) {
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const progress = Math.round((event.loaded / event.total) * 100);
+          onProgress(progress);
+        }
+      };
+    }
+
+    // Handle response
+    xhr.onload = () => {
+      console.log('Upload response status:', xhr.status);
+      console.log('Response length:', xhr.responseText?.length || 0);
+      
+      if (xhr.status === 200) {
+        try {
+          const response = xhr.responseText?.trim();
+          if (!response) {
+            console.error('Empty response from server');
+            reject(new Error('Server error. Please try again.'));
+            return;
+          }
+
+          const result: UploadResponse = JSON.parse(response);
+          if (result.success && result.data?.url) {
+            resolve(result.data.url);
+          } else {
+            reject(new Error(result.error || 'Upload failed'));
+          }
+        } catch (error) {
+          console.error('Parse error:', error);
+          reject(new Error('Server response error'));
+        }
+      } else {
+        reject(new Error(`Upload failed (${xhr.status})`));
+      }
+    };
+
+    // Handle errors
+    xhr.onerror = () => reject(new Error('Network error'));
+    xhr.ontimeout = () => reject(new Error('Upload timeout'));
+
+    // Setup and send request
+    xhr.open('POST', '/api/upload/cv');
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.timeout = 45000; // 45 seconds
+    
+    formData.append('cv', file);
+    
+    console.log('Starting CV upload:', file.name);
+    xhr.send(formData);
+  });
 };

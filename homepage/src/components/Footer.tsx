@@ -198,7 +198,7 @@ const Footer: React.FC = () => {
                     src="/logo1.png"
                     alt="Excellence Coaching Hub Logo"
                     sx={{
-                      height: 50,
+                      height: 90,
                       mr: 2,
                       filter: 'brightness(0) invert(1)',
                     }}

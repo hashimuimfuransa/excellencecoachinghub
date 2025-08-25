@@ -89,7 +89,7 @@ const Navbar: React.FC = () => {
             style={{ height: 30, width: 'auto' }}
           />
           <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-            Excellence Hub
+        
           </Typography>
         </Box>
         <IconButton onClick={handleDrawerToggle}>
@@ -210,7 +210,7 @@ const Navbar: React.FC = () => {
             <img 
               src="/logo1.png" 
               alt="Excellence Coaching Hub" 
-              style={{ height: 40, width: 'auto' }}
+              style={{ height: 80, width: 'auto' }}
             />
             <Typography 
               variant="h6" 

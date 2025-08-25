@@ -5,31 +5,9 @@ import { uploadDocumentToCloudinary, uploadToCloudinary } from '../config/cloudi
 import { User } from '../models/User';
 import { profileCompletionService } from '../services/profileCompletionService';
 
-// Middleware to ensure proper response headers and prevent empty responses
-const ensureResponseHeaders = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  // Set response headers to prevent caching and ensure proper content type
+// Simple middleware to set response headers
+const setResponseHeaders = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  
-  // Override the end method to ensure we never send empty responses
-  const originalEnd = res.end;
-  res.end = function(chunk?: any, encoding?: BufferEncoding | (() => void), callback?: () => void) {
-    // If no chunk is provided or chunk is empty, send error
-    if (!chunk || (typeof chunk === 'string' && chunk.trim() === '')) {
-      console.error('⚠️ Attempted to send empty response - preventing this');
-      
-      if (!res.headersSent) {
-        return originalEnd.call(this, JSON.stringify({
-          success: false,
-          error: 'Internal server error - empty response detected'
-        }), encoding as BufferEncoding, callback as (() => void));
-      }
-    }
-    
-    return originalEnd.call(this, chunk, encoding as BufferEncoding, callback as (() => void));
-  };
-  
   next();
 };
 
@@ -135,145 +113,78 @@ router.post('/documents', protect, upload.array('files', 10), async (req, res) =
 // @desc    Upload single CV file
 // @route   POST /api/upload/cv
 // @access  Private
-router.post('/cv', protect, ensureResponseHeaders, upload.single('cv'), async (req, res) => {
-  let uploadResult = null;
-  let userUpdated = false;
-  
+router.post('/cv', protect, setResponseHeaders, upload.single('cv'), async (req, res) => {
   try {
     const userId = (req as any).user.id;
     const file = req.file;
     
-    console.log('📂 CV upload request for user:', userId);
-    console.log('📄 File details:', { 
-      originalName: file?.originalname, 
-      mimetype: file?.mimetype, 
-      size: file?.size 
-    });
+    console.log('CV upload request for user:', userId);
     
+    // Basic validation
     if (!file) {
-      console.error('❌ No CV file provided in request');
-      return res.status(400).json({
+      console.log('No file provided');
+      const errorResponse = {
         success: false,
         error: 'No CV file uploaded'
-      });
-    }
-
-    console.log('☁️ Starting Cloudinary upload...');
-    const folder = `excellence-coaching-hub/documents/${userId}/cv`;
-    
-    // Upload to Cloudinary with timeout protection
-    uploadResult = await Promise.race([
-      uploadDocumentToCloudinary(file.buffer, userId, file.originalname, folder),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Upload timeout')), 120000) // 2 minutes
-      )
-    ]) as { url: string; publicId: string; size: number };
-    
-    console.log('✅ Cloudinary upload successful:', uploadResult.url);
-
-    // Update user profile with CV URL - separate try-catch
-    console.log('📝 Updating user profile...');
-    try {
-      const updatedUser = await User.findByIdAndUpdate(userId, {
-        cvFile: uploadResult.url,
-        resume: uploadResult.url, // Also update the general resume field
-        lastProfileUpdate: new Date().toISOString()
-      }, { new: true });
-      
-      if (!updatedUser) {
-        throw new Error('User not found during profile update');
-      }
-      
-      userUpdated = true;
-      console.log('✅ User profile updated successfully');
-      
-      // Try profile completion calculation - with error isolation
-      let completionResult = null;
-      try {
-        console.log('📊 Calculating profile completion...');
-        completionResult = await profileCompletionService.updateProfileCompletion(updatedUser);
-        console.log('✅ Profile completion calculated successfully');
-      } catch (completionError: any) {
-        console.error('⚠️ Profile completion calculation failed (non-critical):', completionError.message);
-        // Don't fail the entire request if profile completion fails
-        completionResult = {
-          percentage: 0,
-          status: 'incomplete',
-          message: 'Profile completion calculation temporarily unavailable'
-        };
-      }
-      
-      // Always send a successful response if we got this far
-      const responseData = {
-        success: true,
-        data: {
-          cv: {
-            originalName: file.originalname,
-            url: uploadResult.url,
-            publicId: uploadResult.publicId,
-            size: uploadResult.size,
-            type: file.mimetype
-          },
-          profileCompletion: completionResult
-        },
-        message: 'CV uploaded successfully and profile updated'
       };
-      
-      console.log('🚀 Sending success response:', JSON.stringify(responseData, null, 2));
-      res.status(200).json(responseData);
-      
-    } catch (profileError: any) {
-      console.error('❌ Profile update failed:', profileError);
-      
-      // Even if profile update fails, the file was uploaded successfully
-      // Let the user know and suggest they refresh
-      return res.status(200).json({
-        success: true,
-        data: {
-          cv: {
-            originalName: file.originalname,
-            url: uploadResult.url,
-            publicId: uploadResult.publicId,
-            size: uploadResult.size,
-            type: file.mimetype
-          },
-          profileCompletion: null
-        },
-        message: 'CV uploaded successfully, but profile update encountered an issue. Please refresh your page.',
-        warning: 'Profile may need manual refresh to reflect changes'
-      });
+      res.status(400);
+      res.write(JSON.stringify(errorResponse));
+      res.end();
+      return;
     }
+
+    console.log('File details:', { name: file.originalname, size: file.size, type: file.mimetype });
+
+    // Upload to Cloudinary
+    console.log('Starting Cloudinary upload...');
+    const folder = `excellence-coaching-hub/documents/${userId}/cv`;
+    const uploadResult = await uploadDocumentToCloudinary(
+      file.buffer, 
+      userId, 
+      file.originalname, 
+      folder
+    );
     
+    console.log('Cloudinary upload successful:', uploadResult.url);
+
+    // Update user profile
+    console.log('Updating user profile...');
+    await User.findByIdAndUpdate(userId, {
+      cvFile: uploadResult.url,
+      resume: uploadResult.url,
+      lastProfileUpdate: new Date().toISOString()
+    });
+    
+    console.log('User profile updated successfully');
+
+    // Prepare and send success response
+    const successResponse = {
+      success: true,
+      data: {
+        url: uploadResult.url,
+        originalName: file.originalname,
+        size: uploadResult.size
+      },
+      message: 'CV uploaded successfully'
+    };
+    
+    console.log('Sending success response:', successResponse);
+    res.status(200);
+    res.write(JSON.stringify(successResponse));
+    res.end();
+
   } catch (error: any) {
-    console.error('❌ CV upload error:', error);
-    console.error('❌ Error stack:', error.stack);
-    
-    // Determine the appropriate error response
-    let errorMessage = 'Failed to upload CV';
-    let statusCode = 500;
-    
-    if (error.message?.includes('timeout')) {
-      errorMessage = 'Upload timed out. Please try again with a smaller file or check your connection.';
-      statusCode = 408;
-    } else if (error.message?.includes('file type') || error.message?.includes('file size')) {
-      errorMessage = error.message;
-      statusCode = 400;
-    } else if (error.message?.includes('Cloudinary')) {
-      errorMessage = 'File storage service temporarily unavailable. Please try again later.';
-    }
+    console.error('CV upload error:', error);
     
     const errorResponse = {
       success: false,
-      error: errorMessage,
-      details: {
-        uploadCompleted: !!uploadResult,
-        profileUpdated: userUpdated,
-        originalError: error.message
-      }
+      error: 'Failed to upload CV. Please try again.'
     };
     
-    console.log('💥 Sending error response:', JSON.stringify(errorResponse, null, 2));
-    res.status(statusCode).json(errorResponse);
+    console.log('Sending error response:', errorResponse);
+    res.status(500);
+    res.write(JSON.stringify(errorResponse));
+    res.end();
   }
 });
 

@@ -62,10 +62,32 @@ class RobustFileUploader {
           throw error;
         }
         
-        // Wait before retrying (exponential backoff)
+        // Retry on specific error types with different delays
+        const isRetryableError = error.message?.includes('RETRY_EMPTY_RESPONSE') || 
+                                error.message?.includes('RETRY_TRUNCATED_RESPONSE') ||
+                                error.message?.includes('Network error') ||
+                                error.message?.includes('timeout');
+        
+        if (!isRetryableError && attempt >= this.config.maxRetries) {
+          throw error;
+        }
+        
+        // Wait before retrying (exponential backoff with different delays for different error types)
         if (attempt < this.config.maxRetries) {
-          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
-          console.log(`⏳ Waiting ${delay}ms before retry...`);
+          let delay: number;
+          
+          if (error.message?.includes('RETRY_EMPTY_RESPONSE')) {
+            // Faster retry for empty responses as these might be temporary server glitches
+            delay = Math.min(2000 * attempt, 6000); // 2s, 4s, 6s
+          } else if (error.message?.includes('RETRY_TRUNCATED_RESPONSE')) {
+            // Slightly longer delay for truncated responses
+            delay = Math.min(3000 * attempt, 9000); // 3s, 6s, 9s
+          } else {
+            // Standard exponential backoff for other errors
+            delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // 1s, 2s, 4s, 5s...
+          }
+          
+          console.log(`⏳ Waiting ${delay}ms before retry (error: ${error.message?.substring(0, 50)}...)...`);
           await this.sleep(delay);
         }
       }
@@ -99,8 +121,8 @@ class RobustFileUploader {
       // Prepare form data
       formData.append(fileType, file);
       
-      // Set timeout
-      xhr.timeout = this.config.timeout;
+      // Set timeout (reduced for faster retries)
+      xhr.timeout = Math.min(this.config.timeout, 90000); // Max 90 seconds per attempt
 
       // Progress tracking
       xhr.upload.addEventListener('progress', (event) => {
@@ -123,22 +145,32 @@ class RobustFileUploader {
 
           if (xhr.status >= 200 && xhr.status < 300) {
             const responseText = xhr.responseText?.trim();
+            const contentLength = xhr.getResponseHeader('content-length');
             
-            // Check if we got any response at all
+            // Enhanced empty response detection
             if (!responseText || responseText.length === 0) {
               console.error('❌ Completely empty response from server');
               console.error('❌ Response headers:', xhr.getAllResponseHeaders());
               console.error('❌ Status:', xhr.status, xhr.statusText);
+              console.error('❌ Content-Length header:', contentLength);
               
-              // In production, sometimes the response is empty but the upload actually succeeded
-              // Let's check if this is a successful upload by examining the status and headers
-              if (xhr.status === 200) {
-                console.warn('⚠️ Got 200 status with empty response - this might be a server issue');
-                reject(new Error('Server returned empty response. The file may have been uploaded but we cannot confirm. Please refresh and check your profile.'));
+              // More aggressive retry for empty responses with 200 status
+              if (xhr.status === 200 && attempt < this.config.maxRetries) {
+                console.warn('⚠️ Got 200 status with empty response - retrying with exponential backoff');
+                reject(new Error('RETRY_EMPTY_RESPONSE'));
               } else {
-                reject(new Error('Empty response from server. Please try again.'));
+                reject(new Error('Server returned empty response after multiple attempts. The file may have been uploaded but confirmation failed. Please refresh your profile to check if the upload succeeded.'));
               }
               return;
+            }
+            
+            // Check for incomplete responses (might be truncated)
+            if (contentLength && parseInt(contentLength) > responseText.length) {
+              console.warn('⚠️ Response appears truncated - content-length mismatch');
+              if (attempt < this.config.maxRetries) {
+                reject(new Error('RETRY_TRUNCATED_RESPONSE'));
+                return;
+              }
             }
 
             let result: any;

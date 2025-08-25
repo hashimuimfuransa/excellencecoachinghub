@@ -63,7 +63,7 @@ import {
   TrendingUp,
   CheckCircle,
   Warning,
-  Error,
+  Error as ErrorIcon,
   Info,
   Download,
   Send,
@@ -96,6 +96,12 @@ interface JobSeeker {
   summary?: string;
   employmentStatus?: string;
   experienceLevel?: string;
+  idNumber?: string;
+  cvFile?: string;
+  nationality?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  address?: string;
   skills?: string[];
   experience?: any[];
   education?: any[];
@@ -154,133 +160,43 @@ const JobSeekerManagementPage: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedJobSeekerId, setSelectedJobSeekerId] = useState<string | null>(null);
 
-  // Mock data - replace with actual API calls
   useEffect(() => {
     const fetchJobSeekers = async () => {
       setLoading(true);
       try {
-        // Simulate API call
-        const mockJobSeekers: JobSeeker[] = [
-          {
-            _id: '1',
-            firstName: 'John',
-            lastName: 'Doe',
-            email: 'john.doe@example.com',
-            phone: '+1-555-0123',
-            location: 'New York, NY',
-            jobTitle: 'Software Engineer',
-            company: 'Tech Corp',
-            bio: 'Passionate software engineer with 5 years of experience in full-stack development.',
-            summary: 'Experienced software engineer specializing in React, Node.js, and cloud technologies.',
-            employmentStatus: 'employed',
-            experienceLevel: 'mid_level',
-            skills: ['JavaScript', 'React', 'Node.js', 'AWS', 'Python'],
-            experience: [
-              {
-                company: 'Tech Corp',
-                position: 'Software Engineer',
-                startDate: '2020-01-01',
-                current: true
-              }
-            ],
-            education: [
-              {
-                institution: 'University of Technology',
-                degree: 'Bachelor of Science',
-                field: 'Computer Science',
-                year: 2019
-              }
-            ],
-            certifications: [
-              {
-                name: 'AWS Certified Developer',
-                issuer: 'Amazon Web Services',
-                issueDate: '2021-06-01'
-              }
-            ],
-            profileCompletion: {
-              percentage: 85,
-              status: 'complete'
-            },
-            verification: {
-              email: true,
-              phone: true,
-              identity: false
-            },
-            isActive: true,
-            lastLogin: '2024-01-15T10:30:00Z',
-            createdAt: '2023-06-01T00:00:00Z',
-            updatedAt: '2024-01-15T10:30:00Z',
-            applicationCount: 12,
-            savedJobsCount: 8,
-            certificatesCount: 3,
-            testsCompletedCount: 5,
-            interviewsCount: 7
-          },
-          {
-            _id: '2',
-            firstName: 'Jane',
-            lastName: 'Smith',
-            email: 'jane.smith@example.com',
-            phone: '+1-555-0124',
-            location: 'San Francisco, CA',
-            jobTitle: 'UX Designer',
-            employmentStatus: 'unemployed',
-            experienceLevel: 'senior_level',
-            skills: ['UI/UX Design', 'Figma', 'Adobe Creative Suite', 'User Research'],
-            profileCompletion: {
-              percentage: 65,
-              status: 'intermediate'
-            },
-            verification: {
-              email: true,
-              phone: false,
-              identity: false
-            },
-            isActive: true,
-            lastLogin: '2024-01-14T15:45:00Z',
-            createdAt: '2023-08-15T00:00:00Z',
-            updatedAt: '2024-01-14T15:45:00Z',
-            applicationCount: 8,
-            savedJobsCount: 15,
-            certificatesCount: 1,
-            testsCompletedCount: 3,
-            interviewsCount: 4
-          },
-          {
-            _id: '3',
-            firstName: 'Mike',
-            lastName: 'Johnson',
-            email: 'mike.johnson@example.com',
-            location: 'Chicago, IL',
-            jobTitle: 'Data Scientist',
-            employmentStatus: 'student',
-            experienceLevel: 'entry_level',
-            skills: ['Python', 'Machine Learning', 'SQL', 'Tableau'],
-            profileCompletion: {
-              percentage: 35,
-              status: 'basic'
-            },
-            verification: {
-              email: true,
-              phone: false,
-              identity: false
-            },
-            isActive: false,
-            lastLogin: '2024-01-10T09:15:00Z',
-            createdAt: '2023-11-01T00:00:00Z',
-            updatedAt: '2024-01-10T09:15:00Z',
-            applicationCount: 3,
-            savedJobsCount: 12,
-            certificatesCount: 0,
-            testsCompletedCount: 1,
-            interviewsCount: 0
-          }
-        ];
+        // Fetch real job seekers data from API
+        const token = localStorage.getItem('token');
+        console.log('🔍 Fetching job seekers from:', '/api/users/job-seekers?limit=100');
+        console.log('🔑 Using token:', token ? 'Token present' : 'No token');
         
-        setJobSeekers(mockJobSeekers);
+        const response = await fetch('/api/users/job-seekers?limit=100', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log('📡 Response status:', response.status);
+        console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.log('❌ Error response text:', errorText);
+          throw new Error(`Failed to fetch job seekers: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
+        console.log('✅ API Response:', result);
+        
+        if (result.success) {
+          console.log('✅ Job seekers data:', result.data.jobSeekers);
+          setJobSeekers(result.data.jobSeekers || []);
+        } else {
+          throw new Error(result.error || 'Failed to fetch job seekers');
+        }
       } catch (error) {
-        console.error('Error fetching job seekers:', error);
+        console.error('❌ Error fetching job seekers:', error);
+        setJobSeekers([]); // Set empty array on error
       } finally {
         setLoading(false);
       }
@@ -334,7 +250,7 @@ const JobSeekerManagementPage: React.FC = () => {
     if (percentage >= 80) return <CheckCircle />;
     if (percentage >= 60) return <Info />;
     if (percentage >= 40) return <Warning />;
-    return <Error />;
+    return <ErrorIcon />;
   };
 
   const formatDate = (dateString: string) => {
@@ -767,6 +683,53 @@ const JobSeekerManagementPage: React.FC = () => {
                         <ListItem>
                           <ListItemIcon><LocationOn /></ListItemIcon>
                           <ListItemText primary="Location" secondary={selectedJobSeeker.location} />
+                        </ListItem>
+                      )}
+                      {selectedJobSeeker.idNumber && (
+                        <ListItem>
+                          <ListItemIcon><Person /></ListItemIcon>
+                          <ListItemText primary="ID Number" secondary={selectedJobSeeker.idNumber} />
+                        </ListItem>
+                      )}
+                      {selectedJobSeeker.nationality && (
+                        <ListItem>
+                          <ListItemIcon><Language /></ListItemIcon>
+                          <ListItemText primary="Nationality" secondary={selectedJobSeeker.nationality} />
+                        </ListItem>
+                      )}
+                      {selectedJobSeeker.dateOfBirth && (
+                        <ListItem>
+                          <ListItemIcon><CalendarToday /></ListItemIcon>
+                          <ListItemText primary="Date of Birth" secondary={new Date(selectedJobSeeker.dateOfBirth).toLocaleDateString()} />
+                        </ListItem>
+                      )}
+                      {selectedJobSeeker.gender && (
+                        <ListItem>
+                          <ListItemIcon><Person /></ListItemIcon>
+                          <ListItemText primary="Gender" secondary={selectedJobSeeker.gender.replace('_', ' ')} />
+                        </ListItem>
+                      )}
+                      {selectedJobSeeker.address && (
+                        <ListItem>
+                          <ListItemIcon><LocationOn /></ListItemIcon>
+                          <ListItemText primary="Address" secondary={selectedJobSeeker.address} />
+                        </ListItem>
+                      )}
+                      {selectedJobSeeker.cvFile && (
+                        <ListItem>
+                          <ListItemIcon><Download /></ListItemIcon>
+                          <ListItemText 
+                            primary="CV File" 
+                            secondary={
+                              <Button
+                                size="small"
+                                startIcon={<Download />}
+                                onClick={() => window.open(selectedJobSeeker.cvFile, '_blank')}
+                              >
+                                Download CV
+                              </Button>
+                            } 
+                          />
                         </ListItem>
                       )}
                     </List>

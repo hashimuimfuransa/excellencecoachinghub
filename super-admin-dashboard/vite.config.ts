@@ -57,7 +57,14 @@ export default defineConfig({
   plugins: [react(), createDeploymentFilesPlugin()],
   server: {
     port: 3002,
-    host: true
+    host: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   },
   build: {
     outDir: 'dist',

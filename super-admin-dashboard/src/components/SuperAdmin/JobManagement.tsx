@@ -288,24 +288,56 @@ const JobManagement: React.FC<JobManagementProps> = ({ onJobSelect }) => {
 
   const loadStats = async () => {
     try {
-      // Mock stats
+      console.log('🔍 JobManagement: Loading real job stats from backend...');
+      const statsData = await superAdminService.getJobStats();
+      console.log('📊 JobManagement: Successfully loaded stats from backend:', statsData);
+
+      // Use the real data from backend
       setStats({
-        totalJobs: 2847,
-        activeJobs: 1923,
-        draftJobs: 456,
-        expiredJobs: 468,
-        totalApplications: 8932,
-        averageApplicationsPerJob: 3.1,
-        topEmployers: [
-          { company: 'TechCorp Inc.', jobs: 45, applications: 892 },
-          { company: 'Innovation Labs', jobs: 38, applications: 756 },
-          { company: 'Digital Solutions', jobs: 32, applications: 634 },
-          { company: 'StartupXYZ', jobs: 28, applications: 523 },
-          { company: 'Enterprise Co.', jobs: 24, applications: 445 }
-        ]
+        totalJobs: statsData.totalJobs || 0,
+        activeJobs: statsData.activeJobs || 0,
+        draftJobs: statsData.draftJobs || 0,
+        expiredJobs: statsData.expiredJobs || 0,
+        totalApplications: statsData.totalApplications || 0,
+        averageApplicationsPerJob: statsData.averageApplicationsPerJob || 0,
+        topEmployers: statsData.topEmployers || []
       });
     } catch (error) {
-      console.error('Error loading stats:', error);
+      console.error('❌ Error loading job stats from backend:', error);
+      console.log('🏗️ This indicates the backend /admin/jobs/stats endpoint may not be working');
+      
+      // Try to calculate basic stats from the loaded jobs as fallback
+      try {
+        console.log('🔄 Attempting to calculate stats from current jobs data...');
+        const activeJobsCount = jobs.filter(job => job.status === 'active').length;
+        const draftJobsCount = jobs.filter(job => job.status === 'draft').length;
+        const expiredJobsCount = jobs.filter(job => job.status === 'expired').length;
+        
+        // Use minimal fallback with calculated data where possible
+        setStats({
+          totalJobs: totalJobs || jobs.length,
+          activeJobs: activeJobsCount,
+          draftJobs: draftJobsCount,
+          expiredJobs: expiredJobsCount,
+          totalApplications: jobs.reduce((total, job) => total + (job.applicationsCount || 0), 0),
+          averageApplicationsPerJob: jobs.length > 0 ? 
+            Math.round((jobs.reduce((total, job) => total + (job.applicationsCount || 0), 0) / jobs.length) * 10) / 10 : 0,
+          topEmployers: []
+        });
+        console.log('✅ Calculated fallback stats from current jobs data');
+      } catch (fallbackError) {
+        console.error('❌ Failed to calculate fallback stats, using empty stats:', fallbackError);
+        // Final fallback to empty stats
+        setStats({
+          totalJobs: 0,
+          activeJobs: 0,
+          draftJobs: 0,
+          expiredJobs: 0,
+          totalApplications: 0,
+          averageApplicationsPerJob: 0,
+          topEmployers: []
+        });
+      }
     }
   };
 

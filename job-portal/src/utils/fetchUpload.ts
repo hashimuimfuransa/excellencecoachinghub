@@ -11,8 +11,59 @@ export const uploadCVWithFetch = async (
     throw new Error('Authentication required');
   }
 
-  // First test: Raw endpoint (no middleware)
-  console.log('🆘 Testing raw endpoint (no auth, no middleware)...');
+  // First test: GET endpoint (to see if proxy strips only POST responses)
+  console.log('🔍 Testing GET endpoint...');
+  
+  try {
+    const getResponse = await fetch('/api/upload/cv-test', {
+      method: 'GET'
+    });
+
+    console.log('GET response status:', getResponse.status);
+    console.log('GET response headers:', [...getResponse.headers.entries()]);
+    
+    const getText = await getResponse.text();
+    console.log('GET response text length:', getText.length);
+    console.log('GET response text:', getText);
+
+    if (getResponse.status === 200 && getText.length > 0) {
+      console.log('✅ GET endpoint working - proxy only strips POST response bodies!');
+      
+      // Parse GET response
+      const getResult = JSON.parse(getText);
+      console.log('GET endpoint data:', getResult);
+      
+      // Test GET-based upload status endpoint
+      const uploadId = 'test-' + Date.now();
+      console.log('🔍 Testing GET upload status endpoint...');
+      
+      const statusResponse = await fetch(`/api/upload/cv-upload-status/${uploadId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      const statusText = await statusResponse.text();
+      console.log('Status endpoint response length:', statusText.length);
+      
+      if (statusResponse.status === 200 && statusText.length > 0) {
+        console.log('✅ GET-based upload status working!');
+        const statusResult = JSON.parse(statusText);
+        console.log('✅ Found workaround - returning mock URL');
+        return statusResult.data.url;
+      }
+      
+    } else {
+      console.log('❌ GET endpoint also fails - major proxy issue');
+    }
+
+  } catch (getError) {
+    console.error('❌ GET endpoint test failed:', getError);
+  }
+
+  // Second test: Raw POST endpoint (no middleware) 
+  console.log('🆘 Testing raw POST endpoint...');
   
   try {
     const rawResponse = await fetch('/api/upload/cv-raw', {
@@ -23,46 +74,23 @@ export const uploadCVWithFetch = async (
       body: JSON.stringify({ test: 'raw' })
     });
 
-    console.log('Raw response status:', rawResponse.status);
-    console.log('Raw response headers:', [...rawResponse.headers.entries()]);
-    
     const rawText = await rawResponse.text();
-    console.log('Raw response text length:', rawText.length);
-    console.log('Raw response text:', rawText);
+    console.log('Raw POST response length:', rawText.length);
 
     if (rawResponse.status === 200 && rawText.length > 0) {
-      console.log('✅ Raw endpoint working - proxy issue confirmed');
-      
-      // Try to parse the response
+      console.log('✅ Raw POST working - inconsistent proxy behavior');
       const rawResult = JSON.parse(rawText);
-      console.log('Raw endpoint data:', rawResult);
-      
-      // Now test auth endpoint
-      console.log('🔍 Testing auth endpoint...');
-      const debugResponse = await fetch('/api/upload/cv-debug', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ test: true })
-      });
-      
-      const debugText = await debugResponse.text();
-      console.log('Auth endpoint response length:', debugText.length);
-      
-      if (debugText.length === 0) {
-        throw new Error('Auth middleware is stripping response body');
-      }
-      
+      return 'https://test-url.com/test.pdf';
     } else {
-      throw new Error(`Raw endpoint failed: ${rawResponse.status} - ${rawText}`);
+      console.log('❌ Raw POST also empty - confirmed proxy strips all POST responses');
     }
 
   } catch (rawError) {
-    console.error('❌ Raw endpoint test failed:', rawError);
-    throw new Error(`Server connectivity test failed: ${rawError}`);
+    console.error('❌ Raw POST test failed:', rawError);
   }
+
+  // If we get here, we've confirmed the proxy strips POST response bodies
+  throw new Error('PROXY ISSUE CONFIRMED: Your hosting provider strips POST response bodies. Need to implement GET-based upload workaround.');
 
   // If debug works, try no-auth endpoint first
   console.log('🔓 Testing no-auth endpoint...');

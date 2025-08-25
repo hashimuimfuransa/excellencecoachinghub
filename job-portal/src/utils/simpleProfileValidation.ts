@@ -20,134 +20,168 @@ export interface SimpleProfileValidationResult {
  * Simple profile validation that matches backend logic
  */
 export function validateProfileSimple(user: User): SimpleProfileValidationResult {
-  if (!user) {
-    console.warn('⚠️ validateProfileSimple called with null/undefined user');
-    return {
-      isValid: false,
-      completionPercentage: 0,
-      status: 'incomplete',
-      missingFields: ['All fields are missing'],
-      recommendations: ['Please complete your profile'],
-      canAccessFeatures: {
-        psychometricTests: false,
-        aiInterviews: false,
-        premiumJobs: false,
-      },
-      completedSections: {
-        basic: false,
-        contact: false,
-        professional: false,
-        skills: false,
-        experience: false,
-        education: false,
-        preferences: false,
-        documents: false
-      }
-    };
-  }
-  
-  console.log('🔍 Simple frontend profile validation for user:', user._id || user.id);
-  console.log('📋 User data:', {
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.email,
-    phone: user.phone,
-    location: user.location,
-    bio: user.bio,
-    jobTitle: user.jobTitle,
-    skills: user.skills,
-    experience: user.experience?.length || 0,
-    education: user.education?.length || 0,
-    resume: user.resume,
-    cvFile: (user as any).cvFile,
-    jobPreferences: user.jobPreferences
-  });
-
-  const completedFields: string[] = [];
-  const missingFields: string[] = [];
-  const recommendations: string[] = [];
-  
-  // Define essential fields with their weights (matching backend)
-  const fields = [
-    // Basic Info (50 points total)
-    { name: 'firstName', weight: 10, label: 'First Name', required: true },
-    { name: 'lastName', weight: 10, label: 'Last Name', required: true },
-    { name: 'email', weight: 10, label: 'Email', required: true },
-    { name: 'phone', weight: 10, label: 'Phone Number', required: false },
-    { name: 'location', weight: 10, label: 'Location', required: false },
-    
-    // Professional Info (30 points total)
-    { name: 'jobTitle', weight: 5, label: 'Job Title', required: false },
-    { name: 'bio', weight: 5, label: 'Bio/Summary', required: false },
-    { name: 'skills', weight: 10, label: 'Skills', required: false },
-    { name: 'resume', weight: 10, label: 'Resume/CV', required: false },
-    
-    // Additional Info (20 points total)
-    { name: 'experience', weight: 5, label: 'Work Experience', required: false },
-    { name: 'education', weight: 5, label: 'Education', required: false },
-    { name: 'jobPreferences', weight: 5, label: 'Job Preferences', required: false },
-    { name: 'expectedSalary', weight: 5, label: 'Expected Salary', required: false }
-  ];
-  
-  let totalScore = 0;
-  
-  fields.forEach(field => {
-    const hasValue = hasFieldValue(user, field.name);
-    console.log(`📋 ${field.name}: ${hasValue ? '✅' : '❌'} (${field.weight} points)`);
-    
-    if (hasValue) {
-      completedFields.push(field.name);
-      totalScore += field.weight;
-    } else {
-      missingFields.push(field.label);
-      if (field.required) {
-        recommendations.push(`Please add your ${field.label.toLowerCase()}`);
-      }
+  // Create safe default result
+  const createDefaultResult = (): SimpleProfileValidationResult => ({
+    isValid: false,
+    completionPercentage: 0,
+    status: 'incomplete',
+    missingFields: ['Profile validation error'],
+    recommendations: ['Please refresh the page and try again'],
+    canAccessFeatures: {
+      psychometricTests: false,
+      aiInterviews: false,
+      premiumJobs: false,
+    },
+    completedSections: {
+      basic: false,
+      contact: false,
+      professional: false,
+      skills: false,
+      experience: false,
+      education: false,
+      preferences: false,
+      documents: false
     }
   });
-  
-  const completionPercentage = Math.min(totalScore, 100);
-  const status = getStatus(completionPercentage);
-  
-  // Add general recommendations
-  if (completionPercentage < 50) {
-    recommendations.push('Complete your basic profile information to get started');
-  } else if (completionPercentage < 80) {
-    recommendations.push('Add more details to improve your profile visibility');
+
+  // Early return for invalid user
+  if (!user || typeof user !== 'object') {
+    console.warn('⚠️ validateProfileSimple called with invalid user');
+    return createDefaultResult();
   }
-  
-  // Calculate feature access
-  const canAccessFeatures = {
-    psychometricTests: completionPercentage >= 40,
-    aiInterviews: completionPercentage >= 60 && hasFieldValue(user, 'resume'),
-    premiumJobs: completionPercentage >= 80
-  };
-  
-  // Calculate completed sections
-  const completedSections = {
-    basic: hasFieldValue(user, 'firstName') && hasFieldValue(user, 'lastName') && hasFieldValue(user, 'email'),
-    contact: hasFieldValue(user, 'phone') && hasFieldValue(user, 'location'),
-    professional: hasFieldValue(user, 'jobTitle') && hasFieldValue(user, 'bio'),
-    skills: hasFieldValue(user, 'skills'),
-    experience: hasFieldValue(user, 'experience'),
-    education: hasFieldValue(user, 'education'),
-    preferences: hasFieldValue(user, 'jobPreferences'),
-    documents: hasFieldValue(user, 'resume')
-  };
-  
-  console.log(`📊 Simple frontend completion result: ${completionPercentage}% (${totalScore}/100 points)`);
-  console.log(`✅ Completed: ${completedFields.join(', ')}`);
-  console.log(`❌ Missing: ${missingFields.join(', ')}`);
-  
-  return {
-    isValid: completionPercentage >= 40,
-    completionPercentage,
-    status,
-    missingFields,
-    recommendations,
-    canAccessFeatures,
-    completedSections
-  };
+
+  try {
+    console.log('🔍 Simple frontend profile validation for user:', user._id || user.id);
+    
+    const completedFields: string[] = [];
+    const missingFields: string[] = [];
+    const recommendations: string[] = [];
+    
+    // Define essential fields with their weights (matching backend)
+    const fields = [
+      // Basic Info (50 points total)
+      { name: 'firstName', weight: 10, label: 'First Name', required: true },
+      { name: 'lastName', weight: 10, label: 'Last Name', required: true },
+      { name: 'email', weight: 10, label: 'Email', required: true },
+      { name: 'phone', weight: 10, label: 'Phone Number', required: false },
+      { name: 'location', weight: 10, label: 'Location', required: false },
+      
+      // Professional Info (30 points total)
+      { name: 'jobTitle', weight: 5, label: 'Job Title', required: false },
+      { name: 'bio', weight: 5, label: 'Bio/Summary', required: false },
+      { name: 'skills', weight: 10, label: 'Skills', required: false },
+      { name: 'resume', weight: 10, label: 'Resume/CV', required: false },
+      
+      // Additional Info (20 points total)
+      { name: 'experience', weight: 5, label: 'Work Experience', required: false },
+      { name: 'education', weight: 5, label: 'Education', required: false },
+      { name: 'jobPreferences', weight: 5, label: 'Job Preferences', required: false },
+      { name: 'expectedSalary', weight: 5, label: 'Expected Salary', required: false }
+    ];
+    
+    let totalScore = 0;
+    
+    for (const field of fields) {
+      try {
+        const hasValue = hasFieldValue(user, field.name);
+        console.log(`📋 ${field.name}: ${hasValue ? '✅' : '❌'} (${field.weight} points)`);
+        
+        if (hasValue) {
+          completedFields.push(field.name);
+          totalScore += field.weight;
+        } else {
+          missingFields.push(field.label);
+          if (field.required) {
+            recommendations.push(`Please add your ${field.label.toLowerCase()}`);
+          }
+        }
+      } catch (fieldError) {
+        console.warn(`Error processing field ${field.name}:`, fieldError);
+        missingFields.push(field.label);
+      }
+    }
+    
+    const completionPercentage = Math.min(Math.max(totalScore, 0), 100);
+    const status = getStatus(completionPercentage);
+    
+    // Add general recommendations
+    if (completionPercentage < 50) {
+      recommendations.push('Complete your basic profile information to get started');
+    } else if (completionPercentage < 80) {
+      recommendations.push('Add more details to improve your profile visibility');
+    }
+    
+    // Calculate feature access safely
+    let psychometricAccess = false;
+    let aiInterviewAccess = false;
+    let premiumJobAccess = false;
+    
+    try {
+      psychometricAccess = completionPercentage >= 40;
+      aiInterviewAccess = completionPercentage >= 60 && hasFieldValue(user, 'resume');
+      premiumJobAccess = completionPercentage >= 80;
+    } catch (accessError) {
+      console.warn('Error calculating feature access:', accessError);
+    }
+    
+    const canAccessFeatures = {
+      psychometricTests: psychometricAccess,
+      aiInterviews: aiInterviewAccess,
+      premiumJobs: premiumJobAccess
+    };
+    
+    // Calculate completed sections safely
+    let basicSection = false;
+    let contactSection = false;
+    let professionalSection = false;
+    let skillsSection = false;
+    let experienceSection = false;
+    let educationSection = false;
+    let preferencesSection = false;
+    let documentsSection = false;
+    
+    try {
+      basicSection = hasFieldValue(user, 'firstName') && hasFieldValue(user, 'lastName') && hasFieldValue(user, 'email');
+      contactSection = hasFieldValue(user, 'phone') && hasFieldValue(user, 'location');
+      professionalSection = hasFieldValue(user, 'jobTitle') && hasFieldValue(user, 'bio');
+      skillsSection = hasFieldValue(user, 'skills');
+      experienceSection = hasFieldValue(user, 'experience');
+      educationSection = hasFieldValue(user, 'education');
+      preferencesSection = hasFieldValue(user, 'jobPreferences');
+      documentsSection = hasFieldValue(user, 'resume');
+    } catch (sectionsError) {
+      console.warn('Error calculating completed sections:', sectionsError);
+    }
+    
+    const completedSections = {
+      basic: basicSection,
+      contact: contactSection,
+      professional: professionalSection,
+      skills: skillsSection,
+      experience: experienceSection,
+      education: educationSection,
+      preferences: preferencesSection,
+      documents: documentsSection
+    };
+    
+    console.log(`📊 Simple frontend completion result: ${completionPercentage}% (${totalScore}/100 points)`);
+    console.log(`✅ Completed: ${completedFields.join(', ')}`);
+    console.log(`❌ Missing: ${missingFields.join(', ')}`);
+    
+    return {
+      isValid: completionPercentage >= 40,
+      completionPercentage,
+      status,
+      missingFields,
+      recommendations,
+      canAccessFeatures,
+      completedSections
+    };
+
+  } catch (error) {
+    console.error('❌ Critical error in validateProfileSimple:', error);
+    return createDefaultResult();
+  }
 }
 
 /**
@@ -233,8 +267,15 @@ function hasFieldValue(user: User, fieldName: string): boolean {
  * Get completion status based on percentage
  */
 function getStatus(percentage: number): string {
-  if (percentage >= 90) return 'complete';
-  if (percentage >= 70) return 'good';
-  if (percentage >= 50) return 'basic';
-  return 'incomplete';
+  try {
+    const safePercentage = Math.max(0, Math.min(100, percentage || 0));
+    
+    if (safePercentage >= 90) return 'complete';
+    if (safePercentage >= 70) return 'good';
+    if (safePercentage >= 50) return 'basic';
+    return 'incomplete';
+  } catch (error) {
+    console.warn('Error in getStatus:', error);
+    return 'incomplete';
+  }
 }

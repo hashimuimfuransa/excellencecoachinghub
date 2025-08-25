@@ -11,6 +11,7 @@ import {
   IconButton,
   Chip,
   Button,
+  useTheme,
 } from '@mui/material';
 import {
   FormatQuote,
@@ -22,11 +23,14 @@ import {
 } from '@mui/icons-material';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { useRef } from 'react';
+import { useThemeContext } from '../contexts/ThemeContext';
 
 const TestimonialsSection: React.FC = () => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
+  const theme = useTheme();
+  const { isDarkMode } = useThemeContext();
 
   const testimonials = [
     {
@@ -148,7 +152,9 @@ const TestimonialsSection: React.FC = () => {
       ref={ref}
       sx={{
         py: { xs: 6, sm: 8, md: 12 },
-        background: 'linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%)',
+        background: isDarkMode 
+          ? 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%)'
+          : 'linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%)',
         position: 'relative',
         overflow: 'hidden',
         minHeight: { xs: 'auto', md: '100vh' },
@@ -164,7 +170,9 @@ const TestimonialsSection: React.FC = () => {
           width: '200px',
           height: '200px',
           borderRadius: '50%',
-          background: 'rgba(63, 81, 181, 0.05)',
+          background: isDarkMode 
+            ? 'rgba(74, 222, 128, 0.1)'
+            : 'rgba(63, 81, 181, 0.05)',
           filter: 'blur(40px)',
           zIndex: 0,
         }}
@@ -188,7 +196,9 @@ const TestimonialsSection: React.FC = () => {
           width: '150px',
           height: '150px',
           borderRadius: '50%',
-          background: 'rgba(255, 107, 107, 0.05)',
+          background: isDarkMode 
+            ? 'rgba(34, 197, 94, 0.08)'
+            : 'rgba(255, 107, 107, 0.05)',
           filter: 'blur(30px)',
           zIndex: 0,
         }}

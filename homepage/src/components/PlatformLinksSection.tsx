@@ -23,49 +23,83 @@ import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useThemeContext } from '../contexts/ThemeContext';
+import { useTheme } from '@mui/material';
 
 const PlatformLinksSection: React.FC = () => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
   const navigate = useNavigate();
   const { user } = useAuth();
+  const theme = useTheme();
+  const { isDarkMode } = useThemeContext();
 
   const platforms = [
     {
       title: 'E-Learning Platform',
-      description: 'Transform your career with our comprehensive learning ecosystem featuring personalized live video coaching, industry-expert instructors, assessments, and hands-on projects.',
+      description: 'Transform your career with our comprehensive learning ecosystem featuring numerous specialized programs, personalized student coaching, live video coaching sessions with industry experts, interactive assessments, hands-on projects, and career-focused training materials designed for Africa\'s digital transformation.',
       icon: <School />,
       color: '#3f51b5',
       gradient: 'linear-gradient(135deg, #3f51b5 0%, #536dfe 100%)',
       features: [
-        'Interactive Video Courses',
+        'Tech & Digital Solutions Training',
+        'Data Analytics & Machine Learning',
+        'Business Development & Entrepreneurship',
+        'Accounting, Tax & Audit Programs',
+        'Project Management & PMP Certification',
+        'Executive & Leadership Coaching',
+        'Professional Qualification Coaching (CPA, PRINCE2)',
+        'HR & Legal Compliance Training',
+        'Financial Management & Planning',
+        'Digital Marketing & E-commerce',
+        'Student Academic Coaching',
+        'Career Transition Coaching',
+        'Personal Development Programs',
+        'Industry-Specific Training',
+        'Soft Skills Development',
+        'Technical Skills Bootcamps',
         'Live Video Coaching Sessions',
-        'Progress Tracking',
-        'Peer Collaboration',
-        'Expert Instructors',
-        'Mobile Learning',
+        'Interactive Assessments & Progress Tracking',
+        'Hands-on Projects & Real-world Applications',
+        'Industry-Expert Instructors & Mentors',
+        'Personalized Study Plans & Career Roadmaps',
+        'Peer Collaboration & Community Learning',
+        'Mobile Learning & Offline Access',
+        'Certificate Programs & Industry Recognition',
       ],
-      buttonText: 'Start Learning',
+      buttonText: 'Start Learning Journey',
       buttonColor: 'primary',
       link: 'https://elearning.excellencecoachinghub.com',
+      coachingDetails: 'Our expert coaches provide personalized one-on-one live video sessions, student academic coaching, career mentoring, skill development guidance, practical assignments, continuous progress monitoring, and comprehensive career guidance across all our diverse programs to ensure your success in your chosen field.',
     },
     {
-      title: 'Job Preparation Platform',
-      description: 'Prepare for your dream job with psychometric assessments, live video coaching for interviews, tests, and access to curated job opportunities.',
+      title: 'Job Portal',
+      description: 'Accelerate your career success with comprehensive job preparation services including psychometric assessments, live video interview coaching, personalized career guidance, resume optimization, skill-job matching, and access to curated job opportunities across Africa and beyond.',
       icon: <Work />,
       color: '#22c55e',
       gradient: 'linear-gradient(135deg, #22c55e 0%, #4ade80 100%)',
       features: [
-        'Psychometric Assessments',
-        'Live Video Interview Coaching',
-        'Resume Builder',
-        'Job Matching',
-        'Interview Coaching',
-        'Career Guidance',
+        'Comprehensive Psychometric Assessments',
+        'Live Video Interview Coaching Sessions',
+        'Personalized Career Guidance & Roadmapping',
+        'Professional Resume & CV Builder',
+        'Skills-Based Job Matching Algorithm',
+        'Interview Preparation & Mock Sessions',
+        'Salary Negotiation Coaching',
+        'LinkedIn Profile Optimization',
+        'Industry-Specific Job Alerts',
+        'Career Transition Support',
+        'Professional Networking Opportunities',
+        'Job Application Tracking System',
+        'Employer Branding & Company Research',
+        'Career Development Resources',
+        'Performance Review Preparation',
+        'Work-Life Balance Coaching',
       ],
-      buttonText: 'Explore Jobs',
+      buttonText: 'Launch Your Career',
       buttonColor: 'secondary',
       link: 'https://jobs.excellencecoachinghub.com',
+      coachingDetails: 'Our career coaches work with you through live video sessions to build confidence, improve interview skills, optimize your professional profile, and provide ongoing support throughout your job search and career advancement journey.',
     },
   ];
 
@@ -126,7 +160,9 @@ const PlatformLinksSection: React.FC = () => {
                   fontWeight: 800,
                   mb: 3,
                   fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.75rem', lg: '3rem' },
-                  background: 'linear-gradient(45deg, #22c55e, #16a34a)',
+                  background: isDarkMode 
+                    ? 'linear-gradient(45deg, #4ade80, #22c55e)'
+                    : 'linear-gradient(45deg, #22c55e, #16a34a)',
                   backgroundClip: 'text',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
@@ -140,7 +176,9 @@ const PlatformLinksSection: React.FC = () => {
                     transform: 'translateX(-50%)',
                     width: { xs: '60px', md: '80px' },
                     height: '4px',
-                    background: 'linear-gradient(45deg, #22c55e, #16a34a)',
+                    background: isDarkMode 
+                      ? 'linear-gradient(45deg, #4ade80, #22c55e)'
+                      : 'linear-gradient(45deg, #22c55e, #16a34a)',
                     borderRadius: '2px',
                   }
                 }}
@@ -158,7 +196,7 @@ const PlatformLinksSection: React.FC = () => {
                   px: { xs: 1, sm: 2, md: 0 },
                 }}
               >
-                Choose your path to success with our specialized platforms designed for Africa's digital transformation
+                Choose your pathway to career excellence with our comprehensive platforms featuring live video coaching, expert-led training programs, personalized career guidance, and industry-recognized certifications designed for Africa's digital transformation
               </Typography>
             </Box>
           </motion.div>
@@ -350,7 +388,7 @@ const PlatformLinksSection: React.FC = () => {
                             fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
                           }}
                         >
-                          Key Features:
+                          What You'll Get:
                         </Typography>
                         <Grid container spacing={{ xs: 1, sm: 1.5 }}>
                           {platform.features.map((feature, featureIndex) => (
@@ -399,6 +437,61 @@ const PlatformLinksSection: React.FC = () => {
                             </Grid>
                           ))}
                         </Grid>
+                      </Box>
+
+                      {/* Coaching Details Section */}
+                      <Box
+                        sx={{
+                          mb: { xs: 3, md: 4 },
+                          p: { xs: 2.5, sm: 3 },
+                          borderRadius: '12px',
+                          background: 'rgba(255, 255, 255, 0.15)',
+                          backdropFilter: 'blur(15px)',
+                          border: '1px solid rgba(255, 255, 255, 0.25)',
+                          position: 'relative',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'linear-gradient(45deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.1) 100%)',
+                            zIndex: 0,
+                          }}
+                        />
+                        <Box sx={{ position: 'relative', zIndex: 1 }}>
+                          <Typography
+                            variant="h6"
+                            sx={{
+                              color: 'white',
+                              fontWeight: 700,
+                              mb: 2,
+                              textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                              fontSize: { xs: '1rem', sm: '1.1rem', md: '1.2rem' },
+                              display: 'flex',
+                              alignItems: 'center',
+                            }}
+                          >
+                            <AutoAwesome sx={{ mr: 1, fontSize: { xs: 18, sm: 20 } }} />
+                            How We Coach You:
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: 'rgba(255, 255, 255, 0.95)',
+                              lineHeight: 1.6,
+                              fontWeight: 500,
+                              fontSize: { xs: '0.85rem', sm: '0.9rem', md: '0.95rem' },
+                              textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                            }}
+                          >
+                            {platform.coachingDetails}
+                          </Typography>
+                        </Box>
                       </Box>
 
                       {/* Action Button */}

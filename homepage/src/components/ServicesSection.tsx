@@ -4,12 +4,13 @@ import {
   Container,
   Typography,
   Grid,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
+  Card,
+  CardContent,
+  Chip,
+  Stack,
   Fade,
+  IconButton,
+  useTheme,
 } from '@mui/material';
 import {
   Code,
@@ -20,367 +21,636 @@ import {
   School,
   Support,
   TrendingUp,
+  Work,
+  CampaignRounded,
+  PersonRounded,
+  BuildRounded,
+  LocalLibraryRounded,
+  GroupsRounded,
+  AutoAwesome,
+  DesignServicesRounded,
+  SecurityRounded,
+  Language,
+  ArrowForward,
 } from '@mui/icons-material';
 import { useInView } from 'react-intersection-observer';
+import { motion } from 'framer-motion';
+import { useThemeContext } from '../contexts/ThemeContext';
 
 const ServicesSection: React.FC = () => {
   const { ref, inView } = useInView({
     threshold: 0.1,
     triggerOnce: true
   });
+  const theme = useTheme();
+  const { isDarkMode } = useThemeContext();
 
-  const [selectedService, setSelectedService] = useState(6); // Professional Qualification Coaching
+  const [selectedCategory, setSelectedCategory] = useState(0);
 
-  const services = [
+  const categories = [
     {
-      title: "Tech and Digital Solutions",
+      title: "Student Academic Coaching",
+      icon: <LocalLibraryRounded />,
+      color: "#2196f3",
+      programs: [
+        "High School Academic Support",
+        "University Exam Preparation",
+        "Study Skills & Time Management",
+        "Research & Writing Assistance",
+        "Mathematics & Science Tutoring",
+        "Language Arts & Literature",
+        "Test-Taking Strategies",
+        "Academic Goal Setting & Planning"
+      ]
+    },
+    {
+      title: "Career Transition Coaching",
+      icon: <Work />,
+      color: "#ff5722",
+      programs: [
+        "Career Change Strategy",
+        "Job Search & Interview Preparation",
+        "Resume & LinkedIn Optimization",
+        "Networking & Professional Branding",
+        "Industry Transition Planning",
+        "Skills Assessment & Development",
+        "Salary Negotiation Coaching",
+        "Professional Portfolio Building"
+      ]
+    },
+    {
+      title: "Technology & Digital Solutions",
       icon: <Code />,
-      description: "Comprehensive technology training and digital transformation services",
-      offerings: [
-        "Digital Marketing",
-        "Software Development",
-        "Web & App Development",
-        "Cloud Computing",
-        "Data Analytics & Machine Learning",
-        "Digital Literacy"
-      ],
-      details: "Complete tech training including digital literacy, software development, data analytics, and cloud computing with live video coaching sessions and hands-on practice."
+      color: "#3f51b5",
+      programs: [
+        "Software Development & Programming",
+        "Web & Mobile App Development", 
+        "Cloud Computing & DevOps",
+        "Cybersecurity & Data Protection",
+        "Digital Marketing & E-commerce",
+        "UI/UX Design & Digital Graphics",
+        "Digital Literacy & Computer Skills",
+        "IT Support & Network Administration"
+      ]
     },
     {
-      title: "Data Analytics Training",
+      title: "Data & Analytics",
       icon: <Analytics />,
-      description: "Master data analytics and business intelligence",
-      offerings: [
-        "Statistical Analysis",
-        "Data Visualization",
+      color: "#ff6b6b", 
+      programs: [
+        "Data Analytics & Visualization",
+        "Machine Learning & AI",
         "Business Intelligence",
-        "SQL & Databases",
-        "Python/R Programming",
-        "Machine Learning Basics"
-      ],
-      details: "Learn data analytics through live video coaching sessions, interactive assessments, and hands-on projects with real-world datasets."
+        "Statistical Analysis",
+        "Python & R Programming",
+        "SQL & Database Management",
+        "Data Science Bootcamp",
+        "Big Data Technologies"
+      ]
     },
     {
-      title: "Business Development & Entrepreneurship",
+      title: "Business & Entrepreneurship",
       icon: <Business />,
-      description: "Strategic business growth and entrepreneurship training",
-      offerings: [
-        "Business Planning",
-        "Market Research",
-        "Financial Planning",
-        "Leadership Development",
-        "Strategic Thinking",
-        "Innovation Management"
-      ],
-      details: "Develop essential business skills with expert coaching on strategy, planning, and entrepreneurial mindset development."
+      color: "#4caf50",
+      programs: [
+        "Business Development & Strategy",
+        "Entrepreneurship & Startup",
+        "Digital Marketing & Social Media",
+        "Sales & Customer Relations",
+        "Supply Chain & Operations",
+        "E-commerce & Online Business",
+        "Business Plan Development",
+        "Market Research & Analysis"
+      ]
     },
     {
-      title: "Accounting, Tax and Audit",
+      title: "Finance & Accounting",
       icon: <AccountBalance />,
-      description: "Professional accounting and financial management services",
-      offerings: [
-        "Financial Accounting",
-        "Tax Preparation",
-        "Audit Procedures",
-        "Compliance Management",
-        "Bookkeeping",
-        "Financial Analysis"
-      ],
-      details: "Comprehensive accounting and tax training with practical applications and compliance requirements."
+      color: "#ff9800",
+      programs: [
+        "Financial Accounting & Reporting",
+        "Tax Preparation & Planning",
+        "Audit & Compliance",
+        "Financial Management & Planning",
+        "Bookkeeping & Payroll",
+        "Investment & Portfolio Management",
+        "Corporate Finance",
+        "Forensic Accounting"
+      ]
     },
     {
       title: "Project Management",
       icon: <TrendingUp />,
-      description: "Professional project management certification and training",
-      offerings: [
-        "PMP Certification",
-        "Agile Methodologies",
+      color: "#9c27b0",
+      programs: [
+        "PMP Certification Preparation",
+        "PRINCE2 Methodology",
+        "Agile & Scrum Master",
         "Risk Management",
-        "Quality Assurance",
-        "Scrum Master Training",
-        "Project Planning Tools"
-      ],
-      details: "Master project management with certification preparation and practical project execution strategies."
+        "Quality Management",
+        "Construction Project Management",
+        "IT Project Management",
+        "Leadership in Project Management"
+      ]
     },
     {
-      title: "Executive Coaching",
+      title: "Leadership & Executive Coaching",
       icon: <Psychology />,
-      description: "Leadership development and executive coaching services",
-      offerings: [
-        "Leadership Development",
-        "Strategic Thinking",
-        "Team Management",
-        "Communication Skills",
+      color: "#607d8b",
+      programs: [
+        "Executive Leadership Development",
+        "Strategic Thinking & Planning",
+        "Team Management & Motivation",
+        "Change Management",
         "Emotional Intelligence",
-        "Executive Presence"
-      ],
-      details: "Personalized executive development through one-on-one live video coaching, leadership assessments, and practical coaching exercises."
+        "Communication & Presentation Skills",
+        "Conflict Resolution",
+        "Performance Management"
+      ]
     },
     {
-      title: "Professional Qualification Coaching",
+      title: "Professional Certifications",
       icon: <School />,
-      description: "Coaching for professional certifications and qualifications",
-      offerings: [
-        "CPA coaching",
-        "PMP coaching",
-        "PRINCE2 coaching",
-        "Professional Exams",
-        "Skills Assessment",
-        "Career Advancement"
-      ],
-      details: "Specialized coaching for professional certifications with personalized study plans and exam preparation strategies."
+      color: "#795548",
+      programs: [
+        "CPA (Certified Public Accountant)",
+        "PMP (Project Management Professional)",
+        "PRINCE2 Certification",
+        "Scrum Master Certification",
+        "Digital Marketing Certification",
+        "HR Professional Certification",
+        "IT Certification Programs",
+        "Industry-Specific Certifications"
+      ]
     },
     {
-      title: "HR and Legal Compliance",
+      title: "HR & Legal Compliance",
       icon: <Support />,
-      description: "Human resources and legal compliance training",
-      offerings: [
-        "Employment Law",
-        "HR Policies",
-        "Workplace Safety",
+      color: "#009688",
+      programs: [
+        "Human Resources Management",
+        "Employment Law & Compliance",
+        "Recruitment & Talent Management",
         "Employee Relations",
-        "Compliance Management",
-        "Legal Documentation"
-      ],
-      details: "Stay compliant with employment laws and HR best practices through expert guidance and training."
+        "Performance & Compensation",
+        "Workplace Safety & Health",
+        "Legal Documentation",
+        "HR Analytics & Metrics"
+      ]
+    },
+    {
+      title: "Communication & Language",
+      icon: <Language />,
+      color: "#8bc34a",
+      programs: [
+        "English Language Proficiency",
+        "Business Communication",
+        "Public Speaking & Presentation",
+        "Professional Writing Skills",
+        "Technical Writing",
+        "Cross-Cultural Communication",
+        "Interpersonal Communication",
+        "Media & Journalism"
+      ]
+    },
+    {
+      title: "Creative & Design",
+      icon: <DesignServicesRounded />,
+      color: "#e91e63",
+      programs: [
+        "Graphic Design & Branding",
+        "Digital Art & Illustration",
+        "Video Production & Editing",
+        "Photography & Visual Arts",
+        "Creative Writing & Content",
+        "Animation & Motion Graphics",
+        "Interior & Architectural Design",
+        "Fashion & Product Design"
+      ]
+    },
+    {
+      title: "Health & Wellness Coaching",
+      icon: <AutoAwesome />,
+      color: "#cddc39",
+      programs: [
+        "Life Coaching & Personal Development",
+        "Wellness & Nutrition Guidance",
+        "Stress Management & Mental Health",
+        "Fitness & Exercise Coaching",
+        "Work-Life Balance",
+        "Mindfulness & Meditation",
+        "Habit Formation & Goal Setting",
+        "Emotional Resilience Building"
+      ]
+    },
+    {
+      title: "Specialized Industries",
+      icon: <BuildRounded />,
+      color: "#00bcd4",
+      programs: [
+        "Healthcare & Medical Training",
+        "Agriculture & Food Security",
+        "Environmental & Sustainability",
+        "Real Estate & Property Management",
+        "Manufacturing & Production",
+        "Logistics & Supply Chain",
+        "Tourism & Hospitality",
+        "Non-Profit & Social Impact"
+      ]
     }
   ];
 
-  const selectedServiceData = services[selectedService];
+  const selectedCategoryData = categories[selectedCategory];
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100
+      }
+    }
+  };
 
   return (
     <Box 
       ref={ref}
       id="services"
       sx={{ 
-        py: { xs: 6, md: 8 },
-        bgcolor: '#1a1a1a',
+        py: { xs: 8, md: 12 },
+        background: isDarkMode 
+          ? 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 100%)'
+          : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
         position: 'relative',
         overflow: 'hidden',
       }}
     >
+      {/* Background decoration */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: isDarkMode ? `
+            radial-gradient(circle at 20% 80%, rgba(74, 222, 128, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(34, 197, 94, 0.08) 0%, transparent 50%),
+            radial-gradient(circle at 40% 40%, rgba(16, 185, 129, 0.06) 0%, transparent 50%)
+          ` : `
+            radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 40% 40%, rgba(139, 92, 246, 0.05) 0%, transparent 50%)
+          `,
+        }}
+      />
+
       <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 1 }}>
         {/* Header Section */}
         <Fade in={inView} timeout={800}>
-          <Box sx={{ textAlign: 'center', mb: 6 }}>
+          <Box sx={{ textAlign: 'center', mb: { xs: 6, md: 8 } }}>
             <Typography
               variant="h2"
               component="h2"
               sx={{
                 fontWeight: 800,
                 mb: 2,
-                background: 'linear-gradient(45deg, #22c55e, #4ade80)',
+                background: isDarkMode 
+                  ? 'linear-gradient(45deg, #4ade80, #ff8a80)'
+                  : 'linear-gradient(45deg, #3f51b5, #ff6b6b)',
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
-                fontSize: { xs: '2.2rem', md: '2.8rem' }
+                fontSize: { xs: '2.2rem', sm: '2.8rem', md: '3.2rem' }
               }}
             >
-              Our Services
+              Our Comprehensive Programs
             </Typography>
             <Typography
               variant="h5"
               component="h3"
               sx={{
                 fontWeight: 600,
-                mb: 2,
-                color: '#e5e7eb',
-                fontSize: { xs: '1.1rem', md: '1.3rem' }
+                mb: 3,
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : '#334155',
+                fontSize: { xs: '1.1rem', sm: '1.3rem', md: '1.4rem' }
               }}
             >
-              Comprehensive Coaching, Training and Advisory Services
+              Transform Your Career Across Multiple Industries
             </Typography>
             <Typography
               variant="body1"
               sx={{
-                fontSize: { xs: '0.95rem', md: '1rem' },
-                color: '#9ca3af',
-                maxWidth: '700px',
+                fontSize: { xs: '1rem', md: '1.1rem' },
+                color: '#64748b',
+                maxWidth: '800px',
                 mx: 'auto',
-                lineHeight: 1.6,
+                lineHeight: 1.7,
               }}
             >
-              With highly experienced experts, Excellence Coaching Hub offers personalized coaching, 
-              training and advisory services designed to inspire, challenge, and support our clients 
-              at every step along the way of growth and success.
+              Excellence Coaching Hub offers comprehensive training and coaching programs across diverse fields. 
+              With expert instructors, personalized coaching, live video sessions, study materials, and hands-on practice, 
+              we prepare you for success in today's competitive job market.
             </Typography>
           </Box>
         </Fade>
 
-        {/* Interactive Services Browser */}
+        {/* Category Selection Tabs */}
         <Fade in={inView} timeout={1000}>
-          <Box
-            sx={{
-              bgcolor: '#111111',
-              borderRadius: 3,
-              overflow: 'hidden',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-              border: '1px solid rgba(34, 197, 94, 0.1)',
-            }}
+          <Box sx={{ mb: 6 }}>
+            <Typography
+              variant="h6"
+              sx={{
+                textAlign: 'center',
+                mb: 3,
+                color: '#1e293b',
+                fontWeight: 700
+              }}
+            >
+              Choose Your Field of Interest
+            </Typography>
+            <Box sx={{ 
+              display: 'flex', 
+              flexWrap: 'wrap', 
+              gap: 1.5, 
+              justifyContent: 'center',
+              mb: 4
+            }}>
+              {categories.map((category, index) => (
+                <Chip
+                  key={index}
+                  icon={category.icon}
+                  label={category.title}
+                  onClick={() => setSelectedCategory(index)}
+                  sx={{
+                    fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                    fontWeight: 600,
+                    px: { xs: 1, sm: 2 },
+                    py: { xs: 2, sm: 3 },
+                    height: { xs: 36, sm: 48 },
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    bgcolor: selectedCategory === index ? category.color : 'white',
+                    color: selectedCategory === index ? 'white' : '#475569',
+                    border: `2px solid ${selectedCategory === index ? category.color : '#e2e8f0'}`,
+                    '&:hover': {
+                      bgcolor: selectedCategory === index ? category.color : 'rgba(99, 102, 241, 0.1)',
+                      borderColor: category.color,
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 8px 25px ${category.color}40`
+                    },
+                    '& .MuiChip-icon': {
+                      color: selectedCategory === index ? 'white' : category.color,
+                    }
+                  }}
+                />
+              ))}
+            </Box>
+          </Box>
+        </Fade>
+
+        {/* Selected Category Programs */}
+        <Fade in={inView} timeout={1200}>
+          <motion.div
+            key={selectedCategory}
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
           >
-            <Grid container sx={{ minHeight: '500px' }}>
-              {/* Left Panel - Services List */}
-              <Grid 
-                item 
-                xs={12} 
-                md={5} 
-                sx={{ 
-                  bgcolor: '#1a1a1a',
-                  borderRight: { md: '2px solid #22c55e' }
-                }}
-              >
-                <List sx={{ p: 0 }}>
-                  {services.map((service, index) => (
-                    <ListItem key={index} disablePadding>
-                      <ListItemButton
-                        onClick={() => setSelectedService(index)}
-                        selected={selectedService === index}
-                        sx={{
-                          py: 2.5,
-                          px: 3,
-                          transition: 'all 0.3s ease',
-                          borderLeft: selectedService === index ? '4px solid #22c55e' : '4px solid transparent',
-                          bgcolor: selectedService === index ? '#22c55e' : 'transparent',
-                          '&:hover': {
-                            bgcolor: selectedService === index ? '#22c55e' : 'rgba(34, 197, 94, 0.1)',
-                          },
-                          '&.Mui-selected': {
-                            bgcolor: '#22c55e',
-                          }
-                        }}
-                      >
-                        <ListItemIcon
-                          sx={{
-                            color: selectedService === index ? 'white' : '#9ca3af',
-                            minWidth: 40,
-                          }}
-                        >
-                          {service.icon}
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={service.title}
-                          sx={{
-                            '& .MuiListItemText-primary': {
-                              fontWeight: selectedService === index ? 600 : 500,
-                              color: selectedService === index ? 'white' : '#e5e7eb',
-                              fontSize: '1rem'
-                            }
-                          }}
-                        />
-                      </ListItemButton>
-                    </ListItem>
-                  ))}
-                </List>
-              </Grid>
-
-              {/* Right Panel - Service Details */}
-              <Grid item xs={12} md={7} sx={{ bgcolor: '#111111' }}>
-                <Box sx={{ p: { xs: 3, md: 4 } }}>
-                  {/* Service Header */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                    <Box
-                      sx={{
-                        p: 2,
-                        borderRadius: 2,
-                        bgcolor: '#22c55e',
-                        color: 'white',
-                        mr: 3,
-                        display: 'flex'
-                      }}
-                    >
-                      {selectedServiceData.icon}
-                    </Box>
-                    <Box>
-                      <Typography
-                        variant="h4"
-                        sx={{
-                          fontWeight: 700,
-                          color: 'white',
-                          fontSize: { xs: '1.5rem', md: '2rem' },
-                          mb: 1
-                        }}
-                      >
-                        {selectedServiceData.title}
-                      </Typography>
-                      <Typography
-                        variant="body1"
-                        sx={{
-                          color: '#9ca3af',
-                          fontSize: '1rem'
-                        }}
-                      >
-                        {selectedServiceData.description}
-                      </Typography>
-                    </Box>
-                  </Box>
-
-                  {/* What we offer section */}
-                  <Box sx={{ mb: 4 }}>
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        color: 'white',
-                        fontWeight: 600,
-                        mb: 3,
-                        fontSize: '1.25rem'
-                      }}
-                    >
-                      What we offer:
-                    </Typography>
-
-                    {/* Two-column offerings */}
-                    <Grid container spacing={3}>
-                      {selectedServiceData.offerings.map((offering, index) => (
-                        <Grid item xs={12} sm={6} key={index}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                            <Box
-                              sx={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: '50%',
-                                bgcolor: '#22c55e',
-                                mr: 2,
-                                flexShrink: 0
-                              }}
-                            />
-                            <Typography
-                              sx={{
-                                color: '#e5e7eb',
-                                fontSize: '0.95rem',
-                                fontWeight: 500
-                              }}
-                            >
-                              {offering}
-                            </Typography>
-                          </Box>
-                        </Grid>
-                      ))}
-                    </Grid>
-                  </Box>
-
-                  {/* Additional Details */}
+            <Card
+              sx={{
+                borderRadius: 4,
+                overflow: 'hidden',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.1)',
+                border: `2px solid ${selectedCategoryData.color}20`,
+                background: 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(10px)',
+              }}
+            >
+              <CardContent sx={{ p: { xs: 3, sm: 4, md: 6 } }}>
+                {/* Category Header */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  mb: 4,
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  textAlign: { xs: 'center', sm: 'left' }
+                }}>
                   <Box
                     sx={{
                       p: 3,
-                      bgcolor: 'rgba(34, 197, 94, 0.05)',
-                      borderRadius: 2,
-                      border: '1px solid rgba(34, 197, 94, 0.2)'
+                      borderRadius: 3,
+                      bgcolor: selectedCategoryData.color,
+                      color: 'white',
+                      mr: { xs: 0, sm: 3 },
+                      mb: { xs: 2, sm: 0 },
+                      display: 'flex',
+                      fontSize: '2rem'
                     }}
                   >
+                    {selectedCategoryData.icon}
+                  </Box>
+                  <Box>
                     <Typography
+                      variant="h3"
                       sx={{
-                        color: '#d1d5db',
-                        fontSize: '0.9rem',
-                        lineHeight: 1.6
+                        fontWeight: 700,
+                        color: '#1e293b',
+                        fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' },
+                        mb: 1
                       }}
                     >
-                      {selectedServiceData.details}
+                      {selectedCategoryData.title}
+                    </Typography>
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        color: '#64748b',
+                        fontSize: { xs: '1rem', md: '1.1rem' },
+                        fontWeight: 500
+                      }}
+                    >
+                      Specialized programs designed for career advancement
                     </Typography>
                   </Box>
                 </Box>
-              </Grid>
-            </Grid>
-          </Box>
+
+                {/* Programs Grid */}
+                <Grid container spacing={3}>
+                  {selectedCategoryData.programs.map((program, index) => (
+                    <Grid item xs={12} sm={6} md={4} key={index}>
+                      <motion.div variants={itemVariants}>
+                        <Card
+                          sx={{
+                            height: '100%',
+                            borderRadius: 2,
+                            transition: 'all 0.3s ease',
+                            border: `1px solid ${selectedCategoryData.color}20`,
+                            '&:hover': {
+                              transform: 'translateY(-4px)',
+                              boxShadow: `0 12px 40px ${selectedCategoryData.color}30`,
+                              borderColor: selectedCategoryData.color,
+                            }
+                          }}
+                        >
+                          <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                              <Box
+                                sx={{
+                                  width: 12,
+                                  height: 12,
+                                  borderRadius: '50%',
+                                  bgcolor: selectedCategoryData.color,
+                                  mr: 2,
+                                  mt: 0.5,
+                                  flexShrink: 0
+                                }}
+                              />
+                              <Typography
+                                variant="h6"
+                                sx={{
+                                  fontWeight: 600,
+                                  color: '#1e293b',
+                                  fontSize: { xs: '1rem', md: '1.1rem' },
+                                  lineHeight: 1.4,
+                                  flex: 1
+                                }}
+                              >
+                                {program}
+                              </Typography>
+                            </Box>
+                            
+                            <Box sx={{ mt: 'auto' }}>
+                              <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                                <Chip 
+                                  size="small" 
+                                  label="Live Sessions" 
+                                  sx={{ 
+                                    bgcolor: `${selectedCategoryData.color}15`,
+                                    color: selectedCategoryData.color,
+                                    fontWeight: 600,
+                                    fontSize: '0.7rem'
+                                  }} 
+                                />
+                                <Chip 
+                                  size="small" 
+                                  label="Certification" 
+                                  sx={{ 
+                                    bgcolor: `${selectedCategoryData.color}15`,
+                                    color: selectedCategoryData.color,
+                                    fontWeight: 600,
+                                    fontSize: '0.7rem'
+                                  }} 
+                                />
+                              </Stack>
+                              
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  color: '#64748b',
+                                  fontSize: '0.9rem',
+                                  lineHeight: 1.5
+                                }}
+                              >
+                                Expert coaching with personalized learning path, practical assignments, and career guidance.
+                              </Typography>
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    </Grid>
+                  ))}
+                </Grid>
+
+                {/* Call to Action */}
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  mt: 6, 
+                  p: 4, 
+                  borderRadius: 3,
+                  background: `linear-gradient(135deg, ${selectedCategoryData.color}15 0%, ${selectedCategoryData.color}05 100%)`,
+                  border: `1px solid ${selectedCategoryData.color}30`
+                }}>
+                  <Typography
+                    variant="h5"
+                    sx={{
+                      fontWeight: 700,
+                      color: '#1e293b',
+                      mb: 2,
+                      fontSize: { xs: '1.3rem', md: '1.5rem' }
+                    }}
+                  >
+                    Ready to Start Your Journey?
+                  </Typography>
+                  <Typography
+                    variant="body1"
+                    sx={{
+                      color: '#64748b',
+                      mb: 3,
+                      fontSize: { xs: '1rem', md: '1.1rem' }
+                    }}
+                  >
+                    Join thousands of professionals who have transformed their careers with our expert coaching and comprehensive training programs.
+                  </Typography>
+                  <Stack 
+                    direction={{ xs: 'column', sm: 'row' }} 
+                    spacing={2} 
+                    justifyContent="center"
+                    alignItems="center"
+                  >
+                    <Chip
+                      icon={<AutoAwesome />}
+                      label="Personalized Coaching"
+                      sx={{
+                        bgcolor: 'white',
+                        color: selectedCategoryData.color,
+                        fontWeight: 600,
+                        px: 2,
+                        py: 3,
+                        height: 40
+                      }}
+                    />
+                    <Chip
+                      icon={<LocalLibraryRounded />}
+                      label="Study Materials"
+                      sx={{
+                        bgcolor: 'white',
+                        color: selectedCategoryData.color,
+                        fontWeight: 600,
+                        px: 2,
+                        py: 3,
+                        height: 40
+                      }}
+                    />
+                    <Chip
+                      icon={<GroupsRounded />}
+                      label="Live Video Sessions"
+                      sx={{
+                        bgcolor: 'white',
+                        color: selectedCategoryData.color,
+                        fontWeight: 600,
+                        px: 2,
+                        py: 3,
+                        height: 40
+                      }}
+                    />
+                  </Stack>
+                </Box>
+              </CardContent>
+            </Card>
+          </motion.div>
         </Fade>
       </Container>
     </Box>

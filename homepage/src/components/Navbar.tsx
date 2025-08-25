@@ -30,6 +30,7 @@ import {
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import ThemeToggle from './ThemeToggle';
 
 const Navbar: React.FC = () => {
   const theme = useTheme();
@@ -335,6 +336,17 @@ const Navbar: React.FC = () => {
             </motion.div>
           </>
         )}
+        
+        {/* Theme Toggle for Mobile */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.8 }}
+        >
+          <ListItem sx={{ mx: 2, mb: 1, justifyContent: 'center' }}>
+            <ThemeToggle size="medium" sx={{ mx: 'auto' }} />
+          </ListItem>
+        </motion.div>
       </List>
       
       {/* Footer */}
@@ -452,6 +464,15 @@ const Navbar: React.FC = () => {
                   </motion.div>
                 ))}
 
+                {/* Theme Toggle */}
+                <motion.div
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.5 }}
+                >
+                  <ThemeToggle size="small" />
+                </motion.div>
+
                 {/* Auth Buttons */}
                 {!user ? (
                   <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
@@ -548,17 +569,20 @@ const Navbar: React.FC = () => {
               </Box>
             )}
 
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Button and Theme Toggle */}
             {isMobile && (
-              <IconButton
-                color="inherit"
-                aria-label="open drawer"
-                edge="start"
-                onClick={handleDrawerToggle}
-                sx={{ color: scrolled ? 'text.primary' : 'white' }}
-              >
-                <MenuIcon />
-              </IconButton>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <ThemeToggle size="small" />
+                <IconButton
+                  color="inherit"
+                  aria-label="open drawer"
+                  edge="start"
+                  onClick={handleDrawerToggle}
+                  sx={{ color: scrolled ? 'text.primary' : 'white' }}
+                >
+                  <MenuIcon />
+                </IconButton>
+              </Box>
             )}
           </Toolbar>
         </Container>

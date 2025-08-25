@@ -8,6 +8,7 @@ import {
   KeyboardArrowUp,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 // Components
 import HeroSection from '../components/HeroSection';
@@ -19,9 +20,11 @@ import PlatformLinksSection from '../components/PlatformLinksSection';
 import TestimonialsSection from '../components/TestimonialsSection';
 import Footer from '../components/Footer';
 import Navbar from '../components/Navbar';
+import FloatingContact from '../components/FloatingContact';
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   // Scroll to top functionality
@@ -41,13 +44,23 @@ const HomePage: React.FC = () => {
     });
   };
 
+  const handleGetStarted = () => {
+    if (user) {
+      // User is logged in, redirect to PostLogin page
+      navigate('/dashboard');
+    } else {
+      // User is not logged in, redirect to register page
+      navigate('/register');
+    }
+  };
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* Navigation */}
       <Navbar />
 
       {/* Hero Section */}
-      <HeroSection onGetStarted={() => navigate('/register')} />
+      <HeroSection onGetStarted={handleGetStarted} />
 
       {/* About Section */}
       <AboutSection />
@@ -78,14 +91,17 @@ const HomePage: React.FC = () => {
           onClick={scrollToTop}
           sx={{
             position: 'fixed',
-            bottom: 24,
-            right: 24,
+            bottom: { xs: 24, md: 24 },
+            right: { xs: 24, md: 90 },
             zIndex: 1000,
           }}
         >
           <KeyboardArrowUp />
         </Fab>
       </Zoom>
+
+      {/* Floating Contact Component */}
+      <FloatingContact />
     </Box>
   );
 };

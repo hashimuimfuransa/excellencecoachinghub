@@ -7,9 +7,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 // Context Providers
 import { AuthProvider } from './contexts/AuthContext';
-
-// Theme
-import theme from './theme/theme';
+import { CustomThemeProvider, useThemeContext } from './contexts/ThemeContext';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -21,9 +19,9 @@ import PostLoginPage from './pages/PostLoginPage';
 import GoogleTestPage from './pages/GoogleTestPage';
 import RoleSelectionPage from './pages/RoleSelectionPage';
 
-// Theme is imported from theme/theme.ts
-
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const { theme, isDarkMode } = useThemeContext();
+  
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -72,7 +70,7 @@ const App: React.FC = () => {
           pauseOnFocusLoss
           draggable
           pauseOnHover
-          theme="light"
+          theme={isDarkMode ? "dark" : "light"}
           toastStyle={{
             borderRadius: '12px',
             fontFamily: theme.typography.fontFamily,
@@ -80,6 +78,14 @@ const App: React.FC = () => {
         />
       </AuthProvider>
     </ThemeProvider>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <CustomThemeProvider>
+      <AppContent />
+    </CustomThemeProvider>
   );
 };
 

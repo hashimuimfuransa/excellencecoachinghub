@@ -7,6 +7,7 @@ import {
   Card,
   CardContent,
   Avatar,
+  useTheme,
 } from '@mui/material';
 import {
   Favorite,
@@ -18,10 +19,13 @@ import {
 } from '@mui/icons-material';
 import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
+import { useThemeContext } from '../contexts/ThemeContext';
 
 const AboutSection: React.FC = () => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
+  const theme = useTheme();
+  const { isDarkMode } = useThemeContext();
 
   const values = [
     {
@@ -97,7 +101,9 @@ const AboutSection: React.FC = () => {
                   fontWeight: 800,
                   mb: 3,
                   fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.75rem', lg: '3rem' },
-                  background: 'linear-gradient(45deg, #22c55e, #16a34a)',
+                  background: isDarkMode 
+                    ? 'linear-gradient(45deg, #4ade80, #22c55e)'
+                    : 'linear-gradient(45deg, #22c55e, #16a34a)',
                   backgroundClip: 'text',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',

@@ -79,7 +79,7 @@ import {
   JobType
 } from '../types/user';
 import { validateProfileSimple } from '../utils/simpleProfileValidation';
-import { uploadFile } from '../utils/fileUpload';
+import { uploadFileRobustly } from '../utils/robustFileUpload';
 
 interface ComprehensiveProfileFormProps {
   user: User;
@@ -297,7 +297,7 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
     }));
 
     try {
-      const fileUrl = await uploadFile(file, fileType, (progress) => {
+      const fileUrl = await uploadFileRobustly(file, fileType, (progress) => {
         setUploadStates(prev => ({
           ...prev,
           [fileType]: { ...prev[fileType], progress }

@@ -176,81 +176,81 @@ router.post('/cv-simple', protect, upload.single('cv'), (req, res) => {
   }
 });
 
-// @desc    Upload single CV file  
+// TEMPORARY: Basic response test endpoint
+router.post('/cv-debug', protect, (req, res) => {
+  console.log('🔍 Debug endpoint hit');
+  res.status(200).json({
+    success: true,
+    message: 'Debug endpoint working',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// EMERGENCY: No middleware test - raw response
+router.post('/cv-raw', (req, res) => {
+  console.log('🆘 Raw endpoint hit - no middleware');
+  try {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      success: true,
+      message: 'Raw endpoint working - no auth, no multer',
+      timestamp: new Date().toISOString()
+    }));
+  } catch (error) {
+    console.error('Raw endpoint error:', error);
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      success: false,
+      error: 'Raw endpoint failed'
+    }));
+  }
+});
+
+// @desc    Upload single CV file (step-by-step debugging)
 // @route   POST /api/upload/cv
 // @access  Private
-router.post('/cv', protect, upload.single('cv'), async (req, res) => {
-  try {
-    const userId = (req as any).user.id;
-    const file = req.file;
-    
-    console.log('📤 CV upload request for user:', userId);
-    
-    if (!file) {
-      console.log('❌ No file provided');
-      return res.status(400).json({
-        success: false,
-        error: 'No CV file uploaded'
-      });
-    }
-
-    console.log('📄 File details:', { 
-      name: file.originalname, 
-      size: file.size, 
-      type: file.mimetype 
-    });
-
-    // Upload to Cloudinary
-    console.log('☁️ Starting Cloudinary upload...');
-    const folder = `excellence-coaching-hub/documents/${userId}/cv`;
-    const uploadResult = await uploadDocumentToCloudinary(
-      file.buffer, 
-      userId, 
-      file.originalname, 
-      folder
-    );
-    
-    console.log('✅ Cloudinary upload completed:', uploadResult.url);
-
-    // Update user profile
-    console.log('💾 Updating user profile...');
-    await User.findByIdAndUpdate(userId, {
-      cvFile: uploadResult.url,
-      resume: uploadResult.url,
-      lastProfileUpdate: new Date().toISOString()
-    }, { new: true });
-    
-    console.log('✅ User profile updated');
-
-    // Send response
-    const response = {
-      success: true,
-      data: {
-        url: uploadResult.url,
-        originalName: file.originalname,
-        size: uploadResult.size || file.size
-      },
-      message: 'CV uploaded successfully'
-    };
-    
-    console.log('📤 Sending success response');
-    res.status(200).json(response);
-
-  } catch (error: any) {
-    console.error('❌ CV upload error:', error);
-    
+router.post('/cv', protect, (req, res) => {
+  console.log('🚀 CV upload endpoint hit');
+  
+  // Force response within 5 seconds to prevent hanging
+  const forceResponse = setTimeout(() => {
     if (!res.headersSent) {
-      let errorMessage = 'Failed to upload CV. Please try again.';
-      
-      if (error.message?.includes('Cloudinary')) {
-        errorMessage = 'File upload service temporarily unavailable. Please try again.';
-      } else if (error.message?.includes('timeout')) {
-        errorMessage = 'Upload timed out. Please try with a smaller file.';
-      }
-      
+      console.error('⏰ FORCE TIMEOUT - Sending emergency response');
       res.status(500).json({
         success: false,
-        error: errorMessage
+        error: 'Server processing timeout'
+      });
+    }
+  }, 5000);
+
+  try {
+    // Step 1: Test basic response without file processing
+    console.log('📤 Step 1: Basic response test');
+    
+    // Clear the force timeout
+    clearTimeout(forceResponse);
+    
+    // Send immediate test response
+    res.status(200).json({
+      success: true,
+      data: {
+        url: 'https://test-url.com/test.pdf',
+        originalName: 'test.pdf',
+        size: 1024
+      },
+      message: 'Test response - file processing temporarily disabled'
+    });
+    
+    console.log('✅ Test response sent successfully');
+    
+  } catch (error: any) {
+    clearTimeout(forceResponse);
+    console.error('❌ Even basic response failed:', error);
+    
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        error: 'Basic response test failed'
       });
     }
   }

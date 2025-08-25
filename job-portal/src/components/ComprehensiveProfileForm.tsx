@@ -80,6 +80,7 @@ import {
 } from '../types/user';
 import { validateProfileSimple } from '../utils/simpleProfileValidation';
 import { uploadCV } from '../utils/simpleFileUpload';
+import { uploadCVWithFetch } from '../utils/fetchUpload';
 
 interface ComprehensiveProfileFormProps {
   user: User;
@@ -297,9 +298,9 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
     }));
 
     try {
-      console.log('Starting CV upload with simplified method...');
+      console.log('Starting CV upload with fetch method...');
       
-      const fileUrl = await uploadCV(file, (progress) => {
+      const fileUrl = await uploadCVWithFetch(file, (progress) => {
         setUploadStates(prev => ({
           ...prev,
           [fileType]: { ...prev[fileType], progress }

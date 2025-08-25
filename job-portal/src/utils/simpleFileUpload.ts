@@ -88,14 +88,19 @@ export const uploadFile = async (
       reject(new Error('Upload timed out. Please try again.'));
     });
 
-    // Setup request
-    const endpoint = `/api/upload/${fileType}`;
+    // TEMPORARY: Use debug endpoint for testing
+    const endpoint = fileType === 'cv' ? '/api/upload/cv-debug' : `/api/upload/${fileType}`;
     xhr.open('POST', endpoint, true);
     xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-    xhr.timeout = 60000; // 1 minute timeout
+    xhr.timeout = 30000; // 30 seconds timeout
     
-    // Prepare form data
-    formData.append(fileType, file);
+    // For debug endpoint, don't send file data
+    if (fileType === 'cv') {
+      // Just send empty form data for debug test
+      console.log('🔍 Using debug endpoint - no file data sent');
+    } else {
+      formData.append(fileType, file);
+    }
     
     console.log(`Starting ${fileType} upload:`, {
       fileName: file.name,

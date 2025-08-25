@@ -3,23 +3,23 @@
   "name": "Excellence Coaching Hub",
   "icons": [
     {
-      "src": "logo.webp",
-      "type": "image/webp",
+      "src": "icon.png",
+      "type": "image/png",
       "sizes": "16x16"
     },
     {
-      "src": "logo.webp",
-      "type": "image/webp",
+      "src": "icon.png",
+      "type": "image/png",
       "sizes": "32x32"
     },
     {
-      "src": "logo.webp",
-      "type": "image/webp",
+      "src": "icon.png",
+      "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "logo.webp",
-      "type": "image/webp",
+      "src": "icon.png",
+      "type": "image/png",
       "sizes": "512x512"
     }
   ],

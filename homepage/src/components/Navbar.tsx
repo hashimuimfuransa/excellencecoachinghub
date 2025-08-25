@@ -387,7 +387,7 @@ const Navbar: React.FC = () => {
               >
                 <Box
                   component="img"
-                  src="/logo.webp"
+                  src="/logo1.png"
                   alt="Excellence Coaching Hub Logo"
                   sx={{
                     height: { xs: 32, sm: 38, md: 42 },

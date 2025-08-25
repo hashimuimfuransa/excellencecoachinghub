@@ -129,7 +129,7 @@ const LoginPage: React.FC = () => {
                 <Box>
                   <Box sx={{ mb: 4, display: 'flex', alignItems: 'center' }}>
                     <img 
-                      src="/logo.webp" 
+                      src="/logo1.png" 
                       alt="Excellence Coaching Hub" 
                       style={{ height: 60, marginRight: 16 }}
                     />
@@ -213,7 +213,7 @@ const LoginPage: React.FC = () => {
               >
                 <Box sx={{ textAlign: 'center', mb: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <img 
-                    src="/logo.webp" 
+                    src="/logo1.png" 
                     alt="Excellence Coaching Hub" 
                     style={{ height: 80, marginBottom: 16 }}
                   />

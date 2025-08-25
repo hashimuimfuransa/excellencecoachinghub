@@ -234,7 +234,7 @@ const LoginPage: React.FC = () => {
 
               <Box
                 component="img"
-                src="/logo.webp"
+                src="/logo1.png"
                 alt="Excellence Coaching Hub Logo"
                 sx={{
                   height: 70,

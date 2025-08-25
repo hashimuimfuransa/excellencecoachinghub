@@ -124,7 +124,7 @@ const PostLoginPage: React.FC = () => {
             <Box sx={{ textAlign: 'center', mb: 6, position: 'relative', zIndex: 1 }}>
               <Box
                 component="img"
-                src="/logo.webp"
+                src="/logo1.png"
                 alt="Excellence Coaching Hub Logo"
                 sx={{
                   height: 70,

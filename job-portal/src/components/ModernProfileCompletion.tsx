@@ -18,7 +18,8 @@ import {
   ListItemIcon,
   ListItemText,
   IconButton,
-  Tooltip
+  Tooltip,
+  CircularProgress
 } from '@mui/material';
 import {
   Person,
@@ -38,6 +39,8 @@ import {
   Edit
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { useFreshUserData } from '../hooks/useFreshUserData';
+import { validateProfileSimple } from '../utils/simpleProfileValidation';
 
 interface ProfileSection {
   id: string;
@@ -63,35 +66,32 @@ const ModernProfileCompletion: React.FC<ModernProfileCompletionProps> = ({
 }) => {
   const theme = useTheme();
   const navigate = useNavigate();
+  const { freshUser, loading, error } = useFreshUserData(user);
 
-  // Calculate profile completion based on user data
-  const calculateCompletion = () => {
-    let score = 0;
-    let total = 0;
+  // Show loading state while fetching fresh data
+  if (loading) {
+    return (
+      <Card sx={{ mb: 4, borderRadius: 3 }}>
+        <CardContent sx={{ p: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            <CircularProgress />
+            <Typography color="textSecondary">
+              Loading your profile status...
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
+    );
+  }
 
-    const checks = [
-      { field: user?.firstName, weight: 5 },
-      { field: user?.lastName, weight: 5 },
-      { field: user?.email, weight: 5 },
-      { field: user?.phone, weight: 10 },
-      { field: user?.location, weight: 10 },
-      { field: user?.bio, weight: 15 },
-      { field: user?.skills?.length > 0, weight: 20 },
-      { field: user?.experience?.length > 0, weight: 20 },
-      { field: user?.education?.length > 0, weight: 10 }
-    ];
-
-    checks.forEach(check => {
-      total += check.weight;
-      if (check.field) {
-        score += check.weight;
-      }
-    });
-
-    return Math.round((score / total) * 100);
-  };
-
-  const completionPercentage = calculateCompletion();
+  const currentUser = freshUser || user;
+  console.log('🔍 ModernProfileCompletion using user data:', currentUser);
+  
+  // Use consistent validation logic from validateProfileSimple
+  const validationResult = validateProfileSimple(currentUser);
+  const completionPercentage = validationResult.completionPercentage;
+  
+  console.log('📊 ModernProfileCompletion completion percentage:', completionPercentage);
 
   const profileSections: ProfileSection[] = [
     {
@@ -99,9 +99,9 @@ const ModernProfileCompletion: React.FC<ModernProfileCompletionProps> = ({
       title: 'Basic Information',
       description: 'Name, contact details, and location',
       icon: <Person />,
-      completed: !!(user?.firstName && user?.lastName && user?.phone && user?.location),
+      completed: !!(currentUser?.firstName && currentUser?.lastName && currentUser?.phone && currentUser?.location),
       completionScore: 25,
-      action: onEditProfile,
+      action: () => window.location.href = '/app/profile',
       priority: 'high'
     },
     {
@@ -109,9 +109,9 @@ const ModernProfileCompletion: React.FC<ModernProfileCompletionProps> = ({
       title: 'Work Experience',
       description: 'Add your professional background',
       icon: <Work />,
-      completed: !!(user?.experience?.length > 0),
+      completed: !!(currentUser?.experience?.length > 0),
       completionScore: 30,
-      action: onEditProfile,
+      action: () => window.location.href = '/app/profile',
       priority: 'high'
     },
     {
@@ -119,9 +119,9 @@ const ModernProfileCompletion: React.FC<ModernProfileCompletionProps> = ({
       title: 'Skills & Expertise',
       description: 'Showcase your technical and soft skills',
       icon: <Star />,
-      completed: !!(user?.skills?.length > 2),
+      completed: !!(currentUser?.skills?.length > 2),
       completionScore: 25,
-      action: onEditProfile,
+      action: () => window.location.href = '/app/profile',
       priority: 'medium'
     },
     {
@@ -129,9 +129,9 @@ const ModernProfileCompletion: React.FC<ModernProfileCompletionProps> = ({
       title: 'Education',
       description: 'Academic background and certifications',
       icon: <School />,
-      completed: !!(user?.education?.length > 0),
+      completed: !!(currentUser?.education?.length > 0),
       completionScore: 20,
-      action: onEditProfile,
+      action: () => window.location.href = '/app/profile',
       priority: 'medium'
     }
   ];
@@ -320,7 +320,7 @@ const ModernProfileCompletion: React.FC<ModernProfileCompletionProps> = ({
                 variant="contained"
                 fullWidth
                 startIcon={<Edit />}
-                onClick={onEditProfile}
+                onClick={() => window.location.href = '/app/profile'}
                 sx={{
                   borderRadius: 2,
                   textTransform: 'none',
@@ -345,7 +345,7 @@ const ModernProfileCompletion: React.FC<ModernProfileCompletionProps> = ({
             <Grid container spacing={3} textAlign="center">
               <Grid item xs={4}>
                 <Typography variant="h4" fontWeight="bold" color="primary.main">
-                  {user?.skills?.length || 0}
+                  {currentUser?.skills?.length || 0}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Skills Listed
@@ -353,7 +353,7 @@ const ModernProfileCompletion: React.FC<ModernProfileCompletionProps> = ({
               </Grid>
               <Grid item xs={4}>
                 <Typography variant="h4" fontWeight="bold" color="success.main">
-                  {user?.experience?.length || 0}
+                  {currentUser?.experience?.length || 0}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Work Experiences
@@ -361,7 +361,7 @@ const ModernProfileCompletion: React.FC<ModernProfileCompletionProps> = ({
               </Grid>
               <Grid item xs={4}>
                 <Typography variant="h4" fontWeight="bold" color="info.main">
-                  {user?.education?.length || 0}
+                  {currentUser?.education?.length || 0}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Education Records

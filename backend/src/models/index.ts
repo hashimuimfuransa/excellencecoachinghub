@@ -37,6 +37,7 @@ export { JobSeekerProfile, IJobSeekerProfileDocument, IJobSeekerProfileModel } f
 export { StudentProfile, IStudentProfileDocument, IStudentProfileModel } from './StudentProfile';
 export { JobCourseMatch, IJobCourseMatchDocument, IJobCourseMatchModel } from './JobCourseMatch';
 export { InterviewSession, IInterviewSessionDocument, IInterviewSessionModel } from './InterviewSession';
+export { TestRequest, ITestRequestDocument, ITestRequestModel } from './TestRequest';
 
 // Re-export shared types for convenience
 export {

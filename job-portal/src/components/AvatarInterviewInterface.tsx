@@ -46,6 +46,8 @@ import {
   modernInterviewService
 } from '../services/modernInterviewService';
 import { AvatarTalkResponse } from '../services/avatarTalkService';
+import { speechToTextService, SpeechToTextResult } from '../services/speechToTextService';
+import StreamingAvatarVideo from './StreamingAvatarVideo';
 
 interface AvatarInterviewInterfaceProps {
   session: InterviewSession;
@@ -61,10 +63,15 @@ interface InterviewState {
   isRecording: boolean;
   isPlaying: boolean;
   currentAvatarVideo?: AvatarTalkResponse;
+  currentAvatarText: string; // Text for streaming avatar
   textResponse: string;
   processingVideo: boolean;
   sessionStarted: boolean;
   showInstructions: boolean;
+  isProcessingAudio: boolean;
+  recordingStartTime: number;
+  currentTranscript: string;
+  awaitingNextQuestion: boolean;
 }
 
 const AvatarInterviewInterface: React.FC<AvatarInterviewInterfaceProps> = ({
@@ -76,7 +83,7 @@ const AvatarInterviewInterface: React.FC<AvatarInterviewInterfaceProps> = ({
   const theme = useTheme();
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const videoRef = useRef<HTMLVideoElement>(null);
+
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [state, setState] = useState<InterviewState>({
@@ -85,10 +92,15 @@ const AvatarInterviewInterface: React.FC<AvatarInterviewInterfaceProps> = ({
     timeRemaining: session.totalDuration,
     isRecording: false,
     isPlaying: false,
+    currentAvatarText: `Hello and welcome to your AI interview for ${session.jobTitle}. I'm your virtual interviewer and I'll be conducting this interview today. Please make sure you're in a quiet environment and your microphone is working properly. We'll start with a few questions to assess your qualifications for this role. Are you ready to begin?`,
     textResponse: '',
     processingVideo: false,
     sessionStarted: false,
-    showInstructions: true
+    showInstructions: true,
+    isProcessingAudio: false,
+    recordingStartTime: 0,
+    currentTranscript: '',
+    awaitingNextQuestion: false
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -125,55 +137,46 @@ const AvatarInterviewInterface: React.FC<AvatarInterviewInterfaceProps> = ({
   const initializeInterview = async () => {
     try {
       setError(null);
-      setState(prev => ({ ...prev, processingVideo: true }));
-
-      // Generate welcome video
-      const welcomeVideo = await modernInterviewService.generateWelcomeVideo(session.jobTitle);
+      // No need to set processingVideo since streaming avatar shows immediately
+      console.log('🎬 Interview initialized with streaming avatar');
       
-      setState(prev => ({
-        ...prev,
-        currentAvatarVideo: welcomeVideo,
-        processingVideo: false
-      }));
-
+      // The welcome text is already set in the initial state
+      // Streaming avatar will start immediately when component renders
+      
     } catch (error) {
       console.error('Failed to initialize interview:', error);
       setError('Failed to load interview. Please try again.');
-      setState(prev => ({ ...prev, processingVideo: false }));
     }
   };
 
   const startInterview = async () => {
+    const firstQuestion = session.questions[0];
+    
     setState(prev => ({
       ...prev,
       sessionStarted: true,
       showInstructions: false,
       currentQuestionIndex: 0,
-      processingVideo: true
+      currentAvatarText: firstQuestion.text
     }));
 
-    try {
-      // Load first question video
-      const firstQuestion = session.questions[0];
-      const questionVideo = await modernInterviewService.generateQuestionVideo(firstQuestion);
-      
-      setState(prev => ({
-        ...prev,
-        currentAvatarVideo: questionVideo,
-        processingVideo: false
-      }));
-
-    } catch (error) {
-      console.error('Failed to load question video:', error);
-      setError('Failed to load question video. Please try again.');
-      setState(prev => ({ ...prev, processingVideo: false }));
-    }
+    console.log('🎯 Starting interview with first question:', firstQuestion.text);
   };
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 44100 // High quality audio
+        } 
+      });
+      
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus' // High quality codec
+      });
       
       audioChunksRef.current = [];
       
@@ -181,9 +184,9 @@ const AvatarInterviewInterface: React.FC<AvatarInterviewInterfaceProps> = ({
         audioChunksRef.current.push(event.data);
       };
       
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        handleRecordingComplete(audioBlob);
+        await handleRecordingComplete(audioBlob);
         
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
@@ -192,7 +195,12 @@ const AvatarInterviewInterface: React.FC<AvatarInterviewInterfaceProps> = ({
       mediaRecorderRef.current = mediaRecorder;
       mediaRecorder.start();
       
-      setState(prev => ({ ...prev, isRecording: true }));
+      setState(prev => ({ 
+        ...prev, 
+        isRecording: true,
+        recordingStartTime: Date.now(),
+        currentTranscript: ''
+      }));
       
     } catch (error) {
       console.error('Failed to start recording:', error);
@@ -203,7 +211,11 @@ const AvatarInterviewInterface: React.FC<AvatarInterviewInterfaceProps> = ({
   const stopRecording = () => {
     if (mediaRecorderRef.current && state.isRecording) {
       mediaRecorderRef.current.stop();
-      setState(prev => ({ ...prev, isRecording: false }));
+      setState(prev => ({ 
+        ...prev, 
+        isRecording: false,
+        isProcessingAudio: true 
+      }));
     }
   };
 
@@ -211,17 +223,63 @@ const AvatarInterviewInterface: React.FC<AvatarInterviewInterfaceProps> = ({
     const currentQuestion = session.questions[state.currentQuestionIndex];
     if (!currentQuestion) return;
 
-    const response: InterviewResponse = {
-      questionId: currentQuestion.id,
-      question: currentQuestion.question,
-      answer: 'Voice response', // We'd need speech-to-text for actual transcription
-      audioBlob,
-      timestamp: new Date(),
-      duration: 60, // This would be calculated from actual recording time
-      confidence: 0.8 // This would come from speech recognition
-    };
+    try {
+      console.log('🎙️ Processing recorded audio...', {
+        size: audioBlob.size,
+        type: audioBlob.type,
+        questionIndex: state.currentQuestionIndex
+      });
 
-    await submitResponse(response);
+      // Calculate recording duration
+      const recordingDuration = (Date.now() - state.recordingStartTime) / 1000;
+
+      // Convert speech to text using AI
+      const transcriptionResult: SpeechToTextResult = await speechToTextService.transcribeAudio(audioBlob, {
+        language: 'en-US',
+        enableWordTimestamps: true,
+        enhancedModel: true
+      });
+
+      console.log('✅ Audio transcription completed:', transcriptionResult);
+
+      // Update state with transcript
+      setState(prev => ({ 
+        ...prev, 
+        currentTranscript: transcriptionResult.transcript,
+        isProcessingAudio: false
+      }));
+
+      // Create response with transcribed text
+      const response: InterviewResponse = {
+        questionId: currentQuestion.id,
+        question: currentQuestion.question,
+        answer: transcriptionResult.transcript || '[Audio response - transcription unavailable]',
+        audioBlob,
+        timestamp: new Date(),
+        duration: recordingDuration,
+        confidence: transcriptionResult.confidence || 0.8
+      };
+
+      // Submit response and get AI feedback
+      await submitResponse(response);
+
+    } catch (error) {
+      console.error('❌ Audio processing failed:', error);
+      
+      // Fallback: create response without transcription
+      const fallbackResponse: InterviewResponse = {
+        questionId: currentQuestion.id,
+        question: currentQuestion.question,
+        answer: '[Audio response recorded - processing error]',
+        audioBlob,
+        timestamp: new Date(),
+        duration: (Date.now() - state.recordingStartTime) / 1000,
+        confidence: 0.5
+      };
+
+      setState(prev => ({ ...prev, isProcessingAudio: false }));
+      await submitResponse(fallbackResponse);
+    }
   };
 
   const handleTextSubmit = async () => {
@@ -248,62 +306,81 @@ const AvatarInterviewInterface: React.FC<AvatarInterviewInterfaceProps> = ({
       setState(prev => ({
         ...prev,
         responses: [...prev.responses, response],
-        processingVideo: true
+        processingVideo: true,
+        awaitingNextQuestion: true
       }));
 
-      // Submit response to backend
+      // Submit response to backend for AI analysis and feedback
+      console.log('📤 Submitting response for AI analysis...', {
+        question: response.question.substring(0, 50),
+        answerLength: response.answer.length,
+        confidence: response.confidence
+      });
+
       await modernInterviewService.submitResponse(session.id, response);
 
       // Check if this was the last question
       const isLastQuestion = state.currentQuestionIndex === session.questions.length - 1;
 
       if (isLastQuestion) {
-        // Generate completion video
-        const completionVideo = await modernInterviewService.generateAcknowledgmentVideo(true);
+        // Show completion message with streaming avatar
+        const completionText = "Thank you for your response. That concludes our interview. I'm now processing your answers and will provide you with detailed feedback shortly. Please wait while I analyze your responses...";
         setState(prev => ({
           ...prev,
-          currentAvatarVideo: completionVideo,
-          processingVideo: false
+          currentAvatarText: completionText,
+          processingVideo: false,
+          awaitingNextQuestion: false
         }));
         
-        // Complete interview after a short delay
-        setTimeout(() => {
-          completeInterview([...state.responses, response]);
-        }, 3000);
-        
-      } else {
-        // Move to next question
-        const nextQuestionIndex = state.currentQuestionIndex + 1;
-        const nextQuestion = session.questions[nextQuestionIndex];
-        
-        // Generate acknowledgment and then next question
-        const ackVideo = await modernInterviewService.generateAcknowledgmentVideo(false);
-        setState(prev => ({
-          ...prev,
-          currentAvatarVideo: ackVideo,
-          processingVideo: false
-        }));
-        
-        // After showing acknowledgment, load next question
+        // Complete interview and get AI feedback
         setTimeout(async () => {
           try {
-            const questionVideo = await modernInterviewService.generateQuestionVideo(nextQuestion);
-            setState(prev => ({
-              ...prev,
-              currentQuestionIndex: nextQuestionIndex,
-              currentAvatarVideo: questionVideo
-            }));
+            console.log('🤖 Getting AI feedback for completed interview...');
+            await completeInterview([...state.responses, response]);
           } catch (error) {
-            console.error('Failed to load next question:', error);
-            setError('Failed to load next question. Please try again.');
+            console.error('Failed to complete interview:', error);
+            setError('Interview completed but failed to get AI feedback.');
           }
-        }, 2000);
+        }, 4000);
+        
+      } else {
+        // Show acknowledgment message with AI processing feedback
+        const processingText = `Thank you for that response. I'm analyzing your answer and preparing personalized feedback. Let me move to the next question...`;
+        setState(prev => ({
+          ...prev,
+          currentAvatarText: processingText,
+          processingVideo: false
+        }));
+        
+        // Automatically move to next question after AI processing
+        setTimeout(() => {
+          const nextQuestionIndex = state.currentQuestionIndex + 1;
+          const nextQuestion = session.questions[nextQuestionIndex];
+          
+          console.log('➡️ Moving to next question automatically:', {
+            nextIndex: nextQuestionIndex,
+            questionText: nextQuestion.text.substring(0, 50)
+          });
+          
+          setState(prev => ({
+            ...prev,
+            currentQuestionIndex: nextQuestionIndex,
+            currentAvatarText: nextQuestion.text,
+            awaitingNextQuestion: false,
+            currentTranscript: '' // Clear previous transcript
+          }));
+        }, 4500); // Slightly longer to show processing message
       }
 
     } catch (error) {
       console.error('Failed to submit response:', error);
       setError('Failed to submit response. Please try again.');
-      setState(prev => ({ ...prev, processingVideo: false }));
+      setState(prev => ({ 
+        ...prev, 
+        processingVideo: false,
+        awaitingNextQuestion: false,
+        isProcessingAudio: false
+      }));
     }
   };
 
@@ -324,12 +401,7 @@ const AvatarInterviewInterface: React.FC<AvatarInterviewInterfaceProps> = ({
     completeInterview(state.responses);
   };
 
-  const playAvatarVideo = () => {
-    if (videoRef.current && state.currentAvatarVideo?.mp4_url) {
-      videoRef.current.play();
-      setState(prev => ({ ...prev, isPlaying: true }));
-    }
-  };
+
 
   const currentQuestion = state.currentQuestionIndex >= 0 ? session.questions[state.currentQuestionIndex] : null;
   const progress = ((state.currentQuestionIndex + 1) / session.questions.length) * 100;
@@ -431,38 +503,25 @@ const AvatarInterviewInterface: React.FC<AvatarInterviewInterfaceProps> = ({
                 }}
               >
                 <CardContent sx={{ p: 3 }}>
-                  {state.processingVideo ? (
-                    <Box sx={{ textAlign: 'center', py: 6 }}>
-                      <CircularProgress size={60} sx={{ color: 'white', mb: 2 }} />
-                      <Typography variant="body1" sx={{ color: 'white' }}>
-                        Loading AI Interviewer...
-                      </Typography>
-                    </Box>
-                  ) : state.currentAvatarVideo?.mp4_url ? (
-                    <Box sx={{ textAlign: 'center' }}>
-                      <video
-                        ref={videoRef}
-                        width="100%"
-                        height="300"
-                        controls
-                        autoPlay
-                        style={{ borderRadius: '12px' }}
-                        onEnded={() => setState(prev => ({ ...prev, isPlaying: false }))}
-                      >
-                        <source src={state.currentAvatarVideo.mp4_url} type="video/mp4" />
-                        Your browser does not support the video tag.
-                      </video>
-                    </Box>
-                  ) : (
-                    <Box sx={{ textAlign: 'center', py: 6 }}>
-                      <Avatar sx={{ mx: 'auto', mb: 2, width: 80, height: 80, bgcolor: 'primary.main' }}>
-                        <SmartToy sx={{ fontSize: 40 }} />
-                      </Avatar>
-                      <Typography variant="body1" sx={{ color: 'white' }}>
-                        AI Interviewer Ready
-                      </Typography>
-                    </Box>
-                  )}
+                  <StreamingAvatarVideo
+                    text={state.currentAvatarText}
+                    avatar="black_man"
+                    emotion="happy"
+                    language="en"
+                    autoPlay={true}
+                    onVideoStart={() => {
+                      console.log('🎬 Avatar video started');
+                      setState(prev => ({ ...prev, isPlaying: true }));
+                    }}
+                    onVideoEnd={() => {
+                      console.log('🎬 Avatar video ended');
+                      setState(prev => ({ ...prev, isPlaying: false }));
+                    }}
+                    onError={(error) => {
+                      console.error('Avatar video error:', error);
+                      setError(`Avatar error: ${error}`);
+                    }}
+                  />
                 </CardContent>
               </Card>
             </Box>
@@ -539,6 +598,52 @@ const AvatarInterviewInterface: React.FC<AvatarInterviewInterfaceProps> = ({
               ) : null}
             </Box>
 
+            {/* Audio Processing Status */}
+            {(state.isProcessingAudio || state.awaitingNextQuestion) && (
+              <Box sx={{ mb: 3 }}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    background: 'rgba(33, 150, 243, 0.1)',
+                    border: '1px solid rgba(33, 150, 243, 0.3)'
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={2}>
+                    <CircularProgress size={24} color="primary" />
+                    <Typography variant="body2">
+                      {state.isProcessingAudio 
+                        ? '🎙️ Processing your audio response...' 
+                        : '🤖 AI is analyzing your response and preparing next question...'}
+                    </Typography>
+                  </Stack>
+                </Paper>
+              </Box>
+            )}
+
+            {/* Current Transcript Display */}
+            {state.currentTranscript && (
+              <Box sx={{ mb: 3 }}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    background: 'rgba(76, 175, 80, 0.1)',
+                    border: '1px solid rgba(76, 175, 80, 0.3)'
+                  }}
+                >
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                    Your Response (Transcribed):
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+                    "{state.currentTranscript}"
+                  </Typography>
+                </Paper>
+              </Box>
+            )}
+
             {/* Response Controls */}
             {state.sessionStarted && currentQuestion && (
               <Box>
@@ -562,9 +667,17 @@ const AvatarInterviewInterface: React.FC<AvatarInterviewInterfaceProps> = ({
                         color={state.isRecording ? "error" : "primary"}
                         startIcon={state.isRecording ? <MicOff /> : <Mic />}
                         onClick={state.isRecording ? stopRecording : startRecording}
-                        sx={{ color: state.isRecording ? 'white' : 'rgba(255,255,255,0.9)' }}
+                        disabled={state.isProcessingAudio || state.awaitingNextQuestion}
+                        sx={{ 
+                          color: state.isRecording ? 'white' : 'rgba(255,255,255,0.9)',
+                          minWidth: '160px'
+                        }}
                       >
-                        {state.isRecording ? 'Stop Recording' : 'Start Recording'}
+                        {state.isProcessingAudio 
+                          ? 'Processing...' 
+                          : state.isRecording 
+                            ? 'Stop Recording' 
+                            : 'Start Recording'}
                       </Button>
                     </Stack>
                   </Paper>
@@ -610,7 +723,7 @@ const AvatarInterviewInterface: React.FC<AvatarInterviewInterfaceProps> = ({
                         variant="contained"
                         startIcon={<Send />}
                         onClick={handleTextSubmit}
-                        disabled={!state.textResponse.trim()}
+                        disabled={!state.textResponse.trim() || state.isProcessingAudio || state.awaitingNextQuestion}
                       >
                         Submit Answer
                       </Button>

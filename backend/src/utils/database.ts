@@ -12,17 +12,18 @@ export const connectDatabase = async (): Promise<void> => {
 
     const options = {
       maxPoolSize: 10, // Maintain up to 10 socket connections
-      minPoolSize: 2, // Maintain at least 2 connections
-      serverSelectionTimeoutMS: 30000, // 30 seconds timeout for server selection
-      socketTimeoutMS: 45000, // 45 seconds timeout for socket operations
-      connectTimeoutMS: 30000, // 30 seconds timeout for initial connection
+      minPoolSize: 1, // Maintain at least 1 connection
+      serverSelectionTimeoutMS: 60000, // 60 seconds timeout for server selection
+      socketTimeoutMS: 60000, // 60 seconds timeout for socket operations
+      connectTimeoutMS: 60000, // 60 seconds timeout for initial connection
       heartbeatFrequencyMS: 10000, // Check connection every 10 seconds
       retryWrites: true, // Retry failed writes
       retryReads: true, // Retry failed reads
       maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
-      // Note: bufferMaxEntries is deprecated in newer MongoDB drivers
-      // bufferCommands: false, // Disable mongoose buffering - handled by mongoose config
     };
+
+    // Set Mongoose-specific options
+    mongoose.set('bufferCommands', false);
 
     await mongoose.connect(mongoUri, options);
 

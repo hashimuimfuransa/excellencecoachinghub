@@ -607,7 +607,9 @@ const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
                           </Typography>
                         </Box>
                         <Typography variant="body2" sx={{ mb: 2 }}>
-                          {result.feedback.substring(0, 100)}...
+                          {Array.isArray(result.feedback) 
+                            ? result.feedback[0]?.substring(0, 100) || 'No feedback available'
+                            : (result.feedback || 'No feedback available').substring(0, 100)}...
                         </Typography>
                       </CardContent>
                       <CardActions>

@@ -349,7 +349,7 @@ class ModernInterviewService {
    */
   async getInterviewHistory(): Promise<InterviewSession[]> {
     try {
-      const response = await fetch(`${this.API_BASE}/interviews/history`, {
+      const response = await fetch(`${this.API_BASE}/ai-interviews/history`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
@@ -360,7 +360,69 @@ class ModernInterviewService {
         throw new Error(`Failed to fetch interview history: ${response.status}`);
       }
 
-      return await response.json();
+      const result = await response.json();
+      
+      // Transform backend AIInterview data to frontend InterviewSession format
+      if (result.success && result.data) {
+        return result.data.map((interview: any) => ({
+          id: interview._id,
+          userId: interview.user,
+          jobId: interview.job?._id || 'unknown',
+          jobTitle: interview.job?.title || 'General Interview',
+          questions: interview.questions.map((q: any) => ({
+            id: q._id,
+            question: q.question,
+            type: q.type || 'behavioral',
+            expectedDuration: 60,
+            difficulty: q.difficulty || 'medium',
+            keywords: q.keywords || []
+          })),
+          totalDuration: interview.duration || 0,
+          status: interview.completedAt ? 'completed' : 'in-progress',
+          createdAt: new Date(interview.createdAt),
+          startedAt: interview.createdAt ? new Date(interview.createdAt) : undefined,
+          completedAt: interview.completedAt ? new Date(interview.completedAt) : undefined,
+          welcomeMessage: `Welcome to your AI interview for ${interview.job?.title || 'this position'}`,
+          maxRetries: 3,
+          jobRole: {
+            id: interview.job?._id || 'unknown',
+            title: interview.job?.title || 'General Interview',
+            department: interview.job?.category || 'General',
+            level: interview.job?.experienceLevel || 'mid',
+            skills: interview.job?.requiredSkills || [],
+            description: interview.job?.description || '',
+            company: interview.job?.company || 'Company',
+            interviewType: 'premium'
+          },
+          result: interview.overallScore !== undefined ? {
+            sessionId: interview._id,
+            score: Math.round(interview.overallScore),
+            overallFeedback: interview.feedback || 'Interview completed successfully',
+            strengths: interview.strengths || [],
+            improvements: interview.areasForImprovement || [],
+            responses: interview.responses.map((r: any) => ({
+              question: r.question,
+              answer: r.answer,
+              score: Math.round(r.score || 0),
+              feedback: r.feedback || '',
+              keywords: r.keywords || [],
+              relevanceScore: r.relevanceScore || 0
+            })),
+            completionTime: interview.duration || 0,
+            skillAssessment: {
+              communication: Math.round((interview.overallScore || 0) * 0.9),
+              technical: Math.round((interview.overallScore || 0) * 1.1),
+              problemSolving: Math.round((interview.overallScore || 0) * 1.0),
+              cultural: Math.round((interview.overallScore || 0) * 0.8)
+            },
+            recommendation: interview.overallScore >= 80 ? 'strongly_recommend' :
+                         interview.overallScore >= 60 ? 'recommend' :
+                         interview.overallScore >= 40 ? 'consider' : 'not_recommend'
+          } : undefined
+        }));
+      }
+      
+      return [];
     } catch (error) {
       console.error('Error fetching interview history:', error);
       return [];
@@ -372,7 +434,7 @@ class ModernInterviewService {
    */
   async getInterviewResults(sessionId: string): Promise<InterviewResult | null> {
     try {
-      const response = await fetch(`${this.API_BASE}/interviews/${sessionId}/results`, {
+      const response = await fetch(`${this.API_BASE}/ai-interviews/${sessionId}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
@@ -383,7 +445,39 @@ class ModernInterviewService {
         throw new Error(`Failed to fetch interview results: ${response.status}`);
       }
 
-      return await response.json();
+      const result = await response.json();
+      
+      // Transform backend data to frontend format
+      if (result.success && result.data && result.data.overallScore !== undefined) {
+        const interview = result.data;
+        return {
+          sessionId: interview._id,
+          score: Math.round(interview.overallScore),
+          overallFeedback: interview.feedback || 'Interview completed successfully',
+          strengths: interview.strengths || [],
+          improvements: interview.areasForImprovement || [],
+          responses: interview.responses.map((r: any) => ({
+            question: r.question,
+            answer: r.answer,
+            score: Math.round(r.score || 0),
+            feedback: r.feedback || '',
+            keywords: r.keywords || [],
+            relevanceScore: r.relevanceScore || 0
+          })),
+          completionTime: interview.duration || 0,
+          skillAssessment: {
+            communication: Math.round((interview.overallScore || 0) * 0.9),
+            technical: Math.round((interview.overallScore || 0) * 1.1),
+            problemSolving: Math.round((interview.overallScore || 0) * 1.0),
+            cultural: Math.round((interview.overallScore || 0) * 0.8)
+          },
+          recommendation: interview.overallScore >= 80 ? 'strongly_recommend' :
+                       interview.overallScore >= 60 ? 'recommend' :
+                       interview.overallScore >= 40 ? 'consider' : 'not_recommend'
+        };
+      }
+
+      return null;
     } catch (error) {
       console.error('Error fetching interview results:', error);
       return null;

@@ -46,6 +46,7 @@ import SupportPage from './pages/SupportPage';
 import CareerGuidancePage from './pages/CareerGuidancePage';
 import CareerAssessmentFlow from './pages/CareerAssessmentFlow';
 import CareerAssessmentResultsPage from './pages/CareerAssessmentResultsPage';
+import CVUploadTest from './components/CVUploadTest';
 
 function App() {
   return (
@@ -61,6 +62,9 @@ function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/companies" element={<CompaniesPage />} />
             <Route path="/support" element={<SupportPage />} />
+            
+            {/* CV Upload Test - Public for testing */}
+            <Route path="/cv-upload-test" element={<CVUploadTest />} />
             
             {/* Test Pages - Standalone */}
             <Route 

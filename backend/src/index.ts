@@ -92,6 +92,8 @@ const io = new Server(server, {
       'https://jobsexcellencecoachinghub.onrender.com',
       'https://adminexcellencecoachinghub.onrender.com',
       'https://ech-w16g.onrender.com',
+      'https://jobs.excellencecoachinghub.com', // Add the missing domain
+      'https://excellencecoachinghub.com',       // Add root domain too
       process.env['FRONTEND_URL'] || 'http://localhost:3000'
     ],
     methods: ['GET', 'POST'],
@@ -150,6 +152,8 @@ const corsOptions = {
       'https://jobsexcellencecoachinghub.onrender.com',
       'https://adminexcellencecoachinghub.onrender.com',
       'https://ech-w16g.onrender.com',
+      'https://jobs.excellencecoachinghub.com', // Add the missing domain
+      'https://excellencecoachinghub.com',       // Add root domain too
       process.env['FRONTEND_URL'] || 'http://localhost:3000'
     ];
     

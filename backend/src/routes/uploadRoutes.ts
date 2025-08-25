@@ -176,94 +176,81 @@ router.post('/cv-simple', protect, upload.single('cv'), (req, res) => {
   }
 });
 
-// @desc    Upload single CV file (ultra-simple production version)
-// @route   POST /api/upload/cv  
+// @desc    Upload single CV file  
+// @route   POST /api/upload/cv
 // @access  Private
 router.post('/cv', protect, upload.single('cv'), async (req, res) => {
-  console.log('🚀 CV upload request received');
-  
-  // Set response timeout to prevent hanging
-  const responseTimeout = setTimeout(() => {
-    if (!res.headersSent) {
-      console.error('⏰ Response timeout - force closing');
-      res.status(408).json({
-        success: false,
-        error: 'Request timeout'
-      });
-    }
-  }, 25000);
-
   try {
     const userId = (req as any).user.id;
     const file = req.file;
     
-    console.log('👤 User ID:', userId);
-    console.log('📄 File received:', !!file, file?.originalname);
+    console.log('📤 CV upload request for user:', userId);
     
     if (!file) {
-      clearTimeout(responseTimeout);
+      console.log('❌ No file provided');
       return res.status(400).json({
         success: false,
         error: 'No CV file uploaded'
       });
     }
 
-    // Create unique filename
-    const timestamp = Date.now();
-    const safeName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const uniqueId = `${userId}_${timestamp}`;
-    
-    console.log('☁️ Preparing Cloudinary upload with ID:', uniqueId);
-
-    // Direct Cloudinary upload with base64
-    const base64File = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
-    
-    console.log('📤 Uploading to Cloudinary...');
-    const result = await cloudinary.uploader.upload(base64File, {
-      public_id: `cv_${uniqueId}`,
-      folder: `excellence-coaching-hub/cv`,
-      resource_type: 'raw',
-      timeout: 15000 // 15 second timeout
+    console.log('📄 File details:', { 
+      name: file.originalname, 
+      size: file.size, 
+      type: file.mimetype 
     });
 
-    console.log('✅ Cloudinary upload complete:', result.secure_url);
-
-    // Update user - fire and forget to avoid hanging
-    setImmediate(async () => {
-      try {
-        await User.findByIdAndUpdate(userId, {
-          cvFile: result.secure_url,
-          resume: result.secure_url,
-          lastProfileUpdate: new Date().toISOString()
-        });
-        console.log('✅ User profile updated');
-      } catch (dbError) {
-        console.error('⚠️ DB update failed (non-critical):', dbError);
-      }
-    });
-
-    // Clear timeout and send immediate response
-    clearTimeout(responseTimeout);
+    // Upload to Cloudinary
+    console.log('☁️ Starting Cloudinary upload...');
+    const folder = `excellence-coaching-hub/documents/${userId}/cv`;
+    const uploadResult = await uploadDocumentToCloudinary(
+      file.buffer, 
+      userId, 
+      file.originalname, 
+      folder
+    );
     
-    console.log('📤 Sending success response');
-    res.status(200).json({
+    console.log('✅ Cloudinary upload completed:', uploadResult.url);
+
+    // Update user profile
+    console.log('💾 Updating user profile...');
+    await User.findByIdAndUpdate(userId, {
+      cvFile: uploadResult.url,
+      resume: uploadResult.url,
+      lastProfileUpdate: new Date().toISOString()
+    }, { new: true });
+    
+    console.log('✅ User profile updated');
+
+    // Send response
+    const response = {
       success: true,
       data: {
-        url: result.secure_url,
+        url: uploadResult.url,
         originalName: file.originalname,
-        size: file.size
+        size: uploadResult.size || file.size
       },
       message: 'CV uploaded successfully'
-    });
+    };
+    
+    console.log('📤 Sending success response');
+    res.status(200).json(response);
 
   } catch (error: any) {
-    clearTimeout(responseTimeout);
-    console.error('❌ Upload error:', error);
+    console.error('❌ CV upload error:', error);
     
     if (!res.headersSent) {
+      let errorMessage = 'Failed to upload CV. Please try again.';
+      
+      if (error.message?.includes('Cloudinary')) {
+        errorMessage = 'File upload service temporarily unavailable. Please try again.';
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = 'Upload timed out. Please try with a smaller file.';
+      }
+      
       res.status(500).json({
         success: false,
-        error: 'Upload failed. Please try again.'
+        error: errorMessage
       });
     }
   }

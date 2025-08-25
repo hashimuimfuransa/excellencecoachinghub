@@ -83,6 +83,7 @@ import { uploadCV } from '../utils/simpleFileUpload';
 import { uploadCVWithFetch } from '../utils/fetchUpload';
 import { uploadCVRenderWorkaround } from '../utils/renderUpload';
 import { uploadCVSimple } from '../utils/workingUpload';
+import { uploadCVBulletproof } from '../utils/bulletproofUpload';
 
 interface ComprehensiveProfileFormProps {
   user: User;
@@ -300,9 +301,9 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
     }));
 
     try {
-      console.log('Starting CV upload with simple working method...');
+      console.log('Starting CV upload with bulletproof method...');
       
-      const fileUrl = await uploadCVSimple(file, (progress) => {
+      const fileUrl = await uploadCVBulletproof(file, (progress) => {
         setUploadStates(prev => ({
           ...prev,
           [fileType]: { ...prev[fileType], progress }

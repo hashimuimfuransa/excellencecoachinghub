@@ -79,6 +79,7 @@ import {
   JobType
 } from '../types/user';
 import { validateProfileSimple } from '../utils/simpleProfileValidation';
+import { debounce } from '../utils';
 
 interface ComprehensiveProfileFormProps {
   user: User;
@@ -167,41 +168,62 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
   const [educationDialog, setEducationDialog] = useState({ open: false, item: null as Education | null, index: -1 });
   const [certificationDialog, setCertificationDialog] = useState({ open: false, item: null as Certification | null, index: -1 });
 
+  // Debounced validation function
+  const debouncedValidation = React.useMemo(
+    () => debounce((userData: Partial<User>) => {
+      try {
+        console.log('🔍 ComprehensiveProfileForm updating validation for:', userData);
+        
+        // Additional safety check
+        if (!userData || typeof userData !== 'object') {
+          console.warn('⚠️ Invalid user data for validation');
+          return;
+        }
+        
+        const result = validateProfileSimple(userData);
+        console.log('📊 ComprehensiveProfileForm validation result:', result);
+        setValidationResult(result);
+      } catch (error) {
+        console.error('❌ Validation error in ComprehensiveProfileForm:', error);
+        // Set a default validation result if validation fails
+        setValidationResult({
+          isValid: false,
+          completionPercentage: 0,
+          status: 'incomplete',
+          missingFields: ['Profile validation error'],
+          recommendations: ['Please refresh the page and try again'],
+          canAccessFeatures: {
+            psychometricTests: false,
+            aiInterviews: false,
+            premiumJobs: false,
+          },
+          completedSections: {
+            basic: false,
+            contact: false,
+            professional: false,
+            skills: false,
+            experience: false,
+            education: false,
+            preferences: false,
+            documents: false
+          }
+        });
+      }
+    }, 300),
+    []
+  );
+
   // Update validation when formData or user changes
   useEffect(() => {
-    try {
-      const combinedUserData = { ...user, ...formData };
-      console.log('🔍 ComprehensiveProfileForm updating validation for:', combinedUserData);
-      const result = validateProfileSimple(combinedUserData);
-      console.log('📊 ComprehensiveProfileForm validation result:', result);
-      setValidationResult(result);
-    } catch (error) {
-      console.error('❌ Validation error in ComprehensiveProfileForm:', error);
-      // Set a default validation result if validation fails
-      setValidationResult({
-        isValid: false,
-        completionPercentage: 0,
-        status: 'incomplete',
-        missingFields: ['Profile validation error'],
-        recommendations: ['Please refresh the page and try again'],
-        canAccessFeatures: {
-          psychometricTests: false,
-          aiInterviews: false,
-          premiumJobs: false,
-        },
-        completedSections: {
-          basic: false,
-          contact: false,
-          professional: false,
-          skills: false,
-          experience: false,
-          education: false,
-          preferences: false,
-          documents: false
-        }
-      });
+    // Skip validation during file upload to prevent issues
+    if (uploadStates.cv.uploading) {
+      console.log('⏳ Skipping validation during file upload');
+      return;
     }
-  }, [user, formData]);
+
+    const combinedUserData = { ...user, ...formData };
+    debouncedValidation(combinedUserData);
+  }, [user, formData, uploadStates.cv.uploading, debouncedValidation]);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({

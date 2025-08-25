@@ -227,8 +227,8 @@ function hasFieldValue(user: User, fieldName: string): boolean {
       case 'resume':
         const resumeValue = user.resume;
         const cvFileValue = (user as any).cvFile;
-        return (resumeValue !== null && resumeValue !== undefined && resumeValue.trim && resumeValue.trim().length > 0) ||
-               (cvFileValue !== null && cvFileValue !== undefined && cvFileValue.trim && cvFileValue.trim().length > 0);
+        return (resumeValue !== null && resumeValue !== undefined && typeof resumeValue === 'string' && resumeValue.trim().length > 0) ||
+               (cvFileValue !== null && cvFileValue !== undefined && typeof cvFileValue === 'string' && cvFileValue.trim().length > 0);
       
       case 'jobPreferences':
         const prefs = user.jobPreferences;

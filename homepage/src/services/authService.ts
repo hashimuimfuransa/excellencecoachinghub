@@ -1,4 +1,5 @@
 import { apiService } from './api';
+import { sendPasswordResetEmail } from './emailjsService';
 import type { LoginForm, RegisterForm, User, AuthResponse } from '../types/auth';
 
 export const authService = {
@@ -97,13 +98,36 @@ export const authService = {
   // Forgot password
   forgotPassword: async (email: string): Promise<void> => {
     try {
+      // First, call the backend to generate the reset token
       const response = await apiService.post('/auth/forgot-password', { email });
 
       if (!response.success) {
+        // Handle specific error types with friendly messages
+        if (response.error?.includes('No user found') || response.error?.includes('not found')) {
+          throw new Error('We couldn\'t find an account with that email address. Please check your email and try again, or create a new account if you haven\'t registered yet.');
+        }
         throw new Error(response.error || 'Failed to send password reset email');
+      }
+
+      // Backend returned success with user data, now send actual email via EmailJS
+      if (response.userData) {
+        const emailSent = await sendPasswordResetEmail(
+          response.userData.email,
+          response.userData.firstName || 'User',
+          response.userData.resetToken
+        );
+
+        if (!emailSent) {
+          // EmailJS failed but backend succeeded - still continue since user can use console token
+          console.log('📧 Check your browser console for the password reset link (EmailJS may be in demo mode)');
+        }
       }
     } catch (error: any) {
       console.error('Forgot password error:', error);
+      // Re-throw with friendly error message if it's a network error
+      if (error.message?.includes('fetch') || error.message?.includes('Network')) {
+        throw new Error('Network error. Please check your internet connection and try again.');
+      }
       throw error;
     }
   },

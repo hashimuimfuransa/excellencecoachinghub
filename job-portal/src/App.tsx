@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, UserRole } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './layouts/MainLayout';
+import { initEmailJS } from './services/emailjsService';
 
 // Import all pages
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import ModernDashboardPage from './pages/ModernDashboardPage';
 import JobsPage from './pages/ModernJobsPage';
@@ -49,6 +52,11 @@ import CareerAssessmentResultsPage from './pages/CareerAssessmentResultsPage';
 import CVUploadTest from './components/CVUploadTest';
 
 function App() {
+  // Initialize EmailJS on app start
+  useEffect(() => {
+    initEmailJS();
+  }, []);
+
   return (
     <ThemeProvider>
       <AuthProvider>
@@ -60,6 +68,8 @@ function App() {
             <Route path="/jobs/:id" element={<JobDetailsPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/companies" element={<CompaniesPage />} />
             <Route path="/support" element={<SupportPage />} />
             

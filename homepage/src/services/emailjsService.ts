@@ -5,7 +5,7 @@ const EMAILJS_CONFIG = {
   SERVICE_ID: 'service_vtor3y8', // Your EmailJS service ID
   VERIFICATION_TEMPLATE_ID: 'template_sikm5se', // Your EmailJS template ID for email verification
   PASSWORD_RESET_TEMPLATE_ID: 'template_9apzq9s', // Your EmailJS template ID for password reset
-  WELCOME_TEMPLATE_ID: 'template_9apzq9s', // Your EmailJS template ID for welcome email
+  WELCOME_TEMPLATE_ID: 'template_sikm5se', // Your EmailJS template ID for welcome email
   PUBLIC_KEY: 'VLY7_POWX21gRHMof' // Your EmailJS public key
 };
 
@@ -197,14 +197,14 @@ export const sendPasswordResetEmail = async (
 export const sendWelcomeEmail = async (
   userEmail: string,
   userName: string,
-  userRole: string = 'student'
+  userRole: string = 'user'
 ): Promise<boolean> => {
   try {
     const templateParams = {
       to_name: userName,
       user_role: userRole,
       dashboard_url: `${window.location.origin}/dashboard`,
-      from_name: 'Excellence Coaching Hub E-Learning',
+      from_name: 'Excellence Coaching Hub',
 
       // EmailJS service configuration (recipient email)
       to_email: userEmail,
@@ -215,8 +215,8 @@ export const sendWelcomeEmail = async (
       recipient: userEmail,
       send_to: userEmail,
 
-      message: `Welcome to Excellence Coaching Hub E-Learning Platform, ${userName}!\n\nYour account has been successfully created as a ${userRole}. You can now access your dashboard and start learning.\n\nDashboard: ${window.location.origin}/dashboard\n\nBest regards,\nExcellence Coaching Hub Team`,
-      subject: 'Welcome to Excellence Coaching Hub E-Learning!'
+      message: `Welcome to Excellence Coaching Hub, ${userName}!\n\nYour account has been successfully created. You can now access your dashboard and start exploring our platform.\n\nDashboard: ${window.location.origin}/dashboard\n\nBest regards,\nExcellence Coaching Hub Team`,
+      subject: 'Welcome to Excellence Coaching Hub!'
     };
 
     // Check if EmailJS is properly configured
@@ -260,7 +260,7 @@ export const sendWelcomeEmail = async (
     console.log('🎉 WELCOME EMAIL (Fallback)');
     console.log('=================================');
     console.log(`To: ${userEmail}`);
-    console.log(`Welcome to Excellence Coaching Hub E-Learning Platform, ${userName}!`);
+    console.log(`Welcome to Excellence Coaching Hub, ${userName}!`);
     console.log('=================================');
     return false;
   }

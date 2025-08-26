@@ -450,7 +450,7 @@ const TrendingJobsSection: React.FC = () => {
               variant="outlined"
               color="primary"
               startIcon={<Psychology />}
-              onClick={() => window.open('https://jobs.excellencecoachinghub.com/jobs', '_blank')}
+              onClick={() => window.open('https://jobs.excellencecoachinghub.com/Register', '_blank')}
               sx={{
                 borderRadius: 2,
                 textTransform: 'none',

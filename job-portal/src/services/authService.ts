@@ -1,5 +1,5 @@
 import { apiPost, apiGet, handleApiResponse } from './api';
-import { sendWelcomeEmail } from './emailjsService';
+import { sendWelcomeEmail, sendPasswordResetEmail } from './emailjsService';
 
 // Local type definitions
 export interface User {
@@ -138,10 +138,35 @@ class AuthService {
       const response = await apiPost('/auth/forgot-password', { email });
       const result = handleApiResponse(response);
       
-      // If backend provides user data for frontend email sending
-      if (result.userData) {
-        console.log('Backend provided user data for frontend email sending:', result.userData);
-        // Additional frontend email logic can be added here if needed
+      // Backend returned success with user data, now send actual email via EmailJS
+      if (result.data) {
+        console.log('Backend provided user data for frontend email sending:', result.data);
+        
+        const emailSent = await sendPasswordResetEmail(
+          result.data.email,
+          result.data.firstName || 'User',
+          result.data.resetToken
+        );
+
+        if (!emailSent) {
+          // EmailJS failed but backend succeeded - still continue since user can use console token
+          console.log('📧 Check your browser console for the password reset link (EmailJS may be in demo mode)');
+        } else {
+          console.log('✅ Password reset email sent successfully via EmailJS');
+        }
+      } else if (result.userData) {
+        // Handle legacy response format
+        const emailSent = await sendPasswordResetEmail(
+          result.userData.email,
+          result.userData.firstName || 'User',
+          result.userData.resetToken
+        );
+
+        if (!emailSent) {
+          console.log('📧 Check your browser console for the password reset link (EmailJS may be in demo mode)');
+        } else {
+          console.log('✅ Password reset email sent successfully via EmailJS');
+        }
       }
     } catch (error: any) {
       console.error('Forgot password error:', error);

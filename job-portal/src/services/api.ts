@@ -34,10 +34,19 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Handle JSON parsing errors
+    // Handle JSON parsing errors more comprehensively
     if (error.message?.includes('Unexpected end of JSON input') || 
-        error.message?.includes('Failed to execute \'json\' on \'Response\'')) {
+        error.message?.includes('Failed to execute \'json\' on \'Response\'') ||
+        error.message?.includes('JSON.parse') ||
+        (error.response && error.response.status === 200 && !error.response.data)) {
       console.error('JSON parsing error detected:', error);
+      console.error('Response details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        headers: error.response?.headers,
+        data: error.response?.data
+      });
+      
       // Create a standardized error response
       const customError = {
         ...error,
@@ -45,8 +54,8 @@ api.interceptors.response.use(
           ...error.response,
           data: {
             success: false,
-            error: 'Invalid server response',
-            message: 'The server returned an invalid response. Please try again.'
+            error: 'Server returned invalid response format',
+            message: 'The server response could not be processed. Please try again.'
           }
         }
       };

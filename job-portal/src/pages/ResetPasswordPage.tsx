@@ -103,28 +103,31 @@ const ResetPasswordPage: React.FC = () => {
       return;
     }
 
+    if (!token) {
+      setError('Invalid reset token. Please request a new password reset.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.message || data.error || 'Failed to reset password. Please try again.');
-        return;
-      }
-
+      // Use the updated authService method instead of direct fetch
+      const { authService } = await import('../services/authService');
+      const authResponse = await authService.resetPassword(token, password);
+      
       setSuccess(true);
+      
+      // Navigate to login page after a short delay
+      setTimeout(() => {
+        navigate('/login', { 
+          state: { 
+            message: 'Password reset successful! Please sign in with your new password.' 
+          } 
+        });
+      }, 2000);
     } catch (err: any) {
       console.error('Password reset error:', err);
-      setError('Network error. Please check your internet connection and try again.');
+      setError(err.message || 'Failed to reset password. Please try again.');
     } finally {
       setLoading(false);
     }

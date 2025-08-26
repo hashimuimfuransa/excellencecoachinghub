@@ -1,0 +1,576 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Button,
+  Chip,
+  Grid,
+  IconButton,
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
+  Alert,
+  Divider,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  LinearProgress
+} from '@mui/material';
+import {
+  Quiz as TestIcon,
+  Schedule as ClockIcon,
+  CheckCircle as CheckIcon,
+  Pending as PendingIcon,
+  Cancel as RejectIcon,
+  PlayArrow as StartIcon,
+  Receipt as ReceiptIcon,
+  RequestPage as RequestIcon,
+  Info as InfoIcon
+} from '@mui/icons-material';
+import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-toastify';
+import { psychometricTestService } from '../services/psychometricTestService';
+
+interface TestPurchase {
+  _id: string;
+  test: {
+    _id: string;
+    title: string;
+    type: string;
+    description: string;
+    timeLimit: number;
+  };
+  job?: {
+    _id: string;
+    title: string;
+    company: string;
+  };
+  amount: number;
+  currency: string;
+  maxAttempts: number;
+  attemptsUsed: number;
+  status: string;
+  purchasedAt: string;
+  expiresAt?: string;
+  
+  // Approval workflow fields
+  approvalStatus: 'not_required' | 'pending_approval' | 'approved' | 'rejected';
+  approvalRequestedAt?: string;
+  approvedAt?: string;
+  rejectedAt?: string;
+  rejectionReason?: string;
+  autoApproval: boolean;
+  
+  // Virtual fields
+  isValid?: boolean;
+  canRequestApproval?: boolean;
+  isApprovalPending?: boolean;
+  approvalStatusDisplay?: string;
+}
+
+const SavedCardsManager: React.FC = () => {
+  const [purchases, setPurchases] = useState<TestPurchase[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedPurchase, setSelectedPurchase] = useState<TestPurchase | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [requestingApproval, setRequestingApproval] = useState<string | null>(null);
+  const [startingTest, setStartingTest] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchPurchases();
+  }, []);
+
+  const fetchPurchases = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await psychometricTestService.getUserTestPurchases();
+      setPurchases(data);
+    } catch (error: any) {
+      console.error('Failed to fetch purchases:', error);
+      setError('Failed to load your saved tests. Please try again.');
+      toast.error('Failed to load your saved tests');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRequestApproval = async (purchaseId: string) => {
+    try {
+      setRequestingApproval(purchaseId);
+      await psychometricTestService.requestTestApproval(purchaseId);
+      toast.success('Approval requested successfully! You will be notified when an admin reviews your request.');
+      await fetchPurchases(); // Refresh the list
+    } catch (error: any) {
+      console.error('Failed to request approval:', error);
+      toast.error(error.message || 'Failed to request approval');
+    } finally {
+      setRequestingApproval(null);
+    }
+  };
+
+  const handleStartTest = async (purchase: TestPurchase) => {
+    try {
+      setStartingTest(purchase._id);
+      
+      // Check test access first
+      const accessCheck = await psychometricTestService.checkTestAccess(purchase.test._id, purchase.job?._id);
+      
+      if (!accessCheck.canTakeTest) {
+        toast.error(accessCheck.reason || 'Cannot start test at this time');
+        return;
+      }
+
+      // Start test session
+      const session = await psychometricTestService.startTestSession(purchase.test._id, purchase.job?._id);
+      
+      // Navigate to test interface or show success message
+      toast.success('Test session started successfully!');
+      // You would typically navigate to the test interface here
+      // navigate(`/test/${purchase.test._id}/session/${session.sessionId}`);
+      
+    } catch (error: any) {
+      console.error('Failed to start test:', error);
+      toast.error(error.message || 'Failed to start test');
+    } finally {
+      setStartingTest(null);
+    }
+  };
+
+  const getStatusColor = (approvalStatus: string, testStatus: string) => {
+    if (testStatus !== 'completed') return 'warning';
+    
+    switch (approvalStatus) {
+      case 'not_required':
+        return 'success';
+      case 'approved':
+        return 'success';
+      case 'pending_approval':
+        return 'warning';
+      case 'rejected':
+        return 'error';
+      default:
+        return 'default';
+    }
+  };
+
+  const getStatusIcon = (approvalStatus: string, testStatus: string) => {
+    if (testStatus !== 'completed') return <PendingIcon />;
+    
+    switch (approvalStatus) {
+      case 'not_required':
+        return <CheckIcon />;
+      case 'approved':
+        return <CheckIcon />;
+      case 'pending_approval':
+        return <PendingIcon />;
+      case 'rejected':
+        return <RejectIcon />;
+      default:
+        return <InfoIcon />;
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatCurrency = (amount: number, currency: string) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency || 'USD'
+    }).format(amount);
+  };
+
+  const canTakeTest = (purchase: TestPurchase) => {
+    return purchase.status === 'completed' && 
+           (purchase.approvalStatus === 'not_required' || purchase.approvalStatus === 'approved') &&
+           purchase.attemptsUsed < purchase.maxAttempts &&
+           (!purchase.expiresAt || new Date() <= new Date(purchase.expiresAt));
+  };
+
+  const showPurchaseDetails = (purchase: TestPurchase) => {
+    setSelectedPurchase(purchase);
+    setDetailsOpen(true);
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert severity="error" sx={{ mb: 2 }}>
+        {error}
+        <Button onClick={fetchPurchases} sx={{ ml: 2 }}>
+          Retry
+        </Button>
+      </Alert>
+    );
+  }
+
+  return (
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 3, fontWeight: 600 }}>
+        <TestIcon sx={{ mr: 2, verticalAlign: 'middle' }} />
+        My Saved Tests
+      </Typography>
+      
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+        Manage your purchased psychometric tests. Request approval when needed and start tests when ready.
+      </Typography>
+
+      {purchases.length === 0 ? (
+        <Card sx={{ textAlign: 'center', py: 8 }}>
+          <CardContent>
+            <TestIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No saved tests found
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Purchase a test to get started with psychometric assessments.
+            </Typography>
+            <Button variant="contained" color="primary" href="/tests">
+              Browse Available Tests
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <Grid container spacing={3}>
+          {purchases.map((purchase) => (
+            <Grid item xs={12} md={6} lg={4} key={purchase._id}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Card 
+                  sx={{ 
+                    height: '100%', 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: (theme) => theme.shadows[8]
+                    }
+                  }}
+                >
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    {/* Test Header */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <TestIcon color="primary" sx={{ mr: 1 }} />
+                      <Typography variant="h6" component="h2" sx={{ flexGrow: 1, fontWeight: 600 }}>
+                        {purchase.test.title}
+                      </Typography>
+                      <Chip
+                        icon={getStatusIcon(purchase.approvalStatus, purchase.status)}
+                        label={purchase.approvalStatusDisplay || purchase.status}
+                        color={getStatusColor(purchase.approvalStatus, purchase.status)}
+                        size="small"
+                      />
+                    </Box>
+
+                    {/* Job Info */}
+                    {purchase.job && (
+                      <Box sx={{ mb: 2, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          Applied for
+                        </Typography>
+                        <Typography variant="body2" fontWeight={500}>
+                          {purchase.job.title}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          at {purchase.job.company}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    {/* Test Details */}
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {purchase.test.description}
+                    </Typography>
+
+                    {/* Test Info */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <ClockIcon sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
+                        <Typography variant="caption">
+                          {purchase.test.timeLimit} min
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <ReceiptIcon sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
+                        <Typography variant="caption">
+                          {formatCurrency(purchase.amount, purchase.currency)}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    {/* Attempts */}
+                    <Box sx={{ mb: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Attempts
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {purchase.attemptsUsed} / {purchase.maxAttempts}
+                        </Typography>
+                      </Box>
+                      <LinearProgress
+                        variant="determinate"
+                        value={(purchase.attemptsUsed / purchase.maxAttempts) * 100}
+                        sx={{ height: 4, borderRadius: 2 }}
+                        color={purchase.attemptsUsed >= purchase.maxAttempts ? 'error' : 'primary'}
+                      />
+                    </Box>
+
+                    {/* Purchase Date */}
+                    <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+                      Purchased on {formatDate(purchase.purchasedAt)}
+                    </Typography>
+
+                    {/* Rejection Reason */}
+                    {purchase.approvalStatus === 'rejected' && purchase.rejectionReason && (
+                      <Alert severity="error" sx={{ mb: 2, '& .MuiAlert-message': { fontSize: '0.75rem' } }}>
+                        <strong>Rejected:</strong> {purchase.rejectionReason}
+                      </Alert>
+                    )}
+                  </CardContent>
+
+                  {/* Action Buttons */}
+                  <Box sx={{ p: 2, pt: 0, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    {/* Request Approval Button */}
+                    {purchase.canRequestApproval && (
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        size="small"
+                        startIcon={requestingApproval === purchase._id ? <CircularProgress size={16} /> : <RequestIcon />}
+                        onClick={() => handleRequestApproval(purchase._id)}
+                        disabled={requestingApproval === purchase._id}
+                        sx={{ flexGrow: 1 }}
+                      >
+                        Request Approval
+                      </Button>
+                    )}
+
+                    {/* Start Test Button */}
+                    {canTakeTest(purchase) && (
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        size="small"
+                        startIcon={startingTest === purchase._id ? <CircularProgress size={16} /> : <StartIcon />}
+                        onClick={() => handleStartTest(purchase)}
+                        disabled={startingTest === purchase._id}
+                        sx={{ flexGrow: 1 }}
+                      >
+                        Start Test
+                      </Button>
+                    )}
+
+                    {/* Details Button */}
+                    <Button
+                      variant="text"
+                      color="primary"
+                      size="small"
+                      startIcon={<InfoIcon />}
+                      onClick={() => showPurchaseDetails(purchase)}
+                    >
+                      Details
+                    </Button>
+                  </Box>
+                </Card>
+              </motion.div>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+
+      {/* Purchase Details Dialog */}
+      <Dialog
+        open={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <TestIcon />
+            Test Purchase Details
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {selectedPurchase && (
+            <Box sx={{ pt: 1 }}>
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="h6" gutterBottom>Test Information</Typography>
+                  <TableContainer component={Paper} variant="outlined">
+                    <Table size="small">
+                      <TableBody>
+                        <TableRow>
+                          <TableCell><strong>Title</strong></TableCell>
+                          <TableCell>{selectedPurchase.test.title}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><strong>Type</strong></TableCell>
+                          <TableCell>
+                            <Chip label={selectedPurchase.test.type} size="small" />
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><strong>Time Limit</strong></TableCell>
+                          <TableCell>{selectedPurchase.test.timeLimit} minutes</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><strong>Description</strong></TableCell>
+                          <TableCell>{selectedPurchase.test.description}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <Typography variant="h6" gutterBottom>Purchase Information</Typography>
+                  <TableContainer component={Paper} variant="outlined">
+                    <Table size="small">
+                      <TableBody>
+                        <TableRow>
+                          <TableCell><strong>Amount</strong></TableCell>
+                          <TableCell>{formatCurrency(selectedPurchase.amount, selectedPurchase.currency)}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><strong>Status</strong></TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={selectedPurchase.status} 
+                              color={selectedPurchase.status === 'completed' ? 'success' : 'warning'}
+                              size="small" 
+                            />
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><strong>Purchased</strong></TableCell>
+                          <TableCell>{formatDate(selectedPurchase.purchasedAt)}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell><strong>Attempts</strong></TableCell>
+                          <TableCell>{selectedPurchase.attemptsUsed} / {selectedPurchase.maxAttempts}</TableCell>
+                        </TableRow>
+                        {selectedPurchase.expiresAt && (
+                          <TableRow>
+                            <TableCell><strong>Expires</strong></TableCell>
+                            <TableCell>{formatDate(selectedPurchase.expiresAt)}</TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Grid>
+
+                {/* Approval Information */}
+                <Grid item xs={12}>
+                  <Typography variant="h6" gutterBottom>Approval Status</Typography>
+                  <TableContainer component={Paper} variant="outlined">
+                    <Table size="small">
+                      <TableBody>
+                        <TableRow>
+                          <TableCell><strong>Status</strong></TableCell>
+                          <TableCell>
+                            <Chip
+                              icon={getStatusIcon(selectedPurchase.approvalStatus, selectedPurchase.status)}
+                              label={selectedPurchase.approvalStatusDisplay}
+                              color={getStatusColor(selectedPurchase.approvalStatus, selectedPurchase.status)}
+                              size="small"
+                            />
+                          </TableCell>
+                        </TableRow>
+                        {selectedPurchase.approvalRequestedAt && (
+                          <TableRow>
+                            <TableCell><strong>Requested</strong></TableCell>
+                            <TableCell>{formatDate(selectedPurchase.approvalRequestedAt)}</TableCell>
+                          </TableRow>
+                        )}
+                        {selectedPurchase.approvedAt && (
+                          <TableRow>
+                            <TableCell><strong>Approved</strong></TableCell>
+                            <TableCell>{formatDate(selectedPurchase.approvedAt)}</TableCell>
+                          </TableRow>
+                        )}
+                        {selectedPurchase.rejectedAt && (
+                          <TableRow>
+                            <TableCell><strong>Rejected</strong></TableCell>
+                            <TableCell>{formatDate(selectedPurchase.rejectedAt)}</TableCell>
+                          </TableRow>
+                        )}
+                        {selectedPurchase.rejectionReason && (
+                          <TableRow>
+                            <TableCell><strong>Reason</strong></TableCell>
+                            <TableCell>
+                              <Alert severity="error" sx={{ mt: 1 }}>
+                                {selectedPurchase.rejectionReason}
+                              </Alert>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Grid>
+
+                {/* Job Information */}
+                {selectedPurchase.job && (
+                  <Grid item xs={12}>
+                    <Typography variant="h6" gutterBottom>Job Information</Typography>
+                    <TableContainer component={Paper} variant="outlined">
+                      <Table size="small">
+                        <TableBody>
+                          <TableRow>
+                            <TableCell><strong>Position</strong></TableCell>
+                            <TableCell>{selectedPurchase.job.title}</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell><strong>Company</strong></TableCell>
+                            <TableCell>{selectedPurchase.job.company}</TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Grid>
+                )}
+              </Grid>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailsOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+};
+
+export default SavedCardsManager;

@@ -16,7 +16,12 @@ import {
   startTestSession,
   getTestSession,
   updateTestSession,
-  checkTestAccess
+  checkTestAccess,
+  getUserTestPurchases,
+  requestTestApproval,
+  getPendingTestApprovals,
+  approveTest,
+  rejectTest
 } from '@/controllers/psychometricTestController';
 
 const router = express.Router();
@@ -43,6 +48,8 @@ router.put('/session/:sessionId', updateTestSession);
 // User routes
 router.post('/:testId/take', takePsychometricTest);
 router.get('/results/my-results', getUserTestResults);
+router.get('/purchases/my-purchases', getUserTestPurchases);
+router.post('/purchases/:purchaseId/request-approval', requestTestApproval);
 
 // Job-specific test generation
 router.post('/generate/job/:jobId', generateJobSpecificTest);
@@ -53,5 +60,10 @@ router.get('/generated/:testId', getGeneratedTest);
 
 // Employer routes
 router.get('/results/job/:jobId', getJobTestResults);
+
+// Admin approval routes
+router.get('/approvals/pending', getPendingTestApprovals);
+router.post('/approvals/:purchaseId/approve', approveTest);
+router.post('/approvals/:purchaseId/reject', rejectTest);
 
 export default router;

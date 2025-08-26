@@ -435,9 +435,9 @@ const PsychometricTestManagementPage: React.FC = () => {
   const loadTestRequests = async () => {
     setRequestsLoading(true);
     try {
-      // Load both test requests and interviews
-      const [testRequestsResponse, interviewsResponse] = await Promise.allSettled([
-        fetch(`${import.meta.env.VITE_API_URL}/test-requests/pending`, {
+      // Load both test purchase approvals and interviews
+      const [testApprovalsResponse, interviewsResponse] = await Promise.allSettled([
+        fetch(`${import.meta.env.VITE_API_URL}/psychometric-tests/approvals/pending`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
             'Content-Type': 'application/json'
@@ -453,18 +453,48 @@ const PsychometricTestManagementPage: React.FC = () => {
 
       let allRequests: any[] = [];
 
-      // Process test requests
-      if (testRequestsResponse.status === 'fulfilled' && testRequestsResponse.value.ok) {
-        const testResult = await testRequestsResponse.value.json();
-        const testRequests = testResult.success ? testResult.data : testResult;
+      // Process test purchase approvals
+      console.log('🔍 Test approvals response status:', testApprovalsResponse.status);
+      if (testApprovalsResponse.status === 'fulfilled') {
+        console.log('🔍 Test approvals HTTP status:', testApprovalsResponse.value.status, testApprovalsResponse.value.statusText);
         
-        if (Array.isArray(testRequests)) {
-          allRequests = [...allRequests, ...testRequests.map(req => ({
-            ...req,
-            displayType: 'Test Request',
-            requestType: 'psychometric_test'
-          }))];
+        if (testApprovalsResponse.value.ok) {
+          const approvalsResult = await testApprovalsResponse.value.json();
+          console.log('🔍 Test approvals API response:', approvalsResult);
+          
+          const pendingApprovals = approvalsResult.success ? approvalsResult.data : approvalsResult;
+          console.log('🔍 Processed test approvals:', pendingApprovals);
+          
+          if (Array.isArray(pendingApprovals)) {
+            const mappedApprovals = pendingApprovals.map(approval => ({
+              _id: approval._id,
+              user: approval.user,
+              displayType: 'Test Purchase Approval',
+              requestType: 'test_purchase_approval',
+              title: `${approval.test?.title || 'Test'} - Approval Request`,
+              description: `User requesting approval to take ${approval.test?.title || 'test'}${approval.job ? ` for ${approval.job.title} at ${approval.job.company}` : ''}`,
+              job: approval.job,
+              priority: 'normal',
+              requestedAt: approval.approvalRequestedAt || approval.purchasedAt,
+              status: 'pending',
+              purchaseId: approval._id,
+              test: approval.test,
+              specifications: {
+                testType: approval.test?.type || 'psychometric',
+                amount: approval.amount,
+                currency: approval.currency,
+                maxAttempts: approval.maxAttempts,
+                attemptsUsed: approval.attemptsUsed
+              }
+            }));
+            allRequests = [...allRequests, ...mappedApprovals];
+            console.log('🔍 Mapped test approvals:', mappedApprovals);
+          }
+        } else {
+          console.error('❌ Test approvals API error:', testApprovalsResponse.value.status, testApprovalsResponse.value.statusText);
         }
+      } else {
+        console.error('❌ Test approvals fetch failed:', testApprovalsResponse.reason);
       }
 
       // Process interviews
@@ -497,119 +527,11 @@ const PsychometricTestManagementPage: React.FC = () => {
         }
       }
 
-      // If no requests found from API, use fallback data
+      console.log('🔍 PsychometricTestManagementPage: Final requests found:', allRequests.length);
+      
+      // Don't use fallback data - show real data only
       if (allRequests.length === 0) {
-        console.log('No requests found from API, using fallback data');
-        allRequests = [
-          {
-            _id: 'req1',
-            user: {
-              _id: 'user1',
-              firstName: 'John',
-              lastName: 'Doe',
-              email: 'john.doe@example.com'
-            },
-            displayType: 'Test Request',
-            requestType: 'psychometric_test',
-            title: 'Software Engineer Assessment',
-            description: 'Need a comprehensive test for evaluating software engineering skills',
-            job: {
-              _id: 'job1',
-              title: 'Senior Software Engineer',
-              company: 'TechCorp Inc'
-            },
-            priority: 'high',
-            requestedAt: new Date().toISOString(),
-            status: 'pending',
-            specifications: {
-              testType: 'technical',
-              duration: 60,
-              questionCount: 25,
-              difficulty: 'medium'
-            }
-          },
-          {
-            _id: 'req2',
-            user: {
-              _id: 'user2',
-              firstName: 'Jane',
-              lastName: 'Smith',
-              email: 'jane.smith@example.com'
-            },
-            displayType: 'Test Request',
-            requestType: 'psychometric_test',
-            title: 'Marketing Personality Test',
-            description: 'Custom personality assessment for marketing roles',
-            job: {
-              _id: 'job2',
-              title: 'Marketing Manager',
-              company: 'AdAgency Ltd'
-            },
-            priority: 'normal',
-            requestedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-            status: 'pending',
-            specifications: {
-              testType: 'personality',
-              duration: 45,
-              questionCount: 30,
-              difficulty: 'easy'
-            }
-          },
-          {
-            _id: 'interview1',
-            user: {
-              _id: 'user3',
-              firstName: 'Mike',
-              lastName: 'Johnson',
-              email: 'mike.johnson@example.com'
-            },
-            displayType: 'AI Interview',
-            requestType: 'ai_interview',
-            title: 'Interview - Full Stack Developer',
-            description: 'AI interview session for Full Stack Developer position',
-            job: {
-              _id: 'job3',
-              title: 'Full Stack Developer',
-              company: 'StartupXYZ'
-            },
-            priority: 'normal',
-            requestedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-            status: 'completed',
-            specifications: {
-              testType: 'interview',
-              duration: 30,
-              score: 85,
-              difficulty: 'medium'
-            }
-          },
-          {
-            _id: 'interview2',
-            user: {
-              _id: 'user4',
-              firstName: 'Sarah',
-              lastName: 'Wilson',
-              email: 'sarah.wilson@example.com'
-            },
-            displayType: 'AI Interview',
-            requestType: 'ai_interview',
-            title: 'Interview - Data Analyst',
-            description: 'AI interview session for Data Analyst position',
-            job: {
-              _id: 'job4',
-              title: 'Data Analyst',
-              company: 'DataCorp Inc'
-            },
-            priority: 'low',
-            requestedAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-            status: 'completed',
-            specifications: {
-              testType: 'interview',
-              duration: 45,
-              score: 92,
-              difficulty: 'hard'
-            }
-          }
-        ];
+        console.log('ℹ️ No test requests found from API - displaying empty state');
       }
 
       // Sort by priority and date
@@ -625,36 +547,8 @@ const PsychometricTestManagementPage: React.FC = () => {
       console.log('Loaded requests and interviews:', allRequests);
     } catch (error) {
       console.error('Error loading test requests and interviews:', error);
-      // Use fallback data on error
-      setTestRequests([
-        {
-          _id: 'req1',
-          user: {
-            _id: 'user1',
-            firstName: 'John',
-            lastName: 'Doe',
-            email: 'john.doe@example.com'
-          },
-          displayType: 'Test Request',
-          requestType: 'psychometric_test',
-          title: 'Software Engineer Assessment',
-          description: 'Need a comprehensive test for evaluating software engineering skills',
-          job: {
-            _id: 'job1',
-            title: 'Senior Software Engineer',
-            company: 'TechCorp Inc'
-          },
-          priority: 'high',
-          requestedAt: new Date().toISOString(),
-          status: 'pending',
-          specifications: {
-            testType: 'technical',
-            duration: 60,
-            questionCount: 25,
-            difficulty: 'medium'
-          }
-        }
-      ]);
+      // Don't use fallback data on error - show empty state
+      setTestRequests([]);
     } finally {
       setRequestsLoading(false);
     }
@@ -662,24 +556,52 @@ const PsychometricTestManagementPage: React.FC = () => {
 
   const handleRequestAction = async (requestId: string, action: 'approve' | 'reject', notes?: string) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/test-requests/${requestId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          status: action === 'approve' ? 'approved' : 'rejected',
-          adminNotes: notes
-        })
-      });
+      // Find the request to determine its type
+      const request = testRequests.find(req => req._id === requestId);
+      if (!request) {
+        console.error('Request not found:', requestId);
+        return;
+      }
+
+      let response;
+      
+      if (request.requestType === 'test_purchase_approval') {
+        // Handle test purchase approval/rejection
+        const endpoint = action === 'approve' 
+          ? `${import.meta.env.VITE_API_URL}/psychometric-tests/approvals/${requestId}/approve`
+          : `${import.meta.env.VITE_API_URL}/psychometric-tests/approvals/${requestId}/reject`;
+        
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            reason: notes || (action === 'reject' ? 'Request rejected by admin' : undefined)
+          })
+        });
+      } else {
+        // Handle regular test request approval/rejection
+        response = await fetch(`${import.meta.env.VITE_API_URL}/test-requests/${requestId}/status`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            status: action === 'approve' ? 'approved' : 'rejected',
+            adminNotes: notes
+          })
+        });
+      }
 
       if (response.ok) {
         // Remove the request from the list
         setTestRequests(prev => prev.filter(req => req._id !== requestId));
         
-        if (action === 'approve') {
-          // Generate the test
+        // For regular test requests, generate the test after approval
+        if (action === 'approve' && request.requestType !== 'test_purchase_approval') {
           await fetch(`${import.meta.env.VITE_API_URL}/test-requests/${requestId}/generate`, {
             method: 'POST',
             headers: {
@@ -688,6 +610,11 @@ const PsychometricTestManagementPage: React.FC = () => {
             }
           });
         }
+        
+        console.log(`✅ Successfully ${action}ed ${request.displayType}:`, requestId);
+      } else {
+        const errorResult = await response.json();
+        console.error(`❌ Failed to ${action} ${request.displayType}:`, errorResult);
       }
     } catch (error) {
       console.error('Error handling request action:', error);

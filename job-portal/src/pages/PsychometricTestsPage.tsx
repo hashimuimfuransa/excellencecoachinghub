@@ -98,7 +98,8 @@ import {
   AccountTree,
   Favorite,
   Lock,
-  LockOpen
+  LockOpen,
+  BookmarkBorder
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
@@ -190,6 +191,9 @@ interface PaymentInfo {
   cost: number;
   attemptsRemaining: number;
   lastPaymentDate?: string;
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  requestedAt?: string;
+  approvedAt?: string;
 }
 
 interface FreeTestCategory {
@@ -350,7 +354,29 @@ const PsychometricTestsPage: React.FC = () => {
     fetchResults();
     fetchJobs();
     fetchUserData();
+    loadUserPayments();
   }, []);
+
+  // Load saved payments from localStorage
+  const loadUserPayments = () => {
+    try {
+      const saved = localStorage.getItem(`psychometric_payments_${user?._id}`);
+      if (saved) {
+        setUserPayments(JSON.parse(saved));
+      }
+    } catch (error) {
+      console.error('Error loading saved payments:', error);
+    }
+  };
+
+  // Save payments to localStorage
+  const saveUserPayments = (payments: PaymentInfo[]) => {
+    try {
+      localStorage.setItem(`psychometric_payments_${user?._id}`, JSON.stringify(payments));
+    } catch (error) {
+      console.error('Error saving payments:', error);
+    }
+  };
 
   const fetchTests = async () => {
     try {
@@ -720,36 +746,93 @@ const PsychometricTestsPage: React.FC = () => {
         level: selectedTestLevel.level,
         cost: selectedTestLevel.cost,
         attemptsRemaining: 3, // 3 attempts per payment
-        lastPaymentDate: new Date().toISOString()
+        lastPaymentDate: new Date().toISOString(),
+        approvalStatus: 'pending'
+        // requestedAt will be set when user clicks "Request Approval"
       };
       
-      setUserPayments(prev => {
-        const existing = prev.find(p => p.level === selectedTestLevel.level);
+      const updatedPayments = (() => {
+        const existing = userPayments.find(p => p.level === selectedTestLevel.level);
         if (existing) {
-          return prev.map(p => 
+          return userPayments.map(p => 
             p.level === selectedTestLevel.level 
-              ? { ...p, attemptsRemaining: 3, lastPaymentDate: new Date().toISOString() }
+              ? { 
+                  ...p, 
+                  attemptsRemaining: 3, 
+                  lastPaymentDate: new Date().toISOString(),
+                  approvalStatus: 'pending' as const
+                  // requestedAt will be set when user clicks "Request Approval"
+                }
               : p
           );
         } else {
-          return [...prev, newPayment];
+          return [...userPayments, newPayment];
         }
-      });
+      })();
+      
+      setUserPayments(updatedPayments);
+      saveUserPayments(updatedPayments);
       
       setPaymentDialogOpen(false);
       
-      // Now show the test card
-      const test = generatedTests.find(t => t._id.includes(`-${selectedTestLevel.level}`));
-      if (test) {
-        setReadyTest(test);
-        setShowTestCard(true);
-      }
+      // Switch to saved assessments tab to show the purchased assessment
+      setCurrentTab(2);
+      
+      // Show success message
+      alert('Payment successful! Your assessment has been saved. Go to the Saved Assessments tab and click "Request Approval" to get admin approval before starting.');
       
     } catch (error) {
       console.error('Payment failed:', error);
       // Handle payment error
     } finally {
       setProcessingPayment(false);
+    }
+  };
+
+  const handleRequestApproval = async (level: number) => {
+    try {
+      const updatedPayments = userPayments.map(p => 
+        p.level === level 
+          ? { 
+              ...p, 
+              approvalStatus: 'pending' as const,
+              requestedAt: new Date().toISOString()
+            }
+          : p
+      );
+      
+      setUserPayments(updatedPayments);
+      saveUserPayments(updatedPayments);
+      
+      // Here you would typically make an API call to notify admins
+      alert('Approval request submitted! You will be notified once an admin reviews your request.');
+      
+    } catch (error) {
+      console.error('Error requesting approval:', error);
+      alert('Failed to submit approval request. Please try again.');
+    }
+  };
+
+  // Demo function to simulate admin approval (for testing purposes)
+  const simulateAdminApproval = async (level: number) => {
+    try {
+      const updatedPayments = userPayments.map(p => 
+        p.level === level 
+          ? { 
+              ...p, 
+              approvalStatus: 'approved' as const,
+              approvedAt: new Date().toISOString()
+            }
+          : p
+      );
+      
+      setUserPayments(updatedPayments);
+      saveUserPayments(updatedPayments);
+      
+      alert('Assessment approved! You can now start your test.');
+      
+    } catch (error) {
+      console.error('Error approving assessment:', error);
     }
   };
 
@@ -760,7 +843,7 @@ const PsychometricTestsPage: React.FC = () => {
 
   const hasValidPayment = (level: number): boolean => {
     const paymentInfo = userPayments.find(p => p.level === level);
-    return paymentInfo ? paymentInfo.attemptsRemaining > 0 : false;
+    return paymentInfo ? paymentInfo.attemptsRemaining > 0 && paymentInfo.approvalStatus === 'approved' : false;
   };
 
   const handleAnswerChange = (questionId: string, answer: any) => {
@@ -1475,6 +1558,15 @@ const PsychometricTestsPage: React.FC = () => {
                 </Box>
               } 
             />
+            <Tab 
+              label={
+                <Box display="flex" alignItems="center" gap={1}>
+                  <BookmarkBorder />
+                  Saved Assessments
+                  <Badge badgeContent={userPayments.length} color="primary" />
+                </Box>
+              } 
+            />
           </Tabs>
         </Box>
 
@@ -1637,6 +1729,238 @@ const PsychometricTestsPage: React.FC = () => {
                 Start Job-Specific Assessment
               </Button>
             </Paper>
+          </Box>
+        )}
+
+        {/* Saved Assessments Tab */}
+        {currentTab === 2 && (
+          <Box>
+            {userPayments.length === 0 ? (
+              <Paper sx={{ p: 6, textAlign: 'center' }}>
+                <Avatar sx={{ width: 80, height: 80, mx: 'auto', mb: 2, bgcolor: 'grey.300' }}>
+                  <BookmarkBorder sx={{ fontSize: 40, color: 'grey.600' }} />
+                </Avatar>
+                <Typography variant="h5" fontWeight="bold" gutterBottom>
+                  No Saved Assessments
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 500, mx: 'auto' }}>
+                  Once you purchase and generate job-specific assessments, they will appear here. You can request approval and start them anytime.
+                </Typography>
+                <Button 
+                  variant="outlined" 
+                  onClick={() => setCurrentTab(1)}
+                  startIcon={<Work />}
+                >
+                  Generate Your First Assessment
+                </Button>
+              </Paper>
+            ) : (
+              <Box>
+                <Alert severity="info" sx={{ mb: 4 }}>
+                  <AlertTitle>Your Saved Assessments</AlertTitle>
+                  These are your purchased assessments. Click "Request Approval" to get admin approval, then start your test.
+                </Alert>
+
+                <Grid container spacing={3}>
+                  {userPayments.map((payment) => {
+                    const testLevel = testLevels.find(level => level.level === payment.level);
+                    if (!testLevel) return null;
+
+                    return (
+                      <Grid item xs={12} md={6} lg={4} key={payment.level}>
+                        <Card 
+                          sx={{ 
+                            height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            position: 'relative',
+                            transition: 'all 0.3s',
+                            '&:hover': {
+                              transform: 'translateY(-4px)',
+                              boxShadow: 8,
+                            }
+                          }}
+                        >
+                          <CardContent sx={{ flexGrow: 1, p: 3 }}>
+                            <Box display="flex" alignItems="center" mb={2}>
+                              <Avatar 
+                                sx={{ 
+                                  bgcolor: 'primary.main', 
+                                  mr: 2,
+                                  width: 48,
+                                  height: 48
+                                }}
+                              >
+                                {payment.level}
+                              </Avatar>
+                              <Box>
+                                <Typography variant="h6" fontWeight="bold">
+                                  Level {payment.level} Assessment
+                                </Typography>
+                                <Chip 
+                                  label="PURCHASED" 
+                                  size="small" 
+                                  color="success" 
+                                  sx={{ fontWeight: 'bold' }}
+                                />
+                              </Box>
+                            </Box>
+                            
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                              {testLevel.description}
+                            </Typography>
+                            
+                            <Stack spacing={1} sx={{ mb: 2 }}>
+                              <Box display="flex" justifyContent="space-between">
+                                <Typography variant="body2">Cost Paid:</Typography>
+                                <Typography variant="body2" fontWeight="bold" color="primary">
+                                  {payment.cost.toLocaleString()} FRW
+                                </Typography>
+                              </Box>
+                              <Box display="flex" justifyContent="space-between">
+                                <Typography variant="body2">Attempts Left:</Typography>
+                                <Typography variant="body2" fontWeight="bold">
+                                  {payment.attemptsRemaining}/3
+                                </Typography>
+                              </Box>
+                              <Box display="flex" justifyContent="space-between">
+                                <Typography variant="body2">Status:</Typography>
+                                <Chip 
+                                  label={
+                                    payment.approvalStatus === 'approved' ? 'APPROVED' :
+                                    payment.approvalStatus === 'pending' ? 'PENDING APPROVAL' :
+                                    'REJECTED'
+                                  }
+                                  size="small"
+                                  color={
+                                    payment.approvalStatus === 'approved' ? 'success' :
+                                    payment.approvalStatus === 'pending' ? 'warning' :
+                                    'error'
+                                  }
+                                  sx={{ fontWeight: 'bold', fontSize: '0.7rem' }}
+                                />
+                              </Box>
+                              {payment.lastPaymentDate && (
+                                <Box display="flex" justifyContent="space-between">
+                                  <Typography variant="body2">Purchased:</Typography>
+                                  <Typography variant="body2">
+                                    {new Date(payment.lastPaymentDate).toLocaleDateString()}
+                                  </Typography>
+                                </Box>
+                              )}
+                              {payment.requestedAt && (
+                                <Box display="flex" justifyContent="space-between">
+                                  <Typography variant="body2">Requested:</Typography>
+                                  <Typography variant="body2">
+                                    {new Date(payment.requestedAt).toLocaleDateString()}
+                                  </Typography>
+                                </Box>
+                              )}
+                            </Stack>
+
+                            {payment.attemptsRemaining > 0 && (
+                              <LinearProgress 
+                                variant="determinate" 
+                                value={(payment.attemptsRemaining / 3) * 100}
+                                sx={{ mb: 2, height: 6, borderRadius: 3 }}
+                              />
+                            )}
+                          </CardContent>
+
+                          <CardActions sx={{ p: 3, pt: 0 }}>
+                            {payment.approvalStatus === 'pending' && !payment.requestedAt ? (
+                              // Show Request Approval button for newly purchased assessments
+                              <Button
+                                fullWidth
+                                variant="outlined"
+                                startIcon={<CheckCircle />}
+                                onClick={() => handleRequestApproval(payment.level)}
+                                color="warning"
+                                sx={{
+                                  py: 1.5,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                Request Approval
+                              </Button>
+                            ) : payment.approvalStatus === 'pending' && payment.requestedAt ? (
+                              // Show pending status for requested assessments
+                              <Stack spacing={1} sx={{ width: '100%' }}>
+                                <Button
+                                  fullWidth
+                                  variant="outlined"
+                                  startIcon={<Timer />}
+                                  disabled
+                                  color="warning"
+                                  sx={{
+                                    py: 1.5,
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  Pending Approval
+                                </Button>
+                                {/* Demo button for testing - remove in production */}
+                                <Button
+                                  fullWidth
+                                  variant="text"
+                                  onClick={() => simulateAdminApproval(payment.level)}
+                                  color="success"
+                                  size="small"
+                                  sx={{ fontSize: '0.75rem' }}
+                                >
+                                  [DEMO] Approve Now
+                                </Button>
+                              </Stack>
+                            ) : payment.approvalStatus === 'approved' ? (
+                              // Show Start Assessment for approved assessments
+                              <Button
+                                fullWidth
+                                variant="contained"
+                                startIcon={<PlayArrow />}
+                                onClick={() => {
+                                  // Find the generated test for this level
+                                  const test = generatedTests.find(t => t._id.includes(`-${payment.level}`));
+                                  if (test) {
+                                    setReadyTest(test);
+                                    setShowTestCard(true);
+                                  } else {
+                                    // If no test exists, generate one first
+                                    handleGenerateTest(selectedJob, payment.level);
+                                  }
+                                }}
+                                disabled={payment.attemptsRemaining <= 0}
+                                color="primary"
+                                sx={{
+                                  py: 1.5,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {payment.attemptsRemaining > 0 ? 'Start Assessment' : 'No Attempts Left'}
+                              </Button>
+                            ) : (
+                              // Show rejected status
+                              <Button
+                                fullWidth
+                                variant="outlined"
+                                startIcon={<Close />}
+                                disabled
+                                color="error"
+                                sx={{
+                                  py: 1.5,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                Request Rejected
+                              </Button>
+                            )}
+                          </CardActions>
+                        </Card>
+                      </Grid>
+                    );
+                  })}
+                </Grid>
+              </Box>
+            )}
           </Box>
         )}
 

@@ -29,6 +29,7 @@ import PsychometricTestsPage from './pages/PsychometricTestsPage';
 import TestPage from './pages/TestPage';
 import FreeTestPage from './pages/FreeTestPage';
 import TestDetailsPage from './pages/TestDetailsPage';
+import SavedCardsManager from './components/SavedCardsManager';
 import CreateJobPage from './pages/CreateJobPage';
 import EmployerJobsPage from './pages/EmployerJobsPage';
 import EmployerCandidatesPage from './pages/EmployerCandidatesPage';
@@ -147,6 +148,7 @@ function App() {
               <Route path="interviews/history" element={<InterviewHistoryPage />} />
               <Route path="interviews/results/:sessionId" element={<InterviewResultsPage />} />
               <Route path="tests" element={<PsychometricTestsPage />} />
+              <Route path="tests/saved" element={<SavedCardsManager />} />
               <Route path="test-results" element={<TestResultsPage />} />
               <Route path="career-guidance" element={<CareerGuidancePage />} />
               <Route path="career/assessment/:assessmentId" element={<CareerAssessmentFlow />} />

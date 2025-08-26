@@ -1113,7 +1113,14 @@ function generateRecommendations(type: PsychometricTestType, scores: Record<stri
 export const purchaseTest = async (req: AuthRequest, res: Response) => {
   try {
     const { testId } = req.params;
-    const { jobId, paymentIntentId, amount, currency = 'USD', maxAttempts = 3 } = req.body;
+    const { 
+      jobId, 
+      paymentIntentId, 
+      amount, 
+      currency = 'USD', 
+      maxAttempts = 3,
+      requiresApproval = false // New field to indicate if approval is needed
+    } = req.body;
     const userId = req.user?.id;
 
     if (!userId) {
@@ -1133,12 +1140,22 @@ export const purchaseTest = async (req: AuthRequest, res: Response) => {
 
     // Check if user already has a valid purchase for this test
     const existingPurchase = await TestPurchase.findUserPurchaseForTest(userId, testId, jobId);
-    if (existingPurchase && existingPurchase.isValid) {
+    if (existingPurchase && existingPurchase.status === 'completed') {
       return res.status(400).json({
         success: false,
-        error: 'You already have a valid purchase for this test'
+        error: 'You already have a purchase for this test',
+        data: {
+          purchase: existingPurchase,
+          canRequestApproval: existingPurchase.canRequestApproval,
+          approvalStatus: existingPurchase.approvalStatus,
+          approvalStatusDisplay: existingPurchase.approvalStatusDisplay
+        }
       });
     }
+
+    // Determine approval workflow settings
+    const approvalStatus = requiresApproval ? 'not_required' : 'not_required'; // Default to not required
+    const autoApproval = !requiresApproval;
 
     // Create new purchase
     const purchase = new TestPurchase({
@@ -1149,17 +1166,31 @@ export const purchaseTest = async (req: AuthRequest, res: Response) => {
       amount,
       currency,
       maxAttempts,
-      status: 'completed' // In real implementation, this would be 'pending' until payment is confirmed
+      status: 'completed', // In real implementation, this would be 'pending' until payment is confirmed
+      approvalStatus,
+      autoApproval
     });
 
     await purchase.save();
 
+    // Populate the purchase with related data
+    const populatedPurchase = await TestPurchase.findById(purchase._id)
+      .populate('test', 'title type description timeLimit')
+      .populate('job', 'title company');
+
     res.status(201).json({
       success: true,
-      data: purchase,
-      message: 'Test purchased successfully'
+      data: populatedPurchase,
+      message: `Test purchased successfully${requiresApproval ? '. You can request approval to start the test.' : '. You can start the test anytime.'}`
     });
   } catch (error: any) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        error: 'You have already purchased this test'
+      });
+    }
+    
     res.status(400).json({
       success: false,
       error: 'Failed to purchase test',
@@ -1371,6 +1402,218 @@ export const checkTestAccess = async (req: AuthRequest, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Failed to check test access',
+      message: error.message
+    });
+  }
+};
+
+// Get user's test purchases
+export const getUserTestPurchases = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    const purchases = await TestPurchase.findUserPurchases(userId);
+
+    res.status(200).json({
+      success: true,
+      data: purchases,
+      message: 'User test purchases retrieved successfully'
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve test purchases',
+      message: error.message
+    });
+  }
+};
+
+// Request approval for a test
+export const requestTestApproval = async (req: AuthRequest, res: Response) => {
+  try {
+    const { purchaseId } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    // Verify the purchase belongs to the user
+    const purchase = await TestPurchase.findById(purchaseId).populate('user test job');
+    if (!purchase) {
+      return res.status(404).json({
+        success: false,
+        error: 'Test purchase not found'
+      });
+    }
+
+    if (purchase.user._id.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied: This purchase does not belong to you'
+      });
+    }
+
+    if (!purchase.canRequestApproval) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot request approval for this test',
+        data: {
+          approvalStatus: purchase.approvalStatus,
+          approvalStatusDisplay: purchase.approvalStatusDisplay
+        }
+      });
+    }
+
+    // Request approval
+    const updatedPurchase = await TestPurchase.requestApproval(purchaseId);
+
+    res.status(200).json({
+      success: true,
+      data: updatedPurchase,
+      message: 'Test approval requested successfully. You will be notified when an admin reviews your request.'
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to request test approval',
+      message: error.message
+    });
+  }
+};
+
+// Get pending test approvals (Admin only)
+export const getPendingTestApprovals = async (req: AuthRequest, res: Response) => {
+  try {
+    const user = req.user;
+    
+    if (!user || user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied: Super admin access required'
+      });
+    }
+
+    const pendingApprovals = await TestPurchase.findPendingApprovals();
+
+    res.status(200).json({
+      success: true,
+      data: pendingApprovals,
+      count: pendingApprovals.length,
+      message: 'Pending test approvals retrieved successfully'
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve pending approvals',
+      message: error.message
+    });
+  }
+};
+
+// Approve a test (Admin only)
+export const approveTest = async (req: AuthRequest, res: Response) => {
+  try {
+    const { purchaseId } = req.params;
+    const user = req.user;
+
+    if (!user || user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied: Super admin access required'
+      });
+    }
+
+    const purchase = await TestPurchase.findById(purchaseId);
+    if (!purchase) {
+      return res.status(404).json({
+        success: false,
+        error: 'Test purchase not found'
+      });
+    }
+
+    if (purchase.approvalStatus !== 'pending_approval') {
+      return res.status(400).json({
+        success: false,
+        error: 'Test is not pending approval',
+        data: { approvalStatus: purchase.approvalStatus }
+      });
+    }
+
+    const approvedPurchase = await TestPurchase.approveTest(purchaseId, user.id);
+
+    res.status(200).json({
+      success: true,
+      data: approvedPurchase,
+      message: 'Test approved successfully. The user can now take the test.'
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to approve test',
+      message: error.message
+    });
+  }
+};
+
+// Reject a test (Admin only)
+export const rejectTest = async (req: AuthRequest, res: Response) => {
+  try {
+    const { purchaseId } = req.params;
+    const { reason } = req.body;
+    const user = req.user;
+
+    if (!user || user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied: Super admin access required'
+      });
+    }
+
+    if (!reason || reason.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Rejection reason is required'
+      });
+    }
+
+    const purchase = await TestPurchase.findById(purchaseId);
+    if (!purchase) {
+      return res.status(404).json({
+        success: false,
+        error: 'Test purchase not found'
+      });
+    }
+
+    if (purchase.approvalStatus !== 'pending_approval') {
+      return res.status(400).json({
+        success: false,
+        error: 'Test is not pending approval',
+        data: { approvalStatus: purchase.approvalStatus }
+      });
+    }
+
+    const rejectedPurchase = await TestPurchase.rejectTest(purchaseId, user.id, reason.trim());
+
+    res.status(200).json({
+      success: true,
+      data: rejectedPurchase,
+      message: 'Test rejected successfully. The user has been notified.'
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to reject test',
       message: error.message
     });
   }

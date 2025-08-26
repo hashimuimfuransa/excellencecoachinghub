@@ -292,6 +292,45 @@ class PsychometricTestService {
     return handleApiResponse(response);
   }
 
+  // Get user's test purchases
+  async getUserTestPurchases(): Promise<any[]> {
+    const response = await apiGet<ApiResponse<any[]>>('/psychometric-tests/purchases/my-purchases');
+    return handleApiResponse(response);
+  }
+
+  // Request approval for a test
+  async requestTestApproval(purchaseId: string): Promise<any> {
+    const response = await apiPost<ApiResponse<any>>(
+      `/psychometric-tests/purchases/${purchaseId}/request-approval`,
+      {}
+    );
+    return handleApiResponse(response);
+  }
+
+  // Get pending test approvals (Admin only)
+  async getPendingTestApprovals(): Promise<any[]> {
+    const response = await apiGet<ApiResponse<any[]>>('/psychometric-tests/approvals/pending');
+    return handleApiResponse(response);
+  }
+
+  // Approve a test (Admin only)
+  async approveTest(purchaseId: string): Promise<any> {
+    const response = await apiPost<ApiResponse<any>>(
+      `/psychometric-tests/approvals/${purchaseId}/approve`,
+      {}
+    );
+    return handleApiResponse(response);
+  }
+
+  // Reject a test (Admin only)
+  async rejectTest(purchaseId: string, reason: string): Promise<any> {
+    const response = await apiPost<ApiResponse<any>>(
+      `/psychometric-tests/approvals/${purchaseId}/reject`,
+      { reason }
+    );
+    return handleApiResponse(response);
+  }
+
   // Get recommended tests based on user profile
   async getRecommendedTests(): Promise<PsychometricTest[]> {
     try {

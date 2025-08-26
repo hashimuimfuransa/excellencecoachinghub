@@ -106,7 +106,7 @@ const TrendingJobsSection: React.FC = () => {
   }, []);
 
   const handleViewMoreJobs = () => {
-    window.open('https://jobs.excellencecoachinghub.com/', '_blank');
+    window.open('https://jobs.excellencecoachinghub.com/jobs', '_blank');
   };
 
   const formatSalary = (salary?: { min: number; max: number; currency: string }) => {
@@ -435,7 +435,7 @@ const TrendingJobsSection: React.FC = () => {
             <Button
               variant="contained"
               color="primary"
-              onClick={() => window.open('https://jobs.excellencecoachinghub.com/', '_blank')}
+              onClick={() => window.open('https://jobs.excellencecoachinghub.com/jobs', '_blank')}
               sx={{
                 borderRadius: 2,
                 textTransform: 'none',
@@ -450,7 +450,7 @@ const TrendingJobsSection: React.FC = () => {
               variant="outlined"
               color="primary"
               startIcon={<Psychology />}
-              onClick={() => window.open('https://jobs.excellencecoachinghub.com/register', '_blank')}
+              onClick={() => window.open('https://jobs.excellencecoachinghub.com/jobs', '_blank')}
               sx={{
                 borderRadius: 2,
                 textTransform: 'none',

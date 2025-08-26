@@ -55,7 +55,13 @@ export const authService = {
   // Register user
   register: async (userData: RegisterForm): Promise<AuthResponse> => {
     try {
-      const response = await apiService.post<AuthResponse>('/auth/register', userData);
+      // Automatically add platform information
+      const registerPayload = {
+        ...userData,
+        platform: 'elearning' // This is the e-learning platform
+      };
+      
+      const response = await apiService.post<AuthResponse>('/auth/register', registerPayload);
 
       if (response.success && response.data) {
         // Store token and user data

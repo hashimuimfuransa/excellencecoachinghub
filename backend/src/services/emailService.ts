@@ -9,9 +9,60 @@ interface EmailOptions {
 
 // Email templates
 const emailTemplates = {
+  welcome: (data: any) => `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1976d2;">Welcome to Excellence Coaching Hub! 🎉</h2>
+      <p>Hi ${data.firstName},</p>
+      <p>Thank you for joining Excellence Coaching Hub! We're excited to have you on board and can't wait to help you achieve your goals.</p>
+      
+      <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #1976d2; margin-top: 0;">What's Next?</h3>
+        <ul style="color: #333;">
+          <li><strong>Explore Job Opportunities:</strong> Browse thousands of job listings tailored to your skills</li>
+          <li><strong>Take Psychometric Tests:</strong> Assess your abilities and get matched with suitable roles</li>
+          <li><strong>Access Learning Resources:</strong> Enhance your skills with our comprehensive e-learning platform</li>
+          <li><strong>Build Your Profile:</strong> Complete your profile to get better job recommendations</li>
+        </ul>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${data.platformUrl}" 
+           style="background-color: #1976d2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 0 10px;">
+          Get Started
+        </a>
+        ${data.platform === 'elearning' ? `
+        <a href="${process.env.FRONTEND_URL || 'http://localhost:3001'}" 
+           style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 0 10px;">
+          Explore E-Learning
+        </a>
+        ` : ''}
+        ${data.platform === 'job-portal' ? `
+        <a href="${process.env.ELEARNING_URL || 'http://localhost:3002'}" 
+           style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 0 10px;">
+          Find Jobs
+        </a>
+        ` : ''}
+      </div>
+
+      <div style="background-color: #e3f2fd; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0; color: #1565c0;"><strong>💡 Pro Tip:</strong> Complete your profile within 48 hours to unlock premium features and get priority access to job opportunities!</p>
+      </div>
+
+      <p>If you have any questions or need assistance, our support team is here to help. Feel free to reach out to us at any time.</p>
+      <p>Welcome aboard, and here's to your success!</p>
+      
+      <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+      <p style="color: #666; font-size: 12px;">
+        Excellence Coaching Hub Team<br>
+        Empowering careers, one step at a time<br>
+        This is an automated email, please do not reply.
+      </p>
+    </div>
+  `,
+
   emailVerification: (data: any) => `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #1976d2;">Welcome to Excellence Coaching Hub!</h2>
+      <h2 style="color: #1976d2;">Verify Your Email Address</h2>
       <p>Hi ${data.firstName},</p>
       <p>Thank you for registering with Excellence Coaching Hub. Please verify your email address by clicking the button below:</p>
       <div style="text-align: center; margin: 30px 0;">
@@ -257,6 +308,37 @@ export const sendHtmlEmail = async (options: { to: string; subject: string; html
     console.log(`Subject: ${options.subject}`);
     console.log(`HTML: ${options.html.substring(0, 200)}...`);
     console.log('========================\n');
+  }
+};
+
+// Send welcome email to new users
+export const sendWelcomeEmail = async (userData: {
+  email: string;
+  firstName: string;
+  platform: 'homepage' | 'job-portal' | 'elearning';
+}): Promise<void> => {
+  try {
+    const platformUrls = {
+      homepage: process.env.HOMEPAGE_URL || 'http://localhost:3000',
+      'job-portal': process.env.JOB_PORTAL_URL || 'http://localhost:3001',
+      elearning: process.env.ELEARNING_URL || 'http://localhost:3002'
+    };
+
+    await sendEmail({
+      to: userData.email,
+      subject: 'Welcome to Excellence Coaching Hub! 🎉',
+      template: 'welcome',
+      data: {
+        firstName: userData.firstName,
+        platform: userData.platform,
+        platformUrl: platformUrls[userData.platform]
+      }
+    });
+
+    console.log(`Welcome email sent to ${userData.email} for ${userData.platform} platform`);
+  } catch (error) {
+    console.error('Error sending welcome email:', error);
+    // Don't throw error - welcome email failure shouldn't break registration
   }
 };
 

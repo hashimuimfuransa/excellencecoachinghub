@@ -64,6 +64,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import PublicLayout from '../layouts/PublicLayout';
 import { jobService } from '../services/jobService';
 import { useAuth } from '../contexts/AuthContext';
+import FloatingContact from '../components/FloatingContact';
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -2705,6 +2706,7 @@ const HomePage: React.FC = () => {
         </Fade>
       </Container>
       </Box>
+      <FloatingContact />
     </PublicLayout>
   );
 };

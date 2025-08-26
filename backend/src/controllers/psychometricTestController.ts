@@ -1154,7 +1154,7 @@ export const purchaseTest = async (req: AuthRequest, res: Response) => {
     }
 
     // Determine approval workflow settings
-    const approvalStatus = requiresApproval ? 'not_required' : 'not_required'; // Default to not required
+    const approvalStatus = 'not_required'; // Initially not required - user can request approval later
     const autoApproval = !requiresApproval;
 
     // Create new purchase
@@ -1441,6 +1441,8 @@ export const requestTestApproval = async (req: AuthRequest, res: Response) => {
     const { purchaseId } = req.params;
     const userId = req.user?.id;
 
+    console.log('🔍 Request approval for purchase:', purchaseId, 'by user:', userId);
+
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -1451,11 +1453,20 @@ export const requestTestApproval = async (req: AuthRequest, res: Response) => {
     // Verify the purchase belongs to the user
     const purchase = await TestPurchase.findById(purchaseId).populate('user test job');
     if (!purchase) {
+      console.error('❌ Test purchase not found:', purchaseId);
       return res.status(404).json({
         success: false,
         error: 'Test purchase not found'
       });
     }
+
+    console.log('🔍 Found purchase:', {
+      id: purchase._id,
+      user: purchase.user._id,
+      approvalStatus: purchase.approvalStatus,
+      canRequestApproval: purchase.canRequestApproval,
+      status: purchase.status
+    });
 
     if (purchase.user._id.toString() !== userId) {
       return res.status(403).json({
@@ -1465,6 +1476,13 @@ export const requestTestApproval = async (req: AuthRequest, res: Response) => {
     }
 
     if (!purchase.canRequestApproval) {
+      console.log('❌ Cannot request approval:', {
+        approvalStatus: purchase.approvalStatus,
+        approvalStatusDisplay: purchase.approvalStatusDisplay,
+        status: purchase.status,
+        attemptsUsed: purchase.attemptsUsed,
+        maxAttempts: purchase.maxAttempts
+      });
       return res.status(400).json({
         success: false,
         error: 'Cannot request approval for this test',
@@ -1476,7 +1494,9 @@ export const requestTestApproval = async (req: AuthRequest, res: Response) => {
     }
 
     // Request approval
+    console.log('✅ Requesting approval for purchase:', purchaseId);
     const updatedPurchase = await TestPurchase.requestApproval(purchaseId);
+    console.log('✅ Updated purchase approval status:', updatedPurchase.approvalStatus);
 
     res.status(200).json({
       success: true,
@@ -1484,6 +1504,7 @@ export const requestTestApproval = async (req: AuthRequest, res: Response) => {
       message: 'Test approval requested successfully. You will be notified when an admin reviews your request.'
     });
   } catch (error: any) {
+    console.error('❌ Error requesting test approval:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to request test approval',
@@ -1504,7 +1525,26 @@ export const getPendingTestApprovals = async (req: AuthRequest, res: Response) =
       });
     }
 
+    console.log('🔍 Getting pending test approvals...');
+    
+    // Debug: Let's also check all purchases to see what's in the database
+    const allPurchases = await TestPurchase.find({ status: 'completed' })
+      .populate('user', 'firstName lastName email')
+      .populate('test', 'title type')
+      .populate('job', 'title company')
+      .sort({ purchasedAt: -1 });
+    
+    console.log('🔍 All completed purchases in DB:', allPurchases.length);
+    allPurchases.forEach(purchase => {
+      console.log(`  - Purchase ${purchase._id}: approvalStatus=${purchase.approvalStatus}, user=${purchase.user?.firstName} ${purchase.user?.lastName}`);
+    });
+
     const pendingApprovals = await TestPurchase.findPendingApprovals();
+    
+    console.log('🔍 Pending approvals found:', pendingApprovals.length);
+    pendingApprovals.forEach(approval => {
+      console.log(`  - Approval ${approval._id}: status=${approval.approvalStatus}, requestedAt=${approval.approvalRequestedAt}`);
+    });
 
     res.status(200).json({
       success: true,
@@ -1513,6 +1553,7 @@ export const getPendingTestApprovals = async (req: AuthRequest, res: Response) =
       message: 'Pending test approvals retrieved successfully'
     });
   } catch (error: any) {
+    console.error('❌ Error getting pending approvals:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve pending approvals',

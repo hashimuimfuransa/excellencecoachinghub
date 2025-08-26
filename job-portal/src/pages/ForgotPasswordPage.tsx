@@ -24,7 +24,7 @@ import {
   CheckCircle
 } from '@mui/icons-material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
-import { sendPasswordResetEmail } from '../services/emailjsService';
+// EmailJS service is handled by authService now
 
 const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -42,68 +42,11 @@ const ForgotPasswordPage: React.FC = () => {
     setLoading(true);
 
     try {
-      // First, call the backend to generate the reset token
-      const response = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Log the error details for debugging
-        console.error('Password reset API error:', {
-          status: response.status,
-          statusText: response.statusText,
-          data
-        });
-
-        // Handle different error types with friendly messages
-        if (response.status === 404) {
-          setError('We couldn\'t find an account with that email address. Please check your email and try again, or create a new account if you haven\'t registered yet.');
-        } else if (response.status === 429) {
-          setError('Too many password reset attempts. Please wait a few minutes before trying again.');
-        } else if (response.status >= 500) {
-          setError('Our servers are experiencing issues. Please try again in a few minutes.');
-        } else {
-          // Handle other error cases with more specific messages
-          const errorMessage = data.message || data.error || `Request failed with status ${response.status}`;
-          
-          // Make specific error messages more user-friendly
-          if (errorMessage.includes('User not found') || errorMessage.includes('not found') || errorMessage.includes('No user')) {
-            setError('We couldn\'t find an account with that email address. Please check your email and try again, or create a new account if you haven\'t registered yet.');
-          } else if (errorMessage.includes('rate limit') || errorMessage.includes('too many')) {
-            setError('Too many password reset attempts. Please wait a few minutes before trying again.');
-          } else if (errorMessage.includes('invalid email') || errorMessage.includes('email format')) {
-            setError('Please enter a valid email address.');
-          } else {
-            setError(`Failed to send password reset email: ${errorMessage}. Please try again.`);
-          }
-        }
-        return;
-      }
-
-      // Backend returned success with user data, now send actual email via EmailJS
-      if (data.userData) {
-        const emailSent = await sendPasswordResetEmail(
-          data.userData.email,
-          data.userData.firstName || 'User',
-          data.userData.resetToken
-        );
-
-        if (emailSent) {
-          setSuccess(true);
-        } else {
-          // EmailJS failed but backend succeeded - still show success since user can use console token
-          setSuccess(true);
-          console.log('📧 Check your browser console for the password reset link (EmailJS may be in demo mode)');
-        }
-      } else {
-        setSuccess(true);
-      }
+      // Use the updated authService method instead of direct fetch
+      const { authService } = await import('../services/authService');
+      await authService.forgotPassword(email);
+      
+      setSuccess(true);
 
     } catch (err: any) {
       console.error('Password reset error:', err);

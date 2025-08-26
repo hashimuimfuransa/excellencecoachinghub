@@ -55,6 +55,21 @@ const createDeploymentFilesPlugin = () => {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), createDeploymentFilesPlugin()],
+  build: {
+    // Optimize resource loading to prevent preload warnings
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          mui: ['@mui/material', '@mui/icons-material']
+        }
+      }
+    },
+    // Enable module preload polyfill
+    modulePreload: {
+      polyfill: true
+    }
+  },
   server: {
     proxy: {
       '/api': {

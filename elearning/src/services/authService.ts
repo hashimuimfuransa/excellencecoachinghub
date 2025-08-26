@@ -1,6 +1,6 @@
 import { apiService } from './api';
 import { IUser, LoginForm, RegisterForm, ApiResponse } from '../shared/types';
-import { sendVerificationEmail, sendPasswordResetEmail, generateVerificationCode } from './emailjsService';
+import { sendVerificationEmail, sendPasswordResetEmail, sendWelcomeEmail, generateVerificationCode } from './emailjsService';
 
 // Interface for forgot password response
 interface ForgotPasswordResponse {
@@ -72,15 +72,24 @@ export const authService = {
           localStorage.setItem('refreshToken', response.data.refreshToken);
         }
 
-        // Send verification email using EmailJS
+        // Send both verification and welcome emails using EmailJS
         try {
+          // Send verification email first
           await authService.sendRegistrationVerification(
             response.data.user.email,
             response.data.user.firstName
           );
           console.log('✅ Verification email sent to:', response.data.user.email);
+
+          // Send welcome email automatically after successful registration
+          await sendWelcomeEmail(
+            response.data.user.email,
+            response.data.user.firstName,
+            response.data.user.role
+          );
+          console.log('✅ Welcome email sent to:', response.data.user.email);
         } catch (emailError) {
-          console.error('Failed to send verification email:', emailError);
+          console.error('Failed to send registration emails:', emailError);
           // Don't fail registration if email fails
         }
 

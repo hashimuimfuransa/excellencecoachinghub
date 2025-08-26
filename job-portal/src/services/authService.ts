@@ -1,4 +1,5 @@
 import { apiPost, apiGet, handleApiResponse } from './api';
+import { sendWelcomeEmail } from './emailjsService';
 
 // Local type definitions
 export interface User {
@@ -64,6 +65,19 @@ class AuthService {
     localStorage.setItem('token', authData.token);
     localStorage.setItem('user', JSON.stringify(authData.user));
     
+    // Send welcome email automatically after successful registration
+    try {
+      await sendWelcomeEmail(
+        authData.user.email,
+        authData.user.firstName,
+        authData.user.role
+      );
+      console.log('✅ Welcome email sent successfully after registration');
+    } catch (emailError) {
+      console.error('❌ Failed to send welcome email after registration:', emailError);
+      // Don't fail registration if email fails - it's not critical
+    }
+    
     return authData;
   }
 
@@ -114,8 +128,23 @@ class AuthService {
 
   // Forgot password
   async forgotPassword(email: string): Promise<void> {
-    const response = await apiPost('/auth/forgot-password', { email });
-    handleApiResponse(response);
+    try {
+      const response = await apiPost('/auth/forgot-password', { email });
+      const result = handleApiResponse(response);
+      
+      // If backend provides user data for frontend email sending
+      if (result.userData) {
+        console.log('Backend provided user data for frontend email sending:', result.userData);
+        // Additional frontend email logic can be added here if needed
+      }
+    } catch (error: any) {
+      // Handle JSON parsing errors specifically
+      if (error.message?.includes('JSON') || error.message?.includes('parse')) {
+        console.error('Password reset JSON error caught:', error);
+        throw new Error('Server communication error. Please try again in a moment.');
+      }
+      throw error;
+    }
   }
 
   // Reset password

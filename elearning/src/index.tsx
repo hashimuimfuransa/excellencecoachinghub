@@ -15,6 +15,10 @@ import { AuthProvider } from './store/AuthContext';
 import { SocketProvider } from './store/SocketContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
+import { initEmailJS } from './services/emailjsService';
+
+// Initialize EmailJS for automatic email sending
+initEmailJS();
 
 // Create a client
 const queryClient = new QueryClient({

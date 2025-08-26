@@ -39,7 +39,11 @@ const registerValidation = [
   body('role')
     .optional()
     .isIn(['admin', 'teacher', 'student', 'professional', 'employer'])
-    .withMessage('Role must be admin, teacher, student, professional, or employer')
+    .withMessage('Role must be admin, teacher, student, professional, or employer'),
+  body('platform')
+    .optional()
+    .isIn(['homepage', 'job-portal', 'elearning'])
+    .withMessage('Platform must be homepage, job-portal, or elearning')
 ];
 
 const loginValidation = [
@@ -92,7 +96,11 @@ const googleRegistrationValidation = [
   body('profilePicture')
     .optional()
     .isURL()
-    .withMessage('Profile picture must be a valid URL')
+    .withMessage('Profile picture must be a valid URL'),
+  body('platform')
+    .optional()
+    .isIn(['homepage', 'job-portal', 'elearning'])
+    .withMessage('Platform must be homepage, job-portal, or elearning')
 ];
 
 // Routes

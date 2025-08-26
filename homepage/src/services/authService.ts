@@ -38,7 +38,13 @@ export const authService = {
   // Register user
   register: async (userData: RegisterForm): Promise<AuthResponse> => {
     try {
-      const response = await apiService.post<AuthResponse>('/auth/register', userData);
+      // Automatically add platform information
+      const registerPayload = {
+        ...userData,
+        platform: 'homepage' // This is the homepage platform
+      };
+      
+      const response = await apiService.post<AuthResponse>('/auth/register', registerPayload);
 
       if (response.success && response.data) {
         // Store token and user data

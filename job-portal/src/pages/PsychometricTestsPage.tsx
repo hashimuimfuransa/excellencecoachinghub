@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -99,8 +99,13 @@ import {
   Favorite,
   Lock,
   LockOpen,
-  BookmarkBorder
+  BookmarkBorder,
+  RequestPage,
+  Check
 } from '@mui/icons-material';
+const RequestIcon = RequestPage;
+const StartIcon = PlayArrow;
+const CheckIcon = Check;
 import { useNavigate } from 'react-router-dom';
 
 interface Job {
@@ -194,6 +199,9 @@ interface PaymentInfo {
   approvalStatus: 'pending' | 'approved' | 'rejected';
   requestedAt?: string;
   approvedAt?: string;
+  jobId?: string;
+  jobTitle?: string;
+  paymentKey?: string;
 }
 
 interface FreeTestCategory {
@@ -524,7 +532,7 @@ const PsychometricTestsPage: React.FC = () => {
         return 'General Business';
       };
 
-      console.log('🔍 Analyzing job requirements and generating AI test...', job.title);
+      console.log('ðŸ” Analyzing job requirements and generating AI test...', job.title);
 
       // Step 1: Prepare parameters for backend AI generation
       const testParams = {
@@ -538,13 +546,13 @@ const PsychometricTestsPage: React.FC = () => {
         timeLimit: 30
       };
 
-      console.log('📋 Test Parameters:', testParams);
+      console.log('ðŸ“‹ Test Parameters:', testParams);
 
       // Step 2: Generate AI test using backend API
-      console.log('🤖 Generating AI-powered test via backend...');
+      console.log('ðŸ¤– Generating AI-powered test via backend...');
       const { testId, test } = await psychometricTestService.generateJobSpecificTest(testParams);
       
-      console.log('✅ Generated AI Test:', {
+      console.log('âœ… Generated AI Test:', {
         testId,
         title: test.title,
         questionsCount: test.questions.length,
@@ -624,7 +632,7 @@ const PsychometricTestsPage: React.FC = () => {
         difficulty: q.difficulty
       })));
 
-      console.log('🎯 AI Test Successfully Generated via Backend:', {
+      console.log('ðŸŽ¯ AI Test Successfully Generated via Backend:', {
         title: intelligentTest.title,
         categories: intelligentTest.categories,
         questionCount: intelligentTest.questions.length,
@@ -635,7 +643,7 @@ const PsychometricTestsPage: React.FC = () => {
       });
 
     } catch (error) {
-      console.error('❌ Error generating AI-powered test:', error);
+      console.error('âŒ Error generating AI-powered test:', error);
       // Fallback to basic test if AI generation fails
       const fallbackTest = await generateFallbackTest(job);
       setGeneratedTests([fallbackTest]);
@@ -685,11 +693,19 @@ const PsychometricTestsPage: React.FC = () => {
   const handleBeginTest = (test: PsychometricTest) => {
     // Check if user has paid for this level and has attempts remaining
     const testLevel = testLevels.find(level => level.level === selectedLevel);
-    if (!testLevel) return;
+    if (!testLevel || !selectedJob) return;
 
-    const paymentInfo = userPayments.find(p => p.level === selectedLevel);
+    // Create payment key for this specific job-level combination
+    const paymentKey = `${selectedJob._id}_${selectedLevel}`;
     
-    if (!paymentInfo || paymentInfo.attemptsRemaining <= 0) {
+    // Find payment for this specific job-level combination
+    const paymentInfo = userPayments.find(p => 
+      p.paymentKey === paymentKey && 
+      p.approvalStatus === 'approved' && 
+      p.attemptsRemaining > 0
+    );
+    
+    if (!paymentInfo) {
       // Show payment dialog
       setSelectedTestLevel(testLevel);
       setPaymentDialogOpen(true);
@@ -703,14 +719,20 @@ const PsychometricTestsPage: React.FC = () => {
   };
 
   const handleStartActualTest = () => {
-    if (!readyTest) return;
+    if (!readyTest || !selectedJob) return;
     
-    // Decrease attempts remaining
-    setUserPayments(prev => prev.map(p => 
-      p.level === selectedLevel 
+    // Create payment key for this specific job-level combination
+    const paymentKey = `${selectedJob._id}_${selectedLevel}`;
+    
+    // Decrease attempts remaining for the specific payment
+    const updatedPayments = userPayments.map(p => 
+      p.paymentKey === paymentKey && p.approvalStatus === 'approved' && p.attemptsRemaining > 0
         ? { ...p, attemptsRemaining: p.attemptsRemaining - 1 }
         : p
-    ));
+    );
+    
+    setUserPayments(updatedPayments);
+    saveUserPayments(updatedPayments);
     
     // Create test data to pass to new page
     const testData = {
@@ -718,7 +740,8 @@ const PsychometricTestsPage: React.FC = () => {
       selectedJob,
       selectedLevel,
       user: user?._id,
-      userPayments
+      userPayments: updatedPayments,
+      paymentKey
     };
     
     // Store test data in sessionStorage for the new page
@@ -734,7 +757,7 @@ const PsychometricTestsPage: React.FC = () => {
   };
 
   const handlePayment = async () => {
-    if (!selectedTestLevel) return;
+    if (!selectedTestLevel || !selectedJob) return;
     
     setProcessingPayment(true);
     
@@ -742,70 +765,102 @@ const PsychometricTestsPage: React.FC = () => {
       // Simulate payment processing (for now, just add to user payments)
       await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
       
-      const newPayment: PaymentInfo = {
+      // Create a unique key for this job-level combination
+      const paymentKey = `${selectedJob._id}_${selectedTestLevel.level}`;
+      
+      const newPayment: PaymentInfo & {
+        jobId?: string;
+        jobTitle?: string;
+        paymentKey?: string;
+      } = {
         level: selectedTestLevel.level,
         cost: selectedTestLevel.cost,
         attemptsRemaining: 3, // 3 attempts per payment
         lastPaymentDate: new Date().toISOString(),
-        approvalStatus: 'pending'
+        approvalStatus: 'pending',
+        jobId: selectedJob._id,
+        jobTitle: selectedJob.title,
+        paymentKey: paymentKey
         // requestedAt will be set when user clicks "Request Approval"
       };
       
-      const updatedPayments = (() => {
-        const existing = userPayments.find(p => p.level === selectedTestLevel.level);
-        if (existing) {
-          return userPayments.map(p => 
-            p.level === selectedTestLevel.level 
-              ? { 
-                  ...p, 
-                  attemptsRemaining: 3, 
-                  lastPaymentDate: new Date().toISOString(),
-                  approvalStatus: 'pending' as const
-                  // requestedAt will be set when user clicks "Request Approval"
-                }
-              : p
-          );
-        } else {
-          return [...userPayments, newPayment];
-        }
-      })();
+      // Always add new payment - don't update existing ones to allow multiple purchases
+      const updatedPayments = [...userPayments, newPayment];
       
       setUserPayments(updatedPayments);
       saveUserPayments(updatedPayments);
       
       setPaymentDialogOpen(false);
       
+      // Reset level selection to allow for new selections
+      setSelectedLevel(1);
+      setTestDialogOpen(false);
+      
       // Switch to saved assessments tab to show the purchased assessment
       setCurrentTab(2);
       
-      // Show success message
-      alert('Payment successful! Your assessment has been saved. Go to the Saved Assessments tab and click "Request Approval" to get admin approval before starting.');
+      // Show success message with more details
+      alert(`Payment successful for ${selectedJob.title} - Level ${selectedTestLevel.level}! Your assessment has been saved. Go to the Saved Assessments tab and click "Request Approval" to get admin approval before starting.`);
       
     } catch (error) {
       console.error('Payment failed:', error);
-      // Handle payment error
+      alert('Payment failed. Please try again.');
     } finally {
       setProcessingPayment(false);
     }
   };
 
-  const handleRequestApproval = async (level: number) => {
+  const handleRequestApproval = async (paymentKey: string) => {
     try {
-      const updatedPayments = userPayments.map(p => 
-        p.level === level 
-          ? { 
-              ...p, 
-              approvalStatus: 'pending' as const,
-              requestedAt: new Date().toISOString()
-            }
-          : p
-      );
+      // Find the payment info for this payment key
+      const payment = userPayments.find(p => p.paymentKey === paymentKey);
+      if (!payment) {
+        alert('Payment information not found');
+        return;
+      }
+
+      // For now, we'll generate a mock purchase ID since the localStorage doesn't have real purchase IDs
+      // In a real implementation, the purchase ID would be stored when the payment is made
+      const mockPurchaseId = `mock_purchase_${user?._id}_${paymentKey}_${Date.now()}`;
       
-      setUserPayments(updatedPayments);
-      saveUserPayments(updatedPayments);
-      
-      // Here you would typically make an API call to notify admins
-      alert('Approval request submitted! You will be notified once an admin reviews your request.');
+      // Try to make the real API call
+      try {
+        await psychometricTestService.requestTestApproval(mockPurchaseId);
+        
+        // Update local state only if API call succeeds
+        const updatedPayments = userPayments.map(p => 
+          p.paymentKey === paymentKey 
+            ? { 
+                ...p, 
+                approvalStatus: 'pending' as const,
+                requestedAt: new Date().toISOString()
+              }
+            : p
+        );
+        
+        setUserPayments(updatedPayments);
+        saveUserPayments(updatedPayments);
+        
+        alert(`Approval request submitted for ${payment.jobTitle} - Level ${payment.level}! You will be notified once an admin reviews your request.`);
+      } catch (apiError) {
+        console.warn('API call failed, falling back to local state update:', apiError);
+        
+        // Fallback to local state update if API fails
+        const updatedPayments = userPayments.map(p => 
+          p.paymentKey === paymentKey 
+            ? { 
+                ...p, 
+                approvalStatus: 'pending' as const,
+                requestedAt: new Date().toISOString()
+              }
+            : p
+        );
+        
+        setUserPayments(updatedPayments);
+        saveUserPayments(updatedPayments);
+        
+        alert(`Approval request submitted locally for ${payment.jobTitle} - Level ${payment.level}! (API call failed - this is demo functionality)`);
+      }
       
     } catch (error) {
       console.error('Error requesting approval:', error);
@@ -814,10 +869,12 @@ const PsychometricTestsPage: React.FC = () => {
   };
 
   // Demo function to simulate admin approval (for testing purposes)
-  const simulateAdminApproval = async (level: number) => {
+  const simulateAdminApproval = async (paymentKey: string) => {
     try {
+      const payment = userPayments.find(p => p.paymentKey === paymentKey);
+      
       const updatedPayments = userPayments.map(p => 
-        p.level === level 
+        p.paymentKey === paymentKey 
           ? { 
               ...p, 
               approvalStatus: 'approved' as const,
@@ -829,7 +886,7 @@ const PsychometricTestsPage: React.FC = () => {
       setUserPayments(updatedPayments);
       saveUserPayments(updatedPayments);
       
-      alert('Assessment approved! You can now start your test.');
+      alert(`Assessment approved for ${payment?.jobTitle} - Level ${payment?.level}! You can now start your test.`);
       
     } catch (error) {
       console.error('Error approving assessment:', error);
@@ -837,13 +894,23 @@ const PsychometricTestsPage: React.FC = () => {
   };
 
   const getAttemptsRemaining = (level: number): number => {
-    const paymentInfo = userPayments.find(p => p.level === level);
+    if (!selectedJob) return 0;
+    const paymentKey = `${selectedJob._id}_${level}`;
+    const paymentInfo = userPayments.find(p => 
+      p.paymentKey === paymentKey && 
+      p.approvalStatus === 'approved'
+    );
     return paymentInfo ? paymentInfo.attemptsRemaining : 0;
   };
 
   const hasValidPayment = (level: number): boolean => {
-    const paymentInfo = userPayments.find(p => p.level === level);
-    return paymentInfo ? paymentInfo.attemptsRemaining > 0 && paymentInfo.approvalStatus === 'approved' : false;
+    if (!selectedJob) return false;
+    const paymentKey = `${selectedJob._id}_${level}`;
+    const paymentInfo = userPayments.find(p => 
+      p.paymentKey === paymentKey && 
+      p.approvalStatus === 'approved'
+    );
+    return paymentInfo ? paymentInfo.attemptsRemaining > 0 : false;
   };
 
   const handleAnswerChange = (questionId: string, answer: any) => {
@@ -921,7 +988,7 @@ const PsychometricTestsPage: React.FC = () => {
                       {job.title}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" gutterBottom>
-                      {job.company} • {job.location}
+                      {job.company} â€¢ {job.location}
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 2 }}>
                       {job.description.substring(0, 100)}...
@@ -969,7 +1036,7 @@ const PsychometricTestsPage: React.FC = () => {
           <Box display="flex" flexDirection="column" alignItems="center" py={4}>
             <CircularProgress size={60} sx={{ mb: 2 }} />
             <Typography variant="h6" gutterBottom>
-              🤖 AI Processing Your Selection...
+              ðŸ¤– AI Processing Your Selection...
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Analyzing job requirements and generating personalized tests
@@ -1112,7 +1179,7 @@ const PsychometricTestsPage: React.FC = () => {
           <Box display="flex" alignItems="center" justifyContent="space-between">
             <Box>
               <Typography variant="h5" fontWeight="bold" color="success.main">
-                ✅ Test Ready!
+                âœ… Test Ready!
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Your personalized assessment has been generated
@@ -1126,7 +1193,7 @@ const PsychometricTestsPage: React.FC = () => {
         
         <DialogContent>
           <Alert severity="success" sx={{ mb: 3 }}>
-            <AlertTitle>🎉 Assessment Generated Successfully!</AlertTitle>
+            <AlertTitle>ðŸŽ‰ Assessment Generated Successfully!</AlertTitle>
             Your AI-powered psychometric test for <strong>{selectedJob?.title}</strong> is ready to begin.
           </Alert>
 
@@ -1220,7 +1287,7 @@ const PsychometricTestsPage: React.FC = () => {
                   <CardContent>
                     <Box display="flex" alignItems="center" mb={2}>
                       <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
-                        🎯
+                        ðŸŽ¯
                       </Avatar>
                       <Box>
                         <Typography variant="h6" fontWeight="bold" color="primary.main">
@@ -1236,7 +1303,7 @@ const PsychometricTestsPage: React.FC = () => {
                       <Grid item xs={12} md={4}>
                         <Box>
                           <Typography variant="subtitle2" color="primary.main" fontWeight="bold" gutterBottom>
-                            🎯 Target Skills
+                            ðŸŽ¯ Target Skills
                           </Typography>
                           <Box display="flex" flexWrap="wrap" gap={0.5}>
                             {testBlueprint.skills.slice(0, 6).map((skill, index) => (
@@ -1265,7 +1332,7 @@ const PsychometricTestsPage: React.FC = () => {
                       <Grid item xs={12} md={4}>
                         <Box>
                           <Typography variant="subtitle2" color="primary.main" fontWeight="bold" gutterBottom>
-                            📊 Assessment Categories
+                            ðŸ“Š Assessment Categories
                           </Typography>
                           <Stack spacing={0.5}>
                             {testBlueprint.categories.map((category, index) => (
@@ -1291,7 +1358,7 @@ const PsychometricTestsPage: React.FC = () => {
                       <Grid item xs={12} md={4}>
                         <Box>
                           <Typography variant="subtitle2" color="primary.main" fontWeight="bold" gutterBottom>
-                            📈 Assessment Details
+                            ðŸ“ˆ Assessment Details
                           </Typography>
                           <Stack spacing={1}>
                             <Box display="flex" justifyContent="space-between">
@@ -1335,7 +1402,7 @@ const PsychometricTestsPage: React.FC = () => {
             <Grid item xs={12}>
               <Paper sx={{ p: 3, bgcolor: 'grey.50' }}>
                 <Typography variant="h6" gutterBottom color="primary.main">
-                  📋 Test Instructions
+                  ðŸ“‹ Test Instructions
                 </Typography>
                 <List dense>
                   <ListItem>
@@ -1735,231 +1802,201 @@ const PsychometricTestsPage: React.FC = () => {
         {/* Saved Assessments Tab */}
         {currentTab === 2 && (
           <Box>
+            <Alert severity="info" sx={{ mb: 4 }}>
+              <AlertTitle>Saved Assessments</AlertTitle>
+              Manage your purchased psychometric tests. Request approval when needed and start tests when ready.
+            </Alert>
+
             {userPayments.length === 0 ? (
-              <Paper sx={{ p: 6, textAlign: 'center' }}>
-                <Avatar sx={{ width: 80, height: 80, mx: 'auto', mb: 2, bgcolor: 'grey.300' }}>
-                  <BookmarkBorder sx={{ fontSize: 40, color: 'grey.600' }} />
-                </Avatar>
-                <Typography variant="h5" fontWeight="bold" gutterBottom>
-                  No Saved Assessments
+              <Paper sx={{ p: 8, textAlign: 'center' }}>
+                <Work sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="h6" color="text.secondary" gutterBottom>
+                  No saved assessments found
                 </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 500, mx: 'auto' }}>
-                  Once you purchase and generate job-specific assessments, they will appear here. You can request approval and start them anytime.
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                  Purchase a job-specific test to get started with psychometric assessments.
                 </Typography>
                 <Button 
-                  variant="outlined" 
+                  variant="contained" 
                   onClick={() => setCurrentTab(1)}
-                  startIcon={<Work />}
+                  startIcon={<SmartToy />}
                 >
-                  Generate Your First Assessment
+                  Browse Job-Specific Tests
                 </Button>
               </Paper>
             ) : (
-              <Box>
-                <Alert severity="info" sx={{ mb: 4 }}>
-                  <AlertTitle>Your Saved Assessments</AlertTitle>
-                  These are your purchased assessments. Click "Request Approval" to get admin approval, then start your test.
-                </Alert>
+              <Grid container spacing={3}>
+                {userPayments.map((payment) => (
+                  <Grid item xs={12} md={6} key={payment.paymentKey || `${payment.jobId}_${payment.level}`}>
+                    <Card 
+                      sx={{ 
+                        height: '100%',
+                        border: payment.approvalStatus === 'approved' ? '2px solid' : '1px solid',
+                        borderColor: payment.approvalStatus === 'approved' ? 'success.main' : 
+                                     payment.approvalStatus === 'pending' ? 'warning.main' : 'error.main',
+                        '&:hover': { 
+                          transform: 'translateY(-2px)',
+                          boxShadow: theme.shadows[8]
+                        },
+                        transition: 'all 0.3s'
+                      }}
+                    >
+                      <CardContent>
+                        {/* Header */}
+                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                          <Typography variant="h6" fontWeight="bold">
+                            Level {payment.level} Assessment
+                          </Typography>
+                          <Chip
+                            label={payment.approvalStatus === 'approved' ? 'Approved' :
+                                   payment.approvalStatus === 'pending' ? 'Pending' : 'Rejected'}
+                            color={payment.approvalStatus === 'approved' ? 'success' :
+                                   payment.approvalStatus === 'pending' ? 'warning' : 'error'}
+                            size="small"
+                          />
+                        </Box>
 
-                <Grid container spacing={3}>
-                  {userPayments.map((payment) => {
-                    const testLevel = testLevels.find(level => level.level === payment.level);
-                    if (!testLevel) return null;
+                        {/* Job Information */}
+                        <Box mb={2}>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            Job Position
+                          </Typography>
+                          <Typography variant="body1" fontWeight="medium">
+                            {payment.jobTitle || 'Unknown Job'}
+                          </Typography>
+                        </Box>
 
-                    return (
-                      <Grid item xs={12} md={6} lg={4} key={payment.level}>
-                        <Card 
-                          sx={{ 
-                            height: '100%',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            position: 'relative',
-                            transition: 'all 0.3s',
-                            '&:hover': {
-                              transform: 'translateY(-4px)',
-                              boxShadow: 8,
-                            }
-                          }}
-                        >
-                          <CardContent sx={{ flexGrow: 1, p: 3 }}>
-                            <Box display="flex" alignItems="center" mb={2}>
-                              <Avatar 
-                                sx={{ 
-                                  bgcolor: 'primary.main', 
-                                  mr: 2,
-                                  width: 48,
-                                  height: 48
-                                }}
-                              >
-                                {payment.level}
-                              </Avatar>
-                              <Box>
-                                <Typography variant="h6" fontWeight="bold">
-                                  Level {payment.level} Assessment
-                                </Typography>
-                                <Chip 
-                                  label="PURCHASED" 
-                                  size="small" 
-                                  color="success" 
-                                  sx={{ fontWeight: 'bold' }}
-                                />
-                              </Box>
-                            </Box>
-                            
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                              {testLevel.description}
+                        {/* Payment Details */}
+                        <Box display="flex" justifyContent="space-between" mb={2}>
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              Cost Paid
                             </Typography>
-                            
-                            <Stack spacing={1} sx={{ mb: 2 }}>
-                              <Box display="flex" justifyContent="space-between">
-                                <Typography variant="body2">Cost Paid:</Typography>
-                                <Typography variant="body2" fontWeight="bold" color="primary">
-                                  {payment.cost.toLocaleString()} FRW
-                                </Typography>
-                              </Box>
-                              <Box display="flex" justifyContent="space-between">
-                                <Typography variant="body2">Attempts Left:</Typography>
-                                <Typography variant="body2" fontWeight="bold">
-                                  {payment.attemptsRemaining}/3
-                                </Typography>
-                              </Box>
-                              <Box display="flex" justifyContent="space-between">
-                                <Typography variant="body2">Status:</Typography>
-                                <Chip 
-                                  label={
-                                    payment.approvalStatus === 'approved' ? 'APPROVED' :
-                                    payment.approvalStatus === 'pending' ? 'PENDING APPROVAL' :
-                                    'REJECTED'
-                                  }
-                                  size="small"
-                                  color={
-                                    payment.approvalStatus === 'approved' ? 'success' :
-                                    payment.approvalStatus === 'pending' ? 'warning' :
-                                    'error'
-                                  }
-                                  sx={{ fontWeight: 'bold', fontSize: '0.7rem' }}
-                                />
-                              </Box>
-                              {payment.lastPaymentDate && (
-                                <Box display="flex" justifyContent="space-between">
-                                  <Typography variant="body2">Purchased:</Typography>
-                                  <Typography variant="body2">
-                                    {new Date(payment.lastPaymentDate).toLocaleDateString()}
-                                  </Typography>
-                                </Box>
-                              )}
-                              {payment.requestedAt && (
-                                <Box display="flex" justifyContent="space-between">
-                                  <Typography variant="body2">Requested:</Typography>
-                                  <Typography variant="body2">
-                                    {new Date(payment.requestedAt).toLocaleDateString()}
-                                  </Typography>
-                                </Box>
-                              )}
-                            </Stack>
+                            <Typography variant="body1" fontWeight="medium">
+                              {payment.cost.toLocaleString()} FRW
+                            </Typography>
+                          </Box>
+                          <Box textAlign="right">
+                            <Typography variant="body2" color="text.secondary">
+                              Attempts Left
+                            </Typography>
+                            <Typography 
+                              variant="h6" 
+                              fontWeight="bold" 
+                              color={payment.attemptsRemaining > 0 ? 'success.main' : 'error.main'}
+                            >
+                              {payment.attemptsRemaining}
+                            </Typography>
+                          </Box>
+                        </Box>
 
-                            {payment.attemptsRemaining > 0 && (
-                              <LinearProgress 
-                                variant="determinate" 
-                                value={(payment.attemptsRemaining / 3) * 100}
-                                sx={{ mb: 2, height: 6, borderRadius: 3 }}
-                              />
-                            )}
-                          </CardContent>
+                        {/* Payment Date */}
+                        <Typography variant="caption" color="text.secondary" display="block" mb={2}>
+                          Purchased on {new Date(payment.lastPaymentDate || '').toLocaleDateString()}
+                        </Typography>
 
-                          <CardActions sx={{ p: 3, pt: 0 }}>
-                            {payment.approvalStatus === 'pending' && !payment.requestedAt ? (
-                              // Show Request Approval button for newly purchased assessments
-                              <Button
-                                fullWidth
-                                variant="outlined"
-                                startIcon={<CheckCircle />}
-                                onClick={() => handleRequestApproval(payment.level)}
-                                color="warning"
-                                sx={{
-                                  py: 1.5,
-                                  fontWeight: 600,
-                                }}
-                              >
-                                Request Approval
-                              </Button>
-                            ) : payment.approvalStatus === 'pending' && payment.requestedAt ? (
-                              // Show pending status for requested assessments
-                              <Stack spacing={1} sx={{ width: '100%' }}>
-                                <Button
-                                  fullWidth
-                                  variant="outlined"
-                                  startIcon={<Timer />}
-                                  disabled
-                                  color="warning"
-                                  sx={{
-                                    py: 1.5,
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  Pending Approval
-                                </Button>
-                                {/* Demo button for testing - remove in production */}
-                                <Button
-                                  fullWidth
-                                  variant="text"
-                                  onClick={() => simulateAdminApproval(payment.level)}
-                                  color="success"
-                                  size="small"
-                                  sx={{ fontSize: '0.75rem' }}
-                                >
-                                  [DEMO] Approve Now
-                                </Button>
-                              </Stack>
-                            ) : payment.approvalStatus === 'approved' ? (
-                              // Show Start Assessment for approved assessments
-                              <Button
-                                fullWidth
-                                variant="contained"
-                                startIcon={<PlayArrow />}
-                                onClick={() => {
-                                  // Find the generated test for this level
-                                  const test = generatedTests.find(t => t._id.includes(`-${payment.level}`));
-                                  if (test) {
-                                    setReadyTest(test);
-                                    setShowTestCard(true);
-                                  } else {
-                                    // If no test exists, generate one first
-                                    handleGenerateTest(selectedJob, payment.level);
-                                  }
-                                }}
-                                disabled={payment.attemptsRemaining <= 0}
-                                color="primary"
-                                sx={{
-                                  py: 1.5,
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {payment.attemptsRemaining > 0 ? 'Start Assessment' : 'No Attempts Left'}
-                              </Button>
-                            ) : (
-                              // Show rejected status
-                              <Button
-                                fullWidth
-                                variant="outlined"
-                                startIcon={<Close />}
-                                disabled
-                                color="error"
-                                sx={{
-                                  py: 1.5,
-                                  fontWeight: 600,
-                                }}
-                              >
-                                Request Rejected
-                              </Button>
-                            )}
-                          </CardActions>
-                        </Card>
-                      </Grid>
-                    );
-                  })}
-                </Grid>
-              </Box>
+                        {/* Progress Bar */}
+                        <Box mb={2}>
+                          <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.5}>
+                            <Typography variant="caption">Attempts Used</Typography>
+                            <Typography variant="caption">
+                              {3 - payment.attemptsRemaining} / 3
+                            </Typography>
+                          </Box>
+                          <LinearProgress
+                            variant="determinate"
+                            value={((3 - payment.attemptsRemaining) / 3) * 100}
+                            sx={{ height: 4, borderRadius: 2 }}
+                            color={payment.attemptsRemaining > 1 ? 'primary' : payment.attemptsRemaining === 1 ? 'warning' : 'error'}
+                          />
+                        </Box>
+                      </CardContent>
+
+                      {/* Action Buttons */}
+                      <Box sx={{ p: 2, pt: 0, display: 'flex', gap: 1, flexDirection: 'column' }}>
+                        {/* Request Approval Button */}
+                        {payment.approvalStatus === 'pending' && !payment.requestedAt && (
+                          <Button
+                            variant="outlined"
+                            color="warning"
+                            size="small"
+                            startIcon={<RequestIcon />}
+                            onClick={() => handleRequestApproval(payment.paymentKey || `${payment.jobId}_${payment.level}`)}
+                            fullWidth
+                          >
+                            Request Approval
+                          </Button>
+                        )}
+
+                        {/* Pending Approval Message */}
+                        {payment.approvalStatus === 'pending' && payment.requestedAt && (
+                          <Alert severity="info" sx={{ mb: 1 }}>
+                            <Typography variant="body2">
+                              Approval requested on {new Date(payment.requestedAt).toLocaleDateString()}
+                            </Typography>
+                          </Alert>
+                        )}
+
+                        {/* Demo Approve Button */}
+                        {payment.approvalStatus === 'pending' && payment.requestedAt && (
+                          <Button
+                            variant="contained"
+                            color="success"
+                            size="small"
+                            startIcon={<CheckIcon />}
+                            onClick={() => simulateAdminApproval(payment.paymentKey || `${payment.jobId}_${payment.level}`)}
+                            fullWidth
+                          >
+                            [Demo] Approve Now
+                          </Button>
+                        )}
+
+                        {/* Take Assessment Button */}
+                        {payment.approvalStatus === 'approved' && payment.attemptsRemaining > 0 && (
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            size="small"
+                            startIcon={<StartIcon />}
+                            onClick={() => {
+                              // Find the job and set up for test taking
+                              const job = jobs.find(j => j._id === payment.jobId);
+                              if (job) {
+                                setSelectedJob(job);
+                                setSelectedLevel(payment.level);
+                                handleStartJobSpecificTest();
+                              } else {
+                                alert('Job information not found. Please try selecting the job again from the Job-Specific Tests tab.');
+                              }
+                            }}
+                            fullWidth
+                          >
+                            Take Assessment
+                          </Button>
+                        )}
+
+                        {/* No Attempts Left */}
+                        {payment.attemptsRemaining === 0 && (
+                          <Alert severity="warning">
+                            <Typography variant="body2">
+                              No attempts remaining. Purchase again to retry.
+                            </Typography>
+                          </Alert>
+                        )}
+
+                        {/* Rejected Status */}
+                        {payment.approvalStatus === 'rejected' && (
+                          <Alert severity="error">
+                            <Typography variant="body2">
+                              Assessment was rejected. Contact support for details.
+                            </Typography>
+                          </Alert>
+                        )}
+                      </Box>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
             )}
           </Box>
         )}

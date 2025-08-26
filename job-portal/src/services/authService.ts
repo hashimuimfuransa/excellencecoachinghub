@@ -28,6 +28,7 @@ export interface RegisterData {
   role: string;
   company?: string;
   jobTitle?: string;
+  platform?: string;
 }
 
 export interface AuthResponse {
@@ -50,7 +51,13 @@ class AuthService {
 
   // Register user
   async register(userData: RegisterData): Promise<AuthResponse> {
-    const response = await apiPost('/auth/register', userData);
+    // Automatically add platform information
+    const registerPayload = {
+      ...userData,
+      platform: 'job-portal' // This is the job portal platform
+    };
+    
+    const response = await apiPost('/auth/register', registerPayload);
     const authData = handleApiResponse(response);
     
     // Store token and user data

@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { User, IUserDocument } from '../models/User';
 import { UserRole } from '../types';
-import { sendEmail } from '../services/emailService';
+import { sendEmail, sendWelcomeEmail } from '../services/emailService';
 import * as simpleEmailService from '../services/simpleEmailService';
 
 // Generate JWT token
@@ -56,7 +56,7 @@ const sendTokenResponse = (user: IUserDocument, statusCode: number, res: Respons
 // @access  Public
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { email, password, firstName, lastName, role } = req.body;
+    const { email, password, firstName, lastName, role, platform } = req.body;
 
     // Validate required fields
     if (!email || !password || !firstName || !lastName) {
@@ -114,8 +114,47 @@ export const register = async (req: Request, res: Response, next: NextFunction):
       isEmailVerified: true // Auto-verify email
     });
 
-    // Send welcome email instead of verification email
+    // Detect platform from request headers, body, or referrer
+    const detectPlatform = (): 'homepage' | 'job-portal' | 'elearning' => {
+      if (platform && ['homepage', 'job-portal', 'elearning'].includes(platform)) {
+        return platform;
+      }
+      
+      // Check referrer header to detect platform
+      const referrer = req.get('Referer') || req.get('Origin') || '';
+      
+      if (referrer.includes(':3001') || referrer.includes('job-portal')) {
+        return 'job-portal';
+      } else if (referrer.includes(':3002') || referrer.includes('elearning')) {
+        return 'elearning';
+      } else if (referrer.includes(':3000') || referrer.includes('homepage')) {
+        return 'homepage';
+      }
+      
+      // Default based on role
+      if (userRole === UserRole.PROFESSIONAL || userRole === UserRole.EMPLOYER) {
+        return 'job-portal';
+      } else if (userRole === UserRole.STUDENT || userRole === UserRole.TEACHER) {
+        return 'elearning';
+      }
+      
+      return 'homepage';
+    };
+
+    // Send enhanced welcome email
     try {
+      const detectedPlatform = detectPlatform();
+      
+      // Send enhanced HTML welcome email
+      await sendWelcomeEmail({
+        email: user.email,
+        firstName: user.firstName,
+        platform: detectedPlatform
+      });
+      
+      console.log(`✅ Enhanced welcome email sent to ${user.email} for ${detectedPlatform} platform`);
+      
+      // Also send console welcome email as fallback
       await simpleEmailService.sendWelcomeEmail(
         user.email,
         user.firstName,
@@ -527,7 +566,8 @@ export const googleCompleteRegistration = async (req: Request, res: Response, ne
       googleId, 
       profilePicture, 
       provider = 'google',
-      isEmailVerified = true 
+      isEmailVerified = true,
+      platform 
     } = req.body;
 
     // Check if user already exists
@@ -561,6 +601,57 @@ export const googleCompleteRegistration = async (req: Request, res: Response, ne
         registrationCompleted: true,
         // No password required for Google OAuth users
       });
+    }
+
+    // Detect platform and send welcome email for new registrations
+    const detectPlatform = (): 'homepage' | 'job-portal' | 'elearning' => {
+      if (platform && ['homepage', 'job-portal', 'elearning'].includes(platform)) {
+        return platform;
+      }
+      
+      // Check referrer header to detect platform
+      const referrer = req.get('Referer') || req.get('Origin') || '';
+      
+      if (referrer.includes(':3001') || referrer.includes('job-portal')) {
+        return 'job-portal';
+      } else if (referrer.includes(':3002') || referrer.includes('elearning')) {
+        return 'elearning';
+      } else if (referrer.includes(':3000') || referrer.includes('homepage')) {
+        return 'homepage';
+      }
+      
+      // Default based on role
+      if (role === UserRole.PROFESSIONAL || role === UserRole.EMPLOYER) {
+        return 'job-portal';
+      } else if (role === UserRole.STUDENT || role === UserRole.TEACHER) {
+        return 'elearning';
+      }
+      
+      return 'homepage';
+    };
+
+    // Send welcome email for new Google OAuth users
+    try {
+      const detectedPlatform = detectPlatform();
+      
+      // Send enhanced HTML welcome email
+      await sendWelcomeEmail({
+        email: user.email,
+        firstName: user.firstName,
+        platform: detectedPlatform
+      });
+      
+      console.log(`✅ Enhanced welcome email sent to ${user.email} for ${detectedPlatform} platform (Google OAuth)`);
+      
+      // Also send console welcome email as fallback
+      await simpleEmailService.sendWelcomeEmail(
+        user.email,
+        user.firstName,
+        role
+      );
+    } catch (emailError) {
+      console.error('Failed to send welcome email for Google OAuth user:', emailError);
+      // Don't fail registration if email fails
     }
 
     // Send token response

@@ -31,6 +31,7 @@ export interface ITestPurchaseModel extends Model<ITestPurchaseDocument> {
   canTakeTest(userId: string, testId: string, jobId?: string): Promise<{ canTake: boolean; purchase?: ITestPurchaseDocument; reason?: string }>;
   incrementAttemptCount(purchaseId: string): Promise<ITestPurchaseDocument>;
   findPendingApprovals(): Promise<ITestPurchaseDocument[]>;
+  findApprovedTests(): Promise<ITestPurchaseDocument[]>;
   findUserPurchases(userId: string): Promise<ITestPurchaseDocument[]>;
   requestApproval(purchaseId: string): Promise<ITestPurchaseDocument>;
   approveTest(purchaseId: string, approvedBy: string): Promise<ITestPurchaseDocument>;
@@ -140,6 +141,7 @@ const testPurchaseSchema = new Schema<ITestPurchaseDocument>({
 }, {
   timestamps: true,
   toJSON: {
+    virtuals: true,
     transform: function(doc, ret) {
       delete ret.__v;
       return ret;
@@ -346,6 +348,19 @@ testPurchaseSchema.statics.findPendingApprovals = function(): Promise<ITestPurch
     .populate('test', 'title type description')
     .populate('job', 'title company')
     .sort({ approvalRequestedAt: -1 });
+};
+
+// Find all approved test purchases
+testPurchaseSchema.statics.findApprovedTests = function(): Promise<ITestPurchaseDocument[]> {
+  return this.find({ 
+    approvalStatus: 'approved',
+    status: 'completed' // Only look at completed purchases
+  })
+    .populate('user', 'firstName lastName email')
+    .populate('test', 'title type description')
+    .populate('job', 'title company')
+    .populate('approvedBy', 'firstName lastName email')
+    .sort({ approvedAt: -1 });
 };
 
 // Find all purchases for a user

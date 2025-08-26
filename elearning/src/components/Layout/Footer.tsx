@@ -56,11 +56,11 @@ const Footer: React.FC = () => {
   };
 
   const socialLinks = [
-    { icon: <Facebook />, url: 'https://facebook.com/excellencehub', label: 'Facebook' },
-    { icon: <Twitter />, url: 'https://twitter.com/excellencehub', label: 'Twitter' },
-    { icon: <LinkedIn />, url: 'https://linkedin.com/company/excellencehub', label: 'LinkedIn' },
-    { icon: <Instagram />, url: 'https://instagram.com/excellencehub', label: 'Instagram' },
-    { icon: <YouTube />, url: 'https://youtube.com/excellencehub', label: 'YouTube' }
+    { icon: <Facebook />, url: 'https://facebook.com/excellencecoachinghub', label: 'Facebook' },
+    { icon: <Twitter />, url: 'https://x.com/ECH_coachinghub?t=Awf4GVPp9eCkSZhDlHkFew&s=08', label: 'Twitter' },
+    { icon: <LinkedIn />, url: 'https://www.linkedin.com/in/excellence-coachinghub-1b8b1a380?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app', label: 'LinkedIn' },
+    { icon: <Instagram />, url: 'https://www.instagram.com/excellencecoachinghub/?utm_source=qr&igsh=Ym5xMXh5aXZmNHVi#', label: 'Instagram' },
+    { icon: <YouTube />, url: 'https://www.tiktok.com/@excellence.coachi4?_t=ZM-8zCgEouFb8w&_r=1', label: 'TikTok' }
   ];
 
   return (
@@ -101,19 +101,19 @@ const Footer: React.FC = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <Email sx={{ mr: 1, fontSize: 18, color: 'grey.400' }} />
                 <Typography variant="body2" sx={{ color: 'grey.300' }}>
-                  support@excellencehub.com
+                  info@excellencecoachinghub.com
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <Phone sx={{ mr: 1, fontSize: 18, color: 'grey.400' }} />
                 <Typography variant="body2" sx={{ color: 'grey.300' }}>
-                  +1 (555) 123-4567
+                  +250 788 123 456
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <LocationOn sx={{ mr: 1, fontSize: 18, color: 'grey.400' }} />
                 <Typography variant="body2" sx={{ color: 'grey.300' }}>
-                  San Francisco, CA, USA
+                  Kigali, Rwanda (HQ) • Serving All of Africa
                 </Typography>
               </Box>
             </Box>

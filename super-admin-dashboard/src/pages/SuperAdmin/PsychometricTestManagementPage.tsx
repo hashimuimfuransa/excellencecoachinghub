@@ -148,7 +148,9 @@ const PsychometricTestManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [tests, setTests] = useState<ExtendedTest[]>([]);
   const [testRequests, setTestRequests] = useState<any[]>([]);
+  const [approvedTests, setApprovedTests] = useState<any[]>([]);
   const [requestsLoading, setRequestsLoading] = useState(false);
+  const [approvedLoading, setApprovedLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
@@ -195,6 +197,8 @@ const PsychometricTestManagementPage: React.FC = () => {
       loadStats();
     } else if (activeTab === 1) {
       loadTestRequests();
+    } else if (activeTab === 2) {
+      loadApprovedTests();
     }
   }, [page, rowsPerPage, filters, activeTab]);
 
@@ -534,6 +538,14 @@ const PsychometricTestManagementPage: React.FC = () => {
         console.log('ℹ️ No test requests found from API - displaying empty state');
       }
 
+      // Check for duplicate IDs and log them
+      const ids = allRequests.map(r => r._id);
+      const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
+      if (duplicateIds.length > 0) {
+        console.warn('🚨 Found duplicate request IDs:', duplicateIds);
+        console.warn('🚨 Full requests with duplicate IDs:', allRequests.filter(r => duplicateIds.includes(r._id)));
+      }
+
       // Sort by priority and date
       allRequests.sort((a, b) => {
         const priorityOrder = { 'high': 3, 'normal': 2, 'low': 1 };
@@ -551,6 +563,68 @@ const PsychometricTestManagementPage: React.FC = () => {
       setTestRequests([]);
     } finally {
       setRequestsLoading(false);
+    }
+  };
+
+  const loadApprovedTests = async () => {
+    setApprovedLoading(true);
+    try {
+      // Fetch approved psychometric test requests
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/psychometric-tests/approvals/approved`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('🔍 Approved tests response status:', response.status);
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('🔍 Approved tests API response:', result);
+        
+        const approvedData = result.success ? result.data : result;
+        console.log('🔍 Processed approved tests:', approvedData);
+        
+        if (Array.isArray(approvedData)) {
+          const mappedApproved = approvedData.map(approval => ({
+            _id: approval._id,
+            user: approval.user,
+            displayType: 'Approved Test',
+            requestType: 'test_purchase_approval',
+            title: `${approval.test?.title || 'Test'} - Approved`,
+            description: `User approved to take ${approval.test?.title || 'test'}${approval.job ? ` for ${approval.job.title} at ${approval.job.company}` : ''}`,
+            job: approval.job,
+            priority: 'normal',
+            approvedAt: approval.approvedAt,
+            requestedAt: approval.approvalRequestedAt || approval.purchasedAt,
+            status: 'approved',
+            purchaseId: approval._id,
+            test: approval.test,
+            approvedBy: approval.approvedBy,
+            specifications: {
+              testType: approval.test?.type || 'psychometric',
+              amount: approval.amount,
+              attemptsRemaining: approval.attemptsRemaining || 3
+            }
+          }));
+          
+          // Sort by approval date (most recent first)
+          mappedApproved.sort((a, b) => new Date(b.approvedAt).getTime() - new Date(a.approvedAt).getTime());
+          
+          setApprovedTests(mappedApproved);
+        } else {
+          setApprovedTests([]);
+        }
+      } else {
+        console.error('Failed to fetch approved tests:', response.statusText);
+        setApprovedTests([]);
+      }
+    } catch (error) {
+      console.error('Error loading approved tests:', error);
+      setApprovedTests([]);
+    } finally {
+      setApprovedLoading(false);
     }
   };
 
@@ -609,6 +683,11 @@ const PsychometricTestManagementPage: React.FC = () => {
               'Content-Type': 'application/json'
             }
           });
+        }
+        
+        // If action was approve, refresh the approved tests tab
+        if (action === 'approve') {
+          loadApprovedTests();
         }
         
         console.log(`✅ Successfully ${action}ed ${request.displayType}:`, requestId);
@@ -894,6 +973,15 @@ const PsychometricTestManagementPage: React.FC = () => {
             label="Pending Requests" 
             sx={{ textTransform: 'none', fontWeight: 'bold' }}
           />
+          <Tab 
+            icon={
+              <Badge badgeContent={approvedTests.length} color="success" max={99}>
+                <CheckCircle />
+              </Badge>
+            } 
+            label="Approved Tests" 
+            sx={{ textTransform: 'none', fontWeight: 'bold' }}
+          />
         </Tabs>
       </Card>
 
@@ -1172,8 +1260,8 @@ const PsychometricTestManagementPage: React.FC = () => {
               </Box>
             ) : (
               <Grid container spacing={3}>
-                {testRequests.map((request) => (
-                  <Grid item xs={12} md={6} lg={4} key={request._id}>
+                {testRequests.map((request, index) => (
+                  <Grid item xs={12} md={6} lg={4} key={`request-${request._id}-${index}`}>
                     <Card 
                       variant="outlined"
                       sx={{ 
@@ -1375,6 +1463,171 @@ const PsychometricTestManagementPage: React.FC = () => {
                           )}
                         </Stack>
                       </Box>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tab 3: Approved Tests */}
+      {activeTab === 2 && (
+        <Card>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+              <Typography variant="h6">
+                Approved Tests ({approvedTests.length})
+              </Typography>
+              <Button
+                startIcon={<Refresh />}
+                onClick={loadApprovedTests}
+                disabled={approvedLoading}
+              >
+                Refresh
+              </Button>
+            </Box>
+
+            {approvedLoading ? (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <CircularProgress />
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                  Loading approved tests...
+                </Typography>
+              </Box>
+            ) : approvedTests.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 8 }}>
+                <CheckCircle sx={{ fontSize: 80, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="h6" gutterBottom>
+                  No approved tests found
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Approved psychometric tests will appear here.
+                </Typography>
+              </Box>
+            ) : (
+              <Grid container spacing={3}>
+                {approvedTests.map((approved, index) => (
+                  <Grid item xs={12} md={6} lg={4} key={`approved-${approved._id}-${index}`}>
+                    <Card
+                      elevation={2}
+                      sx={{
+                        height: '100%',
+                        border: '2px solid',
+                        borderColor: 'success.main',
+                        '&:hover': {
+                          boxShadow: 6,
+                          transform: 'translateY(-2px)',
+                        },
+                        transition: 'all 0.3s ease-in-out'
+                      }}
+                    >
+                      <CardContent>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                          <Typography variant="subtitle1" fontWeight="bold" sx={{ flex: 1 }}>
+                            {approved.title}
+                          </Typography>
+                          <Chip
+                            label="APPROVED"
+                            color="success"
+                            size="small"
+                            sx={{ fontWeight: 'bold' }}
+                          />
+                        </Box>
+
+                        <Typography variant="body2" color="text.secondary" paragraph>
+                          {approved.description}
+                        </Typography>
+
+                        {/* User Information */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                          <Avatar sx={{ width: 32, height: 32, mr: 2, bgcolor: 'primary.main' }}>
+                            <Person />
+                          </Avatar>
+                          <Box>
+                            <Typography variant="body2" fontWeight="medium">
+                              {approved.user?.firstName} {approved.user?.lastName}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {approved.user?.email}
+                            </Typography>
+                          </Box>
+                        </Box>
+
+                        {/* Job Information */}
+                        {approved.job && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                            <Work sx={{ fontSize: 20, color: 'text.secondary', mr: 1 }} />
+                            <Box>
+                              <Typography variant="body2" fontWeight="medium">
+                                {approved.job.title}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                at {approved.job.company}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        )}
+
+                        {/* Test Information */}
+                        <Box sx={{ p: 2, bgcolor: 'success.50', borderRadius: 1, mb: 2 }}>
+                          <Stack direction="row" spacing={2} alignItems="center">
+                            <Psychology sx={{ color: 'success.main' }} />
+                            <Box flex={1}>
+                              <Typography variant="body2" fontWeight="medium">
+                                {approved.test?.title || 'Psychometric Test'}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Type: {approved.specifications?.testType || 'N/A'}
+                              </Typography>
+                            </Box>
+                            {approved.specifications?.amount && (
+                              <Chip
+                                label={`$${approved.specifications.amount}`}
+                                size="small"
+                                variant="outlined"
+                                color="success"
+                              />
+                            )}
+                          </Stack>
+                        </Box>
+
+                        {/* Timing Information */}
+                        <Stack spacing={1}>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Schedule sx={{ fontSize: 16, color: 'text.secondary', mr: 1 }} />
+                            <Typography variant="caption" color="text.secondary">
+                              Approved: {new Date(approved.approvedAt).toLocaleDateString()} at {new Date(approved.approvedAt).toLocaleTimeString()}
+                            </Typography>
+                          </Box>
+                          {approved.requestedAt && (
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Schedule sx={{ fontSize: 16, color: 'text.secondary', mr: 1 }} />
+                              <Typography variant="caption" color="text.secondary">
+                                Requested: {new Date(approved.requestedAt).toLocaleDateString()}
+                              </Typography>
+                            </Box>
+                          )}
+                          {approved.approvedBy && (
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Person sx={{ fontSize: 16, color: 'text.secondary', mr: 1 }} />
+                              <Typography variant="caption" color="text.secondary">
+                                Approved by: {approved.approvedBy.firstName} {approved.approvedBy.lastName}
+                              </Typography>
+                            </Box>
+                          )}
+                        </Stack>
+
+                        {/* Attempts Information */}
+                        {approved.specifications?.attemptsRemaining !== undefined && (
+                          <Box sx={{ mt: 2, p: 1, bgcolor: 'info.50', borderRadius: 1 }}>
+                            <Typography variant="caption" color="info.main" fontWeight="medium">
+                              Attempts Remaining: {approved.specifications.attemptsRemaining}
+                            </Typography>
+                          </Box>
+                        )}
+                      </CardContent>
                     </Card>
                   </Grid>
                 ))}

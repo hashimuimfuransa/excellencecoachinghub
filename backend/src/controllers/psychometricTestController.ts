@@ -3,6 +3,7 @@ import { PsychometricTest, PsychometricTestResult, Job, JobApplication, Generate
 import { UserRole, PsychometricTestType } from '../../../shared/types';
 import { AuthRequest } from '@/middleware/auth';
 import { aiService } from '@/services/aiService';
+import mongoose from 'mongoose';
 
 // Get all psychometric tests
 export const getPsychometricTests = async (req: Request, res: Response) => {
@@ -1450,6 +1451,84 @@ export const requestTestApproval = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Check if purchaseId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(purchaseId)) {
+      console.error('❌ Invalid purchase ID format:', purchaseId);
+      
+      // Handle demo/mock functionality - convert to real purchase
+      if (purchaseId.startsWith('mock_purchase_')) {
+        console.log('🔄 Converting demo purchase to real purchase for approval request');
+        
+        try {
+          // Parse the mock purchase ID to extract information
+          // Format: mock_purchase_userId_testId_jobId_timestamp
+          const parts = purchaseId.split('_');
+          if (parts.length >= 5) {
+            const mockUserId = parts[2];
+            const mockTestId = parts[3];
+            const mockJobId = parts[4] !== '1' ? parts[4] : null; // '1' means no job
+            
+            // Validate that this mock purchase belongs to the current user
+            if (mockUserId !== userId) {
+              return res.status(403).json({
+                success: false,
+                error: 'Access denied: This purchase does not belong to you'
+              });
+            }
+            
+            // Check if a real purchase already exists for this user/test combination
+            const existingPurchase = await TestPurchase.findUserPurchaseForTest(userId, mockTestId, mockJobId);
+            if (existingPurchase) {
+              // Use existing purchase for approval request
+              const updatedPurchase = await TestPurchase.requestApproval(existingPurchase._id.toString());
+              return res.status(200).json({
+                success: true,
+                data: updatedPurchase,
+                message: 'Test approval requested successfully. You will be notified when an admin reviews your request.'
+              });
+            }
+            
+            // Create a real purchase entry for this demo request
+            const purchase = new TestPurchase({
+              user: userId,
+              test: mockTestId,
+              job: mockJobId,
+              paymentIntentId: `demo_payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              amount: 0, // Demo price
+              currency: 'USD',
+              status: 'completed',
+              maxAttempts: 3,
+              approvalStatus: 'not_required',
+              autoApproval: false
+            });
+            
+            await purchase.save();
+            console.log('✅ Created real purchase from demo:', purchase._id);
+            
+            // Now request approval for the real purchase
+            const updatedPurchase = await TestPurchase.requestApproval(purchase._id.toString());
+            
+            return res.status(200).json({
+              success: true,
+              data: updatedPurchase,
+              message: 'Test approval requested successfully. A real purchase has been created and approval request sent to super admin.'
+            });
+          }
+        } catch (conversionError: any) {
+          console.error('❌ Error converting demo purchase to real purchase:', conversionError);
+          return res.status(400).json({
+            success: false,
+            error: 'Failed to process demo purchase for approval'
+          });
+        }
+      }
+      
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid purchase ID format'
+      });
+    }
+
     // Verify the purchase belongs to the user
     const purchase = await TestPurchase.findById(purchaseId).populate('user test job');
     if (!purchase) {
@@ -1562,6 +1641,43 @@ export const getPendingTestApprovals = async (req: AuthRequest, res: Response) =
   }
 };
 
+// Get approved tests (Admin only)
+export const getApprovedTests = async (req: AuthRequest, res: Response) => {
+  try {
+    const user = req.user;
+    
+    if (!user || user.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied: Super admin access required'
+      });
+    }
+
+    console.log('🔍 Getting approved tests...');
+    
+    const approvedTests = await TestPurchase.findApprovedTests();
+    
+    console.log('🔍 Approved tests found:', approvedTests.length);
+    approvedTests.forEach(approved => {
+      console.log(`  - Approved ${approved._id}: user=${approved.user?.firstName} ${approved.user?.lastName}, approvedAt=${approved.approvedAt}`);
+    });
+
+    res.status(200).json({
+      success: true,
+      data: approvedTests,
+      count: approvedTests.length,
+      message: 'Approved tests retrieved successfully'
+    });
+  } catch (error: any) {
+    console.error('❌ Error getting approved tests:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve approved tests',
+      message: error.message
+    });
+  }
+};
+
 // Approve a test (Admin only)
 export const approveTest = async (req: AuthRequest, res: Response) => {
   try {
@@ -1572,6 +1688,14 @@ export const approveTest = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({
         success: false,
         error: 'Access denied: Super admin access required'
+      });
+    }
+
+    // Check if purchaseId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(purchaseId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid purchase ID format'
       });
     }
 
@@ -1618,6 +1742,14 @@ export const rejectTest = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({
         success: false,
         error: 'Access denied: Super admin access required'
+      });
+    }
+
+    // Check if purchaseId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(purchaseId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid purchase ID format'
       });
     }
 

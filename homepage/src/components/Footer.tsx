@@ -17,7 +17,7 @@ import {
   Twitter,
   LinkedIn,
   Instagram,
-  YouTube,
+  VideoLibrary,
   Email,
   Phone,
   LocationOn,
@@ -62,11 +62,11 @@ const Footer: React.FC = () => {
 
   const footerLinks = {
     platform: [
-      { label: 'E-Learning', href: '/elearning' },
-      { label: 'Job Preparation', href: '/jobs' },
-      { label: 'Courses', href: '/courses' },
-      { label: 'Assessments', href: '/assessments' },
-      { label: 'Certifications', href: '/certifications' },
+      { label: 'E-Learning', href: 'https://elearning.excellencecoachinghub.com' },
+      { label: 'Job Preparation', href: 'https://jobs.excellencecoachinghub.com' },
+      { label: 'Courses', href: 'https://elearning.excellencecoachinghub.com/courses' },
+      { label: 'Assessments', href: 'https://jobs.excellencecoachinghub.com/assessments' },
+      { label: 'Certifications', href: 'https://elearning.excellencecoachinghub.com/certifications' },
     ],
     company: [
       { label: 'About Us', href: '#about' },
@@ -93,10 +93,10 @@ const Footer: React.FC = () => {
 
   const socialLinks = [
     { icon: <Facebook />, href: 'https://facebook.com/excellencecoachinghub', label: 'Facebook' },
-    { icon: <Twitter />, href: 'https://twitter.com/excellencehub', label: 'Twitter' },
-    { icon: <LinkedIn />, href: 'https://linkedin.com/company/excellence-coaching-hub', label: 'LinkedIn' },
-    { icon: <Instagram />, href: 'https://instagram.com/excellencecoachinghub', label: 'Instagram' },
-    { icon: <YouTube />, href: 'https://youtube.com/excellencecoachinghub', label: 'YouTube' },
+    { icon: <Twitter />, href: 'https://x.com/ECH_coachinghub?t=Awf4GVPp9eCkSZhDlHkFew&s=08', label: 'Twitter' },
+    { icon: <LinkedIn />, href: 'https://www.linkedin.com/in/excellence-coachinghub-1b8b1a380?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app', label: 'LinkedIn' },
+    { icon: <Instagram />, href: 'https://www.instagram.com/excellencecoachinghub/?utm_source=qr&igsh=Ym5xMXh5aXZmNHVi#', label: 'Instagram' },
+    { icon: <VideoLibrary />, href: 'https://www.tiktok.com/@excellence.coachi4?_t=ZM-8zCgEouFb8w&_r=1', label: 'TikTok' },
   ];
 
   const contactInfo = [

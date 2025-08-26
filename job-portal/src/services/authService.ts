@@ -33,7 +33,7 @@ export interface RegisterData {
 }
 
 export interface AuthResponse {
-  user: User;
+  user: User | null;
   token: string;
 }
 
@@ -45,7 +45,9 @@ class AuthService {
     
     // Store token and user data
     localStorage.setItem('token', authData.token);
-    localStorage.setItem('user', JSON.stringify(authData.user));
+    if (authData.user) {
+      localStorage.setItem('user', JSON.stringify(authData.user));
+    }
     
     return authData;
   }
@@ -63,19 +65,23 @@ class AuthService {
     
     // Store token and user data
     localStorage.setItem('token', authData.token);
-    localStorage.setItem('user', JSON.stringify(authData.user));
+    if (authData.user) {
+      localStorage.setItem('user', JSON.stringify(authData.user));
+    }
     
     // Send welcome email automatically after successful registration
-    try {
-      await sendWelcomeEmail(
-        authData.user.email,
-        authData.user.firstName,
-        authData.user.role
-      );
-      console.log('✅ Welcome email sent successfully after registration');
-    } catch (emailError) {
-      console.error('❌ Failed to send welcome email after registration:', emailError);
-      // Don't fail registration if email fails - it's not critical
+    if (authData.user) {
+      try {
+        await sendWelcomeEmail(
+          authData.user.email,
+          authData.user.firstName,
+          authData.user.role
+        );
+        console.log('✅ Welcome email sent successfully after registration');
+      } catch (emailError) {
+        console.error('❌ Failed to send welcome email after registration:', emailError);
+        // Don't fail registration if email fails - it's not critical
+      }
     }
     
     return authData;

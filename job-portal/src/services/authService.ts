@@ -144,19 +144,54 @@ class AuthService {
         // Additional frontend email logic can be added here if needed
       }
     } catch (error: any) {
+      console.error('Forgot password error:', error);
       // Handle JSON parsing errors specifically
-      if (error.message?.includes('JSON') || error.message?.includes('parse')) {
-        console.error('Password reset JSON error caught:', error);
-        throw new Error('Server communication error. Please try again in a moment.');
+      if (error.message?.includes('JSON') || error.message?.includes('parse') || 
+          error.message?.includes('Unexpected end of JSON input')) {
+        throw new Error('Unable to process password reset request. Please try again in a moment.');
+      }
+      // Handle network errors
+      if (error.message?.includes('fetch') || error.message?.includes('Network')) {
+        throw new Error('Network error. Please check your internet connection and try again.');
+      }
+      // Handle specific error messages from backend
+      if (error.message?.includes('No user found') || error.message?.includes('not found')) {
+        throw new Error('We couldn\'t find an account with that email address. Please check your email and try again.');
       }
       throw error;
     }
   }
 
   // Reset password
-  async resetPassword(token: string, password: string): Promise<void> {
-    const response = await apiPost('/auth/reset-password', { token, password });
-    handleApiResponse(response);
+  async resetPassword(token: string, password: string): Promise<AuthResponse> {
+    try {
+      const response = await apiPost('/auth/reset-password', { token, password });
+      const authData = handleApiResponse(response);
+      
+      // Store token and user data after successful password reset
+      localStorage.setItem('token', authData.token);
+      if (authData.user) {
+        localStorage.setItem('user', JSON.stringify(authData.user));
+      }
+      
+      return authData;
+    } catch (error: any) {
+      console.error('Reset password error:', error);
+      // Handle JSON parsing errors specifically
+      if (error.message?.includes('JSON') || error.message?.includes('parse') || 
+          error.message?.includes('Unexpected end of JSON input')) {
+        throw new Error('Unable to reset password. Please try again or request a new reset link.');
+      }
+      // Handle network errors
+      if (error.message?.includes('fetch') || error.message?.includes('Network')) {
+        throw new Error('Network error. Please check your internet connection and try again.');
+      }
+      // Handle token errors
+      if (error.message?.includes('Invalid token') || error.message?.includes('expired')) {
+        throw new Error('This reset link has expired or is invalid. Please request a new password reset.');
+      }
+      throw error;
+    }
   }
 
   // Change password

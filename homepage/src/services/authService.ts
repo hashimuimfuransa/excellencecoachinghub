@@ -11,7 +11,9 @@ export const authService = {
       if (response.success && response.data) {
         // Store token and user data
         localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
+        if (response.data.user) {
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+        }
         
         if (response.data.refreshToken) {
           localStorage.setItem('refreshToken', response.data.refreshToken);
@@ -49,23 +51,27 @@ export const authService = {
       if (response.success && response.data) {
         // Store token and user data
         localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
+        if (response.data.user) {
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+        }
 
         if (response.data.refreshToken) {
           localStorage.setItem('refreshToken', response.data.refreshToken);
         }
 
         // Send welcome email automatically after successful registration
-        try {
-          await sendWelcomeEmail(
-            response.data.user.email,
-            response.data.user.firstName,
-            response.data.user.role
-          );
-          console.log('✅ Welcome email sent successfully after registration');
-        } catch (emailError) {
-          console.error('❌ Failed to send welcome email after registration:', emailError);
-          // Don't fail registration if email fails - it's not critical
+        if (response.data.user) {
+          try {
+            await sendWelcomeEmail(
+              response.data.user.email,
+              response.data.user.firstName,
+              response.data.user.role
+            );
+            console.log('✅ Welcome email sent successfully after registration');
+          } catch (emailError) {
+            console.error('❌ Failed to send welcome email after registration:', emailError);
+            // Don't fail registration if email fails - it's not critical
+          }
         }
 
         return response.data;

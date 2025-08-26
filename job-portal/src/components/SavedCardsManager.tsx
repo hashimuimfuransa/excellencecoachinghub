@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -15,6 +15,7 @@ import {
   DialogActions,
   CircularProgress,
   Alert,
+  AlertTitle,
   Divider,
   Table,
   TableBody,
@@ -23,7 +24,8 @@ import {
   TableHead,
   TableRow,
   Paper,
-  LinearProgress
+  LinearProgress,
+  Snackbar
 } from '@mui/material';
 import {
   Quiz as TestIcon,
@@ -34,7 +36,8 @@ import {
   PlayArrow as StartIcon,
   Receipt as ReceiptIcon,
   RequestPage as RequestIcon,
-  Info as InfoIcon
+  Info as InfoIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
@@ -85,25 +88,132 @@ const SavedCardsManager: React.FC = () => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [requestingApproval, setRequestingApproval] = useState<string | null>(null);
   const [startingTest, setStartingTest] = useState<string | null>(null);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'info' | 'warning' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'info'
+  });
 
   useEffect(() => {
     fetchPurchases();
-  }, []);
+  }, [fetchPurchases]);
 
-  const fetchPurchases = async () => {
+  // Separate effect for auto-refresh that doesn't depend on purchases state
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    
+    // Check if there are pending approvals and set up interval
+    const checkAndSetupRefresh = () => {
+      const pendingApprovals = purchases.filter(p => p.approvalStatus === 'pending_approval');
+      
+      if (pendingApprovals.length > 0) {
+        if (!interval) {
+          console.log(`🔄 Setting up auto-refresh for ${pendingApprovals.length} pending approval(s)...`);
+          console.log('📝 Pending approvals:', pendingApprovals.map(p => ({
+            id: p._id,
+            testTitle: p.test?.title,
+            status: p.approvalStatus,
+            requestedAt: p.approvalRequestedAt
+          })));
+          
+          // Determine refresh interval based on recency of approval requests
+          const recentRequests = pendingApprovals.filter(p => {
+            if (!p.approvalRequestedAt) return false;
+            const requestTime = new Date(p.approvalRequestedAt);
+            const now = new Date();
+            const minutesAgo = (now.getTime() - requestTime.getTime()) / (1000 * 60);
+            return minutesAgo < 5; // Recent if within last 5 minutes
+          });
+          
+          const refreshInterval = recentRequests.length > 0 ? 5000 : 10000; // 5s for recent, 10s for older
+          
+          interval = setInterval(() => {
+            console.log('🔄 Auto-refreshing purchases for approval status updates...');
+            console.log('⏰ Current time:', new Date().toISOString());
+            console.log(`🚀 Using ${refreshInterval/1000}s interval (recent requests: ${recentRequests.length})`);
+            fetchPurchases();
+          }, refreshInterval);
+        }
+      } else {
+        if (interval) {
+          console.log('✅ Clearing auto-refresh - no pending approvals');
+          clearInterval(interval);
+          interval = null;
+        }
+      }
+    };
+
+    checkAndSetupRefresh();
+    
+    return () => {
+      if (interval) {
+        console.log('🧹 Cleaning up auto-refresh interval');
+        clearInterval(interval);
+      }
+    };
+  }, [purchases, fetchPurchases]);
+
+  const fetchPurchases = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const data = await psychometricTestService.getUserTestPurchases();
+      console.log('📊 Fetched user test purchases:', data.length, 'purchases');
+      data.forEach((purchase, index) => {
+        console.log(`  Purchase ${index + 1}:`, {
+          id: purchase._id,
+          test: purchase.test?.title,
+          status: purchase.status,
+          approvalStatus: purchase.approvalStatus,
+          approvalStatusDisplay: purchase.approvalStatusDisplay,
+          approvedAt: purchase.approvedAt,
+          approvalRequestedAt: purchase.approvalRequestedAt,
+          updatedAt: purchase.updatedAt
+        });
+      });
+      
+      // Check for status changes
+      const statusChanges = data.filter(purchase => 
+        purchases.find(existing => 
+          existing._id === purchase._id && 
+          existing.approvalStatus !== purchase.approvalStatus
+        )
+      );
+      
+      if (statusChanges.length > 0) {
+        console.log('🔄 Status changes detected:', statusChanges.map(p => ({
+          id: p._id,
+          test: p.test?.title,
+          oldStatus: purchases.find(existing => existing._id === p._id)?.approvalStatus,
+          newStatus: p.approvalStatus
+        })));
+        
+        statusChanges.forEach(purchase => {
+          if (purchase.approvalStatus === 'approved') {
+            setSnackbar({
+              open: true,
+              message: `Test "${purchase.test?.title}" has been approved! You can now start the test.`,
+              severity: 'success'
+            });
+          } else if (purchase.approvalStatus === 'rejected') {
+            setSnackbar({
+              open: true,
+              message: `Test "${purchase.test?.title}" was rejected. Please contact support for details.`,
+              severity: 'error'
+            });
+          }
+        });
+      }
+      
       setPurchases(data);
     } catch (error: any) {
-      console.error('Failed to fetch purchases:', error);
+      console.error('❌ Failed to fetch purchases:', error);
       setError('Failed to load your saved tests. Please try again.');
       toast.error('Failed to load your saved tests');
     } finally {
       setLoading(false);
     }
-  };
+  }, [purchases]);
 
   const handleRequestApproval = async (purchaseId: string) => {
     try {
@@ -198,6 +308,31 @@ const SavedCardsManager: React.FC = () => {
     }).format(amount);
   };
 
+  const handleManualRefresh = useCallback(async () => {
+    setSnackbar({
+      open: true,
+      message: 'Refreshing test status...',
+      severity: 'info'
+    });
+    
+    try {
+      await fetchPurchases();
+      setTimeout(() => {
+        setSnackbar({
+          open: true,
+          message: 'Test status updated successfully!',
+          severity: 'success'
+        });
+      }, 500);
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Failed to refresh status. Please try again.',
+        severity: 'error'
+      });
+    }
+  }, [fetchPurchases]);
+
   const canTakeTest = (purchase: TestPurchase) => {
     return purchase.status === 'completed' && 
            (purchase.approvalStatus === 'not_required' || purchase.approvalStatus === 'approved') &&
@@ -231,14 +366,55 @@ const SavedCardsManager: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 3, fontWeight: 600 }}>
-        <TestIcon sx={{ mr: 2, verticalAlign: 'middle' }} />
-        My Saved Tests
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+          <TestIcon sx={{ mr: 2, verticalAlign: 'middle' }} />
+          My Saved Tests
+        </Typography>
+        <Button
+          variant="outlined"
+          onClick={handleManualRefresh}
+          disabled={loading}
+          startIcon={loading ? <CircularProgress size={16} /> : <RefreshIcon />}
+        >
+          Refresh
+        </Button>
+      </Box>
       
       <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
         Manage your purchased psychometric tests. Request approval when needed and start tests when ready.
       </Typography>
+
+      {/* Pending Approvals Alert */}
+      {purchases.some(p => p.approvalStatus === 'pending_approval') && (
+        <Alert 
+          severity="info" 
+          sx={{ mb: 3 }}
+          action={
+            <Button 
+              color="inherit" 
+              size="small" 
+              onClick={handleManualRefresh}
+              disabled={loading}
+              startIcon={loading ? <CircularProgress size={16} color="inherit" /> : undefined}
+            >
+              {loading ? 'Refreshing...' : 'Check Status'}
+            </Button>
+          }
+        >
+          <AlertTitle>Approval Status Updates</AlertTitle>
+          You have {purchases.filter(p => p.approvalStatus === 'pending_approval').length} test(s) 
+          pending admin approval. Status updates automatically every {
+            purchases.some(p => {
+              if (!p.approvalRequestedAt) return false;
+              const requestTime = new Date(p.approvalRequestedAt);
+              const now = new Date();
+              const minutesAgo = (now.getTime() - requestTime.getTime()) / (1000 * 60);
+              return minutesAgo < 5;
+            }) ? '5' : '10'
+          } seconds, or click "Check Status" to refresh immediately.
+        </Alert>
+      )}
 
       {purchases.length === 0 ? (
         <Card sx={{ textAlign: 'center', py: 8 }}>
@@ -288,6 +464,16 @@ const SavedCardsManager: React.FC = () => {
                         label={purchase.approvalStatusDisplay || purchase.status}
                         color={getStatusColor(purchase.approvalStatus, purchase.status)}
                         size="small"
+                        sx={{
+                          ...(purchase.approvalStatus === 'pending_approval' && {
+                            animation: 'pulse 2s ease-in-out infinite',
+                            '@keyframes pulse': {
+                              '0%': { opacity: 1 },
+                              '50%': { opacity: 0.7 },
+                              '100%': { opacity: 1 }
+                            }
+                          })
+                        }}
                       />
                     </Box>
 
@@ -569,6 +755,23 @@ const SavedCardsManager: React.FC = () => {
           <Button onClick={() => setDetailsOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

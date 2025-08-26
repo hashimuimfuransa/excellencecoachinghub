@@ -20,6 +20,7 @@ import {
   getUserTestPurchases,
   requestTestApproval,
   getPendingTestApprovals,
+  getApprovedTests,
   approveTest,
   rejectTest
 } from '@/controllers/psychometricTestController';
@@ -63,6 +64,7 @@ router.get('/results/job/:jobId', getJobTestResults);
 
 // Admin approval routes
 router.get('/approvals/pending', getPendingTestApprovals);
+router.get('/approvals/approved', getApprovedTests);
 router.post('/approvals/:purchaseId/approve', approveTest);
 router.post('/approvals/:purchaseId/reject', rejectTest);
 

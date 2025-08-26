@@ -37,7 +37,8 @@ import {
   CircularProgress,
   Tabs,
   Tab,
-  Badge
+  Badge,
+  Snackbar
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 import SimpleProfileGuard from '../components/SimpleProfileGuard';
@@ -100,12 +101,10 @@ import {
   Lock,
   LockOpen,
   BookmarkBorder,
-  RequestPage,
-  Check
+  RequestPage
 } from '@mui/icons-material';
 const RequestIcon = RequestPage;
 const StartIcon = PlayArrow;
-const CheckIcon = Check;
 import { useNavigate } from 'react-router-dom';
 
 interface Job {
@@ -356,13 +355,44 @@ const PsychometricTestsPage: React.FC = () => {
   const [currentTab, setCurrentTab] = useState(0);
   const [testBlueprint, setTestBlueprint] = useState<JobTestBlueprint | null>(null);
   const [aiGeneratedQuestions, setAiGeneratedQuestions] = useState<GeneratedQuestion[]>([]);
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'info' | 'warning' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'info'
+  });
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    fetchTests();
-    fetchResults();
-    fetchJobs();
-    fetchUserData();
-    loadUserPayments();
+    // Load data in the correct order to ensure jobs are available when processing payments
+    const loadInitialData = async () => {
+      setLoading(true);
+      try {
+        // First, load basic data
+        await Promise.all([
+          fetchTests(),
+          fetchResults(), 
+          fetchUserData()
+        ]);
+        
+        // Load jobs first (needed for payment processing)
+        await fetchJobs();
+        
+        // Load initial payments from localStorage
+        loadUserPayments();
+        
+        // Then refresh payments from backend (this will use the jobs data)
+        setTimeout(() => {
+          refreshUserPayments();
+        }, 1000); // Small delay to ensure jobs state is updated
+        
+      } catch (error) {
+        console.error('Error loading initial data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadInitialData();
   }, []);
 
   // Load saved payments from localStorage
@@ -386,21 +416,416 @@ const PsychometricTestsPage: React.FC = () => {
     }
   };
 
+  // Refresh user payments and check for status updates
+  const refreshUserPayments = async () => {
+    if (!user?._id) return;
+    
+    try {
+      setRefreshing(true);
+      
+      // Get the current payments to compare status changes
+      const currentPayments = [...userPayments];
+      
+      // Fetch latest payments from backend API
+      const response = await psychometricTestService.getUserTestPurchases();
+      
+      console.log('🔍 Raw backend response:', response);
+      console.log('🔍 Total payments received:', response?.length || 0);
+      
+      // Enhanced logging for each payment
+      if (response && Array.isArray(response)) {
+        response.forEach((payment: any, index: number) => {
+          console.log(`💳 Payment ${index + 1}:`, {
+            id: payment._id,
+            status: payment.status,
+            approvalStatus: payment.approvalStatus,
+            testType: payment.testType,
+            type: payment.type,
+            service: payment.service,
+            paymentKeys: Object.keys(payment).filter(key => 
+              key.includes('job') || key.includes('Job') || key.includes('test') || key.includes('Test')
+            ),
+            allKeys: Object.keys(payment)
+          });
+        });
+      }
+
+      // If no payments found, try to check the specific payment ID mentioned by user
+      if (!response || response.length === 0) {
+        console.log('🔍 No payments found in primary endpoint, testing specific payment ID...');
+        try {
+          const specificPayment = await psychometricTestService.getPaymentById('68ada6c00799fee46cd1d1ce');
+          if (specificPayment) {
+            console.log('✅ Found specific payment by ID:', specificPayment);
+            console.log('📋 Payment details:', {
+              id: specificPayment._id,
+              status: specificPayment.status,
+              approvalStatus: specificPayment.approvalStatus,
+              userId: specificPayment.userId,
+              keys: Object.keys(specificPayment)
+            });
+          } else {
+            console.log('❌ Specific payment ID 68ada6c00799fee46cd1d1ce not found or not accessible');
+          }
+        } catch (error) {
+          console.error('❌ Error testing specific payment ID:', error);
+        }
+      }
+      
+      if (response && Array.isArray(response)) {
+        // Ensure we have the latest jobs data before processing payments
+        let currentJobs = jobs;
+        if (currentJobs.length === 0) {
+          console.log('🔄 No jobs in state, fetching fresh jobs data...');
+          try {
+            const jobsResponse = await jobService.getJobs({ status: 'active' });
+            currentJobs = jobsResponse.data || [];
+            setJobs(currentJobs); // Update state
+          } catch (error) {
+            console.error('Failed to fetch jobs for payment processing:', error);
+            currentJobs = [];
+          }
+        }
+        
+        // Convert backend format to local format and ensure we have job information
+        const updatedPayments: PaymentInfo[] = await Promise.all(
+          response.map(async (purchase: any) => {
+            console.log('🔍 Processing purchase (full object):', purchase);
+            console.log('🔍 Processing purchase (key fields):', {
+              id: purchase._id,
+              paymentKey: purchase.paymentKey,
+              jobId: purchase.jobId,
+              testJobId: purchase.testJobId,
+              job: purchase.job ? { _id: purchase.job._id, title: purchase.job.title } : null,
+              test: purchase.test ? { _id: purchase.test._id, title: purchase.test.title, jobId: purchase.test.jobId } : null,
+              level: purchase.level,
+              cost: purchase.cost,
+              amount: purchase.amount,
+              approvalStatus: purchase.approvalStatus,
+              // Check for other possible jobId fields
+              targetJobId: purchase.targetJobId,
+              relatedJobId: purchase.relatedJobId,
+              metadata: purchase.metadata
+            });
+
+            // Extract information based on backend structure
+            let jobInfo = purchase.job; // This is populated by backend
+            let testInfo = purchase.test; // This is populated by backend
+            let jobId = purchase.job?._id || purchase.jobId || purchase.testJobId || purchase.test?.jobId || purchase.targetJobId || purchase.relatedJobId;
+            let testId = purchase.test?._id || purchase.testId;
+            let paymentKey = purchase.paymentKey || purchase._id;
+            let cost = purchase.amount || purchase.cost || 0; // Backend uses 'amount'
+            let level = purchase.level || 1; // Extract level from purchase or default to 1
+            
+            console.log('📝 Extracted initial values:', {
+              jobId,
+              testId,
+              paymentKey,
+              level,
+              hasJobInfo: !!jobInfo,
+              hasTestInfo: !!testInfo
+            });
+            
+            // If we have a paymentKey in format "jobId_level", extract level from it
+            if (paymentKey && paymentKey.includes('_') && !purchase.level) {
+              const parts = paymentKey.split('_');
+              if (parts.length >= 2 && !isNaN(parseInt(parts[parts.length - 1]))) {
+                level = parseInt(parts[parts.length - 1]);
+                // Also extract jobId if it wasn't found
+                if (!jobId && parts.length >= 2) {
+                  jobId = parts.slice(0, -1).join('_'); // Join all parts except the last (level)
+                }
+              }
+            }
+            
+            // IMPORTANT: If we still don't have job info after approval, but we have a job reference,
+            // we need to make sure we fetch the actual job data from our jobs array or API
+            if (!jobInfo && jobId) {
+              console.log('🔍 No job info in purchase data, but we have jobId:', jobId);
+              // Try to find the job in our current jobs array first
+              const foundJob = currentJobs.find(j => j._id === jobId);
+              if (foundJob) {
+                console.log('✅ Found job in current jobs array:', foundJob.title);
+                jobInfo = foundJob;
+              } else {
+                console.log('⚠️ Job not found in current jobs array for ID:', jobId);
+                // We'll need to mark this for individual fetching later
+              }
+            }
+            
+            // Special handling for MongoDB ObjectId payment keys (newer backend format)
+            // If paymentKey looks like a MongoDB ObjectId and we don't have other info,
+            // we might need to extract job info from other fields or fetch from API
+            if (paymentKey && paymentKey.length === 24 && !paymentKey.includes('_') && !jobInfo) {
+              console.log('⚠️ PaymentKey appears to be MongoDB ObjectId format:', paymentKey);
+              console.log('🔍 Looking for additional job context in purchase object...');
+              
+              // Look for job context in metadata, description, or other fields
+              if (purchase.metadata && purchase.metadata.jobId) {
+                jobId = purchase.metadata.jobId;
+                console.log('📋 Found jobId in metadata:', jobId);
+              } else if (purchase.description && purchase.description.includes('Job:')) {
+                // Try to extract job info from description if available
+                const jobMatch = purchase.description.match(/Job:\s*([^,\n]+)/);
+                if (jobMatch) {
+                  const jobTitle = jobMatch[1].trim();
+                  console.log('📋 Extracted job title from description:', jobTitle);
+                  // Try to find job by title
+                  const jobByTitle = currentJobs.find(j => j.title.toLowerCase().includes(jobTitle.toLowerCase()));
+                  if (jobByTitle) {
+                    jobId = jobByTitle._id;
+                    jobInfo = jobByTitle;
+                    console.log('✅ Found job by title match:', jobByTitle.title);
+                  }
+                }
+              }
+            }
+            
+            // Create a paymentKey if missing - use job+level combination for uniqueness
+            if (!paymentKey && jobId) {
+              paymentKey = `${jobId}_${level}`;
+            }
+            
+            // If job info is missing from the purchase, try to fetch it
+            if (!jobInfo && jobId) {
+              try {
+                console.log('🔍 Missing job info for purchase, trying to fetch:', jobId);
+                const job = currentJobs.find(j => j._id === jobId);
+                if (job) {
+                  jobInfo = job;
+                  console.log('✅ Found job in current jobs array:', job.title);
+                } else {
+                  // Fallback - try to fetch individual job from API
+                  console.log('⚠️ Job not found in current jobs array, fetching from API:', jobId);
+                  try {
+                    const fetchedJob = await jobService.getJobById(jobId);
+                    if (fetchedJob) {
+                      jobInfo = fetchedJob;
+                      console.log('✅ Successfully fetched job from API:', fetchedJob.title);
+                      
+                      // Add the fetched job to our local jobs array to prevent future API calls
+                      setJobs(prevJobs => {
+                        const exists = prevJobs.some(j => j._id === fetchedJob._id);
+                        if (!exists) {
+                          console.log('📌 Adding fetched job to local jobs array');
+                          return [...prevJobs, fetchedJob];
+                        }
+                        return prevJobs;
+                      });
+                    } else {
+                      console.log('⚠️ API returned null/undefined for job ID:', jobId);
+                    }
+                  } catch (apiError) {
+                    console.error('Failed to fetch job from API:', apiError);
+                    console.log('🔍 Will attempt to use existing job title if available...');
+                  }
+                }
+              } catch (error) {
+                console.error('Error fetching individual job:', error);
+              }
+            }
+            
+            // Final fallback - if we still don't have job info but we have metadata about the job
+            if (!jobInfo && !jobId) {
+              console.log('⚠️ No job info and no job ID found, trying alternative methods...');
+              
+              // Try to extract any job information from the purchase object itself
+              if (purchase.testTitle && purchase.testTitle !== 'Psychometric Assessment') {
+                console.log('📋 Trying to use test title as job indicator:', purchase.testTitle);
+                // See if test title contains job information
+                const titleMatch = currentJobs.find(j => 
+                  purchase.testTitle.toLowerCase().includes(j.title.toLowerCase()) ||
+                  j.title.toLowerCase().includes(purchase.testTitle.toLowerCase())
+                );
+                if (titleMatch) {
+                  console.log('✅ Found job by test title correlation:', titleMatch.title);
+                  jobInfo = titleMatch;
+                  jobId = titleMatch._id;
+                }
+              }
+              
+              // Try using any available context
+              if (!jobInfo && purchase.context) {
+                console.log('📋 Checking purchase context for job information...');
+                // This would be backend-specific logic
+              }
+            }
+
+            // Generate payment key if missing
+            if (!paymentKey && jobId && purchase.level) {
+              paymentKey = `${jobId}_${purchase.level}`;
+            } else if (!paymentKey && purchase._id) {
+              paymentKey = purchase._id; // Use purchase ID as fallback
+            }
+
+            // Map backend approval status to frontend format
+            let mappedApprovalStatus = 'pending';
+            let canRequestApproval = false;
+            
+            switch (purchase.approvalStatus) {
+              case 'not_required':
+                mappedApprovalStatus = 'approved'; // Can start test immediately
+                canRequestApproval = false;
+                break;
+              case 'pending_approval':
+                mappedApprovalStatus = 'pending';
+                canRequestApproval = false; // Already requested
+                break;
+              case 'approved':
+                mappedApprovalStatus = 'approved';
+                canRequestApproval = false;
+                break;
+              case 'rejected':
+                mappedApprovalStatus = 'rejected';
+                canRequestApproval = true; // Can request again
+                break;
+              default:
+                mappedApprovalStatus = 'pending';
+                canRequestApproval = true; // Unknown state, allow request
+            }
+
+            const mappedPayment = {
+              paymentKey: paymentKey || `unknown_${Date.now()}`,
+              jobId: jobId || '',
+              jobTitle: jobInfo?.title || testInfo?.title || 'Unknown Job',
+              level: level, // Use the extracted level
+              cost: cost,
+              attemptsRemaining: purchase.remainingAttempts ?? (purchase.maxAttempts - purchase.attemptsUsed) ?? 3,
+              approvalStatus: mappedApprovalStatus,
+              canRequestApproval: canRequestApproval,
+              requestedAt: purchase.approvalRequestedAt,
+              approvedAt: purchase.approvedAt,
+              rejectedAt: purchase.rejectedAt,
+              lastPaymentDate: purchase.purchasedAt || purchase.createdAt || new Date().toISOString(),
+              // Keep the original backend status for debugging
+              originalApprovalStatus: purchase.approvalStatus,
+            };
+
+            console.log('✅ Mapped payment:', mappedPayment);
+            return mappedPayment;
+          })
+        );
+
+        // Check for status changes
+        const statusChanges = updatedPayments.filter(updatedPayment => {
+          const currentPayment = currentPayments.find(p => p.paymentKey === updatedPayment.paymentKey);
+          return currentPayment && currentPayment.approvalStatus !== updatedPayment.approvalStatus;
+        });
+
+        // Show notifications for status changes
+        statusChanges.forEach(payment => {
+          if (payment.approvalStatus === 'approved') {
+            setSnackbar({
+              open: true,
+              message: `Test "${payment.jobTitle} - Level ${payment.level}" has been approved! You can now start the test.`,
+              severity: 'success'
+            });
+          } else if (payment.approvalStatus === 'rejected') {
+            setSnackbar({
+              open: true,
+              message: `Test "${payment.jobTitle} - Level ${payment.level}" was rejected. Please contact support for details.`,
+              severity: 'error'
+            });
+          }
+        });
+
+        // Update state with fresh data
+        setUserPayments(updatedPayments);
+        saveUserPayments(updatedPayments);
+        
+        console.log('📊 Refreshed user payments:', updatedPayments.length, 'payments');
+        console.log('🔄 Status changes detected:', statusChanges.length);
+      }
+    } catch (error) {
+      console.error('Error refreshing user payments:', error);
+      // Don't show error snackbar for automatic refreshes to avoid spam
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Manual refresh with user feedback
+  const handleManualRefresh = async () => {
+    setSnackbar({
+      open: true,
+      message: 'Refreshing test status...',
+      severity: 'info'
+    });
+    
+    try {
+      await refreshUserPayments();
+      setTimeout(() => {
+        setSnackbar({
+          open: true,
+          message: 'Test status updated successfully!',
+          severity: 'success'
+        });
+      }, 500);
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Failed to refresh status. Please try again.',
+        severity: 'error'
+      });
+    }
+  };
+
+  // Auto-refresh effect for pending approvals
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    
+    const pendingApprovals = userPayments.filter(p => p.approvalStatus === 'pending');
+    
+    if (pendingApprovals.length > 0) {
+      console.log(`🔄 Setting up auto-refresh for ${pendingApprovals.length} pending approval(s)...`);
+      
+      // Determine refresh interval based on recency of approval requests
+      const recentRequests = pendingApprovals.filter(p => {
+        if (!p.requestedAt) return false;
+        const requestTime = new Date(p.requestedAt);
+        const now = new Date();
+        const minutesAgo = (now.getTime() - requestTime.getTime()) / (1000 * 60);
+        return minutesAgo < 5; // Recent if within last 5 minutes
+      });
+      
+      const refreshInterval = recentRequests.length > 0 ? 5000 : 10000; // 5s for recent, 10s for older
+      
+      interval = setInterval(() => {
+        console.log('🔄 Auto-refreshing payments for approval status updates...');
+        console.log(`🚀 Using ${refreshInterval/1000}s interval (recent requests: ${recentRequests.length})`);
+        refreshUserPayments();
+      }, refreshInterval);
+    } else if (interval) {
+      console.log('✅ Clearing auto-refresh - no pending approvals');
+      clearInterval(interval);
+      interval = null;
+    }
+    
+    return () => {
+      if (interval) {
+        console.log('🧹 Cleaning up auto-refresh interval');
+        clearInterval(interval);
+      }
+    };
+  }, [userPayments]);
+
   const fetchTests = async () => {
     try {
-      const response = await psychometricTestService.getTests();
+      const response = await psychometricTestService.getPsychometricTests({}, 1, 50);
       setTests(response.data || []);
     } catch (error) {
       console.error('Error fetching tests:', error);
+      setTests([]);
     }
   };
 
   const fetchResults = async () => {
     try {
-      const response = await psychometricTestService.getResults();
-      setResults(response.data || []);
+      const results = await psychometricTestService.getUserTestResults();
+      setResults(results || []);
     } catch (error) {
       console.error('Error fetching results:', error);
+      setResults([]);
     }
   };
 
@@ -454,6 +879,266 @@ const PsychometricTestsPage: React.FC = () => {
 
   const handleStartJobSpecificTest = () => {
     setJobSelectionOpen(true);
+  };
+
+  // New function specifically for starting approved saved assessments
+  const handleStartApprovedTest = async (payment: PaymentInfo) => {
+    try {
+      console.log('🎯 Starting approved test for payment:', {
+        jobId: payment.jobId,
+        jobTitle: payment.jobTitle,
+        level: payment.level,
+        paymentKey: payment.paymentKey
+      });
+
+      // Check if we have a valid jobId
+      if (!payment.jobId || payment.jobId.trim() === '') {
+        console.error('❌ No job ID found in payment:', payment);
+        
+        // Try to extract jobId from paymentKey if it's in format "jobId_level"
+        let extractedJobId = null;
+        if (payment.paymentKey && payment.paymentKey.includes('_')) {
+          const parts = payment.paymentKey.split('_');
+          if (parts.length >= 2 && !isNaN(parseInt(parts[parts.length - 1]))) {
+            extractedJobId = parts.slice(0, -1).join('_'); // All parts except the last (level)
+          }
+        }
+        
+        if (extractedJobId) {
+          console.log('🔍 Extracted job ID from payment key:', extractedJobId);
+          payment.jobId = extractedJobId; // Update the payment object
+        } else {
+          // If we can't extract jobId from paymentKey, this means the backend data is incomplete
+          console.log('⚠️ Payment key appears to be a MongoDB ObjectId, trying alternative approaches...');
+          console.log('📋 Searching for job by title or other criteria...');
+          
+          // Try to find job by title if available and not "Unknown Job"
+          if (payment.jobTitle && payment.jobTitle !== 'Unknown Job') {
+            console.log('🔍 Attempting to find job by title:', payment.jobTitle);
+            
+            // First try exact match
+            let jobByTitle = jobs.find(j => j.title === payment.jobTitle);
+            
+            // If exact match fails, try partial match
+            if (!jobByTitle) {
+              jobByTitle = jobs.find(j => 
+                j.title.toLowerCase().includes(payment.jobTitle.toLowerCase()) ||
+                payment.jobTitle.toLowerCase().includes(j.title.toLowerCase())
+              );
+            }
+            
+            if (jobByTitle) {
+              console.log('✅ Found job by title match:', jobByTitle._id, jobByTitle.title);
+              payment.jobId = jobByTitle._id;
+              // Update the payment object with correct job title
+              payment.jobTitle = jobByTitle.title;
+            } else {
+              console.log('🔍 Job not found by title, refreshing jobs list...');
+              setSnackbar({
+                open: true,
+                message: 'Updating job information, please wait...',
+                severity: 'info'
+              });
+              
+              // Refresh jobs and try again
+              try {
+                setLoadingJobs(true);
+                await fetchJobs();
+                
+                // Wait for jobs state to update
+                await new Promise(resolve => setTimeout(resolve, 500));
+                setLoadingJobs(false);
+                
+                // Get updated jobs from the state after refresh
+                const currentJobs = jobs.length > 0 ? jobs : await jobService.getJobs({ status: 'active' }).then(res => res.data || []);
+                
+                const refreshedJob = currentJobs.find(j => 
+                  j.title === payment.jobTitle ||
+                  j.title.toLowerCase().includes(payment.jobTitle.toLowerCase()) ||
+                  payment.jobTitle.toLowerCase().includes(j.title.toLowerCase())
+                );
+                
+                if (refreshedJob) {
+                  console.log('✅ Found job after refresh:', refreshedJob._id, refreshedJob.title);
+                  payment.jobId = refreshedJob._id;
+                  payment.jobTitle = refreshedJob.title;
+                } else {
+                  throw new Error('Job not found after refresh');
+                }
+              } catch (error) {
+                setLoadingJobs(false);
+                console.error('Failed to refresh jobs:', error);
+                setSnackbar({
+                  open: true,
+                  message: `Cannot find job "${payment.jobTitle}". The job may have been removed or renamed. Please try refreshing the page or contact support. (Payment ID: ${payment.paymentKey})`,
+                  severity: 'error'
+                });
+                return;
+              }
+            }
+          } else {
+            // If no useful job title, try to refresh payments data first
+            console.log('🔄 No useful job title, attempting to refresh payment data...');
+            setSnackbar({
+              open: true,
+              message: 'Refreshing payment data to get complete job information...',
+              severity: 'info'
+            });
+            
+            try {
+              await refreshUserPayments();
+              
+              // Find the updated payment after refresh
+              const updatedPayments = JSON.parse(localStorage.getItem(`psychometric_payments_${user?._id}`) || '[]');
+              const updatedPayment = updatedPayments.find(p => p.paymentKey === payment.paymentKey);
+              
+              if (updatedPayment && updatedPayment.jobId && updatedPayment.jobId !== payment.jobId) {
+                console.log('✅ Found updated job ID after payment refresh:', updatedPayment.jobId);
+                payment.jobId = updatedPayment.jobId;
+                payment.jobTitle = updatedPayment.jobTitle;
+              } else {
+                throw new Error('No job information found after payment refresh');
+              }
+            } catch (error) {
+              console.error('Failed to refresh payment data:', error);
+              // Let's provide more specific guidance based on the payment ID
+              console.error('🚨 Payment processing failed for ID:', payment.paymentKey);
+              console.error('🚨 Current payment object:', JSON.stringify(payment, null, 2));
+              
+              setSnackbar({
+                open: true,
+                message: `Assessment data incomplete after approval. This often happens when backend data changes during approval. Please try refreshing the page or contact support with Payment ID: ${payment.paymentKey}`,
+                severity: 'warning'
+              });
+              
+              // Try one more automatic refresh before giving up
+              console.log('🔄 Attempting one final data refresh...');
+              try {
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+                await refreshUserPayments();
+                setSnackbar({
+                  open: true,
+                  message: 'Data refreshed. Please try starting the test again.',
+                  severity: 'info'
+                });
+              } catch (finalError) {
+                console.error('Final refresh failed:', finalError);
+              }
+              return;
+            }
+          }
+        }
+      }
+
+      setSnackbar({
+        open: true,
+        message: 'Loading saved assessment...',
+        severity: 'info'
+      });
+
+      // First, ensure we have the job data
+      let job = jobs.find(j => j._id === payment.jobId);
+      
+      if (!job && payment.jobId) {
+        console.log('🔍 Job not found in current list, fetching from API...', payment.jobId);
+        setSnackbar({
+          open: true,
+          message: 'Loading job information...',
+          severity: 'info'
+        });
+        
+        try {
+          // Try to fetch the individual job first
+          job = await jobService.getJobById(payment.jobId);
+          console.log('✅ Fetched job from API:', job?.title);
+          
+          // Add the fetched job to our jobs array to prevent future fetches
+          if (job) {
+            setJobs(prevJobs => {
+              const exists = prevJobs.some(j => j._id === job!._id);
+              return exists ? prevJobs : [...prevJobs, job!];
+            });
+          }
+        } catch (fetchError) {
+          console.log('❌ Individual fetch failed, refreshing all jobs...', fetchError);
+          // Fallback - refresh all jobs and try again
+          setLoadingJobs(true);
+          await fetchJobs();
+          setLoadingJobs(false);
+          job = jobs.find(j => j._id === payment.jobId);
+        }
+      }
+
+      if (!job) {
+        console.error('❌ Job not found after all attempts:', { 
+          paymentJobId: payment.jobId, 
+          availableJobIds: jobs.map(j => j._id).slice(0, 5) // Show first 5 for debugging
+        });
+        
+        setSnackbar({
+          open: true,
+          message: `Job information not found (ID: ${payment.jobId}). The job may have been removed. Please contact support.`,
+          severity: 'error'
+        });
+        return;
+      }
+
+      console.log('✅ Job found, setting up test for approved assessment:', {
+        jobTitle: job.title,
+        level: payment.level,
+        paymentKey: payment.paymentKey
+      });
+
+      // Set the selected job and level from the saved payment
+      setSelectedJob(job);
+      setSelectedLevel(payment.level);
+      
+      // Clear any existing generated tests to force regeneration with correct job data
+      setGeneratedTests([]);
+      setTestBlueprint(null);
+      setAiGeneratedQuestions([]);
+      
+      // Generate tests for this specific job and level
+      setGeneratingTest(true);
+      
+      try {
+        // Small delay to show loading state
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Generate tests for the approved job
+        await generateTestsForJob(job);
+        
+        // Show the test card when ready
+        setShowTestCard(true);
+        setCurrentTab(0); // Switch to free tests tab to show the test card
+        
+        setSnackbar({
+          open: true,
+          message: `Assessment ready for ${job.title} - Level ${payment.level}!`,
+          severity: 'success'
+        });
+        
+        console.log('✅ Approved test successfully prepared and ready to start');
+        
+      } catch (error) {
+        console.error('❌ Error generating test for approved assessment:', error);
+        setSnackbar({
+          open: true,
+          message: 'Failed to prepare the test. Please try again or contact support.',
+          severity: 'error'
+        });
+      } finally {
+        setGeneratingTest(false);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error starting approved test:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to load assessment. Please try again.',
+        severity: 'error'
+      });
+    }
   };
 
   const handleJobSelection = (job: Job) => {
@@ -812,20 +1497,27 @@ const PsychometricTestsPage: React.FC = () => {
 
   const handleRequestApproval = async (paymentKey: string) => {
     try {
+      console.log('🔄 Requesting approval for:', paymentKey);
+      
       // Find the payment info for this payment key
       const payment = userPayments.find(p => p.paymentKey === paymentKey);
       if (!payment) {
-        alert('Payment information not found');
+        setSnackbar({
+          open: true,
+          message: 'Payment information not found',
+          severity: 'error'
+        });
         return;
       }
 
-      // For now, we'll generate a mock purchase ID since the localStorage doesn't have real purchase IDs
-      // In a real implementation, the purchase ID would be stored when the payment is made
-      const mockPurchaseId = `mock_purchase_${user?._id}_${paymentKey}_${Date.now()}`;
-      
-      // Try to make the real API call
+      // Use the actual purchase ID from the backend response (stored in paymentKey if it's the _id)
+      const purchaseId = payment.paymentKey;
+      console.log('📝 Using purchase ID:', purchaseId);
+
+      // Make the real API call to request approval
       try {
-        await psychometricTestService.requestTestApproval(mockPurchaseId);
+        const response = await psychometricTestService.requestTestApproval(purchaseId);
+        console.log('✅ Approval requested successfully:', response);
         
         // Update local state only if API call succeeds
         const updatedPayments = userPayments.map(p => 
@@ -841,25 +1533,25 @@ const PsychometricTestsPage: React.FC = () => {
         setUserPayments(updatedPayments);
         saveUserPayments(updatedPayments);
         
-        alert(`Approval request submitted for ${payment.jobTitle} - Level ${payment.level}! You will be notified once an admin reviews your request.`);
+        setSnackbar({
+          open: true,
+          message: `Approval request submitted for ${payment.jobTitle}! Admin will review soon.`,
+          severity: 'success'
+        });
+
+        // Refresh the payments to get the latest status
+        setTimeout(() => refreshUserPayments(), 1000);
+
       } catch (apiError) {
-        console.warn('API call failed, falling back to local state update:', apiError);
+        console.warn('API call failed:', apiError);
         
-        // Fallback to local state update if API fails
-        const updatedPayments = userPayments.map(p => 
-          p.paymentKey === paymentKey 
-            ? { 
-                ...p, 
-                approvalStatus: 'pending' as const,
-                requestedAt: new Date().toISOString()
-              }
-            : p
-        );
+        setSnackbar({
+          open: true,
+          message: 'Failed to request approval. Please try again or contact support.',
+          severity: 'error'
+        });
         
-        setUserPayments(updatedPayments);
-        saveUserPayments(updatedPayments);
-        
-        alert(`Approval request submitted locally for ${payment.jobTitle} - Level ${payment.level}! (API call failed - this is demo functionality)`);
+        alert(`Approval request saved locally for ${payment.jobTitle} - Level ${payment.level}! Your request will be processed when connection is restored.`);
       }
       
     } catch (error) {
@@ -868,30 +1560,7 @@ const PsychometricTestsPage: React.FC = () => {
     }
   };
 
-  // Demo function to simulate admin approval (for testing purposes)
-  const simulateAdminApproval = async (paymentKey: string) => {
-    try {
-      const payment = userPayments.find(p => p.paymentKey === paymentKey);
-      
-      const updatedPayments = userPayments.map(p => 
-        p.paymentKey === paymentKey 
-          ? { 
-              ...p, 
-              approvalStatus: 'approved' as const,
-              approvedAt: new Date().toISOString()
-            }
-          : p
-      );
-      
-      setUserPayments(updatedPayments);
-      saveUserPayments(updatedPayments);
-      
-      alert(`Assessment approved for ${payment?.jobTitle} - Level ${payment?.level}! You can now start your test.`);
-      
-    } catch (error) {
-      console.error('Error approving assessment:', error);
-    }
-  };
+
 
   const getAttemptsRemaining = (level: number): number => {
     if (!selectedJob) return 0;
@@ -1802,10 +2471,55 @@ const PsychometricTestsPage: React.FC = () => {
         {/* Saved Assessments Tab */}
         {currentTab === 2 && (
           <Box>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+              <Typography variant="h5" fontWeight="bold">
+                Saved Assessments
+              </Typography>
+              <Button
+                variant="outlined"
+                onClick={handleManualRefresh}
+                disabled={refreshing}
+                startIcon={refreshing ? <CircularProgress size={16} /> : <Refresh />}
+              >
+                {refreshing ? 'Refreshing...' : 'Refresh Status'}
+              </Button>
+            </Box>
+
             <Alert severity="info" sx={{ mb: 4 }}>
               <AlertTitle>Saved Assessments</AlertTitle>
               Manage your purchased psychometric tests. Request approval when needed and start tests when ready.
             </Alert>
+
+            {/* Pending Approvals Alert */}
+            {userPayments.some(p => p.approvalStatus === 'pending') && (
+              <Alert 
+                severity="info" 
+                sx={{ mb: 3 }}
+                action={
+                  <Button 
+                    color="inherit" 
+                    size="small" 
+                    onClick={handleManualRefresh}
+                    disabled={refreshing}
+                    startIcon={refreshing ? <CircularProgress size={16} color="inherit" /> : undefined}
+                  >
+                    {refreshing ? 'Refreshing...' : 'Check Status'}
+                  </Button>
+                }
+              >
+                <AlertTitle>Approval Status Updates</AlertTitle>
+                You have {userPayments.filter(p => p.approvalStatus === 'pending').length} test(s) 
+                pending admin approval. Status updates automatically every {
+                  userPayments.some(p => {
+                    if (!p.requestedAt) return false;
+                    const requestTime = new Date(p.requestedAt);
+                    const now = new Date();
+                    const minutesAgo = (now.getTime() - requestTime.getTime()) / (1000 * 60);
+                    return minutesAgo < 5;
+                  }) ? '5' : '10'
+                } seconds, or click "Check Status" to refresh immediately.
+              </Alert>
+            )}
 
             {userPayments.length === 0 ? (
               <Paper sx={{ p: 8, textAlign: 'center' }}>
@@ -1853,6 +2567,22 @@ const PsychometricTestsPage: React.FC = () => {
                             color={payment.approvalStatus === 'approved' ? 'success' :
                                    payment.approvalStatus === 'pending' ? 'warning' : 'error'}
                             size="small"
+                            sx={{
+                              ...(payment.approvalStatus === 'pending' && {
+                                animation: 'pulse 2s infinite',
+                                '@keyframes pulse': {
+                                  '0%': {
+                                    opacity: 1,
+                                  },
+                                  '50%': {
+                                    opacity: 0.6,
+                                  },
+                                  '100%': {
+                                    opacity: 1,
+                                  },
+                                }
+                              })
+                            }}
                           />
                         </Box>
 
@@ -1864,6 +2594,11 @@ const PsychometricTestsPage: React.FC = () => {
                           <Typography variant="body1" fontWeight="medium">
                             {payment.jobTitle || 'Unknown Job'}
                           </Typography>
+                          {process.env.NODE_ENV === 'development' && (
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              Debug: JobID = {payment.jobId} | PaymentKey = {payment.paymentKey}
+                            </Typography>
+                          )}
                         </Box>
 
                         {/* Payment Details */}
@@ -1930,26 +2665,29 @@ const PsychometricTestsPage: React.FC = () => {
 
                         {/* Pending Approval Message */}
                         {payment.approvalStatus === 'pending' && payment.requestedAt && (
-                          <Alert severity="info" sx={{ mb: 1 }}>
-                            <Typography variant="body2">
+                          <Alert 
+                            severity="info" 
+                            sx={{ 
+                              mb: 1,
+                              animation: 'fadeIn 0.3s ease-in',
+                              '@keyframes fadeIn': {
+                                '0%': { opacity: 0, transform: 'translateY(-10px)' },
+                                '100%': { opacity: 1, transform: 'translateY(0)' }
+                              }
+                            }}
+                          >
+                            <Typography variant="body2" fontWeight="medium">
                               Approval requested on {new Date(payment.requestedAt).toLocaleDateString()}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                              ⏱️ Automatic status updates every {
+                                payment.requestedAt && new Date().getTime() - new Date(payment.requestedAt).getTime() < 5 * 60 * 1000 ? '5' : '10'
+                              } seconds
                             </Typography>
                           </Alert>
                         )}
 
-                        {/* Demo Approve Button */}
-                        {payment.approvalStatus === 'pending' && payment.requestedAt && (
-                          <Button
-                            variant="contained"
-                            color="success"
-                            size="small"
-                            startIcon={<CheckIcon />}
-                            onClick={() => simulateAdminApproval(payment.paymentKey || `${payment.jobId}_${payment.level}`)}
-                            fullWidth
-                          >
-                            [Demo] Approve Now
-                          </Button>
-                        )}
+
 
                         {/* Take Assessment Button */}
                         {payment.approvalStatus === 'approved' && payment.attemptsRemaining > 0 && (
@@ -1958,20 +2696,14 @@ const PsychometricTestsPage: React.FC = () => {
                             color="primary"
                             size="small"
                             startIcon={<StartIcon />}
-                            onClick={() => {
-                              // Find the job and set up for test taking
-                              const job = jobs.find(j => j._id === payment.jobId);
-                              if (job) {
-                                setSelectedJob(job);
-                                setSelectedLevel(payment.level);
-                                handleStartJobSpecificTest();
-                              } else {
-                                alert('Job information not found. Please try selecting the job again from the Job-Specific Tests tab.');
-                              }
-                            }}
+                            onClick={() => handleStartApprovedTest(payment)}
                             fullWidth
+                            disabled={generatingTest}
                           >
-                            Take Assessment
+                            {generatingTest && selectedJob?.title === payment.jobTitle ? 
+                              'Preparing Assessment...' : 
+                              'Take Assessment'
+                            }
                           </Button>
                         )}
 
@@ -2005,6 +2737,23 @@ const PsychometricTestsPage: React.FC = () => {
         <TestLevelDialog />
         <TestReadyCard />
         <PaymentDialog />
+
+        {/* Snackbar for notifications */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={4000}
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          <Alert 
+            onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
+            severity={snackbar.severity}
+            variant="filled"
+            sx={{ width: '100%' }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
       </Container>
     </SimpleProfileGuard>
   );

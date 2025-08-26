@@ -294,8 +294,45 @@ class PsychometricTestService {
 
   // Get user's test purchases
   async getUserTestPurchases(): Promise<any[]> {
-    const response = await apiGet<ApiResponse<any[]>>('/psychometric-tests/purchases/my-purchases');
-    return handleApiResponse(response);
+    // Add cache busting parameter to force fresh data
+    const timestamp = Date.now();
+    
+    try {
+      const response = await apiGet<ApiResponse<any[]>>(
+        '/psychometric-tests/purchases/my-purchases', 
+        { _t: timestamp }
+      );
+      const result = handleApiResponse(response);
+      console.log('🔍 Primary API endpoint result:', result?.length || 0, 'payments');
+      return result;
+    } catch (error) {
+      console.error('❌ Primary endpoint failed, trying fallback...', error);
+      
+      // Try alternative endpoint if primary fails
+      try {
+        const fallbackResponse = await apiGet<ApiResponse<any[]>>(
+          '/users/me/payments', 
+          { _t: timestamp, type: 'psychometric' }
+        );
+        const fallbackResult = handleApiResponse(fallbackResponse);
+        console.log('🔍 Fallback API endpoint result:', fallbackResult?.length || 0, 'payments');
+        return fallbackResult;
+      } catch (fallbackError) {
+        console.error('❌ Fallback endpoint also failed:', fallbackError);
+        return [];
+      }
+    }
+  }
+
+  // Debug method to get a specific payment by ID
+  async getPaymentById(paymentId: string): Promise<any> {
+    try {
+      const response = await apiGet<ApiResponse<any>>(`/psychometric-tests/purchases/${paymentId}`);
+      return handleApiResponse(response);
+    } catch (error) {
+      console.error(`❌ Failed to fetch payment ${paymentId}:`, error);
+      return null;
+    }
   }
 
   // Request approval for a test

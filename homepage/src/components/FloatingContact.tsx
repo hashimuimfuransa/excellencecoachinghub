@@ -30,6 +30,8 @@ import {
   Facebook,
   LinkedIn,
   Twitter,
+  Instagram,
+  VideoLibrary,
   Schedule,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
@@ -77,12 +79,22 @@ const FloatingContact: React.FC = () => {
     {
       icon: <LinkedIn sx={{ color: '#0A66C2' }} />,
       title: 'LinkedIn',
-      action: () => window.open('https://linkedin.com/company/excellencecoachinghub', '_blank'),
+      action: () => window.open('https://www.linkedin.com/in/excellence-coachinghub-1b8b1a380?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app', '_blank'),
     },
     {
       icon: <Twitter sx={{ color: '#1DA1F2' }} />,
       title: 'Twitter',
-      action: () => window.open('https://twitter.com/excellencecoachinghub', '_blank'),
+      action: () => window.open('https://x.com/ECH_coachinghub?t=Awf4GVPp9eCkSZhDlHkFew&s=08', '_blank'),
+    },
+    {
+      icon: <Instagram sx={{ color: '#E4405F' }} />,
+      title: 'Instagram',
+      action: () => window.open('https://www.instagram.com/excellencecoachinghub/?utm_source=qr&igsh=Ym5xMXh5aXZmNHVi#', '_blank'),
+    },
+    {
+      icon: <VideoLibrary sx={{ color: '#ff0050' }} />,
+      title: 'TikTok',
+      action: () => window.open('https://www.tiktok.com/@excellence.coachi4?_t=ZM-8zCgEouFb8w&_r=1', '_blank'),
     },
   ];
 

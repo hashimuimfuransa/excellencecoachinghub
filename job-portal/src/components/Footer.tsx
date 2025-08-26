@@ -67,16 +67,16 @@ const Footer: React.FC = () => {
   ];
 
   const socialLinks = [
-    { icon: <Facebook />, url: 'https://facebook.com', label: 'Facebook' },
-    { icon: <Twitter />, url: 'https://twitter.com', label: 'Twitter' },
-    { icon: <LinkedIn />, url: 'https://linkedin.com', label: 'LinkedIn' },
-    { icon: <Instagram />, url: 'https://instagram.com', label: 'Instagram' }
+    { icon: <Facebook />, url: 'https://facebook.com/excellencecoachinghub', label: 'Facebook' },
+    { icon: <Twitter />, url: 'https://x.com/ECH_coachinghub?t=Awf4GVPp9eCkSZhDlHkFew&s=08', label: 'Twitter' },
+    { icon: <LinkedIn />, url: 'https://www.linkedin.com/in/excellence-coachinghub-1b8b1a380?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app', label: 'LinkedIn' },
+    { icon: <Instagram />, url: 'https://www.instagram.com/excellencecoachinghub/?utm_source=qr&igsh=Ym5xMXh5aXZmNHVi#', label: 'Instagram' }
   ];
 
   const contactInfo = [
-    { icon: <Email />, text: 'support@excellencehub.com', href: 'mailto:support@excellencehub.com' },
-    { icon: <Phone />, text: '+1 (555) 123-4567', href: 'tel:+15551234567' },
-    { icon: <LocationOn />, text: '123 Innovation Street, Tech City, TC 12345', href: '#' }
+    { icon: <Email />, text: 'info@excellencecoachinghub.com', href: 'mailto:info@excellencecoachinghub.com' },
+    { icon: <Phone />, text: '+250 788 123 456', href: 'tel:+250788123456' },
+    { icon: <LocationOn />, text: 'Kigali, Rwanda (HQ) • Serving All of Africa', href: '#' }
   ];
 
   return (

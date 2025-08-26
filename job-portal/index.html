@@ -141,9 +141,9 @@
     <link rel="icon" sizes="192x192" href="/logo.webp" type="image/webp">
     <link rel="mask-icon" href="/app-icon.svg" color="#4caf50">
     
-    <!-- Preload critical resources -->
-    <link rel="preload" href="/career-growth_graph_trending_chart-100747018-orig.webp" as="image" type="image/webp">
-    <link rel="preload" href="/find job.jpg" as="image" type="image/jpeg">
+    <!-- Preload critical resources with fetchpriority -->
+    <link rel="preload" href="/career-growth_graph_trending_chart-100747018-orig.webp" as="image" type="image/webp" fetchpriority="high">
+    <link rel="preload" href="/find job.jpg" as="image" type="image/jpeg" fetchpriority="high">
     
     <!-- DNS prefetch for external resources -->
     <link rel="dns-prefetch" href="//fonts.googleapis.com">

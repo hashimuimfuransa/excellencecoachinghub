@@ -1,6 +1,6 @@
 import emailjs from '@emailjs/browser';
 
-// EmailJS configuration - Replace with your actual EmailJS credentials
+// EmailJS configuration - Uses same config as homepage for consistency
 const EMAILJS_CONFIG = {
   SERVICE_ID: 'service_vtor3y8', // Your EmailJS service ID
   VERIFICATION_TEMPLATE_ID: 'template_sikm5se', // Your EmailJS template ID for email verification
@@ -12,7 +12,7 @@ const EMAILJS_CONFIG = {
 // Initialize EmailJS
 export const initEmailJS = () => {
   emailjs.init(EMAILJS_CONFIG.PUBLIC_KEY);
-  console.log('📧 EmailJS initialized with config:', {
+  console.log('📧 Job Portal EmailJS initialized with config:', {
     SERVICE_ID: EMAILJS_CONFIG.SERVICE_ID,
     VERIFICATION_TEMPLATE_ID: EMAILJS_CONFIG.VERIFICATION_TEMPLATE_ID,
     PASSWORD_RESET_TEMPLATE_ID: EMAILJS_CONFIG.PASSWORD_RESET_TEMPLATE_ID,
@@ -21,109 +21,22 @@ export const initEmailJS = () => {
   });
 };
 
-// Send verification email using EmailJS
-export const sendVerificationEmail = async (
-  userEmail: string,
-  userName: string,
-  verificationCode: string
-): Promise<boolean> => {
-  try {
-    // Parameters that match your EmailJS template exactly
-    const templateParams = {
-      // Template variables (what your template expects)
-      to_name: userName,
-      verification_url: `${window.location.origin}/verify-email?token=${verificationCode}`,
-      from_name: 'Excellence Coaching Hub Job Portal'
-    };
-
-    // Add recipient email with the most common parameter names
-    // EmailJS services often expect one of these specific names
-    const recipientParams = {
-      email_id: userEmail,        // Most common for Gmail service
-      to_email: userEmail,        // Standard parameter
-      user_email: userEmail,      // Alternative
-      email: userEmail,           // Simple version
-      reply_to: userEmail,        // Sometimes used
-      recipient: userEmail,       // Generic
-      send_to: userEmail          // Alternative
-    };
-
-    // Combine template and recipient parameters
-    const finalParams = { ...templateParams, ...recipientParams };
-
-    // Check if EmailJS is properly configured
-    if (EMAILJS_CONFIG.PUBLIC_KEY === 'YOUR_EMAILJS_PUBLIC_KEY') {
-      // Fallback to console logging if not configured
-      console.log('📧 EMAIL VERIFICATION (Configure EmailJS for real emails)');
-      console.log('=========================================================');
-      console.log(`To: ${userEmail}`);
-      console.log(`Name: ${userName}`);
-      console.log(`Verification Code: ${verificationCode}`);
-      console.log(`Verification URL: ${finalParams.verification_url}`);
-      console.log('=========================================================');
-      console.log('💡 To send real emails, configure EmailJS credentials in emailjsService.ts');
-      return true;
-    }
-
-    // Send real email using EmailJS
-    console.log('📧 Sending real email to:', userEmail);
-    console.log('📧 Template parameters:', finalParams);
-    console.log('📧 EmailJS Config:', {
-      SERVICE_ID: EMAILJS_CONFIG.SERVICE_ID,
-      TEMPLATE_ID: EMAILJS_CONFIG.VERIFICATION_TEMPLATE_ID,
-      PUBLIC_KEY: EMAILJS_CONFIG.PUBLIC_KEY.substring(0, 8) + '...'
-    });
-
-    const result = await emailjs.send(
-      EMAILJS_CONFIG.SERVICE_ID,
-      EMAILJS_CONFIG.VERIFICATION_TEMPLATE_ID,
-      finalParams,
-      EMAILJS_CONFIG.PUBLIC_KEY
-    );
-
-    if (result.status === 200) {
-      console.log('✅ Email sent successfully to:', userEmail);
-      return true;
-    } else {
-      console.error('❌ Failed to send email, status:', result.status);
-      console.error('❌ EmailJS response:', result);
-      return false;
-    }
-  } catch (error: any) {
-    console.error('❌ Failed to send verification email:', error);
-    console.error('❌ Error details:', error.text || error.message || error);
-
-    // Check if it's an EmailJS specific error
-    if (error.status) {
-      console.error('❌ EmailJS Error Status:', error.status);
-    }
-
-    // Fallback to console logging
-    console.log('📧 EMAIL VERIFICATION (Fallback)');
-    console.log('=================================');
-    console.log(`To: ${userEmail}`);
-    console.log(`Verification URL: ${window.location.origin}/verify-email?token=${verificationCode}`);
-    console.log('=================================');
-    return false;
-  }
-};
-
 // Send password reset email
 export const sendPasswordResetEmail = async (
   userEmail: string,
   userName: string,
-  resetCode: string
+  resetToken: string
 ): Promise<boolean> => {
   try {
     // Parameters that match your EmailJS template
-    const resetUrl = `${window.location.origin}/reset-password?token=${resetCode}`;
+    const resetUrl = `${window.location.origin}/reset-password?token=${resetToken}`;
 
     const templateParams = {
       // Template variables (what your template expects)
       to_name: userName,
       reset_url: resetUrl,
       link: resetUrl,  // Alternative parameter name
-      from_name: 'Excellence Coaching Hub Job Portal',
+      from_name: 'Excellence Coaching Hub - Job Portal',
 
       // EmailJS service configuration (recipient email)
       // Try all common parameter names for recipient
@@ -136,7 +49,7 @@ export const sendPasswordResetEmail = async (
       send_to: userEmail,
 
       // Additional parameters for compatibility
-      message: `Hi ${userName}!\n\nYou requested a password reset for your Excellence Coaching Hub Job Portal account. Click the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in one hour.\n\nIf you didn't request this, please ignore this email.\n\nBest regards,\nExcellence Coaching Hub Team`,
+      message: `Hi ${userName}!\n\nYou requested a password reset for your Excellence Coaching Hub Job Portal account. Click the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in 10 minutes for security reasons.\n\nIf you didn't request this, please ignore this email.\n\nBest regards,\nExcellence Coaching Hub Team`,
       subject: 'Password Reset - Excellence Coaching Hub Job Portal'
     };
 
@@ -147,7 +60,7 @@ export const sendPasswordResetEmail = async (
       console.log('=========================================================');
       console.log(`To: ${userEmail}`);
       console.log(`Name: ${userName}`);
-      console.log(`Reset Code: ${resetCode}`);
+      console.log(`Reset Token: ${resetToken}`);
       console.log(`Reset URL: ${resetUrl}`);
       console.log('=========================================================');
       console.log('💡 To send real emails, configure EmailJS credentials in emailjsService.ts');
@@ -187,7 +100,7 @@ export const sendPasswordResetEmail = async (
     console.log('🔐 PASSWORD RESET EMAIL (Fallback)');
     console.log('=================================');
     console.log(`To: ${userEmail}`);
-    console.log(`Reset URL: ${window.location.origin}/reset-password?token=${resetCode}`);
+    console.log(`Reset URL: ${window.location.origin}/reset-password?token=${resetToken}`);
     console.log('=================================');
     return false;
   }
@@ -197,14 +110,15 @@ export const sendPasswordResetEmail = async (
 export const sendWelcomeEmail = async (
   userEmail: string,
   userName: string,
-  userRole: string = 'candidate'
+  userRole: string = 'user'
 ): Promise<boolean> => {
   try {
     const templateParams = {
       to_name: userName,
       user_role: userRole,
       dashboard_url: `${window.location.origin}/dashboard`,
-      from_name: 'Excellence Coaching Hub Job Portal',
+      jobs_url: `${window.location.origin}/jobs`,
+      from_name: 'Excellence Coaching Hub - Job Portal',
 
       // EmailJS service configuration (recipient email)
       to_email: userEmail,
@@ -215,8 +129,8 @@ export const sendWelcomeEmail = async (
       recipient: userEmail,
       send_to: userEmail,
 
-      message: `Welcome to Excellence Coaching Hub Job Portal, ${userName}!\n\nYour account has been successfully created as a ${userRole}. You can now access your dashboard and start exploring opportunities.\n\nDashboard: ${window.location.origin}/dashboard\n\nBest regards,\nExcellence Coaching Hub Team`,
-      subject: 'Welcome to Excellence Coaching Hub Job Portal!'
+      message: `Welcome to Excellence Coaching Hub Job Portal, ${userName}!\n\nYour account has been successfully created. You can now access your dashboard and start exploring job opportunities.\n\n🚀 Dashboard: ${window.location.origin}/dashboard\n💼 Browse Jobs: ${window.location.origin}/jobs\n\nWe're excited to help you find your dream job!\n\nBest regards,\nExcellence Coaching Hub Team`,
+      subject: 'Welcome to Excellence Coaching Hub Job Portal! 🎉'
     };
 
     // Check if EmailJS is properly configured
@@ -228,6 +142,7 @@ export const sendWelcomeEmail = async (
       console.log(`Name: ${userName}`);
       console.log(`Role: ${userRole}`);
       console.log(`Dashboard URL: ${window.location.origin}/dashboard`);
+      console.log(`Jobs URL: ${window.location.origin}/jobs`);
       console.log('=========================================================');
       console.log('💡 To send real emails, configure EmailJS credentials in emailjsService.ts');
       return true;
@@ -280,7 +195,7 @@ export const generateVerificationCode = (): string => {
 // Test EmailJS with minimal parameters
 export const testEmailJSConnection = async (testEmail: string): Promise<boolean> => {
   try {
-    console.log('🧪 Testing EmailJS connection...');
+    console.log('🧪 Testing Job Portal EmailJS connection...');
 
     // Use comprehensive template parameters to ensure compatibility
     const testParams = {
@@ -295,9 +210,9 @@ export const testEmailJSConnection = async (testEmail: string): Promise<boolean>
       recipient_name: 'Test User',
 
       // Sender and content
-      from_name: 'Excellence Coaching Hub Job Portal',
+      from_name: 'Excellence Coaching Hub - Job Portal',
       message: 'This is a test email from Excellence Coaching Hub Job Portal.',
-      subject: 'Test Email'
+      subject: 'Test Email - Job Portal'
     };
 
     console.log('📧 Sending test email with params:', testParams);
@@ -310,22 +225,21 @@ export const testEmailJSConnection = async (testEmail: string): Promise<boolean>
     );
 
     if (result.status === 200) {
-      console.log('✅ Test email sent successfully!');
+      console.log('✅ Test email sent successfully from Job Portal!');
       return true;
     } else {
       console.error('❌ Test email failed, status:', result.status);
       return false;
     }
   } catch (error: any) {
-    console.error('❌ EmailJS test failed:', error);
+    console.error('❌ Job Portal EmailJS test failed:', error);
     console.error('❌ Error details:', error.text || error.message || error);
     return false;
   }
 };
 
-const emailjsService = {
+const jobPortalEmailjsService = {
   initEmailJS,
-  sendVerificationEmail,
   sendPasswordResetEmail,
   sendWelcomeEmail,
   isValidEmail,
@@ -333,4 +247,4 @@ const emailjsService = {
   testEmailJSConnection
 };
 
-export default emailjsService;
+export default jobPortalEmailjsService;

@@ -365,17 +365,18 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
         resetToken
       );
 
-      // Return success - frontend will handle actual email sending via EmailJS
-      res.status(200).json({
+      // Always send a proper JSON response - frontend will handle actual email sending via EmailJS
+      const responseData = {
         success: true,
-        message: 'Password reset email sent',
-        // Include user data for frontend EmailJS
-        userData: {
+        message: 'Password reset instructions have been sent',
+        data: {
           email: user.email,
           firstName: user.firstName,
           resetToken: resetToken
         }
-      });
+      };
+
+      res.status(200).json(responseData);
     } catch (emailError) {
       console.error('Failed to send password reset email:', emailError);
 
@@ -384,9 +385,11 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
       user.passwordResetExpires = undefined;
       await user.save();
 
+      // Send proper error JSON response
       res.status(500).json({
         success: false,
-        error: 'Failed to send password reset email'
+        error: 'Failed to process password reset request',
+        message: 'Unable to send password reset email. Please try again later.'
       });
     }
   } catch (error) {
@@ -430,7 +433,8 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
     if (!user) {
       res.status(400).json({
         success: false,
-        error: 'Invalid or expired reset token'
+        error: 'Invalid or expired reset token',
+        message: 'The password reset token is invalid or has expired. Please request a new password reset.'
       });
       return;
     }

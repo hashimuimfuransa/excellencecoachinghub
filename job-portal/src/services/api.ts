@@ -26,9 +26,33 @@ api.interceptors.request.use(
 // Response interceptor to handle errors
 api.interceptors.response.use(
   (response) => {
+    // Check if response data exists and is valid JSON
+    if (response.data === '' || response.data === null || response.data === undefined) {
+      // Create a proper empty response
+      response.data = { success: false, error: 'Empty response from server' };
+    }
     return response;
   },
   (error) => {
+    // Handle JSON parsing errors
+    if (error.message?.includes('Unexpected end of JSON input') || 
+        error.message?.includes('Failed to execute \'json\' on \'Response\'')) {
+      console.error('JSON parsing error detected:', error);
+      // Create a standardized error response
+      const customError = {
+        ...error,
+        response: {
+          ...error.response,
+          data: {
+            success: false,
+            error: 'Invalid server response',
+            message: 'The server returned an invalid response. Please try again.'
+          }
+        }
+      };
+      return Promise.reject(customError);
+    }
+    
     if (error.response?.status === 401) {
       // Check if this is a login or register request - don't redirect in these cases
       const isAuthRequest = error.config?.url?.includes('/auth/login') || 

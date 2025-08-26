@@ -99,7 +99,11 @@ export const authService = {
   forgotPassword: async (email: string): Promise<void> => {
     try {
       // First, call the backend to generate the reset token
-      const response = await apiService.post('/auth/forgot-password', { email });
+      const response = await apiService.post<{
+        email: string;
+        firstName?: string;
+        resetToken: string;
+      }>('/auth/forgot-password', { email });
 
       if (!response.success) {
         // Handle specific error types with friendly messages
@@ -110,11 +114,11 @@ export const authService = {
       }
 
       // Backend returned success with user data, now send actual email via EmailJS
-      if (response.userData) {
+      if (response.data) {
         const emailSent = await sendPasswordResetEmail(
-          response.userData.email,
-          response.userData.firstName || 'User',
-          response.userData.resetToken
+          response.data.email,
+          response.data.firstName || 'User',
+          response.data.resetToken
         );
 
         if (!emailSent) {

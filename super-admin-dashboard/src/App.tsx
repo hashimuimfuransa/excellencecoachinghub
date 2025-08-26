@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, UserRole } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -6,6 +6,7 @@ import AdminLayout from './layouts/AdminLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import { initEmailJS } from './services/emailjsService';
 
 // Super Admin Pages
 import AllUsersPage from './pages/SuperAdmin/AllUsersPage';
@@ -24,6 +25,11 @@ import PerformanceReportsPage from './pages/SuperAdmin/PerformanceReportsPage';
 import UsageStatisticsPage from './pages/SuperAdmin/UsageStatisticsPage';
 
 function App() {
+  // Initialize EmailJS on app start
+  useEffect(() => {
+    initEmailJS();
+  }, []);
+
   return (
     <ThemeProvider>
       <AuthProvider>

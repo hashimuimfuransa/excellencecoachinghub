@@ -61,7 +61,40 @@ const ForgotPasswordPage: React.FC = () => {
       setEmailSent(true);
       toast.success('Password reset instructions sent to your email!');
     } catch (error: any) {
-      toast.error(error.message || 'Failed to send reset email. Please try again.');
+      console.error('Forgot password error:', error);
+      
+      // Handle different types of errors with user-friendly messages
+      let errorMessage = 'Failed to send reset email. Please try again.';
+      
+      if (error.message?.includes('status code 404') || 
+          error.message?.includes('No user found') || 
+          error.message?.includes('not found') ||
+          error.message?.includes('User not found') ||
+          error.message?.includes('couldn\'t find an account')) {
+        errorMessage = 'We couldn\'t find an account with that email address. Please check your email and try again, or create a new account if you haven\'t registered yet.';
+      } else if (error.message?.includes('status code 429') || 
+                 error.message?.includes('rate limit') || 
+                 error.message?.includes('too many')) {
+        errorMessage = 'Too many password reset attempts. Please wait a few minutes before trying again.';
+      } else if (error.message?.includes('status code 5') || 
+                 error.message?.includes('server error') || 
+                 error.message?.includes('internal error')) {
+        errorMessage = 'Our servers are experiencing issues. Please try again in a few minutes.';
+      } else if (error.message?.includes('Failed to fetch') || 
+                 error.message?.includes('NetworkError') || 
+                 error.message?.includes('Network error')) {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = 'Request timed out. Please check your internet connection and try again.';
+      } else if (error.message?.includes('invalid email') || 
+                 error.message?.includes('email format')) {
+        errorMessage = 'Please enter a valid email address.';
+      } else if (error.message && !error.message.includes('status code')) {
+        // Use the original error message if it doesn't contain technical status codes
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -75,7 +108,37 @@ const ForgotPasswordPage: React.FC = () => {
         await forgotPassword(email);
         toast.success('Email sent again!');
       } catch (error: any) {
-        toast.error(error.message || 'Failed to resend email.');
+        console.error('Resend email error:', error);
+        
+        // Handle different types of errors with user-friendly messages
+        let errorMessage = 'Failed to resend email. Please try again.';
+        
+        if (error.message?.includes('status code 404') || 
+            error.message?.includes('No user found') || 
+            error.message?.includes('not found') ||
+            error.message?.includes('User not found') ||
+            error.message?.includes('couldn\'t find an account')) {
+          errorMessage = 'We couldn\'t find an account with that email address. Please check your email and try again.';
+        } else if (error.message?.includes('status code 429') || 
+                   error.message?.includes('rate limit') || 
+                   error.message?.includes('too many')) {
+          errorMessage = 'Too many password reset attempts. Please wait a few minutes before trying again.';
+        } else if (error.message?.includes('status code 5') || 
+                   error.message?.includes('server error') || 
+                   error.message?.includes('internal error')) {
+          errorMessage = 'Our servers are experiencing issues. Please try again in a few minutes.';
+        } else if (error.message?.includes('Failed to fetch') || 
+                   error.message?.includes('NetworkError') || 
+                   error.message?.includes('Network error')) {
+          errorMessage = 'Network error. Please check your internet connection and try again.';
+        } else if (error.message?.includes('timeout')) {
+          errorMessage = 'Request timed out. Please check your internet connection and try again.';
+        } else if (error.message && !error.message.includes('status code')) {
+          // Use the original error message if it doesn't contain technical status codes
+          errorMessage = error.message;
+        }
+        
+        toast.error(errorMessage);
       } finally {
         setLoading(false);
       }

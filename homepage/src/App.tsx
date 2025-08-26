@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
@@ -8,6 +8,7 @@ import 'react-toastify/dist/ReactToastify.css';
 // Context Providers
 import { AuthProvider } from './contexts/AuthContext';
 import { CustomThemeProvider, useThemeContext } from './contexts/ThemeContext';
+import { initEmailJS } from './services/emailjsService';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -82,6 +83,11 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  // Initialize EmailJS on app start
+  useEffect(() => {
+    initEmailJS();
+  }, []);
+
   return (
     <CustomThemeProvider>
       <AppContent />

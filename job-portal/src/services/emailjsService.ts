@@ -5,7 +5,7 @@ const EMAILJS_CONFIG = {
   SERVICE_ID: 'service_vtor3y8', // Your EmailJS service ID
   VERIFICATION_TEMPLATE_ID: 'template_sikm5se', // Your EmailJS template ID for email verification
   PASSWORD_RESET_TEMPLATE_ID: 'template_9apzq9s', // Your EmailJS template ID for password reset
-  WELCOME_TEMPLATE_ID: 'template_9apzq9s', // Your EmailJS template ID for welcome email
+  WELCOME_TEMPLATE_ID: 'template_sikm5se', // Your EmailJS template ID for welcome email
   PUBLIC_KEY: 'VLY7_POWX21gRHMof' // Your EmailJS public key
 };
 
@@ -33,7 +33,7 @@ export const sendVerificationEmail = async (
       // Template variables (what your template expects)
       to_name: userName,
       verification_url: `${window.location.origin}/verify-email?token=${verificationCode}`,
-      from_name: 'Excellence Coaching Hub'
+      from_name: 'Excellence Coaching Hub Job Portal'
     };
 
     // Add recipient email with the most common parameter names
@@ -123,7 +123,7 @@ export const sendPasswordResetEmail = async (
       to_name: userName,
       reset_url: resetUrl,
       link: resetUrl,  // Alternative parameter name
-      from_name: 'Excellence Coaching Hub',
+      from_name: 'Excellence Coaching Hub Job Portal',
 
       // EmailJS service configuration (recipient email)
       // Try all common parameter names for recipient
@@ -136,8 +136,8 @@ export const sendPasswordResetEmail = async (
       send_to: userEmail,
 
       // Additional parameters for compatibility
-      message: `Hi ${userName}!\n\nYou requested a password reset for your Excellence Coaching Hub account. Click the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in one hour.\n\nIf you didn't request this, please ignore this email.\n\nBest regards,\nExcellence Coaching Hub Team`,
-      subject: 'Password Reset - Excellence Coaching Hub'
+      message: `Hi ${userName}!\n\nYou requested a password reset for your Excellence Coaching Hub Job Portal account. Click the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in one hour.\n\nIf you didn't request this, please ignore this email.\n\nBest regards,\nExcellence Coaching Hub Team`,
+      subject: 'Password Reset - Excellence Coaching Hub Job Portal'
     };
 
     // Check if EmailJS is properly configured
@@ -197,14 +197,14 @@ export const sendPasswordResetEmail = async (
 export const sendWelcomeEmail = async (
   userEmail: string,
   userName: string,
-  userRole: string = 'student'
+  userRole: string = 'candidate'
 ): Promise<boolean> => {
   try {
     const templateParams = {
       to_name: userName,
       user_role: userRole,
       dashboard_url: `${window.location.origin}/dashboard`,
-      from_name: 'Excellence Coaching Hub E-Learning',
+      from_name: 'Excellence Coaching Hub Job Portal',
 
       // EmailJS service configuration (recipient email)
       to_email: userEmail,
@@ -215,8 +215,8 @@ export const sendWelcomeEmail = async (
       recipient: userEmail,
       send_to: userEmail,
 
-      message: `Welcome to Excellence Coaching Hub E-Learning Platform, ${userName}!\n\nYour account has been successfully created as a ${userRole}. You can now access your dashboard and start learning.\n\nDashboard: ${window.location.origin}/dashboard\n\nBest regards,\nExcellence Coaching Hub Team`,
-      subject: 'Welcome to Excellence Coaching Hub E-Learning!'
+      message: `Welcome to Excellence Coaching Hub Job Portal, ${userName}!\n\nYour account has been successfully created as a ${userRole}. You can now access your dashboard and start exploring opportunities.\n\nDashboard: ${window.location.origin}/dashboard\n\nBest regards,\nExcellence Coaching Hub Team`,
+      subject: 'Welcome to Excellence Coaching Hub Job Portal!'
     };
 
     // Check if EmailJS is properly configured
@@ -260,7 +260,7 @@ export const sendWelcomeEmail = async (
     console.log('🎉 WELCOME EMAIL (Fallback)');
     console.log('=================================');
     console.log(`To: ${userEmail}`);
-    console.log(`Welcome to Excellence Coaching Hub E-Learning Platform, ${userName}!`);
+    console.log(`Welcome to Excellence Coaching Hub Job Portal, ${userName}!`);
     console.log('=================================');
     return false;
   }
@@ -295,8 +295,8 @@ export const testEmailJSConnection = async (testEmail: string): Promise<boolean>
       recipient_name: 'Test User',
 
       // Sender and content
-      from_name: 'Excellence Coaching Hub',
-      message: 'This is a test email from Excellence Coaching Hub.',
+      from_name: 'Excellence Coaching Hub Job Portal',
+      message: 'This is a test email from Excellence Coaching Hub Job Portal.',
       subject: 'Test Email'
     };
 

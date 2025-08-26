@@ -138,35 +138,25 @@ class AuthService {
       const response = await apiPost('/auth/forgot-password', { email });
       const result = handleApiResponse(response);
       
-      // Backend returned success with user data, now send actual email via EmailJS
-      if (result.data) {
-        console.log('Backend provided user data for frontend email sending:', result.data);
+      // handleApiResponse returns response.data, so result IS the data object
+      if (result && result.email && result.resetToken) {
+        console.log('Backend provided user data for frontend email sending:', result);
         
         const emailSent = await sendPasswordResetEmail(
-          result.data.email,
-          result.data.firstName || 'User',
-          result.data.resetToken
+          result.email,
+          result.firstName || 'User',
+          result.resetToken
         );
 
         if (!emailSent) {
           // EmailJS failed but backend succeeded - still continue since user can use console token
           console.log('📧 Check your browser console for the password reset link (EmailJS may be in demo mode)');
+          console.log('🔗 Reset URL: http://localhost:5174/reset-password?token=' + result.resetToken);
         } else {
           console.log('✅ Password reset email sent successfully via EmailJS');
         }
-      } else if (result.userData) {
-        // Handle legacy response format
-        const emailSent = await sendPasswordResetEmail(
-          result.userData.email,
-          result.userData.firstName || 'User',
-          result.userData.resetToken
-        );
-
-        if (!emailSent) {
-          console.log('📧 Check your browser console for the password reset link (EmailJS may be in demo mode)');
-        } else {
-          console.log('✅ Password reset email sent successfully via EmailJS');
-        }
+      } else {
+        console.log('❌ Backend did not provide expected user data for email sending:', result);
       }
     } catch (error: any) {
       console.error('Forgot password error:', error);

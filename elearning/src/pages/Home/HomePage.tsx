@@ -32,6 +32,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useQuery } from 'react-query';
 import { courseService } from '../../services/courseService';
+import FloatingContact from '../../components/FloatingContact';
 
 // Hero Section Component
 const HeroSection: React.FC = () => {
@@ -857,6 +858,7 @@ const HomePage: React.FC = () => {
       <StatisticsSection />
       <TestimonialsSection />
       <CTASection />
+      <FloatingContact />
     </Box>
   );
 };

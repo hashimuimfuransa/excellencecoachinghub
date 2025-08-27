@@ -82,7 +82,7 @@ const ServicesSection: React.FC = () => {
       ]
     },
     {
-      title: "Career Transition Coaching",
+      title: "School To Work Transition Coaching",
       icon: <Work />,
       color: "#ff5722",
       description: "Strategic career transformation guidance to help you successfully navigate job changes and advance your professional journey.",
@@ -202,7 +202,7 @@ const ServicesSection: React.FC = () => {
       ]
     },
     {
-      title: "Business & Entrepreneurship",
+      title: "Business Management & Entrepreneurship",
       icon: <Business />,
       color: "#4caf50",
       description: "Build entrepreneurial skills and business acumen with practical training in startup development and business management.",

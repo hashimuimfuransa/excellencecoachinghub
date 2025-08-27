@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   Box,
   Container,
@@ -26,9 +26,9 @@ import {
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { motion, useInView } from 'framer-motion';
-import { useRef } from 'react';
 import { useThemeContext } from '../contexts/ThemeContext';
 
+// Stepper custom connector
 const ColorlibConnector = styled(StepConnector)(({ theme }) => ({
   [`&.${stepConnectorClasses.alternativeLabel}`]: {
     top: 22,
@@ -52,6 +52,7 @@ const ColorlibConnector = styled(StepConnector)(({ theme }) => ({
   },
 }));
 
+// Stepper custom icons
 const ColorlibStepIconRoot = styled('div')<{
   ownerState: { completed?: boolean; active?: boolean };
 }>(({ theme, ownerState }) => ({
@@ -106,34 +107,35 @@ const HowItWorksSection: React.FC = () => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
 
+  // Steps for both individuals & organizations
   const steps = [
     {
       label: 'Register & Create Profile',
-      description: 'Sign up and create your personalized learning profile with your career goals and interests.',
+      description: 'Sign up as an individual, business, or organization and set your goals.',
       icon: <PersonAdd />,
       color: '#1976d2',
     },
     {
-      label: 'Take E-learning Courses',
-      description: 'Access tailored courses designed for your education level and career aspirations.',
+      label: 'Access Training & Courses',
+      description: 'Join tailored programs in Business Advisory, Tech, Finance, and Leadership.',
       icon: <School />,
       color: '#2e7d32',
     },
     {
-      label: 'Complete Assessments',
-      description: 'Take psychometric tests and live video coaching sessions to evaluate and improve your skills.',
+      label: 'Assess & Improve Skills',
+      description: 'Use psychometric tools, coaching, and interactive assessments to grow.',
       icon: <Psychology />,
       color: '#ed6c02',
     },
     {
-      label: 'Receive Certifications',
-      description: 'Earn verified, blockchain-secured certificates upon successful course completion.',
+      label: 'Earn Recognized Certificates',
+      description: 'Gain secure, blockchain-based certificates that prove your achievements.',
       icon: <Verified />,
       color: '#9c27b0',
     },
     {
-      label: 'Get Hired',
-      description: 'Access curated job listings and employer exams to secure your dream job.',
+      label: 'Achieve Growth & Success',
+      description: 'Secure jobs, scale businesses, and build leadership impact across industries.',
       icon: <Work />,
       color: '#d32f2f',
     },
@@ -154,10 +156,7 @@ const HowItWorksSection: React.FC = () => {
     visible: {
       opacity: 1,
       y: 0,
-      transition: {
-        duration: 0.6,
-        ease: 'easeOut',
-      },
+      transition: { duration: 0.6, ease: 'easeOut' },
     },
   };
 
@@ -220,7 +219,7 @@ const HowItWorksSection: React.FC = () => {
                   lineHeight: 1.6,
                 }}
               >
-                Your journey to career success in 5 simple steps
+                A simple 5-step journey for individuals, businesses, and organizations to succeed
               </Typography>
             </Box>
           </motion.div>
@@ -229,11 +228,7 @@ const HowItWorksSection: React.FC = () => {
           {!isMobile && (
             <motion.div variants={itemVariants}>
               <Box sx={{ mb: 8 }}>
-                <Stepper
-                  alternativeLabel
-                  activeStep={5}
-                  connector={<ColorlibConnector />}
-                >
+                <Stepper alternativeLabel activeStep={5} connector={<ColorlibConnector />}>
                   {steps.map((step) => (
                     <Step key={step.label}>
                       <StepLabel StepIconComponent={ColorlibStepIcon}>
@@ -260,10 +255,7 @@ const HowItWorksSection: React.FC = () => {
               <Grid item xs={12} sm={6} md={isMobile ? 12 : 2.4} key={index}>
                 <motion.div
                   variants={itemVariants}
-                  whileHover={{
-                    y: -10,
-                    transition: { duration: 0.3 },
-                  }}
+                  whileHover={{ y: -10, transition: { duration: 0.3 } }}
                 >
                   <Card
                     sx={{
@@ -274,10 +266,16 @@ const HowItWorksSection: React.FC = () => {
                       cursor: 'pointer',
                       borderRadius: '16px',
                       transition: 'all 0.3s ease',
-                      border: '1px solid rgba(0, 0, 0, 0.05)',
-                      background: 'linear-gradient(145deg, #ffffff, #f8f9fa)',
+                      border: isDarkMode 
+                        ? '1px solid rgba(255, 255, 255, 0.1)' 
+                        : '1px solid rgba(0, 0, 0, 0.05)',
+                      background: isDarkMode 
+                        ? 'linear-gradient(145deg, rgba(30, 30, 30, 0.9), rgba(40, 40, 40, 0.8))'
+                        : 'linear-gradient(145deg, #ffffff, #f8f9fa)',
                       '&:hover': {
-                        boxShadow: '0 15px 40px rgba(0, 0, 0, 0.12)',
+                        boxShadow: isDarkMode 
+                          ? '0 15px 40px rgba(0, 0, 0, 0.4)' 
+                          : '0 15px 40px rgba(0, 0, 0, 0.12)',
                         transform: 'translateY(-5px)',
                       },
                     }}
@@ -311,15 +309,8 @@ const HowItWorksSection: React.FC = () => {
                     <CardContent sx={{ p: 4, pt: 5 }}>
                       <Box
                         component={motion.div}
-                        whileHover={{ 
-                          scale: 1.05,
-                          rotate: [0, 5, 0, -5, 0],
-                          transition: { duration: 0.5 }
-                        }}
-                        sx={{
-                          position: 'relative',
-                          mb: 3,
-                        }}
+                        whileHover={{ scale: 1.05, rotate: [0, 5, 0, -5, 0], transition: { duration: 0.5 } }}
+                        sx={{ position: 'relative', mb: 3 }}
                       >
                         <Avatar
                           sx={{
@@ -328,7 +319,9 @@ const HowItWorksSection: React.FC = () => {
                             height: 80,
                             mx: 'auto',
                             boxShadow: `0 8px 20px ${step.color}33`,
-                            border: '4px solid white',
+                            border: isDarkMode 
+                              ? '4px solid rgba(40, 40, 40, 0.8)' 
+                              : '4px solid white',
                           }}
                         >
                           {React.cloneElement(step.icon, { sx: { fontSize: 36 } })}
@@ -348,24 +341,10 @@ const HowItWorksSection: React.FC = () => {
                         />
                       </Box>
                       
-                      <Typography
-                        variant="h6"
-                        sx={{
-                          fontWeight: 600,
-                          mb: 2,
-                          color: 'text.primary',
-                        }}
-                      >
+                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
                         {step.label}
                       </Typography>
-                      
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          color: 'text.secondary',
-                          lineHeight: 1.6,
-                        }}
-                      >
+                      <Typography variant="body2" sx={{ color: 'text.secondary', lineHeight: 1.6 }}>
                         {step.description}
                       </Typography>
                     </CardContent>
@@ -375,7 +354,7 @@ const HowItWorksSection: React.FC = () => {
             ))}
           </Grid>
 
-          {/* Interactive Features */}
+          {/* Why Choose Our Platform Section */}
           <motion.div variants={itemVariants}>
             <Box
               sx={{
@@ -390,7 +369,7 @@ const HowItWorksSection: React.FC = () => {
                 overflow: 'hidden',
               }}
             >
-              {/* Animated background elements */}
+              {/* Animated Background */}
               <Box
                 component={motion.div}
                 sx={{
@@ -403,17 +382,9 @@ const HowItWorksSection: React.FC = () => {
                   background: 'rgba(255, 255, 255, 0.05)',
                   zIndex: 0,
                 }}
-                animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [0.3, 0.5, 0.3],
-                }}
-                transition={{
-                  duration: 8,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                }}
+                animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
+                transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
               />
-              
               <Box
                 component={motion.div}
                 sx={{
@@ -426,22 +397,14 @@ const HowItWorksSection: React.FC = () => {
                   background: 'rgba(255, 107, 107, 0.1)',
                   zIndex: 0,
                 }}
-                animate={{
-                  scale: [1, 1.3, 1],
-                  opacity: [0.2, 0.4, 0.2],
-                }}
-                transition={{
-                  duration: 10,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                  delay: 1,
-                }}
+                animate={{ scale: [1, 1.3, 1], opacity: [0.2, 0.4, 0.2] }}
+                transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
               />
-              
-              <Typography 
-                variant="h4" 
-                sx={{ 
-                  fontWeight: 700, 
+
+              <Typography
+                variant="h4"
+                sx={{
+                  fontWeight: 700,
                   mb: 4,
                   position: 'relative',
                   zIndex: 1,
@@ -450,28 +413,32 @@ const HowItWorksSection: React.FC = () => {
               >
                 Why Choose Our Platform?
               </Typography>
-              
+
               <Grid container spacing={4}>
                 {[
                   {
                     icon: <CheckCircle />,
-                    title: 'Expert-Led Learning',
-                    description: 'Personalized learning paths with live video coaching and expert guidance',
+                    title: 'Expert-Led Training',
+                    description:
+                      'Programs in Business Advisory, Tech Services, Finance, and Leadership with live coaching for individuals, businesses, and organizations.',
                   },
                   {
                     icon: <Verified />,
-                    title: 'Blockchain Certificates',
-                    description: 'Tamper-proof, verifiable certificates for your achievements',
+                    title: 'Verified Blockchain Certificates',
+                    description:
+                      'Secure, tamper-proof certificates that validate skills and achievements across industries.',
                   },
                   {
                     icon: <Psychology />,
-                    title: 'Psychometric Tests',
-                    description: 'Comprehensive assessments to identify your strengths',
+                    title: 'Psychometric & Skills Assessments',
+                    description:
+                      'Comprehensive tools to identify strengths, improve performance, and guide professional growth.',
                   },
                   {
                     icon: <Work />,
-                    title: 'Job Placement',
-                    description: '85% of our graduates secure employment within 6 months',
+                    title: 'Career & Business Growth',
+                    description:
+                      'From job placement to business advisory, we drive measurable success for people and enterprises alike.',
                   },
                 ].map((feature, index) => (
                   <Grid item xs={12} sm={6} md={3} key={index}>
@@ -511,21 +478,13 @@ const HowItWorksSection: React.FC = () => {
                       </Avatar>
                       <Typography
                         variant="h6"
-                        sx={{ 
-                          fontWeight: 700, 
-                          mb: 1,
-                          textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                        }}
+                        sx={{ fontWeight: 700, mb: 1, textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
                       >
                         {feature.title}
                       </Typography>
                       <Typography
                         variant="body2"
-                        sx={{ 
-                          opacity: 0.9, 
-                          lineHeight: 1.6,
-                          fontWeight: 500,
-                        }}
+                        sx={{ opacity: 0.9, lineHeight: 1.6, fontWeight: 500 }}
                       >
                         {feature.description}
                       </Typography>

@@ -218,11 +218,17 @@ const PlatformLinksSection: React.FC = () => {
                       cursor: 'pointer',
                       borderRadius: '20px',
                       transition: 'all 0.3s ease',
-                      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.15)',
+                      boxShadow: isDarkMode 
+                        ? '0 10px 30px rgba(0, 0, 0, 0.4)' 
+                        : '0 10px 30px rgba(0, 0, 0, 0.15)',
                       background: platform.gradient,
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      border: isDarkMode 
+                        ? '1px solid rgba(255, 255, 255, 0.15)' 
+                        : '1px solid rgba(255, 255, 255, 0.1)',
                       '&:hover': {
-                        boxShadow: '0 25px 70px rgba(0, 0, 0, 0.25)',
+                        boxShadow: isDarkMode 
+                          ? '0 25px 70px rgba(0, 0, 0, 0.6)' 
+                          : '0 25px 70px rgba(0, 0, 0, 0.25)',
                         transform: 'translateY(-5px)',
                       },
                       '&:before': {
@@ -506,24 +512,34 @@ const PlatformLinksSection: React.FC = () => {
                         endIcon={<ArrowForward />}
                         onClick={() => handlePlatformClick()}
                         sx={{
-                          bgcolor: 'white',
+                          bgcolor: isDarkMode 
+                            ? 'rgba(255, 255, 255, 0.95)' 
+                            : 'white',
                           color: platform.color,
                           fontWeight: 700,
                           py: { xs: 1.5, sm: 2 },
                           px: { xs: 3, sm: 4 },
                           borderRadius: '8px',
                           fontSize: { xs: '0.95rem', sm: '1rem', md: '1.1rem' },
-                          boxShadow: '0 8px 20px rgba(0, 0, 0, 0.2)',
+                          boxShadow: isDarkMode 
+                            ? '0 8px 20px rgba(0, 0, 0, 0.4)' 
+                            : '0 8px 20px rgba(0, 0, 0, 0.2)',
                           border: '2px solid rgba(255, 255, 255, 0.3)',
                           '&:hover': {
-                            bgcolor: 'white',
+                            bgcolor: isDarkMode 
+                              ? 'rgba(255, 255, 255, 0.98)' 
+                              : 'white',
                             transform: 'translateY(-3px)',
-                            boxShadow: '0 12px 35px rgba(0, 0, 0, 0.3)',
+                            boxShadow: isDarkMode 
+                              ? '0 12px 35px rgba(0, 0, 0, 0.5)' 
+                              : '0 12px 35px rgba(0, 0, 0, 0.3)',
                             color: platform.color,
                           },
                           '&:active': {
                             transform: 'translateY(-1px)',
-                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                            boxShadow: isDarkMode 
+                              ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
+                              : '0 4px 12px rgba(0, 0, 0, 0.2)',
                           },
                         }}
                       >
@@ -541,13 +557,20 @@ const PlatformLinksSection: React.FC = () => {
             <Box
               sx={{
                 p: { xs: 4, md: 6 },
-                background: 'linear-gradient(135deg, #3f51b5 0%, #6a1b9a 100%)',
+                background: isDarkMode 
+                  ? 'linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #5b21b6 100%)'
+                  : 'linear-gradient(135deg, #3f51b5 0%, #6a1b9a 100%)',
                 borderRadius: '24px',
                 textAlign: 'center',
                 color: 'white',
-                boxShadow: '0 20px 60px rgba(63, 81, 181, 0.25)',
+                boxShadow: isDarkMode 
+                  ? '0 20px 60px rgba(76, 29, 149, 0.4)'
+                  : '0 20px 60px rgba(63, 81, 181, 0.25)',
                 position: 'relative',
                 overflow: 'hidden',
+                border: isDarkMode 
+                  ? '1px solid rgba(255, 255, 255, 0.1)' 
+                  : 'none',
               }}
             >
               {/* Animated background elements */}

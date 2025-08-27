@@ -45,210 +45,616 @@ const ServicesSection: React.FC = () => {
       title: "Student Academic Coaching",
       icon: <LocalLibraryRounded />,
       color: "#2196f3",
+      description: "Personalized academic support to help students excel in their studies with improved learning techniques and study strategies.",
       programs: [
-        "High School Academic Support",
-        "University Exam Preparation",
-        "Study Skills & Time Management",
-        "Research & Writing Assistance",
-        "Mathematics & Science Tutoring",
-        "Language Arts & Literature",
-        "Test-Taking Strategies",
-        "Academic Goal Setting & Planning"
+        {
+          name: "High School Academic Support",
+          description: "Comprehensive tutoring and mentorship to help high school students excel in their studies and prepare for higher education."
+        },
+        {
+          name: "University Exam Preparation",
+          description: "Intensive preparation for university entrance exams, standardized tests, and academic assessments with proven strategies."
+        },
+        {
+          name: "Study Skills & Time Management",
+          description: "Master effective study techniques, time management, and organizational skills for academic success and productivity."
+        },
+        {
+          name: "Research & Writing Assistance",
+          description: "Develop strong research methodology and academic writing skills for essays, reports, and scholarly papers."
+        },
+        {
+          name: "Mathematics & Science Tutoring",
+          description: "Expert tutoring in mathematics, physics, chemistry, and biology with practical problem-solving approaches."
+        },
+        {
+          name: "Communication Skills",
+          description: "Enhance verbal and written communication skills for academic presentations, discussions, and professional interactions."
+        },
+        {
+          name: "Test-Taking Strategies",
+          description: "Learn effective test-taking techniques, stress management, and optimal preparation methods for various exam formats."
+        },
+        {
+          name: "Academic Goal Setting & Planning",
+          description: "Strategic academic planning and goal-setting to maximize educational outcomes and career preparation."
+        }
       ]
     },
     {
       title: "Career Transition Coaching",
       icon: <Work />,
       color: "#ff5722",
+      description: "Strategic career transformation guidance to help you successfully navigate job changes and advance your professional journey.",
       programs: [
-        "Career Change Strategy",
-        "Job Search & Interview Preparation",
-        "Resume & LinkedIn Optimization",
-        "Networking & Professional Branding",
-        "Industry Transition Planning",
-        "Skills Assessment & Development",
-        "Salary Negotiation Coaching",
-        "Professional Portfolio Building"
+        {
+          name: "Career Change Strategy",
+          description: "Develop a comprehensive strategy for successful career transitions with market analysis and opportunity identification."
+        },
+        {
+          name: "Job Search & Interview Preparation",
+          description: "Master job search techniques, interview skills, and professional networking to secure your ideal position."
+        },
+        {
+          name: "Resume & LinkedIn Optimization",
+          description: "Create compelling resumes and optimize LinkedIn profiles to attract recruiters and showcase your value proposition."
+        },
+        {
+          name: "Networking & Professional Branding",
+          description: "Build strategic professional relationships and develop a strong personal brand for career advancement."
+        },
+        {
+          name: "Industry Transition Planning",
+          description: "Navigate cross-industry career moves with targeted skill development and market entry strategies."
+        },
+        {
+          name: "Skills Assessment & Development",
+          description: "Identify skill gaps and create personalized development plans to meet industry requirements and career goals."
+        },
+        {
+          name: "Salary Negotiation Coaching",
+          description: "Learn effective negotiation techniques to secure competitive compensation packages and career advancement."
+        },
+        {
+          name: "Professional Portfolio Building",
+          description: "Create impressive portfolios and case studies that demonstrate your expertise and achievements to employers."
+        }
       ]
     },
     {
       title: "Technology & Digital Solutions",
       icon: <Code />,
       color: "#3f51b5",
+      description: "Comprehensive tech training programs covering cutting-edge technologies and digital skills for the modern workforce.",
       programs: [
-        "Software Development & Programming",
-        "Web & Mobile App Development", 
-        "Cloud Computing & DevOps",
-        "Cybersecurity & Data Protection",
-        "Digital Marketing & E-commerce",
-        "UI/UX Design & Digital Graphics",
-        "Digital Literacy & Computer Skills",
-        "IT Support & Network Administration"
+        {
+          name: "Software Development & Programming",
+          description: "Master programming languages, software architecture, and development methodologies for building robust applications."
+        },
+        {
+          name: "Web & Mobile App Development",
+          description: "Create responsive websites and mobile applications using modern frameworks and development best practices."
+        },
+        {
+          name: "Cloud Computing & DevOps",
+          description: "Learn cloud platforms, containerization, and automation tools for scalable and efficient software deployment."
+        },
+        {
+          name: "Cybersecurity & Data Protection",
+          description: "Develop expertise in network security, threat detection, and data protection strategies for digital environments."
+        },
+        {
+          name: "Digital Marketing & E-commerce",
+          description: "Master online marketing strategies, SEO, social media marketing, and e-commerce platform management."
+        },
+        {
+          name: "UI/UX Design & Digital Graphics",
+          description: "Design intuitive user interfaces and engaging user experiences with modern design tools and principles."
+        },
+        {
+          name: "Digital Literacy & Computer Skills",
+          description: "Build foundational computer skills, digital communication, and productivity software proficiency."
+        },
+        {
+          name: "IT Support & Network Administration",
+          description: "Learn system administration, network management, and technical support skills for IT infrastructure."
+        }
       ]
     },
     {
       title: "Data & Analytics",
       icon: <Analytics />,
       color: "#ff6b6b", 
+      description: "Master data science and analytics with hands-on experience in statistical analysis, machine learning, and business intelligence.",
       programs: [
-        "Data Analytics & Visualization",
-        "Machine Learning & AI",
-        "Business Intelligence",
-        "Statistical Analysis",
-        "Python & R Programming",
-        "SQL & Database Management",
-        "Data Science Bootcamp",
-        "Big Data Technologies"
+        {
+          name: "Data Analytics & Visualization",
+          description: "Transform raw data into actionable insights using advanced analytics tools and compelling visualization techniques."
+        },
+        {
+          name: "Machine Learning & AI",
+          description: "Build intelligent systems with machine learning algorithms, neural networks, and artificial intelligence applications."
+        },
+        {
+          name: "Business Intelligence",
+          description: "Create comprehensive business intelligence solutions for data-driven decision making and strategic planning."
+        },
+        {
+          name: "Statistical Analysis",
+          description: "Master statistical methods, hypothesis testing, and predictive modeling for research and business applications."
+        },
+        {
+          name: "Python & R Programming",
+          description: "Learn Python and R programming languages for data manipulation, analysis, and statistical computing."
+        },
+        {
+          name: "SQL & Database Management",
+          description: "Master database design, SQL querying, and data management for efficient data storage and retrieval."
+        },
+        {
+          name: "Data Science Bootcamp",
+          description: "Intensive hands-on training covering the complete data science pipeline from collection to deployment."
+        },
+        {
+          name: "Big Data Technologies",
+          description: "Work with large-scale data processing frameworks, distributed computing, and big data analytics platforms."
+        }
       ]
     },
     {
       title: "Business & Entrepreneurship",
       icon: <Business />,
       color: "#4caf50",
+      description: "Build entrepreneurial skills and business acumen with practical training in startup development and business management.",
       programs: [
-        "Business Development & Strategy",
-        "Entrepreneurship & Startup",
-        "Digital Marketing & Social Media",
-        "Sales & Customer Relations",
-        "Supply Chain & Operations",
-        "E-commerce & Online Business",
-        "Business Plan Development",
-        "Market Research & Analysis"
+        {
+          name: "Business Development & Strategy",
+          description: "Develop strategic business plans, identify growth opportunities, and implement sustainable business models."
+        },
+        {
+          name: "Entrepreneurship & Startup",
+          description: "Launch and scale successful startups with practical training in business fundamentals and venture development."
+        },
+        {
+          name: "Digital Marketing & Social Media",
+          description: "Master digital marketing strategies, social media management, and online brand building for business growth."
+        },
+        {
+          name: "Sales & Customer Relations",
+          description: "Excel in sales techniques, customer relationship management, and client retention strategies."
+        },
+        {
+          name: "Supply Chain & Operations",
+          description: "Optimize business operations, supply chain management, and logistics for efficient business processes."
+        },
+        {
+          name: "E-commerce & Online Business",
+          description: "Build and manage successful online businesses with e-commerce platforms and digital sales strategies."
+        },
+        {
+          name: "Business Plan Development",
+          description: "Create comprehensive business plans, financial projections, and investor-ready business presentations."
+        },
+        {
+          name: "Market Research & Analysis",
+          description: "Conduct thorough market research, competitive analysis, and consumer behavior studies for strategic decisions."
+        }
       ]
     },
     {
       title: "Finance & Accounting",
       icon: <AccountBalance />,
       color: "#ff9800",
+      description: "Professional finance and accounting training with focus on industry standards, compliance, and financial management practices.",
       programs: [
-        "Financial Accounting & Reporting",
-        "Tax Preparation & Planning",
-        "Audit & Compliance",
-        "Financial Management & Planning",
-        "Bookkeeping & Payroll",
-        "Investment & Portfolio Management",
-        "Corporate Finance",
-        "Forensic Accounting"
+        {
+          name: "Financial Accounting & Reporting",
+          description: "Master financial statements preparation, accounting principles, and regulatory reporting requirements."
+        },
+        {
+          name: "Tax Preparation & Planning",
+          description: "Learn comprehensive tax preparation, planning strategies, and compliance with local and international tax laws."
+        },
+        {
+          name: "Audit & Compliance",
+          description: "Develop auditing skills, internal controls assessment, and regulatory compliance procedures."
+        },
+        {
+          name: "Financial Management & Planning",
+          description: "Strategic financial planning, budgeting, forecasting, and investment decision-making for organizations."
+        },
+        {
+          name: "Bookkeeping & Payroll",
+          description: "Master day-to-day bookkeeping operations, payroll processing, and small business financial management."
+        },
+        {
+          name: "Investment & Portfolio Management",
+          description: "Learn investment analysis, portfolio optimization, and wealth management strategies for individual and institutional clients."
+        },
+        {
+          name: "Corporate Finance",
+          description: "Advanced corporate financial strategies, mergers and acquisitions, and capital structure optimization."
+        },
+        {
+          name: "Forensic Accounting",
+          description: "Specialize in fraud detection, financial investigation, and litigation support services."
+        }
       ]
     },
     {
       title: "Project Management",
       icon: <TrendingUp />,
       color: "#9c27b0",
+      description: "Learn professional project management methodologies and earn industry-recognized certifications for career advancement.",
       programs: [
-        "PMP Certification Preparation",
-        "PRINCE2 Methodology",
-        "Agile & Scrum Master",
-        "Risk Management",
-        "Quality Management",
-        "Construction Project Management",
-        "IT Project Management",
-        "Leadership in Project Management"
+        {
+          name: "PMP Certification Preparation",
+          description: "Comprehensive preparation for Project Management Professional certification with practice exams and real-world scenarios."
+        },
+        {
+          name: "PRINCE2 Methodology",
+          description: "Master PRINCE2 project management methodology with structured approach to project delivery and governance."
+        },
+        {
+          name: "Agile & Scrum Master",
+          description: "Learn agile methodologies, Scrum framework, and leadership skills for agile project environments."
+        },
+        {
+          name: "Risk Management",
+          description: "Identify, assess, and mitigate project risks with comprehensive risk management strategies and tools."
+        },
+        {
+          name: "Quality Management",
+          description: "Implement quality assurance processes, continuous improvement, and quality control in project delivery."
+        },
+        {
+          name: "Construction Project Management",
+          description: "Specialized project management skills for construction industry including scheduling, cost control, and safety management."
+        },
+        {
+          name: "IT Project Management",
+          description: "Manage technology projects, software development lifecycle, and digital transformation initiatives."
+        },
+        {
+          name: "Leadership in Project Management",
+          description: "Develop leadership skills, team management, and stakeholder communication for successful project delivery."
+        }
       ]
     },
     {
       title: "Leadership & Executive Coaching",
       icon: <Psychology />,
       color: "#607d8b",
+      description: "Develop executive presence and leadership capabilities with strategic thinking and team management expertise.",
       programs: [
-        "Executive Leadership Development",
-        "Strategic Thinking & Planning",
-        "Team Management & Motivation",
-        "Change Management",
-        "Emotional Intelligence",
-        "Communication & Presentation Skills",
-        "Conflict Resolution",
-        "Performance Management"
+        {
+          name: "Executive Leadership Development",
+          description: "Comprehensive leadership training for C-suite executives focusing on vision, strategy, and organizational transformation."
+        },
+        {
+          name: "Strategic Thinking & Planning",
+          description: "Develop strategic thinking capabilities, long-term planning skills, and competitive analysis for business success."
+        },
+        {
+          name: "Team Management & Motivation",
+          description: "Master team leadership techniques, employee motivation strategies, and high-performance team building."
+        },
+        {
+          name: "Change Management",
+          description: "Lead organizational change initiatives with proven methodologies for smooth transitions and stakeholder buy-in."
+        },
+        {
+          name: "Emotional Intelligence",
+          description: "Enhance self-awareness, empathy, and interpersonal skills for effective leadership and relationship management."
+        },
+        {
+          name: "Communication & Presentation Skills",
+          description: "Master executive communication, public speaking, and presentation skills for influential leadership."
+        },
+        {
+          name: "Conflict Resolution",
+          description: "Learn mediation techniques, negotiation skills, and conflict management strategies for workplace harmony."
+        },
+        {
+          name: "Performance Management",
+          description: "Implement effective performance management systems, feedback processes, and talent development programs."
+        }
       ]
     },
     {
       title: "Professional Certifications",
       icon: <School />,
       color: "#795548",
+      description: "Earn internationally recognized professional certifications to validate your expertise and advance your career prospects.",
       programs: [
-        "CPA (Certified Public Accountant)",
-        "PMP (Project Management Professional)",
-        "PRINCE2 Certification",
-        "Scrum Master Certification",
-        "Digital Marketing Certification",
-        "HR Professional Certification",
-        "IT Certification Programs",
-        "Industry-Specific Certifications"
+        {
+          name: "CPA (Certified Public Accountant)",
+          description: "Complete CPA exam preparation with comprehensive accounting principles, auditing, and business law coverage."
+        },
+        {
+          name: "PMP (Project Management Professional)",
+          description: "Achieve PMP certification with intensive training in project management best practices and methodologies."
+        },
+        {
+          name: "PRINCE2 Certification",
+          description: "Earn PRINCE2 Foundation and Practitioner certifications in structured project management methodology."
+        },
+        {
+          name: "Scrum Master Certification",
+          description: "Become a certified Scrum Master with training in agile principles and team facilitation skills."
+        },
+        {
+          name: "Digital Marketing Certification",
+          description: "Gain Google, Facebook, and HubSpot certifications in digital marketing and analytics."
+        },
+        {
+          name: "HR Professional Certification",
+          description: "Prepare for SHRM-CP, PHR, and other HR professional certifications with comprehensive training."
+        },
+        {
+          name: "IT Certification Programs",
+          description: "Earn industry-standard IT certifications including CompTIA, Cisco, Microsoft, and AWS credentials."
+        },
+        {
+          name: "Industry-Specific Certifications",
+          description: "Specialized certifications for healthcare, finance, manufacturing, and other industry professionals."
+        }
       ]
     },
     {
       title: "HR & Legal Compliance",
       icon: <Support />,
       color: "#009688",
+      description: "Master human resources management and legal compliance with training in employment law and organizational practices.",
       programs: [
-        "Human Resources Management",
-        "Employment Law & Compliance",
-        "Recruitment & Talent Management",
-        "Employee Relations",
-        "Performance & Compensation",
-        "Workplace Safety & Health",
-        "Legal Documentation",
-        "HR Analytics & Metrics"
+        {
+          name: "Human Resources Management",
+          description: "Comprehensive HR management including recruitment, policy development, and strategic human capital planning."
+        },
+        {
+          name: "Employment Law & Compliance",
+          description: "Navigate complex employment laws, regulatory compliance, and workplace legal requirements."
+        },
+        {
+          name: "Recruitment & Talent Management",
+          description: "Master talent acquisition strategies, interviewing techniques, and employee retention programs."
+        },
+        {
+          name: "Employee Relations",
+          description: "Develop skills in conflict resolution, employee engagement, and workplace culture development."
+        },
+        {
+          name: "Performance & Compensation",
+          description: "Design performance management systems, compensation structures, and employee benefit programs."
+        },
+        {
+          name: "Workplace Safety & Health",
+          description: "Implement occupational safety programs, health and wellness initiatives, and risk management practices."
+        },
+        {
+          name: "Legal Documentation",
+          description: "Create and manage employment contracts, policies, procedures, and legal compliance documentation."
+        },
+        {
+          name: "HR Analytics & Metrics",
+          description: "Use data analytics for HR decision-making, workforce planning, and performance measurement."
+        }
       ]
     },
     {
       title: "Communication & Language",
       icon: <Language />,
       color: "#8bc34a",
+      description: "Enhance your communication skills and language proficiency for professional success in global business environments.",
       programs: [
-        "English Language Proficiency",
-        "Business Communication",
-        "Public Speaking & Presentation",
-        "Professional Writing Skills",
-        "Technical Writing",
-        "Cross-Cultural Communication",
-        "Interpersonal Communication",
-        "Media & Journalism"
+        {
+          name: "English Language Proficiency",
+          description: "Improve English speaking, writing, and comprehension skills for international business communication."
+        },
+        {
+          name: "Business Communication",
+          description: "Master professional communication skills for meetings, presentations, and corporate correspondence."
+        },
+        {
+          name: "Public Speaking & Presentation",
+          description: "Develop confident public speaking abilities and create compelling presentations that engage audiences."
+        },
+        {
+          name: "Professional Writing Skills",
+          description: "Enhance business writing, report preparation, and professional correspondence across various formats."
+        },
+        {
+          name: "Technical Writing",
+          description: "Specialize in technical documentation, user manuals, and complex information communication."
+        },
+        {
+          name: "Cross-Cultural Communication",
+          description: "Navigate cultural differences in global business environments with effective intercultural communication."
+        },
+        {
+          name: "Interpersonal Communication",
+          description: "Build strong interpersonal relationships through active listening, empathy, and emotional communication."
+        },
+        {
+          name: "Media & Journalism",
+          description: "Learn journalistic writing, media relations, and communication strategies for public engagement."
+        }
       ]
     },
     {
       title: "Creative & Design",
       icon: <DesignServicesRounded />,
       color: "#e91e63",
+      description: "Unleash your creativity with professional design training covering visual arts, digital media, and creative content production.",
       programs: [
-        "Graphic Design & Branding",
-        "Digital Art & Illustration",
-        "Video Production & Editing",
-        "Photography & Visual Arts",
-        "Creative Writing & Content",
-        "Animation & Motion Graphics",
-        "Interior & Architectural Design",
-        "Fashion & Product Design"
+        {
+          name: "Graphic Design & Branding",
+          description: "Create compelling visual identities, logos, and brand materials using industry-standard design software and principles."
+        },
+        {
+          name: "Digital Art & Illustration",
+          description: "Master digital illustration techniques, concept art, and creative visual storytelling for various media platforms."
+        },
+        {
+          name: "Video Production & Editing",
+          description: "Learn professional video production, editing techniques, and post-production workflows for engaging content."
+        },
+        {
+          name: "Photography & Visual Arts",
+          description: "Develop photography skills, visual composition, and artistic expression for commercial and creative applications."
+        },
+        {
+          name: "Creative Writing & Content",
+          description: "Enhance creative writing abilities, content creation, and storytelling for digital and traditional media."
+        },
+        {
+          name: "Animation & Motion Graphics",
+          description: "Create dynamic animations, motion graphics, and visual effects for digital media and entertainment."
+        },
+        {
+          name: "Interior & Architectural Design",
+          description: "Design functional and aesthetic interior spaces with architectural principles and space planning expertise."
+        },
+        {
+          name: "Fashion & Product Design",
+          description: "Develop skills in fashion design, product development, and consumer-focused design innovation."
+        }
       ]
     },
     {
       title: "Health & Wellness Coaching",
       icon: <AutoAwesome />,
       color: "#cddc39",
+      description: "Transform lives through holistic wellness coaching focusing on personal development, mental health, and life balance.",
       programs: [
-        "Life Coaching & Personal Development",
-        "Wellness & Nutrition Guidance",
-        "Stress Management & Mental Health",
-        "Fitness & Exercise Coaching",
-        "Work-Life Balance",
-        "Mindfulness & Meditation",
-        "Habit Formation & Goal Setting",
-        "Emotional Resilience Building"
+        {
+          name: "Life Coaching & Personal Development",
+          description: "Guide individuals through personal transformation, goal achievement, and life purpose discovery."
+        },
+        {
+          name: "Wellness & Nutrition Guidance",
+          description: "Provide holistic wellness coaching including nutrition planning, healthy lifestyle design, and wellness program development."
+        },
+        {
+          name: "Stress Management & Mental Health",
+          description: "Develop strategies for stress reduction, mental health support, and psychological wellbeing improvement."
+        },
+        {
+          name: "Fitness & Exercise Coaching",
+          description: "Create personalized fitness programs, exercise coaching, and physical wellness training for diverse populations."
+        },
+        {
+          name: "Work-Life Balance",
+          description: "Help professionals achieve sustainable work-life integration and personal fulfillment strategies."
+        },
+        {
+          name: "Mindfulness & Meditation",
+          description: "Teach mindfulness practices, meditation techniques, and contemplative approaches to wellbeing."
+        },
+        {
+          name: "Habit Formation & Goal Setting",
+          description: "Master behavior change psychology, habit formation, and systematic goal achievement methodologies."
+        },
+        {
+          name: "Emotional Resilience Building",
+          description: "Develop emotional intelligence, resilience skills, and mental toughness for personal and professional challenges."
+        }
       ]
     },
     {
       title: "Specialized Industries",
       icon: <BuildRounded />,
       color: "#00bcd4",
+      description: "Industry-specific training programs tailored for specialized sectors with practical applications and expert guidance.",
       programs: [
-        "Healthcare & Medical Training",
-        "Agriculture & Food Security",
-        "Environmental & Sustainability",
-        "Real Estate & Property Management",
-        "Manufacturing & Production",
-        "Logistics & Supply Chain",
-        "Tourism & Hospitality",
-        "Non-Profit & Social Impact"
+        {
+          name: "Healthcare & Medical Training",
+          description: "Specialized training for healthcare professionals including medical administration, patient care, and healthcare technology."
+        },
+        {
+          name: "Agriculture & Food Security",
+          description: "Modern agricultural practices, sustainable farming, food production, and agricultural business management."
+        },
+        {
+          name: "Environmental & Sustainability",
+          description: "Environmental management, sustainability practices, renewable energy, and green business solutions."
+        },
+        {
+          name: "Real Estate & Property Management",
+          description: "Real estate investment, property management, market analysis, and real estate business development."
+        },
+        {
+          name: "Manufacturing & Production",
+          description: "Production management, quality control, lean manufacturing, and industrial process optimization."
+        },
+        {
+          name: "Logistics & Supply Chain",
+          description: "Supply chain management, logistics optimization, inventory control, and distribution strategies."
+        },
+        {
+          name: "Tourism & Hospitality",
+          description: "Hospitality management, customer service excellence, tourism marketing, and travel industry operations."
+        },
+        {
+          name: "Non-Profit & Social Impact",
+          description: "Non-profit management, fundraising strategies, social entrepreneurship, and community development programs."
+        }
+      ]
+    },
+    {
+      title: "TVET Development Programs",
+      icon: <BuildRounded />,
+      color: "#f44336",
+      description: "Technical and Vocational Education and Training programs designed to develop practical skills and competencies for immediate workforce entry.",
+      programs: [
+        {
+          name: "Automotive Technology & Mechanics",
+          description: "Comprehensive automotive repair, maintenance, diagnostics, and modern vehicle technology training for career advancement."
+        },
+        {
+          name: "Electrical & Electronics Technology",
+          description: "Hands-on training in electrical systems, electronics repair, wiring, and electrical safety for residential and industrial applications."
+        },
+        {
+          name: "Plumbing & HVAC Systems",
+          description: "Professional plumbing, heating, ventilation, and air conditioning system installation, maintenance, and repair training."
+        },
+        {
+          name: "Welding & Metal Fabrication",
+          description: "Master various welding techniques, metal fabrication, blueprint reading, and safety protocols for industrial applications."
+        },
+        {
+          name: "Construction & Building Trades",
+          description: "Learn carpentry, masonry, concrete work, and construction project management with emphasis on safety and building codes."
+        },
+        {
+          name: "Culinary Arts & Food Service",
+          description: "Professional chef training, food preparation, kitchen management, and hospitality service skills for restaurant industry."
+        },
+        {
+          name: "Beauty & Cosmetology Services",
+          description: "Comprehensive beauty training including hair styling, skincare, makeup artistry, and salon business management."
+        },
+        {
+          name: "Healthcare Support & Nursing Aid",
+          description: "Medical assistant training, patient care, healthcare documentation, and clinical support skills for healthcare facilities."
+        },
+        {
+          name: "Information Technology Support",
+          description: "Computer repair, network setup, technical support, and basic IT infrastructure maintenance for small businesses."
+        },
+        {
+          name: "Agriculture & Livestock Management",
+          description: "Modern farming techniques, crop management, livestock care, and agricultural business practices for sustainable farming."
+        },
+        {
+          name: "Tailoring & Fashion Design",
+          description: "Professional garment construction, pattern making, fashion design basics, and clothing alteration services."
+        },
+        {
+          name: "Small Business & Entrepreneurship",
+          description: "Practical business startup training, financial management, marketing strategies, and business registration procedures."
+        }
       ]
     }
   ];
@@ -368,7 +774,7 @@ const ServicesSection: React.FC = () => {
               sx={{
                 textAlign: 'center',
                 mb: 3,
-                color: '#1e293b',
+                color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : '#1e293b',
                 fontWeight: 700
               }}
             >
@@ -395,11 +801,17 @@ const ServicesSection: React.FC = () => {
                     height: { xs: 36, sm: 48 },
                     cursor: 'pointer',
                     transition: 'all 0.3s ease',
-                    bgcolor: selectedCategory === index ? category.color : 'white',
-                    color: selectedCategory === index ? 'white' : '#475569',
-                    border: `2px solid ${selectedCategory === index ? category.color : '#e2e8f0'}`,
+                    bgcolor: selectedCategory === index 
+                      ? category.color 
+                      : isDarkMode ? 'rgba(40, 40, 40, 0.8)' : 'white',
+                    color: selectedCategory === index 
+                      ? 'white' 
+                      : isDarkMode ? 'rgba(255, 255, 255, 0.8)' : '#475569',
+                    border: `2px solid ${selectedCategory === index ? category.color : isDarkMode ? 'rgba(255, 255, 255, 0.2)' : '#e2e8f0'}`,
                     '&:hover': {
-                      bgcolor: selectedCategory === index ? category.color : 'rgba(99, 102, 241, 0.1)',
+                      bgcolor: selectedCategory === index 
+                        ? category.color 
+                        : isDarkMode ? `${category.color}20` : 'rgba(99, 102, 241, 0.1)',
                       borderColor: category.color,
                       transform: 'translateY(-2px)',
                       boxShadow: `0 8px 25px ${category.color}40`
@@ -426,9 +838,13 @@ const ServicesSection: React.FC = () => {
               sx={{
                 borderRadius: 4,
                 overflow: 'hidden',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.1)',
-                border: `2px solid ${selectedCategoryData.color}20`,
-                background: 'rgba(255, 255, 255, 0.95)',
+                boxShadow: isDarkMode 
+                  ? '0 20px 60px rgba(0, 0, 0, 0.4)' 
+                  : '0 20px 60px rgba(0, 0, 0, 0.1)',
+                border: `2px solid ${selectedCategoryData.color}${isDarkMode ? '40' : '20'}`,
+                background: isDarkMode 
+                  ? 'rgba(30, 30, 30, 0.95)' 
+                  : 'rgba(255, 255, 255, 0.95)',
                 backdropFilter: 'blur(10px)',
               }}
             >
@@ -460,7 +876,7 @@ const ServicesSection: React.FC = () => {
                       variant="h3"
                       sx={{
                         fontWeight: 700,
-                        color: '#1e293b',
+                        color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : '#1e293b',
                         fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' },
                         mb: 1
                       }}
@@ -470,12 +886,12 @@ const ServicesSection: React.FC = () => {
                     <Typography
                       variant="body1"
                       sx={{
-                        color: '#64748b',
+                        color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : '#64748b',
                         fontSize: { xs: '1rem', md: '1.1rem' },
                         fontWeight: 500
                       }}
                     >
-                      Specialized programs designed for career advancement
+                      {selectedCategoryData.description}
                     </Typography>
                   </Box>
                 </Box>
@@ -490,7 +906,9 @@ const ServicesSection: React.FC = () => {
                             height: '100%',
                             borderRadius: 2,
                             transition: 'all 0.3s ease',
-                            border: `1px solid ${selectedCategoryData.color}20`,
+                            border: `1px solid ${selectedCategoryData.color}${isDarkMode ? '40' : '20'}`,
+                            bgcolor: isDarkMode ? 'rgba(30, 30, 30, 0.8)' : 'white',
+                            backdropFilter: 'blur(10px)',
                             '&:hover': {
                               transform: 'translateY(-4px)',
                               boxShadow: `0 12px 40px ${selectedCategoryData.color}30`,
@@ -515,13 +933,13 @@ const ServicesSection: React.FC = () => {
                                 variant="h6"
                                 sx={{
                                   fontWeight: 600,
-                                  color: '#1e293b',
+                                  color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : '#1e293b',
                                   fontSize: { xs: '1rem', md: '1.1rem' },
                                   lineHeight: 1.4,
                                   flex: 1
                                 }}
                               >
-                                {program}
+                                {program.name}
                               </Typography>
                             </Box>
                             
@@ -531,7 +949,7 @@ const ServicesSection: React.FC = () => {
                                   size="small" 
                                   label="Live Sessions" 
                                   sx={{ 
-                                    bgcolor: `${selectedCategoryData.color}15`,
+                                    bgcolor: isDarkMode ? `${selectedCategoryData.color}25` : `${selectedCategoryData.color}15`,
                                     color: selectedCategoryData.color,
                                     fontWeight: 600,
                                     fontSize: '0.7rem'
@@ -541,7 +959,7 @@ const ServicesSection: React.FC = () => {
                                   size="small" 
                                   label="Certification" 
                                   sx={{ 
-                                    bgcolor: `${selectedCategoryData.color}15`,
+                                    bgcolor: isDarkMode ? `${selectedCategoryData.color}25` : `${selectedCategoryData.color}15`,
                                     color: selectedCategoryData.color,
                                     fontWeight: 600,
                                     fontSize: '0.7rem'
@@ -552,12 +970,12 @@ const ServicesSection: React.FC = () => {
                               <Typography
                                 variant="body2"
                                 sx={{
-                                  color: '#64748b',
+                                  color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : '#64748b',
                                   fontSize: '0.9rem',
                                   lineHeight: 1.5
                                 }}
                               >
-                                Expert coaching with personalized learning path, practical assignments, and career guidance.
+                                {program.description}
                               </Typography>
                             </Box>
                           </CardContent>
@@ -571,75 +989,199 @@ const ServicesSection: React.FC = () => {
                 <Box sx={{ 
                   textAlign: 'center', 
                   mt: 6, 
-                  p: 4, 
-                  borderRadius: 3,
-                  background: `linear-gradient(135deg, ${selectedCategoryData.color}15 0%, ${selectedCategoryData.color}05 100%)`,
-                  border: `1px solid ${selectedCategoryData.color}30`
+                  p: { xs: 3, md: 5 }, 
+                  borderRadius: 4,
+                  background: isDarkMode 
+                    ? `linear-gradient(135deg, rgba(30, 30, 30, 0.6) 0%, rgba(20, 20, 20, 0.4) 100%)`
+                    : `linear-gradient(135deg, ${selectedCategoryData.color}08 0%, ${selectedCategoryData.color}03 100%)`,
+                  border: `1px solid ${selectedCategoryData.color}${isDarkMode ? '30' : '20'}`,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '3px',
+                    background: `linear-gradient(90deg, ${selectedCategoryData.color}, ${selectedCategoryData.color}80)`,
+                  }
                 }}>
                   <Typography
-                    variant="h5"
+                    variant="h4"
                     sx={{
-                      fontWeight: 700,
-                      color: '#1e293b',
+                      fontWeight: 800,
+                      background: `linear-gradient(45deg, ${selectedCategoryData.color}, ${selectedCategoryData.color}80)`,
+                      backgroundClip: 'text',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
                       mb: 2,
-                      fontSize: { xs: '1.3rem', md: '1.5rem' }
+                      fontSize: { xs: '1.5rem', md: '2rem' }
                     }}
                   >
-                    Ready to Start Your Journey?
+                    Ready to Transform Your Career?
                   </Typography>
+                  
                   <Typography
                     variant="body1"
                     sx={{
-                      color: '#64748b',
-                      mb: 3,
-                      fontSize: { xs: '1rem', md: '1.1rem' }
+                      color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : '#64748b',
+                      mb: 4,
+                      fontSize: { xs: '1rem', md: '1.1rem' },
+                      maxWidth: '800px',
+                      mx: 'auto',
+                      lineHeight: 1.7
                     }}
                   >
-                    Join thousands of professionals who have transformed their careers with our expert coaching and comprehensive training programs.
+                    Join thousands of professionals across Africa who have accelerated their careers and scaled their operations with our expert coaching programs.
                   </Typography>
-                  <Stack 
-                    direction={{ xs: 'column', sm: 'row' }} 
-                    spacing={2} 
-                    justifyContent="center"
-                    alignItems="center"
-                  >
-                    <Chip
-                      icon={<AutoAwesome />}
-                      label="Personalized Coaching"
-                      sx={{
-                        bgcolor: 'white',
-                        color: selectedCategoryData.color,
-                        fontWeight: 600,
-                        px: 2,
-                        py: 3,
-                        height: 40
-                      }}
-                    />
-                    <Chip
-                      icon={<LocalLibraryRounded />}
-                      label="Study Materials"
-                      sx={{
-                        bgcolor: 'white',
-                        color: selectedCategoryData.color,
-                        fontWeight: 600,
-                        px: 2,
-                        py: 3,
-                        height: 40
-                      }}
-                    />
-                    <Chip
-                      icon={<GroupsRounded />}
-                      label="Live Video Sessions"
-                      sx={{
-                        bgcolor: 'white',
-                        color: selectedCategoryData.color,
-                        fontWeight: 600,
-                        px: 2,
-                        py: 3,
-                        height: 40
-                      }}
-                    />
-                  </Stack>
+
+                  {/* Features Grid */}
+                  <Grid container spacing={3} sx={{ mb: 4 }}>
+                    <Grid item xs={12} md={4}>
+                      <Card sx={{
+                        p: 3,
+                        height: '100%',
+                        borderRadius: 3,
+                        border: `1px solid ${selectedCategoryData.color}${isDarkMode ? '30' : '20'}`,
+                        background: isDarkMode 
+                          ? 'rgba(30, 30, 30, 0.8)' 
+                          : 'rgba(255, 255, 255, 0.8)',
+                        backdropFilter: 'blur(10px)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          borderColor: selectedCategoryData.color,
+                          boxShadow: `0 8px 30px ${selectedCategoryData.color}20`
+                        }
+                      }}>
+                        <Box sx={{
+                          width: 60,
+                          height: 60,
+                          borderRadius: '50%',
+                          background: `linear-gradient(135deg, ${selectedCategoryData.color}20, ${selectedCategoryData.color}10)`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          mx: 'auto',
+                          mb: 2
+                        }}>
+                          <AutoAwesome sx={{ fontSize: 28, color: selectedCategoryData.color }} />
+                        </Box>
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : '#1e293b' }}>
+                          Personalized Coaching
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : '#64748b', lineHeight: 1.6 }}>
+                          Tailored guidance for career advancement, business growth, and leadership development
+                        </Typography>
+                      </Card>
+                    </Grid>
+                    
+                    <Grid item xs={12} md={4}>
+                      <Card sx={{
+                        p: 3,
+                        height: '100%',
+                        borderRadius: 3,
+                        border: `1px solid ${selectedCategoryData.color}${isDarkMode ? '30' : '20'}`,
+                        background: isDarkMode 
+                          ? 'rgba(30, 30, 30, 0.8)' 
+                          : 'rgba(255, 255, 255, 0.8)',
+                        backdropFilter: 'blur(10px)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          borderColor: selectedCategoryData.color,
+                          boxShadow: `0 8px 30px ${selectedCategoryData.color}20`
+                        }
+                      }}>
+                        <Box sx={{
+                          width: 60,
+                          height: 60,
+                          borderRadius: '50%',
+                          background: `linear-gradient(135deg, ${selectedCategoryData.color}20, ${selectedCategoryData.color}10)`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          mx: 'auto',
+                          mb: 2
+                        }}>
+                          <LocalLibraryRounded sx={{ fontSize: 28, color: selectedCategoryData.color }} />
+                        </Box>
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : '#1e293b' }}>
+                          Comprehensive Resources
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : '#64748b', lineHeight: 1.6 }}>
+                          Access practical tools and materials across Business, Technology, Finance, and Leadership
+                        </Typography>
+                      </Card>
+                    </Grid>
+                    
+                    <Grid item xs={12} md={4}>
+                      <Card sx={{
+                        p: 3,
+                        height: '100%',
+                        borderRadius: 3,
+                        border: `1px solid ${selectedCategoryData.color}${isDarkMode ? '30' : '20'}`,
+                        background: isDarkMode 
+                          ? 'rgba(30, 30, 30, 0.8)' 
+                          : 'rgba(255, 255, 255, 0.8)',
+                        backdropFilter: 'blur(10px)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          borderColor: selectedCategoryData.color,
+                          boxShadow: `0 8px 30px ${selectedCategoryData.color}20`
+                        }
+                      }}>
+                        <Box sx={{
+                          width: 60,
+                          height: 60,
+                          borderRadius: '50%',
+                          background: `linear-gradient(135deg, ${selectedCategoryData.color}20, ${selectedCategoryData.color}10)`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          mx: 'auto',
+                          mb: 2
+                        }}>
+                          <GroupsRounded sx={{ fontSize: 28, color: selectedCategoryData.color }} />
+                        </Box>
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, color: isDarkMode ? 'rgba(255, 255, 255, 0.9)' : '#1e293b' }}>
+                          Interactive Sessions
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : '#64748b', lineHeight: 1.6 }}>
+                          Engage in live video sessions with industry experts and like-minded professionals
+                        </Typography>
+                      </Card>
+                    </Grid>
+                  </Grid>
+
+                  {/* CTA Button */}
+                  <Box sx={{ mt: 4 }}>
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <Box
+                        component="button"
+                        sx={{
+                          background: `linear-gradient(135deg, ${selectedCategoryData.color}, ${selectedCategoryData.color}CC)`,
+                          color: 'white',
+                          fontWeight: 700,
+                          fontSize: { xs: '1rem', md: '1.1rem' },
+                          px: { xs: 4, md: 6 },
+                          py: { xs: 1.5, md: 2 },
+                          borderRadius: '50px',
+                          border: 'none',
+                          cursor: 'pointer',
+                          boxShadow: `0 8px 25px ${selectedCategoryData.color}40`,
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            boxShadow: `0 12px 35px ${selectedCategoryData.color}50`,
+                          }
+                        }}
+                      >
+                        Start Your Journey Today
+                      </Box>
+                    </motion.div>
+                  </Box>
                 </Box>
               </CardContent>
             </Card>

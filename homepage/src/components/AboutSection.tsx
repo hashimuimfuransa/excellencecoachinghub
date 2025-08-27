@@ -128,12 +128,16 @@ const AboutSection: React.FC = () => {
                   color: 'text.secondary',
                   maxWidth: { xs: '100%', sm: '700px', md: '800px' },
                   mx: 'auto',
-                  lineHeight: 1.6,
-                  fontSize: { xs: '0.95rem', sm: '1.1rem', md: '1.25rem' },
+                  lineHeight: 1.7,
+                  fontSize: { xs: '1rem', sm: '1.15rem', md: '1.3rem' },
                   px: { xs: 1, sm: 2, md: 0 },
+                  fontWeight: 400,
+                  textAlign: 'center',
                 }}
               >
-                Transforming Africa's workforce through innovative e-learning, career coaching, and job placement services across the continent
+                Transforming Africa's talent and businesses through innovative coaching,
+                training, and advisory services that drive sustainable growth and success
+                across the continent and beyond.
               </Typography>
             </Box>
           </motion.div>
@@ -146,16 +150,18 @@ const AboutSection: React.FC = () => {
                 <Card
                   sx={{
                     height: '100%',
-                    background: 'linear-gradient(135deg, #3f51b5 0%, #536dfe 100%)',
+                    background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%)',
                     color: 'white',
                     position: 'relative',
                     overflow: 'hidden',
-                    borderRadius: '20px',
-                    boxShadow: '0 15px 35px rgba(63, 81, 181, 0.2)',
-                    transition: 'all 0.3s ease',
+                    borderRadius: '24px',
+                    boxShadow: '0 20px 40px rgba(30, 64, 175, 0.15)',
+                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
                     '&:hover': {
-                      transform: 'translateY(-10px)',
-                      boxShadow: '0 20px 40px rgba(63, 81, 181, 0.3)',
+                      transform: 'translateY(-12px) scale(1.02)',
+                      boxShadow: '0 25px 50px rgba(30, 64, 175, 0.25)',
                     }
                   }}
                 >
@@ -195,10 +201,11 @@ const AboutSection: React.FC = () => {
                         Vision
                       </Typography>
                     </Box>
-                    <Typography variant="body1" sx={{ lineHeight: 1.7, fontSize: '1.1rem' }}>
-                      ECH envisages becoming a leading African hub for career readiness, 
-                      coaching, and skills development, providing innovative solutions that 
-                      empower individuals to succeed in an evolving job market.
+                    <Typography variant="body1" sx={{ lineHeight: 1.8, fontSize: '1.1rem', fontWeight: 400 }}>
+                      ECH envisages to become a leading African Hub for high quality coaching, 
+                      training and advisory services, offering to businesses, organizations, 
+                      and individuals the solutions that drive efficiency, growth, adaptability 
+                      and success in an ever-changing world.
                     </Typography>
                   </CardContent>
                 </Card>
@@ -211,16 +218,18 @@ const AboutSection: React.FC = () => {
                 <Card
                   sx={{
                     height: '100%',
-                    background: 'linear-gradient(135deg, #22c55e 0%, #4ade80 100%)',
+                    background: 'linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%)',
                     color: 'white',
                     position: 'relative',
                     overflow: 'hidden',
-                    borderRadius: '20px',
-                    boxShadow: '0 15px 35px rgba(255, 107, 107, 0.2)',
-                    transition: 'all 0.3s ease',
+                    borderRadius: '24px',
+                    boxShadow: '0 20px 40px rgba(5, 150, 105, 0.15)',
+                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
                     '&:hover': {
-                      transform: 'translateY(-10px)',
-                      boxShadow: '0 20px 40px rgba(255, 107, 107, 0.3)',
+                      transform: 'translateY(-12px) scale(1.02)',
+                      boxShadow: '0 25px 50px rgba(5, 150, 105, 0.25)',
                     }
                   }}
                 >
@@ -260,12 +269,10 @@ const AboutSection: React.FC = () => {
                         Mission
                       </Typography>
                     </Box>
-                    <Typography variant="body1" sx={{ lineHeight: 1.7, fontSize: '1.1rem' }}>
-                      ECH is dedicated to empowering individuals across Africa with high-quality, 
-                      tailored coaching, online courses, psychometric assessments, live video coaching 
-                      for interview preparation, and verified certifications, enabling them to gain 
-                      the skills, confidence, and opportunities needed to secure meaningful 
-                      employment and thrive in a dynamic global workforce.
+                    <Typography variant="body1" sx={{ lineHeight: 1.8, fontSize: '1.1rem', fontWeight: 400 }}>
+                      ECH is dedicated to providing businesses, organizations, and individuals 
+                      across Africa and beyond with high-quality tailor-made coaching, training 
+                      and advisory services needed to thrive in a dynamic global landscape.
                     </Typography>
                   </CardContent>
                 </Card>
@@ -279,9 +286,16 @@ const AboutSection: React.FC = () => {
               <Typography
                 variant="h3"
                 sx={{
-                  fontWeight: 600,
-                  mb: 2,
+                  fontWeight: 700,
+                  mb: 3,
                   color: 'text.primary',
+                  fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' },
+                  background: isDarkMode 
+                    ? 'linear-gradient(45deg, #4ade80, #22c55e)'
+                    : 'linear-gradient(45deg, #22c55e, #16a34a)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
                 }}
               >
                 Our Core Values
@@ -307,8 +321,9 @@ const AboutSection: React.FC = () => {
                 <motion.div
                   variants={itemVariants}
                   whileHover={{
-                    y: -10,
-                    transition: { duration: 0.3 },
+                    y: -8,
+                    scale: 1.03,
+                    transition: { duration: 0.3, ease: "easeOut" },
                   }}
                 >
                   <Card
@@ -317,12 +332,15 @@ const AboutSection: React.FC = () => {
                       textAlign: 'center',
                       position: 'relative',
                       overflow: 'hidden',
-                      borderRadius: '16px',
-                      transition: 'all 0.3s ease',
-                      border: '1px solid rgba(0, 0, 0, 0.05)',
+                      borderRadius: '20px',
+                      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                      border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(0, 0, 0, 0.08)',
+                      backdropFilter: 'blur(10px)',
+                      background: isDarkMode ? 'rgba(16, 24, 40, 0.9)' : 'rgba(255, 255, 255, 0.95)',
                       '&:hover': {
-                        boxShadow: '0 15px 40px rgba(0, 0, 0, 0.12)',
-                        transform: 'translateY(-5px)',
+                        boxShadow: isDarkMode ? '0 20px 50px rgba(0, 0, 0, 0.6)' : '0 20px 50px rgba(0, 0, 0, 0.15)',
+                        transform: 'translateY(-8px)',
+                        border: `1px solid ${value.color}20`,
                       },
                     }}
                   >
@@ -348,14 +366,14 @@ const AboutSection: React.FC = () => {
                           mb: 3,
                         }}
                       >
-                        {React.cloneElement(value.icon, { sx: { fontSize: 32 } })}
+                        {React.cloneElement(value.icon, { sx: { fontSize: 32, color: isDarkMode ? '#fff' : undefined } })}
                       </Avatar>
                       <Typography
                         variant="h6"
                         sx={{
                           fontWeight: 600,
                           mb: 2,
-                          color: 'text.primary',
+                          color: isDarkMode ? 'grey.100' : 'text.primary',
                         }}
                       >
                         {value.title}
@@ -363,7 +381,7 @@ const AboutSection: React.FC = () => {
                       <Typography
                         variant="body2"
                         sx={{
-                          color: 'text.secondary',
+                          color: isDarkMode ? 'grey.400' : 'text.secondary',
                           lineHeight: 1.6,
                         }}
                       >
@@ -382,7 +400,9 @@ const AboutSection: React.FC = () => {
               sx={{
                 mt: 10,
                 p: { xs: 4, md: 6 },
-                background: 'linear-gradient(135deg, #3f51b5 0%, #6a1b9a 100%)',
+                background: isDarkMode
+                  ? 'linear-gradient(135deg, #0b1220 0%, #111827 100%)'
+                  : 'linear-gradient(135deg, #3f51b5 0%, #6a1b9a 100%)',
                 borderRadius: '24px',
                 color: 'white',
                 textAlign: 'center',
@@ -466,9 +486,9 @@ const AboutSection: React.FC = () => {
                       sx={{
                         p: 2,
                         borderRadius: '16px',
-                        background: 'rgba(255, 255, 255, 0.1)',
+                        background: isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.1)',
                         backdropFilter: 'blur(5px)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        border: isDarkMode ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(255, 255, 255, 0.2)',
                         height: '100%',
                         display: 'flex',
                         flexDirection: 'column',

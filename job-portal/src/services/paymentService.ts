@@ -1,290 +1,410 @@
-/**
- * Payment Service
- * Handles payment processing and simulation for various services
- */
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-export interface PaymentRequest {
-  amount: number;
-  currency: string;
+export interface TestPackage {
+  _id: string;
+  name: string;
   description: string;
-  serviceType: 'interview' | 'test' | 'course' | 'certificate';
-  userId: string;
-  metadata?: Record<string, any>;
+  level: 'basic' | 'standard' | 'premium' | 'enterprise';
+  price: number;
+  currency: string;
+  features: {
+    questionCount: number;
+    timeLimit: number;
+    attempts: number;
+    validityDays: number;
+    industrySpecific: boolean;
+    detailedReports: boolean;
+    comparativeAnalysis: boolean;
+    certificateIncluded: boolean;
+  };
+  isActive: boolean;
 }
 
-export interface PaymentResponse {
-  success: boolean;
-  paymentId: string;
-  transactionId?: string;
-  amount: number;
+// New simplified interface for test levels
+export interface TestLevel {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
   currency: string;
-  status: 'pending' | 'completed' | 'failed' | 'cancelled';
-  message?: string;
-  error?: string;
-  timestamp: string;
+  features: {
+    questionCount: number;
+    timeLimit: number;
+    attempts: number;
+    validityDays: number;
+    detailedReports: boolean;
+  };
 }
 
 export interface PaymentMethod {
   id: string;
   name: string;
+  description: string;
   icon: string;
-  available: boolean;
+  fee: number;
   processingTime: string;
+  currency: string;
+  isActive: boolean;
+}
+
+export interface TestPurchase {
+  _id: string;
+  user: string;
+  test: {
+    _id: string;
+    title: string;
+    description: string;
+    type: string;
+  };
+  amount: number;
+  currency: string;
+  status: 'pending' | 'completed' | 'failed' | 'refunded';
+  purchasedAt: Date;
+  expiresAt: Date;
+  maxAttempts: number;
+  attemptsUsed: number;
+  remainingAttempts: number;
+  metadata: {
+    packageLevel: string;
+    jobTitle?: string;
+    jobDescription?: string;
+    industry?: string;
+    experienceLevel?: string;
+    features: any;
+    paymentMethod: string;
+  };
+}
+
+export interface PurchaseRequest {
+  packageId: string;
+  jobTitle: string;
+  jobDescription?: string;
+  industry?: string;
+  experienceLevel?: 'entry-level' | 'mid-level' | 'senior-level' | 'executive';
+  paymentMethod: string;
 }
 
 class PaymentService {
-  // Available payment methods in Rwanda
-  private readonly PAYMENT_METHODS: PaymentMethod[] = [
-    {
-      id: 'momo',
-      name: 'MTN Mobile Money',
-      icon: '📱',
-      available: true,
-      processingTime: 'Instant'
-    },
-    {
-      id: 'airtel_money',
-      name: 'Airtel Money',
-      icon: '💳',
-      available: true,
-      processingTime: 'Instant'
-    },
-    {
-      id: 'bank_card',
-      name: 'Bank Card',
-      icon: '💳',
-      available: true,
-      processingTime: '2-5 minutes'
-    },
-    {
-      id: 'bank_transfer',
-      name: 'Bank Transfer',
-      icon: '🏦',
-      available: true,
-      processingTime: '5-10 minutes'
-    }
-  ];
-
-  // Standard prices
-  private readonly PRICES = {
-    INTERVIEW_3_MIN: 3000, // 3,000 RWF
-    PSYCHOMETRIC_TEST: 5000, // 5,000 RWF
-    FULL_INTERVIEW: 10000, // 10,000 RWF
-    COURSE_ACCESS: 15000 // 15,000 RWF
-  };
-
-  /**
-   * Get available payment methods
-   * @returns Array of available payment methods
-   */
-  getPaymentMethods(): PaymentMethod[] {
-    return this.PAYMENT_METHODS.filter(method => method.available);
+  private getAuthHeaders() {
+    const token = localStorage.getItem('token');
+    return {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    };
   }
 
-  /**
-   * Get service prices
-   * @returns Object with service prices
-   */
-  getPrices() {
-    return this.PRICES;
-  }
-
-  /**
-   * Simulate payment processing
-   * @param request - Payment request details
-   * @param paymentMethodId - Selected payment method ID
-   * @returns Promise<PaymentResponse>
-   */
-  async processPayment(request: PaymentRequest, paymentMethodId: string): Promise<PaymentResponse> {
+  async getTestPackages(): Promise<TestPackage[]> {
     try {
-      // Validate payment method
-      const paymentMethod = this.PAYMENT_METHODS.find(method => method.id === paymentMethodId);
-      if (!paymentMethod) {
-        throw new Error('Invalid payment method');
+      const response = await fetch(`${API_BASE_URL}/payments/test-packages`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch test packages');
       }
 
-      // Validate amount
-      if (request.amount <= 0) {
-        throw new Error('Invalid amount');
+      const data = await response.json();
+      return data.success ? data.data : [];
+    } catch (error) {
+      console.error('Error fetching test packages:', error);
+      throw error;
+    }
+  }
+
+  async getPaymentMethods(): Promise<PaymentMethod[]> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/payments/methods`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch payment methods');
       }
 
-      // Generate unique payment and transaction IDs
-      const paymentId = `pay_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const data = await response.json();
+      return data.success ? data.data : [];
+    } catch (error) {
+      console.error('Error fetching payment methods:', error);
+      throw error;
+    }
+  }
 
-      // Simulate processing delay based on payment method
-      const processingDelay = this.getProcessingDelay(paymentMethodId);
-      await new Promise(resolve => setTimeout(resolve, processingDelay));
-
-      // Simulate success/failure (95% success rate)
-      const isSuccessful = Math.random() > 0.05;
-
-      if (!isSuccessful) {
-        return {
-          success: false,
-          paymentId,
-          amount: request.amount,
-          currency: request.currency,
-          status: 'failed',
-          error: 'Payment processing failed. Please try again.',
-          timestamp: new Date().toISOString()
-        };
-      }
-
-      // Successful payment response
-      const response: PaymentResponse = {
-        success: true,
-        paymentId,
-        transactionId,
-        amount: request.amount,
-        currency: request.currency,
-        status: 'completed',
-        message: `Payment of ${request.amount} ${request.currency} completed successfully via ${paymentMethod.name}`,
-        timestamp: new Date().toISOString()
-      };
-
-      // Store payment record (in real app, this would go to database)
-      await this.storePaymentRecord({
-        ...response,
-        request,
-        paymentMethodId
+  async purchaseTestPackage(purchaseData: PurchaseRequest): Promise<{
+    purchase: TestPurchase;
+    paymentUrl?: string;
+  }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/payments/purchase-test-package`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(purchaseData),
       });
 
-      return response;
-    } catch (error) {
-      console.error('Payment processing error:', error);
-      
-      return {
-        success: false,
-        paymentId: `fail_${Date.now()}`,
-        amount: request.amount,
-        currency: request.currency,
-        status: 'failed',
-        error: error instanceof Error ? error.message : 'Unknown payment error',
-        timestamp: new Date().toISOString()
-      };
-    }
-  }
-
-  /**
-   * Process 3-minute interview payment
-   * @param userId - User ID
-   * @param jobTitle - Job title for the interview
-   * @param paymentMethodId - Selected payment method
-   * @returns Promise<PaymentResponse>
-   */
-  async processInterviewPayment(userId: string, jobTitle: string, paymentMethodId: string): Promise<PaymentResponse> {
-    const request: PaymentRequest = {
-      amount: this.PRICES.INTERVIEW_3_MIN,
-      currency: 'RWF',
-      description: `3-minute AI interview practice for ${jobTitle}`,
-      serviceType: 'interview',
-      userId,
-      metadata: {
-        jobTitle,
-        duration: '3 minutes',
-        type: 'ai_interview_practice'
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to purchase test package');
       }
-    };
 
-    return this.processPayment(request, paymentMethodId);
-  }
-
-  /**
-   * Validate payment before starting service
-   * @param paymentId - Payment ID to validate
-   * @returns Promise<boolean> - True if payment is valid
-   */
-  async validatePayment(paymentId: string): Promise<boolean> {
-    try {
-      // In real implementation, this would check with payment provider
-      // For simulation, check our stored records
-      const storedPayments = this.getStoredPayments();
-      const payment = storedPayments.find(p => p.paymentId === paymentId);
-      
-      return payment?.status === 'completed' && payment?.success === true;
+      const data = await response.json();
+      return data.data;
     } catch (error) {
-      console.error('Payment validation error:', error);
-      return false;
+      console.error('Error purchasing test package:', error);
+      throw error;
     }
   }
 
-  /**
-   * Get user's payment history
-   * @param userId - User ID
-   * @returns Array of payment records
-   */
-  async getUserPaymentHistory(userId: string): Promise<any[]> {
+  async getUserPurchases(): Promise<TestPurchase[]> {
     try {
-      const storedPayments = this.getStoredPayments();
-      return storedPayments
-        .filter(payment => payment.request?.userId === userId)
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      const response = await fetch(`${API_BASE_URL}/payments/my-purchases`, {
+        headers: this.getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch user purchases');
+      }
+
+      const data = await response.json();
+      return data.success ? data.data : [];
     } catch (error) {
-      console.error('Error fetching payment history:', error);
-      return [];
+      console.error('Error fetching user purchases:', error);
+      throw error;
     }
   }
 
-  /**
-   * Format amount for display
-   * @param amount - Amount in minor units
-   * @param currency - Currency code
-   * @returns Formatted amount string
-   */
-  formatAmount(amount: number, currency = 'RWF'): string {
-    return new Intl.NumberFormat('rw', {
+  async validateTestAccess(purchaseId: string): Promise<{
+    canTake: boolean;
+    reason?: string;
+    purchase?: TestPurchase;
+  }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/payments/validate-test-access`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ purchaseId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to validate test access');
+      }
+
+      const data = await response.json();
+      return data.data;
+    } catch (error) {
+      console.error('Error validating test access:', error);
+      throw error;
+    }
+  }
+
+  async generateQuestionsFromPurchase(purchaseId: string): Promise<any> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/psychometric-tests/generate-from-purchase`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ purchaseId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate test questions');
+      }
+
+      const data = await response.json();
+      return data.data;
+    } catch (error) {
+      console.error('Error generating questions from purchase:', error);
+      throw error;
+    }
+  }
+
+  formatCurrency(amount: number, currency: string = 'RWF'): string {
+    return new Intl.NumberFormat('rw-RW', {
       style: 'currency',
       currency: currency,
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      maximumFractionDigits: 0,
     }).format(amount);
   }
 
+  getPackageBadgeColor(level: string): string {
+    switch (level.toLowerCase()) {
+      case 'basic': return '#2196f3';
+      case 'standard': return '#4caf50';
+      case 'premium': return '#ff9800';
+      case 'enterprise': return '#9c27b0';
+      default: return '#666';
+    }
+  }
+
+  getPackageIcon(level: string): string {
+    switch (level.toLowerCase()) {
+      case 'basic': return '🎯';
+      case 'standard': return '📊';
+      case 'premium': return '💎';
+      case 'enterprise': return '👑';
+      default: return '📋';
+    }
+  }
+
+  // New Simplified API Methods
+
   /**
-   * Get processing delay based on payment method
-   * @param paymentMethodId - Payment method ID
-   * @returns Delay in milliseconds
+   * Get available test levels
    */
-  private getProcessingDelay(paymentMethodId: string): number {
-    switch (paymentMethodId) {
-      case 'momo':
-      case 'airtel_money':
-        return 2000; // 2 seconds for mobile money
-      case 'bank_card':
-        return 3000; // 3 seconds for bank card
-      case 'bank_transfer':
-        return 5000; // 5 seconds for bank transfer
-      default:
-        return 2000;
+  async getTestLevels(): Promise<TestLevel[]> {
+    try {
+      console.log('🔍 Fetching test levels from:', `${API_BASE_URL}/test-levels-early`);
+      const response = await fetch(`${API_BASE_URL}/test-levels-early`);
+      
+      console.log('🔍 Response status:', response.status);
+      console.log('🔍 Response ok:', response.ok);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.log('🔍 Error data:', errorData);
+        throw new Error(errorData.error || 'Failed to fetch test levels');
+      }
+
+      const data = await response.json();
+      console.log('🔍 Successfully fetched test levels:', data);
+      return data.data || [];
+    } catch (error) {
+      console.error('Error fetching test levels:', error);
+      throw error;
     }
   }
 
   /**
-   * Store payment record (mock storage)
-   * @param paymentRecord - Complete payment record
+   * Purchase a test level
    */
-  private async storePaymentRecord(paymentRecord: any): Promise<void> {
+  async purchaseTestLevel(purchaseData: {
+    levelId: string;
+    paymentMethodId: string;
+  }) {
     try {
-      const storedPayments = this.getStoredPayments();
-      storedPayments.push(paymentRecord);
-      localStorage.setItem('payment_records', JSON.stringify(storedPayments));
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/payments/purchase-test-level`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(purchaseData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to purchase test level');
+      }
+
+      return await response.json();
     } catch (error) {
-      console.error('Error storing payment record:', error);
+      console.error('Error purchasing test level:', error);
+      throw error;
     }
   }
 
   /**
-   * Get stored payment records (mock storage)
-   * @returns Array of payment records
+   * Generate psychometric test for a specific job (temporary - without purchase requirement)
    */
-  private getStoredPayments(): any[] {
+  async generatePsychometricTest(testData: {
+    jobId: string;
+    levelId: string;
+  }) {
     try {
-      const stored = localStorage.getItem('payment_records');
-      return stored ? JSON.parse(stored) : [];
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/simple-psychometric/generate-test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(testData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate test');
+      }
+
+      return await response.json();
     } catch (error) {
-      console.error('Error retrieving payment records:', error);
-      return [];
+      console.error('Error generating psychometric test:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Start a psychometric test session
+   */
+  async startPsychometricTest(sessionId: string) {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/simple-psychometric/start/${sessionId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to start test');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error starting psychometric test:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Submit psychometric test answers
+   */
+  async submitPsychometricTest(sessionId: string, answers: any) {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/simple-psychometric/submit/${sessionId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ answers })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit test');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error submitting psychometric test:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user's test results
+   */
+  async getUserTestResults() {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/simple-psychometric/my-results`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch test results');
+      }
+
+      const data = await response.json();
+      return data.data;
+    } catch (error) {
+      console.error('Error fetching test results:', error);
+      throw error;
     }
   }
 }

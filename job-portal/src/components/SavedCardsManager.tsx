@@ -15,7 +15,7 @@ import {
   DialogActions,
   CircularProgress,
   Alert,
-  AlertTitle,
+
   Divider,
   Table,
   TableBody,
@@ -35,7 +35,7 @@ import {
   Cancel as RejectIcon,
   PlayArrow as StartIcon,
   Receipt as ReceiptIcon,
-  RequestPage as RequestIcon,
+
   Info as InfoIcon,
   Refresh as RefreshIcon
 } from '@mui/icons-material';
@@ -65,19 +65,8 @@ interface TestPurchase {
   purchasedAt: string;
   expiresAt?: string;
   
-  // Approval workflow fields
-  approvalStatus: 'not_required' | 'pending_approval' | 'approved' | 'rejected';
-  approvalRequestedAt?: string;
-  approvedAt?: string;
-  rejectedAt?: string;
-  rejectionReason?: string;
-  autoApproval: boolean;
-  
   // Virtual fields
   isValid?: boolean;
-  canRequestApproval?: boolean;
-  isApprovalPending?: boolean;
-  approvalStatusDisplay?: string;
 }
 
 const SavedCardsManager: React.FC = () => {
@@ -86,7 +75,7 @@ const SavedCardsManager: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedPurchase, setSelectedPurchase] = useState<TestPurchase | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [requestingApproval, setRequestingApproval] = useState<string | null>(null);
+
   const [startingTest, setStartingTest] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'info' | 'warning' | 'error' }>({
     open: false,
@@ -98,60 +87,8 @@ const SavedCardsManager: React.FC = () => {
     fetchPurchases();
   }, [fetchPurchases]);
 
-  // Separate effect for auto-refresh that doesn't depend on purchases state
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    
-    // Check if there are pending approvals and set up interval
-    const checkAndSetupRefresh = () => {
-      const pendingApprovals = purchases.filter(p => p.approvalStatus === 'pending_approval');
-      
-      if (pendingApprovals.length > 0) {
-        if (!interval) {
-          console.log(`🔄 Setting up auto-refresh for ${pendingApprovals.length} pending approval(s)...`);
-          console.log('📝 Pending approvals:', pendingApprovals.map(p => ({
-            id: p._id,
-            testTitle: p.test?.title,
-            status: p.approvalStatus,
-            requestedAt: p.approvalRequestedAt
-          })));
-          
-          // Determine refresh interval based on recency of approval requests
-          const recentRequests = pendingApprovals.filter(p => {
-            if (!p.approvalRequestedAt) return false;
-            const requestTime = new Date(p.approvalRequestedAt);
-            const now = new Date();
-            const minutesAgo = (now.getTime() - requestTime.getTime()) / (1000 * 60);
-            return minutesAgo < 5; // Recent if within last 5 minutes
-          });
-          
-          const refreshInterval = recentRequests.length > 0 ? 5000 : 10000; // 5s for recent, 10s for older
-          
-          interval = setInterval(() => {
-            console.log('🔄 Auto-refreshing purchases for approval status updates...');
-            console.log('⏰ Current time:', new Date().toISOString());
-            console.log(`🚀 Using ${refreshInterval/1000}s interval (recent requests: ${recentRequests.length})`);
-            fetchPurchases();
-          }, refreshInterval);
-        }
-      } else {
-        if (interval) {
-          console.log('✅ Clearing auto-refresh - no pending approvals');
-          clearInterval(interval);
-          interval = null;
-        }
-      }
-    };
 
-    checkAndSetupRefresh();
-    
-    return () => {
-      if (interval) {
-        console.log('🧹 Cleaning up auto-refresh interval');
-        clearInterval(interval);
-      }
-    };
-  }, [purchases, fetchPurchases]);
+
 
   const fetchPurchases = useCallback(async () => {
     try {
@@ -159,51 +96,6 @@ const SavedCardsManager: React.FC = () => {
       setError(null);
       const data = await psychometricTestService.getUserTestPurchases();
       console.log('📊 Fetched user test purchases:', data.length, 'purchases');
-      data.forEach((purchase, index) => {
-        console.log(`  Purchase ${index + 1}:`, {
-          id: purchase._id,
-          test: purchase.test?.title,
-          status: purchase.status,
-          approvalStatus: purchase.approvalStatus,
-          approvalStatusDisplay: purchase.approvalStatusDisplay,
-          approvedAt: purchase.approvedAt,
-          approvalRequestedAt: purchase.approvalRequestedAt,
-          updatedAt: purchase.updatedAt
-        });
-      });
-      
-      // Check for status changes
-      const statusChanges = data.filter(purchase => 
-        purchases.find(existing => 
-          existing._id === purchase._id && 
-          existing.approvalStatus !== purchase.approvalStatus
-        )
-      );
-      
-      if (statusChanges.length > 0) {
-        console.log('🔄 Status changes detected:', statusChanges.map(p => ({
-          id: p._id,
-          test: p.test?.title,
-          oldStatus: purchases.find(existing => existing._id === p._id)?.approvalStatus,
-          newStatus: p.approvalStatus
-        })));
-        
-        statusChanges.forEach(purchase => {
-          if (purchase.approvalStatus === 'approved') {
-            setSnackbar({
-              open: true,
-              message: `Test "${purchase.test?.title}" has been approved! You can now start the test.`,
-              severity: 'success'
-            });
-          } else if (purchase.approvalStatus === 'rejected') {
-            setSnackbar({
-              open: true,
-              message: `Test "${purchase.test?.title}" was rejected. Please contact support for details.`,
-              severity: 'error'
-            });
-          }
-        });
-      }
       
       setPurchases(data);
     } catch (error: any) {
@@ -215,19 +107,7 @@ const SavedCardsManager: React.FC = () => {
     }
   }, [purchases]);
 
-  const handleRequestApproval = async (purchaseId: string) => {
-    try {
-      setRequestingApproval(purchaseId);
-      await psychometricTestService.requestTestApproval(purchaseId);
-      toast.success('Approval requested successfully! You will be notified when an admin reviews your request.');
-      await fetchPurchases(); // Refresh the list
-    } catch (error: any) {
-      console.error('Failed to request approval:', error);
-      toast.error(error.message || 'Failed to request approval');
-    } finally {
-      setRequestingApproval(null);
-    }
-  };
+
 
   const handleStartTest = async (purchase: TestPurchase) => {
     try {
@@ -257,38 +137,12 @@ const SavedCardsManager: React.FC = () => {
     }
   };
 
-  const getStatusColor = (approvalStatus: string, testStatus: string) => {
-    if (testStatus !== 'completed') return 'warning';
-    
-    switch (approvalStatus) {
-      case 'not_required':
-        return 'success';
-      case 'approved':
-        return 'success';
-      case 'pending_approval':
-        return 'warning';
-      case 'rejected':
-        return 'error';
-      default:
-        return 'default';
-    }
+  const getStatusColor = (status: string) => {
+    return status === 'completed' ? 'success' : 'warning';
   };
 
-  const getStatusIcon = (approvalStatus: string, testStatus: string) => {
-    if (testStatus !== 'completed') return <PendingIcon />;
-    
-    switch (approvalStatus) {
-      case 'not_required':
-        return <CheckIcon />;
-      case 'approved':
-        return <CheckIcon />;
-      case 'pending_approval':
-        return <PendingIcon />;
-      case 'rejected':
-        return <RejectIcon />;
-      default:
-        return <InfoIcon />;
-    }
+  const getStatusIcon = (status: string) => {
+    return status === 'completed' ? <CheckIcon /> : <PendingIcon />;
   };
 
   const formatDate = (dateString: string) => {
@@ -334,8 +188,7 @@ const SavedCardsManager: React.FC = () => {
   }, [fetchPurchases]);
 
   const canTakeTest = (purchase: TestPurchase) => {
-    return purchase.status === 'completed' && 
-           (purchase.approvalStatus === 'not_required' || purchase.approvalStatus === 'approved') &&
+    return purchase.status === 'completed' &&
            purchase.attemptsUsed < purchase.maxAttempts &&
            (!purchase.expiresAt || new Date() <= new Date(purchase.expiresAt));
   };
@@ -382,39 +235,10 @@ const SavedCardsManager: React.FC = () => {
       </Box>
       
       <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        Manage your purchased psychometric tests. Request approval when needed and start tests when ready.
+        Manage your purchased psychometric tests and start them when ready.
       </Typography>
 
-      {/* Pending Approvals Alert */}
-      {purchases.some(p => p.approvalStatus === 'pending_approval') && (
-        <Alert 
-          severity="info" 
-          sx={{ mb: 3 }}
-          action={
-            <Button 
-              color="inherit" 
-              size="small" 
-              onClick={handleManualRefresh}
-              disabled={loading}
-              startIcon={loading ? <CircularProgress size={16} color="inherit" /> : undefined}
-            >
-              {loading ? 'Refreshing...' : 'Check Status'}
-            </Button>
-          }
-        >
-          <AlertTitle>Approval Status Updates</AlertTitle>
-          You have {purchases.filter(p => p.approvalStatus === 'pending_approval').length} test(s) 
-          pending admin approval. Status updates automatically every {
-            purchases.some(p => {
-              if (!p.approvalRequestedAt) return false;
-              const requestTime = new Date(p.approvalRequestedAt);
-              const now = new Date();
-              const minutesAgo = (now.getTime() - requestTime.getTime()) / (1000 * 60);
-              return minutesAgo < 5;
-            }) ? '5' : '10'
-          } seconds, or click "Check Status" to refresh immediately.
-        </Alert>
-      )}
+
 
       {purchases.length === 0 ? (
         <Card sx={{ textAlign: 'center', py: 8 }}>
@@ -460,20 +284,10 @@ const SavedCardsManager: React.FC = () => {
                         {purchase.test.title}
                       </Typography>
                       <Chip
-                        icon={getStatusIcon(purchase.approvalStatus, purchase.status)}
-                        label={purchase.approvalStatusDisplay || purchase.status}
-                        color={getStatusColor(purchase.approvalStatus, purchase.status)}
+                        icon={getStatusIcon(purchase.status)}
+                        label={purchase.status === 'completed' ? 'Ready to Start' : 'Processing'}
+                        color={getStatusColor(purchase.status)}
                         size="small"
-                        sx={{
-                          ...(purchase.approvalStatus === 'pending_approval' && {
-                            animation: 'pulse 2s ease-in-out infinite',
-                            '@keyframes pulse': {
-                              '0%': { opacity: 1 },
-                              '50%': { opacity: 0.7 },
-                              '100%': { opacity: 1 }
-                            }
-                          })
-                        }}
                       />
                     </Box>
 
@@ -536,30 +350,12 @@ const SavedCardsManager: React.FC = () => {
                       Purchased on {formatDate(purchase.purchasedAt)}
                     </Typography>
 
-                    {/* Rejection Reason */}
-                    {purchase.approvalStatus === 'rejected' && purchase.rejectionReason && (
-                      <Alert severity="error" sx={{ mb: 2, '& .MuiAlert-message': { fontSize: '0.75rem' } }}>
-                        <strong>Rejected:</strong> {purchase.rejectionReason}
-                      </Alert>
-                    )}
+
                   </CardContent>
 
                   {/* Action Buttons */}
                   <Box sx={{ p: 2, pt: 0, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                    {/* Request Approval Button */}
-                    {purchase.canRequestApproval && (
-                      <Button
-                        variant="outlined"
-                        color="primary"
-                        size="small"
-                        startIcon={requestingApproval === purchase._id ? <CircularProgress size={16} /> : <RequestIcon />}
-                        onClick={() => handleRequestApproval(purchase._id)}
-                        disabled={requestingApproval === purchase._id}
-                        sx={{ flexGrow: 1 }}
-                      >
-                        Request Approval
-                      </Button>
-                    )}
+
 
                     {/* Start Test Button */}
                     {canTakeTest(purchase) && (
@@ -677,55 +473,7 @@ const SavedCardsManager: React.FC = () => {
                   </TableContainer>
                 </Grid>
 
-                {/* Approval Information */}
-                <Grid item xs={12}>
-                  <Typography variant="h6" gutterBottom>Approval Status</Typography>
-                  <TableContainer component={Paper} variant="outlined">
-                    <Table size="small">
-                      <TableBody>
-                        <TableRow>
-                          <TableCell><strong>Status</strong></TableCell>
-                          <TableCell>
-                            <Chip
-                              icon={getStatusIcon(selectedPurchase.approvalStatus, selectedPurchase.status)}
-                              label={selectedPurchase.approvalStatusDisplay}
-                              color={getStatusColor(selectedPurchase.approvalStatus, selectedPurchase.status)}
-                              size="small"
-                            />
-                          </TableCell>
-                        </TableRow>
-                        {selectedPurchase.approvalRequestedAt && (
-                          <TableRow>
-                            <TableCell><strong>Requested</strong></TableCell>
-                            <TableCell>{formatDate(selectedPurchase.approvalRequestedAt)}</TableCell>
-                          </TableRow>
-                        )}
-                        {selectedPurchase.approvedAt && (
-                          <TableRow>
-                            <TableCell><strong>Approved</strong></TableCell>
-                            <TableCell>{formatDate(selectedPurchase.approvedAt)}</TableCell>
-                          </TableRow>
-                        )}
-                        {selectedPurchase.rejectedAt && (
-                          <TableRow>
-                            <TableCell><strong>Rejected</strong></TableCell>
-                            <TableCell>{formatDate(selectedPurchase.rejectedAt)}</TableCell>
-                          </TableRow>
-                        )}
-                        {selectedPurchase.rejectionReason && (
-                          <TableRow>
-                            <TableCell><strong>Reason</strong></TableCell>
-                            <TableCell>
-                              <Alert severity="error" sx={{ mt: 1 }}>
-                                {selectedPurchase.rejectionReason}
-                              </Alert>
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Grid>
+
 
                 {/* Job Information */}
                 {selectedPurchase.job && (

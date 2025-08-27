@@ -149,7 +149,7 @@ class PsychometricTestService {
     return bestScores;
   }
 
-  // Purchase a test
+  // Purchase a test (temporarily disabled - payment functionality removed)
   async purchaseTest(
     testId: string, 
     paymentDetails: {
@@ -160,11 +160,11 @@ class PsychometricTestService {
       jobId?: string;
     }
   ): Promise<any> {
-    const response = await apiPost<ApiResponse<any>>(`/psychometric-tests/${testId}/purchase`, paymentDetails);
-    return handleApiResponse(response);
+    console.log('🔍 Payment functionality temporarily disabled - cannot purchase test:', testId);
+    throw new Error('Payment functionality is temporarily disabled');
   }
 
-  // Check test access
+  // Check test access (temporarily modified - always allow access without purchases)
   async checkTestAccess(testId: string, jobId?: string): Promise<{
     canTakeTest: boolean;
     reason?: string;
@@ -174,9 +174,17 @@ class PsychometricTestService {
     hasActivePurchase: boolean;
     remainingAttempts: number;
   }> {
-    const params = jobId ? { jobId } : {};
-    const response = await apiGet<ApiResponse<any>>(`/psychometric-tests/${testId}/access`, params);
-    return handleApiResponse(response);
+    console.log('🔍 Payment functionality temporarily disabled - allowing access to test:', testId);
+    // Return a mock response that allows access
+    return {
+      canTakeTest: true,
+      reason: 'Access granted (payment functionality temporarily disabled)',
+      purchase: null,
+      existingSession: null,
+      existingResults: [],
+      hasActivePurchase: false,
+      remainingAttempts: 99
+    };
   }
 
   // Start test session
@@ -292,81 +300,19 @@ class PsychometricTestService {
     return handleApiResponse(response);
   }
 
-  // Get user's test purchases
+  // Get user's test purchases (temporarily disabled - payment functionality removed)
   async getUserTestPurchases(): Promise<any[]> {
-    // Add cache busting parameter to force fresh data
-    const timestamp = Date.now();
-    
-    try {
-      const response = await apiGet<ApiResponse<any[]>>(
-        '/psychometric-tests/purchases/my-purchases', 
-        { _t: timestamp }
-      );
-      const result = handleApiResponse(response);
-      console.log('🔍 Primary API endpoint result:', result?.length || 0, 'payments');
-      return result;
-    } catch (error) {
-      console.error('❌ Primary endpoint failed, trying fallback...', error);
-      
-      // Try alternative endpoint if primary fails
-      try {
-        const fallbackResponse = await apiGet<ApiResponse<any[]>>(
-          '/users/me/payments', 
-          { _t: timestamp, type: 'psychometric' }
-        );
-        const fallbackResult = handleApiResponse(fallbackResponse);
-        console.log('🔍 Fallback API endpoint result:', fallbackResult?.length || 0, 'payments');
-        return fallbackResult;
-      } catch (fallbackError) {
-        console.error('❌ Fallback endpoint also failed:', fallbackError);
-        return [];
-      }
-    }
+    console.log('🔍 Payment functionality temporarily disabled - returning empty array');
+    return [];
   }
 
-  // Debug method to get a specific payment by ID
+  // Debug method to get a specific payment by ID (temporarily disabled - payment functionality removed)
   async getPaymentById(paymentId: string): Promise<any> {
-    try {
-      const response = await apiGet<ApiResponse<any>>(`/psychometric-tests/purchases/${paymentId}`);
-      return handleApiResponse(response);
-    } catch (error) {
-      console.error(`❌ Failed to fetch payment ${paymentId}:`, error);
-      return null;
-    }
+    console.log('🔍 Payment functionality temporarily disabled - returning null for payment ID:', paymentId);
+    return null;
   }
 
-  // Request approval for a test
-  async requestTestApproval(purchaseId: string): Promise<any> {
-    const response = await apiPost<ApiResponse<any>>(
-      `/psychometric-tests/purchases/${purchaseId}/request-approval`,
-      {}
-    );
-    return handleApiResponse(response);
-  }
 
-  // Get pending test approvals (Admin only)
-  async getPendingTestApprovals(): Promise<any[]> {
-    const response = await apiGet<ApiResponse<any[]>>('/psychometric-tests/approvals/pending');
-    return handleApiResponse(response);
-  }
-
-  // Approve a test (Admin only)
-  async approveTest(purchaseId: string): Promise<any> {
-    const response = await apiPost<ApiResponse<any>>(
-      `/psychometric-tests/approvals/${purchaseId}/approve`,
-      {}
-    );
-    return handleApiResponse(response);
-  }
-
-  // Reject a test (Admin only)
-  async rejectTest(purchaseId: string, reason: string): Promise<any> {
-    const response = await apiPost<ApiResponse<any>>(
-      `/psychometric-tests/approvals/${purchaseId}/reject`,
-      { reason }
-    );
-    return handleApiResponse(response);
-  }
 
   // Get recommended tests based on user profile
   async getRecommendedTests(): Promise<PsychometricTest[]> {

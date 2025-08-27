@@ -51,6 +51,8 @@ import CareerGuidancePage from './pages/CareerGuidancePage';
 import CareerAssessmentFlow from './pages/CareerAssessmentFlow';
 import CareerAssessmentResultsPage from './pages/CareerAssessmentResultsPage';
 import CVUploadTest from './components/CVUploadTest';
+import SimplifiedTestTaking from './pages/SimplifiedTestTaking';
+import SimplifiedTestResult from './pages/SimplifiedTestResult';
 
 function App() {
   // Initialize EmailJS on app start
@@ -103,6 +105,32 @@ function App() {
               } 
             />
             
+            {/* Psychometric Test Taking - Standalone (outside dashboard for full screen) */}
+            <Route 
+              path="/take-psychometric-test" 
+              element={
+                <ProtectedRoute>
+                  <SimplifiedTestTaking />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/take-psychometric-test/:sessionId" 
+              element={
+                <ProtectedRoute>
+                  <SimplifiedTestTaking />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/psychometric-test-result" 
+              element={
+                <ProtectedRoute>
+                  <SimplifiedTestResult />
+                </ProtectedRoute>
+              } 
+            />
+            
             {/* Protected Routes with MainLayout */}
             <Route 
               path="/app" 
@@ -150,6 +178,9 @@ function App() {
               <Route path="tests" element={<PsychometricTestsPage />} />
               <Route path="tests/saved" element={<SavedCardsManager />} />
               <Route path="test-results" element={<TestResultsPage />} />
+              
+              {/* Test Routes moved to standalone for full screen experience */}
+              
               <Route path="career-guidance" element={<CareerGuidancePage />} />
               <Route path="career/assessment/:assessmentId" element={<CareerAssessmentFlow />} />
               <Route path="career/assessment/:assessmentId/results" element={<CareerAssessmentResultsPage />} />

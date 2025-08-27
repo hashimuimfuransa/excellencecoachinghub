@@ -14,7 +14,9 @@ export interface IGeneratedPsychometricTestDocument extends Document {
     type: string;
     options?: string[];
     scaleRange?: { min: number; max: number; labels: string[] };
+    matchingPairs?: { columnA: string[]; columnB: string[] };
     correctAnswer?: string | number;
+    correctMatches?: Record<string, string>;
     traits: string[];
     weight: number;
     explanation?: string;
@@ -40,6 +42,7 @@ export interface IGeneratedPsychometricTestModel extends Model<IGeneratedPsychom
   findByJobAndUser(jobId: string, userId: string): Promise<IGeneratedPsychometricTestDocument | null>;
   findActiveByTestId(testId: string): Promise<IGeneratedPsychometricTestDocument | null>;
   cleanupExpired(): Promise<void>;
+  getPreviousQuestionsByUser(jobId: string, userId: string): Promise<string[]>;
 }
 
 const generatedTestQuestionSchema = new Schema({
@@ -58,7 +61,7 @@ const generatedTestQuestionSchema = new Schema({
   },
   type: {
     type: String,
-    enum: ['multiple_choice', 'scale', 'true_false', 'scenario'],
+    enum: ['multiple_choice', 'scale', 'true_false', 'scenario', 'matching', 'likert_scale'],
     required: true
   },
   options: [{
@@ -70,7 +73,15 @@ const generatedTestQuestionSchema = new Schema({
     max: { type: Number, default: 5 },
     labels: [{ type: String, trim: true }]
   },
+  matchingPairs: {
+    columnA: [{ type: String, trim: true }],
+    columnB: [{ type: String, trim: true }]
+  },
   correctAnswer: Schema.Types.Mixed,
+  correctMatches: {
+    type: Map,
+    of: String
+  },
   traits: [{
     type: String,
     trim: true
@@ -222,6 +233,31 @@ generatedPsychometricTestSchema.statics.cleanupExpired = function(): Promise<voi
   return this.deleteMany({ 
     expiresAt: { $lt: new Date() } 
   });
+};
+
+generatedPsychometricTestSchema.statics.getPreviousQuestionsByUser = async function(
+  jobId: string, 
+  userId: string
+): Promise<string[]> {
+  const previousTests = await this.find({ 
+    jobId, 
+    userId, 
+    isActive: true,
+    expiresAt: { $gt: new Date() }
+  }).select('questions.question').lean();
+
+  const allQuestions: string[] = [];
+  previousTests.forEach(test => {
+    if (test.questions) {
+      test.questions.forEach(q => {
+        if (q.question) {
+          allQuestions.push(q.question);
+        }
+      });
+    }
+  });
+
+  return allQuestions;
 };
 
 export const GeneratedPsychometricTest = mongoose.model<IGeneratedPsychometricTestDocument, IGeneratedPsychometricTestModel>(

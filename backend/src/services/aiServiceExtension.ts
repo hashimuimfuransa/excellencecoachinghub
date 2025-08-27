@@ -7,7 +7,8 @@ let cachedAvailability = false;
 const AVAILABILITY_CACHE_DURATION = 60000; // 1 minute
 
 // Add the isAvailable method to the existing service
-(aiService as any).isAvailable = async function(): Promise<boolean> {
+if (aiService) {
+  (aiService as any).isAvailable = async function(): Promise<boolean> {
   try {
     // Check if API key is configured
     if (!process.env.GEMINI_API_KEY) {
@@ -42,6 +43,9 @@ const AVAILABILITY_CACHE_DURATION = 60000; // 1 minute
     
     return false;
   }
-};
+  };
+} else {
+  console.warn('aiService is not available for extension');
+}
 
 export { aiService };

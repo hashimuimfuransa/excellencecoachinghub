@@ -42,9 +42,11 @@ import {
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 import SimpleProfileGuard from '../components/SimpleProfileGuard';
+import { SimplifiedTestSelection } from '../components/SimplifiedTestSelection';
 import { userService } from '../services/userService';
 import { psychometricTestService } from '../services/psychometricTestService';
 import { jobService } from '../services/jobService';
+import { paymentService } from '../services/paymentService';
 // Removed old local AI service - now using backend API
 interface JobTestBlueprint {
   categories: { name: string; weight: number }[];
@@ -100,10 +102,9 @@ import {
   Favorite,
   Lock,
   LockOpen,
-  BookmarkBorder,
-  RequestPage
+  BookmarkBorder
 } from '@mui/icons-material';
-const RequestIcon = RequestPage;
+
 const StartIcon = PlayArrow;
 import { useNavigate } from 'react-router-dom';
 
@@ -292,33 +293,33 @@ const freeTestCategories: FreeTestCategory[] = [
   }
 ];
 
-// Test levels for job-specific paid tests
+// Test levels for job-specific paid tests - Easy: 20, Intermediate: 30, Hard: 40 questions
 const testLevels: TestLevel[] = [
   {
     level: 1,
     title: 'Foundation Level',
-    description: 'Basic assessment covering fundamental traits and abilities',
+    description: 'Basic assessment covering fundamental traits and abilities with 20 comprehensive questions',
     difficulty: 'Easy',
-    estimatedTime: 15,
+    estimatedTime: 25, // ~1.25 minutes per question
     questionCount: 20,
     cost: 2000 // Base cost in FRW
   },
   {
     level: 2,
     title: 'Intermediate Level',
-    description: 'Comprehensive evaluation with scenario-based questions',
+    description: 'Comprehensive evaluation with scenario-based questions - 30 questions total',
     difficulty: 'Medium',
-    estimatedTime: 30,
-    questionCount: 40,
+    estimatedTime: 40, // ~1.33 minutes per question
+    questionCount: 30,
     cost: 4000 // Level 1 cost * 2
   },
   {
     level: 3,
     title: 'Advanced Level',
-    description: 'In-depth analysis with complex situational assessments',
+    description: 'In-depth analysis with complex situational assessments - 40 advanced questions',
     difficulty: 'Hard',
-    estimatedTime: 45,
-    questionCount: 60,
+    estimatedTime: 60, // 1.5 minutes per question
+    questionCount: 40,
     cost: 8000 // Level 2 cost * 2
   }
 ];
@@ -361,6 +362,11 @@ const PsychometricTestsPage: React.FC = () => {
     severity: 'info'
   });
   const [refreshing, setRefreshing] = useState(false);
+  
+  // New payment-first flow states
+  const [packageSelectionOpen, setPackageSelectionOpen] = useState(false);
+  const [purchaseId, setPurchaseId] = useState<string | null>(null);
+  const [purchasePackageLevel, setPurchasePackageLevel] = useState<string | null>(null);
 
   useEffect(() => {
     // Load data in the correct order to ensure jobs are available when processing payments
@@ -416,61 +422,20 @@ const PsychometricTestsPage: React.FC = () => {
     }
   };
 
-  // Refresh user payments and check for status updates
+  // Refresh user payments and check for status updates (temporarily disabled - payment functionality removed)
   const refreshUserPayments = async () => {
     if (!user?._id) return;
     
     try {
       setRefreshing(true);
       
-      // Get the current payments to compare status changes
-      const currentPayments = [...userPayments];
+      console.log('🔍 Payment functionality temporarily disabled - skipping payment refresh');
       
-      // Fetch latest payments from backend API
-      const response = await psychometricTestService.getUserTestPurchases();
+      // Since payments are disabled, just set empty array
+      const response: any[] = [];
       
-      console.log('🔍 Raw backend response:', response);
-      console.log('🔍 Total payments received:', response?.length || 0);
-      
-      // Enhanced logging for each payment
-      if (response && Array.isArray(response)) {
-        response.forEach((payment: any, index: number) => {
-          console.log(`💳 Payment ${index + 1}:`, {
-            id: payment._id,
-            status: payment.status,
-            approvalStatus: payment.approvalStatus,
-            testType: payment.testType,
-            type: payment.type,
-            service: payment.service,
-            paymentKeys: Object.keys(payment).filter(key => 
-              key.includes('job') || key.includes('Job') || key.includes('test') || key.includes('Test')
-            ),
-            allKeys: Object.keys(payment)
-          });
-        });
-      }
-
-      // If no payments found, try to check the specific payment ID mentioned by user
-      if (!response || response.length === 0) {
-        console.log('🔍 No payments found in primary endpoint, testing specific payment ID...');
-        try {
-          const specificPayment = await psychometricTestService.getPaymentById('68ada6c00799fee46cd1d1ce');
-          if (specificPayment) {
-            console.log('✅ Found specific payment by ID:', specificPayment);
-            console.log('📋 Payment details:', {
-              id: specificPayment._id,
-              status: specificPayment.status,
-              approvalStatus: specificPayment.approvalStatus,
-              userId: specificPayment.userId,
-              keys: Object.keys(specificPayment)
-            });
-          } else {
-            console.log('❌ Specific payment ID 68ada6c00799fee46cd1d1ce not found or not accessible');
-          }
-        } catch (error) {
-          console.error('❌ Error testing specific payment ID:', error);
-        }
-      }
+      console.log('🔍 Raw backend response (disabled):', response);
+      console.log('🔍 Total payments received (disabled):', response?.length || 0);
       
       if (response && Array.isArray(response)) {
         // Ensure we have the latest jobs data before processing payments
@@ -878,7 +843,20 @@ const PsychometricTestsPage: React.FC = () => {
   };
 
   const handleStartJobSpecificTest = () => {
+    setPackageSelectionOpen(true);
+  };
+
+  const handlePurchaseComplete = (newPurchaseId: string, packageLevel: string) => {
+    setPurchaseId(newPurchaseId);
+    setPurchasePackageLevel(packageLevel);
+    setPackageSelectionOpen(false);
     setJobSelectionOpen(true);
+    
+    setSnackbar({
+      open: true,
+      message: `Package purchased successfully! Now select a job to generate your assessment.`,
+      severity: 'success'
+    });
   };
 
   // New function specifically for starting approved saved assessments
@@ -1106,11 +1084,16 @@ const PsychometricTestsPage: React.FC = () => {
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // Generate tests for the approved job
-        await generateTestsForJob(job);
+        const generatedTest = await generateTestsForJob(job);
+        
+        // Set the ready test from the generated test
+        if (generatedTest) {
+          setReadyTest(generatedTest);
+        }
         
         // Show the test card when ready
         setShowTestCard(true);
-        setCurrentTab(0); // Switch to free tests tab to show the test card
+        // Keep user on current tab (Saved Assessments) instead of switching to Free Tests
         
         setSnackbar({
           open: true,
@@ -1148,10 +1131,17 @@ const PsychometricTestsPage: React.FC = () => {
   };
 
   const handleLevelSelection = async (level: number) => {
+    const previousLevel = selectedLevel;
     setSelectedLevel(level);
     
+    // Set the selected test level for payment dialog
+    const testLevel = testLevels.find(lvl => lvl.level === level);
+    if (testLevel) {
+      setSelectedTestLevel(testLevel);
+    }
+    
     // If tests are not generated yet or level changed, regenerate tests
-    if (generatedTests.length === 0 || selectedLevel !== level) {
+    if (generatedTests.length === 0 || previousLevel !== level) {
       setGeneratingTest(true);
       
       try {
@@ -1170,8 +1160,57 @@ const PsychometricTestsPage: React.FC = () => {
     }
   };
 
-  const generateTestsForJob = async (job: Job) => {
+  const generateTestsForJob = async (job: Job): Promise<PsychometricTest | null> => {
     try {
+      // Check if we have a purchased package
+      if (purchaseId) {
+        console.log('🛒 Using purchased package to generate test:', {
+          purchaseId,
+          packageLevel: purchasePackageLevel,
+          jobTitle: job.title
+        });
+
+        setGeneratingTest(true);
+        
+        try {
+          const result = await paymentService.generateQuestionsFromPurchase(purchaseId);
+          
+          // Create test object compatible with current structure
+          const purchasedTest: PsychometricTest = {
+            _id: `purchased-${purchaseId}-${Date.now()}`,
+            title: `${job.title} Assessment`,
+            description: `AI-powered psychometric assessment for ${job.title} position`,
+            type: 'comprehensive',
+            timeLimit: result.test.test.timeLimit || 45,
+            questions: result.test.test.questions,
+            traits: result.test.test.traits || ['Personality', 'Cognitive', 'Behavioral'],
+            jobRole: job.title,
+            industry: job.industry || 'General',
+            difficulty: 'medium',
+            isActive: true,
+            createdBy: '',
+            jobSpecific: true,
+            premium: true
+          };
+
+          console.log('✅ Generated test from purchase:', purchasedTest.title);
+          setGeneratedTests([purchasedTest]);
+          setGeneratingTest(false);
+          
+          return purchasedTest;
+        } catch (error) {
+          console.error('Error generating test from purchase:', error);
+          setGeneratingTest(false);
+          
+          setSnackbar({
+            open: true,
+            message: 'Failed to generate test from purchase. Please try again.',
+            severity: 'error'
+          });
+          
+          return null;
+        }
+      }
       // Extract skills from job description and requirements
       const extractSkillsFromText = (text: string): string[] => {
         const commonSkills = [
@@ -1219,7 +1258,9 @@ const PsychometricTestsPage: React.FC = () => {
 
       console.log('ðŸ” Analyzing job requirements and generating AI test...', job.title);
 
-      // Step 1: Prepare parameters for backend AI generation
+      // Step 1: Prepare parameters for backend AI generation using selected level
+      const selectedTestLevel = testLevels.find(level => level.level === selectedLevel) || testLevels[0];
+      
       const testParams = {
         jobTitle: job.title,
         jobDescription: job.description,
@@ -1227,8 +1268,8 @@ const PsychometricTestsPage: React.FC = () => {
         experienceLevel: job.experienceLevel || 'mid-level',
         industry: determineIndustry(job),
         testType: 'comprehensive' as const,
-        questionCount: 20,
-        timeLimit: 30
+        questionCount: selectedTestLevel.questionCount,
+        timeLimit: selectedTestLevel.estimatedTime
       };
 
       console.log('ðŸ“‹ Test Parameters:', testParams);
@@ -1269,7 +1310,7 @@ const PsychometricTestsPage: React.FC = () => {
         title: test.title,
         description: test.description,
         type: test.type || 'comprehensive',
-        timeLimit: test.timeLimit || 30,
+        timeLimit: selectedTestLevel.estimatedTime,
         questions: convertedQuestions,
         industry: test.industry || testParams.industry,
         jobRole: job.title,
@@ -1278,7 +1319,7 @@ const PsychometricTestsPage: React.FC = () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         categories: test.categories || ['comprehensive'],
-        difficulty: test.difficulty || 'moderate',
+        difficulty: selectedTestLevel.difficulty.toLowerCase() as 'easy' | 'medium' | 'hard',
         targetSkills: testParams.requiredSkills,
         targetTraits: ['problem-solving', 'communication', 'teamwork'],
         jobSpecific: test.jobSpecific || true,
@@ -1299,9 +1340,9 @@ const PsychometricTestsPage: React.FC = () => {
         skills: testParams.requiredSkills,
         traits: ['problem-solving', 'communication', 'teamwork'],
         totalQuestions: convertedQuestions.length,
-        difficulty: test.difficulty || 'moderate',
-        timeLimit: test.timeLimit || 30,
-        totalTimeLimit: (test.timeLimit || 30) * 60
+        difficulty: selectedTestLevel.difficulty.toLowerCase(),
+        timeLimit: selectedTestLevel.estimatedTime,
+        totalTimeLimit: selectedTestLevel.estimatedTime * 60
       });
       
       setAiGeneratedQuestions(convertedQuestions.map(q => ({
@@ -1327,29 +1368,98 @@ const PsychometricTestsPage: React.FC = () => {
         industry: testParams.industry
       });
 
+      return intelligentTest;
+
     } catch (error) {
       console.error('âŒ Error generating AI-powered test:', error);
       // Fallback to basic test if AI generation fails
       const fallbackTest = await generateFallbackTest(job);
       setGeneratedTests([fallbackTest]);
+      return fallbackTest;
     }
   };
 
   const generateFallbackTest = async (job: Job): Promise<PsychometricTest> => {
+    const selectedTestLevel = testLevels.find(level => level.level === selectedLevel) || testLevels[0];
+    
     return {
       _id: `fallback-${job._id}-${selectedLevel}`,
-      title: `${job.title} Basic Assessment - Level ${selectedLevel}`,
-      description: `Standard assessment for ${job.title} position at ${job.company}`,
-      type: 'behavioral',
-      timeLimit: testLevels[selectedLevel - 1].estimatedTime,
-      questions: generateMockQuestions(testLevels[selectedLevel - 1].questionCount),
+      title: `${job.title} Assessment - Level ${selectedLevel}`,
+      description: `Tailored assessment for ${job.title} position at ${job.company}`,
+      type: 'comprehensive',
+      timeLimit: selectedTestLevel.estimatedTime,
+      questions: generateJobSpecificQuestions(job, selectedTestLevel.questionCount),
       industry: job.skills[0] || 'General',
       jobRole: job.title,
       isActive: true,
       createdBy: 'System',
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      difficulty: selectedTestLevel.difficulty.toLowerCase() as 'easy' | 'medium' | 'hard',
+      categories: ['behavioral', 'cognitive', 'technical'],
+      targetSkills: job.skills || ['general'],
+      jobSpecific: true
     };
+  };
+
+  const generateJobSpecificQuestions = (job: Job, count: number): TestQuestion[] => {
+    const questions: TestQuestion[] = [];
+    
+    // Create job-specific question templates
+    const questionTemplates = [
+      {
+        template: `Based on the ${job.title} role requirements, how important is strong communication with team members?`,
+        category: 'communication',
+        traits: ['communication', 'teamwork']
+      },
+      {
+        template: `For a ${job.title} position at ${job.company}, how would you handle conflicting priorities?`,
+        category: 'problem-solving',
+        traits: ['problem-solving', 'decision-making']
+      },
+      {
+        template: `In your role as ${job.title}, how do you approach learning new skills or technologies?`,
+        category: 'adaptability',
+        traits: ['adaptability', 'learning']
+      },
+      {
+        template: `When working in ${job.title}, how important is attention to detail in your daily tasks?`,
+        category: 'attention-to-detail',
+        traits: ['attention-to-detail', 'quality']
+      },
+      {
+        template: `As a ${job.title} professional, how do you handle working under pressure or tight deadlines?`,
+        category: 'stress-management',
+        traits: ['stress-management', 'time-management']
+      }
+    ];
+    
+    // Generate questions based on job context
+    for (let i = 0; i < count; i++) {
+      const template = questionTemplates[i % questionTemplates.length];
+      
+      questions.push({
+        _id: `job-q-${i}`,
+        question: template.template,
+        type: 'scale',
+        scaleRange: {
+          min: 1,
+          max: 5,
+          labels: [
+            'Not Important/Never',
+            'Rarely Important/Seldom',
+            'Somewhat Important/Sometimes',
+            'Very Important/Often',
+            'Extremely Important/Always'
+          ]
+        },
+        traits: template.traits,
+        category: template.category,
+        weight: 1
+      });
+    }
+    
+    return questions;
   };
 
   const generateMockQuestions = (count: number): TestQuestion[] => {
@@ -1462,11 +1572,10 @@ const PsychometricTestsPage: React.FC = () => {
         cost: selectedTestLevel.cost,
         attemptsRemaining: 3, // 3 attempts per payment
         lastPaymentDate: new Date().toISOString(),
-        approvalStatus: 'pending',
+        approvalStatus: 'approved',
         jobId: selectedJob._id,
         jobTitle: selectedJob.title,
         paymentKey: paymentKey
-        // requestedAt will be set when user clicks "Request Approval"
       };
       
       // Always add new payment - don't update existing ones to allow multiple purchases
@@ -1477,88 +1586,33 @@ const PsychometricTestsPage: React.FC = () => {
       
       setPaymentDialogOpen(false);
       
-      // Reset level selection to allow for new selections
-      setSelectedLevel(1);
+      // Keep the selected level instead of resetting it
+      // This maintains the user's chosen assessment level after payment
       setTestDialogOpen(false);
       
       // Switch to saved assessments tab to show the purchased assessment
       setCurrentTab(2);
       
-      // Show success message with more details
-      alert(`Payment successful for ${selectedJob.title} - Level ${selectedTestLevel.level}! Your assessment has been saved. Go to the Saved Assessments tab and click "Request Approval" to get admin approval before starting.`);
+      // Show success message with better UX
+      setSnackbar({
+        open: true,
+        message: `Payment successful for ${selectedJob.title} - Level ${selectedTestLevel.level}! Your assessment has been saved and is ready to start.`,
+        severity: 'success'
+      });
       
     } catch (error) {
       console.error('Payment failed:', error);
-      alert('Payment failed. Please try again.');
+      setSnackbar({
+        open: true,
+        message: 'Payment failed. Please try again or contact support.',
+        severity: 'error'
+      });
     } finally {
       setProcessingPayment(false);
     }
   };
 
-  const handleRequestApproval = async (paymentKey: string) => {
-    try {
-      console.log('🔄 Requesting approval for:', paymentKey);
-      
-      // Find the payment info for this payment key
-      const payment = userPayments.find(p => p.paymentKey === paymentKey);
-      if (!payment) {
-        setSnackbar({
-          open: true,
-          message: 'Payment information not found',
-          severity: 'error'
-        });
-        return;
-      }
 
-      // Use the actual purchase ID from the backend response (stored in paymentKey if it's the _id)
-      const purchaseId = payment.paymentKey;
-      console.log('📝 Using purchase ID:', purchaseId);
-
-      // Make the real API call to request approval
-      try {
-        const response = await psychometricTestService.requestTestApproval(purchaseId);
-        console.log('✅ Approval requested successfully:', response);
-        
-        // Update local state only if API call succeeds
-        const updatedPayments = userPayments.map(p => 
-          p.paymentKey === paymentKey 
-            ? { 
-                ...p, 
-                approvalStatus: 'pending' as const,
-                requestedAt: new Date().toISOString()
-              }
-            : p
-        );
-        
-        setUserPayments(updatedPayments);
-        saveUserPayments(updatedPayments);
-        
-        setSnackbar({
-          open: true,
-          message: `Approval request submitted for ${payment.jobTitle}! Admin will review soon.`,
-          severity: 'success'
-        });
-
-        // Refresh the payments to get the latest status
-        setTimeout(() => refreshUserPayments(), 1000);
-
-      } catch (apiError) {
-        console.warn('API call failed:', apiError);
-        
-        setSnackbar({
-          open: true,
-          message: 'Failed to request approval. Please try again or contact support.',
-          severity: 'error'
-        });
-        
-        alert(`Approval request saved locally for ${payment.jobTitle} - Level ${payment.level}! Your request will be processed when connection is restored.`);
-      }
-      
-    } catch (error) {
-      console.error('Error requesting approval:', error);
-      alert('Failed to submit approval request. Please try again.');
-    }
-  };
 
 
 
@@ -1580,6 +1634,30 @@ const PsychometricTestsPage: React.FC = () => {
       p.approvalStatus === 'approved'
     );
     return paymentInfo ? paymentInfo.attemptsRemaining > 0 : false;
+  };
+
+  // New simplified flow handlers
+  const handleTestStart = async (testSessionId: string) => {
+    try {
+      // Start the test session and get the questions using real API
+      const testData = await paymentService.startPsychometricTest(testSessionId);
+      
+      // Navigate to standalone test taking interface with the session data (outside dashboard for full screen)
+      navigate('/take-psychometric-test', { 
+        state: { 
+          sessionId: testSessionId,
+          testData: testData.data
+        } 
+      });
+      
+    } catch (error: any) {
+      console.error('Error starting test:', error);
+      setSnackbar({
+        open: true,
+        message: error.message || 'Failed to start test. Please try again.',
+        severity: 'error'
+      });
+    }
   };
 
   const handleAnswerChange = (questionId: string, answer: any) => {
@@ -2487,39 +2565,10 @@ const PsychometricTestsPage: React.FC = () => {
 
             <Alert severity="info" sx={{ mb: 4 }}>
               <AlertTitle>Saved Assessments</AlertTitle>
-              Manage your purchased psychometric tests. Request approval when needed and start tests when ready.
+              Manage your purchased psychometric tests and start them when ready.
             </Alert>
 
-            {/* Pending Approvals Alert */}
-            {userPayments.some(p => p.approvalStatus === 'pending') && (
-              <Alert 
-                severity="info" 
-                sx={{ mb: 3 }}
-                action={
-                  <Button 
-                    color="inherit" 
-                    size="small" 
-                    onClick={handleManualRefresh}
-                    disabled={refreshing}
-                    startIcon={refreshing ? <CircularProgress size={16} color="inherit" /> : undefined}
-                  >
-                    {refreshing ? 'Refreshing...' : 'Check Status'}
-                  </Button>
-                }
-              >
-                <AlertTitle>Approval Status Updates</AlertTitle>
-                You have {userPayments.filter(p => p.approvalStatus === 'pending').length} test(s) 
-                pending admin approval. Status updates automatically every {
-                  userPayments.some(p => {
-                    if (!p.requestedAt) return false;
-                    const requestTime = new Date(p.requestedAt);
-                    const now = new Date();
-                    const minutesAgo = (now.getTime() - requestTime.getTime()) / (1000 * 60);
-                    return minutesAgo < 5;
-                  }) ? '5' : '10'
-                } seconds, or click "Check Status" to refresh immediately.
-              </Alert>
-            )}
+
 
             {userPayments.length === 0 ? (
               <Paper sx={{ p: 8, textAlign: 'center' }}>
@@ -2594,11 +2643,6 @@ const PsychometricTestsPage: React.FC = () => {
                           <Typography variant="body1" fontWeight="medium">
                             {payment.jobTitle || 'Unknown Job'}
                           </Typography>
-                          {process.env.NODE_ENV === 'development' && (
-                            <Typography variant="caption" color="text.secondary" display="block">
-                              Debug: JobID = {payment.jobId} | PaymentKey = {payment.paymentKey}
-                            </Typography>
-                          )}
                         </Box>
 
                         {/* Payment Details */}
@@ -2649,43 +2693,7 @@ const PsychometricTestsPage: React.FC = () => {
 
                       {/* Action Buttons */}
                       <Box sx={{ p: 2, pt: 0, display: 'flex', gap: 1, flexDirection: 'column' }}>
-                        {/* Request Approval Button */}
-                        {payment.approvalStatus === 'pending' && !payment.requestedAt && (
-                          <Button
-                            variant="outlined"
-                            color="warning"
-                            size="small"
-                            startIcon={<RequestIcon />}
-                            onClick={() => handleRequestApproval(payment.paymentKey || `${payment.jobId}_${payment.level}`)}
-                            fullWidth
-                          >
-                            Request Approval
-                          </Button>
-                        )}
 
-                        {/* Pending Approval Message */}
-                        {payment.approvalStatus === 'pending' && payment.requestedAt && (
-                          <Alert 
-                            severity="info" 
-                            sx={{ 
-                              mb: 1,
-                              animation: 'fadeIn 0.3s ease-in',
-                              '@keyframes fadeIn': {
-                                '0%': { opacity: 0, transform: 'translateY(-10px)' },
-                                '100%': { opacity: 1, transform: 'translateY(0)' }
-                              }
-                            }}
-                          >
-                            <Typography variant="body2" fontWeight="medium">
-                              Approval requested on {new Date(payment.requestedAt).toLocaleDateString()}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
-                              ⏱️ Automatic status updates every {
-                                payment.requestedAt && new Date().getTime() - new Date(payment.requestedAt).getTime() < 5 * 60 * 1000 ? '5' : '10'
-                              } seconds
-                            </Typography>
-                          </Alert>
-                        )}
 
 
 
@@ -2737,6 +2745,13 @@ const PsychometricTestsPage: React.FC = () => {
         <TestLevelDialog />
         <TestReadyCard />
         <PaymentDialog />
+        
+        {/* New Simplified Test Selection Dialog */}
+        <SimplifiedTestSelection
+          open={packageSelectionOpen}
+          onClose={() => setPackageSelectionOpen(false)}
+          onTestStart={handleTestStart}
+        />
 
         {/* Snackbar for notifications */}
         <Snackbar

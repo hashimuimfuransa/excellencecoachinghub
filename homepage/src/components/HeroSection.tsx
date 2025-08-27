@@ -181,7 +181,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
                       textAlign: { xs: 'center', md: 'left' },
                     }}
                   >
-                    Transform Your Career in{' '}
+                    Transform Careers and Businesses in{' '}
                     <Box
                       component="span"
                       sx={{
@@ -215,7 +215,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
                       textAlign: { xs: 'center', md: 'left' },
                     }}
                   >
-                    Excellence Coaching Hub - E-Learning, Job Prep & Career Success Across Africa
+                   Excellence Coaching Hub – Business Advisory, Tech Services, Finance & Leadership for Career Growth and Job Readiness
                   </Typography>
                 </motion.div>
 
@@ -236,7 +236,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
                       textAlign: { xs: 'center', md: 'left' },
                     }}
                   >
-                    We prepare you for career success through comprehensive job preparation and diverse professional training programs. From tech and business to finance and leadership, we provide expert coaching with study materials, live video sessions, interactive assessments, personalized mentoring, and practical hands-on experience across multiple industries to transform your career journey.
+                   We empower individuals, businesses, and organizations with expert training in Business Advisory, Tech Services, Finance, and Leadership. Through practical learning, mentoring, and job preparation, Excellence Coaching Hub equips you with the skills to grow, compete, and succeed across industries.
                   </Typography>
                 </motion.div>
 

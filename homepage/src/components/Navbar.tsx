@@ -30,10 +30,12 @@ import {
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useThemeContext } from '../contexts/ThemeContext';
 import ThemeToggle from './ThemeToggle';
 
 const Navbar: React.FC = () => {
   const theme = useTheme();
+  const { isDarkMode } = useThemeContext();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -373,11 +375,23 @@ const Navbar: React.FC = () => {
         position="fixed"
         elevation={scrolled ? 2 : 0}
         sx={{
-          bgcolor: scrolled ? 'rgba(255, 255, 255, 0.95)' : 'transparent',
+          bgcolor: scrolled 
+            ? isDarkMode 
+              ? 'rgba(20, 20, 20, 0.95)' 
+              : 'rgba(255, 255, 255, 0.95)'
+            : 'transparent',
           backdropFilter: scrolled ? 'blur(10px)' : 'none',
           transition: 'all 0.3s ease-in-out',
-          borderBottom: scrolled ? '1px solid rgba(0, 0, 0, 0.08)' : 'none',
-          boxShadow: scrolled ? '0 4px 20px rgba(0, 0, 0, 0.08)' : 'none',
+          borderBottom: scrolled 
+            ? isDarkMode 
+              ? '1px solid rgba(255, 255, 255, 0.08)' 
+              : '1px solid rgba(0, 0, 0, 0.08)'
+            : 'none',
+          boxShadow: scrolled 
+            ? isDarkMode 
+              ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
+              : '0 4px 20px rgba(0, 0, 0, 0.08)'
+            : 'none',
           borderRadius: 0,
         }}
       >
@@ -412,7 +426,11 @@ const Navbar: React.FC = () => {
                   component="div"
                   sx={{
                     fontWeight: 700,
-                    color: scrolled ? 'text.primary' : 'white',
+                    color: scrolled 
+                      ? isDarkMode 
+                        ? 'rgba(255, 255, 255, 0.9)' 
+                        : 'text.primary'
+                      : 'white',
                     fontSize: { xs: '0.9rem', sm: '1.1rem', md: '1.25rem' },
                     textShadow: scrolled ? 'none' : '0px 1px 2px rgba(0,0,0,0.3)',
                     lineHeight: 1.2,
@@ -426,7 +444,11 @@ const Navbar: React.FC = () => {
                   component="div"
                   sx={{
                     fontWeight: 700,
-                    color: scrolled ? 'text.primary' : 'white',
+                    color: scrolled 
+                      ? isDarkMode 
+                        ? 'rgba(255, 255, 255, 0.9)' 
+                        : 'text.primary'
+                      : 'white',
                     fontSize: '0.8rem',
                     textShadow: scrolled ? 'none' : '0px 1px 2px rgba(0,0,0,0.3)',
                     lineHeight: 1.2,
@@ -451,11 +473,19 @@ const Navbar: React.FC = () => {
                     <Button
                       onClick={item.action}
                       sx={{
-                        color: scrolled ? 'text.primary' : 'white',
+                        color: scrolled 
+                          ? isDarkMode 
+                            ? 'rgba(255, 255, 255, 0.9)' 
+                            : 'text.primary'
+                          : 'white',
                         fontWeight: 500,
                         textTransform: 'none',
                         '&:hover': {
-                          bgcolor: scrolled ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.1)',
+                          bgcolor: scrolled 
+                            ? isDarkMode 
+                              ? 'rgba(255, 255, 255, 0.08)' 
+                              : 'rgba(34, 197, 94, 0.08)'
+                            : 'rgba(255, 255, 255, 0.1)',
                         }
                       }}
                     >
@@ -487,14 +517,30 @@ const Navbar: React.FC = () => {
                       variant="outlined"
                       startIcon={<Login />}
                       sx={{
-                        color: scrolled ? 'primary.main' : 'white',
-                        borderColor: scrolled ? 'primary.main' : 'white',
+                        color: scrolled 
+                          ? isDarkMode 
+                            ? 'rgba(255, 255, 255, 0.9)' 
+                            : 'primary.main'
+                          : 'white',
+                        borderColor: scrolled 
+                          ? isDarkMode 
+                            ? 'rgba(255, 255, 255, 0.3)' 
+                            : 'primary.main'
+                          : 'white',
                         borderWidth: '1px',
                         borderRadius: '4px',
                         px: 2,
                         '&:hover': {
-                          borderColor: scrolled ? 'primary.dark' : 'rgba(255, 255, 255, 0.8)',
-                          bgcolor: scrolled ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.1)',
+                          borderColor: scrolled 
+                            ? isDarkMode 
+                              ? 'rgba(255, 255, 255, 0.6)' 
+                              : 'primary.dark'
+                            : 'rgba(255, 255, 255, 0.8)',
+                          bgcolor: scrolled 
+                            ? isDarkMode 
+                              ? 'rgba(255, 255, 255, 0.08)' 
+                              : 'rgba(34, 197, 94, 0.08)'
+                            : 'rgba(255, 255, 255, 0.1)',
                           transform: 'translateY(-2px)',
                           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                         }
@@ -532,7 +578,11 @@ const Navbar: React.FC = () => {
                     <Typography
                       variant="body2"
                       sx={{ 
-                        color: scrolled ? 'text.primary' : 'white',
+                        color: scrolled 
+                          ? isDarkMode 
+                            ? 'rgba(255, 255, 255, 0.9)' 
+                            : 'text.primary'
+                          : 'white',
                         fontWeight: 500,
                         textShadow: scrolled ? 'none' : '0px 1px 2px rgba(0,0,0,0.2)'
                       }}
@@ -550,13 +600,29 @@ const Navbar: React.FC = () => {
                       variant="outlined"
                       size="small"
                       sx={{
-                        color: scrolled ? 'primary.main' : 'white',
-                        borderColor: scrolled ? 'primary.main' : 'white',
+                        color: scrolled 
+                          ? isDarkMode 
+                            ? 'rgba(255, 255, 255, 0.9)' 
+                            : 'primary.main'
+                          : 'white',
+                        borderColor: scrolled 
+                          ? isDarkMode 
+                            ? 'rgba(255, 255, 255, 0.3)' 
+                            : 'primary.main'
+                          : 'white',
                         borderRadius: '4px',
                         borderWidth: '1px',
                         '&:hover': {
-                          borderColor: scrolled ? 'primary.dark' : 'rgba(255, 255, 255, 0.8)',
-                          bgcolor: scrolled ? 'rgba(34, 197, 94, 0.08)' : 'rgba(255, 255, 255, 0.1)',
+                          borderColor: scrolled 
+                            ? isDarkMode 
+                              ? 'rgba(255, 255, 255, 0.6)' 
+                              : 'primary.dark'
+                            : 'rgba(255, 255, 255, 0.8)',
+                          bgcolor: scrolled 
+                            ? isDarkMode 
+                              ? 'rgba(255, 255, 255, 0.08)' 
+                              : 'rgba(34, 197, 94, 0.08)'
+                            : 'rgba(255, 255, 255, 0.1)',
                           transform: 'translateY(-2px)',
                           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                         }
@@ -578,7 +644,13 @@ const Navbar: React.FC = () => {
                   aria-label="open drawer"
                   edge="start"
                   onClick={handleDrawerToggle}
-                  sx={{ color: scrolled ? 'text.primary' : 'white' }}
+                  sx={{ 
+                    color: scrolled 
+                      ? isDarkMode 
+                        ? 'rgba(255, 255, 255, 0.9)' 
+                        : 'text.primary'
+                      : 'white' 
+                  }}
                 >
                   <MenuIcon />
                 </IconButton>

@@ -82,42 +82,42 @@ const ServicesSection: React.FC = () => {
       ]
     },
     {
-      title: "School To Work Transition Coaching",
+      title: "ExJobNet Platform Services",
       icon: <Work />,
       color: "#ff5722",
-      description: "Strategic career transformation guidance to help you successfully navigate job changes and advance your professional journey.",
+      description: "Comprehensive digital career platform offering AI-powered job matching, professional development, and career advancement tools across Africa.",
       programs: [
         {
-          name: "Career Change Strategy",
-          description: "Develop a comprehensive strategy for successful career transitions with market analysis and opportunity identification."
+          name: "Smart Job Matching & Search",
+          description: "Advanced AI-powered job search with personalized recommendations, saved jobs, and intelligent filtering across diverse industries and locations."
         },
         {
-          name: "Job Search & Interview Preparation",
-          description: "Master job search techniques, interview skills, and professional networking to secure your ideal position."
+          name: "AI-Powered Interview Preparation",
+          description: "Interactive AI interview coaching with real-time feedback, practice sessions for various job roles, and performance analytics to boost confidence."
         },
         {
-          name: "Resume & LinkedIn Optimization",
-          description: "Create compelling resumes and optimize LinkedIn profiles to attract recruiters and showcase your value proposition."
+          name: "Psychometric Testing & Assessment",
+          description: "Comprehensive personality assessments, cognitive ability tests, and skills evaluations to match candidates with suitable career paths."
         },
         {
-          name: "Networking & Professional Branding",
-          description: "Build strategic professional relationships and develop a strong personal brand for career advancement."
+          name: "Career Guidance & Mentorship",
+          description: "Personalized career counseling with AI-driven insights, career path recommendations, and professional development planning."
         },
         {
-          name: "Industry Transition Planning",
-          description: "Navigate cross-industry career moves with targeted skill development and market entry strategies."
+          name: "Digital Profile & Portfolio Builder",
+          description: "Dynamic professional profiles with skill verification, achievement showcases, and portfolio management to attract top employers."
         },
         {
-          name: "Skills Assessment & Development",
-          description: "Identify skill gaps and create personalized development plans to meet industry requirements and career goals."
+          name: "Blockchain-Verified Certificates",
+          description: "Secure, tamper-proof digital certificates for completed courses and skills, verified on blockchain technology for global recognition."
         },
         {
-          name: "Salary Negotiation Coaching",
-          description: "Learn effective negotiation techniques to secure competitive compensation packages and career advancement."
+          name: "Employer Talent Acquisition Tools",
+          description: "Advanced recruitment solutions including candidate screening, interview management, analytics, and talent pipeline development."
         },
         {
-          name: "Professional Portfolio Building",
-          description: "Create impressive portfolios and case studies that demonstrate your expertise and achievements to employers."
+          name: "Professional Networking Hub",
+          description: "Connect with industry professionals, join career communities, access mentorship opportunities, and expand your professional network."
         }
       ]
     },

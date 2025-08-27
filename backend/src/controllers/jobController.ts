@@ -43,7 +43,7 @@ export const getJobs = async (req: Request, res: Response) => {
     const skip = (pageNum - 1) * limitNum;
 
     let jobQuery = Job.find(query)
-      .populate('employer', 'firstName lastName company')
+      .populate('employer', 'firstName lastName company email phone')
       .skip(skip)
       .limit(limitNum)
       .lean(); // Use lean() for faster queries when we don't need Mongoose methods
@@ -103,7 +103,7 @@ export const getJobsForStudent = async (req: AuthRequest, res: Response) => {
 
       // Return basic active jobs as fallback
       const jobs = await Job.find({ status: JobStatus.ACTIVE })
-        .populate('employer', 'firstName lastName company')
+        .populate('employer', 'firstName lastName company email phone')
         .populate('relatedCourses', 'title description category')
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -175,7 +175,7 @@ export const getJobsForStudent = async (req: AuthRequest, res: Response) => {
     };
 
     const jobs = await Job.find(query)
-      .populate('employer', 'firstName lastName company')
+      .populate('employer', 'firstName lastName company email phone')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum)
@@ -239,7 +239,7 @@ export const getJobById = async (req: Request, res: Response) => {
     const { id } = req.params;
 
     const job = await Job.findById(id)
-      .populate('employer', 'firstName lastName company email')
+      .populate('employer', 'firstName lastName company email phone address location socialLinks.linkedin socialLinks.website socialLinks.twitter jobTitle industry')
       .populate('relatedCourses', 'title description category level')
       .populate('psychometricTests', 'title description type');
 

@@ -275,27 +275,51 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
       (testSession.purchase as any).features && 
       (testSession.purchase as any).features.detailedReports;
 
-    // Create or update test result record
+    // Calculate time spent (in minutes)
+    const timeSpentMinutes = testSession.startedAt 
+      ? Math.round((new Date().getTime() - testSession.startedAt.getTime()) / (1000 * 60))
+      : testSession.timeLimit || 30; // Default to test time limit if no start time
+
+    // Generate category scores and interpretation
+    const categoryScores = calculateCategoryScores(detailedResults);
+    const interpretation = generateInterpretation(scorePercentage, categoryScores, (testSession.job as any).title);
+    const recommendations = generateRecommendations(scorePercentage, (testSession.job as any).title);
+
+    // Create or update test result record - match the PsychometricTestResult model schema
     const resultData = {
       user: userId,
       job: testSession.job._id,
-      testSession: testSession._id,
-      testLevel: testSession.testLevel,
-      score: scorePercentage,
-      totalQuestions: testSession.questions.length,
-      correctAnswers: correctAnswers,
+      answers: answers, // Array of user's selected answers
+      scores: categoryScores, // Category-wise scores object
+      overallScore: scorePercentage, // Direct field, not nested
+      interpretation: interpretation, // Required field
+      recommendations: recommendations, // Array of recommendation strings
       completedAt: new Date(),
-      results: {
-        overallScore: scorePercentage,
-        categoryScores: calculateCategoryScores(detailedResults),
-        detailedResults: hasDetailedResults ? detailedResults : null,
-        recommendations: generateRecommendations(scorePercentage, (testSession.job as any).title)
-      }
+      timeSpent: Math.max(1, timeSpentMinutes), // Ensure minimum 1 minute
+      attempt: 1, // Default attempt number
+      testMetadata: {
+        testId: testSession._id.toString(),
+        title: `Psychometric Assessment for ${(testSession.job as any).title}`,
+        type: 'job-specific',
+        categories: Object.keys(categoryScores),
+        difficulty: testSession.testLevel,
+        isGenerated: true,
+        jobSpecific: true
+      },
+      detailedAnalysis: hasDetailedResults ? {
+        detailedResults: detailedResults,
+        categoryBreakdown: categoryScores,
+        testLevel: testSession.testLevel,
+        totalQuestions: testSession.questions.length,
+        correctAnswers: correctAnswers
+      } : null
     };
 
     // Check if a result already exists for this test session
     let testResult = await PsychometricTestResult.findOne({
-      testSession: testSession._id
+      user: userId,
+      'testMetadata.testId': testSession._id.toString(),
+      job: testSession.job._id
     });
 
     if (testResult) {
@@ -316,8 +340,11 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
         score: scorePercentage,
         totalQuestions: testSession.questions.length,
         correctAnswers: correctAnswers,
+        timeSpent: testResult.timeSpent,
+        interpretation: testResult.interpretation,
+        categoryScores: testResult.scores,
         hasDetailedResults: hasDetailedResults,
-        recommendations: testResult.results.recommendations
+        recommendations: testResult.recommendations
       },
       message: isResubmission ? 'Test resubmitted and graded successfully!' : 'Test completed successfully!'
     });
@@ -433,6 +460,42 @@ function calculateCategoryScores(detailedResults: any[]) {
   });
 
   return categoryScores;
+}
+
+function generateInterpretation(score: number, categoryScores: { [key: string]: number }, jobTitle: string): string {
+  let interpretation = `Based on your psychometric assessment for the ${jobTitle} position, you scored ${score}% overall. `;
+
+  if (score >= 90) {
+    interpretation += "This is an exceptional performance that demonstrates outstanding aptitude for this role. ";
+  } else if (score >= 80) {
+    interpretation += "This is an excellent performance that shows strong suitability for this position. ";
+  } else if (score >= 70) {
+    interpretation += "This is a good performance that indicates solid potential for this role. ";
+  } else if (score >= 60) {
+    interpretation += "This is an average performance with room for improvement in key areas. ";
+  } else {
+    interpretation += "This performance suggests significant development is needed for this role. ";
+  }
+
+  // Add category-specific feedback
+  const categories = Object.keys(categoryScores);
+  if (categories.length > 0) {
+    interpretation += "Your performance across different categories shows: ";
+    const strengths = categories.filter(cat => categoryScores[cat] >= 75);
+    const improvements = categories.filter(cat => categoryScores[cat] < 60);
+
+    if (strengths.length > 0) {
+      interpretation += `strong performance in ${strengths.join(', ')} (${strengths.map(cat => categoryScores[cat] + '%').join(', ')}). `;
+    }
+    
+    if (improvements.length > 0) {
+      interpretation += `Areas for development include ${improvements.join(', ')} (${improvements.map(cat => categoryScores[cat] + '%').join(', ')}). `;
+    }
+  }
+
+  interpretation += `This assessment provides insights into your readiness for the ${jobTitle} position and highlights areas for professional development.`;
+  
+  return interpretation;
 }
 
 function generateRecommendations(score: number, jobTitle: string): string[] {

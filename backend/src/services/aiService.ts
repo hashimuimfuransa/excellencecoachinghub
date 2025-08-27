@@ -3281,3 +3281,5 @@ Rules:
     }
   }
 }
+// Create and export singleton instance
+export const aiService = new AIService();

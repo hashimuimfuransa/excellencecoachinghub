@@ -25,6 +25,7 @@ import { liveSessionScheduler } from '@/services/liveSessionScheduler';
 import { proctoringService } from '@/services/proctoringService';
 import { validateCloudinaryConfig } from '@/config/cloudinary';
 import videoProviderService from '@/services/videoProviderService';
+import { JobScrapingScheduler } from '@/services/jobScrapingScheduler';
 
 // Import routes
 import authRoutes from '@/routes/authRoutes';
@@ -76,6 +77,7 @@ import superAdminRoutes from '@/routes/superAdminRoutes';
 import employerRoutes from '@/routes/employerRoutes';
 import testRequestRoutes from '@/routes/testRequestRoutes';
 import paymentRoutes from '@/routes/paymentRoutes';
+import jobScrapingRoutes from '@/routes/jobScrapingRoutes';
 
 
 
@@ -688,6 +690,7 @@ app.use('/api/speech', speechRoutes);
 app.use('/api/job-certificates', jobCertificateRoutes);
 app.use('/api/profiles', profileRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/job-scraping', jobScrapingRoutes);
 
 // Test Request routes
 app.use('/api/test-requests', testRequestRoutes);
@@ -855,6 +858,9 @@ const startServer = async () => {
 
       // Start the live session scheduler
       liveSessionScheduler.start();
+      
+      // Start the job scraping scheduler
+      JobScrapingScheduler.start();
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);

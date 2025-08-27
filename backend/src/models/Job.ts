@@ -20,6 +20,7 @@ export interface IJobDocument extends Document {
   responsibilities: string[];
   benefits: string[];
   applicationDeadline?: Date;
+  postedDate?: Date;
   status: JobStatus;
   isCurated: boolean;
   curatedBy?: string;
@@ -28,6 +29,19 @@ export interface IJobDocument extends Document {
   psychometricTests: string[];
   applicationsCount: number;
   viewsCount: number;
+  isExternalJob: boolean;
+  externalApplicationUrl?: string;
+  externalJobSource?: string;
+  externalJobId?: string;
+  // Contact information for external jobs
+  contactInfo?: {
+    email?: string;
+    phone?: string;
+    website?: string;
+    address?: string;
+    contactPerson?: string;
+    applicationInstructions?: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -129,6 +143,10 @@ const jobSchema = new Schema<IJobDocument>({
       message: 'Application deadline must be in the future'
     }
   },
+  postedDate: {
+    type: Date,
+    default: Date.now
+  },
   status: {
     type: String,
     enum: JobStatus ? Object.values(JobStatus) : ['draft', 'active', 'paused', 'closed', 'expired'],
@@ -166,6 +184,58 @@ const jobSchema = new Schema<IJobDocument>({
     type: Number,
     default: 0,
     min: [0, 'Views count cannot be negative']
+  },
+  isExternalJob: {
+    type: Boolean,
+    default: false
+  },
+  externalApplicationUrl: {
+    type: String,
+    trim: true,
+    maxlength: [2000, 'External application URL cannot exceed 2000 characters']
+  },
+  externalJobSource: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'External job source cannot exceed 200 characters']
+  },
+  externalJobId: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'External job ID cannot exceed 200 characters']
+  },
+  contactInfo: {
+    email: {
+      type: String,
+      trim: true,
+      maxlength: [200, 'Contact email cannot exceed 200 characters'],
+      match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please provide a valid email address']
+    },
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: [50, 'Contact phone cannot exceed 50 characters']
+    },
+    website: {
+      type: String,
+      trim: true,
+      maxlength: [300, 'Website URL cannot exceed 300 characters']
+    },
+    address: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Address cannot exceed 500 characters']
+    },
+    contactPerson: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Contact person name cannot exceed 100 characters']
+    },
+    applicationInstructions: {
+      type: String,
+      trim: true,
+      maxlength: [1000, 'Application instructions cannot exceed 1000 characters']
+    }
   }
 }, {
   timestamps: true,
@@ -187,6 +257,8 @@ jobSchema.index({ jobType: 1 });
 jobSchema.index({ experienceLevel: 1 });
 jobSchema.index({ createdAt: -1 });
 jobSchema.index({ applicationDeadline: 1 });
+jobSchema.index({ isExternalJob: 1 });
+jobSchema.index({ externalJobSource: 1, externalJobId: 1 }, { unique: true, sparse: true });
 
 // Compound indexes
 jobSchema.index({ status: 1, educationLevel: 1 });

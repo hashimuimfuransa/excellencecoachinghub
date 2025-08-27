@@ -42,6 +42,15 @@ interface User {
   avatar?: string;
   company?: string;
   jobTitle?: string;
+  phone?: string;
+  address?: string;
+  location?: string;
+  industry?: string;
+  socialLinks?: {
+    linkedin?: string;
+    website?: string;
+    twitter?: string;
+  };
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

@@ -71,7 +71,7 @@ const PlatformLinksSection: React.FC = () => {
       coachingDetails: 'Our expert coaches provide personalized one-on-one live video sessions, student academic coaching, career mentoring, skill development guidance, practical assignments, continuous progress monitoring, and comprehensive career guidance across all our diverse programs to ensure your success in your chosen field.',
     },
     {
-      title: 'Job Portal',
+      title: 'exjobnet Portal',
       description: 'Accelerate your career success with comprehensive job preparation services including psychometric assessments, live video interview coaching, personalized career guidance, resume optimization, skill-job matching, and access to curated job opportunities across Africa and beyond.',
       icon: <Work />,
       color: '#22c55e',

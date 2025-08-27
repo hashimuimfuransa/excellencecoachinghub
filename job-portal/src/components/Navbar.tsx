@@ -84,12 +84,12 @@ const Navbar: React.FC = () => {
       <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <img 
-            src="/icon-minimal.svg" 
-            alt="Excellence Coaching Hub" 
+            src="/exjobnetlogo.png" 
+            alt="ExJobNet" 
             style={{ height: 30, width: 'auto' }}
           />
           <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-        
+            ExJobNet
           </Typography>
         </Box>
         <IconButton onClick={handleDrawerToggle}>
@@ -208,8 +208,8 @@ const Navbar: React.FC = () => {
             onClick={() => navigate('/')}
           >
             <img 
-              src="/logo1.png" 
-              alt="Excellence Coaching Hub" 
+              src="/exjobnetlogo.png" 
+              alt="ExJobNet" 
               style={{ height: 80, width: 'auto' }}
             />
             <Typography 
@@ -224,7 +224,7 @@ const Navbar: React.FC = () => {
                 WebkitTextFillColor: 'transparent'
               }}
             >
-              Excellence Coaching Hub
+              ExJobNet
             </Typography>
           </Box>
 

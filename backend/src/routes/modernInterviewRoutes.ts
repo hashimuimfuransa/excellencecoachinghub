@@ -13,59 +13,58 @@ import {
 
 const router = express.Router();
 
-// All routes require authentication
-router.use(auth);
+// Apply authentication per route as needed (removed global auth)
 
 /**
- * GET /api/job-roles
+ * GET /api/modern-interviews/job-roles
  * Get available job roles for interviews
  */
-router.get('/job-roles', getJobRoles);
+router.get('/job-roles', auth, getJobRoles);
 
 /**
- * POST /api/interviews/create
+ * POST /api/modern-interviews/interviews/create
  * Create a new interview session
  * Body: { jobId: string, jobTitle: string, duration?: number }
  */
-router.post('/interviews/create', createInterviewSession);
+router.post('/interviews/create', auth, createInterviewSession);
 
 /**
- * POST /api/interviews/:sessionId/start
+ * POST /api/modern-interviews/interviews/:sessionId/start
  * Start an interview session
  */
-router.post('/interviews/:sessionId/start', startInterviewSession);
+router.post('/interviews/:sessionId/start', auth, startInterviewSession);
 
 /**
- * POST /api/interviews/:sessionId/responses
+ * POST /api/modern-interviews/interviews/:sessionId/responses
  * Submit an interview response
  * Body: { questionId: string, question: string, answer: string, timestamp: string, duration?: number, confidence?: number }
  */
-router.post('/interviews/:sessionId/responses', submitInterviewResponse);
+router.post('/interviews/:sessionId/responses', auth, submitInterviewResponse);
 
 /**
- * POST /api/interviews/:sessionId/complete
+ * POST /api/modern-interviews/interviews/:sessionId/complete
  * Complete interview session and get results
  * Body: { responses: InterviewResponse[] }
  */
-router.post('/interviews/:sessionId/complete', completeInterviewSession);
+router.post('/interviews/:sessionId/complete', auth, completeInterviewSession);
 
 /**
- * GET /api/interviews/history
+ * GET /api/modern-interviews/interviews/history
  * Get user's interview history
  */
-router.get('/interviews/history', getInterviewHistory);
+router.get('/interviews/history', auth, getInterviewHistory);
 
 /**
- * GET /api/interviews/:sessionId/results
+ * GET /api/modern-interviews/interviews/:sessionId/results
  * Get interview results for a specific session
  */
-router.get('/interviews/:sessionId/results', getInterviewResults);
+router.get('/interviews/:sessionId/results', auth, getInterviewResults);
 
 /**
- * GET /api/interviews/jobs/for-interviews
+ * GET /api/modern-interviews/interviews/jobs/for-interviews
  * Get real job postings for interview practice
  */
-router.get('/interviews/jobs/for-interviews', async (req, res) => {
+router.get('/interviews/jobs/for-interviews', auth, async (req, res) => {
   try {
     // Fetch real jobs from database - active jobs only, limit to 20 for interviews
     const jobs = await Job.find({

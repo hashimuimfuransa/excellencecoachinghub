@@ -63,6 +63,7 @@ import testRoutes from '@/routes/testRoutes';
 import jobRoutes from '@/routes/jobRoutes';
 import jobApplicationRoutes from '@/routes/jobApplicationRoutes';
 import psychometricTestRoutes from '@/routes/psychometricTestRoutes';
+import simplePsychometricRoutes from '@/routes/simplePsychometricRoutes';
 import careerGuidanceRoutes from '@/routes/careerGuidanceRoutes';
 import aiInterviewRoutes from '@/routes/aiInterviewRoutes';
 import quickInterviewRoutes from '@/routes/quickInterviewRoutes';
@@ -74,6 +75,7 @@ import uploadRoutes from '@/routes/uploadRoutes';
 import superAdminRoutes from '@/routes/superAdminRoutes';
 import employerRoutes from '@/routes/employerRoutes';
 import testRequestRoutes from '@/routes/testRequestRoutes';
+import paymentRoutes from '@/routes/paymentRoutes';
 
 
 
@@ -196,6 +198,224 @@ app.use((req, res, next) => {
   next();
 });
 
+// EARLY TEST ENDPOINT - NO AUTH REQUIRED
+app.get('/api/test-levels-early', (req, res) => {
+  console.log('🚀 EARLY test levels endpoint hit - should have no auth');
+  res.status(200).json({
+    success: true,
+    data: [
+      { 
+        id: 'easy', 
+        name: 'Easy Level', 
+        price: 2000, 
+        currency: 'UGX',
+        description: 'Basic psychometric assessment with fundamental questions',
+        features: {
+          questionCount: 15,
+          timeLimit: 20,
+          attempts: 3,
+          validityDays: 30,
+          detailedReports: false
+        }
+      },
+      { 
+        id: 'intermediate', 
+        name: 'Intermediate Level', 
+        price: 3500, 
+        currency: 'UGX',
+        description: 'Moderate difficulty assessment covering various skills',
+        features: {
+          questionCount: 25,
+          timeLimit: 35,
+          attempts: 2,
+          validityDays: 45,
+          detailedReports: true
+        }
+      },
+      { 
+        id: 'hard', 
+        name: 'Hard Level', 
+        price: 5000, 
+        currency: 'UGX',
+        description: 'Comprehensive assessment for advanced positions',
+        features: {
+          questionCount: 40,
+          timeLimit: 60,
+          attempts: 1,
+          validityDays: 60,
+          detailedReports: true
+        }
+      }
+    ],
+    message: 'Early test levels endpoint working - no auth'
+  });
+});
+
+// EARLY TEST JOBS ENDPOINT - NO AUTH REQUIRED (for testing dialog)
+// Updated endpoint to fetch real jobs from database instead of mock data
+app.get('/api/test-jobs-early', async (req, res) => {
+  console.log('🚀 Fetching actual jobs from database for psychometric tests');
+  try {
+    // Import Job model properly
+    const { Job } = await import('./models');
+    
+    // Query active jobs from database
+    const jobs = await Job.find({ status: 'active' })
+      .populate('employer', 'firstName lastName company')
+      .limit(20)
+      .sort({ createdAt: -1 });
+
+    // If no jobs found in database, return fallback mock jobs
+    if (!jobs || jobs.length === 0) {
+      console.log('⚠️ No jobs found in database, using fallback data');
+      return res.status(200).json({
+        success: true,
+        data: [
+          {
+            _id: 'fallback-job-1',
+            title: 'Software Developer',
+            company: 'Tech Solutions Ltd',
+            industry: 'Technology',
+            experienceLevel: 'mid_level',
+            skillsRequired: ['JavaScript', 'React', 'Node.js', 'MongoDB', 'API Development'],
+            description: 'Join our dynamic team as a Software Developer and work on cutting-edge projects.',
+            status: 'active',
+            jobType: 'full_time',
+            location: 'Kampala, Uganda',
+            educationLevel: 'bachelor',
+            employer: { firstName: 'John', lastName: 'Doe', company: 'Tech Solutions Ltd' }
+          },
+          {
+            _id: 'fallback-job-2',
+            title: 'Digital Marketing Specialist',
+            company: 'Marketing Pro Agency',
+            industry: 'Marketing',
+            experienceLevel: 'entry_level',
+            skillsRequired: ['SEO', 'Social Media', 'Content Marketing', 'Analytics', 'PPC'],
+            description: 'Drive digital marketing campaigns and help clients grow their online presence.',
+            status: 'active',
+            jobType: 'full_time',
+            location: 'Entebbe, Uganda',
+            educationLevel: 'bachelor',
+            employer: { firstName: 'Sarah', lastName: 'Smith', company: 'Marketing Pro Agency' }
+          },
+          {
+            _id: 'fallback-job-3',
+            title: 'Data Analyst',
+            company: 'Data Insights Corp',
+            industry: 'Data Science',
+            experienceLevel: 'mid_level',
+            skillsRequired: ['Python', 'SQL', 'Excel', 'Tableau', 'Statistics'],
+            description: 'Analyze complex datasets and provide actionable insights for business decisions.',
+            status: 'active',
+            jobType: 'contract',
+            location: 'Jinja, Uganda',
+            educationLevel: 'bachelor',
+            employer: { firstName: 'Michael', lastName: 'Johnson', company: 'Data Insights Corp' }
+          },
+          {
+            _id: 'fallback-job-4',
+            title: 'Project Manager',
+            company: 'Business Excellence Ltd',
+            industry: 'Consulting',
+            experienceLevel: 'senior_level',
+            skillsRequired: ['Project Management', 'Leadership', 'Agile', 'Communication', 'Risk Management'],
+            description: 'Lead cross-functional teams and deliver projects on time and within budget.',
+            status: 'active',
+            jobType: 'full_time',
+            location: 'Mbarara, Uganda',
+            educationLevel: 'master',
+            employer: { firstName: 'Emma', lastName: 'Wilson', company: 'Business Excellence Ltd' }
+          },
+          {
+            _id: 'fallback-job-5',
+            title: 'Graphic Designer',
+            company: 'Creative Studio',
+            industry: 'Design',
+            experienceLevel: 'entry_level',
+            skillsRequired: ['Photoshop', 'Illustrator', 'InDesign', 'Branding', 'Typography'],
+            description: 'Create visually stunning designs for various marketing materials and digital content.',
+            status: 'active',
+            jobType: 'freelance',
+            location: 'Gulu, Uganda',
+            educationLevel: 'associate',
+            employer: { firstName: 'David', lastName: 'Brown', company: 'Creative Studio' }
+          }
+        ],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 5,
+          pages: 1
+        },
+        message: 'Using fallback jobs - no real jobs in database'
+      });
+    }
+
+    // Format jobs for response
+    const formattedJobs = jobs.map(job => ({
+      _id: job._id,
+      title: job.title,
+      company: job.company || job.employer?.company,
+      industry: job.industry,
+      experienceLevel: job.experienceLevel,
+      skillsRequired: job.skillsRequired || job.requirements || [],
+      description: job.description,
+      status: job.status,
+      jobType: job.jobType,
+      location: job.location,
+      educationLevel: job.educationLevel,
+      employer: job.employer
+    }));
+
+    console.log(`✅ Successfully fetched ${formattedJobs.length} real jobs from database`);
+    
+    res.status(200).json({
+      success: true,
+      data: formattedJobs,
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: formattedJobs.length,
+        pages: 1
+      },
+      message: `Loaded ${formattedJobs.length} real jobs from database`
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching real jobs:', error);
+    
+    // Return fallback mock data in case of error
+    res.status(200).json({
+      success: true,
+      data: [
+        {
+          _id: 'error-fallback-1',
+          title: 'Software Developer',
+          company: 'Tech Solutions Ltd',
+          industry: 'Technology',
+          experienceLevel: 'mid_level',
+          skillsRequired: ['JavaScript', 'React', 'Node.js', 'MongoDB', 'API Development'],
+          description: 'Join our dynamic team as a Software Developer and work on cutting-edge projects.',
+          status: 'active',
+          jobType: 'full_time',
+          location: 'Kampala, Uganda',
+          educationLevel: 'bachelor',
+          employer: { firstName: 'John', lastName: 'Doe', company: 'Tech Solutions Ltd' }
+        }
+      ],
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 1,
+        pages: 1
+      },
+      message: 'Error fetching real jobs - using fallback data',
+      error: error.message
+    });
+  }
+});
+
 // Global async error catcher
 app.use(globalAsyncErrorCatcher);
 
@@ -288,6 +508,32 @@ app.get('/api/test', (_req, res) => {
     success: true,
     message: 'API test endpoint working',
     timestamp: new Date().toISOString()
+  });
+});
+
+// Direct test levels endpoint to bypass routing issues
+app.get('/api/payments/test-levels-direct', (_req, res) => {
+  const TEST_LEVELS = [
+    {
+      id: 'easy',
+      name: 'Easy Level',
+      description: 'Basic assessment with 15 questions',
+      price: 1500,
+      currency: 'RWF',
+      features: {
+        questionCount: 15,
+        timeLimit: 25,
+        attempts: 1,
+        validityDays: 7,
+        detailedReports: false
+      }
+    }
+  ];
+  
+  res.status(200).json({
+    success: true,
+    data: TEST_LEVELS,
+    message: 'Test levels retrieved directly - bypassing routing'
   });
 });
 
@@ -433,10 +679,11 @@ app.use('/api/test', testRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/job-applications', jobApplicationRoutes);
 app.use('/api/psychometric-tests', psychometricTestRoutes);
+app.use('/api/simple-psychometric', simplePsychometricRoutes);
 app.use('/api/career-guidance', careerGuidanceRoutes);
 app.use('/api/ai-interviews', aiInterviewRoutes);
 app.use('/api/quick-interviews', quickInterviewRoutes);
-app.use('/api', modernInterviewRoutes);
+app.use('/api/modern-interviews', modernInterviewRoutes);
 app.use('/api/speech', speechRoutes);
 app.use('/api/job-certificates', jobCertificateRoutes);
 app.use('/api/profiles', profileRoutes);
@@ -444,6 +691,89 @@ app.use('/api/upload', uploadRoutes);
 
 // Test Request routes
 app.use('/api/test-requests', testRequestRoutes);
+
+// Test endpoint to check jobs in database
+app.get('/api/jobs-debug', async (req, res) => {
+  try {
+    const { Job } = await import('./models');
+    const jobCount = await Job.countDocuments();
+    const sampleJobs = await Job.find().limit(3).select('title company status createdAt');
+    
+    console.log('🔍 Jobs debug - Total jobs:', jobCount);
+    console.log('🔍 Sample jobs:', sampleJobs);
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        totalJobs: jobCount,
+        sampleJobs,
+        message: `Found ${jobCount} jobs in database`
+      }
+    });
+  } catch (error: any) {
+    console.error('Jobs debug error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Simple test endpoint to debug auth issues - Easy: 20, Intermediate: 30, Hard: 40 questions
+app.get('/api/test-levels-debug', (req, res) => {
+  console.log('🚀 Direct test levels endpoint hit - no middleware');
+  res.status(200).json({
+    success: true,
+    data: [
+      { 
+        id: 'easy', 
+        name: 'Foundation Level', 
+        price: 2000, 
+        currency: 'UGX',
+        description: 'Basic psychometric assessment with 20 comprehensive questions covering fundamental traits and abilities',
+        features: {
+          questionCount: 20,
+          timeLimit: 25,
+          attempts: 3,
+          validityDays: 30,
+          detailedReports: false
+        }
+      },
+      { 
+        id: 'intermediate', 
+        name: 'Intermediate Level', 
+        price: 3500, 
+        currency: 'UGX',
+        description: 'Comprehensive evaluation with 30 scenario-based questions covering various skills',
+        features: {
+          questionCount: 30,
+          timeLimit: 40,
+          attempts: 2,
+          validityDays: 45,
+          detailedReports: true
+        }
+      },
+      { 
+        id: 'hard', 
+        name: 'Advanced Level', 
+        price: 5000, 
+        currency: 'UGX',
+        description: 'In-depth analysis with 40 complex situational assessments for advanced positions',
+        features: {
+          questionCount: 40,
+          timeLimit: 60,
+          attempts: 1,
+          validityDays: 60,
+          detailedReports: true
+        }
+      }
+    ],
+    message: 'Direct test levels endpoint working - Easy: 20, Intermediate: 30, Hard: 40 questions'
+  });
+});
+
+// Payment routes
+app.use('/api/payments', paymentRoutes);
 
 // Employer routes
 app.use('/api/employer', employerRoutes);

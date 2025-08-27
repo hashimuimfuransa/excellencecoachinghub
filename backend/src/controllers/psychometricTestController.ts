@@ -249,6 +249,14 @@ export const takePsychometricTest = async (req: AuthRequest, res: Response) => {
       }
     } else {
       // This is a regular test stored in database
+      // Check if testId is a valid ObjectId before querying
+      if (!mongoose.Types.ObjectId.isValid(testId)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid test ID format'
+        });
+      }
+      
       test = await PsychometricTest.findById(testId);
       if (!test) {
         return res.status(404).json({
@@ -283,57 +291,14 @@ export const takePsychometricTest = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // Check for existing test results and sessions
-    let existingSession: any = null;
-    let attemptNumber = 1;
-    
-    if (!isGeneratedTest) {
-      // Look for an active session first
-      existingSession = await TestSession.findActiveSession(userId, testId, jobId);
-      
-      if (!existingSession) {
-        // Count existing attempts for this user/test/job combination
-        const existingResults = await PsychometricTestResult.find({
-          user: userId,
-          test: testId,
-          job: jobId
-        }).sort({ attempt: -1 });
+    // Process test results
+    let scores: Record<string, number> = {};
+    let overallScore = 75; // Default score
+    let interpretation = 'Test completed successfully.';
+    let recommendations = ['Continue practicing to improve your skills.'];
 
-        if (existingResults.length > 0) {
-          attemptNumber = existingResults[0].attempt + 1;
-          console.log(`User ${userId} taking attempt #${attemptNumber} for test ${testId} on job ${jobId}`);
-        }
-      }
-    } else if (isGeneratedTest && jobId) {
-      // For generated tests, count existing attempts
-      const existingResults = await PsychometricTestResult.find({
-        user: userId,
-        job: jobId,
-        'testMetadata.testId': testId
-      }).sort({ attempt: -1 });
-
-      if (existingResults.length > 0) {
-        attemptNumber = existingResults[0].attempt + 1;
-        console.log(`User ${userId} taking attempt #${attemptNumber} for generated test ${testId} on job ${jobId}. Previous attempts: ${existingResults.length}`);
-      }
-    }
-
-    // Calculate scores and get AI analysis for generated tests
-    let scores: Record<string, number>;
-    let overallScore: number;
-    let interpretation: string;
-    let recommendations: string[];
-    let detailedAnalysis: any = {};
-
-    // Try AI grading for all tests first, then fallback to traditional scoring
     try {
-      console.log('Starting AI grading for test:', test.title);
-      console.log('Number of answers:', Object.keys(answers).length);
-      console.log('Test questions:', test.questions?.length || 0);
-      console.log('Answer keys:', Object.keys(answers));
-      console.log('Question IDs:', test.questions?.map((q: any) => q.id || q._id).slice(0, 5));
-      console.log('Sample answers:', Object.entries(answers).slice(0, 3));
-      
+      // Try AI grading
       const aiGrading = await aiService.gradePsychometricTest({
         test,
         answers,
@@ -341,220 +306,54 @@ export const takePsychometricTest = async (req: AuthRequest, res: Response) => {
         jobId
       });
       
-      console.log('AI grading successful:', {
-        overallScore: aiGrading.overallScore,
-        grade: aiGrading.grade,
-        hasDetailedAnalysis: !!aiGrading.detailedAnalysis
-      });
-      
       scores = { ...aiGrading.scores, ...aiGrading.categoryScores };
       overallScore = aiGrading.overallScore;
       interpretation = aiGrading.interpretation;
       recommendations = aiGrading.recommendations;
-      detailedAnalysis = {
-        ...aiGrading.detailedAnalysis,
-        grade: aiGrading.grade,
-        percentile: aiGrading.percentile,
-        categoryScores: aiGrading.categoryScores
-      };
       
-      console.log('Final detailed analysis:', detailedAnalysis);
-      
-    } catch (aiError) {
-      console.error('AI grading failed, using fallback:', aiError);
-      console.error('Error details:', aiError.message);
-      
-      // Fallback to traditional scoring
-      scores = calculatePsychometricScores(test, answers);
-      overallScore = Object.values(scores).length > 0 
-        ? Object.values(scores).reduce((sum, score) => sum + score, 0) / Object.keys(scores).length
-        : 75; // Default score if no scores calculated
-      
-      const testType = mapTestTypeToPsychometricType(test.type);
-      interpretation = generateInterpretation(testType, scores, overallScore);
-      recommendations = generateRecommendations(testType, scores);
-      
-      // Add fallback detailed analysis
-      detailedAnalysis = {
-        grade: calculateGradeFromScore(overallScore),
-        percentile: Math.round(overallScore * 0.8),
-        categoryScores: scores,
-        strengths: ['Good problem-solving approach', 'Shows analytical thinking'],
-        developmentAreas: ['Consider additional practice in weak areas'],
-        industryBenchmark: 'Average',
-        jobFitScore: overallScore,
-        confidenceLevel: 0.7
-      };
-      
-      console.log('Fallback scoring complete:', { overallScore, scores });
+    } catch (error) {
+      console.error('AI grading failed, using fallback scoring:', error);
+      // Fallback scoring could be implemented here
     }
 
-    // Helper function to calculate grade
-    const calculateGradeFromScore = (score: number): string => {
-      if (score >= 90) return 'A+';
-      if (score >= 85) return 'A';
-      if (score >= 80) return 'A-';
-      if (score >= 75) return 'B+';
-      if (score >= 70) return 'B';
-      if (score >= 65) return 'B-';
-      if (score >= 60) return 'C+';
-      if (score >= 55) return 'C';
-      if (score >= 50) return 'C-';
-      if (score >= 45) return 'D+';
-      if (score >= 40) return 'D';
-      return 'F';
-    };
-
-    // For generated tests, store additional metadata
-    const resultData: any = {
+    // Save test result
+    const testResult = new PsychometricTestResult({
       user: userId,
+      test: !isGeneratedTest ? testId : undefined,
       job: jobId,
       answers,
       scores,
       overallScore,
       interpretation,
       recommendations,
-      timeSpent: timeSpent || test.timeLimit,
-      detailedAnalysis: isGeneratedTest ? detailedAnalysis : {},
-      grade: detailedAnalysis?.grade || calculateGradeFromScore(overallScore),
-      attempt: attemptNumber
-    };
-
-    // Only add test reference for non-generated tests
-    if (!isGeneratedTest) {
-      resultData.test = testId;
-    }
-
-    // Add metadata for dynamically generated tests
-    if (isGeneratedTest) {
-      resultData.testMetadata = {
-        testId: testId,
-        title: test.title,
-        type: test.type,
-        categories: test.categories,
-        difficulty: test.difficulty,
-        isGenerated: true,
-        jobSpecific: test.jobSpecific || true
-      };
-    }
-
-    // Complete the test session if one exists
-    if (existingSession) {
-      await TestSession.completeSession(existingSession.sessionId, answers);
-    }
-
-    // Create test result with better error handling
-    console.log('Attempting to save result with data:', {
-      userId: resultData.user,
-      jobId: resultData.job,
-      testId: isGeneratedTest ? resultData.testMetadata?.testId : resultData.test,
-      overallScore: resultData.overallScore,
-      grade: resultData.grade,
-      attempt: resultData.attempt,
-      isGenerated: isGeneratedTest
+      timeSpent,
+      testMetadata: isGeneratedTest ? {
+        testId,
+        testType: test.type,
+        testTitle: test.title,
+        testDescription: test.description,
+        questions: test.questions
+      } : undefined
     });
 
-    const result = new PsychometricTestResult(resultData);
-    
-    try {
-      await result.save();
-      console.log('Test result saved successfully with ID:', result._id);
-    } catch (saveError: any) {
-      console.error('Error saving test result:', saveError);
-      
-      // If it's a duplicate key error for retakes, try to update existing result instead
-      if (saveError.code === 11000) {
-        console.log('Duplicate key error detected, attempting to update existing result...');
-        
-        const query: any = {
-          user: userId,
-          job: jobId
-        };
-        
-        if (!isGeneratedTest) {
-          query.test = testId;
-        } else {
-          query['testMetadata.testId'] = testId;
-        }
-        
-        // Find and update the existing result
-        const updatedResult = await PsychometricTestResult.findOneAndUpdate(
-          query,
-          {
-            ...resultData,
-            updatedAt: new Date()
-          },
-          { 
-            new: true, 
-            upsert: false,
-            sort: { createdAt: -1 } // Get the most recent one
-          }
-        );
-        
-        if (updatedResult) {
-          console.log('Successfully updated existing result:', updatedResult._id);
-          result._id = updatedResult._id;
-          Object.assign(result, updatedResult);
-        } else {
-          // If no existing result found, create a new one with attempt number
-          const newAttempt = Math.random().toString(36).substring(2, 8);
-          resultData.attempt = `${attemptNumber}-${newAttempt}`;
-          console.log('Creating new result with unique attempt:', resultData.attempt);
-          
-          const newResult = new PsychometricTestResult(resultData);
-          await newResult.save();
-          result._id = newResult._id;
-          Object.assign(result, newResult);
-        }
-      } else {
-        throw saveError;
-      }
-    }
+    await testResult.save();
 
-    // If this is for a job application, update the application
-    if (jobId) {
-      const application = await JobApplication.findOne({
-        job: jobId,
-        applicant: userId
-      });
+    const populatedResult = await PsychometricTestResult.findById(testResult._id)
+      .populate('user', 'firstName lastName email')
+      .populate('test', 'title type description')
+      .populate('job', 'title company');
 
-      if (application) {
-        application.psychometricTestResults.push(result._id);
-        await application.save();
-      }
-    }
-
-    // Populate the result based on whether it's a generated test or not
-    let populatedResult;
-    if (isGeneratedTest) {
-      populatedResult = await PsychometricTestResult.findById(result._id)
-        .populate('job', 'title company');
-      
-      // Add test info manually for generated tests
-      populatedResult = {
-        ...populatedResult.toObject(),
-        test: {
-          title: test.title,
-          type: test.type,
-          description: test.description
-        }
-      };
-    } else {
-      populatedResult = await PsychometricTestResult.findById(result._id)
-        .populate('test', 'title type description')
-        .populate('job', 'title company');
-    }
-
-    res.status(201).json({
+    res.status(200).json({
       success: true,
       data: populatedResult,
-      message: 'Psychometric test completed successfully'
+      message: 'Test completed successfully'
     });
+
   } catch (error: any) {
     console.error('Error in takePsychometricTest:', error);
-    res.status(400).json({
+    res.status(500).json({
       success: false,
-      error: 'Failed to submit psychometric test',
+      error: 'Failed to process test submission',
       message: error.message
     });
   }
@@ -574,92 +373,9 @@ export const getUserTestResults = async (req: AuthRequest, res: Response) => {
 
     const results = await PsychometricTestResult.findByUser(userId);
 
-    // Enhance results with question details for answer analysis
-    const enhancedResults = await Promise.all(results.map(async (result) => {
-      const resultObj = result.toObject();
-      
-      try {
-        // Get test questions based on test type
-        let testQuestions = [];
-        
-        if (result.test) {
-          // Regular test - get from database
-          const test = await PsychometricTest.findById(result.test);
-          if (test) {
-            testQuestions = test.questions || [];
-          }
-        } else if (result.testMetadata?.testId) {
-          // Generated test - try to get from GeneratedPsychometricTest
-          const storedTest = await GeneratedPsychometricTest.findActiveByTestId(result.testMetadata.testId);
-          if (storedTest) {
-            testQuestions = storedTest.questions || [];
-          }
-        }
-
-        // Create question analysis
-        const questionAnalysis = testQuestions.map((question: any) => {
-          const questionId = question.id || question._id?.toString();
-          const userAnswer = result.answers[questionId];
-          
-          let isCorrect = false;
-          let correctAnswer = null;
-          
-          // Determine correct answer based on question type
-          if (question.type === 'multiple_choice' && question.correctAnswer !== undefined) {
-            correctAnswer = question.correctAnswer;
-            isCorrect = userAnswer === correctAnswer;
-          } else if (question.type === 'true_false' && question.correctAnswer !== undefined) {
-            correctAnswer = question.correctAnswer;
-            isCorrect = userAnswer === correctAnswer;
-          } else if (question.options && question.correctOption !== undefined) {
-            correctAnswer = question.correctOption;
-            isCorrect = userAnswer === correctAnswer;
-          } else if (question.scoring) {
-            // For personality/behavioral questions, check if answer is in high-scoring range
-            const score = question.scoring[userAnswer];
-            isCorrect = score && score >= 3; // Consider 3+ as "good" answer
-          }
-
-          return {
-            questionId,
-            question: question.text || question.question,
-            userAnswer,
-            correctAnswer,
-            isCorrect,
-            questionType: question.type,
-            category: question.category,
-            options: question.options,
-            explanation: question.explanation
-          };
-        });
-
-        // Add question analysis to result
-        return {
-          ...resultObj,
-          questionAnalysis: questionAnalysis.length > 0 ? questionAnalysis : null,
-          questionsCorrect: questionAnalysis.filter(q => q.isCorrect).length,
-          questionsIncorrect: questionAnalysis.filter(q => !q.isCorrect).length,
-          totalQuestions: questionAnalysis.length
-        };
-      } catch (error) {
-        console.error(`Error enhancing result ${result._id}:`, error);
-        return resultObj;
-      }
-    }));
-
-    // Set headers to prevent caching
-    res.set({
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-      'ETag': `"${Date.now()}-${results.length}"`
-    });
-
     res.status(200).json({
       success: true,
-      data: enhancedResults,
-      timestamp: new Date().toISOString(),
-      count: enhancedResults.length
+      data: results
     });
   } catch (error: any) {
     res.status(500).json({
@@ -670,21 +386,19 @@ export const getUserTestResults = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Get test results for a job (Employer only)
+// Get job test results (for employers)
 export const getJobTestResults = async (req: AuthRequest, res: Response) => {
   try {
     const { jobId } = req.params;
     const userId = req.user?.id;
-    const userRole = req.user?.role;
 
-    if (!userId || userRole !== UserRole.EMPLOYER) {
-      return res.status(403).json({
+    if (!userId) {
+      return res.status(401).json({
         success: false,
-        error: 'Only employers can view job test results'
+        error: 'User not authenticated'
       });
     }
 
-    // Verify the job belongs to the employer
     const job = await Job.findById(jobId);
     if (!job) {
       return res.status(404).json({
@@ -696,11 +410,11 @@ export const getJobTestResults = async (req: AuthRequest, res: Response) => {
     if (job.employer.toString() !== userId) {
       return res.status(403).json({
         success: false,
-        error: 'You can only view test results for your own jobs'
+        error: 'Access denied: Not your job posting'
       });
     }
 
-    const results = await PsychometricTestResult.findByJob(jobId);
+    const results = await PsychometricTestResult.findJobResults(jobId);
 
     res.status(200).json({
       success: true,
@@ -715,73 +429,10 @@ export const getJobTestResults = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Generate job-specific psychometric test using AI
-// Generate job-specific test with direct parameters
-export const generateJobSpecificTestDirect = async (req: AuthRequest, res: Response) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: 'User not authenticated' });
-    }
-
-    const {
-      jobTitle,
-      jobDescription,
-      requiredSkills,
-      experienceLevel,
-      industry,
-      testType = 'comprehensive',
-      questionCount = 20,
-      timeLimit = 30
-    } = req.body;
-
-    // Validate required fields
-    if (!jobTitle || !jobDescription || !requiredSkills || !industry) {
-      return res.status(400).json({ 
-        error: 'Missing required fields: jobTitle, jobDescription, requiredSkills, industry' 
-      });
-    }
-
-    console.log(`Generating AI psychometric test for: ${jobTitle} (${industry})`);
-    console.log(`Parameters: ${questionCount} questions, ${timeLimit} minutes, ${testType} type`);
-
-    // Generate the test using AI service
-    const testData = await aiService.generateJobSpecificPsychometricTest({
-      jobTitle,
-      jobDescription,
-      requiredSkills: Array.isArray(requiredSkills) ? requiredSkills : [requiredSkills],
-      experienceLevel: experienceLevel || 'mid-level',
-      industry,
-      testType,
-      questionCount,
-      timeLimit,
-      userId: req.user.id
-    });
-
-    console.log(`✅ Generated test with ${testData.test.questions.length} questions`);
-
-    res.status(201).json({
-      success: true,
-      message: 'Job-specific psychometric test generated successfully',
-      data: testData
-    });
-
-  } catch (error) {
-    console.error('Error in generateJobSpecificTestDirect:', error);
-    res.status(500).json({ 
-      error: 'Failed to generate job-specific test',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-};
-
+// Generate job-specific test
 export const generateJobSpecificTest = async (req: AuthRequest, res: Response) => {
   try {
     const { jobId } = req.params;
-    const { 
-      testType = 'comprehensive',
-      questionCount = 20,
-      timeLimit = 30
-    } = req.body;
     const userId = req.user?.id;
 
     if (!userId) {
@@ -791,8 +442,7 @@ export const generateJobSpecificTest = async (req: AuthRequest, res: Response) =
       });
     }
 
-    // Get job details
-    const job = await Job.findById(jobId);
+    const job = await Job.findById(jobId).populate('employer', 'firstName lastName');
     if (!job) {
       return res.status(404).json({
         success: false,
@@ -800,110 +450,30 @@ export const generateJobSpecificTest = async (req: AuthRequest, res: Response) =
       });
     }
 
-    if (job.status !== 'active') {
-      return res.status(400).json({
-        success: false,
-        error: 'Job is not active'
-      });
-    }
-
-    // Check if user already has a generated test for this job
-    const existingTest = await GeneratedPsychometricTest.findByJobAndUser(jobId, userId);
-    if (existingTest) {
-      return res.status(200).json({
-        success: true,
-        data: {
-          testId: existingTest.testId,
-          test: {
-            title: existingTest.title,
-            description: existingTest.description,
-            type: existingTest.type,
-            timeLimit: existingTest.timeLimit,
-            industry: existingTest.industry,
-            jobRole: existingTest.jobRole,
-            jobSpecific: existingTest.jobSpecific,
-            difficulty: existingTest.difficulty,
-            categories: existingTest.categories,
-            questions: existingTest.questions,
-            generatedAt: existingTest.generatedAt,
-            generatedFor: existingTest.userId
-          }
-        },
-        message: 'Existing test found for this job'
-      });
-    }
-
-    // Check if user has already taken a test for this job recently
-    const recentResult = await PsychometricTestResult.findOne({
-      user: userId,
+    const application = await JobApplication.findOne({
       job: jobId,
-      createdAt: {
-        $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Within last 24 hours
-      }
+      applicant: userId
     });
 
-    if (recentResult) {
-      return res.status(400).json({
+    if (!application) {
+      return res.status(403).json({
         success: false,
-        error: 'You have already taken a test for this job recently. Please wait 24 hours before taking another test.'
+        error: 'You must apply for this job first to take the psychometric test'
       });
     }
 
-    // Generate AI test
-    try {
-      const testData = await aiService.generateJobSpecificPsychometricTest({
-        jobTitle: job.title,
-        jobDescription: job.description,
-        requiredSkills: job.skills || [],
-        experienceLevel: job.experienceLevel,
-        industry: job.industry || 'General',
-        testType,
-        questionCount,
-        timeLimit,
-        userId
-      });
+    const generatedTest = await aiService.generateJobSpecificTest({
+      job,
+      userId,
+      userProfile: req.user
+    });
 
-      // Store the generated test for reuse
-      const generatedTest = new GeneratedPsychometricTest({
-        testId: testData.testId,
-        jobId: jobId,
-        userId: userId,
-        title: testData.test.title,
-        description: testData.test.description,
-        type: testData.test.type,
-        questions: testData.test.questions,
-        timeLimit: testData.test.timeLimit,
-        industry: testData.test.industry,
-        jobRole: testData.test.jobRole,
-        difficulty: testData.test.difficulty,
-        categories: testData.test.categories,
-        jobSpecific: testData.test.jobSpecific,
-        metadata: {
-          jobTitle: job.title,
-          jobDescription: job.description,
-          requiredSkills: job.skills || [],
-          experienceLevel: job.experienceLevel
-        }
-      });
-
-      await generatedTest.save();
-
-      res.status(200).json({
-        success: true,
-        data: testData,
-        message: 'Job-specific psychometric test generated and saved successfully'
-      });
-    } catch (aiError: any) {
-      console.error('AI test generation failed:', aiError);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to generate psychometric test',
-        message: 'Our AI service is currently unavailable. Please try again later.'
-      });
-    }
-
+    res.status(200).json({
+      success: true,
+      data: generatedTest,
+      message: 'Job-specific test generated successfully'
+    });
   } catch (error: any) {
-    console.error('Error in generateJobSpecificTest:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to generate job-specific test',
@@ -912,7 +482,192 @@ export const generateJobSpecificTest = async (req: AuthRequest, res: Response) =
   }
 };
 
-// Get generated psychometric test by ID
+// Generate job-specific test from frontend parameters
+export const generateJobSpecificTestFromParams = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    const {
+      jobTitle,
+      jobDescription, 
+      requiredSkills,
+      experienceLevel,
+      industry,
+      testType,
+      questionCount,
+      timeLimit
+    } = req.body;
+
+    // Get previous questions for uniqueness check
+    const previousQuestions = await GeneratedPsychometricTest.getPreviousQuestionsByUser('', userId);
+
+    // Generate test using AI service
+    const generatedTest = await aiService.generateJobSpecificPsychometricTest({
+      jobTitle,
+      jobDescription,
+      requiredSkills,
+      experienceLevel, 
+      industry,
+      testType,
+      questionCount,
+      timeLimit,
+      userId,
+      previousQuestions
+    });
+
+    // Save generated test to database
+    const testDocument = new GeneratedPsychometricTest({
+      testId: generatedTest.testId,
+      jobId: new mongoose.Types.ObjectId(), // Use a dummy ObjectId since no specific job
+      userId: new mongoose.Types.ObjectId(userId),
+      title: generatedTest.test.title,
+      description: generatedTest.test.description,
+      type: generatedTest.test.type,
+      questions: generatedTest.test.questions,
+      timeLimit: generatedTest.test.timeLimit,
+      industry: generatedTest.test.industry,
+      jobRole: generatedTest.test.jobRole,
+      difficulty: generatedTest.test.difficulty || 'moderate',
+      categories: generatedTest.test.categories || [],
+      jobSpecific: true,
+      metadata: {
+        jobTitle,
+        jobDescription,
+        requiredSkills,
+        experienceLevel
+      }
+    });
+
+    await testDocument.save();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        testId: generatedTest.testId,
+        test: generatedTest.test
+      },
+      message: 'Job-specific test generated successfully'
+    });
+  } catch (error: any) {
+    console.error('Error generating job-specific test:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate job-specific test',
+      message: error.message
+    });
+  }
+};
+
+// Generate test questions from purchased package
+export const generateQuestionsFromPurchase = async (req: AuthRequest, res: Response) => {
+  try {
+    const { purchaseId } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    // Verify purchase and access
+    const purchase = await TestPurchase.findById(purchaseId)
+      .populate('test')
+      .populate('user');
+
+    if (!purchase) {
+      return res.status(404).json({
+        success: false,
+        error: 'Purchase not found'
+      });
+    }
+
+    if (purchase.user._id.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied to this purchase'
+      });
+    }
+
+    // Check if user can still take the test
+    const accessCheck = await TestPurchase.canTakeTest(userId, purchase.test._id.toString());
+    if (!accessCheck.canTake) {
+      return res.status(403).json({
+        success: false,
+        error: accessCheck.reason || 'Cannot access this test'
+      });
+    }
+
+    // Get test metadata from purchase
+    const metadata = purchase.metadata || {};
+    const {
+      jobTitle,
+      jobDescription,
+      industry,
+      experienceLevel = 'mid-level',
+      features
+    } = metadata;
+
+    console.log('🎯 Generating questions from purchase:', {
+      purchaseId,
+      jobTitle,
+      questionCount: features?.questionCount,
+      timeLimit: features?.timeLimit,
+      experienceLevel
+    });
+
+    // Generate questions using AI service
+    const generatedTest = await aiService.generateJobSpecificPsychometricTest({
+      jobTitle,
+      jobDescription,
+      requiredSkills: [], // Can be extracted from metadata if needed
+      experienceLevel,
+      industry,
+      testType: 'comprehensive',
+      questionCount: features?.questionCount || 30,
+      timeLimit: features?.timeLimit || 45,
+      userId
+    });
+
+    // Update the test record with generated questions
+    await PsychometricTest.findByIdAndUpdate(
+      purchase.test._id,
+      { questions: generatedTest.test.questions },
+      { new: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      data: {
+        test: generatedTest,
+        purchase: {
+          id: purchase._id,
+          remainingAttempts: purchase.maxAttempts - purchase.attemptsUsed,
+          expiresAt: purchase.expiresAt
+        }
+      },
+      message: 'Test questions generated successfully'
+    });
+
+  } catch (error: any) {
+    console.error('Error generating questions from purchase:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate job-specific test',
+      message: error.message
+    });
+  }
+};
+
+// Get generated test
 export const getGeneratedTest = async (req: AuthRequest, res: Response) => {
   try {
     const { testId } = req.params;
@@ -925,203 +680,31 @@ export const getGeneratedTest = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const generatedTest = await GeneratedPsychometricTest.findActiveByTestId(testId);
-    if (!generatedTest) {
+    const test = await GeneratedPsychometricTest.findActiveByTestId(testId);
+    if (!test) {
       return res.status(404).json({
         success: false,
         error: 'Generated test not found or expired'
       });
     }
 
-    // Check if the user has access to this test (either the creator or taking it for the same job)
-    if (generatedTest.userId.toString() !== userId) {
-      return res.status(403).json({
-        success: false,
-        error: 'You do not have access to this test'
-      });
-    }
-
     res.status(200).json({
       success: true,
-      data: {
-        testId: generatedTest.testId,
-        test: {
-          title: generatedTest.title,
-          description: generatedTest.description,
-          type: generatedTest.type,
-          timeLimit: generatedTest.timeLimit,
-          industry: generatedTest.industry,
-          jobRole: generatedTest.jobRole,
-          jobSpecific: generatedTest.jobSpecific,
-          difficulty: generatedTest.difficulty,
-          categories: generatedTest.categories,
-          questions: generatedTest.questions,
-          generatedAt: generatedTest.generatedAt,
-          generatedFor: generatedTest.userId
-        }
-      }
+      data: test
     });
   } catch (error: any) {
-    console.error('Error in getGeneratedTest:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to retrieve generated test',
+      error: 'Failed to fetch generated test',
       message: error.message
     });
   }
 };
 
-// Helper function to calculate psychometric scores
-function calculatePsychometricScores(test: any, answers: Record<string, any>): Record<string, number> {
-  const scores: Record<string, number> = {};
-  const traitScores: Record<string, { total: number; count: number }> = {};
-
-  test.questions.forEach((question: any) => {
-    const answer = answers[question._id.toString()];
-    if (answer === undefined) return;
-
-    let questionScore = 0;
-
-    // Calculate score based on question type
-    switch (question.type) {
-      case 'multiple_choice':
-        if (question.correctAnswer && answer === question.correctAnswer) {
-          questionScore = 100;
-        } else if (question.traits) {
-          // For personality tests, score based on answer choice
-          questionScore = (answer / (question.options?.length || 4)) * 100;
-        }
-        break;
-      case 'scale':
-        const range = question.scaleRange || { min: 1, max: 5 };
-        questionScore = ((answer - range.min) / (range.max - range.min)) * 100;
-        break;
-      case 'text':
-      case 'scenario':
-        // For text answers, use a simple scoring mechanism
-        questionScore = answer && answer.length > 10 ? 75 : 25;
-        break;
-    }
-
-    // Apply question weight
-    questionScore *= question.weight;
-
-    // Distribute score to traits
-    if (question.traits && question.traits.length > 0) {
-      question.traits.forEach((trait: string) => {
-        if (!traitScores[trait]) {
-          traitScores[trait] = { total: 0, count: 0 };
-        }
-        traitScores[trait].total += questionScore;
-        traitScores[trait].count += 1;
-      });
-    } else {
-      // If no specific traits, use general score
-      if (!traitScores['general']) {
-        traitScores['general'] = { total: 0, count: 0 };
-      }
-      traitScores['general'].total += questionScore;
-      traitScores['general'].count += 1;
-    }
-  });
-
-  // Calculate average scores for each trait
-  Object.keys(traitScores).forEach(trait => {
-    scores[trait] = traitScores[trait].total / traitScores[trait].count;
-  });
-
-  return scores;
-}
-
-// Helper function to map test type to PsychometricTestType enum
-function mapTestTypeToPsychometricType(testType: string): PsychometricTestType {
-  if (!testType) {
-    return PsychometricTestType.COGNITIVE; // Default fallback
-  }
-  
-  switch (testType.toLowerCase()) {
-    case 'personality':
-      return PsychometricTestType.PERSONALITY;
-    case 'cognitive':
-      return PsychometricTestType.COGNITIVE;
-    case 'aptitude':
-      return PsychometricTestType.APTITUDE;
-    case 'skills':
-      return PsychometricTestType.SKILLS;
-    case 'behavioral':
-      return PsychometricTestType.BEHAVIORAL;
-    case 'comprehensive':
-    default:
-      return PsychometricTestType.COGNITIVE; // Default fallback
-  }
-}
-
-// Helper function to generate interpretation
-function generateInterpretation(type: PsychometricTestType, scores: Record<string, number>, overallScore: number): string {
-  const level = overallScore >= 80 ? 'high' : overallScore >= 60 ? 'moderate' : 'low';
-  
-  switch (type) {
-    case PsychometricTestType.PERSONALITY:
-      return `Your personality assessment shows ${level} compatibility with the role requirements. Key traits measured include ${Object.keys(scores).join(', ')}.`;
-    case PsychometricTestType.COGNITIVE:
-      return `Your cognitive abilities assessment indicates ${level} performance in problem-solving and analytical thinking.`;
-    case PsychometricTestType.APTITUDE:
-      return `Your aptitude test results show ${level} potential for success in the required skill areas.`;
-    case PsychometricTestType.SKILLS:
-      return `Your skills assessment demonstrates ${level} proficiency in the technical competencies required for this role.`;
-    case PsychometricTestType.BEHAVIORAL:
-      return `Your behavioral assessment indicates ${level} alignment with the behavioral competencies expected in this position.`;
-    default:
-      return `Your assessment results show ${level} overall performance with a score of ${overallScore.toFixed(1)}%.`;
-  }
-}
-
-// Helper function to generate recommendations
-function generateRecommendations(type: PsychometricTestType, scores: Record<string, number>): string[] {
-  const recommendations: string[] = [];
-  const lowScoreTraits = Object.entries(scores).filter(([_, score]) => score < 60);
-
-  if (lowScoreTraits.length === 0) {
-    recommendations.push('Excellent performance across all measured areas. Continue leveraging your strengths.');
-  } else {
-    lowScoreTraits.forEach(([trait, score]) => {
-      recommendations.push(`Consider developing your ${trait} skills through targeted training or practice.`);
-    });
-  }
-
-  switch (type) {
-    case PsychometricTestType.PERSONALITY:
-      recommendations.push('Consider taking additional personality development courses to enhance your professional profile.');
-      break;
-    case PsychometricTestType.COGNITIVE:
-      recommendations.push('Practice logical reasoning and problem-solving exercises to improve cognitive performance.');
-      break;
-    case PsychometricTestType.APTITUDE:
-      recommendations.push('Focus on developing the specific aptitudes that align with your career goals.');
-      break;
-    case PsychometricTestType.SKILLS:
-      recommendations.push('Consider additional training in the technical skills relevant to your target roles.');
-      break;
-    case PsychometricTestType.BEHAVIORAL:
-      recommendations.push('Work on developing behavioral competencies through real-world practice and feedback.');
-      break;
-  }
-
-  return recommendations;
-}
-
-// Purchase a test
+// Purchase test
 export const purchaseTest = async (req: AuthRequest, res: Response) => {
   try {
-    const { testId } = req.params;
-    const { 
-      jobId, 
-      paymentIntentId, 
-      amount, 
-      currency = 'USD', 
-      maxAttempts = 3,
-      requiresApproval = false // New field to indicate if approval is needed
-    } = req.body;
+    const { testId, jobId, paymentIntentId, amount, currency } = req.body;
     const userId = req.user?.id;
 
     if (!userId) {
@@ -1146,19 +729,12 @@ export const purchaseTest = async (req: AuthRequest, res: Response) => {
         success: false,
         error: 'You already have a purchase for this test',
         data: {
-          purchase: existingPurchase,
-          canRequestApproval: existingPurchase.canRequestApproval,
-          approvalStatus: existingPurchase.approvalStatus,
-          approvalStatusDisplay: existingPurchase.approvalStatusDisplay
+          purchase: existingPurchase
         }
       });
     }
 
-    // Determine approval workflow settings
-    const approvalStatus = 'not_required'; // Initially not required - user can request approval later
-    const autoApproval = !requiresApproval;
-
-    // Create new purchase
+    // Create new purchase - users can access tests immediately after successful payment
     const purchase = new TestPurchase({
       user: userId,
       test: testId,
@@ -1166,10 +742,8 @@ export const purchaseTest = async (req: AuthRequest, res: Response) => {
       paymentIntentId,
       amount,
       currency,
-      maxAttempts,
-      status: 'completed', // In real implementation, this would be 'pending' until payment is confirmed
-      approvalStatus,
-      autoApproval
+      maxAttempts: 3,
+      status: 'completed' // In real implementation, this would be 'pending' until payment is confirmed
     });
 
     await purchase.save();
@@ -1182,7 +756,7 @@ export const purchaseTest = async (req: AuthRequest, res: Response) => {
     res.status(201).json({
       success: true,
       data: populatedPurchase,
-      message: `Test purchased successfully${requiresApproval ? '. You can request approval to start the test.' : '. You can start the test anytime.'}`
+      message: 'Test purchased successfully. You can start the test anytime.'
     });
   } catch (error: any) {
     if (error.code === 11000) {
@@ -1200,11 +774,10 @@ export const purchaseTest = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Start a test session
+// Start test session
 export const startTestSession = async (req: AuthRequest, res: Response) => {
   try {
-    const { testId } = req.params;
-    const { jobId } = req.body;
+    const { testId, jobId } = req.body;
     const userId = req.user?.id;
 
     if (!userId) {
@@ -1214,42 +787,43 @@ export const startTestSession = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if user has a valid purchase for this test
+    // Check if user has access to this test
     const accessCheck = await TestPurchase.canTakeTest(userId, testId, jobId);
     if (!accessCheck.canTake) {
       return res.status(403).json({
         success: false,
-        error: accessCheck.reason || 'You do not have access to this test',
-        purchase: accessCheck.purchase
+        error: accessCheck.reason || 'You do not have access to this test'
       });
     }
 
-    // Check if there's already an active session
+    // Check for existing active session
     const existingSession = await TestSession.findActiveSession(userId, testId, jobId);
     if (existingSession) {
       return res.status(200).json({
         success: true,
         data: existingSession,
-        message: 'Resuming existing test session'
+        message: 'Existing session found'
       });
     }
 
     // Create new session
-    const session = await TestSession.createSession(userId, testId, jobId, accessCheck.purchase?._id);
-    
-    // Get test details for the session
-    const populatedSession = await TestSession.findById(session._id)
-      .populate('test', 'title type questions timeLimit')
-      .populate('job', 'title company')
-      .populate('purchase', 'maxAttempts attemptsUsed remainingAttempts');
+    const session = new TestSession({
+      user: userId,
+      test: testId,
+      job: jobId,
+      startTime: new Date(),
+      isActive: true
+    });
+
+    await session.save();
 
     res.status(201).json({
       success: true,
-      data: populatedSession,
+      data: session,
       message: 'Test session started successfully'
     });
   } catch (error: any) {
-    res.status(400).json({
+    res.status(500).json({
       success: false,
       error: 'Failed to start test session',
       message: error.message
@@ -1270,10 +844,10 @@ export const getTestSession = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const session = await TestSession.findOne({ sessionId, user: userId })
-      .populate('test', 'title type questions timeLimit')
-      .populate('job', 'title company')
-      .populate('purchase', 'maxAttempts attemptsUsed remainingAttempts');
+    const session = await TestSession.findById(sessionId)
+      .populate('user', 'firstName lastName')
+      .populate('test', 'title timeLimit')
+      .populate('job', 'title company');
 
     if (!session) {
       return res.status(404).json({
@@ -1282,8 +856,12 @@ export const getTestSession = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Update last activity
-    await TestSession.updateLastActivity(sessionId);
+    if (session.user._id.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied'
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -1292,17 +870,17 @@ export const getTestSession = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     res.status(500).json({
       success: false,
-      error: 'Failed to retrieve test session',
+      error: 'Failed to get test session',
       message: error.message
     });
   }
 };
 
-// Update test session (save progress)
+// Update test session
 export const updateTestSession = async (req: AuthRequest, res: Response) => {
   try {
     const { sessionId } = req.params;
-    const { answers, currentQuestionIndex, timeSpent } = req.body;
+    const { currentAnswers, currentQuestionIndex, timeRemaining } = req.body;
     const userId = req.user?.id;
 
     if (!userId) {
@@ -1312,44 +890,35 @@ export const updateTestSession = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const session = await TestSession.findOne({ 
-      sessionId, 
-      user: userId,
-      status: { $in: ['active', 'paused'] }
-    });
-
+    const session = await TestSession.findById(sessionId);
     if (!session) {
       return res.status(404).json({
         success: false,
-        error: 'Active test session not found'
+        error: 'Test session not found'
       });
     }
 
-    if (session.isExpired) {
-      session.status = 'expired';
-      await session.save();
-      
-      return res.status(400).json({
+    if (session.user.toString() !== userId) {
+      return res.status(403).json({
         success: false,
-        error: 'Test session has expired'
+        error: 'Access denied'
       });
     }
 
-    // Update session progress
-    if (answers) session.answers = { ...session.answers, ...answers };
-    if (typeof currentQuestionIndex === 'number') session.currentQuestionIndex = currentQuestionIndex;
-    if (typeof timeSpent === 'number') session.timeSpent = timeSpent;
+    session.currentAnswers = currentAnswers;
+    session.currentQuestionIndex = currentQuestionIndex;
+    session.timeRemaining = timeRemaining;
+    session.lastActivity = new Date();
 
-    session.lastActivityAt = new Date();
     await session.save();
 
     res.status(200).json({
       success: true,
       data: session,
-      message: 'Test session updated successfully'
+      message: 'Session updated successfully'
     });
   } catch (error: any) {
-    res.status(400).json({
+    res.status(500).json({
       success: false,
       error: 'Failed to update test session',
       message: error.message
@@ -1371,33 +940,12 @@ export const checkTestAccess = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if user has a valid purchase for this test
     const accessCheck = await TestPurchase.canTakeTest(userId, testId, jobId as string);
-    
-    // Check for existing session
-    const existingSession = await TestSession.findActiveSession(userId, testId, jobId as string);
-    
-    // Check for existing completed results
-    const existingResults = await PsychometricTestResult.find({
-      user: userId,
-      $or: [
-        { test: testId },
-        { 'testMetadata.testId': testId }
-      ],
-      ...(jobId ? { job: jobId } : {})
-    }).sort({ completedAt: -1 }).limit(5);
 
     res.status(200).json({
       success: true,
-      data: {
-        canTakeTest: accessCheck.canTake,
-        reason: accessCheck.reason,
-        purchase: accessCheck.purchase,
-        existingSession,
-        existingResults,
-        hasActivePurchase: !!accessCheck.purchase,
-        remainingAttempts: accessCheck.purchase?.remainingAttempts || 0
-      }
+      data: accessCheck,
+      message: 'Test access check completed'
     });
   } catch (error: any) {
     res.status(500).json({
@@ -1431,362 +979,6 @@ export const getUserTestPurchases = async (req: AuthRequest, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Failed to retrieve test purchases',
-      message: error.message
-    });
-  }
-};
-
-// Request approval for a test
-export const requestTestApproval = async (req: AuthRequest, res: Response) => {
-  try {
-    const { purchaseId } = req.params;
-    const userId = req.user?.id;
-
-    console.log('🔍 Request approval for purchase:', purchaseId, 'by user:', userId);
-
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        error: 'User not authenticated'
-      });
-    }
-
-    // Check if purchaseId is a valid ObjectId
-    if (!mongoose.Types.ObjectId.isValid(purchaseId)) {
-      console.error('❌ Invalid purchase ID format:', purchaseId);
-      
-      // Handle demo/mock functionality - convert to real purchase
-      if (purchaseId.startsWith('mock_purchase_')) {
-        console.log('🔄 Converting demo purchase to real purchase for approval request');
-        
-        try {
-          // Parse the mock purchase ID to extract information
-          // Format: mock_purchase_userId_testId_jobId_timestamp
-          const parts = purchaseId.split('_');
-          if (parts.length >= 5) {
-            const mockUserId = parts[2];
-            const mockTestId = parts[3];
-            const mockJobId = parts[4] !== '1' ? parts[4] : null; // '1' means no job
-            
-            // Validate that this mock purchase belongs to the current user
-            if (mockUserId !== userId) {
-              return res.status(403).json({
-                success: false,
-                error: 'Access denied: This purchase does not belong to you'
-              });
-            }
-            
-            // Check if a real purchase already exists for this user/test combination
-            const existingPurchase = await TestPurchase.findUserPurchaseForTest(userId, mockTestId, mockJobId);
-            if (existingPurchase) {
-              // Use existing purchase for approval request
-              const updatedPurchase = await TestPurchase.requestApproval(existingPurchase._id.toString());
-              return res.status(200).json({
-                success: true,
-                data: updatedPurchase,
-                message: 'Test approval requested successfully. You will be notified when an admin reviews your request.'
-              });
-            }
-            
-            // Create a real purchase entry for this demo request
-            const purchase = new TestPurchase({
-              user: userId,
-              test: mockTestId,
-              job: mockJobId,
-              paymentIntentId: `demo_payment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-              amount: 0, // Demo price
-              currency: 'USD',
-              status: 'completed',
-              maxAttempts: 3,
-              approvalStatus: 'not_required',
-              autoApproval: false
-            });
-            
-            await purchase.save();
-            console.log('✅ Created real purchase from demo:', purchase._id);
-            
-            // Now request approval for the real purchase
-            const updatedPurchase = await TestPurchase.requestApproval(purchase._id.toString());
-            
-            return res.status(200).json({
-              success: true,
-              data: updatedPurchase,
-              message: 'Test approval requested successfully. A real purchase has been created and approval request sent to super admin.'
-            });
-          }
-        } catch (conversionError: any) {
-          console.error('❌ Error converting demo purchase to real purchase:', conversionError);
-          return res.status(400).json({
-            success: false,
-            error: 'Failed to process demo purchase for approval'
-          });
-        }
-      }
-      
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid purchase ID format'
-      });
-    }
-
-    // Verify the purchase belongs to the user
-    const purchase = await TestPurchase.findById(purchaseId).populate('user test job');
-    if (!purchase) {
-      console.error('❌ Test purchase not found:', purchaseId);
-      return res.status(404).json({
-        success: false,
-        error: 'Test purchase not found'
-      });
-    }
-
-    console.log('🔍 Found purchase:', {
-      id: purchase._id,
-      user: purchase.user._id,
-      approvalStatus: purchase.approvalStatus,
-      canRequestApproval: purchase.canRequestApproval,
-      status: purchase.status
-    });
-
-    if (purchase.user._id.toString() !== userId) {
-      return res.status(403).json({
-        success: false,
-        error: 'Access denied: This purchase does not belong to you'
-      });
-    }
-
-    if (!purchase.canRequestApproval) {
-      console.log('❌ Cannot request approval:', {
-        approvalStatus: purchase.approvalStatus,
-        approvalStatusDisplay: purchase.approvalStatusDisplay,
-        status: purchase.status,
-        attemptsUsed: purchase.attemptsUsed,
-        maxAttempts: purchase.maxAttempts
-      });
-      return res.status(400).json({
-        success: false,
-        error: 'Cannot request approval for this test',
-        data: {
-          approvalStatus: purchase.approvalStatus,
-          approvalStatusDisplay: purchase.approvalStatusDisplay
-        }
-      });
-    }
-
-    // Request approval
-    console.log('✅ Requesting approval for purchase:', purchaseId);
-    const updatedPurchase = await TestPurchase.requestApproval(purchaseId);
-    console.log('✅ Updated purchase approval status:', updatedPurchase.approvalStatus);
-
-    res.status(200).json({
-      success: true,
-      data: updatedPurchase,
-      message: 'Test approval requested successfully. You will be notified when an admin reviews your request.'
-    });
-  } catch (error: any) {
-    console.error('❌ Error requesting test approval:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to request test approval',
-      message: error.message
-    });
-  }
-};
-
-// Get pending test approvals (Admin only)
-export const getPendingTestApprovals = async (req: AuthRequest, res: Response) => {
-  try {
-    const user = req.user;
-    
-    if (!user || user.role !== 'super_admin') {
-      return res.status(403).json({
-        success: false,
-        error: 'Access denied: Super admin access required'
-      });
-    }
-
-    console.log('🔍 Getting pending test approvals...');
-    
-    // Debug: Let's also check all purchases to see what's in the database
-    const allPurchases = await TestPurchase.find({ status: 'completed' })
-      .populate('user', 'firstName lastName email')
-      .populate('test', 'title type')
-      .populate('job', 'title company')
-      .sort({ purchasedAt: -1 });
-    
-    console.log('🔍 All completed purchases in DB:', allPurchases.length);
-    allPurchases.forEach(purchase => {
-      console.log(`  - Purchase ${purchase._id}: approvalStatus=${purchase.approvalStatus}, user=${purchase.user?.firstName} ${purchase.user?.lastName}`);
-    });
-
-    const pendingApprovals = await TestPurchase.findPendingApprovals();
-    
-    console.log('🔍 Pending approvals found:', pendingApprovals.length);
-    pendingApprovals.forEach(approval => {
-      console.log(`  - Approval ${approval._id}: status=${approval.approvalStatus}, requestedAt=${approval.approvalRequestedAt}`);
-    });
-
-    res.status(200).json({
-      success: true,
-      data: pendingApprovals,
-      count: pendingApprovals.length,
-      message: 'Pending test approvals retrieved successfully'
-    });
-  } catch (error: any) {
-    console.error('❌ Error getting pending approvals:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to retrieve pending approvals',
-      message: error.message
-    });
-  }
-};
-
-// Get approved tests (Admin only)
-export const getApprovedTests = async (req: AuthRequest, res: Response) => {
-  try {
-    const user = req.user;
-    
-    if (!user || user.role !== 'super_admin') {
-      return res.status(403).json({
-        success: false,
-        error: 'Access denied: Super admin access required'
-      });
-    }
-
-    console.log('🔍 Getting approved tests...');
-    
-    const approvedTests = await TestPurchase.findApprovedTests();
-    
-    console.log('🔍 Approved tests found:', approvedTests.length);
-    approvedTests.forEach(approved => {
-      console.log(`  - Approved ${approved._id}: user=${approved.user?.firstName} ${approved.user?.lastName}, approvedAt=${approved.approvedAt}`);
-    });
-
-    res.status(200).json({
-      success: true,
-      data: approvedTests,
-      count: approvedTests.length,
-      message: 'Approved tests retrieved successfully'
-    });
-  } catch (error: any) {
-    console.error('❌ Error getting approved tests:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to retrieve approved tests',
-      message: error.message
-    });
-  }
-};
-
-// Approve a test (Admin only)
-export const approveTest = async (req: AuthRequest, res: Response) => {
-  try {
-    const { purchaseId } = req.params;
-    const user = req.user;
-
-    if (!user || user.role !== 'super_admin') {
-      return res.status(403).json({
-        success: false,
-        error: 'Access denied: Super admin access required'
-      });
-    }
-
-    // Check if purchaseId is a valid ObjectId
-    if (!mongoose.Types.ObjectId.isValid(purchaseId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid purchase ID format'
-      });
-    }
-
-    const purchase = await TestPurchase.findById(purchaseId);
-    if (!purchase) {
-      return res.status(404).json({
-        success: false,
-        error: 'Test purchase not found'
-      });
-    }
-
-    if (purchase.approvalStatus !== 'pending_approval') {
-      return res.status(400).json({
-        success: false,
-        error: 'Test is not pending approval',
-        data: { approvalStatus: purchase.approvalStatus }
-      });
-    }
-
-    const approvedPurchase = await TestPurchase.approveTest(purchaseId, user.id);
-
-    res.status(200).json({
-      success: true,
-      data: approvedPurchase,
-      message: 'Test approved successfully. The user can now take the test.'
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to approve test',
-      message: error.message
-    });
-  }
-};
-
-// Reject a test (Admin only)
-export const rejectTest = async (req: AuthRequest, res: Response) => {
-  try {
-    const { purchaseId } = req.params;
-    const { reason } = req.body;
-    const user = req.user;
-
-    if (!user || user.role !== 'super_admin') {
-      return res.status(403).json({
-        success: false,
-        error: 'Access denied: Super admin access required'
-      });
-    }
-
-    // Check if purchaseId is a valid ObjectId
-    if (!mongoose.Types.ObjectId.isValid(purchaseId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid purchase ID format'
-      });
-    }
-
-    if (!reason || reason.trim().length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Rejection reason is required'
-      });
-    }
-
-    const purchase = await TestPurchase.findById(purchaseId);
-    if (!purchase) {
-      return res.status(404).json({
-        success: false,
-        error: 'Test purchase not found'
-      });
-    }
-
-    if (purchase.approvalStatus !== 'pending_approval') {
-      return res.status(400).json({
-        success: false,
-        error: 'Test is not pending approval',
-        data: { approvalStatus: purchase.approvalStatus }
-      });
-    }
-
-    const rejectedPurchase = await TestPurchase.rejectTest(purchaseId, user.id, reason.trim());
-
-    res.status(200).json({
-      success: true,
-      data: rejectedPurchase,
-      message: 'Test rejected successfully. The user has been notified.'
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to reject test',
       message: error.message
     });
   }

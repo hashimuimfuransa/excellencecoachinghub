@@ -620,7 +620,36 @@ const TestPage: React.FC = () => {
               </FormControl>
             )}
 
-            {/* Scale */}
+            {/* Likert Scale (radio buttons) */}
+            {currentQ.type === 'likert_scale' && (
+              <FormControl component="fieldset" fullWidth>
+                <RadioGroup
+                  value={answers[currentQ._id] || ''}
+                  onChange={(e) => handleAnswerChange(currentQ._id, e.target.value)}
+                >
+                  {(currentQ.options || ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree']).map((option, index) => (
+                    <FormControlLabel
+                      key={index}
+                      value={option}
+                      control={<Radio />}
+                      label={option}
+                      sx={{ 
+                        mb: 1, 
+                        p: 2, 
+                        border: '1px solid',
+                        borderColor: answers[currentQ._id] === option ? 'primary.main' : 'divider',
+                        backgroundColor: answers[currentQ._id] === option ? 'primary.50' : 'transparent',
+                        borderRadius: 2,
+                        '&:hover': { bgcolor: 'grey.50' },
+                        transition: 'all 0.2s'
+                      }}
+                    />
+                  ))}
+                </RadioGroup>
+              </FormControl>
+            )}
+
+            {/* Scale (slider) */}
             {currentQ.type === 'scale' && (
               <Box sx={{ px: 3, py: 2 }}>
                 <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mb: 2 }}>

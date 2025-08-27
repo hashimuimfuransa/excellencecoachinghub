@@ -23,7 +23,22 @@ export class AIService {
       jsonText = jsonText.slice(3, -3).trim();
     }
     
-    return JSON.parse(jsonText);
+    // Find JSON content between first { and last }
+    const firstBrace = jsonText.indexOf('{');
+    const lastBrace = jsonText.lastIndexOf('}');
+    
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      jsonText = jsonText.substring(firstBrace, lastBrace + 1);
+    }
+    
+    try {
+      return JSON.parse(jsonText);
+    } catch (error) {
+      console.error('Failed to parse JSON from AI response:', error);
+      console.error('Raw response:', text);
+      console.error('Processed JSON text:', jsonText);
+      throw new Error(`Failed to parse AI response: ${error instanceof Error ? error.message : 'Unknown parsing error'}`);
+    }
   }
 
   // General content generation method
@@ -35,6 +50,406 @@ export class AIService {
       console.error('Error generating content with AI:', error);
       throw error;
     }
+  }
+
+  // Generate psychometric test questions with proper JSON parsing
+  async generatePsychometricTest(params: {
+    jobTitle: string;
+    jobDescription: string;
+    industry: string;
+    experienceLevel: string;
+    skills: string[];
+    questionCount: number;
+    testLevel: string;
+    timeLimit: number;
+  }): Promise<{
+    questions: Array<{
+      question: string;
+      options: string[];
+      correctAnswer: number;
+      explanation: string;
+      category: string;
+    }>;
+  }> {
+    try {
+      const { jobTitle, jobDescription, industry, experienceLevel, skills, questionCount, testLevel, timeLimit } = params;
+      
+      const prompt = `Generate a comprehensive psychometric test for the job position: ${jobTitle}
+
+Job Context:
+- Job Description: ${jobDescription}
+- Industry: ${industry}
+- Experience Level: ${experienceLevel}
+- Required Skills: ${skills.length > 0 ? skills.join(', ') : 'General skills for the position'}
+
+Test Specifications:
+- Total Questions: EXACTLY ${questionCount} questions (this is critical)
+- Test Level: ${testLevel}
+- Time Allocation: ${timeLimit} minutes (1 minute per question)
+
+Assessment Areas (distribute questions evenly):
+1. COGNITIVE ABILITIES (25% of questions) - logical reasoning, analytical thinking, pattern recognition
+2. PERSONALITY TRAITS (25% of questions) - behavior patterns, work style preferences, team dynamics
+3. PROBLEM-SOLVING (25% of questions) - creative solutions, critical thinking, decision-making
+4. SITUATIONAL JUDGMENT (25% of questions) - workplace scenarios, ethical decisions, conflict resolution
+
+Requirements:
+- Each question must have exactly 4 options
+- Only ONE correct answer per question
+- Clear, professional language appropriate for ${experienceLevel} level
+- Questions must be directly relevant to ${jobTitle} role in ${industry}
+- Provide detailed explanations for correct answers
+
+CRITICAL OUTPUT FORMAT - Return ONLY this JSON structure (no markdown, no extra text):
+{
+  "questions": [
+    {
+      "question": "Complete question text here",
+      "options": ["Option A text", "Option B text", "Option C text", "Option D text"],
+      "correctAnswer": 0,
+      "explanation": "Detailed explanation of why this answer is correct",
+      "category": "cognitive"
+    }
+  ]
+}
+
+MANDATORY CATEGORY VALUES (use only these):
+- "cognitive" (logical reasoning, analytical thinking)
+- "personality" (behavior assessment, work preferences)  
+- "problem-solving" (creative solutions, critical thinking)
+- "situational" (workplace scenarios, judgment calls)
+
+QUALITY STANDARDS:
+- Questions must be complete and professionally written
+- Options must be realistic and relevant
+- Explanations must be educational and clear
+- No truncated or incomplete content
+- Test the full range of skills needed for ${jobTitle}
+
+Generate all ${questionCount} questions now:`;
+
+      // Implement retry logic for AI service
+      let result;
+      let text;
+      let retryCount = 0;
+      const maxRetries = 3;
+      const retryDelay = 2000; // 2 seconds
+      
+      while (retryCount < maxRetries) {
+        try {
+          console.log(`🤖 Attempting AI generation (attempt ${retryCount + 1}/${maxRetries})`);
+          result = await this.model.generateContent(prompt);
+          const response = await result.response;
+          text = response.text();
+          break; // Success, exit retry loop
+        } catch (aiError: any) {
+          retryCount++;
+          console.log(`⚠️ AI generation failed (attempt ${retryCount}/${maxRetries}):`, aiError.message);
+          
+          if (retryCount >= maxRetries) {
+            console.error('AI service failed after all retries, using fallback questions');
+            // Use fallback questions when AI service is unavailable
+            return this.generateFallbackQuestions(params);
+          }
+          
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount));
+        }
+      }
+      
+      console.log('🤖 Raw psychometric test response:', text.substring(0, 200) + '...');
+      
+      try {
+        const result = this.extractJsonFromResponse(text);
+        
+        // Validate and clean up the generated questions
+        if (result.questions && Array.isArray(result.questions)) {
+          // Validate each question for completeness and quality
+          result.questions = result.questions.map((question: any, index: number) => {
+            // Validate question structure
+            if (!question.question || typeof question.question !== 'string' || question.question.trim().length === 0) {
+              console.warn(`⚠️ Question ${index + 1} has invalid question text, using fallback`);
+              question.question = `${testLevel} level question ${index + 1} for ${jobTitle} position`;
+            }
+
+            // Validate options
+            if (!question.options || !Array.isArray(question.options) || question.options.length !== 4) {
+              console.warn(`⚠️ Question ${index + 1} has invalid options, using fallback`);
+              question.options = ["Option A", "Option B", "Option C", "Option D"];
+            } else {
+              // Ensure all options are strings and not empty
+              question.options = question.options.map((option: any, optIndex: number) => {
+                if (!option || typeof option !== 'string' || option.trim().length === 0) {
+                  return `Option ${String.fromCharCode(65 + optIndex)}`;
+                }
+                return option.trim();
+              });
+            }
+
+            // Validate correct answer
+            if (typeof question.correctAnswer !== 'number' || 
+                question.correctAnswer < 0 || 
+                question.correctAnswer >= 4) {
+              console.warn(`⚠️ Question ${index + 1} has invalid correctAnswer, defaulting to 0`);
+              question.correctAnswer = 0;
+            }
+
+            // Validate explanation
+            if (!question.explanation || typeof question.explanation !== 'string' || question.explanation.trim().length === 0) {
+              console.warn(`⚠️ Question ${index + 1} has invalid explanation, using fallback`);
+              question.explanation = "This is the correct answer for this question.";
+            }
+
+            // Clean up category values
+            let category = question.category;
+            if (typeof category === 'string') {
+              category = category.toLowerCase().trim();
+              // Map invalid categories to valid ones
+              if (category.includes('situational') || category.includes('judgment')) {
+                category = 'situational';
+              } else if (category.includes('problem') || category.includes('solving')) {
+                category = 'problem-solving';
+              } else if (category.includes('personality') || category.includes('behavior')) {
+                category = 'personality';
+              } else if (category.includes('cognitive') || category.includes('logical') || category.includes('analytical')) {
+                category = 'cognitive';
+              } else {
+                // Default fallback
+                category = 'cognitive';
+              }
+            } else {
+              category = 'cognitive';
+            }
+            
+            return {
+              question: question.question.trim(),
+              options: question.options,
+              correctAnswer: question.correctAnswer,
+              explanation: question.explanation.trim(),
+              category: category
+            };
+          });
+
+          // Filter out any completely invalid questions
+          result.questions = result.questions.filter((question: any) => 
+            question.question && 
+            question.options && 
+            Array.isArray(question.options) && 
+            question.options.length === 4
+          );
+          
+          // Ensure exact question count
+          if (result.questions.length > questionCount) {
+            console.log(`⚠️ AI generated ${result.questions.length} valid questions, trimming to ${questionCount}`);
+            result.questions = result.questions.slice(0, questionCount);
+          } else if (result.questions.length < questionCount) {
+            console.log(`⚠️ AI generated ${result.questions.length} valid questions, padding to ${questionCount}`);
+            // Add high-quality fallback questions to reach the target count
+            const needed = questionCount - result.questions.length;
+            const categories = ['cognitive', 'personality', 'problem-solving', 'situational'];
+            
+            for (let i = 0; i < needed; i++) {
+              const questionNum = result.questions.length + 1;
+              const category = categories[i % categories.length];
+              
+              result.questions.push({
+                question: `As a ${jobTitle} professional in the ${industry} industry, how would you approach a ${testLevel} level challenge that requires ${category} skills?`,
+                options: [
+                  "Take a systematic and analytical approach",
+                  "Rely on past experience only",
+                  "Avoid the challenge if possible",
+                  "Ask others to handle it instead"
+                ],
+                correctAnswer: 0,
+                explanation: "A systematic and analytical approach demonstrates the professional skills required for this role.",
+                category: category
+              });
+            }
+          }
+          
+          console.log(`✅ Final validated question count: ${result.questions.length} (target: ${questionCount})`);
+          
+          // Final quality check
+          const hasIncompleteQuestions = result.questions.some((q: any) => 
+            !q.question || 
+            !q.options || 
+            q.options.length !== 4 || 
+            typeof q.correctAnswer !== 'number' ||
+            !q.explanation ||
+            !q.category
+          );
+          
+          if (hasIncompleteQuestions) {
+            console.error('⚠️ Some questions are still incomplete after validation');
+          } else {
+            console.log('✅ All questions passed validation');
+          }
+        }
+        
+        return result;
+      } catch (parseError) {
+        console.error('Failed to parse psychometric test response:', parseError);
+        
+        // Fallback: try to generate a simple test structure
+        const fallbackQuestions = Array.from({ length: questionCount }, (_, i) => ({
+          question: `Sample ${testLevel} question ${i + 1} for ${jobTitle} position`,
+          options: ["Option A", "Option B", "Option C", "Option D"],
+          correctAnswer: 0,
+          explanation: "This is a sample question. The actual test should be generated by AI.",
+          category: "cognitive"
+        }));
+        
+        return { questions: fallbackQuestions };
+      }
+    } catch (error) {
+      console.error('Error generating psychometric test:', error);
+      throw new Error('Failed to generate psychometric test');
+    }
+  }
+
+  // Generate fallback questions when AI service is unavailable
+  private generateFallbackQuestions(params: {
+    jobTitle: string;
+    jobDescription: string;
+    industry: string;
+    experienceLevel: string;
+    skills: string[];
+    questionCount: number;
+    testLevel: string;
+    timeLimit: number;
+  }): { questions: Array<{ question: string; options: string[]; correctAnswer: number; explanation: string; category: string; }> } {
+    const { jobTitle, industry, experienceLevel, questionCount, testLevel } = params;
+    
+    console.log(`🔄 Generating ${questionCount} fallback questions for ${jobTitle}`);
+    
+    // Predefined question templates based on job characteristics
+    const questionTemplates = {
+      cognitive: [
+        {
+          question: `In a ${industry} role like ${jobTitle}, what's the most logical approach to analyze complex data?`,
+          options: [
+            "Break it down into smaller, manageable components",
+            "Ignore the complexity and make quick decisions", 
+            "Ask others to handle the analysis",
+            "Wait for more information before starting"
+          ],
+          correctAnswer: 0,
+          explanation: "Breaking complex problems into smaller components is a fundamental analytical skill."
+        },
+        {
+          question: `When prioritizing tasks as a ${jobTitle}, which factor should be most important?`,
+          options: [
+            "Personal preference",
+            "Task difficulty level",
+            "Business impact and urgency",
+            "How long each task takes"
+          ],
+          correctAnswer: 2,
+          explanation: "Business impact and urgency are key factors in effective task prioritization."
+        }
+      ],
+      personality: [
+        {
+          question: `How would you handle conflicting opinions in a team meeting for a ${jobTitle} role?`,
+          options: [
+            "Avoid the conflict and change topics",
+            "Support the loudest voice in the room",
+            "Listen to all perspectives and find common ground",
+            "Make the decision yourself without input"
+          ],
+          correctAnswer: 2,
+          explanation: "Effective team collaboration requires listening to all perspectives and finding solutions."
+        },
+        {
+          question: `When facing a challenging deadline in your ${jobTitle} position, what's your approach?`,
+          options: [
+            "Work extra hours alone to meet the deadline",
+            "Communicate with stakeholders and create a realistic plan",
+            "Hope the deadline extends automatically",
+            "Focus on the easiest tasks first"
+          ],
+          correctAnswer: 1,
+          explanation: "Professional communication and realistic planning are key to managing challenging deadlines."
+        }
+      ],
+      "problem-solving": [
+        {
+          question: `A process in your ${jobTitle} role isn't working efficiently. What's your first step?`,
+          options: [
+            "Continue using the same process",
+            "Analyze the current process to identify bottlenecks",
+            "Ask your manager to fix it",
+            "Switch to a completely different approach immediately"
+          ],
+          correctAnswer: 1,
+          explanation: "Analyzing the current situation is essential before making improvements."
+        },
+        {
+          question: `When implementing a solution as a ${jobTitle}, what should you do?`,
+          options: [
+            "Implement everything at once",
+            "Test the solution on a small scale first",
+            "Let others implement while you watch",
+            "Wait for perfect conditions"
+          ],
+          correctAnswer: 1,
+          explanation: "Testing solutions on a small scale reduces risk and allows for adjustments."
+        }
+      ],
+      situational: [
+        {
+          question: `Your ${jobTitle} supervisor asks you to complete a task you've never done before. What do you do?`,
+          options: [
+            "Pretend you know how and figure it out later",
+            "Refuse the task entirely",
+            "Ask for guidance and resources to learn the task",
+            "Delegate it to someone else"
+          ],
+          correctAnswer: 2,
+          explanation: "Professional growth requires asking for guidance when learning new skills."
+        },
+        {
+          question: `As a ${jobTitle} in the ${industry} industry, you notice a potential improvement. What's your next step?`,
+          options: [
+            "Implement the change immediately without approval",
+            "Keep the idea to yourself",
+            "Document the idea and discuss it with relevant stakeholders",
+            "Wait for someone else to notice the same issue"
+          ],
+          correctAnswer: 2,
+          explanation: "Professional improvement suggestions should be documented and discussed appropriately."
+        }
+      ]
+    };
+
+    const categories = Object.keys(questionTemplates) as Array<keyof typeof questionTemplates>;
+    const questions = [];
+    
+    // Distribute questions evenly across categories
+    const questionsPerCategory = Math.floor(questionCount / categories.length);
+    const remainder = questionCount % categories.length;
+    
+    for (let i = 0; i < categories.length; i++) {
+      const category = categories[i];
+      const numQuestions = questionsPerCategory + (i < remainder ? 1 : 0);
+      const templates = questionTemplates[category];
+      
+      for (let j = 0; j < numQuestions; j++) {
+        const template = templates[j % templates.length];
+        questions.push({
+          ...template,
+          category
+        });
+      }
+    }
+    
+    // Shuffle questions
+    for (let i = questions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [questions[i], questions[j]] = [questions[j], questions[i]];
+    }
+    
+    return { questions: questions.slice(0, questionCount) };
   }
 
   // Generate quiz questions from course content
@@ -2335,7 +2750,7 @@ Rules:
     return categories;
   }
 
-  // Generate job-specific psychometric test
+  // Generate job-specific psychometric test with uniqueness tracking
   async generateJobSpecificPsychometricTest(params: {
     jobTitle: string;
     jobDescription: string;
@@ -2346,6 +2761,7 @@ Rules:
     questionCount?: number;
     timeLimit?: number;
     userId: string;
+    previousQuestions?: string[]; // Array of previously generated question texts for uniqueness check
   }): Promise<any> {
     try {
       const {
@@ -2355,9 +2771,10 @@ Rules:
         experienceLevel,
         industry,
         testType,
-        questionCount = 20,
-        timeLimit = 30,
-        userId
+        questionCount = 20, // Default to 20 questions (Foundation level)
+        timeLimit = 20, // Default to 20 minutes (1 minute per question)
+        userId,
+        previousQuestions = [] // Default to empty array if no previous questions
       } = params;
 
       // Define psychometric categories based on job requirements
@@ -2414,13 +2831,28 @@ Rules:
 
         **Important Guidelines:**
         1. Create exactly ${questionCount} unique, numbered questions (Q1, Q2, Q3, etc.)
-        2. Ensure NO DUPLICATE questions or similar questions
-        3. Use variety in question types: multiple choice, scenario-based, scale ratings, and true/false
-        4. Make questions specific to the job role and industry
-        5. Include realistic workplace scenarios
-        6. Ensure questions are professional, unbiased, and legally compliant
-        7. Each question should test different aspects/traits
-        8. Provide clear, concise questions that candidates can understand easily
+        2. Ensure NO DUPLICATE questions or similar questions - each must be completely unique
+        ${previousQuestions.length > 0 ? `3. CRITICAL: Avoid generating questions similar to these previously used questions for this user:
+           ${previousQuestions.slice(0, 20).map((q, i) => `- "${q}"`).join('\n           ')}
+           ${previousQuestions.length > 20 ? `   ... and ${previousQuestions.length - 20} more questions` : ''}
+           Generate completely different questions that test the same competencies but with different wording, scenarios, and approaches.` : ''}
+        ${previousQuestions.length > 0 ? '4' : '3'}. Use diverse question formats - ensure ALL types are represented:
+           - Multiple Choice (4 options A-D) - 30% of questions
+           - Matching Questions (Match items from Column A to Column B) - 20% of questions
+           - Scenario-based (workplace situations with 4 response options) - 25% of questions
+           - Likert Scale (1-5 ratings: Strongly Disagree to Strongly Agree) - 15% of questions
+           - True/False statements - 10% of questions
+           Make sure to include matching questions where candidates match skills to scenarios, traits to behaviors, or concepts to definitions.
+        ${previousQuestions.length > 0 ? '5' : '4'}. Follow standard psychometric assessment practices:
+           - Questions should be clear, unambiguous, and professional
+           - Avoid leading questions or cultural bias
+           - Use validated psychometric constructs
+           - Include both direct and indirect trait measurements
+        ${previousQuestions.length > 0 ? '6' : '5'}. Make questions specific to ${jobTitle} role in ${industry} industry
+        ${previousQuestions.length > 0 ? '7' : '6'}. Include realistic workplace scenarios relevant to the position
+        ${previousQuestions.length > 0 ? '8' : '7'}. Each question must test different psychological traits/competencies
+        ${previousQuestions.length > 0 ? '9' : '8'}. Ensure balanced difficulty and comprehensive coverage of key traits
+        ${previousQuestions.length > 0 ? '10' : '9'}. Use professional language appropriate for ${experienceLevel} candidates
 
         **Response Format (JSON):**
         {
@@ -2439,23 +2871,34 @@ Rules:
               {
                 "id": "q1",
                 "number": 1,
-                "question": "Question text here?",
+                "question": "When facing a complex problem at work, what is your preferred approach?",
                 "type": "multiple_choice",
-                "options": ["Option A", "Option B", "Option C", "Option D"],
-                "correctAnswer": "Option A",
-                "traits": ["logical-reasoning", "problem-solving"],
+                "options": [
+                  "Break it down into smaller, manageable tasks",
+                  "Seek input from colleagues before proceeding", 
+                  "Research similar problems and their solutions",
+                  "Take immediate action based on initial assessment"
+                ],
+                "correctAnswer": "Break it down into smaller, manageable tasks",
+                "traits": ["problem-solving", "analytical-thinking"],
                 "weight": 1,
                 "category": "cognitive",
-                "explanation": "Brief explanation of the expected response"
+                "explanation": "Tests systematic problem-solving approach"
               },
               {
-                "id": "q2",
+                "id": "q2", 
                 "number": 2,
-                "question": "Scenario-based question here...",
-                "type": "scenario",
-                "options": ["Response A", "Response B", "Response C", "Response D"],
-                "correctAnswer": "Response A",
-                "traits": ["situational-judgment", "decision-making"],
+                "question": "I enjoy working on projects that require attention to detail.",
+                "type": "likert_scale",
+                "options": [
+                  "Strongly Disagree",
+                  "Disagree", 
+                  "Neutral",
+                  "Agree",
+                  "Strongly Agree"
+                ],
+                "correctAnswer": null,
+                "traits": ["attention-to-detail", "conscientiousness"],
                 "weight": 1,
                 "category": "behavioral",
                 "explanation": "Explanation of best response"
@@ -2463,6 +2906,36 @@ Rules:
               {
                 "id": "q3",
                 "number": 3,
+                "question": "Match each leadership style to its most appropriate workplace scenario:",
+                "type": "matching",
+                "matchingPairs": {
+                  "columnA": [
+                    "Transformational Leadership",
+                    "Democratic Leadership", 
+                    "Autocratic Leadership",
+                    "Coaching Leadership"
+                  ],
+                  "columnB": [
+                    "Leading organizational change and innovation",
+                    "Making collaborative decisions with team input",
+                    "Managing crisis situations requiring quick decisions", 
+                    "Developing junior team members' skills"
+                  ]
+                },
+                "correctMatches": {
+                  "Transformational Leadership": "Leading organizational change and innovation",
+                  "Democratic Leadership": "Making collaborative decisions with team input",
+                  "Autocratic Leadership": "Managing crisis situations requiring quick decisions",
+                  "Coaching Leadership": "Developing junior team members' skills"
+                },
+                "traits": ["leadership", "situational-awareness"],
+                "weight": 2,
+                "category": "behavioral",
+                "explanation": "Tests understanding of different leadership approaches"
+              },
+              {
+                "id": "q4",
+                "number": 4,
                 "question": "I enjoy working in team environments",
                 "type": "scale",
                 "scaleRange": {
@@ -2506,6 +2979,11 @@ Rules:
         - Generate EXACTLY ${questionCount} questions - no more, no less
         - Each question MUST be completely unique - no repetition in content, wording, or concepts
         - Number questions sequentially: Q1, Q2, Q3... Q${questionCount}
+        - Use diverse question types: mix multiple choice, likert scales, scenarios, true/false
+        - Cover different psychological domains: cognitive, personality, behavioral, skills
+        - Include job-relevant scenarios specific to ${jobTitle} role
+        - Ensure professional, unbiased language appropriate for workplace assessment
+        - Each question should target different competencies/traits
         - Use unique question IDs: q1, q2, q3... q${questionCount}
 
         **Question Types and Distribution (Total: ${questionCount}):**
@@ -2783,181 +3261,23 @@ Rules:
           scores: gradingResult.scores || {},
           categoryScores: gradingResult.categoryScores || {},
           overallScore: Math.min(Math.max(gradingResult.overallScore || 0, 0), 100),
-          grade: gradingResult.grade || this.calculateGrade(gradingResult.overallScore || 0),
-          percentile: gradingResult.percentile || Math.round((gradingResult.overallScore || 0) * 0.8),
-          interpretation: gradingResult.interpretation || 'Assessment completed.',
-          recommendations: gradingResult.recommendations || [],
-          detailedAnalysis: {
-            strengths: gradingResult.detailedAnalysis?.strengths || [],
-            developmentAreas: gradingResult.detailedAnalysis?.developmentAreas || [],
-            skillGaps: gradingResult.detailedAnalysis?.skillGaps || [],
-            careerReadiness: gradingResult.detailedAnalysis?.careerReadiness || {},
-            jobFitScore: gradingResult.detailedAnalysis?.jobFitScore || gradingResult.overallScore || 0,
-            confidenceLevel: gradingResult.detailedAnalysis?.confidenceLevel || 0.8,
-            industryBenchmark: gradingResult.detailedAnalysis?.industryBenchmark || 'Average',
-            competencyProfile: gradingResult.detailedAnalysis?.competencyProfile || {},
-            learningRecommendations: gradingResult.detailedAnalysis?.learningRecommendations || [],
-            nextSteps: gradingResult.detailedAnalysis?.nextSteps || []
-          }
+          recommendations: gradingResult.recommendations || []
         };
-
       } catch (parseError) {
-        console.error('Failed to parse grading response:', parseError);
-        console.error('Raw AI response:', text?.substring(0, 1000));
+        console.error('Failed to parse AI grading response:', parseError);
+        console.error('Raw response:', text);
         
-        // Enhanced fallback scoring logic
-        const answeredQuestions = Object.keys(answers).length;
-        const totalQuestions = test.questions?.length || 1;
-        const completionRate = answeredQuestions / totalQuestions;
-        
-        // Try to extract any score from the response text
-        const scoreMatch = text?.match(/(\d+)%?/g);
-        const extractedScore = scoreMatch ? Math.max(...scoreMatch.map(s => parseInt(s.replace('%', ''))).filter(n => n <= 100 && n >= 0)) : null;
-        
-        const fallbackScore = extractedScore || Math.max(Math.round(completionRate * 75 + Math.random() * 15), 60); // Base score 60-90
-        
-        console.log('Enhanced fallback scoring:', {
-          answeredQuestions,
-          totalQuestions,
-          completionRate,
-          extractedScore,
-          finalFallbackScore: fallbackScore
-        });
-
+        // Return fallback grading result
         return {
-          scores: { 
-            communication: fallbackScore,
-            problemSolving: Math.max(fallbackScore - 5, 0),
-            leadership: Math.min(fallbackScore + 5, 100),
-            teamwork: fallbackScore,
-            adaptability: Math.max(fallbackScore - 3, 0)
-          },
-          categoryScores: {
-            cognitive: fallbackScore,
-            personality: Math.max(fallbackScore - 2, 0),
-            behavioral: Math.min(fallbackScore + 2, 100),
-            skills: fallbackScore
-          },
-          overallScore: fallbackScore,
-          grade: this.calculateGrade(fallbackScore),
-          percentile: Math.round(fallbackScore * 0.8),
-          interpretation: `Assessment completed successfully. You answered ${answeredQuestions} out of ${totalQuestions} questions, demonstrating engagement with the assessment process. Your responses indicate potential across multiple competency areas.`,
-          recommendations: [
-            'Continue developing your analytical and problem-solving skills',
-            'Seek opportunities to apply your knowledge in practical settings',
-            'Consider additional training in areas where you scored lower',
-            'Build on your existing strengths while addressing development areas'
-          ],
-          detailedAnalysis: {
-            strengths: [
-              'Shows engagement with the assessment process',
-              'Demonstrates willingness to tackle complex questions',
-              'Exhibits potential for growth and development'
-            ],
-            developmentAreas: [
-              'Continue building expertise in core competency areas',
-              'Practice applying theoretical knowledge to real situations',
-              'Develop confidence through additional learning and experience'
-            ],
-            skillGaps: [
-              {
-                skill: 'Professional Development',
-                currentLevel: 'Developing',
-                targetLevel: 'Proficient',
-                importance: 'Medium',
-                learningPath: 'Engage in continuous learning and skill-building activities'
-              }
-            ],
-            careerReadiness: {
-              currentRole: 'Suitable with development',
-              nextLevel: 'Requires additional preparation',
-              timeToPromotion: '6-18 months',
-              keyFocusAreas: ['Skill enhancement', 'Experience building']
-            },
-            jobFitScore: fallbackScore,
-            confidenceLevel: 0.7,
-            industryBenchmark: 'Average',
-            competencyProfile: {
-              topCompetencies: ['Adaptability', 'Learning orientation'],
-              emergingCompetencies: ['Problem solving', 'Communication'],
-              competenciesToDevelop: ['Leadership', 'Technical expertise']
-            },
-            learningRecommendations: [
-              {
-                type: 'Skill Development',
-                priority: 'Medium',
-                recommendation: 'Focus on building core competencies through structured learning',
-                timeline: '3-6 months',
-                resources: ['Online courses', 'Workshops', 'Mentoring']
-              }
-            ],
-            nextSteps: [
-              'Review your results to identify specific areas for improvement',
-              'Create a personal development plan with clear goals',
-              'Seek learning opportunities that align with your career objectives',
-              'Practice applying new skills in low-risk environments'
-            ],
-            completionRate,
-            answeredQuestions,
-            totalQuestions
-          }
+          scores: {},
+          categoryScores: {},
+          overallScore: 0,
+          recommendations: ['Unable to generate AI recommendations at this time.']
         };
       }
-
     } catch (error) {
-      console.error('Error grading psychometric test:', error);
-      throw new Error('Failed to grade psychometric test');
-    }
-  }
-
-  // Helper method to calculate letter grade from numerical score
-  private calculateGrade(score: number): string {
-    if (score >= 90) return 'A+';
-    if (score >= 85) return 'A';
-    if (score >= 80) return 'A-';
-    if (score >= 75) return 'B+';
-    if (score >= 70) return 'B';
-    if (score >= 65) return 'B-';
-    if (score >= 60) return 'C+';
-    if (score >= 55) return 'C';
-    if (score >= 50) return 'C-';
-    if (score >= 45) return 'D+';
-    if (score >= 40) return 'D';
-    return 'F';
-  }
-
-  // Helper method to calculate fallback score based on completion
-  private calculateFallbackScore(answers: Record<string, any>, questions: any[]): number {
-    const answeredQuestions = Object.keys(answers).length;
-    const totalQuestions = questions.length || 1;
-    const completionRate = answeredQuestions / totalQuestions;
-    
-    // Base score calculation: 60-85 range based on completion
-    const baseScore = Math.round(60 + (completionRate * 25));
-    
-    // Add some variation based on answer patterns
-    let qualityBonus = 0;
-    for (const answer of Object.values(answers)) {
-      if (answer && answer.toString().length > 5) {
-        qualityBonus += 2; // Bonus for detailed answers
-      }
-    }
-    
-    return Math.min(baseScore + qualityBonus, 100);
-  }
-
-  // General method to generate content using AI
-  async generateContent(prompt: string): Promise<string> {
-    try {
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      return response.text();
-    } catch (error) {
-      console.error('Error generating content with AI:', error);
-      throw new Error('Failed to generate content with AI');
+      console.error('Error grading interview with AI:', error);
+      throw new Error('Failed to grade interview with AI');
     }
   }
 }
-
-// Export singleton instance
-export const aiService = new AIService();

@@ -1,7 +1,7 @@
 {
-  "name": "Excellence Coaching Hub - Premier Job Portal",
-  "short_name": "excellencecoachinghub",
-  "description": "Find your dream career with AI-powered job matching, interview coaching, and professional development",
+  "name": "ExJobNet - Dynamic Career Platform",
+  "short_name": "ExJobNet",
+  "description": "ExJobNet is a dynamic career platform combining the best of professional networking and job readiness—offering features like personalized profiles, interactive job preparation tools, live coaching, and secure certifications to empower both individuals and organizations in Africa's job ecosystem.",
   "lang": "en-US",
   "start_url": "/",
   "scope": "/",
@@ -41,7 +41,7 @@
       "sizes": "1200x800",
       "type": "image/webp",
       "platform": "wide",
-      "label": "Excellence Coaching Hub - Career Growth Dashboard"
+      "label": "ExJobNet - Dynamic Career Platform Dashboard"
     }
   ],
   "related_applications": [],

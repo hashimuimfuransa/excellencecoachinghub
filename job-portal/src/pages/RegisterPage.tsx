@@ -36,7 +36,8 @@ import {
   ArrowBack,
   HowToReg,
   School,
-  PersonAdd
+  PersonAdd,
+  Home as HomeIcon
 } from '@mui/icons-material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -224,10 +225,33 @@ const RegisterPage: React.FC = () => {
               overflow: 'hidden'
             }}
           >
+            {/* Back to Home Button */}
+            <Box sx={{ position: 'absolute', top: 16, left: 16 }}>
+              <Button
+                component={RouterLink}
+                to="/"
+                startIcon={<HomeIcon />}
+                variant="outlined"
+                size="small"
+                sx={{
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  '&:hover': {
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                  },
+                  transition: 'all 0.3s'
+                }}
+              >
+                Back to Home
+              </Button>
+            </Box>
+            
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4, justifyContent: 'center' }}>
               <img 
-                src="/logo1.png" 
-                alt="Excellence Coaching Hub" 
+                src="/exjobnetlogo.png" 
+                alt="ExJobNet" 
                 style={{ height: 120, marginBottom: 16 }}
               />
               <Typography 
@@ -241,7 +265,7 @@ const RegisterPage: React.FC = () => {
                   WebkitTextFillColor: 'transparent'
                 }}
               >
-                Excellence Coaching Hub
+                ExJobNet
               </Typography>
             </Box>
             
@@ -271,7 +295,7 @@ const RegisterPage: React.FC = () => {
                 Create Your Account
               </Typography>
               <Typography variant="body1" color="text.secondary" sx={{ mt: 3 }}>
-                Join our platform to accelerate your career journey
+                Join ExJobNet to accelerate your career journey across Africa's dynamic job ecosystem
               </Typography>
             </Box>
             

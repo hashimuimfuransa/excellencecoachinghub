@@ -107,11 +107,10 @@ const Footer: React.FC = () => {
                   WebkitTextFillColor: 'transparent'
                 }}
               >
-                Excellence Coaching Hub
+                ExJobNet
               </Typography>
               <Typography variant="body1" sx={{ mb: 3, opacity: 0.9, lineHeight: 1.6 }}>
-                Empowering careers through AI-powered job matching, skill development, and personalized coaching. 
-                Your success is our mission.
+                ExJobNet is a dynamic career platform combining the best of professional networking and job readiness—offering features like personalized profiles, interactive job preparation tools, live coaching, and secure certifications to empower both individuals and organizations in Africa's job ecosystem.
               </Typography>
               
               {/* Social Links */}
@@ -275,7 +274,7 @@ const Footer: React.FC = () => {
           }}
         >
           <Typography variant="body2" sx={{ opacity: 0.8 }}>
-            © {new Date().getFullYear()} Excellence Coaching Hub. All rights reserved.
+            © {new Date().getFullYear()} ExJobNet. All rights reserved.
           </Typography>
           
           <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>

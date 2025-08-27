@@ -83,15 +83,9 @@ const HomePage: React.FC = () => {
   const jobsPerPage = 6;
 
   useEffect(() => {
-    // Redirect authenticated users to dashboard
-    if (!isLoading && isAuthenticated) {
-      navigate('/dashboard', { replace: true });
-      return;
-    }
-    
     setAnimationTrigger(true);
     fetchFeaturedJobs();
-  }, [isAuthenticated, isLoading, navigate]);
+  }, []);
   
   const fetchFeaturedJobs = async (page = 1) => {
     try {
@@ -120,8 +114,8 @@ const HomePage: React.FC = () => {
   const features = [
     {
       icon: <Work sx={{ fontSize: 48, color: '#4caf50' }} />,
-      title: 'Smart Job Matching',
-      description: 'Smart job recommendations based on your skills, experience, and career goals.',
+      title: 'Professional Networking',
+      description: 'Connect with industry professionals, build meaningful relationships, and expand your career network across Africa.',
       action: () => navigate('/app/jobs'),
       color: '#4caf50',
       bgColor: 'rgba(76, 175, 80, 0.1)',
@@ -129,8 +123,8 @@ const HomePage: React.FC = () => {
     },
     {
       icon: <Psychology sx={{ fontSize: 48, color: '#66bb6a' }} />,
-      title: 'Interview Coach',
-      description: 'Practice with our smart interview coach and get real-time feedback to ace your interviews.',
+      title: 'Interactive Job Preparation',
+      description: 'Access comprehensive preparation tools including AI-powered interview coaching, skill assessments, and career guidance.',
       action: () => navigate('/app/interviews'),
       color: '#66bb6a',
       bgColor: 'rgba(102, 187, 106, 0.1)',
@@ -138,8 +132,8 @@ const HomePage: React.FC = () => {
     },
     {
       icon: <School sx={{ fontSize: 48, color: '#81c784' }} />,
-      title: 'Skill Certification',
-      description: 'Earn industry-recognized certificates and showcase your expertise to employers.',
+      title: 'Secure Certifications',
+      description: 'Earn verified, blockchain-secured certificates that validate your skills and boost your professional credibility.',
       action: () => navigate('/app/certificates'),
       color: '#81c784',
       bgColor: 'rgba(129, 199, 132, 0.1)',
@@ -147,8 +141,8 @@ const HomePage: React.FC = () => {
     },
     {
       icon: <TrendingUp sx={{ fontSize: 48, color: '#388e3c' }} />,
-      title: 'Career Analytics',
-      description: 'Track your career progress with detailed analytics and personalized insights.',
+      title: 'Personalized Profiles',
+      description: 'Create dynamic career profiles that showcase your expertise, achievements, and career aspirations to potential employers.',
       action: () => navigate('/app/profile'),
       color: '#388e3c',
       bgColor: 'rgba(56, 142, 60, 0.1)',
@@ -157,10 +151,10 @@ const HomePage: React.FC = () => {
   ];
 
   const benefits = [
-    { icon: <Speed />, title: 'Fast Application Process', description: 'Apply to multiple jobs with one click' },
-    { icon: <Security />, title: 'Secure & Private', description: 'Your data is protected with enterprise-grade security' },
-    { icon: <Support />, title: '24/7 Support', description: 'Get help whenever you need it from our expert team' },
-    { icon: <Verified />, title: 'Verified Companies', description: 'All companies are verified and trusted partners' }
+    { icon: <Speed />, title: 'Streamlined Process', description: 'Efficient application and networking process designed for busy professionals' },
+    { icon: <Security />, title: 'Enterprise Security', description: 'Bank-level encryption and data protection for all your professional information' },
+    { icon: <Support />, title: 'Live Career Coaching', description: 'Access professional coaching and mentorship from industry experts' },
+    { icon: <Verified />, title: 'Verified Network', description: 'Connect only with authenticated professionals and legitimate organizations' }
   ];
 
   const popularCategories = [
@@ -171,29 +165,29 @@ const HomePage: React.FC = () => {
   const howItWorksSteps = [
     {
       step: '01',
-      title: 'Create Your Profile',
-      description: 'Sign up and build your professional profile with our guided setup process.',
+      title: 'Build Your Profile',
+      description: 'Create a comprehensive professional profile showcasing your skills, experience, and career aspirations.',
       icon: <Person sx={{ fontSize: 40 }} />,
       color: '#4caf50'
     },
     {
       step: '02',
-      title: 'Get Matched',
-      description: 'Our system analyzes your skills and preferences to find the perfect job opportunities.',
+      title: 'Network & Connect',
+      description: 'Discover and connect with industry professionals, mentors, and potential collaborators in your field.',
       icon: <AutoAwesome sx={{ fontSize: 40 }} />,
       color: '#66bb6a'
     },
     {
       step: '03',
-      title: 'Prepare & Apply',
-      description: 'Use our interview coach and application tools to stand out from the competition.',
+      title: 'Prepare & Upskill',
+      description: 'Access interactive preparation tools, live coaching sessions, and secure certification programs.',
       icon: <Psychology sx={{ fontSize: 40 }} />,
       color: '#81c784'
     },
     {
       step: '04',
-      title: 'Land Your Dream Job',
-      description: 'Get hired by top companies and advance your career with ongoing support.',
+      title: 'Advance Your Career',
+      description: 'Leverage your enhanced profile and network to secure better opportunities and career growth.',
       icon: <EmojiEvents sx={{ fontSize: 40 }} />,
       color: '#388e3c'
     }
@@ -436,7 +430,7 @@ const HomePage: React.FC = () => {
                         textShadow: '0 2px 15px rgba(255,255,255,0.3)'
                       }}
                     >
-                      🎯 Where Talent Meets Opportunity - Excellence Starts Here
+                      🎯 Where Talent Meets Opportunity - Africa's Premier Career Network
                     </Typography>
                     <Typography 
                       variant="h6" 
@@ -452,7 +446,7 @@ const HomePage: React.FC = () => {
                         px: { xs: 1, sm: 0 }
                       }}
                     >
-                      🌟 Join Africa's premier career transformation platform where over 12,500 professionals have achieved career success. Get matched with vetted opportunities, master skills through personalized coaching, and land your dream role with our AI-powered interview preparation.
+                      🌟 ExJobNet is a dynamic career platform combining the best of professional networking and job readiness. With personalized profiles, interactive job preparation tools, live coaching, and secure certifications, we empower both individuals and organizations across Africa's thriving job ecosystem.
                     </Typography>
 
                     {/* Key Benefits Pills */}
@@ -465,10 +459,10 @@ const HomePage: React.FC = () => {
                       px: { xs: 1, sm: 0 }
                     }}>
                       {[
-                        { icon: '🎯', text: 'Smart Job Matching', color: '#4caf50' },
-                        { icon: '⚡', text: 'Instant Apply', color: '#66bb6a' },
-                        { icon: '📈', text: '95% Success Rate', color: '#81c784' },
-                        { icon: '💎', text: 'Premium Support', color: '#388e3c' }
+                        { icon: '🎯', text: 'Smart Matching', color: '#4caf50' },
+                        { icon: '⚡', text: 'Instant Connect', color: '#66bb6a' },
+                        { icon: '📈', text: 'Career Growth', color: '#81c784' },
+                        { icon: '🛡️', text: 'Secure Platform', color: '#388e3c' }
                       ].map((benefit, index) => (
                         <Chip
                           key={index}

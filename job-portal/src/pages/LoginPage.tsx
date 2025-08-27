@@ -25,7 +25,8 @@ import {
   Visibility, 
   VisibilityOff, 
   Login as LoginIcon,
-  PersonAdd
+  PersonAdd,
+  Home as HomeIcon
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -129,8 +130,8 @@ const LoginPage: React.FC = () => {
                 <Box>
                   <Box sx={{ mb: 4, display: 'flex', alignItems: 'center' }}>
                     <img 
-                      src="/logo1.png" 
-                      alt="Excellence Coaching Hub" 
+                      src="/exjobnetlogo.png" 
+                      alt="ExJobNet" 
                       style={{ height: 100, marginRight: 16 }}
                     />
                     <Typography 
@@ -144,16 +145,16 @@ const LoginPage: React.FC = () => {
                         WebkitTextFillColor: 'transparent'
                       }}
                     >
-                      Excellence Coaching Hub
+                      ExJobNet
                     </Typography>
                   </Box>
                   
                   <Typography variant="h3" component="h2" fontWeight="bold" sx={{ mb: 3 }}>
-                    Welcome to Your Career Success Platform
+                    Welcome to ExJobNet
                   </Typography>
                   
                   <Typography variant="h6" color="text.secondary" sx={{ mb: 4, maxWidth: '80%' }}>
-                    Sign in to access personalized job recommendations, AI-powered interview coaching, and career development tools.
+                    Sign in to access Africa's premier career platform with personalized profiles, interactive job preparation tools, live coaching, and secure certifications.
                   </Typography>
                   
                   <Box sx={{ 
@@ -164,15 +165,15 @@ const LoginPage: React.FC = () => {
                   }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Avatar sx={{ bgcolor: 'success.light' }}>1</Avatar>
-                      <Typography>Access AI-powered job matching</Typography>
+                      <Typography>Build your professional network</Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Avatar sx={{ bgcolor: 'success.light' }}>2</Avatar>
-                      <Typography>Practice with interview simulations</Typography>
+                      <Typography>Access interactive preparation tools</Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Avatar sx={{ bgcolor: 'success.light' }}>3</Avatar>
-                      <Typography>Track your applications and progress</Typography>
+                      <Typography>Earn secure certifications</Typography>
                     </Box>
                   </Box>
                 </Box>
@@ -211,10 +212,33 @@ const LoginPage: React.FC = () => {
                   }
                 }}
               >
+                {/* Back to Home Button */}
+                <Box sx={{ position: 'absolute', top: 16, left: 16 }}>
+                  <Button
+                    component={RouterLink}
+                    to="/"
+                    startIcon={<HomeIcon />}
+                    variant="outlined"
+                    size="small"
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      '&:hover': {
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                      },
+                      transition: 'all 0.3s'
+                    }}
+                  >
+                    Back to Home
+                  </Button>
+                </Box>
+                
                 <Box sx={{ textAlign: 'center', mb: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <img 
-                    src="/logo1.png" 
-                    alt="Excellence Coaching Hub" 
+                    src="/exjobnetlogo.png" 
+                    alt="ExJobNet" 
                     style={{ height: 120, marginBottom: 16 }}
                   />
                   <Typography 
@@ -228,7 +252,7 @@ const LoginPage: React.FC = () => {
                       WebkitTextFillColor: 'transparent'
                     }}
                   >
-                    Excellence Coaching Hub
+                    ExJobNet
                   </Typography>
                 </Box>
                 

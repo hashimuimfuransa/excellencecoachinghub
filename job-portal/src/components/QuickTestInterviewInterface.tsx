@@ -810,7 +810,7 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
                   >
                     <StreamingAvatarVideo
                       text={currentAvatarText}
-                      avatar="black_man"
+                      avatar="european_woman"
                       emotion="happy"
                       language="en"
                       autoPlay={true}

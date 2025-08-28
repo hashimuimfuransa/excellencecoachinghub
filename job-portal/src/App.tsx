@@ -38,6 +38,7 @@ import EmployerDashboardPage from './pages/EmployerDashboardPage';
 import JobApplicationsPage from './pages/JobApplicationsPage';
 import TestResultsPage from './pages/TestResultsPage';
 import InterviewResultsPage from './pages/InterviewResultsPage';
+import InterviewFeedbackPage from './pages/InterviewFeedbackPage';
 import InterviewHistoryPage from './pages/InterviewHistoryPage';
 import AllJobsPage from './pages/AllJobsPage';
 import EmployerTalentPoolPage from './pages/EmployerTalentPoolPage';
@@ -190,6 +191,7 @@ function App() {
               <Route path="courses" element={<CoursesPage />} />
               <Route path="interviews" element={<AIInterviewsPage />} />
               <Route path="interviews/history" element={<InterviewHistoryPage />} />
+              <Route path="interviews/feedback/:sessionId" element={<InterviewFeedbackPage />} />
               <Route path="interviews/results/:sessionId" element={<InterviewResultsPage />} />
               <Route path="tests" element={<PsychometricTestsPage />} />
               <Route path="tests/saved" element={<SavedCardsManager />} />

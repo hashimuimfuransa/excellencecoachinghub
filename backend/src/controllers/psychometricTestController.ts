@@ -339,19 +339,20 @@ export const takePsychometricTest = async (req: AuthRequest, res: Response) => {
 
     console.log('⚡ Starting AI grading...');
 
+    let aiGradingResult: any = null;
     try {
       // Try AI grading
-      const aiGrading = await aiService.gradePsychometricTest({
+      aiGradingResult = await aiService.gradePsychometricTest({
         test,
         answers,
         userId,
         jobId
       });
       
-      scores = { ...aiGrading.scores, ...aiGrading.categoryScores };
-      overallScore = aiGrading.overallScore;
-      interpretation = aiGrading.interpretation;
-      recommendations = aiGrading.recommendations;
+      scores = { ...aiGradingResult.scores, ...aiGradingResult.categoryScores };
+      overallScore = aiGradingResult.overallScore;
+      interpretation = aiGradingResult.interpretation;
+      recommendations = aiGradingResult.recommendations;
       
       console.log('✅ AI grading completed successfully');
       
@@ -377,7 +378,7 @@ export const takePsychometricTest = async (req: AuthRequest, res: Response) => {
       ];
     }
 
-    // Save test result
+    // Save test result with detailed analysis
     const testResult = new PsychometricTestResult({
       user: userId,
       test: !isGeneratedTest ? testId : undefined,
@@ -389,13 +390,40 @@ export const takePsychometricTest = async (req: AuthRequest, res: Response) => {
       recommendations,
       timeSpent: timeSpent || 0,
       sessionId: sessionId || undefined,
+      // Store all AI grading results if available
+      grade: aiGradingResult?.grade,
+      percentile: aiGradingResult?.percentile,
+      categoryScores: aiGradingResult?.categoryScores,
+      detailedAnalysis: aiGradingResult?.detailedAnalysis,
+      failedQuestions: aiGradingResult?.failedQuestions,
+      correctQuestions: aiGradingResult?.questionByQuestionAnalysis?.filter((q: any) => q.isCorrect)?.map((q: any) => ({
+        questionNumber: q.questionNumber,
+        question: q.question,
+        candidateAnswer: q.candidateAnswer,
+        correctAnswer: q.correctAnswer,
+        isCorrect: true,
+        category: q.category,
+        explanation: q.analysis,
+        options: test.questions?.find((tq: any, index: number) => index + 1 === q.questionNumber)?.options || []
+      })),
+      questionByQuestionAnalysis: aiGradingResult?.questionByQuestionAnalysis,
       testMetadata: isGeneratedTest ? {
         testId,
         testType: test.type,
         testTitle: test.title,
         testDescription: test.description,
-        questions: test.questions
-      } : undefined
+        questions: test.questions,
+        isGenerated: true,
+        jobSpecific: test.jobSpecific || false
+      } : {
+        testId,
+        testType: test.type,
+        testTitle: test.title,
+        testDescription: test.description,
+        questions: test.questions,
+        isGenerated: false,
+        jobSpecific: test.jobSpecific || false
+      }
     });
 
     console.log('💾 Saving test result to database...');

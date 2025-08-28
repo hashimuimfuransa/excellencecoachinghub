@@ -19,14 +19,22 @@ export interface SimpleTestSession {
 }
 
 export interface SimpleTestResult {
-  sessionId: string;
+  resultId: string;
   score: number;
   totalQuestions: number;
   correctAnswers: number;
+  incorrectAnswers: number;
   timeSpent: number;
   categoryScores: Record<string, number>;
-  feedback: string;
-  passed: boolean;
+  interpretation: string;
+  recommendations: string[];
+  grade: string;
+  percentile: number;
+  hasDetailedResults: boolean;
+  // Additional fields that might come from detailed analysis
+  correctQuestions?: any[];
+  failedQuestions?: any[];
+  detailedResults?: any[];
 }
 
 class SimplePsychometricService {

@@ -63,8 +63,8 @@ export const apiPut = async <T>(url: string, data?: any): Promise<T> => {
   return response.data;
 };
 
-export const apiDelete = async <T>(url: string): Promise<T> => {
-  const response = await api.delete<T>(url);
+export const apiDelete = async <T>(url: string, config?: any): Promise<T> => {
+  const response = await api.delete<T>(url, config);
   return response.data;
 };
 

@@ -15,9 +15,9 @@ interface ISmartTest extends Document {
   testId: string;
   title: string;
   description: string;
-  jobId: mongoose.Types.ObjectId;
+  jobId?: mongoose.Types.ObjectId;
   jobTitle: string;
-  company: string;
+  company?: string;
   userId: mongoose.Types.ObjectId;
   questions: ISmartTestQuestion[];
   timeLimit: number; // in minutes
@@ -27,6 +27,10 @@ interface ISmartTest extends Document {
   jobRole: string;
   skillsRequired: string[];
   isActive: boolean;
+  isAdminUploaded?: boolean;
+  uploadedBy?: string;
+  testTakers?: number;
+  averageScore?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,9 +58,9 @@ const smartTestSchema = new Schema<ISmartTest>({
   testId: { type: String, required: true, unique: true },
   title: { type: String, required: true },
   description: { type: String, required: true },
-  jobId: { type: Schema.Types.ObjectId, ref: 'Job', required: true },
+  jobId: { type: Schema.Types.ObjectId, ref: 'Job' },
   jobTitle: { type: String, required: true },
-  company: { type: String, required: true },
+  company: { type: String },
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   questions: [smartTestQuestionSchema],
   timeLimit: { type: Number, required: true },
@@ -69,7 +73,12 @@ const smartTestSchema = new Schema<ISmartTest>({
   industry: { type: String },
   jobRole: { type: String, required: true },
   skillsRequired: [{ type: String }],
-  isActive: { type: Boolean, default: true }
+  isActive: { type: Boolean, default: true },
+  isPublished: { type: Boolean, default: false },
+  isAdminUploaded: { type: Boolean, default: false },
+  uploadedBy: { type: String },
+  testTakers: { type: Number, default: 0 },
+  averageScore: { type: Number, default: 0 }
 }, {
   timestamps: true
 });

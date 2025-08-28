@@ -46,7 +46,8 @@ import {
   Psychology,
   RecordVoiceOver,
   Assignment,
-  ManageAccounts
+  ManageAccounts,
+  QuestionAnswer
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme as useCustomTheme } from '../contexts/ThemeContext';
@@ -74,6 +75,7 @@ const navigationItems: NavigationItem[] = [
   { text: 'Applications', icon: <Assignment />, path: '/applications', category: 'Content Management' },
   { text: 'Courses Management', icon: <School />, path: '/courses', category: 'Content Management' },
   { text: 'Psychometric Tests', icon: <Psychology />, path: '/psychometric-tests', category: 'Content Management' },
+  { text: 'Smart Tests', icon: <QuestionAnswer />, path: '/smart-tests', category: 'Content Management' },
   { text: 'AI Interviews', icon: <RecordVoiceOver />, path: '/ai-interviews', category: 'Content Management' },
   { text: 'Certificates', icon: <CardMembership />, path: '/certificates', category: 'Content Management' },
   

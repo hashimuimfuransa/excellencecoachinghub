@@ -16,6 +16,7 @@ import JobsManagementPage from './pages/SuperAdmin/JobsManagementPage';
 import ApplicationsManagementPage from './pages/SuperAdmin/ApplicationsManagementPage';
 import CoursesManagementPage from './pages/SuperAdmin/CoursesManagementPage';
 import PsychometricTestManagementPage from './pages/SuperAdmin/PsychometricTestManagementPage';
+import SmartTestManagementPage from './pages/SmartTestManagementPage';
 import AIInterviewManagementPage from './pages/SuperAdmin/AIInterviewManagementPage';
 import CertificatesManagementPage from './pages/SuperAdmin/CertificatesManagementPage';
 import SystemAnalyticsPage from './pages/SuperAdmin/SystemAnalyticsPage';
@@ -53,6 +54,7 @@ function App() {
               <Route path="applications" element={<ApplicationsManagementPage />} />
               <Route path="courses" element={<CoursesManagementPage />} />
               <Route path="psychometric-tests" element={<PsychometricTestManagementPage />} />
+              <Route path="smart-tests" element={<SmartTestManagementPage />} />
               <Route path="ai-interviews" element={<AIInterviewManagementPage />} />
               <Route path="certificates" element={<CertificatesManagementPage />} />
               

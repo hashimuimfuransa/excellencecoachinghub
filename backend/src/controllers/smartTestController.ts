@@ -557,10 +557,472 @@ function generateSmartTestFeedback(percentageScore: number, detailedResults: any
   };
 }
 
+/**
+ * @desc Get admin uploaded smart tests (for job seekers)
+ * @route GET /api/smart-tests/admin
+ * @access Private
+ */
+export const getAdminSmartTests = async (req: AuthRequest, res: Response) => {
+  try {
+    const smartTests = await SmartTest.find({ 
+      isAdminUploaded: true, 
+      isActive: true 
+    })
+      .populate('jobId', 'title company industry location')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: smartTests
+    });
+
+  } catch (error) {
+    console.error('Error fetching admin smart tests:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch admin smart tests'
+    });
+  }
+};
+
+/**
+ * @desc Create admin smart test
+ * @route POST /api/smart-tests/admin/create
+ * @access Private (Admin only)
+ */
+export const createAdminSmartTest = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const {
+      title,
+      description,
+      jobTitle,
+      company,
+      industry,
+      questionCount,
+      timeLimit,
+      difficulty,
+      skillsRequired,
+      questions
+    } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    // Validate required fields
+    if (!title || !description || !jobTitle) {
+      return res.status(400).json({
+        success: false,
+        error: 'Title, description, and job title are required'
+      });
+    }
+
+    // Generate unique test ID
+    const testId = `admin_smart_${Date.now()}`;
+
+    // Process questions if provided, otherwise create empty array
+    let processedQuestions: any[] = [];
+    if (questions && Array.isArray(questions)) {
+      processedQuestions = questions.map((q: any, index: number) => ({
+        id: q.id || `q${index + 1}`,
+        question: q.question,
+        type: q.type || 'multiple_choice',
+        options: q.options || [],
+        correctAnswer: q.correctAnswer,
+        explanation: q.explanation || '',
+        category: q.category || 'general',
+        difficulty: q.difficulty || difficulty || 'basic'
+      }));
+    }
+
+    // Process skills required
+    let processedSkills = [];
+    if (skillsRequired) {
+      if (Array.isArray(skillsRequired)) {
+        processedSkills = skillsRequired;
+      } else if (typeof skillsRequired === 'string') {
+        processedSkills = skillsRequired.split(',').map((s: string) => s.trim());
+      }
+    }
+
+    const smartTest = await SmartTest.create({
+      testId,
+      title,
+      description,
+      jobTitle,
+      company: company || '',
+      industry: industry || '',
+      userId,
+      questions: processedQuestions,
+      timeLimit: timeLimit || 30,
+      difficulty: difficulty || 'basic',
+      questionCount: questionCount || processedQuestions.length,
+      jobRole: jobTitle,
+      skillsRequired: processedSkills,
+      isActive: true,
+      isAdminUploaded: true,
+      uploadedBy: `${req.user?.firstName} ${req.user?.lastName}`,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    res.status(201).json({
+      success: true,
+      data: smartTest,
+      message: 'Admin smart test created successfully'
+    });
+
+  } catch (error: any) {
+    console.error('Error creating admin smart test:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to create admin smart test'
+    });
+  }
+};
+
+/**
+ * @desc Update admin smart test
+ * @route PUT /api/smart-tests/admin/:testId
+ * @access Private (Admin only)
+ */
+export const updateAdminSmartTest = async (req: AuthRequest, res: Response) => {
+  try {
+    const { testId } = req.params;
+    const updateData = req.body;
+
+    const smartTest = await SmartTest.findOne({ testId });
+
+    if (!smartTest) {
+      return res.status(404).json({
+        success: false,
+        error: 'Smart test not found'
+      });
+    }
+
+    // Update the test
+    Object.assign(smartTest, updateData);
+    await smartTest.save();
+
+    res.status(200).json({
+      success: true,
+      data: smartTest,
+      message: 'Smart test updated successfully'
+    });
+
+  } catch (error: any) {
+    console.error('Error updating admin smart test:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to update admin smart test'
+    });
+  }
+};
+
+/**
+ * @desc Delete admin smart test
+ * @route DELETE /api/smart-tests/admin/:testId
+ * @access Private (Admin only)
+ */
+export const deleteAdminSmartTest = async (req: AuthRequest, res: Response) => {
+  try {
+    const { testId } = req.params;
+
+    const smartTest = await SmartTest.findOneAndDelete({ testId });
+
+    if (!smartTest) {
+      return res.status(404).json({
+        success: false,
+        error: 'Smart test not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Smart test deleted successfully'
+    });
+
+  } catch (error: any) {
+    console.error('Error deleting admin smart test:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to delete admin smart test'
+    });
+  }
+};
+
+/**
+ * @desc Toggle smart test status
+ * @route PATCH /api/smart-tests/admin/:testId/status
+ * @access Private (Admin only)
+ */
+export const toggleSmartTestStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const { testId } = req.params;
+    const { isActive } = req.body;
+
+    const smartTest = await SmartTest.findOneAndUpdate(
+      { testId },
+      { isActive },
+      { new: true }
+    );
+
+    if (!smartTest) {
+      return res.status(404).json({
+        success: false,
+        error: 'Smart test not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: smartTest,
+      message: `Smart test ${isActive ? 'activated' : 'deactivated'} successfully`
+    });
+
+  } catch (error: any) {
+    console.error('Error toggling smart test status:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to update smart test status'
+    });
+  }
+};
+
+/**
+ * @desc Upload smart test file
+ * @route POST /api/smart-tests/admin/upload
+ * @access Private (Admin only)
+ */
+export const uploadSmartTestFile = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const { 
+      title,
+      description,
+      jobTitle,
+      company,
+      industry,
+      timeLimit,
+      difficulty,
+      skillsRequired,
+      questionsData // Expected to be parsed questions from uploaded file
+    } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    if (!title || !description || !jobTitle) {
+      return res.status(400).json({
+        success: false,
+        error: 'Title, description, and job title are required'
+      });
+    }
+
+    // Generate unique test ID
+    const testId = `admin_upload_${Date.now()}`;
+
+    // Process questions from uploaded data
+    let processedQuestions: any[] = [];
+    if (questionsData && Array.isArray(questionsData)) {
+      processedQuestions = questionsData.map((q: any, index: number) => ({
+        id: q.id || `q${index + 1}`,
+        question: q.question,
+        type: q.type || 'multiple_choice',
+        options: q.options || [],
+        correctAnswer: q.correctAnswer,
+        explanation: q.explanation || '',
+        category: q.category || 'general',
+        difficulty: q.difficulty || difficulty || 'basic'
+      }));
+    }
+
+    // Process skills required
+    let processedSkills = [];
+    if (skillsRequired) {
+      if (Array.isArray(skillsRequired)) {
+        processedSkills = skillsRequired;
+      } else if (typeof skillsRequired === 'string') {
+        processedSkills = skillsRequired.split(',').map((s: string) => s.trim());
+      }
+    }
+
+    const smartTest = await SmartTest.create({
+      testId,
+      title,
+      description,
+      jobTitle,
+      company: company || '',
+      industry: industry || '',
+      userId,
+      questions: processedQuestions,
+      timeLimit: timeLimit || 30,
+      difficulty: difficulty || 'basic',
+      questionCount: processedQuestions.length,
+      jobRole: jobTitle,
+      skillsRequired: processedSkills,
+      isActive: true,
+      isAdminUploaded: true,
+      uploadedBy: `${req.user?.firstName} ${req.user?.lastName}`,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    res.status(201).json({
+      success: true,
+      data: smartTest,
+      message: 'Smart test uploaded successfully'
+    });
+
+  } catch (error: any) {
+    console.error('Error uploading smart test file:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to upload smart test file'
+    });
+  }
+};
+
+// Upload test content to existing test
+export const uploadTestContentToExisting = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const { testId } = req.params;
+    const { questionsData } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    if (!testId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Test ID is required'
+      });
+    }
+
+    // Find the existing test
+    const existingTest = await SmartTest.findOne({ _id: testId });
+    if (!existingTest) {
+      return res.status(404).json({
+        success: false,
+        error: 'Test not found'
+      });
+    }
+
+    // Process and add new questions
+    let newQuestions = [];
+    if (questionsData && Array.isArray(questionsData)) {
+      newQuestions = questionsData.map((q: any, index: number) => ({
+        id: q.id || `q${existingTest.questions.length + index + 1}`,
+        question: q.question,
+        type: q.type || 'multiple_choice',
+        options: q.options || [],
+        correctAnswer: q.correctAnswer,
+        explanation: q.explanation || '',
+        category: q.category || 'general',
+        difficulty: q.difficulty || existingTest.difficulty
+      }));
+    }
+
+    // Update the test with new questions
+    existingTest.questions = [...existingTest.questions, ...newQuestions];
+    existingTest.questionCount = existingTest.questions.length;
+    existingTest.updatedAt = new Date();
+
+    await existingTest.save();
+
+    res.status(200).json({
+      success: true,
+      data: existingTest,
+      message: `Added ${newQuestions.length} questions to the test`
+    });
+
+  } catch (error: any) {
+    console.error('Error uploading test content:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to upload test content'
+    });
+  }
+};
+
+// Toggle publish status
+export const togglePublishStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const { testId } = req.params;
+    const { isPublished } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    if (!testId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Test ID is required'
+      });
+    }
+
+    // Find and update the test
+    const test = await SmartTest.findOneAndUpdate(
+      { _id: testId },
+      { 
+        isPublished: isPublished !== undefined ? isPublished : true,
+        updatedAt: new Date()
+      },
+      { new: true }
+    );
+
+    if (!test) {
+      return res.status(404).json({
+        success: false,
+        error: 'Test not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: test,
+      message: `Test ${test.isPublished ? 'published' : 'unpublished'} successfully`
+    });
+
+  } catch (error: any) {
+    console.error('Error toggling publish status:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to toggle publish status'
+    });
+  }
+};
+
 export {
   getUserSmartTests,
   getSmartTestById,
   startSmartTest,
   submitSmartTest,
-  getUserSmartTestResults
+  getUserSmartTestResults,
+  getAdminSmartTests,
+  createAdminSmartTest,
+  updateAdminSmartTest,
+  deleteAdminSmartTest,
+  toggleSmartTestStatus,
+  uploadSmartTestFile,
+  uploadTestContentToExisting,
+  togglePublishStatus
 };

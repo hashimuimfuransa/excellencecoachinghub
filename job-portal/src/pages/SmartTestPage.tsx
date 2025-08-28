@@ -32,7 +32,9 @@ import {
   IconButton,
   Tooltip,
   Autocomplete,
-  Stack
+  Stack,
+  Tabs,
+  Tab
 } from '@mui/material';
 import {
   School,
@@ -84,6 +86,25 @@ interface SmartTest {
   difficulty: string;
   skillsRequired: string[];
   createdAt: string;
+  isAdminUploaded?: boolean;
+  uploadedBy?: string;
+}
+
+interface AdminSmartTest {
+  _id: string;
+  testId: string;
+  title: string;
+  description: string;
+  jobTitle: string;
+  company: string;
+  industry: string;
+  questionCount: number;
+  timeLimit: number;
+  difficulty: string;
+  skillsRequired: string[];
+  createdAt: string;
+  uploadedBy: string;
+  isActive: boolean;
 }
 
 const SmartTestPage: React.FC = () => {
@@ -100,6 +121,8 @@ const SmartTestPage: React.FC = () => {
   const [loadingJobs, setLoadingJobs] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userSmartTests, setUserSmartTests] = useState<SmartTest[]>([]);
+  const [adminSmartTests, setAdminSmartTests] = useState<AdminSmartTest[]>([]);
+  const [tabValue, setTabValue] = useState(0);
   
   // Job filtering state
   const [jobSearch, setJobSearch] = useState('');
@@ -116,6 +139,7 @@ const SmartTestPage: React.FC = () => {
   useEffect(() => {
     fetchJobs();
     fetchUserSmartTests();
+    fetchAdminSmartTests();
   }, []);
 
   // Filter jobs based on search and filters
@@ -198,6 +222,16 @@ const SmartTestPage: React.FC = () => {
       setUserSmartTests(tests);
     } catch (error) {
       console.error('Error fetching smart tests:', error);
+    }
+  };
+
+  const fetchAdminSmartTests = async () => {
+    try {
+      const tests = await smartTestService.getAdminSmartTests();
+      setAdminSmartTests(tests);
+    } catch (error) {
+      console.error('Error fetching admin smart tests:', error);
+      // Don't show error for admin tests if endpoint doesn't exist yet
     }
   };
 
@@ -328,7 +362,28 @@ const SmartTestPage: React.FC = () => {
         </Alert>
       )}
 
-      {/* Action Buttons */}
+      {/* Tabs */}
+      <Paper sx={{ mb: 4 }}>
+        <Tabs 
+          value={tabValue} 
+          onChange={(e, newValue) => setTabValue(newValue)}
+          sx={{ borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Tab 
+            label={`My Generated Tests (${userSmartTests.length})`} 
+            icon={<Build />}
+          />
+          <Tab 
+            label={`Admin Tests (${adminSmartTests.length})`} 
+            icon={<School />}
+          />
+        </Tabs>
+      </Paper>
+
+      {/* Tab Content */}
+      {tabValue === 0 && (
+        <>
+          {/* Action Buttons */}
       <Grid container spacing={3} mb={4}>
         <Grid item xs={12} md={6}>
           <Card sx={{ height: '100%' }}>
@@ -484,6 +539,112 @@ const SmartTestPage: React.FC = () => {
           </Grid>
         )}
       </Box>
+        </>
+      )}
+
+      {/* Admin Tests Tab */}
+      {tabValue === 1 && (
+        <Box mb={4}>
+          <Typography variant="h5" fontWeight="bold" mb={3}>
+            Admin Uploaded Tests ({adminSmartTests.length})
+          </Typography>
+          
+          {adminSmartTests.length === 0 ? (
+            <Card>
+              <CardContent sx={{ textAlign: 'center', py: 6 }}>
+                <School sx={{ fontSize: 64, color: theme.palette.grey[400], mb: 2 }} />
+                <Typography variant="h6" color="text.secondary" gutterBottom>
+                  No Admin Tests Available
+                </Typography>
+                <Typography variant="body2" color="text.secondary" paragraph>
+                  Check back later for tests uploaded by administrators for specific job positions
+                </Typography>
+              </CardContent>
+            </Card>
+          ) : (
+            <Grid container spacing={3}>
+              {adminSmartTests.map((test) => (
+                <Grid item xs={12} md={6} lg={4} key={test._id}>
+                  <Card sx={{ height: '100%' }}>
+                    <CardContent>
+                      <Box display="flex" alignItems="center" mb={2}>
+                        {getDifficultyIcon(test.difficulty)}
+                        <Box ml={1}>
+                          <Typography variant="h6" component="div" noWrap>
+                            {test.jobTitle}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {test.company} • {test.industry}
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      <Typography variant="body1" sx={{ mb: 2, fontWeight: 'medium' }}>
+                        {test.title}
+                      </Typography>
+
+                      <Typography variant="body2" color="text.secondary" paragraph>
+                        {test.description}
+                      </Typography>
+
+                      <Divider sx={{ my: 2 }} />
+
+                      <Box mb={2}>
+                        <Chip 
+                          label={test.difficulty.charAt(0).toUpperCase() + test.difficulty.slice(1)}
+                          size="small"
+                          sx={{ 
+                            backgroundColor: getDifficultyColor(test.difficulty),
+                            color: 'white',
+                            mb: 1,
+                            mr: 1
+                          }}
+                        />
+                        <Chip 
+                          label={`${test.questionCount} Questions`}
+                          size="small"
+                          variant="outlined"
+                          sx={{ mb: 1, mr: 1 }}
+                        />
+                        <Chip 
+                          label={`${test.timeLimit} min`}
+                          size="small"
+                          variant="outlined"
+                          sx={{ mb: 1 }}
+                        />
+                      </Box>
+
+                      <Typography variant="body2" color="text.secondary" paragraph>
+                        Skills: {test.skillsRequired.join(', ')}
+                      </Typography>
+
+                      <Typography variant="caption" color="text.secondary" display="block" mb={1}>
+                        Uploaded: {new Date(test.createdAt).toLocaleDateString()}
+                      </Typography>
+                      
+                      <Typography variant="caption" color="text.secondary">
+                        By: {test.uploadedBy}
+                      </Typography>
+
+                      <Box mt={3}>
+                        <Button
+                          variant="contained"
+                          fullWidth
+                          startIcon={<PlayArrow />}
+                          onClick={() => startTest(test.testId)}
+                          disabled={loading || !test.isActive}
+                        >
+                          {!test.isActive ? 'Test Inactive' : loading ? 'Starting...' : 'Start Test'}
+                        </Button>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </Box>
+      )}
 
       {/* Generate Test Dialog - Enhanced */}
       <Dialog 

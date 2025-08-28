@@ -628,7 +628,7 @@ export const getDetailedTestResult = async (req: AuthRequest, res: Response) => 
     const result = await PsychometricTestResult.findOne({
       _id: resultId,
       user: userId
-    }).populate('job').populate('testSession');
+    }).populate('job').populate('test');
 
     if (!result) {
       return res.status(404).json({

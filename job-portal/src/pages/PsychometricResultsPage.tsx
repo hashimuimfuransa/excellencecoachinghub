@@ -189,7 +189,7 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const TestResultsPage: React.FC = () => {
+const PsychometricResultsPage: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const { user } = useAuth();
@@ -200,10 +200,11 @@ const TestResultsPage: React.FC = () => {
   const [selectedResult, setSelectedResult] = useState<TestResult | null>(null);
 
   useEffect(() => {
-    // Check for recent test result from session storage first
-    const recentTestResult = sessionStorage.getItem('testResult');
-    if (recentTestResult) {
-      try {
+    const initializeData = async () => {
+      // Check for recent test result from session storage first
+      const recentTestResult = sessionStorage.getItem('testResult');
+      if (recentTestResult) {
+        try {
         const parsedResult = JSON.parse(recentTestResult);
         console.log('Found recent test result in session storage:', parsedResult);
         
@@ -216,8 +217,19 @@ const TestResultsPage: React.FC = () => {
           job: parsedResult.job,
           answers: parsedResult.answers || {},
           scores: parsedResult.scores || parsedResult.detailedAnalysis?.scores || {},
-          // Prioritize backend scores
-          overallScore: parsedResult.overallScore || parsedResult.detailedAnalysis?.overallScore || 0,
+          // Clean categoryScores and traitScores to prevent NaN values
+          categoryScores: Object.fromEntries(
+            Object.entries(parsedResult.categoryScores || parsedResult.detailedAnalysis?.categoryScores || {})
+              .map(([key, value]) => [key, typeof value === 'number' && !isNaN(value) ? Math.round(value) : 0])
+          ),
+          traitScores: Object.fromEntries(
+            Object.entries(parsedResult.traitScores || parsedResult.detailedAnalysis?.traitScores || {})
+              .map(([key, value]) => [key, typeof value === 'number' && !isNaN(value) ? Math.round(value) : 0])
+          ),
+          // Prioritize backend scores with safety checks
+          overallScore: typeof (parsedResult.overallScore || parsedResult.detailedAnalysis?.overallScore) === 'number' && 
+                       !isNaN(parsedResult.overallScore || parsedResult.detailedAnalysis?.overallScore) ? 
+                       (parsedResult.overallScore || parsedResult.detailedAnalysis?.overallScore) : 0,
           interpretation: parsedResult.interpretation || '',
           recommendations: parsedResult.recommendations || [],
           // Prioritize backend percentile and grade
@@ -225,7 +237,13 @@ const TestResultsPage: React.FC = () => {
           grade: parsedResult.grade || parsedResult.detailedAnalysis?.grade || 'N/A',
           timeSpent: parsedResult.timeSpent || 0,
           answersCount: Object.keys(parsedResult.answers || {}).length,
-          totalQuestions: parsedResult.test?.questions?.length || 0,
+          totalQuestions: parsedResult.test?.questions?.length || parsedResult.testMetadata?.questions?.length || 0,
+          // Calculate question analysis from the answers and test data
+          questionsCorrect: parsedResult.questionsCorrect || parsedResult.correctQuestions?.length || 0,
+          questionsIncorrect: parsedResult.questionsIncorrect || parsedResult.failedQuestions?.length || 0,
+          // Include question analysis arrays
+          correctQuestions: parsedResult.correctQuestions || [],
+          failedQuestions: parsedResult.failedQuestions || [],
           createdAt: parsedResult.createdAt || new Date().toISOString(),
           completedAt: parsedResult.createdAt || new Date().toISOString(),
           // Include all detailed analysis from backend
@@ -240,21 +258,24 @@ const TestResultsPage: React.FC = () => {
         };
         
         // Set this as the selected result for immediate viewing
-        setSelectedResult(transformedResult);
+        await setSelectedResultWithDetails(transformedResult);
         
         // Clear the session storage after reading
         sessionStorage.removeItem('testResult');
         
         // Force refresh to get latest data including the new result
-        fetchTestResults(true);
-      } catch (error) {
-        console.error('Error parsing test result from session storage:', error);
-        fetchTestResults(true);
+        await fetchTestResults(true);
+        } catch (error) {
+          console.error('Error parsing test result from session storage:', error);
+          await fetchTestResults(true);
+        }
+      } else {
+        // No session storage result, just fetch normally
+        await fetchTestResults(false);
       }
-    } else {
-      // No session storage result, just fetch normally
-      fetchTestResults(false);
-    }
+    };
+    
+    initializeData();
   }, []);
 
   const fetchTestResults = async (forceRefresh = false) => {
@@ -271,8 +292,27 @@ const TestResultsPage: React.FC = () => {
       const results = await psychometricTestService.getUserTestResults();
       console.log('Fetched test results:', results.length, 'results');
       
+      // Transform backend results to ensure all fields are properly calculated
+      const transformedResults = results.map((result: any) => ({
+        ...result,
+        // Ensure question counts are calculated from available data
+        questionsCorrect: (result as any).questionsCorrect || 
+                         (result.detailedAnalysis?.correctQuestions?.length) || 0,
+        questionsIncorrect: (result as any).questionsIncorrect || 
+                           (result.detailedAnalysis?.failedQuestions?.length) || 0,
+        // Calculate total questions from available sources
+        totalQuestions: (result as any).totalQuestions || 
+                       (result.detailedAnalysis?.totalQuestions) || 
+                       Object.keys(result.answers || {}).length || 0,
+        // Ensure overallScore is valid
+        overallScore: typeof result.overallScore === 'number' && !isNaN(result.overallScore) ? 
+                     result.overallScore : 0,
+        // Ensure attempt field exists
+        attempt: (result as any).attempt || 1
+      }));
+      
       // Sort results by creation date and attempt number
-      const sortedResults = results.sort((a, b) => {
+      const sortedResults = transformedResults.sort((a, b) => {
         const dateComparison = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         if (dateComparison === 0) {
           return (b.attempt || 1) - (a.attempt || 1);
@@ -286,7 +326,7 @@ const TestResultsPage: React.FC = () => {
       if (!selectedResult && sortedResults.length > 0) {
         const mostRecent = sortedResults[0];
         console.log('Setting most recent result as selected:', mostRecent);
-        setSelectedResult(mostRecent);
+        await setSelectedResultWithDetails(mostRecent);
       }
       
     } catch (error) {
@@ -294,6 +334,78 @@ const TestResultsPage: React.FC = () => {
       setError('Failed to load test results. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Function to fetch detailed result data
+  const fetchDetailedResult = async (resultId: string): Promise<any> => {
+    try {
+      console.log('📊 Fetching detailed result for:', resultId);
+      
+      const response = await fetch(`/api/simple-psychometric/result/${resultId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch detailed result');
+      }
+      
+      const detailedResponse = await response.json();
+      
+      if (detailedResponse.success) {
+        return detailedResponse.data;
+      } else {
+        throw new Error(detailedResponse.error || 'Failed to get detailed results');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching detailed result:', error);
+      return null;
+    }
+  };
+
+  // Enhanced function to set selected result with detailed data
+  const setSelectedResultWithDetails = async (result: TestResult) => {
+    try {
+      // First set the basic result
+      setSelectedResult(result);
+      
+      // Then fetch and merge detailed data if available
+      const detailedData = await fetchDetailedResult(result._id);
+      
+      if (detailedData) {
+        const enhancedResult = {
+          ...result,
+          ...detailedData,
+          // Ensure question counts are properly set
+          questionsCorrect: detailedData.correctQuestions?.length || result.questionsCorrect || 0,
+          questionsIncorrect: detailedData.failedQuestions?.length || result.questionsIncorrect || 0,
+          totalQuestions: detailedData.questionByQuestionAnalysis?.length || result.totalQuestions || 0,
+          // Include all detailed data
+          correctQuestions: detailedData.correctQuestions || [],
+          failedQuestions: detailedData.failedQuestions || [],
+          questionByQuestionAnalysis: detailedData.questionByQuestionAnalysis || [],
+          detailedAnalysis: {
+            ...result.detailedAnalysis,
+            correctQuestions: detailedData.correctQuestions || [],
+            failedQuestions: detailedData.failedQuestions || []
+          }
+        };
+        
+        console.log('✅ Enhanced result with detailed data:', {
+          correctQuestions: enhancedResult.correctQuestions?.length,
+          failedQuestions: enhancedResult.failedQuestions?.length,
+          totalQuestions: enhancedResult.totalQuestions
+        });
+        
+        setSelectedResult(enhancedResult);
+      }
+    } catch (error) {
+      console.error('❌ Error setting result with details:', error);
+      // Fall back to basic result
+      setSelectedResult(result);
     }
   };
 
@@ -313,6 +425,7 @@ const TestResultsPage: React.FC = () => {
   };
 
   const getScoreColor = (score: number) => {
+    if (typeof score !== 'number' || isNaN(score)) return theme.palette.grey[500];
     if (score >= 80) return theme.palette.success.main;
     if (score >= 70) return theme.palette.info.main;
     if (score >= 60) return theme.palette.warning.main;
@@ -321,7 +434,11 @@ const TestResultsPage: React.FC = () => {
 
   const calculateAverageScore = () => {
     if (testResults.length === 0) return 0;
-    return Math.round(testResults.reduce((sum, result) => sum + result.overallScore, 0) / testResults.length);
+    const validScores = testResults.filter(result => 
+      typeof result.overallScore === 'number' && !isNaN(result.overallScore)
+    );
+    if (validScores.length === 0) return 0;
+    return Math.round(validScores.reduce((sum, result) => sum + result.overallScore, 0) / validScores.length);
   };
 
   const getTestsByType = () => {
@@ -345,7 +462,10 @@ const TestResultsPage: React.FC = () => {
     testResults.forEach(result => {
       // Handle both regular tests and generated tests
       const testId = result.test?._id || result.testMetadata?.testId || 'generated';
-      if (!bestScores[testId] || result.overallScore > bestScores[testId].overallScore) {
+      const currentScore = typeof result.overallScore === 'number' && !isNaN(result.overallScore) ? result.overallScore : 0;
+      const bestScore = bestScores[testId] && typeof bestScores[testId].overallScore === 'number' && !isNaN(bestScores[testId].overallScore) ? bestScores[testId].overallScore : -1;
+      
+      if (!bestScores[testId] || currentScore > bestScore) {
         bestScores[testId] = result;
       }
     });
@@ -413,7 +533,7 @@ const TestResultsPage: React.FC = () => {
       <Box mb={4} display="flex" justifyContent="space-between" alignItems="center">
         <Box>
           <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
-            Test Results & Progress
+            Psychometric Test Results & Progress
           </Typography>
           <Typography variant="h6" color="text.secondary">
             Track your psychometric assessment performance and progress over time
@@ -536,7 +656,7 @@ const TestResultsPage: React.FC = () => {
               <Grid item xs={12} md={3}>
                 <Box textAlign="center">
                   <Typography variant="h2" fontWeight="bold" sx={{ fontSize: { xs: '2rem', md: '3rem' } }}>
-                    {selectedResult.overallScore}%
+                    {typeof selectedResult.overallScore === 'number' && !isNaN(selectedResult.overallScore) ? Math.round(selectedResult.overallScore) : 0}%
                   </Typography>
                   <Typography variant="h5" sx={{ opacity: 0.9 }}>
                     {selectedResult.grade || 'N/A'}
@@ -557,16 +677,16 @@ const TestResultsPage: React.FC = () => {
                 </Typography>
                 <Box display="flex" gap={2} flexWrap="wrap">
                   <Chip 
-                    label={`${selectedResult.answersCount}/${selectedResult.totalQuestions} Questions`} 
+                    label={`${selectedResult.answersCount || Object.keys(selectedResult.answers || {}).length || 0}/${selectedResult.totalQuestions || (selectedResult.testMetadata?.questions?.length) || 0} Questions`} 
                     sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} 
                   />
                   <Chip 
                     label={formatTime(selectedResult.timeSpent)} 
                     sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} 
                   />
-                  {selectedResult.percentile && (
+                  {selectedResult.percentile && typeof selectedResult.percentile === 'number' && !isNaN(selectedResult.percentile) && (
                     <Chip 
-                      label={`${selectedResult.percentile}th Percentile`} 
+                      label={`${Math.round(selectedResult.percentile)}th Percentile`} 
                       sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} 
                     />
                   )}
@@ -661,19 +781,19 @@ const TestResultsPage: React.FC = () => {
               <Card>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
-                    Recent Test Results
+                    Recent Psychometric Results
                   </Typography>
                   <List>
                     {getRecentResults().map((result, index) => (
                       <ListItem key={result._id} divider={index < getRecentResults().length - 1}>
                         <ListItemIcon>
                           <Avatar sx={{ 
-                            bgcolor: getScoreColor(result.overallScore),
+                            bgcolor: getScoreColor(typeof result.overallScore === 'number' && !isNaN(result.overallScore) ? result.overallScore : 0),
                             width: 32, 
                             height: 32,
                             fontSize: '0.8rem'
                           }}>
-                            {result.overallScore}
+                            {typeof result.overallScore === 'number' && !isNaN(result.overallScore) ? Math.round(result.overallScore) : 0}
                           </Avatar>
                         </ListItemIcon>
                         <ListItemText
@@ -718,18 +838,18 @@ const TestResultsPage: React.FC = () => {
                         </ListItemIcon>
                         <ListItemText
                           primary={result.test?.title || result.testMetadata?.title || 'Generated Test'}
-                          secondary={`Best: ${result.overallScore}% • ${result.grade || 'N/A'}`}
+                          secondary={`Best: ${typeof result.overallScore === 'number' && !isNaN(result.overallScore) ? Math.round(result.overallScore) : 0}% • ${result.grade || 'N/A'}`}
                         />
                         <Box sx={{ width: 100, mr: 1 }}>
                           <LinearProgress 
                             variant="determinate" 
-                            value={result.overallScore} 
+                            value={typeof result.overallScore === 'number' && !isNaN(result.overallScore) ? result.overallScore : 0} 
                             sx={{
                               height: 8,
                               borderRadius: 4,
-                              bgcolor: alpha(getScoreColor(result.overallScore), 0.2),
+                              bgcolor: alpha(getScoreColor(typeof result.overallScore === 'number' && !isNaN(result.overallScore) ? result.overallScore : 0), 0.2),
                               '& .MuiLinearProgress-bar': {
-                                bgcolor: getScoreColor(result.overallScore)
+                                bgcolor: getScoreColor(typeof result.overallScore === 'number' && !isNaN(result.overallScore) ? result.overallScore : 0)
                               }
                             }}
                           />
@@ -760,7 +880,7 @@ const TestResultsPage: React.FC = () => {
                         <CheckCircle sx={{ fontSize: 40 }} />
                         <Box>
                           <Typography variant="h4" fontWeight="bold">
-                            {selectedResult.correctQuestions?.length || (selectedResult.totalQuestions - (selectedResult.failedQuestions?.length || 0))}
+                            {selectedResult.correctQuestions?.length || Math.max(0, (selectedResult.totalQuestions || 0) - (selectedResult.failedQuestions?.length || 0))}
                           </Typography>
                           <Typography variant="body2">
                             Questions Correct
@@ -794,7 +914,7 @@ const TestResultsPage: React.FC = () => {
                         <QuestionAnswer sx={{ fontSize: 40 }} />
                         <Box>
                           <Typography variant="h4" fontWeight="bold">
-                            {selectedResult.totalQuestions}
+                            {selectedResult.totalQuestions || (selectedResult.testMetadata?.questions?.length) || ((selectedResult.correctQuestions?.length || 0) + (selectedResult.failedQuestions?.length || 0)) || 0}
                           </Typography>
                           <Typography variant="body2">
                             Total Questions
@@ -968,39 +1088,42 @@ const TestResultsPage: React.FC = () => {
                       Performance by Category
                     </Typography>
                     <Grid container spacing={3}>
-                      {Object.entries(selectedResult.categoryScores).map(([category, score]) => (
-                        <Grid item xs={12} sm={6} md={3} key={category}>
-                          <Box textAlign="center">
-                            <Box
-                              sx={{
-                                width: 80,
-                                height: 80,
-                                borderRadius: '50%',
-                                bgcolor: score >= 80 ? 'success.light' : score >= 60 ? 'warning.light' : 'error.light',
-                                color: 'white',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontWeight: 'bold',
-                                fontSize: '1.5rem',
-                                mx: 'auto',
-                                mb: 2
-                              }}
-                            >
-                              {score}%
+                      {Object.entries(selectedResult.categoryScores).map(([category, score]) => {
+                        const safeScore = typeof score === 'number' && !isNaN(score) ? Math.round(score) : 0;
+                        return (
+                          <Grid item xs={12} sm={6} md={3} key={category}>
+                            <Box textAlign="center">
+                              <Box
+                                sx={{
+                                  width: 80,
+                                  height: 80,
+                                  borderRadius: '50%',
+                                  bgcolor: safeScore >= 80 ? 'success.light' : safeScore >= 60 ? 'warning.light' : 'error.light',
+                                  color: 'white',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontWeight: 'bold',
+                                  fontSize: '1.5rem',
+                                  mx: 'auto',
+                                  mb: 2
+                                }}
+                              >
+                                {safeScore}%
+                              </Box>
+                              <Typography variant="body1" fontWeight="bold" gutterBottom sx={{ textTransform: 'capitalize' }}>
+                                {category.replace(/([A-Z])/g, ' $1').trim()}
+                              </Typography>
+                              <LinearProgress
+                                variant="determinate"
+                                value={safeScore}
+                                color={safeScore >= 80 ? 'success' : safeScore >= 60 ? 'warning' : 'error'}
+                                sx={{ height: 6, borderRadius: 3 }}
+                              />
                             </Box>
-                            <Typography variant="body1" fontWeight="bold" gutterBottom sx={{ textTransform: 'capitalize' }}>
-                              {category.replace(/([A-Z])/g, ' $1').trim()}
-                            </Typography>
-                            <LinearProgress
-                              variant="determinate"
-                              value={score}
-                              color={score >= 80 ? 'success' : score >= 60 ? 'warning' : 'error'}
-                              sx={{ height: 6, borderRadius: 3 }}
-                            />
-                          </Box>
-                        </Grid>
-                      ))}
+                          </Grid>
+                        );
+                      })}
                     </Grid>
                   </CardContent>
                 </Card>
@@ -1060,13 +1183,13 @@ const TestResultsPage: React.FC = () => {
                         <Typography 
                           variant="body2" 
                           fontWeight="bold"
-                          color={getScoreColor(result.overallScore)}
+                          color={getScoreColor(typeof result.overallScore === 'number' && !isNaN(result.overallScore) ? result.overallScore : 0)}
                         >
-                          {result.overallScore}%
+                          {typeof result.overallScore === 'number' && !isNaN(result.overallScore) ? Math.round(result.overallScore) : 0}%
                         </Typography>
                         <LinearProgress 
                           variant="determinate" 
-                          value={result.overallScore} 
+                          value={typeof result.overallScore === 'number' && !isNaN(result.overallScore) ? result.overallScore : 0} 
                           sx={{ width: 50, height: 4 }}
                         />
                       </Box>
@@ -1111,7 +1234,7 @@ const TestResultsPage: React.FC = () => {
                     <TableCell>
                       <Button 
                         size="small" 
-                        onClick={() => setSelectedResult(result)}
+                        onClick={() => setSelectedResultWithDetails(result)}
                       >
                         View Details
                       </Button>
@@ -1723,4 +1846,4 @@ const TestResultsPage: React.FC = () => {
   );
 };
 
-export default TestResultsPage;
+export default PsychometricResultsPage;

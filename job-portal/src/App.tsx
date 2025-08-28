@@ -36,7 +36,7 @@ import EmployerJobsPage from './pages/EmployerJobsPage';
 import EmployerCandidatesPage from './pages/EmployerCandidatesPage';
 import EmployerDashboardPage from './pages/EmployerDashboardPage';
 import JobApplicationsPage from './pages/JobApplicationsPage';
-import TestResultsPage from './pages/TestResultsPage';
+import PsychometricResultsPage from './pages/PsychometricResultsPage';
 import InterviewResultsPage from './pages/InterviewResultsPage';
 import InterviewFeedbackPage from './pages/InterviewFeedbackPage';
 import InterviewHistoryPage from './pages/InterviewHistoryPage';
@@ -195,7 +195,7 @@ function App() {
               <Route path="interviews/results/:sessionId" element={<InterviewResultsPage />} />
               <Route path="tests" element={<PsychometricTestsPage />} />
               <Route path="tests/saved" element={<SavedCardsManager />} />
-              <Route path="test-results" element={<TestResultsPage />} />
+              <Route path="test-results" element={<PsychometricResultsPage />} />
               
               {/* Test Routes moved to standalone for full screen experience */}
               

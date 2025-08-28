@@ -12,7 +12,39 @@ export interface IPsychometricTestResultDocument extends Document {
   completedAt: Date;
   timeSpent: number;
   grade?: string;
+  percentile?: number;
+  categoryScores?: Record<string, number>;
   detailedAnalysis?: Record<string, any>;
+  failedQuestions?: Array<{
+    questionNumber: number;
+    question: string;
+    yourAnswer: string;
+    correctAnswer: string;
+    explanation: string;
+    category?: string;
+  }>;
+  correctQuestions?: Array<{
+    questionNumber: number;
+    question: string;
+    candidateAnswer: string;
+    correctAnswer: string;
+    isCorrect: boolean;
+    category?: string;
+    explanation?: string;
+    options?: string[];
+  }>;
+  questionByQuestionAnalysis?: Array<{
+    questionNumber: number;
+    question: string;
+    candidateAnswer: any;
+    correctAnswer: any;
+    isCorrect: boolean;
+    pointsEarned: number;
+    maxPoints: number;
+    analysis: string;
+    traitImpact: string;
+    category?: string;
+  }>;
   attempt: number;
   testMetadata?: {
     testId: string;
@@ -22,6 +54,7 @@ export interface IPsychometricTestResultDocument extends Document {
     difficulty: string;
     isGenerated: boolean;
     jobSpecific: boolean;
+    questions?: any[];
   };
 }
 
@@ -85,10 +118,50 @@ const psychometricTestResultSchema = new Schema<IPsychometricTestResultDocument>
     type: String,
     required: false
   },
+  percentile: {
+    type: Number,
+    required: false,
+    min: [0, 'Percentile cannot be negative'],
+    max: [100, 'Percentile cannot exceed 100']
+  },
+  categoryScores: {
+    type: Schema.Types.Mixed,
+    required: false
+  },
   detailedAnalysis: {
     type: Schema.Types.Mixed,
     required: false
   },
+  failedQuestions: [{
+    questionNumber: { type: Number, required: false },
+    question: { type: String, required: false },
+    yourAnswer: { type: String, required: false },
+    correctAnswer: { type: String, required: false },
+    explanation: { type: String, required: false },
+    category: { type: String, required: false }
+  }],
+  correctQuestions: [{
+    questionNumber: { type: Number, required: false },
+    question: { type: String, required: false },
+    candidateAnswer: { type: String, required: false },
+    correctAnswer: { type: String, required: false },
+    isCorrect: { type: Boolean, default: true },
+    category: { type: String, required: false },
+    explanation: { type: String, required: false },
+    options: [{ type: String }]
+  }],
+  questionByQuestionAnalysis: [{
+    questionNumber: { type: Number, required: false },
+    question: { type: String, required: false },
+    candidateAnswer: { type: Schema.Types.Mixed, required: false },
+    correctAnswer: { type: Schema.Types.Mixed, required: false },
+    isCorrect: { type: Boolean, required: false },
+    pointsEarned: { type: Number, required: false },
+    maxPoints: { type: Number, required: false },
+    analysis: { type: String, required: false },
+    traitImpact: { type: String, required: false },
+    category: { type: String, required: false }
+  }],
   testMetadata: {
     testId: { type: String, required: false },
     title: { type: String, required: false },
@@ -96,7 +169,8 @@ const psychometricTestResultSchema = new Schema<IPsychometricTestResultDocument>
     categories: [{ type: String }],
     difficulty: { type: String, required: false },
     isGenerated: { type: Boolean, default: false },
-    jobSpecific: { type: Boolean, default: false }
+    jobSpecific: { type: Boolean, default: false },
+    questions: { type: Schema.Types.Mixed, required: false }
   }
 }, {
   timestamps: true,

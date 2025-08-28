@@ -287,37 +287,69 @@ const SimplifiedTestResult: React.FC = () => {
           variant="contained"
           size="large"
           startIcon={<Psychology />}
-          onClick={() => {
-            // Store the detailed result in session storage for the detailed results page
-            const detailedResultForStorage = {
-              ...result,
-              ...location.state,
-              _id: result.resultId,
-              overallScore: result.score,
-              answersCount: result.correctAnswers,
-              totalQuestions: result.totalQuestions,
-              timeSpent: result.timeSpent || 0,
-              createdAt: new Date().toISOString(),
-              completedAt: new Date().toISOString(),
-              detailedAnalysis: {
-                overallScore: result.score,
-                grade: result.grade,
-                percentile: result.percentile,
-                categoryScores: result.categoryScores,
-                interpretation: result.interpretation,
-                strengths: result.correctQuestions?.map(q => `Correct on: ${q.question?.substring(0, 50)}...`) || [],
-                developmentAreas: result.failedQuestions?.map(q => `Needs improvement: ${q.question?.substring(0, 50)}...`) || [],
-                nextSteps: result.recommendations || [],
-                failedQuestions: result.failedQuestions || [],
-                correctQuestions: result.correctQuestions || []
-              },
-              questionByQuestionAnalysis: result.detailedResults || [],
-              failedQuestions: result.failedQuestions || [],
-              correctQuestions: result.correctQuestions || []
-            };
-            
-            sessionStorage.setItem('testResult', JSON.stringify(detailedResultForStorage));
-            navigate('/app/test-results');
+          onClick={async () => {
+            try {
+              // Fetch detailed result from backend
+              console.log('📊 Fetching detailed result for:', result.resultId);
+              
+              const response = await fetch(`/api/simple-psychometric/result/${result.resultId}`, {
+                headers: {
+                  'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+              
+              if (!response.ok) {
+                throw new Error('Failed to fetch detailed result');
+              }
+              
+              const detailedResponse = await response.json();
+              
+              if (detailedResponse.success) {
+                const detailedResult = detailedResponse.data;
+                
+                // Store the complete detailed result in session storage
+                const detailedResultForStorage = {
+                  ...result,
+                  ...location.state,
+                  ...detailedResult,
+                  _id: result.resultId,
+                  overallScore: result.score,
+                  answersCount: result.correctAnswers,
+                  totalQuestions: result.totalQuestions,
+                  // Use backend provided counts
+                  questionsCorrect: result.correctAnswers || 0,
+                  questionsIncorrect: result.incorrectAnswers || 0,
+                  timeSpent: result.timeSpent || 0,
+                  createdAt: new Date().toISOString(),
+                  completedAt: new Date().toISOString(),
+                  // Include the detailed analysis from backend
+                  detailedAnalysis: {
+                    overallScore: result.score,
+                    grade: detailedResult.grade || result.grade,
+                    percentile: detailedResult.percentile || result.percentile,
+                    categoryScores: result.categoryScores,
+                    interpretation: result.interpretation,
+                    strengths: detailedResult.correctQuestions?.map((q: any) => `Correct on: ${q.question?.substring(0, 50)}...`) || [],
+                    developmentAreas: detailedResult.failedQuestions?.map((q: any) => `Needs improvement: ${q.question?.substring(0, 50)}...`) || [],
+                    nextSteps: result.recommendations || [],
+                    failedQuestions: detailedResult.failedQuestions || [],
+                    correctQuestions: detailedResult.correctQuestions || []
+                  },
+                  questionByQuestionAnalysis: detailedResult.questionByQuestionAnalysis || [],
+                  failedQuestions: detailedResult.failedQuestions || [],
+                  correctQuestions: detailedResult.correctQuestions || []
+                };
+                
+                sessionStorage.setItem('testResult', JSON.stringify(detailedResultForStorage));
+                navigate('/app/test-results');
+              } else {
+                throw new Error(detailedResponse.error || 'Failed to get detailed results');
+              }
+            } catch (error) {
+              console.error('❌ Error fetching detailed result:', error);
+              alert('Failed to load detailed results. Please try again.');
+            }
           }}
           sx={{
             backgroundColor: '#4caf50',

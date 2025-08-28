@@ -744,10 +744,11 @@ Generate all ${questionCount} questions now:`;
           "failedQuestions": [
             {
               "questionNumber": 1,
-              "whatYouAnswered": "Take immediate action based on initial assessment",
-              "whatYouShouldHaveAnswered": "Break it down into smaller, manageable tasks",
-              "whyYourAnswerWasWrong": "This approach shows impulsiveness rather than systematic thinking",
-              "whatBetterAnswerShows": "Demonstrates structured problem-solving and analytical skills crucial for the role"
+              "question": "When facing a complex problem at work...",
+              "yourAnswer": "Take immediate action based on initial assessment",
+              "correctAnswer": "Break it down into smaller, manageable tasks",
+              "explanation": "This approach shows impulsiveness rather than systematic thinking. The better answer demonstrates structured problem-solving and analytical skills crucial for the role.",
+              "category": "Problem Solving"
             }
           ],
           "interpretation": "Comprehensive assessment showing specific strengths and clear development areas. Detailed analysis of each response pattern reveals psychological profile.",

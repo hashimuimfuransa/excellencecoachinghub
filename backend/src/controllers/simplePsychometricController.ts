@@ -256,14 +256,32 @@ export const startPsychometricTest = async (req: AuthRequest, res: Response) => 
  */
 export const submitPsychometricTest = async (req: AuthRequest, res: Response) => {
   try {
+    console.log('🚀 Starting test submission for session:', req.params.sessionId);
     const { sessionId } = req.params;
     const { answers } = req.body;
     const userId = req.user?.id;
 
+    console.log('📊 Submission data:', {
+      sessionId,
+      userId,
+      answersLength: answers?.length,
+      answersType: typeof answers,
+      requestBody: req.body
+    });
+
     if (!userId) {
+      console.error('❌ User not authenticated');
       return res.status(401).json({
         success: false,
         error: 'User not authenticated'
+      });
+    }
+
+    if (!answers || !Array.isArray(answers)) {
+      console.error('❌ Invalid answers format:', answers);
+      return res.status(400).json({
+        success: false,
+        error: 'Answers must be provided as an array'
       });
     }
 
@@ -412,7 +430,7 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
 
     const isResubmission = testSession.status === 'completed';
     
-    res.status(200).json({
+    const responseData = {
       success: true,
       data: {
         resultId: testResult._id,
@@ -442,14 +460,40 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
         percentile: Math.round(scorePercentage * 0.85) // Rough percentile estimate
       },
       message: isResubmission ? 'Test resubmitted and graded successfully!' : 'Test completed successfully!'
+    };
+
+    console.log('✅ Sending response with data size:', JSON.stringify(responseData).length, 'bytes');
+    console.log('✅ Response structure valid:', {
+      success: responseData.success,
+      dataKeys: Object.keys(responseData.data),
+      message: responseData.message
     });
+    
+    res.status(200).json(responseData);
 
   } catch (error: any) {
-    console.error('Error submitting psychometric test:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to submit test'
+    console.error('❌ Error submitting psychometric test:', error);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Error details:', {
+      message: error.message,
+      name: error.name,
+      code: error.code
     });
+
+    // Ensure we always send a proper JSON response
+    if (!res.headersSent) {
+      const errorResponse = {
+        success: false,
+        error: 'Failed to submit test',
+        message: error.message || 'An unexpected error occurred during test submission',
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log('📤 Sending error response:', errorResponse);
+      res.status(500).json(errorResponse);
+    } else {
+      console.error('❌ Headers already sent, cannot send error response');
+    }
   }
 };
 

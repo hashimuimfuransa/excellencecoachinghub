@@ -267,50 +267,143 @@ const SimplifiedTestTaking: React.FC = () => {
     
     setSubmitting(true);
     
-    try {
-      console.log('📝 Submitting test answers:', {
-        sessionId: testData.sessionId,
-        answers: answers,
-        timeSpent: (testData.timeLimit * 60) - timeRemaining
-      });
-
-      const response = await fetch(`/api/simple-psychometric/submit/${testData.sessionId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`📝 Submitting test answers (attempt ${attempt}/${maxRetries}):`, {
+          sessionId: testData.sessionId,
           answers: answers,
           timeSpent: (testData.timeLimit * 60) - timeRemaining
-        })
-      });
+        });
 
-      if (!response.ok) {
-        throw new Error('Failed to submit test');
-      }
+        const response = await fetch(`/api/simple-psychometric/submit/${testData.sessionId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            answers: answers,
+            timeSpent: (testData.timeLimit * 60) - timeRemaining
+          })
+        });
 
-      const result = await response.json();
-      console.log('✅ Test submitted successfully:', result);
-      
-      setTestCompleted(true);
-      
-      // Navigate to standalone results page
-      navigate('/psychometric-test-result', {
-        state: {
-          result: result.data,
-          testData,
-          returnUrl: '/app/tests'
+        console.log('🌐 Response status:', response.status, response.statusText);
+        console.log('🌐 Response headers:', Object.fromEntries(response.headers.entries()));
+
+        if (!response.ok) {
+          console.error('❌ Response not OK:', response.status, response.statusText);
+          
+          // Try to get error details
+          let errorMessage = 'Failed to submit test';
+          try {
+            const errorData = await response.text(); // Use text() first to avoid JSON parsing error
+            console.error('❌ Error response body:', errorData);
+            
+            // Try to parse as JSON if possible
+            try {
+              const errorJson = JSON.parse(errorData);
+              errorMessage = errorJson.error || errorJson.message || errorMessage;
+            } catch (parseError) {
+              // If not JSON, use the text as the error message
+              errorMessage = errorData || errorMessage;
+            }
+          } catch (textError) {
+            console.error('❌ Could not read error response:', textError);
+          }
+          
+          throw new Error(errorMessage);
         }
-      });
-      
-    } catch (error) {
-      console.error('Error submitting test:', error);
-      alert('Failed to submit test. Please try again.');
-    } finally {
-      setSubmitting(false);
-      setShowConfirmDialog(false);
+
+        // Check if response has content
+        const responseText = await response.text();
+        console.log('📥 Response text length:', responseText.length);
+        console.log('📥 Response text (first 200 chars):', responseText.substring(0, 200));
+        
+        if (!responseText || responseText.trim() === '') {
+          console.error('❌ Empty response received from server');
+          throw new Error('Server returned empty response');
+        }
+
+        // Try to parse the JSON
+        let result;
+        try {
+          result = JSON.parse(responseText);
+          console.log('✅ JSON parsed successfully:', result);
+        } catch (parseError) {
+          console.error('❌ JSON parsing failed:', parseError);
+          console.error('❌ Response text:', responseText);
+          throw new Error(`Server returned invalid JSON response: ${parseError.message}`);
+        }
+        
+        console.log('✅ Test submitted successfully:', result);
+        
+        setTestCompleted(true);
+        
+        // Navigate to standalone results page
+        navigate('/psychometric-test-result', {
+          state: {
+            result: result.data,
+            testData,
+            returnUrl: '/app/tests'
+          }
+        });
+        
+        // Success - break out of retry loop
+        setSubmitting(false);
+        setShowConfirmDialog(false);
+        return;
+        
+      } catch (error: any) {
+        console.error(`❌ Test submission attempt ${attempt} failed:`, error);
+        
+        const isLastAttempt = attempt === maxRetries;
+        const isRetryableError = 
+          error.message?.includes('JSON') || 
+          error.message?.includes('Unexpected end of JSON input') ||
+          error.message?.includes('Server returned empty response') ||
+          error.message?.includes('Server returned invalid JSON response') ||
+          error.message?.includes('Network connection failed') ||
+          error.message?.includes('Server is temporarily unavailable') ||
+          error.message?.includes('Failed to fetch');
+        
+        if (isLastAttempt || !isRetryableError) {
+          // Show detailed error message on final failure
+          let userMessage = 'Failed to submit test.';
+          
+          if (error.message?.includes('JSON') || 
+              error.message?.includes('Unexpected end of JSON input') ||
+              error.message?.includes('Server returned empty response') ||
+              error.message?.includes('Server returned invalid JSON response')) {
+            userMessage = 'Test submission failed due to a server communication issue. Your answers may have been saved. Please try refreshing the page or contact support if the problem persists.';
+          } else if (error.message?.includes('Network connection failed') || 
+                     error.message?.includes('Failed to fetch')) {
+            userMessage = 'Network connection failed. Please check your internet connection and try again.';
+          } else {
+            userMessage = `Test submission failed: ${error.message}. Please try again.`;
+          }
+          
+          console.error('❌ Final submission failure after', attempt, 'attempts');
+          alert(userMessage);
+          setSubmitting(false);
+          setShowConfirmDialog(false);
+          return;
+        }
+        
+        // Wait before retrying with exponential backoff
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        console.log(`⏳ Retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
+    
+    // This should never be reached due to the return statements above
+    console.error('❌ Test submission failed after all retry attempts');
+    alert('Test submission failed after multiple attempts. Please try again later.');
+    setSubmitting(false);
+    setShowConfirmDialog(false);
   };
 
   const formatTime = (seconds: number): string => {

@@ -35,6 +35,17 @@ const JobPreparationPage: React.FC = () => {
   // Preparation options for job seekers
   const preparationOptions = [
     {
+      id: 'smart-test',
+      title: 'Smart Job-Specific Tests',
+      description: 'AI-generated tests tailored to specific job roles and company requirements',
+      icon: <BotIcon />,
+      color: '#9c27b0',
+      route: '/app/smart-test',
+      features: ['Job-Specific Questions', 'AI-Generated Content', 'Real Company Tests', 'Instant Feedback'],
+      difficulty: 'Tailored to Role',
+      popularity: 'New & Hot'
+    },
+    {
       id: 'psychometric-tests',
       title: 'Psychometric Tests',
       description: 'Take personality, cognitive and skills assessments used by real employers',
@@ -95,6 +106,7 @@ const JobPreparationPage: React.FC = () => {
       case 'Trending': return '#ff9800';
       case 'Recommended': return '#4caf50';
       case 'New': return '#2196f3';
+      case 'New & Hot': return '#e91e63';
       default: return '#757575';
     }
   };

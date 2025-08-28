@@ -128,6 +128,15 @@ class PsychometricTestService {
     return handleApiResponse(response);
   }
 
+  // Generate psychometric test for a specific job
+  async generatePsychometricTest(testData: {
+    jobId: string;
+    levelId: string;
+  }): Promise<any> {
+    const response = await apiPost<any>('/simple-psychometric/generate-test', testData);
+    return response;
+  }
+
   // Get user's test history
   async getUserTestHistory(): Promise<PsychometricTestResult[]> {
     const results = await this.getUserTestResults();

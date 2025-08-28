@@ -26,11 +26,27 @@ api.interceptors.request.use(
 // Response interceptor to handle errors
 api.interceptors.response.use(
   (response) => {
-    // Check if response data exists and is valid JSON
+    // Check if response data exists and is valid
     if (response.data === '' || response.data === null || response.data === undefined) {
       // Create a proper empty response
       response.data = { success: false, error: 'Empty response from server' };
     }
+    
+    // Additional safety check for malformed JSON
+    if (typeof response.data === 'string') {
+      try {
+        // If it's a string, try to parse it as JSON
+        response.data = JSON.parse(response.data);
+      } catch (parseError) {
+        console.error('❌ Failed to parse string response as JSON:', parseError);
+        response.data = { 
+          success: false, 
+          error: 'Invalid JSON response from server',
+          originalData: response.data 
+        };
+      }
+    }
+    
     return response;
   },
   (error) => {
@@ -96,8 +112,17 @@ export const apiGet = async <T>(url: string, params?: any, signal?: AbortSignal)
 export const apiPost = async <T>(url: string, data?: any): Promise<T> => {
   try {
     console.log(`🌐 Making POST request to ${url}`);
+    console.log(`🌐 Request data:`, data);
+    
     const response = await api.post<T>(url, data);
     console.log(`✅ POST request successful for ${url}:`, response.status);
+    
+    // Additional validation to ensure we received valid data
+    if (response.data === null || response.data === undefined) {
+      console.error('❌ Received null/undefined response data');
+      throw new Error('Server returned invalid response format');
+    }
+    
     return response.data;
   } catch (error: any) {
     console.error(`❌ API POST Error for ${url}:`, {
@@ -105,7 +130,8 @@ export const apiPost = async <T>(url: string, data?: any): Promise<T> => {
       status: error.response?.status,
       statusText: error.response?.statusText,
       data: error.response?.data,
-      headers: error.response?.headers
+      headers: error.response?.headers,
+      config: error.config
     });
     
     // Enhanced error handling for specific cases
@@ -115,6 +141,11 @@ export const apiPost = async <T>(url: string, data?: any): Promise<T> => {
     
     if (error.response?.status === 502 || error.response?.status === 503 || error.response?.status === 504) {
       throw new Error('Server is temporarily unavailable. Please try again in a few moments.');
+    }
+    
+    // Handle cases where response data is not valid JSON or is empty
+    if (error.response?.status === 200 && (!error.response.data || error.response.data === '')) {
+      throw new Error('Server returned empty response');
     }
     
     throw error;

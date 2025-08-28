@@ -505,7 +505,7 @@ const AvatarInterviewInterface: React.FC<AvatarInterviewInterfaceProps> = ({
                 <CardContent sx={{ p: 3 }}>
                   <StreamingAvatarVideo
                     text={state.currentAvatarText}
-                    avatar="black_man"
+                    avatar="european_woman"
                     emotion="happy"
                     language="en"
                     autoPlay={true}

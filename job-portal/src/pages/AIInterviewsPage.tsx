@@ -23,7 +23,17 @@ import {
   LinearProgress,
   IconButton,
   Tooltip,
-  Divider
+  Divider,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  useMediaQuery,
+  Badge,
+  Fade,
+  Slide,
+  alpha
 } from '@mui/material';
 import {
   PlayArrow,
@@ -36,8 +46,24 @@ import {
   Close,
   CheckCircle,
   Timer,
-  Star
+  Star,
+  Search,
+  FilterList,
+  Clear,
+  TrendingUp,
+  AutoAwesome,
+  Psychology,
+  Speed,
+  Lightbulb,
+  Verified,
+  ArrowForward,
+  PlayCircleOutline,
+  WorkOutline,
+  Group,
+  AccessTime,
+  Analytics
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import ProfileAccessGuard from '../components/ProfileAccessGuard';
 import { jobService, Job } from '../services/jobService';
@@ -49,7 +75,10 @@ interface AIInterviewsPageProps {}
 
 const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
   // Main states
   const [loading, setLoading] = useState(true);
@@ -62,6 +91,12 @@ const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [jobSelectionOpen, setJobSelectionOpen] = useState(false);
   const [generatingQuestions, setGeneratingQuestions] = useState(false);
+  
+  // Filter states for job selection
+  const [searchTerm, setSearchTerm] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('');
+  const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
 
   // Test interview states
   const [testInterviewSession, setTestInterviewSession] = useState<QuickInterviewSession | null>(null);
@@ -105,7 +140,7 @@ const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
   const loadJobs = async () => {
     try {
       setLoadingJobs(true);
-      const response = await jobService.getJobs({}, 1, 12); // Get first 12 jobs
+      const response = await jobService.getJobs({}, 1, 100); // Get first 100 jobs
       const fetchedJobs = response.data || [];
       setJobs(fetchedJobs);
     } catch (error) {
@@ -115,6 +150,42 @@ const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
     } finally {
       setLoadingJobs(false);
     }
+  };
+
+  // Filter jobs based on search term, location, and department
+  useEffect(() => {
+    if (!jobs.length) return;
+    
+    let filtered = jobs.filter(job => {
+      const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           job.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           job.skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesLocation = !locationFilter || job.location?.toLowerCase().includes(locationFilter.toLowerCase());
+      
+      const matchesDepartment = !departmentFilter || job.department?.toLowerCase().includes(departmentFilter.toLowerCase());
+      
+      return matchesSearch && matchesLocation && matchesDepartment;
+    });
+    
+    setFilteredJobs(filtered);
+  }, [jobs, searchTerm, locationFilter, departmentFilter]);
+
+  // Get unique filter options
+  const getUniqueLocations = () => {
+    const locations = jobs.map(job => job.location).filter(Boolean);
+    return [...new Set(locations)];
+  };
+
+  const getUniqueDepartments = () => {
+    const departments = jobs.map(job => job.department).filter(Boolean);
+    return [...new Set(departments)];
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setLocationFilter('');
+    setDepartmentFilter('');
   };
 
   // =============================================================================
@@ -208,8 +279,8 @@ const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
     setJobInterviewOpen(false);
     setJobInterviewSession(null);
     
-    // Show success
-    setSuccess(`Interview completed! You scored ${result.overallScore}%.`);
+    // Navigate to feedback page with sessionId
+    navigate(`/app/interviews/feedback/${result.sessionId}`);
   };
 
   // =============================================================================
@@ -249,9 +320,16 @@ const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
       onClose={() => setJobSelectionOpen(false)}
       maxWidth="md"
       fullWidth
+      fullScreen={isSmallScreen}
+      sx={{
+        '& .MuiDialog-paper': {
+          borderRadius: isSmallScreen ? 0 : 3,
+          maxHeight: isSmallScreen ? '100vh' : '90vh'
+        }
+      }}
     >
       <DialogTitle>
-        <Typography variant="h5" fontWeight="bold">
+        <Typography variant="h5" fontWeight="bold" component="div">
           Select a Job for Interview Practice
         </Typography>
         <Typography variant="body2" color="text.secondary">
@@ -259,14 +337,102 @@ const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
         </Typography>
       </DialogTitle>
       <DialogContent>
+        {/* Filters Section */}
+        <Box sx={{ mb: 3 }}>
+          <Stack spacing={2}>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+              <FilterList />
+              <Typography variant="h6">
+                Filter Jobs
+              </Typography>
+              <Button
+                size="small"
+                startIcon={<Clear />}
+                onClick={clearFilters}
+                sx={{ ml: 'auto' }}
+              >
+                Clear All
+              </Button>
+            </Stack>
+            
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+              <Box sx={{ flex: 1 }}>
+                <TextField
+                  fullWidth
+                  placeholder="Search jobs, companies, skills..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  InputProps={{
+                    startAdornment: <Search sx={{ mr: 1 }} />
+                  }}
+                />
+              </Box>
+              
+              <Box sx={{ flex: 1 }}>
+                <FormControl fullWidth>
+                  <InputLabel>Location</InputLabel>
+                  <Select
+                    value={locationFilter}
+                    onChange={(e) => setLocationFilter(e.target.value)}
+                  >
+                    <MenuItem value="">All Locations</MenuItem>
+                    {getUniqueLocations().map((location) => (
+                      <MenuItem key={location} value={location}>
+                        {location}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+              
+              <Box sx={{ flex: 1 }}>
+                <FormControl fullWidth>
+                  <InputLabel>Department</InputLabel>
+                  <Select
+                    value={departmentFilter}
+                    onChange={(e) => setDepartmentFilter(e.target.value)}
+                  >
+                    <MenuItem value="">All Departments</MenuItem>
+                    {getUniqueDepartments().map((department) => (
+                      <MenuItem key={department} value={department}>
+                        {department}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </Stack>
+          </Stack>
+        </Box>
+        
+        {/* Results Summary */}
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            Showing {filteredJobs.length} of {jobs.length} jobs
+          </Typography>
+        </Box>
+        
         {loadingJobs ? (
           <Box display="flex" justifyContent="center" py={4}>
             <CircularProgress />
           </Box>
+        ) : filteredJobs.length === 0 && jobs.length > 0 ? (
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <Typography color="text.secondary" sx={{ mb: 2 }}>
+              No jobs match your filters
+            </Typography>
+            <Button
+              variant="outlined"
+              startIcon={<Clear />}
+              onClick={clearFilters}
+            >
+              Clear Filters
+            </Button>
+          </Box>
         ) : (
           <Grid container spacing={2}>
-            {jobs.map((job) => (
-              <Grid item xs={12} sm={6} key={job._id}>
+            {filteredJobs.map((job) => (
+              <Grid item xs={12} sm={6} key={job._id} {...({} as any)}>
                 <Card 
                   sx={{ 
                     cursor: 'pointer',
@@ -421,15 +587,31 @@ const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
     return (
       <Container maxWidth="xl">
         <Box py={4}>
-          <Skeleton variant="text" width="50%" height={60} />
-          <Skeleton variant="text" width="30%" height={40} />
-          <Grid container spacing={3} mt={2}>
-            {[1, 2, 3, 4].map((i) => (
-              <Grid item xs={12} md={6} lg={3} key={i}>
-                <Skeleton variant="rectangular" height={200} />
+          <Fade in={loading}>
+            <Box>
+              <Skeleton 
+                variant="text" 
+                width={isMobile ? "80%" : "50%"} 
+                height={isMobile ? 50 : 60} 
+              />
+              <Skeleton 
+                variant="text" 
+                width={isMobile ? "60%" : "30%"} 
+                height={isMobile ? 30 : 40} 
+              />
+              <Grid container spacing={isMobile ? 2 : 3} mt={2}>
+                {[1, 2].map((i) => (
+                  <Grid item xs={12} md={6} key={i}>
+                    <Skeleton 
+                      variant="rectangular" 
+                      height={isMobile ? 180 : 200} 
+                      sx={{ borderRadius: 2 }}
+                    />
+                  </Grid>
+                ))}
               </Grid>
-            ))}
-          </Grid>
+            </Box>
+          </Fade>
         </Box>
       </Container>
     );
@@ -437,198 +619,634 @@ const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
 
   return (
     <ProfileAccessGuard user={user} feature="aiInterviews">
-      <Container maxWidth="xl">
-        <Box mb={4}>
-          {/* Header */}
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-            <Box>
-              <Typography variant="h3" component="h1" fontWeight="bold" gutterBottom>
-                Smart Interview Practice
-              </Typography>
-              <Typography variant="h6" color="text.secondary">
-                Practice with AI-powered interviews and get instant feedback
-              </Typography>
-            </Box>
-          </Box>
-
-          {/* Alerts */}
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-              {error}
-            </Alert>
-          )}
-          {success && (
-            <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
-              {success}
-            </Alert>
-          )}
-
-          {/* Progress for question generation */}
-          {generatingQuestions && (
-            <Paper sx={{ p: 2, mb: 2 }}>
-              <Box display="flex" alignItems="center" mb={1}>
-                <CircularProgress size={20} sx={{ mr: 2 }} />
-                <Typography variant="body1">
-                  Generating personalized interview questions...
+      <Box 
+        sx={{ 
+          minHeight: '100vh',
+          background: `linear-gradient(135deg, 
+            ${alpha(theme.palette.primary.main, 0.05)} 0%, 
+            ${alpha(theme.palette.secondary.main, 0.05)} 50%, 
+            ${alpha(theme.palette.primary.main, 0.02)} 100%)`,
+          pb: 4
+        }}
+      >
+        <Container maxWidth="xl">
+          <Box pt={isMobile ? 2 : 4} pb={2}>
+            {/* Hero Section */}
+            <Fade in timeout={800}>
+              <Box 
+                textAlign="center" 
+                mb={isMobile ? 4 : 6}
+                sx={{
+                  background: `linear-gradient(135deg, 
+                    ${alpha(theme.palette.primary.main, 0.1)} 0%, 
+                    ${alpha(theme.palette.secondary.main, 0.08)} 100%)`,
+                  borderRadius: 4,
+                  p: isMobile ? 3 : 4,
+                  backdropFilter: 'blur(10px)',
+                  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
+                }}
+              >
+                <Avatar
+                  sx={{
+                    width: isMobile ? 60 : 80,
+                    height: isMobile ? 60 : 80,
+                    mx: 'auto',
+                    mb: 2,
+                    background: `linear-gradient(135deg, 
+                      ${theme.palette.primary.main}, 
+                      ${theme.palette.secondary.main})`,
+                  }}
+                >
+                  <Psychology sx={{ fontSize: isMobile ? 30 : 40 }} />
+                </Avatar>
+                <Typography 
+                  variant={isMobile ? "h4" : "h2"} 
+                  component="h1" 
+                  fontWeight="bold" 
+                  gutterBottom
+                  sx={{
+                    background: `linear-gradient(135deg, 
+                      ${theme.palette.primary.main}, 
+                      ${theme.palette.secondary.main})`,
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    color: 'transparent',
+                  }}
+                >
+                  Smart Interview Practice
                 </Typography>
+                <Typography 
+                  variant={isMobile ? "body1" : "h6"} 
+                  color="text.secondary"
+                  sx={{ maxWidth: 600, mx: 'auto', mb: 2 }}
+                >
+                  Master your interview skills with AI-powered practice sessions. Get instant feedback, 
+                  improve your confidence, and land your dream job.
+                </Typography>
+                <Stack 
+                  direction={isMobile ? "column" : "row"} 
+                  spacing={2} 
+                  justifyContent="center"
+                  alignItems="center"
+                  sx={{ mt: 2 }}
+                >
+                  <Chip
+                    icon={<AutoAwesome />}
+                    label="AI-Powered Feedback"
+                    color="primary"
+                    variant="outlined"
+                  />
+                  <Chip
+                    icon={<Speed />}
+                    label="Instant Results"
+                    color="success"
+                    variant="outlined"
+                  />
+                  <Chip
+                    icon={<Verified />}
+                    label="Real Scenarios"
+                    color="info"
+                    variant="outlined"
+                  />
+                </Stack>
               </Box>
-              <LinearProgress />
-            </Paper>
-          )}
+            </Fade>
 
-          {/* Main Content */}
-          <Grid container spacing={4}>
-            {/* Free Test Interview */}
-            <Grid item xs={12} md={6}>
-              <Card sx={{ height: '100%' }}>
-                <CardContent>
+            {/* Alerts */}
+            {error && (
+              <Slide direction="down" in={!!error} mountOnEnter unmountOnExit>
+                <Alert 
+                  severity="error" 
+                  sx={{ 
+                    mb: 2,
+                    borderRadius: 2,
+                    boxShadow: theme.shadows[3]
+                  }} 
+                  onClose={() => setError(null)}
+                >
+                  {error}
+                </Alert>
+              </Slide>
+            )}
+
+            {success && (
+              <Slide direction="down" in={!!success} mountOnEnter unmountOnExit>
+                <Alert 
+                  severity="success" 
+                  sx={{ 
+                    mb: 2,
+                    borderRadius: 2,
+                    boxShadow: theme.shadows[3]
+                  }} 
+                  onClose={() => setSuccess(null)}
+                >
+                  {success}
+                </Alert>
+              </Slide>
+            )}
+
+            {/* Progress for question generation */}
+            {generatingQuestions && (
+              <Fade in={generatingQuestions}>
+                <Paper 
+                  sx={{ 
+                    p: 3, 
+                    mb: 3,
+                    borderRadius: 3,
+                    background: `linear-gradient(135deg, 
+                      ${alpha(theme.palette.info.main, 0.1)} 0%, 
+                      ${alpha(theme.palette.info.main, 0.05)} 100%)`,
+                    border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`
+                  }}
+                >
                   <Box display="flex" alignItems="center" mb={2}>
-                    <Assessment sx={{ mr: 2, color: 'success.main', fontSize: 40 }} />
-                    <Box>
-                      <Typography variant="h5" fontWeight="bold">
-                        Free Test Interview
+                    <CircularProgress size={24} sx={{ mr: 2 }} />
+                    <Box flex={1}>
+                      <Typography variant="h6" fontWeight="bold">
+                        Generating AI-Powered Questions
                       </Typography>
-                      <Chip label="FREE" color="success" size="small" />
+                      <Typography variant="body2" color="text.secondary">
+                        Creating personalized interview questions tailored to your selected position...
+                      </Typography>
                     </Box>
                   </Box>
-                  <Typography variant="body1" color="text.secondary" mb={3}>
-                    Practice with our 3-minute general interview to get familiar with the AI interview experience.
-                  </Typography>
-                  <Stack spacing={1}>
-                    <Typography variant="body2">• 3 general questions</Typography>
-                    <Typography variant="body2">• 3 minutes duration</Typography>
-                    <Typography variant="body2">• Instant AI feedback</Typography>
-                    <Typography variant="body2">• Performance scoring</Typography>
-                  </Stack>
-                </CardContent>
-                <CardActions>
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    size="large"
-                    startIcon={testInterviewLoading ? <CircularProgress size={20} color="inherit" /> : <PlayArrow />}
-                    disabled={testInterviewLoading}
-                    onClick={startTestInterview}
-                    sx={{
-                      background: 'linear-gradient(45deg, #4caf50 30%, #66bb6a 90%)',
-                      py: 1.5
+                  <LinearProgress 
+                    sx={{ 
+                      borderRadius: 1,
+                      height: 6,
+                      backgroundColor: alpha(theme.palette.info.main, 0.1)
+                    }} 
+                  />
+                </Paper>
+              </Fade>
+            )}
+
+            {/* Main Content */}
+            <Grid container spacing={isMobile ? 3 : 4}>
+              {/* Free Test Interview */}
+              <Grid item xs={12} md={6}>
+                <Fade in timeout={1000}>
+                  <Card 
+                    sx={{ 
+                      height: '100%',
+                      borderRadius: 3,
+                      background: `linear-gradient(135deg, 
+                        ${alpha(theme.palette.success.main, 0.08)} 0%, 
+                        ${alpha(theme.palette.success.light, 0.04)} 100%)`,
+                      border: `2px solid ${alpha(theme.palette.success.main, 0.2)}`,
+                      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&:hover': {
+                        transform: 'translateY(-8px)',
+                        boxShadow: `0 20px 40px ${alpha(theme.palette.success.main, 0.3)}`,
+                        border: `2px solid ${alpha(theme.palette.success.main, 0.4)}`
+                      }
                     }}
                   >
-                    {testInterviewLoading ? 'Preparing...' : 'Start Test Interview'}
-                  </Button>
-                </CardActions>
-              </Card>
-            </Grid>
-
-            {/* Job-Specific Interview */}
-            <Grid item xs={12} md={6}>
-              <Card sx={{ height: '100%' }}>
-                <CardContent>
-                  <Box display="flex" alignItems="center" mb={2}>
-                    <Business sx={{ mr: 2, color: 'primary.main', fontSize: 40 }} />
-                    <Box>
-                      <Typography variant="h5" fontWeight="bold">
-                        Job-Specific Interview
+                    <CardContent sx={{ p: isMobile ? 2 : 3 }}>
+                      <Box 
+                        display="flex" 
+                        alignItems="center" 
+                        justifyContent="space-between" 
+                        mb={2}
+                      >
+                        <Box display="flex" alignItems="center">
+                          <Avatar
+                            sx={{
+                              background: `linear-gradient(135deg, 
+                                ${theme.palette.success.main}, 
+                                ${theme.palette.success.light})`,
+                              width: isMobile ? 50 : 60,
+                              height: isMobile ? 50 : 60,
+                              mr: 2
+                            }}
+                          >
+                            <Assessment sx={{ fontSize: isMobile ? 24 : 28 }} />
+                          </Avatar>
+                          <Box>
+                            <Typography variant={isMobile ? "h6" : "h5"} fontWeight="bold">
+                              Quick Practice
+                            </Typography>
+                            <Chip 
+                              label="FREE" 
+                              color="success" 
+                              size="small"
+                              icon={<CheckCircle />}
+                            />
+                          </Box>
+                        </Box>
+                        <PlayCircleOutline 
+                          sx={{ 
+                            fontSize: 40, 
+                            color: theme.palette.success.main,
+                            opacity: 0.6
+                          }} 
+                        />
+                      </Box>
+                      
+                      <Typography 
+                        variant="body1" 
+                        color="text.secondary" 
+                        mb={3}
+                        sx={{ lineHeight: 1.6 }}
+                      >
+                        Perfect for beginners! Get familiar with AI interviews through a quick 3-minute session 
+                        with instant feedback and scoring.
                       </Typography>
-                      <Chip label="AI POWERED" color="primary" size="small" />
-                    </Box>
-                  </Box>
-                  <Typography variant="body1" color="text.secondary" mb={3}>
-                    Get personalized interview questions generated specifically for your target job position.
-                  </Typography>
-                  <Stack spacing={1}>
-                    <Typography variant="body2">• 5 job-specific questions</Typography>
-                    <Typography variant="body2">• 15 minutes duration</Typography>
-                    <Typography variant="body2">• Role-based scenarios</Typography>
-                    <Typography variant="body2">• Detailed feedback</Typography>
-                  </Stack>
-                </CardContent>
-                <CardActions>
-                  {selectedJob && jobInterviewSession ? (
-                    <Button
-                      variant="contained"
-                      fullWidth
-                      size="large"
-                      startIcon={<PlayArrow />}
-                      onClick={startJobInterview}
-                      sx={{
-                        background: 'linear-gradient(45deg, #2196f3 30%, #21cbf3 90%)',
-                        py: 1.5
-                      }}
-                    >
-                      Start {selectedJob.title} Interview
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="outlined"
-                      fullWidth
-                      size="large"
-                      startIcon={<Business />}
-                      onClick={() => setJobSelectionOpen(true)}
-                      disabled={generatingQuestions}
-                      sx={{ py: 1.5 }}
-                    >
-                      {generatingQuestions ? 'Generating Questions...' : 'Select Job Position'}
-                    </Button>
-                  )}
-                </CardActions>
-              </Card>
-            </Grid>
-          </Grid>
+                      
+                      <Grid container spacing={1} mb={2}>
+                        <Grid item xs={6}>
+                          <Box display="flex" alignItems="center" mb={1}>
+                            <Group sx={{ fontSize: 16, mr: 1, color: 'success.main' }} />
+                            <Typography variant="body2">3 Questions</Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Box display="flex" alignItems="center" mb={1}>
+                            <AccessTime sx={{ fontSize: 16, mr: 1, color: 'success.main' }} />
+                            <Typography variant="body2">3 Minutes</Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Box display="flex" alignItems="center" mb={1}>
+                            <Analytics sx={{ fontSize: 16, mr: 1, color: 'success.main' }} />
+                            <Typography variant="body2">AI Analysis</Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Box display="flex" alignItems="center" mb={1}>
+                            <TrendingUp sx={{ fontSize: 16, mr: 1, color: 'success.main' }} />
+                            <Typography variant="body2">Score Report</Typography>
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    </CardContent>
+                    <CardActions sx={{ p: isMobile ? 2 : 3, pt: 0 }}>
+                      <Button
+                        variant="contained"
+                        fullWidth
+                        size="large"
+                        startIcon={testInterviewLoading ? <CircularProgress size={20} color="inherit" /> : <PlayArrow />}
+                        endIcon={!testInterviewLoading && <ArrowForward />}
+                        disabled={testInterviewLoading}
+                        onClick={startTestInterview}
+                        sx={{
+                          background: `linear-gradient(135deg, 
+                            ${theme.palette.success.main} 0%, 
+                            ${theme.palette.success.light} 100%)`,
+                          py: isMobile ? 1.5 : 2,
+                          borderRadius: 2,
+                          fontWeight: 'bold',
+                          fontSize: isMobile ? '0.9rem' : '1rem',
+                          boxShadow: `0 4px 12px ${alpha(theme.palette.success.main, 0.4)}`,
+                          '&:hover': {
+                            background: `linear-gradient(135deg, 
+                              ${theme.palette.success.dark} 0%, 
+                              ${theme.palette.success.main} 100%)`,
+                            transform: 'translateY(-2px)',
+                            boxShadow: `0 6px 16px ${alpha(theme.palette.success.main, 0.5)}`
+                          }
+                        }}
+                      >
+                        {testInterviewLoading ? 'Preparing Session...' : 'Start Practice Now'}
+                      </Button>
+                    </CardActions>
+                  </Card>
+                </Fade>
+              </Grid>
 
-          {/* Results Section */}
-          {interviewResults.length > 0 && (
-            <Box mt={6}>
-              <Typography variant="h4" fontWeight="bold" gutterBottom>
-                Your Interview Results
-              </Typography>
-              <Grid container spacing={3}>
-                {interviewResults.map((result, index) => (
-                  <Grid item xs={12} md={6} lg={4} key={index}>
-                    <Card>
-                      <CardContent>
-                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                          <Typography variant="h6" fontWeight="bold">
-                            Interview #{interviewResults.length - index}
-                          </Typography>
-                          <Chip 
-                            label={`${result.overallScore}%`} 
-                            color={result.overallScore >= 80 ? 'success' : result.overallScore >= 60 ? 'warning' : 'error'}
-                            sx={{ fontWeight: 'bold' }}
-                          />
+              {/* Job-Specific Interview */}
+              <Grid item xs={12} md={6}>
+                <Fade in timeout={1200}>
+                  <Card 
+                    sx={{ 
+                      height: '100%',
+                      borderRadius: 3,
+                      background: `linear-gradient(135deg, 
+                        ${alpha(theme.palette.primary.main, 0.08)} 0%, 
+                        ${alpha(theme.palette.primary.light, 0.04)} 100%)`,
+                      border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&:hover': {
+                        transform: 'translateY(-8px)',
+                        boxShadow: `0 20px 40px ${alpha(theme.palette.primary.main, 0.3)}`,
+                        border: `2px solid ${alpha(theme.palette.primary.main, 0.4)}`
+                      }
+                    }}
+                  >
+                    <CardContent sx={{ p: isMobile ? 2 : 3 }}>
+                      <Box 
+                        display="flex" 
+                        alignItems="center" 
+                        justifyContent="space-between" 
+                        mb={2}
+                      >
+                        <Box display="flex" alignItems="center">
+                          <Avatar
+                            sx={{
+                              background: `linear-gradient(135deg, 
+                                ${theme.palette.primary.main}, 
+                                ${theme.palette.primary.light})`,
+                              width: isMobile ? 50 : 60,
+                              height: isMobile ? 50 : 60,
+                              mr: 2
+                            }}
+                          >
+                            <WorkOutline sx={{ fontSize: isMobile ? 24 : 28 }} />
+                          </Avatar>
+                          <Box>
+                            <Typography variant={isMobile ? "h6" : "h5"} fontWeight="bold">
+                              Job-Specific
+                            </Typography>
+                            <Chip 
+                              label="AI POWERED" 
+                              color="primary" 
+                              size="small"
+                              icon={<AutoAwesome />}
+                            />
+                          </Box>
                         </Box>
-                        <Typography variant="body2" color="text.secondary" gutterBottom>
-                          Completed: {new Date(result.completedAt).toLocaleDateString()}
-                        </Typography>
-                        <Box display="flex" alignItems="center" gap={1} mb={2}>
-                          <Star sx={{ color: 'gold', fontSize: 20 }} />
-                          <Typography variant="body2">
-                            {result.totalQuestions} questions answered
-                          </Typography>
-                        </Box>
-                        <Typography variant="body2" sx={{ mb: 2 }}>
-                          {Array.isArray(result.feedback) 
-                            ? result.feedback[0]?.substring(0, 100) || 'No feedback available'
-                            : (result.feedback || 'No feedback available').substring(0, 100)}...
-                        </Typography>
-                      </CardContent>
-                      <CardActions>
+                        <Lightbulb 
+                          sx={{ 
+                            fontSize: 40, 
+                            color: theme.palette.primary.main,
+                            opacity: 0.6
+                          }} 
+                        />
+                      </Box>
+                      
+                      <Typography 
+                        variant="body1" 
+                        color="text.secondary" 
+                        mb={3}
+                        sx={{ lineHeight: 1.6 }}
+                      >
+                        Advanced preparation! Get role-specific questions tailored to your target position 
+                        with detailed performance analytics.
+                      </Typography>
+                      
+                      <Grid container spacing={1} mb={2}>
+                        <Grid item xs={6}>
+                          <Box display="flex" alignItems="center" mb={1}>
+                            <Psychology sx={{ fontSize: 16, mr: 1, color: 'primary.main' }} />
+                            <Typography variant="body2">5 Questions</Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Box display="flex" alignItems="center" mb={1}>
+                            <Timer sx={{ fontSize: 16, mr: 1, color: 'primary.main' }} />
+                            <Typography variant="body2">15 Minutes</Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Box display="flex" alignItems="center" mb={1}>
+                            <Business sx={{ fontSize: 16, mr: 1, color: 'primary.main' }} />
+                            <Typography variant="body2">Role-Based</Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Box display="flex" alignItems="center" mb={1}>
+                            <EmojiEvents sx={{ fontSize: 16, mr: 1, color: 'primary.main' }} />
+                            <Typography variant="body2">Detailed Feedback</Typography>
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    </CardContent>
+                    <CardActions sx={{ p: isMobile ? 2 : 3, pt: 0 }}>
+                      {selectedJob && jobInterviewSession ? (
+                        <Button
+                          variant="contained"
+                          fullWidth
+                          size="large"
+                          startIcon={<PlayArrow />}
+                          endIcon={<ArrowForward />}
+                          onClick={startJobInterview}
+                          sx={{
+                            background: `linear-gradient(135deg, 
+                              ${theme.palette.primary.main} 0%, 
+                              ${theme.palette.primary.light} 100%)`,
+                            py: isMobile ? 1.5 : 2,
+                            borderRadius: 2,
+                            fontWeight: 'bold',
+                            fontSize: isMobile ? '0.9rem' : '1rem',
+                            boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.4)}`,
+                            '&:hover': {
+                              background: `linear-gradient(135deg, 
+                                ${theme.palette.primary.dark} 0%, 
+                                ${theme.palette.primary.main} 100%)`,
+                              transform: 'translateY(-2px)',
+                              boxShadow: `0 6px 16px ${alpha(theme.palette.primary.main, 0.5)}`
+                            }
+                          }}
+                        >
+                          Start {selectedJob.title.length > 15 && isMobile 
+                            ? `${selectedJob.title.substring(0, 15)}...` 
+                            : selectedJob.title} Interview
+                        </Button>
+                      ) : (
                         <Button
                           variant="outlined"
-                          size="small"
-                          startIcon={<Visibility />}
-                          onClick={() => openResultDetails(result)}
+                          fullWidth
+                          size="large"
+                          startIcon={generatingQuestions ? <CircularProgress size={20} /> : <Business />}
+                          endIcon={!generatingQuestions && <ArrowForward />}
+                          onClick={() => setJobSelectionOpen(true)}
+                          disabled={generatingQuestions}
+                          sx={{ 
+                            py: isMobile ? 1.5 : 2,
+                            borderRadius: 2,
+                            borderWidth: 2,
+                            fontWeight: 'bold',
+                            fontSize: isMobile ? '0.9rem' : '1rem',
+                            '&:hover': {
+                              borderWidth: 2,
+                              transform: 'translateY(-2px)',
+                              boxShadow: `0 6px 16px ${alpha(theme.palette.primary.main, 0.3)}`
+                            }
+                          }}
                         >
-                          View Details
+                          {generatingQuestions ? 'Generating Questions...' : 'Select Job Position'}
                         </Button>
-                      </CardActions>
-                    </Card>
-                  </Grid>
-                ))}
+                      )}
+                    </CardActions>
+                  </Card>
+                </Fade>
               </Grid>
-            </Box>
-          )}
-        </Box>
+            </Grid>
+
+            {/* Results Section */}
+            {interviewResults.length > 0 && (
+              <Fade in timeout={1500}>
+                <Box mt={isMobile ? 4 : 6}>
+                  <Box 
+                    display="flex" 
+                    alignItems="center" 
+                    mb={3}
+                    sx={{
+                      background: `linear-gradient(135deg, 
+                        ${alpha(theme.palette.secondary.main, 0.1)} 0%, 
+                        ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
+                      borderRadius: 2,
+                      p: 2,
+                      border: `1px solid ${alpha(theme.palette.secondary.main, 0.2)}`
+                    }}
+                  >
+                    <EmojiEvents sx={{ 
+                      fontSize: 40, 
+                      color: theme.palette.secondary.main,
+                      mr: 2 
+                    }} />
+                    <Box>
+                      <Typography variant={isMobile ? "h5" : "h4"} fontWeight="bold">
+                        Your Interview Results
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Track your progress and improvements over time
+                      </Typography>
+                    </Box>
+                    <Badge 
+                      badgeContent={interviewResults.length} 
+                      color="secondary"
+                      sx={{ ml: 'auto' }}
+                    >
+                      <Analytics sx={{ fontSize: 32, color: theme.palette.secondary.main }} />
+                    </Badge>
+                  </Box>
+                  <Grid container spacing={isMobile ? 2 : 3}>
+                    {interviewResults.map((result, index) => (
+                      <Grid item xs={12} md={6} lg={4} key={index}>
+                        <Fade in timeout={1500 + (index * 200)}>
+                          <Card
+                            sx={{
+                              borderRadius: 3,
+                              background: `linear-gradient(135deg, 
+                                ${alpha(result.overallScore >= 80 ? theme.palette.success.main : 
+                                  result.overallScore >= 60 ? theme.palette.warning.main : 
+                                  theme.palette.error.main, 0.08)} 0%, 
+                                ${alpha(result.overallScore >= 80 ? theme.palette.success.light : 
+                                  result.overallScore >= 60 ? theme.palette.warning.light : 
+                                  theme.palette.error.light, 0.04)} 100%)`,
+                              border: `2px solid ${alpha(result.overallScore >= 80 ? theme.palette.success.main : 
+                                result.overallScore >= 60 ? theme.palette.warning.main : 
+                                theme.palette.error.main, 0.2)}`,
+                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                              '&:hover': {
+                                transform: 'translateY(-4px)',
+                                boxShadow: `0 12px 24px ${alpha(result.overallScore >= 80 ? theme.palette.success.main : 
+                                  result.overallScore >= 60 ? theme.palette.warning.main : 
+                                  theme.palette.error.main, 0.2)}`
+                              }
+                            }}
+                          >
+                            <CardContent sx={{ p: isMobile ? 2 : 3 }}>
+                              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                                <Box display="flex" alignItems="center">
+                                  <Avatar
+                                    sx={{
+                                      width: 40,
+                                      height: 40,
+                                      mr: 1.5,
+                                      background: `linear-gradient(135deg, 
+                                        ${result.overallScore >= 80 ? theme.palette.success.main : 
+                                          result.overallScore >= 60 ? theme.palette.warning.main : 
+                                          theme.palette.error.main}, 
+                                        ${result.overallScore >= 80 ? theme.palette.success.light : 
+                                          result.overallScore >= 60 ? theme.palette.warning.light : 
+                                          theme.palette.error.light})`
+                                    }}
+                                  >
+                                    <Typography variant="h6" color="white" fontWeight="bold">
+                                      #{interviewResults.length - index}
+                                    </Typography>
+                                  </Avatar>
+                                  <Box>
+                                    <Typography variant="h6" fontWeight="bold">
+                                      Interview Session
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                      {new Date(result.completedAt).toLocaleDateString()}
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                                <Chip 
+                                  label={`${result.overallScore}%`} 
+                                  color={result.overallScore >= 80 ? 'success' : result.overallScore >= 60 ? 'warning' : 'error'}
+                                  sx={{ 
+                                    fontWeight: 'bold',
+                                    fontSize: '0.9rem',
+                                    height: 32
+                                  }}
+                                />
+                              </Box>
+                              
+                              <Stack direction="row" spacing={2} mb={2}>
+                                <Box display="flex" alignItems="center">
+                                  <Star sx={{ 
+                                    color: 'gold', 
+                                    fontSize: 18, 
+                                    mr: 0.5 
+                                  }} />
+                                  <Typography variant="body2">
+                                    {result.totalQuestions} Questions
+                                  </Typography>
+                                </Box>
+                                <Box display="flex" alignItems="center">
+                                  <Timer sx={{ 
+                                    color: theme.palette.info.main, 
+                                    fontSize: 18, 
+                                    mr: 0.5 
+                                  }} />
+                                  <Typography variant="body2">
+                                    Completed
+                                  </Typography>
+                                </Box>
+                              </Stack>
+                              
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  mb: 2,
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 3,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                  lineHeight: 1.4
+                                }}
+                              >
+                                {Array.isArray(result.feedback) 
+                                  ? result.feedback[0] || 'No feedback available'
+                                  : (result.feedback || 'No feedback available')}
+                              </Typography>
+                            </CardContent>
+                            <CardActions sx={{ p: isMobile ? 2 : 3, pt: 0 }}>
+                              <Button
+                                variant="outlined"
+                                fullWidth
+                                size="medium"
+                                startIcon={<Visibility />}
+                                endIcon={<ArrowForward />}
+                                onClick={() => openResultDetails(result)}
+                                sx={{
+                                  borderRadius: 2,
+                                  fontWeight: 'bold',
+                                  '&:hover': {
+                                    transform: 'translateY(-1px)',
+                                    boxShadow: theme.shadows[4]
+                                  }
+                                }}
+                              >
+                                View Detailed Report
+                              </Button>
+                            </CardActions>
+                          </Card>
+                        </Fade>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </Box>
+              </Fade>
+            )}
+          </Box>
+        </Container>
 
         {/* Dialogs */}
         <JobSelectionDialog />
@@ -654,7 +1272,7 @@ const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
             onComplete={handleJobInterviewComplete}
           />
         )}
-      </Container>
+      </Box>
     </ProfileAccessGuard>
   );
 };

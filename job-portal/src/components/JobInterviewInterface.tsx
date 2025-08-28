@@ -980,7 +980,7 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
                   >
                     <StreamingAvatarVideo
                       text={currentAvatarText}
-                      avatar="black_man"
+                      avatar="european_woman"
                       emotion="serious"
                       language="en"
                       autoPlay={true}

@@ -321,7 +321,7 @@ export const SimplifiedTestSelection: React.FC<SimplifiedTestSelectionProps> = (
       
       <Grid container spacing={2}>
         {testLevels.map((level) => (
-          <Grid item xs={12} md={4} key={level.id}>
+          <Grid size={{ xs: 12, md: 4 }} key={level.id}>
             <Card
               sx={{
                 height: '100%',
@@ -453,7 +453,7 @@ export const SimplifiedTestSelection: React.FC<SimplifiedTestSelectionProps> = (
 
       <Grid container spacing={2}>
         {paymentMethods.map((method) => (
-          <Grid item xs={12} sm={6} key={method.id}>
+          <Grid size={{ xs: 12, sm: 6 }} key={method.id}>
             <Card
               sx={{
                 cursor: 'pointer',
@@ -558,7 +558,7 @@ export const SimplifiedTestSelection: React.FC<SimplifiedTestSelectionProps> = (
           {/* Filter Controls */}
           <Collapse in={showFilters}>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Industry</InputLabel>
                   <Select
@@ -576,7 +576,7 @@ export const SimplifiedTestSelection: React.FC<SimplifiedTestSelectionProps> = (
                 </FormControl>
               </Grid>
               
-              <Grid item xs={12} sm={6}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Experience Level</InputLabel>
                   <Select
@@ -631,7 +631,7 @@ export const SimplifiedTestSelection: React.FC<SimplifiedTestSelectionProps> = (
         ) : (
           <Grid container spacing={2} sx={{ maxHeight: 400, overflow: 'auto' }}>
             {filteredJobs.map((job) => (
-              <Grid item xs={12} sm={6} key={job._id}>
+              <Grid size={{ xs: 12, sm: 6 }} key={job._id}>
                 <Card
                   sx={{
                     cursor: 'pointer',

@@ -639,7 +639,7 @@ const AllJobsPage: React.FC = () => {
       ) : (
         <Grid container spacing={4}>
           {jobs.map((job) => (
-            <Grid item xs={12} md={6} lg={4} key={job._id}>
+            <Grid size={{ xs: 12, md: 6, lg: 4 }} key={job._id}>
               <Card 
                 elevation={0}
                 sx={{ 

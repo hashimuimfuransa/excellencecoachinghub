@@ -41,7 +41,7 @@ interface Job {
   location: string;
   jobType: string;
   experienceLevel: string;
-  salary?: string;
+  salary?: { min: number; max: number; currency: string } | string;
   skills?: string[];
   postedAt?: string;
   applicationsCount?: number;
@@ -69,6 +69,13 @@ const JobRecommendations: React.FC<JobRecommendationsProps> = ({
   const theme = useTheme();
   const navigate = useNavigate();
   const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set());
+
+  // Format salary for display
+  const formatSalary = (salary?: { min: number; max: number; currency: string } | string) => {
+    if (!salary) return 'Competitive salary';
+    if (typeof salary === 'string') return salary;
+    return `${salary.currency} ${salary.min.toLocaleString()} - ${salary.currency} ${salary.max.toLocaleString()}`;
+  };
 
   // Force navigation to ensure page actually changes
   const forceNavigate = (path: string) => {
@@ -230,7 +237,7 @@ const JobRecommendations: React.FC<JobRecommendationsProps> = ({
                 <Box display="flex" alignItems="center">
                   <AttachMoney sx={{ fontSize: '16px', color: 'success.main', mr: 0.5 }} />
                   <Typography variant="caption" color="success.main" fontWeight="medium">
-                    {job.salary}
+                    {formatSalary(job.salary)}
                   </Typography>
                 </Box>
               )}
@@ -276,7 +283,7 @@ const JobRecommendations: React.FC<JobRecommendationsProps> = ({
             justifyContent="space-between"
             alignItems="center"
           >
-            <Box display="flex" alignItems="center" spacing={1}>
+            <Stack direction="row" alignItems="center" spacing={1}>
               <AccessTime sx={{ fontSize: '14px', color: 'text.disabled' }} />
               <Typography variant="caption" color="text.disabled">
                 {formatTimeAgo(job.postedAt)}
@@ -292,7 +299,7 @@ const JobRecommendations: React.FC<JobRecommendationsProps> = ({
                   </Typography>
                 </>
               )}
-            </Box>
+            </Stack>
 
             {/* Action Buttons */}
             <Stack

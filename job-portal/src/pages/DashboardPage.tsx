@@ -101,7 +101,11 @@ interface Job {
   jobType: string;
   experienceLevel: string;
   status: string;
-  salary?: string;
+  salary?: {
+    min: number;
+    max: number;
+    currency: string;
+  } | string;
   postedAt?: string;
   deadline?: string;
   skills?: string[];
@@ -257,6 +261,13 @@ const DashboardPage: React.FC = () => {
   const theme = useTheme();
   const { user, hasRole } = useAuth();
   const navigate = useNavigate();
+
+  // Helper function to format salary
+  const formatSalary = (salary?: { min: number; max: number; currency: string } | string) => {
+    if (!salary) return 'Competitive salary';
+    if (typeof salary === 'string') return salary;
+    return `${salary.currency} ${salary.min.toLocaleString()} - ${salary.currency} ${salary.max.toLocaleString()}`;
+  };
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
@@ -570,7 +581,7 @@ const DashboardPage: React.FC = () => {
             {job.salary && (
               <Box display="flex" alignItems="center">
                 <AttachMoney fontSize="small" color="action" sx={{ mr: 0.5 }} />
-                <Typography variant="body2">{job.salary}</Typography>
+                <Typography variant="body2">{formatSalary(job.salary)}</Typography>
               </Box>
             )}
             <Box display="flex" alignItems="center">

@@ -222,18 +222,14 @@ const MainLayout: React.FC = () => {
         icon: <Person />,
         badge: 2
       },
-      {
-        label: 'Saved Jobs',
-        path: '/app/saved-jobs',
-        icon: <Bookmark />,
-      },
+   
       {
         label: 'Career Guidance',
         path: '/app/career-guidance',
         icon: <TrendingUp />,
       },
       {
-        label: 'Career Development',
+        label: 'Career preparation',
         path: '#',
         icon: <School />,
         children: [

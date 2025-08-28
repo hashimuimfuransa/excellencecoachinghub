@@ -173,203 +173,204 @@ const ModernProfileCompletion: React.FC<ModernProfileCompletionProps> = ({
       )}
 
       <CardContent sx={{ p: 4 }}>
-        <Grid container spacing={4} alignItems="center">
-          {/* Profile Overview */}
-          <Grid item xs={12} md={4}>
-            <Box textAlign="center">
+        {/* Header with CTA First */}
+        <Grid container spacing={4} alignItems="center" sx={{ mb: 4 }}>
+          <Grid item xs={12} md={8}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
               <Avatar
                 sx={{
-                  width: 80,
-                  height: 80,
-                  mx: 'auto',
-                  mb: 2,
+                  width: 60,
+                  height: 60,
                   bgcolor: alpha(profileStrength.color, 0.1),
                   color: profileStrength.color,
-                  fontSize: '2rem'
+                  fontSize: '1.5rem',
+                  fontWeight: 'bold'
                 }}
               >
                 {completionPercentage}%
               </Avatar>
-              <Typography variant="h5" fontWeight="bold" gutterBottom>
-                Profile Strength: {profileStrength.text}
-              </Typography>
-              <LinearProgress
-                variant="determinate"
-                value={completionPercentage}
-                sx={{
-                  height: 8,
-                  borderRadius: 4,
-                  bgcolor: alpha(theme.palette.grey[300], 0.3),
-                  '& .MuiLinearProgress-bar': {
-                    bgcolor: profileStrength.color,
-                    borderRadius: 4
-                  }
-                }}
-              />
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                {completionPercentage}% Complete
-              </Typography>
+              <Box flex={1}>
+                <Typography variant="h4" fontWeight="bold" gutterBottom>
+                  🚀 Boost Your Profile Power
+                </Typography>
+                <Typography variant="h6" color="text.secondary" gutterBottom>
+                  Complete profiles get 5x more employer views & job matches
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
+                  <LinearProgress
+                    variant="determinate"
+                    value={completionPercentage}
+                    sx={{
+                      height: 8,
+                      borderRadius: 4,
+                      flex: 1,
+                      bgcolor: alpha(theme.palette.grey[300], 0.3),
+                      '& .MuiLinearProgress-bar': {
+                        bgcolor: profileStrength.color,
+                        borderRadius: 4
+                      }
+                    }}
+                  />
+                  <Chip 
+                    label={profileStrength.text} 
+                    size="small" 
+                    sx={{ 
+                      bgcolor: alpha(profileStrength.color, 0.1),
+                      color: profileStrength.color,
+                      fontWeight: 'bold'
+                    }}
+                  />
+                </Box>
+              </Box>
             </Box>
           </Grid>
+          
+          {/* Primary CTA Button - Most Prominent */}
+          <Grid item xs={12} md={4}>
+            <Button
+              variant="contained"
+              size="large"
+              fullWidth
+              startIcon={<Edit />}
+              onClick={() => window.location.href = '/app/profile'}
+              sx={{
+                py: 2,
+                fontSize: '1.1rem',
+                fontWeight: 'bold',
+                textTransform: 'none',
+                borderRadius: 3,
+                background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
+                boxShadow: theme.shadows[8],
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: theme.shadows[12],
+                }
+              }}
+            >
+              Complete My Profile Now
+            </Button>
+          </Grid>
+        </Grid>
 
-          {/* Missing Sections */}
-          <Grid item xs={12} md={5}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-              Complete Your Profile
-            </Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              A complete profile gets 5x more views from employers
-            </Typography>
-            
-            <Stack spacing={2}>
-              {profileSections
-                .filter(section => !section.completed)
-                .slice(0, 3)
-                .map((section) => (
+        {/* What's Missing Section */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ mb: 3 }}>
+            ⏰ Quick Fixes - Just {profileSections.filter(s => !s.completed).length} steps to complete
+          </Typography>
+          
+          <Grid container spacing={2}>
+            {profileSections
+              .filter(section => !section.completed)
+              .slice(0, 4)
+              .map((section) => (
+                <Grid item xs={12} sm={6} key={section.id}>
                   <Paper
-                    key={section.id}
                     sx={{
-                      p: 2,
+                      p: 3,
                       cursor: 'pointer',
-                      transition: 'all 0.2s ease',
+                      transition: 'all 0.3s ease',
                       border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                      borderRadius: 2,
                       '&:hover': {
-                        boxShadow: theme.shadows[4],
+                        transform: 'translateY(-4px)',
+                        boxShadow: theme.shadows[8],
                         border: `1px solid ${theme.palette.primary.main}`,
                       }
                     }}
                     onClick={section.action}
                   >
-                    <Stack direction="row" alignItems="center" spacing={2}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                       <Avatar
                         sx={{
                           bgcolor: alpha(theme.palette.primary.main, 0.1),
                           color: theme.palette.primary.main,
-                          width: 32,
-                          height: 32
+                          width: 40,
+                          height: 40
                         }}
                       >
                         {section.icon}
                       </Avatar>
                       <Box flex={1}>
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                          <Typography variant="subtitle2" fontWeight="medium">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="subtitle1" fontWeight="bold">
                             {section.title}
                           </Typography>
                           {section.priority === 'high' && (
                             <Chip
-                              label="Important"
+                              label="High Priority"
                               size="small"
                               color="error"
-                              variant="outlined"
+                              sx={{ fontSize: '0.7rem' }}
                             />
                           )}
-                        </Stack>
-                        <Typography variant="caption" color="text.secondary">
-                          {section.description}
-                        </Typography>
+                        </Box>
                       </Box>
                       <Chip
                         label={`+${section.completionScore}%`}
                         size="small"
                         color="primary"
-                        variant="outlined"
+                        variant="filled"
+                        sx={{ fontWeight: 'bold' }}
                       />
-                    </Stack>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary">
+                      {section.description}
+                    </Typography>
                   </Paper>
-                ))}
-            </Stack>
+                </Grid>
+              ))}
           </Grid>
+        </Box>
 
-          {/* Benefits & CTA */}
-          <Grid item xs={12} md={3}>
-            <Paper
-              sx={{
-                p: 3,
-                textAlign: 'center',
-                bgcolor: alpha(theme.palette.success.main, 0.05),
-                border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`
-              }}
-            >
-              <Typography variant="h6" fontWeight="bold" color="success.main" gutterBottom>
-                Profile Benefits
-              </Typography>
-              
-              <Stack spacing={1.5} mb={3}>
-                <Box display="flex" alignItems="center">
-                  <TrendingUp sx={{ color: 'success.main', mr: 1, fontSize: '20px' }} />
-                  <Typography variant="body2">
-                    5x more profile views
-                  </Typography>
-                </Box>
-                <Box display="flex" alignItems="center">
-                  <Visibility sx={{ color: 'info.main', mr: 1, fontSize: '20px' }} />
-                  <Typography variant="body2">
-                    Better job matches
-                  </Typography>
-                </Box>
-                <Box display="flex" alignItems="center">
-                  <Business sx={{ color: 'primary.main', mr: 1, fontSize: '20px' }} />
-                  <Typography variant="body2">
-                    Recruiter attention
-                  </Typography>
-                </Box>
-              </Stack>
-
-              <Button
-                variant="contained"
-                fullWidth
-                startIcon={<Edit />}
-                onClick={() => window.location.href = '/app/profile'}
-                sx={{
-                  borderRadius: 2,
-                  textTransform: 'none',
-                  fontWeight: 600
-                }}
-              >
-                Complete Profile
-              </Button>
-            </Paper>
-          </Grid>
-        </Grid>
-
-        {/* Quick Stats */}
-        {completionPercentage > 50 && (
-          <Box
-            sx={{
-              mt: 3,
-              pt: 3,
-              borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`
-            }}
-          >
-            <Grid container spacing={3} textAlign="center">
-              <Grid item xs={4}>
-                <Typography variant="h4" fontWeight="bold" color="primary.main">
-                  {currentUser?.skills?.length || 0}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Skills Listed
-                </Typography>
-              </Grid>
-              <Grid item xs={4}>
+        {/* Benefits Row */}
+        <Paper
+          sx={{
+            p: 3,
+            borderRadius: 2,
+            bgcolor: alpha(theme.palette.success.main, 0.05),
+            border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`
+          }}
+        >
+          <Typography variant="h6" fontWeight="bold" color="success.main" gutterBottom textAlign="center">
+            💡 Why Complete Your Profile?
+          </Typography>
+          
+          <Grid container spacing={3} textAlign="center">
+            <Grid item xs={12} md={4}>
+              <Box>
+                <TrendingUp sx={{ color: 'success.main', fontSize: '2.5rem', mb: 1 }} />
                 <Typography variant="h4" fontWeight="bold" color="success.main">
-                  {currentUser?.experience?.length || 0}
+                  5x
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Work Experiences
+                  More Profile Views
                 </Typography>
-              </Grid>
-              <Grid item xs={4}>
-                <Typography variant="h4" fontWeight="bold" color="info.main">
-                  {currentUser?.education?.length || 0}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Education Records
-                </Typography>
-              </Grid>
+              </Box>
             </Grid>
-          </Box>
-        )}
+            <Grid item xs={12} md={4}>
+              <Box>
+                <Visibility sx={{ color: 'info.main', fontSize: '2.5rem', mb: 1 }} />
+                <Typography variant="h4" fontWeight="bold" color="info.main">
+                  3x
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Better Job Matches
+                </Typography>
+              </Box>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Box>
+                <Business sx={{ color: 'primary.main', fontSize: '2.5rem', mb: 1 }} />
+                <Typography variant="h4" fontWeight="bold" color="primary.main">
+                  2x
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Recruiter Messages
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
+        </Paper>
       </CardContent>
     </Card>
   );

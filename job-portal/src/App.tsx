@@ -48,6 +48,7 @@ import EmployerCompanyProfilePage from './pages/EmployerCompanyProfilePage';
 import CompaniesPage from './pages/CompaniesPage';
 import SupportPage from './pages/SupportPage';
 import CareerGuidancePage from './pages/CareerGuidancePage';
+import JobPreparationPage from './pages/JobPreparationPage';
 import CareerAssessmentFlow from './pages/CareerAssessmentFlow';
 import CareerAssessmentResultsPage from './pages/CareerAssessmentResultsPage';
 import CVUploadTest from './components/CVUploadTest';
@@ -182,6 +183,7 @@ function App() {
               {/* Test Routes moved to standalone for full screen experience */}
               
               <Route path="career-guidance" element={<CareerGuidancePage />} />
+              <Route path="job-preparation" element={<JobPreparationPage />} />
               <Route path="career/assessment/:assessmentId" element={<CareerAssessmentFlow />} />
               <Route path="career/assessment/:assessmentId/results" element={<CareerAssessmentResultsPage />} />
               

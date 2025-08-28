@@ -42,6 +42,7 @@ import {
   PlayArrow as PlayIcon,
   Download as DownloadIcon,
   Share as ShareIcon,
+  ArrowForward,
   Chat as ChatIcon,
   Person as PersonIcon,
   SmartToy as BotIcon,

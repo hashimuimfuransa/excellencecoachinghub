@@ -84,13 +84,41 @@ api.interceptors.response.use(
 
 // Generic API functions
 export const apiGet = async <T>(url: string, params?: any, signal?: AbortSignal): Promise<T> => {
-  const response = await api.get<T>(url, { params, signal });
-  return response.data;
+  try {
+    const response = await api.get<T>(url, { params, signal });
+    return response.data;
+  } catch (error: any) {
+    console.error(`API GET Error for ${url}:`, error);
+    throw error;
+  }
 };
 
 export const apiPost = async <T>(url: string, data?: any): Promise<T> => {
-  const response = await api.post<T>(url, data);
-  return response.data;
+  try {
+    console.log(`🌐 Making POST request to ${url}`);
+    const response = await api.post<T>(url, data);
+    console.log(`✅ POST request successful for ${url}:`, response.status);
+    return response.data;
+  } catch (error: any) {
+    console.error(`❌ API POST Error for ${url}:`, {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      headers: error.response?.headers
+    });
+    
+    // Enhanced error handling for specific cases
+    if (error.code === 'NETWORK_ERROR' || !error.response) {
+      throw new Error('Network connection failed. Please check your internet connection and try again.');
+    }
+    
+    if (error.response?.status === 502 || error.response?.status === 503 || error.response?.status === 504) {
+      throw new Error('Server is temporarily unavailable. Please try again in a few moments.');
+    }
+    
+    throw error;
+  }
 };
 
 export const apiPut = async <T>(url: string, data?: any): Promise<T> => {

@@ -336,26 +336,48 @@ export const takePsychometricTest = async (req: AuthRequest, res: Response) => {
       } : undefined
     });
 
+    console.log('💾 Saving test result to database...');
     await testResult.save();
+    console.log('✅ Test result saved successfully, ID:', testResult._id);
 
+    console.log('🔍 Populating test result data...');
     const populatedResult = await PsychometricTestResult.findById(testResult._id)
       .populate('user', 'firstName lastName email')
       .populate('test', 'title type description')
       .populate('job', 'title company');
 
+    if (!populatedResult) {
+      console.error('❌ Failed to find populated result for ID:', testResult._id);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve saved test result',
+        message: 'Test was saved but could not be retrieved'
+      });
+    }
+
+    console.log('✅ Test result populated successfully, sending response...');
     res.status(200).json({
       success: true,
       data: populatedResult,
       message: 'Test completed successfully'
     });
+    console.log('📤 Response sent successfully');
 
   } catch (error: any) {
-    console.error('Error in takePsychometricTest:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to process test submission',
-      message: error.message
-    });
+    console.error('❌ Error in takePsychometricTest:', error);
+    console.error('❌ Error stack:', error.stack);
+    
+    // Ensure we always send a proper JSON response
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to process test submission',
+        message: error.message || 'Unknown error occurred during test submission',
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      console.error('❌ Headers already sent, cannot send error response');
+    }
   }
 };
 

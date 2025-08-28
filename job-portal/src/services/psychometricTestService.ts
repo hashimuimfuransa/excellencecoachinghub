@@ -42,7 +42,7 @@ class PsychometricTestService {
     handleApiResponse(response);
   }
 
-  // Take psychometric test
+  // Take psychometric test with retry mechanism
   async takePsychometricTest(
     testId: string, 
     answers: Record<string, any>, 
@@ -50,16 +50,78 @@ class PsychometricTestService {
     timeSpent?: number,
     testData?: any
   ): Promise<PsychometricTestResult> {
-    const response = await apiPost<ApiResponse<PsychometricTestResult>>(
-      `/psychometric-tests/${testId}/take`,
-      {
-        answers,
-        jobId,
-        timeSpent,
-        testData
+    console.log('📝 Submitting test answers:', { testId, answersCount: Object.keys(answers).length, jobId, timeSpent });
+    
+    const maxRetries = 3;
+    const baseDelay = 1000; // 1 second
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 Test submission attempt ${attempt}/${maxRetries}`);
+        
+        const response = await apiPost<ApiResponse<PsychometricTestResult>>(
+          `/psychometric-tests/${testId}/take`,
+          {
+            answers,
+            jobId,
+            timeSpent,
+            testData
+          }
+        );
+        
+        console.log('✅ Test submission successful:', response);
+        return handleApiResponse(response);
+        
+      } catch (error: any) {
+        console.error(`❌ Test submission attempt ${attempt} failed:`, error);
+        
+        const isLastAttempt = attempt === maxRetries;
+        const isRetryableError = 
+          error.message?.includes('JSON') || 
+          error.message?.includes('Unexpected end of JSON input') ||
+          error.message?.includes('Failed to execute \'json\' on \'Response\'') ||
+          error.message?.includes('Network connection failed') ||
+          error.message?.includes('Server is temporarily unavailable') ||
+          error.response?.status >= 500;
+        
+        if (isLastAttempt || !isRetryableError) {
+          // Enhanced error handling for JSON parsing errors
+          if (error.message?.includes('JSON') || 
+              error.message?.includes('Unexpected end of JSON input') ||
+              error.message?.includes('Failed to execute \'json\' on \'Response\'')) {
+            
+            console.error('🔍 JSON parsing error details:', {
+              error: error.message,
+              response: error.response,
+              config: error.config?.url,
+              attempt: attempt
+            });
+            
+            const contextualError = new Error(
+              `Test submission failed due to server communication issue after ${attempt} attempts. This might be a temporary server problem. Please try refreshing the page and submitting again. If the issue persists, your test answers may have been saved.`
+            );
+            (contextualError as any).originalError = error;
+            (contextualError as any).isJsonError = true;
+            (contextualError as any).attempts = attempt;
+            throw contextualError;
+          }
+          
+          // Re-throw other errors with additional context
+          const enhancedError = new Error(`Test submission failed after ${attempt} attempts: ${error.message || 'Unknown error'}`);
+          (enhancedError as any).originalError = error;
+          (enhancedError as any).attempts = attempt;
+          throw enhancedError;
+        }
+        
+        // Wait before retrying with exponential backoff
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        console.log(`⏳ Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
-    );
-    return handleApiResponse(response);
+    }
+    
+    // This should never be reached, but included for completeness
+    throw new Error('Test submission failed after all retry attempts');
   }
 
   // Get user's test results

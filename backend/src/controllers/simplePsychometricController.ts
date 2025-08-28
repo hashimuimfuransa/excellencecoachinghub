@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PsychometricTestResult, Job, TestPurchase, TestSession } from '../models';
+import { GeneratedPsychometricTest } from '../models/GeneratedPsychometricTest';
 import { AuthRequest } from '../middleware/auth';
 import { aiService } from '../services/aiService';
 import mongoose from 'mongoose';
@@ -57,7 +58,9 @@ export const generatePsychometricTest = async (req: AuthRequest, res: Response) 
       skills: job.skills && Array.isArray(job.skills) ? job.skills : [],
       questionCount,
       testLevel: levelId,
-      timeLimit
+      timeLimit,
+      userId: userId,
+      jobId: jobId
     });
 
     // Validate the structure
@@ -69,6 +72,48 @@ export const generatePsychometricTest = async (req: AuthRequest, res: Response) 
     }
 
     console.log('✅ Successfully generated', testData.questions.length, 'questions for', job.title);
+
+    // Save the generated test to the database for tracking
+    try {
+      const generatedTestId = `gen_test_${userId}_${jobId}_${Date.now()}`;
+      
+      await GeneratedPsychometricTest.create({
+        testId: generatedTestId,
+        jobId: jobId,
+        userId: userId,
+        title: `Psychometric Assessment for ${job.title}`,
+        description: `AI-generated psychometric test for ${job.title} position`,
+        type: 'comprehensive',
+        questions: testData.questions.map((q, index) => ({
+          id: `q${index + 1}`,
+          number: index + 1,
+          question: q.question,
+          type: 'multiple_choice',
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          traits: q.category ? [q.category] : ['general'],
+          weight: 1,
+          explanation: q.explanation
+        })),
+        timeLimit: timeLimit,
+        industry: job.industry,
+        jobRole: job.title,
+        difficulty: levelId === 'intermediate' ? 'moderate' : (levelId === 'advanced' ? 'hard' : 'easy'),
+        categories: [...new Set(testData.questions.map(q => q.category).filter(Boolean))],
+        jobSpecific: true,
+        metadata: {
+          jobTitle: job.title,
+          jobDescription: job.description,
+          requiredSkills: job.skills && Array.isArray(job.skills) ? job.skills : [],
+          experienceLevel: job.experienceLevel
+        }
+      });
+      
+      console.log('✅ Generated test saved to database with ID:', generatedTestId);
+    } catch (saveError) {
+      console.warn('⚠️ Warning: Could not save generated test to database:', saveError);
+      // Continue execution - this is not critical for the test generation
+    }
 
     // Create test session (simple version - no purchase required)
     // Use retry logic for MongoDB operations after long AI generation
@@ -306,13 +351,47 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
         isGenerated: true,
         jobSpecific: true
       },
-      detailedAnalysis: hasDetailedResults ? {
+      // Always store detailed analysis including question breakdown
+      detailedAnalysis: {
         detailedResults: detailedResults,
         categoryBreakdown: categoryScores,
         testLevel: testSession.testLevel,
         totalQuestions: testSession.questions.length,
-        correctAnswers: correctAnswers
-      } : null
+        correctAnswers: correctAnswers,
+        // Store the complete questions with answers for later retrieval
+        questionAnalysis: detailedResults.map((result, index) => ({
+          question: result.question,
+          userAnswer: result.userAnswer,
+          correctAnswer: result.correctAnswer,
+          isCorrect: result.isCorrect,
+          category: result.category,
+          explanation: result.explanation,
+          options: testSession.questions[index].options
+        })),
+        // Store failed and correct questions for easy access
+        failedQuestions: detailedResults.filter(r => !r.isCorrect).map(r => {
+          const questionIndex = detailedResults.indexOf(r);
+          return {
+            question: r.question,
+            yourAnswer: r.userAnswer !== null && r.userAnswer !== undefined ? testSession.questions[questionIndex].options[r.userAnswer] : 'Not answered',
+            correctAnswer: testSession.questions[questionIndex].options[r.correctAnswer],
+            correctAnswerIndex: r.correctAnswer,
+            explanation: r.explanation,
+            category: r.category
+          };
+        }),
+        correctQuestions: detailedResults.filter(r => r.isCorrect).map(r => {
+          const questionIndex = detailedResults.indexOf(r);
+          return {
+            question: r.question,
+            options: testSession.questions[questionIndex].options,
+            correctAnswer: r.correctAnswer,
+            explanation: r.explanation,
+            category: r.category,
+            isCorrect: r.isCorrect
+          };
+        })
+      }
     };
 
     // Check if a result already exists for this test session
@@ -340,11 +419,27 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
         score: scorePercentage,
         totalQuestions: testSession.questions.length,
         correctAnswers: correctAnswers,
+        incorrectAnswers: testSession.questions.length - correctAnswers,
         timeSpent: testResult.timeSpent,
         interpretation: testResult.interpretation,
         categoryScores: testResult.scores,
         hasDetailedResults: hasDetailedResults,
-        recommendations: testResult.recommendations
+        recommendations: testResult.recommendations,
+        // Include question-by-question results for immediate feedback
+        detailedResults: detailedResults,
+        // Questions that were answered correctly
+        correctQuestions: detailedResults.filter(r => r.isCorrect),
+        // Questions that were answered incorrectly with correct answers
+        failedQuestions: detailedResults.filter(r => !r.isCorrect).map(r => ({
+          question: r.question,
+          yourAnswer: r.userAnswer !== null && r.userAnswer !== undefined ? testSession.questions[detailedResults.indexOf(r)].options[r.userAnswer] : 'Not answered',
+          correctAnswer: testSession.questions[detailedResults.indexOf(r)].options[r.correctAnswer],
+          correctAnswerIndex: r.correctAnswer,
+          explanation: r.explanation,
+          category: r.category
+        })),
+        grade: scorePercentage >= 90 ? 'Excellent' : scorePercentage >= 75 ? 'Good' : scorePercentage >= 60 ? 'Average' : 'Needs Improvement',
+        percentile: Math.round(scorePercentage * 0.85) // Rough percentile estimate
       },
       message: isResubmission ? 'Test resubmitted and graded successfully!' : 'Test completed successfully!'
     });
@@ -379,9 +474,47 @@ export const getUserTestResults = async (req: AuthRequest, res: Response) => {
       .populate('testSession', 'testLevel')
       .sort({ completedAt: -1 });
 
+    // Transform results to include question analysis from detailedAnalysis
+    const transformedResults = results.map(result => {
+      const resultObj = result.toObject();
+      
+      // Extract question analysis data from detailedAnalysis if it exists
+      if (result.detailedAnalysis) {
+        const analysis = result.detailedAnalysis as any;
+        
+        // Add question analysis fields to the result object
+        if (analysis.questionAnalysis) {
+          resultObj.questionAnalysis = analysis.questionAnalysis;
+        }
+        
+        if (analysis.failedQuestions) {
+          resultObj.failedQuestions = analysis.failedQuestions;
+        }
+        
+        if (analysis.correctQuestions) {
+          resultObj.correctQuestions = analysis.correctQuestions;
+        }
+        
+        // Add question counts
+        if (analysis.totalQuestions && analysis.correctAnswers !== undefined) {
+          resultObj.totalQuestions = analysis.totalQuestions;
+          resultObj.questionsCorrect = analysis.correctAnswers;
+          resultObj.questionsIncorrect = analysis.totalQuestions - analysis.correctAnswers;
+          resultObj.answersCount = analysis.totalQuestions;
+        }
+        
+        // Add detailed results for backward compatibility
+        if (analysis.detailedResults) {
+          resultObj.detailedResults = analysis.detailedResults;
+        }
+      }
+      
+      return resultObj;
+    });
+
     res.status(200).json({
       success: true,
-      data: results,
+      data: transformedResults,
       message: 'Test results retrieved successfully'
     });
 
@@ -423,9 +556,46 @@ export const getDetailedTestResult = async (req: AuthRequest, res: Response) => 
       });
     }
 
+    // Get the original test session to reconstruct detailed analysis
+    const testSession = await TestSession.findOne({
+      _id: result.testMetadata.testId,
+      user: userId
+    });
+
+    let enhancedResult = result.toObject();
+
+    // If we have the test session, provide enhanced question-by-question analysis
+    if (testSession && testSession.questions && result.answers) {
+      const detailedAnalysis = testSession.questions.map((question: any, index: number) => {
+        const userAnswer = result.answers[index];
+        const isCorrect = userAnswer === question.correctAnswer;
+        
+        return {
+          questionNumber: index + 1,
+          question: question.question,
+          options: question.options,
+          userAnswer: userAnswer !== null && userAnswer !== undefined ? question.options[userAnswer] : 'Not answered',
+          userAnswerIndex: userAnswer,
+          correctAnswer: question.options[question.correctAnswer],
+          correctAnswerIndex: question.correctAnswer,
+          isCorrect,
+          explanation: question.explanation,
+          category: question.category
+        };
+      });
+
+      enhancedResult.questionByQuestionAnalysis = detailedAnalysis;
+      enhancedResult.correctQuestions = detailedAnalysis.filter(q => q.isCorrect);
+      enhancedResult.failedQuestions = detailedAnalysis.filter(q => !q.isCorrect);
+      enhancedResult.grade = result.overallScore >= 90 ? 'Excellent' : 
+                             result.overallScore >= 75 ? 'Good' : 
+                             result.overallScore >= 60 ? 'Average' : 'Needs Improvement';
+      enhancedResult.percentile = Math.round(result.overallScore * 0.85);
+    }
+
     res.status(200).json({
       success: true,
-      data: result,
+      data: enhancedResult,
       message: 'Detailed test result retrieved successfully'
     });
 

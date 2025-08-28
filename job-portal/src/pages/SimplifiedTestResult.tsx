@@ -31,8 +31,17 @@ interface TestResult {
   score: number;
   totalQuestions: number;
   correctAnswers: number;
+  incorrectAnswers?: number;
   hasDetailedResults: boolean;
   recommendations: string[];
+  detailedResults?: any[];
+  correctQuestions?: any[];
+  failedQuestions?: any[];
+  grade?: string;
+  percentile?: number;
+  categoryScores?: Record<string, number>;
+  interpretation?: string;
+  timeSpent?: number;
 }
 
 const SimplifiedTestResult: React.FC = () => {
@@ -194,62 +203,157 @@ const SimplifiedTestResult: React.FC = () => {
         </Card>
       )}
 
-      {/* Detailed Results Notice */}
-      {result.hasDetailedResults && (
+      {/* Quick Question Summary */}
+      {(result.failedQuestions && result.failedQuestions.length > 0) && (
         <Card sx={{ mb: 3 }}>
           <CardContent>
-            <Alert severity="info">
-              <Typography variant="body1" fontWeight="bold" gutterBottom>
-                Detailed Report Available
+            <Typography variant="h6" fontWeight="bold" gutterBottom color="error.main">
+              Questions You Missed ({result.failedQuestions.length})
+            </Typography>
+            <List sx={{ maxHeight: 300, overflow: 'auto' }}>
+              {result.failedQuestions.slice(0, 5).map((question: any, index: number) => (
+                <ListItem key={index} sx={{ px: 0 }}>
+                  <ListItemText
+                    primary={
+                      <Typography variant="body2" sx={{ fontWeight: 'medium', mb: 1 }}>
+                        Q{index + 1}: {question.question?.substring(0, 100)}...
+                      </Typography>
+                    }
+                    secondary={
+                      <Box>
+                        <Typography variant="caption" color="error.main">
+                          Your Answer: {question.yourAnswer || 'Not answered'}
+                        </Typography>
+                        <br />
+                        <Typography variant="caption" color="success.main">
+                          Correct Answer: {question.correctAnswer}
+                        </Typography>
+                        {question.explanation && (
+                          <>
+                            <br />
+                            <Typography variant="caption" color="text.secondary">
+                              {question.explanation}
+                            </Typography>
+                          </>
+                        )}
+                      </Box>
+                    }
+                  />
+                  {index < Math.min(result.failedQuestions.length - 1, 4) && <Divider />}
+                </ListItem>
+              ))}
+            </List>
+            {result.failedQuestions.length > 5 && (
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
+                + {result.failedQuestions.length - 5} more questions. View detailed results for complete analysis.
               </Typography>
-              <Typography variant="body2">
-                Your assessment level includes detailed performance analytics and category-wise breakdown. 
-                You can view the full report in your assessment history.
-              </Typography>
-            </Alert>
+            )}
           </CardContent>
         </Card>
       )}
 
+      {/* Performance Summary */}
+      {result.categoryScores && Object.keys(result.categoryScores).length > 0 && (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" fontWeight="bold" gutterBottom>
+              Performance by Category
+            </Typography>
+            {Object.entries(result.categoryScores).map(([category, score]) => (
+              <Box key={category} sx={{ mb: 2 }}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                  <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
+                    {category.replace(/([A-Z])/g, ' $1').trim()}
+                  </Typography>
+                  <Typography variant="body2" fontWeight="bold">
+                    {score}%
+                  </Typography>
+                </Box>
+                <LinearProgress
+                  variant="determinate"
+                  value={score}
+                  color={score >= 80 ? 'success' : score >= 60 ? 'warning' : 'error'}
+                  sx={{ height: 6, borderRadius: 3 }}
+                />
+              </Box>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* View Detailed Results Button */}
+      <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+        <Button
+          variant="contained"
+          size="large"
+          startIcon={<Psychology />}
+          onClick={() => {
+            // Store the detailed result in session storage for the detailed results page
+            const detailedResultForStorage = {
+              ...result,
+              ...location.state,
+              _id: result.resultId,
+              overallScore: result.score,
+              answersCount: result.correctAnswers,
+              totalQuestions: result.totalQuestions,
+              timeSpent: result.timeSpent || 0,
+              createdAt: new Date().toISOString(),
+              completedAt: new Date().toISOString(),
+              detailedAnalysis: {
+                overallScore: result.score,
+                grade: result.grade,
+                percentile: result.percentile,
+                categoryScores: result.categoryScores,
+                interpretation: result.interpretation,
+                strengths: result.correctQuestions?.map(q => `Correct on: ${q.question?.substring(0, 50)}...`) || [],
+                developmentAreas: result.failedQuestions?.map(q => `Needs improvement: ${q.question?.substring(0, 50)}...`) || [],
+                nextSteps: result.recommendations || [],
+                failedQuestions: result.failedQuestions || [],
+                correctQuestions: result.correctQuestions || []
+              },
+              questionByQuestionAnalysis: result.detailedResults || [],
+              failedQuestions: result.failedQuestions || [],
+              correctQuestions: result.correctQuestions || []
+            };
+            
+            sessionStorage.setItem('testResult', JSON.stringify(detailedResultForStorage));
+            navigate('/app/test-results');
+          }}
+          sx={{
+            backgroundColor: '#4caf50',
+            '&:hover': { backgroundColor: '#45a049' },
+            padding: '12px 32px',
+            fontSize: '1.1rem',
+            marginBottom: '1rem'
+          }}
+        >
+          View Detailed Results & Question-by-Question Analysis
+        </Button>
+      </div>
+
       {/* Action Buttons */}
       <Grid container spacing={2}>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={6}>
           <Button
             fullWidth
             variant="outlined"
             startIcon={<Home />}
-            onClick={() => navigate('/psychometric-tests')}
+            onClick={() => navigate('/app/tests')}
             size="large"
           >
             Back to Tests
           </Button>
         </Grid>
-        <Grid item xs={12} sm={4}>
+        <Grid item xs={12} sm={6}>
           <Button
             fullWidth
             variant="outlined"
             startIcon={<Refresh />}
-            onClick={() => navigate('/psychometric-tests')}
+            onClick={() => navigate('/app/tests')}
             size="large"
           >
             Take Another Test
           </Button>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          {result.hasDetailedResults && (
-            <Button
-              fullWidth
-              variant="contained"
-              startIcon={<Download />}
-              size="large"
-              onClick={() => {
-                // Navigate to detailed results or download report
-                navigate(`/test-results/${result.resultId}`);
-              }}
-            >
-              View Details
-            </Button>
-          )}
         </Grid>
       </Grid>
 

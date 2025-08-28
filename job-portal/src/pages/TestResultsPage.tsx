@@ -135,6 +135,33 @@ interface TestResult {
   questionAnalysis?: QuestionAnalysis[];
   questionsCorrect?: number;
   questionsIncorrect?: number;
+  // Psychometric test specific fields
+  failedQuestions?: Array<{
+    question: string;
+    yourAnswer: string;
+    correctAnswer: string;
+    correctAnswerIndex: number;
+    explanation: string;
+    category: string;
+  }>;
+  correctQuestions?: Array<{
+    question: string;
+    options: string[];
+    correctAnswer: number;
+    explanation: string;
+    category: string;
+    isCorrect: boolean;
+  }>;
+  detailedResults?: Array<{
+    question: string;
+    userAnswer: any;
+    correctAnswer: number;
+    isCorrect: boolean;
+    explanation: string;
+    category: string;
+  }>;
+  recommendations?: string[];
+  interpretation?: string;
 }
 
 interface TabPanelProps {
@@ -382,192 +409,192 @@ const TestResultsPage: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-        {/* Header */}
-        <Box mb={4} display="flex" justifyContent="space-between" alignItems="center">
-          <Box>
-            <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
-              Test Results & Progress
-            </Typography>
-            <Typography variant="h6" color="text.secondary">
-              Track your psychometric assessment performance and progress over time
-            </Typography>
-          </Box>
-          <Button
-            variant="outlined"
-            startIcon={<Refresh />}
-            onClick={() => fetchTestResults(true)}
-            disabled={loading}
-            sx={{ minWidth: 140 }}
-          >
-            {loading ? 'Refreshing...' : 'Refresh'}
-          </Button>
+      {/* Header */}
+      <Box mb={4} display="flex" justifyContent="space-between" alignItems="center">
+        <Box>
+          <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
+            Test Results & Progress
+          </Typography>
+          <Typography variant="h6" color="text.secondary">
+            Track your psychometric assessment performance and progress over time
+          </Typography>
         </Box>
+        <Button
+          variant="outlined"
+          startIcon={<Refresh />}
+          onClick={() => fetchTestResults(true)}
+          disabled={loading}
+          sx={{ minWidth: 140 }}
+        >
+          {loading ? 'Refreshing...' : 'Refresh'}
+        </Button>
+      </Box>
 
-        {/* Statistics Cards */}
-        <Grid container spacing={3} mb={4}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ 
-              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
-              color: 'white'
-            }}>
-              <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
-                  <Box>
-                    <Typography variant="h4" fontWeight="bold">
-                      {testResults.length}
-                    </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                      Tests Completed
-                    </Typography>
-                  </Box>
-                  <Assessment sx={{ fontSize: 40, opacity: 0.8 }} />
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ 
-              background: `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${theme.palette.success.dark} 100%)`,
-              color: 'white'
-            }}>
-              <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
-                  <Box>
-                    <Typography variant="h4" fontWeight="bold">
-                      {calculateAverageScore()}%
-                    </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                      Average Score
-                    </Typography>
-                  </Box>
-                  <BarChart sx={{ fontSize: 40, opacity: 0.8 }} />
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ 
-              background: `linear-gradient(135deg, ${theme.palette.info.main} 0%, ${theme.palette.info.dark} 100%)`,
-              color: 'white'
-            }}>
-              <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
-                  <Box>
-                    <Typography variant="h4" fontWeight="bold">
-                      {getBestScores().length}
-                    </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                      Unique Tests
-                    </Typography>
-                  </Box>
-                  <EmojiEvents sx={{ fontSize: 40, opacity: 0.8 }} />
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={3}>
-            <Card sx={{ 
-              background: `linear-gradient(135deg, ${theme.palette.warning.main} 0%, ${theme.palette.warning.dark} 100%)`,
-              color: 'white'
-            }}>
-              <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="space-between">
-                  <Box>
-                    <Typography variant="h4" fontWeight="bold">
-                      {testResults.filter(r => r.test?.jobSpecific || r.testMetadata?.jobSpecific).length}
-                    </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                      Job-Specific
-                    </Typography>
-                  </Box>
-                  <GpsFixed sx={{ fontSize: 40, opacity: 0.8 }} />
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-
-        {/* Tabs */}
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-          <Tabs value={tabValue} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
-            <Tab icon={<Timeline />} label="Overview" />
-            <Tab icon={<QuestionAnswer />} label="Question Analysis" />
-            <Tab icon={<Table />} label="All Results" />
-            <Tab icon={<ShowChart />} label="Progress Analysis" />
-            <Tab icon={<Insights />} label="Detailed Feedback" />
-          </Tabs>
-        </Box>
-
-        {/* Recent Test Result Highlight */}
-        {selectedResult && (
-          <Card sx={{ mb: 4, background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`, color: 'white' }}>
+      {/* Statistics Cards */}
+      <Grid container spacing={3} mb={4}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ 
+            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+            color: 'white'
+          }}>
             <CardContent>
-              <Grid container spacing={3} alignItems="center">
-                <Grid item xs={12} md={3}>
-                  <Box textAlign="center">
-                    <Typography variant="h2" fontWeight="bold" sx={{ fontSize: { xs: '2rem', md: '3rem' } }}>
-                      {selectedResult.overallScore}%
-                    </Typography>
-                    <Typography variant="h5" sx={{ opacity: 0.9 }}>
-                      {selectedResult.grade || 'N/A'}
-                    </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.7 }}>
-                      Overall Score
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Typography variant="h5" gutterBottom>
-                    {selectedResult.test?.title || selectedResult.testMetadata?.title || 'Latest Test Results'}
+              <Box display="flex" alignItems="center" justifyContent="space-between">
+                <Box>
+                  <Typography variant="h4" fontWeight="bold">
+                    {testResults.length}
                   </Typography>
-                  <Typography variant="body1" sx={{ opacity: 0.9 }} paragraph>
-                    {selectedResult.detailedAnalysis?.interpretation || 
-                     selectedResult.feedback?.overall || 
-                     'Your assessment has been completed and analyzed.'}
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    Tests Completed
                   </Typography>
-                  <Box display="flex" gap={2} flexWrap="wrap">
-                    <Chip 
-                      label={`${selectedResult.answersCount}/${selectedResult.totalQuestions} Questions`} 
-                      sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} 
-                    />
-                    <Chip 
-                      label={formatTime(selectedResult.timeSpent)} 
-                      sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} 
-                    />
-                    {selectedResult.percentile && (
-                      <Chip 
-                        label={`${selectedResult.percentile}th Percentile`} 
-                        sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} 
-                      />
-                    )}
-                  </Box>
-                </Grid>
-                <Grid item xs={12} md={3}>
-                  <Box textAlign="center">
-                    <Button 
-                      variant="outlined" 
-                      size="large"
-                      sx={{ 
-                        color: 'white', 
-                        borderColor: 'rgba(255,255,255,0.5)',
-                        '&:hover': { 
-                          borderColor: 'white',
-                          bgcolor: 'rgba(255,255,255,0.1)'
-                        }
-                      }}
-                      onClick={() => setTabValue(3)}
-                      startIcon={<Insights />}
-                    >
-                      View Detailed Analysis
-                    </Button>
-                  </Box>
-                </Grid>
-              </Grid>
+                </Box>
+                <Assessment sx={{ fontSize: 40, opacity: 0.8 }} />
+              </Box>
             </CardContent>
           </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ 
+            background: `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${theme.palette.success.dark} 100%)`,
+            color: 'white'
+          }}>
+            <CardContent>
+              <Box display="flex" alignItems="center" justifyContent="space-between">
+                <Box>
+                  <Typography variant="h4" fontWeight="bold">
+                    {calculateAverageScore()}%
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    Average Score
+                  </Typography>
+                </Box>
+                <BarChart sx={{ fontSize: 40, opacity: 0.8 }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ 
+            background: `linear-gradient(135deg, ${theme.palette.info.main} 0%, ${theme.palette.info.dark} 100%)`,
+            color: 'white'
+          }}>
+            <CardContent>
+              <Box display="flex" alignItems="center" justifyContent="space-between">
+                <Box>
+                  <Typography variant="h4" fontWeight="bold">
+                    {getBestScores().length}
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    Unique Tests
+                  </Typography>
+                </Box>
+                <EmojiEvents sx={{ fontSize: 40, opacity: 0.8 }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ 
+            background: `linear-gradient(135deg, ${theme.palette.warning.main} 0%, ${theme.palette.warning.dark} 100%)`,
+            color: 'white'
+          }}>
+            <CardContent>
+              <Box display="flex" alignItems="center" justifyContent="space-between">
+                <Box>
+                  <Typography variant="h4" fontWeight="bold">
+                    {testResults.filter(r => r.test?.jobSpecific || r.testMetadata?.jobSpecific).length}
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    Job-Specific
+                  </Typography>
+                </Box>
+                <GpsFixed sx={{ fontSize: 40, opacity: 0.8 }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Tabs */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs value={tabValue} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
+          <Tab icon={<Timeline />} label="Overview" />
+          <Tab icon={<QuestionAnswer />} label="Question Analysis" />
+          <Tab icon={<Table />} label="All Results" />
+          <Tab icon={<ShowChart />} label="Progress Analysis" />
+          <Tab icon={<Insights />} label="Detailed Feedback" />
+        </Tabs>
+      </Box>
+
+      {/* Recent Test Result Highlight */}
+      {selectedResult && (
+        <Card sx={{ mb: 4, background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`, color: 'white' }}>
+          <CardContent>
+            <Grid container spacing={3} alignItems="center">
+              <Grid item xs={12} md={3}>
+                <Box textAlign="center">
+                  <Typography variant="h2" fontWeight="bold" sx={{ fontSize: { xs: '2rem', md: '3rem' } }}>
+                    {selectedResult.overallScore}%
+                  </Typography>
+                  <Typography variant="h5" sx={{ opacity: 0.9 }}>
+                    {selectedResult.grade || 'N/A'}
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.7 }}>
+                    Overall Score
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <Typography variant="h5" gutterBottom>
+                  {selectedResult.test?.title || selectedResult.testMetadata?.title || 'Latest Test Results'}
+                </Typography>
+                <Typography variant="body1" sx={{ opacity: 0.9 }} paragraph>
+                  {selectedResult.detailedAnalysis?.interpretation || 
+                   selectedResult.feedback?.overall || 
+                   'Your assessment has been completed and analyzed.'}
+                </Typography>
+                <Box display="flex" gap={2} flexWrap="wrap">
+                  <Chip 
+                    label={`${selectedResult.answersCount}/${selectedResult.totalQuestions} Questions`} 
+                    sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} 
+                  />
+                  <Chip 
+                    label={formatTime(selectedResult.timeSpent)} 
+                    sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} 
+                  />
+                  {selectedResult.percentile && (
+                    <Chip 
+                      label={`${selectedResult.percentile}th Percentile`} 
+                      sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} 
+                    />
+                  )}
+                </Box>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <Box textAlign="center">
+                  <Button 
+                    variant="outlined" 
+                    size="large"
+                    sx={{ 
+                      color: 'white', 
+                      borderColor: 'rgba(255,255,255,0.5)',
+                      '&:hover': { 
+                        borderColor: 'white',
+                        bgcolor: 'rgba(255,255,255,0.1)'
+                      }
+                    }}
+                    onClick={() => setTabValue(3)}
+                    startIcon={<Insights />}
+                  >
+                    View Detailed Analysis
+                  </Button>
+                </Box>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
         )}
 
         {/* AI-Powered Quick Insights */}
@@ -718,10 +745,10 @@ const TestResultsPage: React.FC = () => {
 
         <TabPanel value={tabValue} index={1}>
           {/* Question Analysis Tab */}
-          {selectedResult?.questionAnalysis ? (
+          {selectedResult && (selectedResult.failedQuestions || selectedResult.correctQuestions || selectedResult.detailedResults) ? (
             <Box>
               <Typography variant="h6" gutterBottom>
-                Question Analysis for {selectedResult.test?.title || selectedResult.testMetadata?.title}
+                Question-by-Question Analysis for {selectedResult.test?.title || selectedResult.testMetadata?.title || 'Psychometric Test'}
               </Typography>
               
               {/* Summary Stats */}
@@ -733,7 +760,7 @@ const TestResultsPage: React.FC = () => {
                         <CheckCircle sx={{ fontSize: 40 }} />
                         <Box>
                           <Typography variant="h4" fontWeight="bold">
-                            {selectedResult.questionsCorrect || 0}
+                            {selectedResult.correctQuestions?.length || (selectedResult.totalQuestions - (selectedResult.failedQuestions?.length || 0))}
                           </Typography>
                           <Typography variant="body2">
                             Questions Correct
@@ -750,10 +777,10 @@ const TestResultsPage: React.FC = () => {
                         <Warning sx={{ fontSize: 40 }} />
                         <Box>
                           <Typography variant="h4" fontWeight="bold">
-                            {selectedResult.questionsIncorrect || 0}
+                            {selectedResult.failedQuestions?.length || 0}
                           </Typography>
                           <Typography variant="body2">
-                            Questions Incorrect
+                            Questions Missed
                           </Typography>
                         </Box>
                       </Box>
@@ -764,10 +791,10 @@ const TestResultsPage: React.FC = () => {
                   <Card sx={{ bgcolor: theme.palette.info.light, color: 'white' }}>
                     <CardContent>
                       <Box display="flex" alignItems="center" gap={2}>
-                        <Assessment sx={{ fontSize: 40 }} />
+                        <QuestionAnswer sx={{ fontSize: 40 }} />
                         <Box>
                           <Typography variant="h4" fontWeight="bold">
-                            {selectedResult.totalQuestions || 0}
+                            {selectedResult.totalQuestions}
                           </Typography>
                           <Typography variant="body2">
                             Total Questions
@@ -779,121 +806,217 @@ const TestResultsPage: React.FC = () => {
                 </Grid>
               </Grid>
 
-              {/* Question Details */}
-              <Grid container spacing={2}>
-                {selectedResult.questionAnalysis.map((qa, index) => {
-                  const formatAnswer = (answer: any, options?: string[]) => {
-                    if (options && typeof answer === 'number') {
-                      return options[answer] || `Option ${answer + 1}`;
-                    }
-                    if (typeof answer === 'boolean') {
-                      return answer ? 'True' : 'False';
-                    }
-                    return String(answer || 'No answer');
-                  };
-
-                  return (
-                    <Grid item xs={12} key={qa.questionId}>
-                      <Card sx={{ 
-                        border: `2px solid ${qa.isCorrect ? theme.palette.success.main : theme.palette.error.main}`,
-                        bgcolor: qa.isCorrect ? alpha(theme.palette.success.main, 0.05) : alpha(theme.palette.error.main, 0.05)
-                      }}>
+              {/* Questions You Missed */}
+              {selectedResult.failedQuestions && selectedResult.failedQuestions.length > 0 && (
+                <Card sx={{ mb: 3 }}>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom color="error.main">
+                      <ThumbDown sx={{ mr: 1, verticalAlign: 'middle' }} />
+                      Questions You Missed ({selectedResult.failedQuestions.length})
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" paragraph>
+                      Review these questions to understand areas for improvement
+                    </Typography>
+                    
+                    {selectedResult.failedQuestions.map((question, index) => (
+                      <Card key={index} variant="outlined" sx={{ mb: 2, border: '1px solid', borderColor: 'error.light' }}>
                         <CardContent>
-                          <Box display="flex" alignItems="flex-start" gap={2} mb={2}>
-                            {qa.isCorrect ? (
-                              <CheckCircle sx={{ color: theme.palette.success.main, mt: 0.5 }} />
-                            ) : (
-                              <Warning sx={{ color: theme.palette.error.main, mt: 0.5 }} />
-                            )}
-                            <Box flex={1}>
-                              <Typography variant="h6" gutterBottom>
-                                Question {index + 1}
-                                <Chip 
-                                  label={qa.isCorrect ? 'Correct' : 'Incorrect'} 
-                                  size="small" 
-                                  sx={{ 
-                                    ml: 2,
-                                    bgcolor: qa.isCorrect ? theme.palette.success.main : theme.palette.error.main,
-                                    color: 'white'
-                                  }} 
-                                />
-                                {qa.category && (
-                                  <Chip 
-                                    label={qa.category} 
-                                    size="small" 
-                                    variant="outlined"
-                                    sx={{ ml: 1 }} 
-                                  />
-                                )}
-                              </Typography>
-                              <Typography variant="body1" paragraph>
-                                {qa.question}
+                          <Grid container spacing={2}>
+                            <Grid item xs={12} sm={1}>
+                              <Box
+                                sx={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: '50%',
+                                  bgcolor: 'error.main',
+                                  color: 'white',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontWeight: 'bold'
+                                }}
+                              >
+                                {index + 1}
+                              </Box>
+                            </Grid>
+                            <Grid item xs={12} sm={11}>
+                              <Typography variant="body1" fontWeight="bold" gutterBottom>
+                                {question.question}
                               </Typography>
                               
-                              <Grid container spacing={2}>
-                                <Grid item xs={12} md={6}>
-                                  <Typography variant="subtitle2" gutterBottom color="text.secondary">
-                                    Your Answer:
+                              <Box sx={{ mb: 2 }}>
+                                <Alert severity="error" sx={{ mb: 1 }}>
+                                  <Typography variant="body2">
+                                    <strong>Your Answer:</strong> {question.yourAnswer}
                                   </Typography>
-                                  <Typography variant="body2" sx={{ 
-                                    p: 1, 
-                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                    borderRadius: 1,
-                                    border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
-                                  }}>
-                                    {formatAnswer(qa.userAnswer, qa.options)}
+                                </Alert>
+                                <Alert severity="success">
+                                  <Typography variant="body2">
+                                    <strong>Correct Answer:</strong> {question.correctAnswer}
                                   </Typography>
-                                </Grid>
-                                
-                                {qa.correctAnswer !== null && qa.correctAnswer !== undefined && (
-                                  <Grid item xs={12} md={6}>
-                                    <Typography variant="subtitle2" gutterBottom color="text.secondary">
-                                      Correct Answer:
-                                    </Typography>
-                                    <Typography variant="body2" sx={{ 
-                                      p: 1, 
-                                      bgcolor: alpha(theme.palette.success.main, 0.1),
-                                      borderRadius: 1,
-                                      border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`
-                                    }}>
-                                      {formatAnswer(qa.correctAnswer, qa.options)}
-                                    </Typography>
-                                  </Grid>
-                                )}
-                              </Grid>
+                                </Alert>
+                              </Box>
 
-                              {qa.explanation && (
-                                <Box mt={2}>
-                                  <Typography variant="subtitle2" gutterBottom color="text.secondary">
-                                    Explanation:
-                                  </Typography>
-                                  <Typography variant="body2" sx={{ 
-                                    p: 2, 
-                                    bgcolor: alpha(theme.palette.info.main, 0.05),
-                                    borderRadius: 1,
-                                    border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`
-                                  }}>
-                                    {qa.explanation}
+                              {question.explanation && (
+                                <Box sx={{ bgcolor: 'grey.50', p: 2, borderRadius: 1, mb: 1 }}>
+                                  <Typography variant="body2" color="text.secondary">
+                                    <Info sx={{ fontSize: 16, mr: 1, verticalAlign: 'middle' }} />
+                                    <strong>Explanation:</strong> {question.explanation}
                                   </Typography>
                                 </Box>
                               )}
-                            </Box>
-                          </Box>
+
+                              {question.category && (
+                                <Chip 
+                                  label={question.category.charAt(0).toUpperCase() + question.category.slice(1)} 
+                                  size="small" 
+                                  color="primary" 
+                                  variant="outlined"
+                                />
+                              )}
+                            </Grid>
+                          </Grid>
                         </CardContent>
                       </Card>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Questions You Got Right */}
+              {selectedResult.correctQuestions && selectedResult.correctQuestions.length > 0 && (
+                <Card sx={{ mb: 3 }}>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom color="success.main">
+                      <ThumbUp sx={{ mr: 1, verticalAlign: 'middle' }} />
+                      Questions You Got Right ({selectedResult.correctQuestions.length})
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" paragraph>
+                      Great job on these questions! These represent your areas of strength.
+                    </Typography>
+                    
+                    {selectedResult.correctQuestions.slice(0, 5).map((question, index) => (
+                      <Card key={index} variant="outlined" sx={{ mb: 2, border: '1px solid', borderColor: 'success.light' }}>
+                        <CardContent>
+                          <Grid container spacing={2}>
+                            <Grid item xs={12} sm={1}>
+                              <Box
+                                sx={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: '50%',
+                                  bgcolor: 'success.main',
+                                  color: 'white',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontWeight: 'bold'
+                                }}
+                              >
+                                ✓
+                              </Box>
+                            </Grid>
+                            <Grid item xs={12} sm={11}>
+                              <Typography variant="body1" fontWeight="bold" gutterBottom>
+                                {question.question}
+                              </Typography>
+                              
+                              <Alert severity="success" sx={{ mb: 1 }}>
+                                <Typography variant="body2">
+                                  <strong>Correct Answer:</strong> {question.options ? question.options[question.correctAnswer] : 'N/A'}
+                                </Typography>
+                              </Alert>
+
+                              {question.explanation && (
+                                <Box sx={{ bgcolor: 'success.50', p: 2, borderRadius: 1, mb: 1 }}>
+                                  <Typography variant="body2" color="text.secondary">
+                                    <CheckCircle sx={{ fontSize: 16, mr: 1, verticalAlign: 'middle', color: 'success.main' }} />
+                                    <strong>Why this is correct:</strong> {question.explanation}
+                                  </Typography>
+                                </Box>
+                              )}
+
+                              {question.category && (
+                                <Chip 
+                                  label={question.category.charAt(0).toUpperCase() + question.category.slice(1)} 
+                                  size="small" 
+                                  color="success" 
+                                  variant="outlined"
+                                />
+                              )}
+                            </Grid>
+                          </Grid>
+                        </CardContent>
+                      </Card>
+                    ))}
+
+                    {selectedResult.correctQuestions.length > 5 && (
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+                        + {selectedResult.correctQuestions.length - 5} more correct answers
+                      </Typography>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Performance by Category */}
+              {selectedResult.categoryScores && Object.keys(selectedResult.categoryScores).length > 0 && (
+                <Card sx={{ mb: 3 }}>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      <BarChart sx={{ mr: 1, verticalAlign: 'middle' }} />
+                      Performance by Category
+                    </Typography>
+                    <Grid container spacing={3}>
+                      {Object.entries(selectedResult.categoryScores).map(([category, score]) => (
+                        <Grid item xs={12} sm={6} md={3} key={category}>
+                          <Box textAlign="center">
+                            <Box
+                              sx={{
+                                width: 80,
+                                height: 80,
+                                borderRadius: '50%',
+                                bgcolor: score >= 80 ? 'success.light' : score >= 60 ? 'warning.light' : 'error.light',
+                                color: 'white',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 'bold',
+                                fontSize: '1.5rem',
+                                mx: 'auto',
+                                mb: 2
+                              }}
+                            >
+                              {score}%
+                            </Box>
+                            <Typography variant="body1" fontWeight="bold" gutterBottom sx={{ textTransform: 'capitalize' }}>
+                              {category.replace(/([A-Z])/g, ' $1').trim()}
+                            </Typography>
+                            <LinearProgress
+                              variant="determinate"
+                              value={score}
+                              color={score >= 80 ? 'success' : score >= 60 ? 'warning' : 'error'}
+                              sx={{ height: 6, borderRadius: 3 }}
+                            />
+                          </Box>
+                        </Grid>
+                      ))}
                     </Grid>
-                  );
-                })}
-              </Grid>
+                  </CardContent>
+                </Card>
+              )}
             </Box>
           ) : (
             <Box textAlign="center" py={8}>
-              <QuestionAnswer sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+              <QuestionAnswer sx={{ fontSize: 80, color: 'grey.400', mb: 2 }} />
               <Typography variant="h6" color="text.secondary" gutterBottom>
-                Question Analysis Not Available
+                No Question Analysis Available
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {selectedResult ? 'Question details are not available for this test result.' : 'Please select a test result to view question analysis.'}
+                {selectedResult ? 
+                  'This test result does not contain detailed question-by-question analysis.' : 
+                  'Select a test result to view detailed question analysis.'
+                }
               </Typography>
             </Box>
           )}

@@ -82,6 +82,17 @@ class SmartTestService {
     return handleApiResponse(response);
   }
 
+  // Get admin uploaded smart tests
+  async getAdminSmartTests(): Promise<any[]> {
+    try {
+      const response = await apiGet<any>('/smart-tests/admin');
+      return handleApiResponse(response);
+    } catch (error) {
+      console.error('Error fetching admin smart tests:', error);
+      return [];
+    }
+  }
+
   // Get smart test by ID
   async getSmartTestById(testId: string): Promise<SmartTest> {
     const response = await apiGet<any>(`/smart-tests/${testId}`);

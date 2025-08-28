@@ -233,12 +233,12 @@ const ProfileCompletionDashboard: React.FC<ProfileCompletionDashboardProps> = ({
                   size="large"
                   startIcon={<Edit />}
                   onClick={() => {
-                    console.log('🚀 Complete Profile button clicked - navigating to profile');
+                    console.log(`🚀 ${completionPercentage >= 80 ? 'Update' : 'Complete'} Profile button clicked - navigating to profile`);
                     onEditProfile();
                   }}
                   sx={{ mb: 2, minWidth: 200 }}
                 >
-                  Complete Profile
+                  {completionPercentage >= 80 ? 'Update Profile' : 'Complete Profile'}
                 </Button>
                 <Typography variant="body2" color="textSecondary">
                   {missingFields.length} fields remaining

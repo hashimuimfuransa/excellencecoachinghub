@@ -43,6 +43,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { smartTestService } from '../services/smartTestService';
+import SimpleProfileGuard from '../components/SimpleProfileGuard';
 
 interface SmartTestResult {
   _id: string;
@@ -175,6 +176,7 @@ const SmartTestResultsPage: React.FC = () => {
     const categoryPerformance = getCategoryPerformance(selectedResult);
     
     return (
+      <SimpleProfileGuard feature="smartTests">
       <Container maxWidth="lg" sx={{ py: 4 }}>
         {/* Header */}
         <Box mb={4} display="flex" justifyContent="space-between" alignItems="center">
@@ -426,10 +428,12 @@ const SmartTestResultsPage: React.FC = () => {
           </CardContent>
         </Card>
       </Container>
+      </SimpleProfileGuard>
     );
   }
 
   return (
+    <SimpleProfileGuard feature="smartTests">
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Header */}
       <Box mb={4} display="flex" justifyContent="space-between" alignItems="center">
@@ -537,6 +541,7 @@ const SmartTestResultsPage: React.FC = () => {
         </Grid>
       )}
     </Container>
+    </SimpleProfileGuard>
   );
 };
 

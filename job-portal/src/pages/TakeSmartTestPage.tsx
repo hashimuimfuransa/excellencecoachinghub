@@ -36,6 +36,7 @@ import {
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { smartTestService } from '../services/smartTestService';
+import SimpleProfileGuard from '../components/SimpleProfileGuard';
 
 interface SmartTestQuestion {
   id: string;
@@ -281,6 +282,7 @@ const TakeSmartTestPage: React.FC = () => {
   }
 
   return (
+    <SimpleProfileGuard feature="smartTests">
     <Container maxWidth="lg" sx={{ py: 2 }}>
       {/* Header with timer and progress */}
       <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
@@ -484,6 +486,7 @@ const TakeSmartTestPage: React.FC = () => {
         />
       )}
     </Container>
+    </SimpleProfileGuard>
   );
 };
 

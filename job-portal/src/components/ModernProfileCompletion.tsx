@@ -101,7 +101,7 @@ const ModernProfileCompletion: React.FC<ModernProfileCompletionProps> = ({
       icon: <Person />,
       completed: !!(currentUser?.firstName && currentUser?.lastName && currentUser?.phone && currentUser?.location),
       completionScore: 25,
-      action: () => window.location.href = '/app/profile',
+      action: () => window.location.href = '/app/profile?edit=true',
       priority: 'high'
     },
     {
@@ -111,7 +111,7 @@ const ModernProfileCompletion: React.FC<ModernProfileCompletionProps> = ({
       icon: <Work />,
       completed: !!(currentUser?.experience?.length > 0),
       completionScore: 30,
-      action: () => window.location.href = '/app/profile',
+      action: () => window.location.href = '/app/profile?edit=true',
       priority: 'high'
     },
     {
@@ -121,7 +121,7 @@ const ModernProfileCompletion: React.FC<ModernProfileCompletionProps> = ({
       icon: <Star />,
       completed: !!(currentUser?.skills?.length > 2),
       completionScore: 25,
-      action: () => window.location.href = '/app/profile',
+      action: () => window.location.href = '/app/profile?edit=true',
       priority: 'medium'
     },
     {
@@ -131,7 +131,7 @@ const ModernProfileCompletion: React.FC<ModernProfileCompletionProps> = ({
       icon: <School />,
       completed: !!(currentUser?.education?.length > 0),
       completionScore: 20,
-      action: () => window.location.href = '/app/profile',
+      action: () => window.location.href = '/app/profile?edit=true',
       priority: 'medium'
     }
   ];

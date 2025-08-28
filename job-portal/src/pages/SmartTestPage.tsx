@@ -61,6 +61,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { jobService } from '../services/jobService';
 import { smartTestService } from '../services/smartTestService';
+import SimpleProfileGuard from '../components/SimpleProfileGuard';
 
 interface Job {
   _id: string;
@@ -338,6 +339,8 @@ const SmartTestPage: React.FC = () => {
   }
 
   return (
+    <SimpleProfileGuard feature="smartTests">
+    {/* Original content wrapped here */}
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Header */}
       <Box mb={4}>
@@ -1032,6 +1035,7 @@ const SmartTestPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
+    </SimpleProfileGuard>
   );
 };
 

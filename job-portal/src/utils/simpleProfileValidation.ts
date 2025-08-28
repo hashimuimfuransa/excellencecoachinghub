@@ -10,6 +10,7 @@ export interface SimpleProfileValidationResult {
     psychometricTests: boolean;
     aiInterviews: boolean;
     premiumJobs: boolean;
+    smartTests: boolean;
   };
   completedSections: {
     [key: string]: boolean;
@@ -31,6 +32,7 @@ export function validateProfileSimple(user: User): SimpleProfileValidationResult
       psychometricTests: false,
       aiInterviews: false,
       premiumJobs: false,
+      smartTests: false,
     },
     completedSections: {
       basic: false,
@@ -115,11 +117,13 @@ export function validateProfileSimple(user: User): SimpleProfileValidationResult
     let psychometricAccess = false;
     let aiInterviewAccess = false;
     let premiumJobAccess = false;
+    let smartTestAccess = false;
     
     try {
       psychometricAccess = completionPercentage >= 40;
       aiInterviewAccess = completionPercentage >= 60 && hasFieldValue(user, 'resume');
       premiumJobAccess = completionPercentage >= 80;
+      smartTestAccess = completionPercentage >= 65 && hasFieldValue(user, 'skills') && hasFieldValue(user, 'jobTitle');
     } catch (accessError) {
       console.warn('Error calculating feature access:', accessError);
     }
@@ -127,7 +131,8 @@ export function validateProfileSimple(user: User): SimpleProfileValidationResult
     const canAccessFeatures = {
       psychometricTests: psychometricAccess,
       aiInterviews: aiInterviewAccess,
-      premiumJobs: premiumJobAccess
+      premiumJobs: premiumJobAccess,
+      smartTests: smartTestAccess
     };
     
     // Calculate completed sections safely

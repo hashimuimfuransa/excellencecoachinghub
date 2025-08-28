@@ -36,7 +36,7 @@ export const sendPasswordResetEmail = async (
       to_name: userName,
       reset_url: resetUrl,
       link: resetUrl,  // Alternative parameter name
-      from_name: 'Excellence Coaching Hub - Job Portal',
+      from_name: 'ExJobNet - Dynamic Career Platform',
 
       // EmailJS service configuration (recipient email)
       // Try all common parameter names for recipient
@@ -49,8 +49,8 @@ export const sendPasswordResetEmail = async (
       send_to: userEmail,
 
       // Additional parameters for compatibility
-      message: `Hi ${userName}!\n\nYou requested a password reset for your Excellence Coaching Hub Job Portal account. Click the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in 10 minutes for security reasons.\n\nIf you didn't request this, please ignore this email.\n\nBest regards,\nExcellence Coaching Hub Team`,
-      subject: 'Password Reset - Excellence Coaching Hub Job Portal'
+      message: `Hi ${userName}!\n\nYou requested a password reset for your ExJobNet account. Click the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in 10 minutes for security reasons.\n\nIf you didn't request this, please ignore this email.\n\nBest regards,\nExJobNet Team`,
+      subject: 'Password Reset - ExJobNet Dynamic Career Platform'
     };
 
     // Check if EmailJS is properly configured
@@ -118,7 +118,7 @@ export const sendWelcomeEmail = async (
       user_role: userRole,
       dashboard_url: `${window.location.origin}/dashboard`,
       jobs_url: `${window.location.origin}/jobs`,
-      from_name: 'Excellence Coaching Hub - Job Portal',
+      from_name: 'ExJobNet - Dynamic Career Platform',
 
       // EmailJS service configuration (recipient email)
       to_email: userEmail,
@@ -129,8 +129,8 @@ export const sendWelcomeEmail = async (
       recipient: userEmail,
       send_to: userEmail,
 
-      message: `Welcome to Excellence Coaching Hub Job Portal, ${userName}!\n\nYour account has been successfully created. You can now access your dashboard and start exploring job opportunities.\n\n🚀 Dashboard: ${window.location.origin}/dashboard\n💼 Browse Jobs: ${window.location.origin}/jobs\n\nWe're excited to help you find your dream job!\n\nBest regards,\nExcellence Coaching Hub Team`,
-      subject: 'Welcome to Excellence Coaching Hub Job Portal! 🎉'
+      message: `Welcome to ExJobNet, ${userName}!\n\nYour account has been successfully created. You can now access your dashboard and start exploring job opportunities on our dynamic career platform.\n\n🚀 Dashboard: ${window.location.origin}/dashboard\n💼 Browse Jobs: ${window.location.origin}/jobs\n\nWe're excited to help you find your dream job!\n\nBest regards,\nExJobNet Team`,
+      subject: 'Welcome to ExJobNet - Dynamic Career Platform! 🎉'
     };
 
     // Check if EmailJS is properly configured
@@ -175,7 +175,7 @@ export const sendWelcomeEmail = async (
     console.log('🎉 WELCOME EMAIL (Fallback)');
     console.log('=================================');
     console.log(`To: ${userEmail}`);
-    console.log(`Welcome to Excellence Coaching Hub Job Portal, ${userName}!`);
+    console.log(`Welcome to ExJobNet, ${userName}!`);
     console.log('=================================');
     return false;
   }
@@ -210,9 +210,9 @@ export const testEmailJSConnection = async (testEmail: string): Promise<boolean>
       recipient_name: 'Test User',
 
       // Sender and content
-      from_name: 'Excellence Coaching Hub - Job Portal',
-      message: 'This is a test email from Excellence Coaching Hub Job Portal.',
-      subject: 'Test Email - Job Portal'
+      from_name: 'ExJobNet - Dynamic Career Platform',
+      message: 'This is a test email from ExJobNet Dynamic Career Platform.',
+      subject: 'Test Email - ExJobNet'
     };
 
     console.log('📧 Sending test email with params:', testParams);

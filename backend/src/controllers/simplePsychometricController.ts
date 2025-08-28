@@ -343,15 +343,30 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
       ? Math.round((new Date().getTime() - testSession.startedAt.getTime()) / (1000 * 60))
       : testSession.timeLimit || 30; // Default to test time limit if no start time
 
+    // Safely extract job information
+    const jobInfo = testSession.job as any;
+    const jobTitle = jobInfo?.title || 'Unknown Position';
+    const jobId = jobInfo?._id || testSession.job;
+
+    // Validate job information before proceeding
+    if (!jobId) {
+      console.error('❌ Missing job ID in test session');
+      return res.status(500).json({
+        success: false,
+        error: 'Invalid test session - missing job information',
+        message: 'Test session is corrupted and cannot be processed'
+      });
+    }
+
     // Generate category scores and interpretation
     const categoryScores = calculateCategoryScores(detailedResults);
-    const interpretation = generateInterpretation(scorePercentage, categoryScores, (testSession.job as any).title);
-    const recommendations = generateRecommendations(scorePercentage, (testSession.job as any).title);
+    const interpretation = generateInterpretation(scorePercentage, categoryScores, jobTitle);
+    const recommendations = generateRecommendations(scorePercentage, jobTitle);
 
     // Create or update test result record - match the PsychometricTestResult model schema
     const resultData = {
       user: userId,
-      job: testSession.job._id,
+      job: jobId,
       answers: answers, // Array of user's selected answers
       scores: categoryScores, // Category-wise scores object
       overallScore: scorePercentage, // Direct field, not nested
@@ -416,7 +431,7 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
     let testResult = await PsychometricTestResult.findOne({
       user: userId,
       'testMetadata.testId': testSession._id.toString(),
-      job: testSession.job._id
+      job: jobId
     });
 
     if (testResult) {
@@ -676,79 +691,116 @@ export const getDetailedTestResult = async (req: AuthRequest, res: Response) => 
 
 // Helper functions
 function calculateCategoryScores(detailedResults: any[]) {
+  if (!Array.isArray(detailedResults) || detailedResults.length === 0) {
+    console.warn('⚠️ Empty or invalid detailedResults array');
+    return { general: 0 };
+  }
+
   const categories: { [key: string]: { correct: number; total: number } } = {};
 
   detailedResults.forEach(result => {
-    if (!categories[result.category]) {
-      categories[result.category] = { correct: 0, total: 0 };
+    // Safely handle missing category
+    const category = result?.category || 'general';
+    
+    if (!categories[category]) {
+      categories[category] = { correct: 0, total: 0 };
     }
-    categories[result.category].total++;
-    if (result.isCorrect) {
-      categories[result.category].correct++;
+    categories[category].total++;
+    if (result?.isCorrect === true) {
+      categories[category].correct++;
     }
   });
 
   const categoryScores: { [key: string]: number } = {};
   Object.keys(categories).forEach(category => {
-    categoryScores[category] = Math.round(
-      (categories[category].correct / categories[category].total) * 100
-    );
+    const categoryData = categories[category];
+    if (categoryData && categoryData.total > 0) {
+      categoryScores[category] = Math.round(
+        (categoryData.correct / categoryData.total) * 100
+      );
+    } else {
+      categoryScores[category] = 0;
+    }
   });
 
   return categoryScores;
 }
 
 function generateInterpretation(score: number, categoryScores: { [key: string]: number }, jobTitle: string): string {
-  let interpretation = `Based on your psychometric assessment for the ${jobTitle} position, you scored ${score}% overall. `;
+  // Safely handle invalid inputs
+  const safeScore = typeof score === 'number' && score >= 0 && score <= 100 ? score : 0;
+  const safeJobTitle = typeof jobTitle === 'string' && jobTitle.trim() ? jobTitle : 'this position';
+  const safeCategoryScores = categoryScores && typeof categoryScores === 'object' ? categoryScores : {};
 
-  if (score >= 90) {
+  let interpretation = `Based on your psychometric assessment for the ${safeJobTitle} position, you scored ${safeScore}% overall. `;
+
+  if (safeScore >= 90) {
     interpretation += "This is an exceptional performance that demonstrates outstanding aptitude for this role. ";
-  } else if (score >= 80) {
+  } else if (safeScore >= 80) {
     interpretation += "This is an excellent performance that shows strong suitability for this position. ";
-  } else if (score >= 70) {
+  } else if (safeScore >= 70) {
     interpretation += "This is a good performance that indicates solid potential for this role. ";
-  } else if (score >= 60) {
+  } else if (safeScore >= 60) {
     interpretation += "This is an average performance with room for improvement in key areas. ";
   } else {
     interpretation += "This performance suggests significant development is needed for this role. ";
   }
 
-  // Add category-specific feedback
-  const categories = Object.keys(categoryScores);
-  if (categories.length > 0) {
-    interpretation += "Your performance across different categories shows: ";
-    const strengths = categories.filter(cat => categoryScores[cat] >= 75);
-    const improvements = categories.filter(cat => categoryScores[cat] < 60);
+  // Add category-specific feedback with error handling
+  try {
+    const categories = Object.keys(safeCategoryScores);
+    if (categories.length > 0) {
+      interpretation += "Your performance across different categories shows: ";
+      const strengths = categories.filter(cat => safeCategoryScores[cat] && safeCategoryScores[cat] >= 75);
+      const improvements = categories.filter(cat => safeCategoryScores[cat] != null && safeCategoryScores[cat] < 60);
 
-    if (strengths.length > 0) {
-      interpretation += `strong performance in ${strengths.join(', ')} (${strengths.map(cat => categoryScores[cat] + '%').join(', ')}). `;
+      if (strengths.length > 0) {
+        interpretation += `strong performance in ${strengths.join(', ')} (${strengths.map(cat => (safeCategoryScores[cat] || 0) + '%').join(', ')}). `;
+      }
+      
+      if (improvements.length > 0) {
+        interpretation += `Areas for development include ${improvements.join(', ')} (${improvements.map(cat => (safeCategoryScores[cat] || 0) + '%').join(', ')}). `;
+      }
     }
-    
-    if (improvements.length > 0) {
-      interpretation += `Areas for development include ${improvements.join(', ')} (${improvements.map(cat => categoryScores[cat] + '%').join(', ')}). `;
-    }
+  } catch (error) {
+    console.warn('⚠️ Error generating category-specific interpretation:', error);
   }
 
-  interpretation += `This assessment provides insights into your readiness for the ${jobTitle} position and highlights areas for professional development.`;
+  interpretation += `This assessment provides insights into your readiness for the ${safeJobTitle} position and highlights areas for professional development.`;
   
   return interpretation;
 }
 
 function generateRecommendations(score: number, jobTitle: string): string[] {
   const recommendations: string[] = [];
+  
+  // Safely handle invalid inputs
+  const safeScore = typeof score === 'number' && score >= 0 && score <= 100 ? score : 0;
+  const safeJobTitle = typeof jobTitle === 'string' && jobTitle.trim() ? jobTitle : 'this position';
 
-  if (score >= 80) {
-    recommendations.push(`Excellent performance! You show strong aptitude for the ${jobTitle} position.`);
-    recommendations.push('Consider applying for senior-level positions in your field.');
-  } else if (score >= 60) {
-    recommendations.push(`Good performance on the ${jobTitle} assessment.`);
-    recommendations.push('Focus on developing specific skills mentioned in the job requirements.');
-    recommendations.push('Consider taking additional courses to strengthen your knowledge base.');
-  } else {
-    recommendations.push(`Your performance indicates room for improvement for the ${jobTitle} position.`);
-    recommendations.push('Consider gaining more experience or education in the required areas.');
-    recommendations.push('Practice similar assessments to improve your test-taking skills.');
-    recommendations.push('Review the job requirements and focus on developing those specific skills.');
+  try {
+    if (safeScore >= 80) {
+      recommendations.push(`Excellent performance! You show strong aptitude for the ${safeJobTitle} position.`);
+      recommendations.push('Consider applying for senior-level positions in your field.');
+    } else if (safeScore >= 60) {
+      recommendations.push(`Good performance on the ${safeJobTitle} assessment.`);
+      recommendations.push('Focus on developing specific skills mentioned in the job requirements.');
+      recommendations.push('Consider taking additional courses to strengthen your knowledge base.');
+    } else {
+      recommendations.push(`Your performance indicates room for improvement for the ${safeJobTitle} position.`);
+      recommendations.push('Consider gaining more experience or education in the required areas.');
+      recommendations.push('Practice similar assessments to improve your test-taking skills.');
+      recommendations.push('Review the job requirements and focus on developing those specific skills.');
+    }
+  } catch (error) {
+    console.warn('⚠️ Error generating recommendations:', error);
+    recommendations.push('Continue practicing and developing your skills.');
+    recommendations.push('Consider seeking feedback from mentors or professionals in your field.');
+  }
+
+  // Ensure we always return at least one recommendation
+  if (recommendations.length === 0) {
+    recommendations.push('Keep working on improving your skills and knowledge.');
   }
 
   return recommendations;

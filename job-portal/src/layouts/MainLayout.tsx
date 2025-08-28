@@ -93,7 +93,7 @@ const MainLayout: React.FC = () => {
   useEffect(() => {
     const isDashboardPage = location.pathname === '/app' || location.pathname === '/app/dashboard' || location.pathname === '/app/';
     if (isDashboardPage && hasCheckedCareerTest) {
-      console.log('🔄 [Job Portal] Resetting career test check for dashboard visit');
+      console.log('🔄 [ExJobNet] Resetting career test check for dashboard visit');
       setHasCheckedCareerTest(false);
     }
   }, [location.pathname, hasCheckedCareerTest]);
@@ -101,7 +101,7 @@ const MainLayout: React.FC = () => {
   // Check for job readiness test completion and show popup
   useEffect(() => {
     const checkCareerTestStatus = async () => {
-      console.log('🔍 [Job Portal] Checking career test status...', {
+      console.log('🔍 [ExJobNet] Checking career test status...', {
         user: user?.email,
         role: user?.role,
         isEmployer: hasRole(UserRole.EMPLOYER),
@@ -511,7 +511,7 @@ const MainLayout: React.FC = () => {
         >
           <Work sx={{ color: 'primary.main', mr: 1, fontSize: 28 }} />
           <Typography variant="h6" fontWeight="bold" noWrap component="div">
-            Job Portal
+            ExJobNet
           </Typography>
         </Box>
       </Toolbar>
@@ -577,7 +577,7 @@ const MainLayout: React.FC = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 'medium' }}>
-            Excellence Coaching Hub - Job Portal
+            ExJobNet - Dynamic Career Platform
           </Typography>
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

@@ -203,17 +203,45 @@ export const deletePsychometricTest = async (req: AuthRequest, res: Response) =>
 
 // Take psychometric test
 export const takePsychometricTest = async (req: AuthRequest, res: Response) => {
+  // Ensure proper Content-Type header for JSON response
+  res.setHeader('Content-Type', 'application/json');
+  
   try {
+    console.log('📝 Processing test submission...');
+    
     const { testId } = req.params;
-    const { answers, jobId, timeSpent, testData } = req.body;
+    const { answers, jobId, timeSpent, testData, sessionId } = req.body;
     const userId = req.user?.id;
 
+    // Validate required data
     if (!userId) {
       return res.status(401).json({
         success: false,
-        error: 'User not authenticated'
+        error: 'User not authenticated',
+        message: 'Please log in to submit test answers',
+        timestamp: new Date().toISOString()
       });
     }
+
+    if (!answers || typeof answers !== 'object' || Object.keys(answers).length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid test answers',
+        message: 'Test answers are required and must be provided',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (!testId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid test ID',
+        message: 'Test ID is required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    console.log('✅ Initial validation passed');
 
     let test: any;
     let isGeneratedTest = false;
@@ -241,7 +269,9 @@ export const takePsychometricTest = async (req: AuthRequest, res: Response) => {
         if (!testData || !testData.test) {
           return res.status(400).json({
             success: false,
-            error: 'Test not found. Please generate a new test.'
+            error: 'Test not found. Please generate a new test.',
+            message: 'The requested test could not be found. Please generate a new test and try again.',
+            timestamp: new Date().toISOString()
           });
         }
         test = testData.test;
@@ -253,7 +283,9 @@ export const takePsychometricTest = async (req: AuthRequest, res: Response) => {
       if (!mongoose.Types.ObjectId.isValid(testId)) {
         return res.status(400).json({
           success: false,
-          error: 'Invalid test ID format'
+          error: 'Invalid test ID format',
+          message: 'The provided test ID is not in a valid format',
+          timestamp: new Date().toISOString()
         });
       }
       
@@ -261,17 +293,23 @@ export const takePsychometricTest = async (req: AuthRequest, res: Response) => {
       if (!test) {
         return res.status(404).json({
           success: false,
-          error: 'Psychometric test not found'
+          error: 'Psychometric test not found',
+          message: 'The requested psychometric test could not be found',
+          timestamp: new Date().toISOString()
         });
       }
 
       if (!test.isActive) {
         return res.status(400).json({
           success: false,
-          error: 'This test is not currently available'
+          error: 'This test is not currently available',
+          message: 'The requested test is currently inactive and cannot be taken',
+          timestamp: new Date().toISOString()
         });
       }
     }
+
+    console.log('✅ Test validation completed');
 
     // Check if user has valid access to take this test (payment verification)
     if (!isGeneratedTest) {
@@ -280,8 +318,10 @@ export const takePsychometricTest = async (req: AuthRequest, res: Response) => {
         return res.status(403).json({
           success: false,
           error: accessCheck.reason || 'You do not have access to this test',
-          purchase: accessCheck.purchase,
-          requiresPayment: !accessCheck.purchase
+          message: 'Access denied. Please purchase the test or check your existing purchase.',
+          purchase: accessCheck.purchase || null,
+          requiresPayment: !accessCheck.purchase,
+          timestamp: new Date().toISOString()
         });
       }
       
@@ -297,6 +337,8 @@ export const takePsychometricTest = async (req: AuthRequest, res: Response) => {
     let interpretation = 'Test completed successfully.';
     let recommendations = ['Continue practicing to improve your skills.'];
 
+    console.log('⚡ Starting AI grading...');
+
     try {
       // Try AI grading
       const aiGrading = await aiService.gradePsychometricTest({
@@ -311,9 +353,28 @@ export const takePsychometricTest = async (req: AuthRequest, res: Response) => {
       interpretation = aiGrading.interpretation;
       recommendations = aiGrading.recommendations;
       
-    } catch (error) {
-      console.error('AI grading failed, using fallback scoring:', error);
-      // Fallback scoring could be implemented here
+      console.log('✅ AI grading completed successfully');
+      
+    } catch (aiError) {
+      console.error('AI grading failed, using fallback scoring:', aiError);
+      
+      // Implement fallback scoring logic
+      const totalQuestions = test.questions ? test.questions.length : 1;
+      const answeredQuestions = Object.keys(answers).length;
+      overallScore = Math.min(100, Math.max(0, (answeredQuestions / totalQuestions) * 100));
+      
+      scores = {
+        accuracy: overallScore,
+        completion: (answeredQuestions / totalQuestions) * 100,
+        timeEfficiency: timeSpent ? Math.max(0, 100 - (timeSpent / 60)) : 50
+      };
+      
+      interpretation = `Test completed with ${overallScore.toFixed(1)}% accuracy. This score is based on completion rate due to AI grading being temporarily unavailable.`;
+      recommendations = [
+        'Review the test questions and practice similar problems',
+        'Consider retaking the test when system resources are available for detailed analysis',
+        'Focus on areas where you spent more time or left questions unanswered'
+      ];
     }
 
     // Save test result
@@ -326,7 +387,8 @@ export const takePsychometricTest = async (req: AuthRequest, res: Response) => {
       overallScore,
       interpretation,
       recommendations,
-      timeSpent,
+      timeSpent: timeSpent || 0,
+      sessionId: sessionId || undefined,
       testMetadata: isGeneratedTest ? {
         testId,
         testType: test.type,
@@ -351,16 +413,31 @@ export const takePsychometricTest = async (req: AuthRequest, res: Response) => {
       return res.status(500).json({
         success: false,
         error: 'Failed to retrieve saved test result',
-        message: 'Test was saved but could not be retrieved'
+        message: 'Test was saved but could not be retrieved. Please contact support if this persists.',
+        testResultId: testResult._id.toString(),
+        timestamp: new Date().toISOString()
       });
     }
 
     console.log('✅ Test result populated successfully, sending response...');
-    res.status(200).json({
+    
+    // Ensure response is properly structured
+    const response = {
       success: true,
       data: populatedResult,
-      message: 'Test completed successfully'
-    });
+      message: 'Test completed successfully',
+      metadata: {
+        testId,
+        isGeneratedTest,
+        overallScore,
+        timeSpent: timeSpent || 0,
+        answeredQuestions: Object.keys(answers).length,
+        totalQuestions: test.questions ? test.questions.length : 0
+      },
+      timestamp: new Date().toISOString()
+    };
+
+    res.status(200).json(response);
     console.log('📤 Response sent successfully');
 
   } catch (error: any) {
@@ -369,14 +446,32 @@ export const takePsychometricTest = async (req: AuthRequest, res: Response) => {
     
     // Ensure we always send a proper JSON response
     if (!res.headersSent) {
-      res.status(500).json({
+      const errorResponse = {
         success: false,
         error: 'Failed to process test submission',
-        message: error.message || 'Unknown error occurred during test submission',
-        timestamp: new Date().toISOString()
-      });
+        message: error.message || 'An unexpected error occurred during test submission. Please try again.',
+        details: process.env.NODE_ENV === 'development' ? {
+          stack: error.stack,
+          name: error.name
+        } : undefined,
+        timestamp: new Date().toISOString(),
+        requestId: req.headers['x-request-id'] || 'unknown'
+      };
+
+      // Set proper headers before sending response
+      res.setHeader('Content-Type', 'application/json');
+      res.status(500).json(errorResponse);
     } else {
       console.error('❌ Headers already sent, cannot send error response');
+      
+      // Log this critical error for monitoring
+      console.error('CRITICAL: Headers already sent but error occurred:', {
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString(),
+        userId: req.user?.id,
+        testId: req.params?.testId
+      });
     }
   }
 };

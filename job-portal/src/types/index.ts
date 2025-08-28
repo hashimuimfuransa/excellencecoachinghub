@@ -1,4 +1,4 @@
-// Job Portal specific types and enums
+// ExJobNet specific types and enums
 export enum UserRole {
   ADMIN = 'admin',
   TEACHER = 'teacher',
@@ -76,7 +76,7 @@ export enum CertificateType {
   PSYCHOMETRIC_ACHIEVEMENT = 'psychometric_achievement'
 }
 
-// Job Portal specific types
+// ExJobNet specific types
 export interface User {
   _id: string;
   firstName: string;

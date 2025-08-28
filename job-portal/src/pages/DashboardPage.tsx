@@ -37,6 +37,7 @@ import {
   DialogActions
 } from '@mui/material';
 import ProfileCompletionDashboard from '../components/ProfileCompletionDashboard';
+import FloatingContact from '../components/FloatingContact';
 import {
   Work,
   Person,
@@ -2014,6 +2015,9 @@ const DashboardPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      
+      {/* Floating Contact Component */}
+      <FloatingContact />
     </Container>
   );
 };

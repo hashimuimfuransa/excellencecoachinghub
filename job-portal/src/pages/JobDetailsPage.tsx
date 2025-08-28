@@ -58,7 +58,8 @@ import {
   LinkedIn,
   Twitter,
   Home,
-  Assignment
+  Assignment,
+  SmartToy
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { jobService } from '../services/jobService';
@@ -224,6 +225,12 @@ const JobDetailsPage: React.FC = () => {
   };
 
   const handleApply = () => {
+    // If it's an external job, redirect to external URL
+    if (job?.isExternalJob && job?.externalApplicationUrl) {
+      window.open(job.externalApplicationUrl, '_blank');
+      return;
+    }
+    
     // Always show the apply dialog, authentication is handled within the dialog
     setApplyDialogOpen(true);
   };
@@ -356,6 +363,23 @@ const JobDetailsPage: React.FC = () => {
                 <Typography variant="h6" color="primary.main" gutterBottom sx={{ fontWeight: 600 }}>
                   {job.company || 'Company not specified'}
                 </Typography>
+                
+                {/* External Job Source */}
+                {job.isExternalJob && job.externalJobSource && (
+                  <Box sx={{ mb: 1 }}>
+                    <Chip
+                      icon={<Language />}
+                      label={`Source: ${job.externalJobSource}`}
+                      size="small"
+                      sx={{
+                        bgcolor: alpha(theme.palette.secondary.main, 0.1),
+                        color: theme.palette.secondary.main,
+                        border: `1px solid ${alpha(theme.palette.secondary.main, 0.3)}`,
+                        fontWeight: 'bold'
+                      }}
+                    />
+                  </Box>
+                )}
               </Box>
               <Stack direction="row" spacing={2} flexWrap="wrap" sx={{ mb: 2 }}>
                 <Box display="flex" alignItems="center" sx={{ 
@@ -1105,7 +1129,7 @@ const JobDetailsPage: React.FC = () => {
                   }
                 }}
               >
-                Prepare for Job
+                🎯 Get Position Ready
               </Button>
 
               <Stack direction="row" spacing={1}>
@@ -1795,96 +1819,263 @@ const JobDetailsPage: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Prepare Dialog */}
-      <Dialog open={prepareDialogOpen} onClose={() => setPrepareDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ textAlign: 'center' }}>
-          <Typography variant="h4" fontWeight="bold" color="primary.main">
-            Get Prepared for {job?.title}
-          </Typography>
-          <Typography variant="subtitle1" color="text.secondary">
-            Choose your preparation path
+      {/* Enhanced Prepare Dialog */}
+      <Dialog open={prepareDialogOpen} onClose={() => setPrepareDialogOpen(false)} maxWidth="lg" fullWidth>
+        <DialogTitle sx={{ textAlign: 'center', pb: 1, pt: 3 }}>
+          <Box sx={{ fontWeight: 'bold', color: 'primary.main', fontSize: '1.8rem', mb: 1 }}>
+            🎯 Get Ready for {job?.title}
+          </Box>
+          <Typography variant="subtitle1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
+            Comprehensive preparation to help you excel in this position
           </Typography>
         </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={4}>
+        <DialogContent sx={{ px: 3, pb: 2 }}>
+          {/* Main Assessment Options */}
+          <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 'bold' }}>
+            🧠 Assessment & Testing
+          </Typography>
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid item xs={12} sm={6} md={3}>
               <Card 
                 sx={{ 
                   height: '100%',
                   cursor: 'pointer',
                   transition: 'all 0.3s ease',
-                  '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 }
+                  border: `2px solid ${alpha(theme.palette.warning.main, 0.2)}`,
+                  '&:hover': { 
+                    transform: 'translateY(-4px)', 
+                    boxShadow: `0 8px 25px ${alpha(theme.palette.warning.main, 0.3)}`,
+                    border: `2px solid ${theme.palette.warning.main}`
+                  }
                 }}
                 onClick={() => {
                   setPrepareDialogOpen(false);
                   navigate('/app/tests');
                 }}
               >
-                <CardContent sx={{ textAlign: 'center', p: 3 }}>
-                  <Assessment sx={{ fontSize: 48, color: theme.palette.warning.main, mb: 2 }} />
-                  <Typography variant="h6" fontWeight="bold" gutterBottom>
+                <CardContent sx={{ textAlign: 'center', p: 2 }}>
+                  <Assessment sx={{ fontSize: 40, color: theme.palette.warning.main, mb: 1.5 }} />
+                  <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ fontSize: '1rem' }}>
                     Psychometric Tests
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Assess your skills and personality fit for this role
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem' }}>
+                    Personality & cognitive assessments
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} md={4}>
+            
+            <Grid item xs={12} sm={6} md={3}>
               <Card 
                 sx={{ 
                   height: '100%',
                   cursor: 'pointer',
                   transition: 'all 0.3s ease',
-                  '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 }
+                  border: `2px solid ${alpha(theme.palette.info.main, 0.2)}`,
+                  '&:hover': { 
+                    transform: 'translateY(-4px)', 
+                    boxShadow: `0 8px 25px ${alpha(theme.palette.info.main, 0.3)}`,
+                    border: `2px solid ${theme.palette.info.main}`
+                  }
+                }}
+                onClick={() => {
+                  setPrepareDialogOpen(false);
+                  navigate('/app/smart-tests');
+                }}
+              >
+                <CardContent sx={{ textAlign: 'center', p: 2 }}>
+                  <SmartToy sx={{ fontSize: 40, color: theme.palette.info.main, mb: 1.5 }} />
+                  <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ fontSize: '1rem' }}>
+                    Smart Tests
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem' }}>
+                    AI-powered adaptive testing
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Card 
+                sx={{ 
+                  height: '100%',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  border: `2px solid ${alpha(theme.palette.secondary.main, 0.2)}`,
+                  '&:hover': { 
+                    transform: 'translateY(-4px)', 
+                    boxShadow: `0 8px 25px ${alpha(theme.palette.secondary.main, 0.3)}`,
+                    border: `2px solid ${theme.palette.secondary.main}`
+                  }
+                }}
+                onClick={() => {
+                  setPrepareDialogOpen(false);
+                  navigate('/app/job-specific-tests');
+                }}
+              >
+                <CardContent sx={{ textAlign: 'center', p: 2 }}>
+                  <Assignment sx={{ fontSize: 40, color: theme.palette.secondary.main, mb: 1.5 }} />
+                  <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ fontSize: '1rem' }}>
+                    Job-Specific Tests
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem' }}>
+                    Role-tailored assessments
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Card 
+                sx={{ 
+                  height: '100%',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  border: `2px solid ${alpha(theme.palette.success.main, 0.2)}`,
+                  '&:hover': { 
+                    transform: 'translateY(-4px)', 
+                    boxShadow: `0 8px 25px ${alpha(theme.palette.success.main, 0.3)}`,
+                    border: `2px solid ${theme.palette.success.main}`
+                  }
+                }}
+                onClick={() => {
+                  setPrepareDialogOpen(false);
+                  navigate('/app/skills-assessment');
+                }}
+              >
+                <CardContent sx={{ textAlign: 'center', p: 2 }}>
+                  <TrendingUp sx={{ fontSize: 40, color: theme.palette.success.main, mb: 1.5 }} />
+                  <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ fontSize: '1rem' }}>
+                    Skills Assessment
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem' }}>
+                    Technical & soft skills evaluation
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+
+          {/* Interview & Learning Options */}
+          <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 'bold' }}>
+            🎤 Interview & Learning
+          </Typography>
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6} md={4}>
+              <Card 
+                sx={{ 
+                  height: '100%',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  border: `2px solid ${alpha(theme.palette.error.main, 0.2)}`,
+                  '&:hover': { 
+                    transform: 'translateY(-4px)', 
+                    boxShadow: `0 8px 25px ${alpha(theme.palette.error.main, 0.3)}`,
+                    border: `2px solid ${theme.palette.error.main}`
+                  }
                 }}
                 onClick={() => {
                   setPrepareDialogOpen(false);
                   navigate('/app/interviews');
                 }}
               >
-                <CardContent sx={{ textAlign: 'center', p: 3 }}>
-                  <Person sx={{ fontSize: 48, color: theme.palette.success.main, mb: 2 }} />
+                <CardContent sx={{ textAlign: 'center', p: 2.5 }}>
+                  <Person sx={{ fontSize: 45, color: theme.palette.error.main, mb: 1.5 }} />
                   <Typography variant="h6" fontWeight="bold" gutterBottom>
                     Interview Practice
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Practice with AI-powered mock interviews
+                    AI-powered mock interviews & feedback
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
-            <Grid item xs={12} md={4}>
+
+            <Grid item xs={12} sm={6} md={4}>
               <Card 
                 sx={{ 
                   height: '100%',
                   cursor: 'pointer',
                   transition: 'all 0.3s ease',
-                  '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 }
+                  border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                  '&:hover': { 
+                    transform: 'translateY(-4px)', 
+                    boxShadow: `0 8px 25px ${alpha(theme.palette.primary.main, 0.3)}`,
+                    border: `2px solid ${theme.palette.primary.main}`
+                  }
                 }}
                 onClick={() => {
                   window.open('https://www.elearning.excellencecoachinghub.com/', '_blank');
                   setPrepareDialogOpen(false);
                 }}
               >
-                <CardContent sx={{ textAlign: 'center', p: 3 }}>
-                  <School sx={{ fontSize: 48, color: theme.palette.primary.main, mb: 2 }} />
+                <CardContent sx={{ textAlign: 'center', p: 2.5 }}>
+                  <School sx={{ fontSize: 45, color: theme.palette.primary.main, mb: 1.5 }} />
                   <Typography variant="h6" fontWeight="bold" gutterBottom>
-                    Skill Courses
+                    Skill Development
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Learn the skills required for this position
+                    Learn required skills for this position
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={4}>
+              <Card 
+                sx={{ 
+                  height: '100%',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  border: `2px solid ${alpha(theme.palette.success.main, 0.2)}`,
+                  '&:hover': { 
+                    transform: 'translateY(-4px)', 
+                    boxShadow: `0 8px 25px ${alpha(theme.palette.success.main, 0.3)}`,
+                    border: `2px solid ${theme.palette.success.main}`
+                  }
+                }}
+                onClick={() => {
+                  setPrepareDialogOpen(false);
+                  navigate('/app/career-guidance');
+                }}
+              >
+                <CardContent sx={{ textAlign: 'center', p: 2.5 }}>
+                  <Psychology sx={{ fontSize: 45, color: theme.palette.success.main, mb: 1.5 }} />
+                  <Typography variant="h6" fontWeight="bold" gutterBottom>
+                    Career Guidance
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Get personalized career advice & tips
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
           </Grid>
+
+          {/* Quick Tips */}
+          <Box 
+            sx={{ 
+              mt: 3, 
+              p: 2, 
+              bgcolor: alpha(theme.palette.info.main, 0.05),
+              borderRadius: 2,
+              border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`
+            }}
+          >
+            <Typography variant="body2" color="info.main" fontWeight="bold" sx={{ mb: 1 }}>
+              💡 Pro Tip for {job?.title}:
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Start with our Smart Tests for personalized assessment, then move to job-specific tests based on your results. 
+              Complete with interview practice for the best preparation experience!
+            </Typography>
+          </Box>
         </DialogContent>
-        <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
+        <DialogActions sx={{ justifyContent: 'center', pb: 3, pt: 1 }}>
           <Button
             onClick={() => setPrepareDialogOpen(false)}
             variant="outlined"
+            sx={{ minWidth: 120 }}
           >
             Close
           </Button>
@@ -1895,8 +2086,15 @@ const JobDetailsPage: React.FC = () => {
                 navigate('/register');
               }}
               variant="contained"
+              sx={{ 
+                minWidth: 140,
+                background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
+                '&:hover': {
+                  background: `linear-gradient(45deg, ${theme.palette.primary.dark} 30%, ${theme.palette.secondary.dark} 90%)`,
+                }
+              }}
             >
-              Register to Start
+              🚀 Start Preparing
             </Button>
           )}
         </DialogActions>

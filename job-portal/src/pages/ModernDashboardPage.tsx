@@ -28,6 +28,7 @@ import {
   Badge,
   Snackbar
 } from '@mui/material';
+import FloatingContact from '../components/FloatingContact';
 import {
   Work,
   Person,
@@ -760,6 +761,8 @@ const ModernDashboardPage: React.FC = () => {
         </Alert>
       </Snackbar>
 
+      {/* Floating Contact Component */}
+      <FloatingContact />
 
     </Container>
   );

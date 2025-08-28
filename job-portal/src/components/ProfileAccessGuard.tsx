@@ -27,7 +27,8 @@ import {
   School,
   Code,
   Phone,
-  Email
+  Email,
+  SmartToy
 } from '@mui/icons-material';
 import { User } from '../types/user';
 import { validateProfile, getFieldDisplayName } from '../utils/profileValidation';
@@ -37,7 +38,7 @@ import { useFreshUserData } from '../hooks/useFreshUserData';
 
 interface ProfileAccessGuardProps {
   user: User;
-  feature: 'psychometricTests' | 'aiInterviews' | 'premiumJobs';
+  feature: 'psychometricTests' | 'aiInterviews' | 'premiumJobs' | 'smartTests';
   children: React.ReactNode;
 }
 
@@ -129,6 +130,17 @@ const ProfileAccessGuard: React.FC<ProfileAccessGuardProps> = ({
             'firstName', 'lastName', 'email', 'phone', 'location',
             'jobTitle', 'experience', 'education', 'skills', 'resume',
             'expectedSalary', 'jobPreferences'
+          ]
+        };
+      case 'smartTests':
+        return {
+          title: 'Smart Job Tests',
+          icon: <SmartToy sx={{ fontSize: 48, color: 'info.main' }} />,
+          description: 'AI-powered job-specific tests to prepare for your target positions',
+          requiredCompletion: 65,
+          requiredFields: [
+            'firstName', 'lastName', 'email', 'phone', 'dateOfBirth',
+            'education', 'experienceLevel', 'skills', 'jobTitle'
           ]
         };
       default:

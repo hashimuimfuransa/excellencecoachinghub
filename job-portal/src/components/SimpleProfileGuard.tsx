@@ -5,12 +5,12 @@ import { userService } from '../services/userService';
 import ProfileAccessGuard from './ProfileAccessGuard';
 
 interface SimpleProfileGuardProps {
-  feature?: 'psychometricTests' | 'aiInterviews' | 'premiumJobs';
+  feature?: 'psychometricTests' | 'aiInterviews' | 'premiumJobs' | 'smartTests';
   children: React.ReactNode;
 }
 
 const SimpleProfileGuard: React.FC<SimpleProfileGuardProps> = ({
-  feature = 'psychometricTests',
+  feature = 'smartTests',
   children
 }) => {
   const { user } = useAuth();

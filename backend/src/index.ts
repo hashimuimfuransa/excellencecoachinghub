@@ -686,6 +686,8 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/job-applications', jobApplicationRoutes);
 app.use('/api/psychometric-tests', psychometricTestRoutes);
 app.use('/api/simple-psychometric', simplePsychometricRoutes);
+// Additional mounting for frontend compatibility
+app.use('/api/psychometric-tests', simplePsychometricRoutes);
 app.use('/api/career-guidance', careerGuidanceRoutes);
 app.use('/api/ai-interviews', aiInterviewRoutes);
 app.use('/api/quick-interviews', quickInterviewRoutes);

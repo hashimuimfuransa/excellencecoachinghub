@@ -78,6 +78,7 @@ import { userService } from '../services/userService';
 import WelcomeSetupCard from '../components/WelcomeSetupCard';
 import ModernProfileCompletion from '../components/ModernProfileCompletion';
 import JobRecommendations from '../components/JobRecommendations';
+import EnhancedDashboardActions from '../components/EnhancedDashboardActions';
 
 
 // Enhanced interfaces
@@ -287,54 +288,97 @@ const ModernDashboardPage: React.FC = () => {
     setSnackbarOpen(true);
   };
 
-  // Primary actions - Most important for users
+  // Primary actions - Most important and specific actions for job seekers
   const primaryActions: QuickAction[] = [
     {
-      id: 'prepare-job',
-      title: 'Get Prepared for Job',
-      description: 'Psychometric tests, AI interviews & skill assessments',
+      id: 'psychometric-test',
+      title: 'Psychometric Test',
+      description: 'Take professional assessment tests',
       icon: <Psychology />,
-      color: theme.palette.primary.main,
-      action: () => forceNavigate('/app/job-preparation', 'prepare for job action'),
+      color: '#9C27B0',
+      action: () => forceNavigate('/app/tests', 'psychometric test action'),
+      badge: 3
+    },
+    {
+      id: 'smart-test',
+      title: 'Smart Job Test',
+      description: 'AI-powered job-specific assessments',
+      icon: <Lightbulb />,
+      color: '#FF9800',
+      action: () => forceNavigate('/app/smart-tests', 'smart test action'),
       badge: 5
     },
     {
+      id: 'ai-interview',
+      title: 'AI Interview Practice',
+      description: 'Practice with AI interviewer',
+      icon: <PlayArrow />,
+      color: '#4CAF50',
+      action: () => forceNavigate('/app/interviews', 'ai interview action'),
+      badge: 2
+    },
+    {
       id: 'find-jobs',
-      title: 'Find Job',
-      description: 'Browse and apply to matching opportunities',
+      title: 'Browse Jobs',
+      description: 'Find matching opportunities',
       icon: <Search />,
-      color: theme.palette.secondary.main,
+      color: theme.palette.primary.main,
       action: () => forceNavigate('/app/jobs', 'find jobs action'),
       badge: stats.skillMatchingJobs
     }
   ];
 
-  // Secondary quick access actions
+  // Secondary quick access actions - More comprehensive and user-friendly
   const secondaryActions: QuickAction[] = [
     {
+      id: 'my-profile',
+      title: 'My Profile',
+      description: 'Complete & update profile',
+      icon: <Person />,
+      color: theme.palette.success.main,
+      action: () => forceNavigate('/app/profile', 'profile action')
+    },
+    {
       id: 'applications',
-      title: 'My Applications',
-      description: 'Track your job applications',
+      title: 'Applications',
+      description: 'Track job applications',
       icon: <Assignment />,
       color: theme.palette.info.main,
       action: () => forceNavigate('/app/applications', 'applications action'),
       badge: stats.totalApplications
     },
     {
-      id: 'profile',
-      title: 'My Profile',
-      description: 'Update your professional profile',
-      icon: <Person />,
-      color: theme.palette.success.main,
-      action: () => forceNavigate('/app/profile', 'profile action')
+      id: 'saved-jobs',
+      title: 'Saved Jobs',
+      description: 'View saved opportunities',
+      icon: <Bookmark />,
+      color: '#E91E63',
+      action: () => forceNavigate('/app/saved-jobs', 'saved jobs action'),
+      badge: stats.savedJobs
     },
     {
-      id: 'learn',
-      title: 'Live Courses',
-      description: 'Expert-led learning sessions',
-      icon: <MenuBook />,
-      color: '#FF5722',
-      action: () => window.open('https://www.elearning.excellencecoachinghub.com/', '_blank')
+      id: 'test-results',
+      title: 'Test Results',
+      description: 'View all test results',
+      icon: <EmojiEvents />,
+      color: '#795548',
+      action: () => forceNavigate('/app/test-results', 'test results action')
+    },
+    {
+      id: 'career-guidance',
+      title: 'Career Guide',
+      description: 'Get career insights',
+      icon: <Timeline />,
+      color: '#607D8B',
+      action: () => forceNavigate('/app/career-guidance', 'career guidance action')
+    },
+    {
+      id: 'certificates',
+      title: 'Certificates',
+      description: 'View earned certificates',
+      icon: <EmojiEvents />,
+      color: '#FF9800',
+      action: () => forceNavigate('/app/certificates', 'certificates action')
     }
   ];
 
@@ -572,50 +616,19 @@ const ModernDashboardPage: React.FC = () => {
       {!isNewUser && user && (
         <ModernProfileCompletion 
           user={user}
-          onEditProfile={() => forceNavigate('/app/profile', 'profile completion button')}
+          onEditProfile={() => forceNavigate('/app/profile?edit=true', 'profile completion button')}
         />
       )}
 
-      {/* Primary Actions - Most Important */}
-      <Paper 
-        sx={{ 
-          p: 4, 
-          mb: 4, 
-          borderRadius: 3,
-          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.02)} 0%, ${alpha(theme.palette.secondary.main, 0.02)} 100%)`,
-          border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
+      {/* Enhanced Dashboard Actions */}
+      <EnhancedDashboardActions 
+        stats={stats}
+        profileCompletion={{
+          score: profileCompletion || 0,
+          isComplete: isProfileComplete
         }}
-      >
-        <Box textAlign="center" mb={4}>
-          <Typography variant="h4" fontWeight="bold" gutterBottom>
-            🚀 Take Your Next Step
-          </Typography>
-          <Typography variant="h6" color="text.secondary">
-            Start with the essentials - get prepared and find your ideal job
-          </Typography>
-        </Box>
-        <Grid container spacing={4} justifyContent="center">
-          {primaryActions.map((action) => (
-            <Grid item xs={12} sm={6} md={6} key={action.id}>
-              <PrimaryActionCard action={action} />
-            </Grid>
-          ))}
-        </Grid>
-      </Paper>
-
-      {/* Quick Access Section */}
-      <Paper sx={{ p: 3, mb: 4, borderRadius: 2 }}>
-        <Typography variant="h5" fontWeight="bold" gutterBottom mb={3}>
-          ⚡ Quick Access
-        </Typography>
-        <Grid container spacing={2}>
-          {secondaryActions.map((action) => (
-            <Grid item xs={6} sm={4} md={2} key={action.id}>
-              <QuickActionCard action={action} />
-            </Grid>
-          ))}
-        </Grid>
-      </Paper>
+        onNavigate={forceNavigate}
+      />
 
       {/* Quick Stats */}
 

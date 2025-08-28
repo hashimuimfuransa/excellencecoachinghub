@@ -27,7 +27,8 @@ import {
   Quiz,
   WorkOutline,
   Edit,
-  ArrowForward
+  ArrowForward,
+  SmartToy
 } from '@mui/icons-material';
 import { User, ProfileCompletionStatus } from '../types/user';
 import { 
@@ -200,7 +201,7 @@ const ProfileCompletion: React.FC<ProfileCompletionProps> = ({
               Feature Access
             </Typography>
             <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={6} md={3}>
                 <Box sx={{ 
                   p: 2, 
                   border: 1, 
@@ -221,7 +222,7 @@ const ProfileCompletion: React.FC<ProfileCompletionProps> = ({
                   />
                 </Box>
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={6} md={3}>
                 <Box sx={{ 
                   p: 2, 
                   border: 1, 
@@ -242,7 +243,7 @@ const ProfileCompletion: React.FC<ProfileCompletionProps> = ({
                   />
                 </Box>
               </Grid>
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={6} md={3}>
                 <Box sx={{ 
                   p: 2, 
                   border: 1, 
@@ -260,6 +261,27 @@ const ProfileCompletion: React.FC<ProfileCompletionProps> = ({
                     label={canAccessFeatures.premiumJobs ? 'Available' : 'Locked'} 
                     size="small"
                     color={canAccessFeatures.premiumJobs ? 'success' : 'default'}
+                  />
+                </Box>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Box sx={{ 
+                  p: 2, 
+                  border: 1, 
+                  borderColor: canAccessFeatures.smartTests ? 'success.main' : 'grey.300',
+                  borderRadius: 2,
+                  bgcolor: canAccessFeatures.smartTests ? 'success.50' : 'grey.50'
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <SmartToy fontSize="small" color={canAccessFeatures.smartTests ? 'success' : 'disabled'} />
+                    <Typography variant="body2" fontWeight="bold">
+                      Smart Tests
+                    </Typography>
+                  </Box>
+                  <Chip 
+                    label={canAccessFeatures.smartTests ? 'Available' : 'Locked'} 
+                    size="small"
+                    color={canAccessFeatures.smartTests ? 'success' : 'default'}
                   />
                 </Box>
               </Grid>
@@ -329,7 +351,7 @@ const ProfileCompletion: React.FC<ProfileCompletionProps> = ({
             >
               {completionPercentage < 40 ? 'Complete Basic Profile' : 
                completionPercentage < 70 ? 'Improve Profile' : 
-               completionPercentage < 90 ? 'Perfect Your Profile' : 
+               completionPercentage < 80 ? 'Perfect Your Profile' : 
                'Update Profile'}
             </Button>
           </Box>

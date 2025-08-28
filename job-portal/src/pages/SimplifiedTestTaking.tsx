@@ -278,7 +278,8 @@ const SimplifiedTestTaking: React.FC = () => {
           timeSpent: (testData.timeLimit * 60) - timeRemaining
         });
 
-        const response = await fetch(`/api/simple-psychometric/submit/${testData.sessionId}`, {
+        const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const response = await fetch(`${apiBaseUrl}/simple-psychometric/submit/${testData.sessionId}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

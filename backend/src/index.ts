@@ -78,6 +78,7 @@ import employerRoutes from '@/routes/employerRoutes';
 import testRequestRoutes from '@/routes/testRequestRoutes';
 import paymentRoutes from '@/routes/paymentRoutes';
 import jobScrapingRoutes from '@/routes/jobScrapingRoutes';
+import smartTestRoutes from '@/routes/smartTestRoutes';
 
 
 
@@ -691,6 +692,7 @@ app.use('/api/job-certificates', jobCertificateRoutes);
 app.use('/api/profiles', profileRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/job-scraping', jobScrapingRoutes);
+app.use('/api/smart-tests', smartTestRoutes);
 
 // Test Request routes
 app.use('/api/test-requests', testRequestRoutes);

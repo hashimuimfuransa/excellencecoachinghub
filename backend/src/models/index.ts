@@ -38,6 +38,8 @@ export { StudentProfile, IStudentProfileDocument, IStudentProfileModel } from '.
 export { JobCourseMatch, IJobCourseMatchDocument, IJobCourseMatchModel } from './JobCourseMatch';
 export { InterviewSession, IInterviewSessionDocument, IInterviewSessionModel } from './InterviewSession';
 export { TestRequest, ITestRequestDocument, ITestRequestModel } from './TestRequest';
+export { SmartTest, ISmartTest, ISmartTestQuestion } from './SmartTest';
+export { SmartTestResult, ISmartTestResult, ISmartTestDetailedResult, ISmartTestFeedback } from './SmartTestResult';
 
 // Re-export shared types for convenience
 export {

@@ -54,6 +54,9 @@ import CareerAssessmentResultsPage from './pages/CareerAssessmentResultsPage';
 import CVUploadTest from './components/CVUploadTest';
 import SimplifiedTestTaking from './pages/SimplifiedTestTaking';
 import SimplifiedTestResult from './pages/SimplifiedTestResult';
+import SmartTestPage from './pages/SmartTestPage';
+import TakeSmartTestPage from './pages/TakeSmartTestPage';
+import SmartTestResultsPage from './pages/SmartTestResultsPage';
 
 function App() {
   // Initialize EmailJS on app start
@@ -132,6 +135,16 @@ function App() {
               } 
             />
             
+            {/* Smart Test Taking - Standalone (outside dashboard for full screen) */}
+            <Route 
+              path="/take-smart-test" 
+              element={
+                <ProtectedRoute>
+                  <TakeSmartTestPage />
+                </ProtectedRoute>
+              } 
+            />
+            
             {/* Protected Routes with MainLayout */}
             <Route 
               path="/app" 
@@ -184,6 +197,8 @@ function App() {
               
               <Route path="career-guidance" element={<CareerGuidancePage />} />
               <Route path="job-preparation" element={<JobPreparationPage />} />
+              <Route path="smart-tests" element={<SmartTestPage />} />
+              <Route path="smart-test-results" element={<SmartTestResultsPage />} />
               <Route path="career/assessment/:assessmentId" element={<CareerAssessmentFlow />} />
               <Route path="career/assessment/:assessmentId/results" element={<CareerAssessmentResultsPage />} />
               

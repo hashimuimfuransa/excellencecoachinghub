@@ -388,6 +388,172 @@ Generate all ${questionCount} questions now:`;
     }
   }
 
+  // Generate job preparation test (separate from psychometric tests)
+  async generateJobPreparationTest(prompt: string, params: {
+    jobTitle: string;
+    company: string;
+    industry?: string;
+    difficulty: string;
+    questionCount: number;
+  }): Promise<{ questions: Array<{ 
+    id: string; 
+    question: string; 
+    type: string; 
+    options: string[]; 
+    correctAnswer: number; 
+    explanation: string; 
+    category: string; 
+  }> }> {
+    try {
+      console.log(`🎯 Generating job preparation test for ${params.jobTitle} at ${params.company}`);
+      
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      let textResponse = response.text();
+
+      // Clean and parse the response
+      textResponse = textResponse.replace(/```json\s*|\s*```/g, '').trim();
+      
+      try {
+        const parsedResponse = JSON.parse(textResponse);
+        
+        if (!parsedResponse.questions || !Array.isArray(parsedResponse.questions)) {
+          throw new Error('Invalid response structure');
+        }
+
+        // Validate and format questions
+        const formattedQuestions = parsedResponse.questions.map((q: any, index: number) => ({
+          id: q.id || `q${index + 1}`,
+          question: q.question,
+          type: q.type || 'multiple_choice',
+          options: Array.isArray(q.options) ? q.options : [],
+          correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 0,
+          explanation: q.explanation || 'Explanation not provided',
+          category: q.category || 'general'
+        }));
+
+        return { questions: formattedQuestions };
+        
+      } catch (parseError) {
+        console.error('Failed to parse job preparation test response:', parseError);
+        
+        // Generate fallback questions for job preparation
+        return this.generateJobPreparationFallback(params);
+      }
+    } catch (error) {
+      console.error('Error generating job preparation test:', error);
+      return this.generateJobPreparationFallback(params);
+    }
+  }
+
+  // Generate fallback questions for job preparation tests
+  private generateJobPreparationFallback(params: {
+    jobTitle: string;
+    company: string;
+    industry?: string;
+    difficulty: string;
+    questionCount: number;
+  }): { questions: Array<{ 
+    id: string; 
+    question: string; 
+    type: string; 
+    options: string[]; 
+    correctAnswer: number; 
+    explanation: string; 
+    category: string; 
+  }> } {
+    
+    const { jobTitle, company, industry, difficulty, questionCount } = params;
+    
+    console.log(`🔄 Generating ${questionCount} fallback job preparation questions for ${jobTitle}`);
+    
+    const fallbackQuestions = [
+      {
+        id: 'q1',
+        question: `What is the most important skill for a ${jobTitle} position?`,
+        type: 'multiple_choice',
+        options: [
+          'Technical expertise in relevant tools and technologies',
+          'Strong communication and teamwork abilities',
+          'Problem-solving and analytical thinking',
+          'Time management and organizational skills'
+        ],
+        correctAnswer: 2,
+        explanation: 'Problem-solving and analytical thinking are fundamental skills that enable success in most professional roles.',
+        category: 'general_skills'
+      },
+      {
+        id: 'q2',
+        question: `When working on a project as a ${jobTitle}, how would you handle competing deadlines?`,
+        type: 'multiple_choice',
+        options: [
+          'Work overtime to meet all deadlines',
+          'Prioritize based on business impact and communicate with stakeholders',
+          'Complete tasks in the order they were assigned',
+          'Ask colleagues to help with some tasks'
+        ],
+        correctAnswer: 1,
+        explanation: 'Prioritizing based on business impact and maintaining clear communication ensures optimal resource allocation.',
+        category: 'situational'
+      },
+      {
+        id: 'q3',
+        question: `What would you do if you disagreed with your manager's approach to a project?`,
+        type: 'multiple_choice',
+        options: [
+          'Follow their instructions without question',
+          'Express your concerns respectfully and suggest alternatives',
+          'Discuss the issue with other team members first',
+          'Implement your own approach instead'
+        ],
+        correctAnswer: 1,
+        explanation: 'Professional communication about concerns shows initiative while respecting hierarchy.',
+        category: 'behavioral'
+      },
+      {
+        id: 'q4',
+        question: `How do you stay current with industry trends in ${industry || 'your field'}?`,
+        type: 'multiple_choice',
+        options: [
+          'Read industry publications and attend conferences',
+          'Take online courses and certifications',
+          'Network with industry professionals',
+          'All of the above'
+        ],
+        correctAnswer: 3,
+        explanation: 'A combination of learning methods ensures comprehensive knowledge of industry developments.',
+        category: 'professional_development'
+      },
+      {
+        id: 'q5',
+        question: `Describe your approach to handling a difficult customer or client.`,
+        type: 'multiple_choice',
+        options: [
+          'Listen actively, empathize, and work toward a solution',
+          'Transfer them to your supervisor immediately',
+          'Explain company policies and stick to them strictly',
+          'Try to end the conversation quickly'
+        ],
+        correctAnswer: 0,
+        explanation: 'Active listening and empathy are key to resolving difficult customer situations effectively.',
+        category: 'customer_service'
+      }
+    ];
+
+    // Adjust number of questions to match requested count
+    const questions = [];
+    for (let i = 0; i < Math.min(questionCount, 20); i++) {
+      const baseQuestion = fallbackQuestions[i % fallbackQuestions.length];
+      questions.push({
+        ...baseQuestion,
+        id: `q${i + 1}`,
+        question: baseQuestion.question.replace(/\$\{jobTitle\}/g, jobTitle)
+      });
+    }
+
+    return { questions };
+  }
+
   // Generate fallback questions when AI service is unavailable
   private generateFallbackQuestions(params: {
     jobTitle: string;

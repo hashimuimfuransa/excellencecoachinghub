@@ -65,7 +65,8 @@ import {
   CalendarToday,
   Warning,
   Info,
-  Close
+  Close,
+  Lightbulb
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -286,41 +287,53 @@ const ModernDashboardPage: React.FC = () => {
     setSnackbarOpen(true);
   };
 
-  // Quick actions for job seekers
-  const quickActions: QuickAction[] = [
+  // Primary actions - Most important for users
+  const primaryActions: QuickAction[] = [
     {
       id: 'prepare-job',
-      title: 'Prepare for Jobs',
-      description: 'Psychometric tests, AI interviews & more',
+      title: 'Get Prepared for Job',
+      description: 'Psychometric tests, AI interviews & skill assessments',
       icon: <Psychology />,
       color: theme.palette.primary.main,
-      action: () => forceNavigate('/app/career-guidance', 'learn and grow quick action'),
-      badge: 5 // Number of preparation options
+      action: () => forceNavigate('/app/job-preparation', 'prepare for job action'),
+      badge: 5
     },
     {
       id: 'find-jobs',
-      title: 'Find Jobs',
-      description: 'Browse and apply to opportunities',
+      title: 'Find Job',
+      description: 'Browse and apply to matching opportunities',
       icon: <Search />,
       color: theme.palette.secondary.main,
-      action: () => forceNavigate('/app/jobs', 'find jobs quick action'),
+      action: () => forceNavigate('/app/jobs', 'find jobs action'),
       badge: stats.skillMatchingJobs
-    },
+    }
+  ];
+
+  // Secondary quick access actions
+  const secondaryActions: QuickAction[] = [
     {
       id: 'applications',
       title: 'My Applications',
-      description: 'Track your applications',
+      description: 'Track your job applications',
       icon: <Assignment />,
       color: theme.palette.info.main,
-      action: () => forceNavigate('/app/applications', 'applications quick action'),
+      action: () => forceNavigate('/app/applications', 'applications action'),
       badge: stats.totalApplications
+    },
+    {
+      id: 'profile',
+      title: 'My Profile',
+      description: 'Update your professional profile',
+      icon: <Person />,
+      color: theme.palette.success.main,
+      action: () => forceNavigate('/app/profile', 'profile action')
     },
     {
       id: 'learn',
       title: 'Live Courses',
       description: 'Expert-led learning sessions',
       icon: <MenuBook />,
-      color: theme.palette.success.main,
+      color: '#FF5722',
       action: () => window.open('https://www.elearning.excellencecoachinghub.com/', '_blank')
     }
   ];
@@ -391,7 +404,81 @@ const ModernDashboardPage: React.FC = () => {
     </Card>
   );
 
-  // Quick action card
+  // Primary action card - Large and prominent
+  const PrimaryActionCard: React.FC<{ action: QuickAction }> = ({ action }) => (
+    <Card
+      sx={{
+        height: '100%',
+        cursor: 'pointer',
+        transition: 'all 0.3s ease',
+        background: `linear-gradient(135deg, ${action.color} 0%, ${alpha(action.color, 0.8)} 100%)`,
+        color: 'white',
+        border: 'none',
+        borderRadius: 3,
+        '&:hover': {
+          transform: 'translateY(-6px) scale(1.02)',
+          boxShadow: `0 20px 40px ${alpha(action.color, 0.4)}`,
+        }
+      }}
+      onClick={action.action}
+    >
+      <CardContent sx={{ p: 4, textAlign: 'center', minHeight: 200 }}>
+        <Badge 
+          badgeContent={action.badge} 
+          color="error" 
+          sx={{ 
+            mb: 3,
+            '& .MuiBadge-badge': {
+              bgcolor: 'rgba(255,255,255,0.9)',
+              color: action.color,
+              fontWeight: 'bold'
+            }
+          }}
+        >
+          <Box
+            sx={{
+              width: 80,
+              height: 80,
+              borderRadius: '20px',
+              bgcolor: 'rgba(255,255,255,0.2)',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mx: 'auto',
+              fontSize: '2rem'
+            }}
+          >
+            {action.icon}
+          </Box>
+        </Badge>
+        <Typography variant="h4" fontWeight="bold" gutterBottom sx={{ color: 'white' }}>
+          {action.title}
+        </Typography>
+        <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.9)' }}>
+          {action.description}
+        </Typography>
+        <Button
+          variant="contained"
+          sx={{
+            mt: 2,
+            bgcolor: 'rgba(255,255,255,0.2)',
+            color: 'white',
+            '&:hover': {
+              bgcolor: 'rgba(255,255,255,0.3)',
+            },
+            textTransform: 'none',
+            fontWeight: 'bold'
+          }}
+          startIcon={<ArrowForward />}
+        >
+          Get Started
+        </Button>
+      </CardContent>
+    </Card>
+  );
+
+  // Quick action card - Smaller secondary actions
   const QuickActionCard: React.FC<{ action: QuickAction }> = ({ action }) => (
     <Card
       sx={{
@@ -399,21 +486,22 @@ const ModernDashboardPage: React.FC = () => {
         cursor: 'pointer',
         transition: 'all 0.3s ease',
         border: `1px solid ${alpha(action.color, 0.2)}`,
+        borderRadius: 2,
         '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: `0 12px 30px ${alpha(action.color, 0.3)}`,
+          transform: 'translateY(-2px)',
+          boxShadow: `0 8px 20px ${alpha(action.color, 0.3)}`,
           border: `1px solid ${action.color}`
         }
       }}
       onClick={action.action}
     >
-      <CardContent sx={{ p: 3, textAlign: 'center' }}>
-        <Badge badgeContent={action.badge} color="error" sx={{ mb: 2 }}>
+      <CardContent sx={{ p: 2.5, textAlign: 'center' }}>
+        <Badge badgeContent={action.badge} color="error" sx={{ mb: 1.5 }}>
           <Box
             sx={{
-              width: 60,
-              height: 60,
-              borderRadius: '16px',
+              width: 48,
+              height: 48,
+              borderRadius: '12px',
               bgcolor: alpha(action.color, 0.1),
               color: action.color,
               display: 'flex',
@@ -425,10 +513,10 @@ const ModernDashboardPage: React.FC = () => {
             {action.icon}
           </Box>
         </Badge>
-        <Typography variant="h6" fontWeight="bold" gutterBottom>
+        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
           {action.title}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
           {action.description}
         </Typography>
       </CardContent>
@@ -488,81 +576,53 @@ const ModernDashboardPage: React.FC = () => {
         />
       )}
 
+      {/* Primary Actions - Most Important */}
+      <Paper 
+        sx={{ 
+          p: 4, 
+          mb: 4, 
+          borderRadius: 3,
+          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.02)} 0%, ${alpha(theme.palette.secondary.main, 0.02)} 100%)`,
+          border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
+        }}
+      >
+        <Box textAlign="center" mb={4}>
+          <Typography variant="h4" fontWeight="bold" gutterBottom>
+            🚀 Take Your Next Step
+          </Typography>
+          <Typography variant="h6" color="text.secondary">
+            Start with the essentials - get prepared and find your ideal job
+          </Typography>
+        </Box>
+        <Grid container spacing={4} justifyContent="center">
+          {primaryActions.map((action) => (
+            <Grid item xs={12} sm={6} md={6} key={action.id}>
+              <PrimaryActionCard action={action} />
+            </Grid>
+          ))}
+        </Grid>
+      </Paper>
+
+      {/* Quick Access Section */}
+      <Paper sx={{ p: 3, mb: 4, borderRadius: 2 }}>
+        <Typography variant="h5" fontWeight="bold" gutterBottom mb={3}>
+          ⚡ Quick Access
+        </Typography>
+        <Grid container spacing={2}>
+          {secondaryActions.map((action) => (
+            <Grid item xs={6} sm={4} md={2} key={action.id}>
+              <QuickActionCard action={action} />
+            </Grid>
+          ))}
+        </Grid>
+      </Paper>
+
       {/* Quick Stats */}
-      <Grid container spacing={3} mb={4}>
-        <Grid item xs={12} sm={6} md={2.4}>
-          <StatCard
-            title="Applications"
-            value={stats.totalApplications}
-            icon={<Assignment />}
-            color={theme.palette.primary.main}
-            subtitle="This month"
-            trend="up"
-            trendValue="+12%"
-            onClick={() => forceNavigate('/app/applications', 'applications stat card')}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
-          <StatCard
-            title="Interviews"
-            value={stats.interviewsScheduled}
-            icon={<CalendarToday />}
-            color={theme.palette.success.main}
-            subtitle="Scheduled"
-            trend="up"
-            trendValue="+1"
-            onClick={() => forceNavigate('/app/interviews', 'interviews stat card')}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
-          <StatCard
-            title="Saved Jobs"
-            value={stats.savedJobs}
-            icon={<Bookmark />}
-            color={theme.palette.info.main}
-            subtitle="Favorites"
-            onClick={() => forceNavigate('/app/saved-jobs', 'saved jobs stat card')}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
-          <StatCard
-            title="Profile Views"
-            value={stats.profileViews}
-            icon={<Visibility />}
-            color={theme.palette.warning.main}
-            subtitle="This week"
-            trend="up"
-            trendValue="+8"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={2.4}>
-          <StatCard
-            title="Job Matches"
-            value={stats.skillMatchingJobs}
-            icon={<TrendingUp />}
-            color={theme.palette.secondary.main}
-            subtitle="Based on skills"
-            onClick={() => forceNavigate('/app/jobs', 'job matches stat card')}
-          />
-        </Grid>
-      </Grid>
+
 
       <Grid container spacing={4}>
         {/* Left Column */}
         <Grid item xs={12} lg={8}>
-          {/* Quick Actions */}
-          <Paper sx={{ p: 3, mb: 4, borderRadius: 2 }}>
-            <Typography variant="h5" fontWeight="bold" gutterBottom mb={3}>
-              Quick Actions
-            </Typography>
-            <Grid container spacing={3}>
-              {quickActions.map((action) => (
-                <Grid item xs={12} sm={6} md={3} key={action.id}>
-                  <QuickActionCard action={action} />
-                </Grid>
-              ))}
-            </Grid>
-          </Paper>
 
           {/* Recommended Jobs */}
           <Paper sx={{ p: 3, mb: 4, borderRadius: 2 }}>
@@ -624,101 +684,56 @@ const ModernDashboardPage: React.FC = () => {
             )}
           </Paper>
 
-          {/* Job Preparation Hub */}
-          <Paper 
-            sx={{ 
-              p: 3, 
-              borderRadius: 2,
-              background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.05)} 0%, ${alpha(theme.palette.primary.main, 0.05)} 100%)`,
-              border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`
-            }}
-          >
-            <Typography variant="h6" fontWeight="bold" gutterBottom color="success.main">
-              🎯 Job Preparation Hub
-            </Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              Get ready for your dream job with comprehensive preparation resources.
+          {/* Tips & Progress */}
+          <Paper sx={{ p: 3, borderRadius: 2 }}>
+            <Typography variant="h6" fontWeight="bold" gutterBottom mb={2}>
+              💡 Quick Tips
             </Typography>
             
-            <Stack spacing={1.5}>
-              <Box 
-                sx={{ 
-                  p: 2, 
-                  borderRadius: 1, 
-                  bgcolor: alpha(theme.palette.primary.main, 0.05),
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                  }
-                }}
-                onClick={() => forceNavigate('/app/tests', 'psychometric tests')}
-              >
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Psychology sx={{ color: 'primary.main' }} />
-                  <Box>
-                    <Typography variant="subtitle2" fontWeight="medium">
-                      Psychometric Tests
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Real questions from recent years
-                    </Typography>
-                  </Box>
-                </Stack>
-              </Box>
+            <Stack spacing={2}>
+              <Alert severity="info" sx={{ border: 'none' }}>
+                <Typography variant="body2">
+                  <strong>Profile Tip:</strong> Complete your profile to get {isProfileComplete ? 'more' : 'better'} job matches
+                </Typography>
+              </Alert>
               
-              <Box 
-                sx={{ 
-                  p: 2, 
-                  borderRadius: 1, 
-                  bgcolor: alpha(theme.palette.secondary.main, 0.05),
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    bgcolor: alpha(theme.palette.secondary.main, 0.1),
-                  }
-                }}
-                onClick={() => forceNavigate('/app/interviews', 'AI mock interviews')}
-              >
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Assignment sx={{ color: 'secondary.main' }} />
-                  <Box>
-                    <Typography variant="subtitle2" fontWeight="medium">
-                      AI Mock Interviews
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Job-specific interview practice
-                    </Typography>
-                  </Box>
-                </Stack>
-              </Box>
-
+              {profileCompletion < 100 && (
+                <Alert severity="warning" sx={{ border: 'none' }}>
+                  <Typography variant="body2">
+                    <strong>Profile:</strong> {profileCompletion}% complete
+                  </Typography>
+                  <LinearProgress 
+                    variant="determinate" 
+                    value={profileCompletion} 
+                    sx={{ mt: 1, borderRadius: 1 }}
+                  />
+                </Alert>
+              )}
+              
+              <Alert severity="success" sx={{ border: 'none' }}>
+                <Typography variant="body2">
+                  <strong>Success Rate:</strong> Take psychometric tests to increase your application success rate by 40%
+                </Typography>
+              </Alert>
+              
               <Button
-                variant="contained"
+                variant="outlined"
                 fullWidth
-                startIcon={<EmojiEvents />}
-                onClick={() => forceNavigate('/app/career-guidance', 'start preparing for job')}
+                startIcon={<Lightbulb />}
+                onClick={() => forceNavigate('/app/career-guidance', 'career guidance')}
                 sx={{ 
                   textTransform: 'none',
-                  mt: 2,
-                  background: `linear-gradient(45deg, ${theme.palette.success.main} 30%, ${theme.palette.primary.main} 90%)`
+                  mt: 1
                 }}
               >
-                Start Preparing for Job
+                Get Career Guidance
               </Button>
             </Stack>
           </Paper>
         </Grid>
       </Grid>
 
-      {/* Floating Action Button */}
-      <Fab
-        color="primary"
-        sx={{ position: 'fixed', bottom: 24, right: 24 }}
-        onClick={() => forceNavigate('/app/tests', 'floating action button')}
-      >
-        <Psychology />
-      </Fab>
+
 
       {/* Success Snackbar */}
       <Snackbar

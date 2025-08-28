@@ -430,6 +430,7 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
 
     const isResubmission = testSession.status === 'completed';
     
+    // Create a more compact response to avoid JSON truncation issues
     const responseData = {
       success: true,
       data: {
@@ -443,21 +444,14 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
         categoryScores: testResult.scores,
         hasDetailedResults: hasDetailedResults,
         recommendations: testResult.recommendations,
-        // Include question-by-question results for immediate feedback
-        detailedResults: detailedResults,
-        // Questions that were answered correctly
-        correctQuestions: detailedResults.filter(r => r.isCorrect),
-        // Questions that were answered incorrectly with correct answers
-        failedQuestions: detailedResults.filter(r => !r.isCorrect).map(r => ({
-          question: r.question,
-          yourAnswer: r.userAnswer !== null && r.userAnswer !== undefined ? testSession.questions[detailedResults.indexOf(r)].options[r.userAnswer] : 'Not answered',
-          correctAnswer: testSession.questions[detailedResults.indexOf(r)].options[r.correctAnswer],
-          correctAnswerIndex: r.correctAnswer,
-          explanation: r.explanation,
-          category: r.category
-        })),
         grade: scorePercentage >= 90 ? 'Excellent' : scorePercentage >= 75 ? 'Good' : scorePercentage >= 60 ? 'Average' : 'Needs Improvement',
-        percentile: Math.round(scorePercentage * 0.85) // Rough percentile estimate
+        percentile: Math.round(scorePercentage * 0.85), // Rough percentile estimate
+        // Simplified question details - removed large arrays that might cause JSON issues
+        summary: {
+          correctCount: detailedResults.filter(r => r.isCorrect).length,
+          incorrectCount: detailedResults.filter(r => !r.isCorrect).length,
+          categories: Object.keys(testResult.scores || {})
+        }
       },
       message: isResubmission ? 'Test resubmitted and graded successfully!' : 'Test completed successfully!'
     };
@@ -469,7 +463,27 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
       message: responseData.message
     });
     
-    res.status(200).json(responseData);
+    // Set headers explicitly to ensure proper JSON response
+    res.set({
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-cache',
+      'X-Content-Type-Options': 'nosniff'
+    });
+    
+    // Validate JSON before sending
+    try {
+      const jsonString = JSON.stringify(responseData);
+      console.log('✅ JSON validation successful, size:', jsonString.length);
+      
+      res.status(200).json(responseData);
+    } catch (jsonError) {
+      console.error('❌ JSON serialization error:', jsonError);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to serialize response',
+        message: 'Internal server error occurred while preparing response'
+      });
+    }
 
   } catch (error: any) {
     console.error('❌ Error submitting psychometric test:', error);
@@ -490,6 +504,14 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
       };
       
       console.log('📤 Sending error response:', errorResponse);
+      
+      // Set headers explicitly for error responses too
+      res.set({
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'X-Content-Type-Options': 'nosniff'
+      });
+      
       res.status(500).json(errorResponse);
     } else {
       console.error('❌ Headers already sent, cannot send error response');

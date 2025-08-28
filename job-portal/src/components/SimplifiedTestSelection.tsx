@@ -29,7 +29,11 @@ import {
   alpha,
   useTheme,
   Paper,
-  Avatar
+  Avatar,
+  TextField,
+  InputAdornment,
+  IconButton,
+  Collapse
 } from '@mui/material';
 import {
   Check,
@@ -46,7 +50,12 @@ import {
   Star,
   TrendingUp,
   WorkOutline,
-  CheckCircle
+  CheckCircle,
+  Search,
+  FilterList,
+  Clear,
+  ExpandMore,
+  ExpandLess
 } from '@mui/icons-material';
 import { paymentService } from '../services/paymentService';
 import { jobService } from '../services/jobService';
@@ -112,6 +121,12 @@ export const SimplifiedTestSelection: React.FC<SimplifiedTestSelectionProps> = (
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   
+  // Search and Filter state
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [industryFilter, setIndustryFilter] = useState<string>('');
+  const [experienceFilter, setExperienceFilter] = useState<string>('');
+  const [showFilters, setShowFilters] = useState<boolean>(false);
+  
   const [error, setError] = useState<string>('');
   const [purchaseId, setPurchaseId] = useState<string>('');
 
@@ -127,6 +142,10 @@ export const SimplifiedTestSelection: React.FC<SimplifiedTestSelectionProps> = (
     setSelectedLevel(null);
     setSelectedPaymentMethod('');
     setSelectedJob(null);
+    setSearchTerm('');
+    setIndustryFilter('');
+    setExperienceFilter('');
+    setShowFilters(false);
     setError('');
     setPurchaseId('');
   };
@@ -251,6 +270,44 @@ export const SimplifiedTestSelection: React.FC<SimplifiedTestSelectionProps> = (
 
   const formatCurrency = (amount: number, currency: string) => {
     return `${currency === 'RWF' ? 'RWF' : '$'} ${amount.toLocaleString()}`;
+  };
+
+  // Get unique industries from jobs
+  const getUniqueIndustries = () => {
+    const industries = jobs.map(job => job.industry).filter(Boolean);
+    return [...new Set(industries)].sort();
+  };
+
+  // Get unique experience levels from jobs
+  const getUniqueExperienceLevels = () => {
+    const levels = jobs.map(job => job.experienceLevel).filter(Boolean);
+    return [...new Set(levels)].sort();
+  };
+
+  // Filter jobs based on search term and filters
+  const getFilteredJobs = () => {
+    return jobs.filter(job => {
+      // Search term filter
+      const matchesSearch = !searchTerm || 
+        job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        job.skillsRequired?.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()));
+
+      // Industry filter
+      const matchesIndustry = !industryFilter || job.industry === industryFilter;
+
+      // Experience filter
+      const matchesExperience = !experienceFilter || job.experienceLevel === experienceFilter;
+
+      return matchesSearch && matchesIndustry && matchesExperience;
+    });
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchTerm('');
+    setIndustryFilter('');
+    setExperienceFilter('');
   };
 
   const renderLevelSelection = () => (
@@ -429,59 +486,232 @@ export const SimplifiedTestSelection: React.FC<SimplifiedTestSelectionProps> = (
     </Box>
   );
 
-  const renderJobSelection = () => (
-    <Box>
-      <Typography variant="h6" gutterBottom>
-        Select Job Position
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Choose the job position you want to be assessed for. AI will generate questions specific to this role.
-      </Typography>
+  const renderJobSelection = () => {
+    const filteredJobs = getFilteredJobs();
+    const uniqueIndustries = getUniqueIndustries();
+    const uniqueExperienceLevels = getUniqueExperienceLevels();
+    const hasActiveFilters = searchTerm || industryFilter || experienceFilter;
 
-      <Grid container spacing={2} sx={{ maxHeight: 400, overflow: 'auto' }}>
-        {(jobs || []).map((job) => (
-          <Grid item xs={12} sm={6} key={job._id}>
-            <Card
-              sx={{
-                cursor: 'pointer',
-                border: selectedJob?._id === job._id ? '2px solid' : '1px solid',
-                borderColor: selectedJob?._id === job._id ? 'primary.main' : 'divider',
-                bgcolor: selectedJob?._id === job._id ? alpha(theme.palette.primary.main, 0.04) : 'background.paper'
-              }}
-              onClick={() => setSelectedJob(job)}
+    return (
+      <Box>
+        <Typography variant="h6" gutterBottom>
+          Select Job Position
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          Choose the job position you want to be assessed for. AI will generate questions specific to this role.
+        </Typography>
+
+        {/* Search and Filter Controls */}
+        <Paper sx={{ p: 2, mb: 3, bgcolor: alpha(theme.palette.primary.main, 0.02) }}>
+          {/* Search Bar */}
+          <TextField
+            fullWidth
+            placeholder="Search by job title, company, or skills..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search color="action" />
+                </InputAdornment>
+              ),
+              endAdornment: searchTerm && (
+                <InputAdornment position="end">
+                  <IconButton 
+                    size="small" 
+                    onClick={() => setSearchTerm('')}
+                    edge="end"
+                  >
+                    <Clear />
+                  </IconButton>
+                </InputAdornment>
+              )
+            }}
+            sx={{ mb: 2 }}
+          />
+
+          {/* Filter Toggle */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: showFilters ? 2 : 0 }}>
+            <Button
+              startIcon={<FilterList />}
+              endIcon={showFilters ? <ExpandLess /> : <ExpandMore />}
+              onClick={() => setShowFilters(!showFilters)}
+              variant="outlined"
+              size="small"
             >
-              <CardContent>
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
-                  {job.title}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  {job.company} • {job.industry}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Level: {job.experienceLevel}
-                </Typography>
-                {job.skillsRequired?.length > 0 && (
-                  <Box mt={1}>
-                    {job.skillsRequired.slice(0, 3).map((skill) => (
-                      <Chip key={skill} label={skill} size="small" sx={{ mr: 0.5, mb: 0.5 }} />
+              Advanced Filters
+            </Button>
+            
+            {hasActiveFilters && (
+              <Button
+                startIcon={<Clear />}
+                onClick={clearFilters}
+                variant="text"
+                size="small"
+                color="secondary"
+              >
+                Clear All Filters
+              </Button>
+            )}
+          </Box>
+
+          {/* Filter Controls */}
+          <Collapse in={showFilters}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Industry</InputLabel>
+                  <Select
+                    value={industryFilter}
+                    label="Industry"
+                    onChange={(e) => setIndustryFilter(e.target.value)}
+                  >
+                    <MenuItem value="">All Industries</MenuItem>
+                    {uniqueIndustries.map((industry) => (
+                      <MenuItem key={industry} value={industry}>
+                        {industry}
+                      </MenuItem>
                     ))}
-                    {job.skillsRequired.length > 3 && (
-                      <Chip label={`+${job.skillsRequired.length - 3} more`} size="small" />
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Experience Level</InputLabel>
+                  <Select
+                    value={experienceFilter}
+                    label="Experience Level"
+                    onChange={(e) => setExperienceFilter(e.target.value)}
+                  >
+                    <MenuItem value="">All Levels</MenuItem>
+                    {uniqueExperienceLevels.map((level) => (
+                      <MenuItem key={level} value={level}>
+                        {level}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+          </Collapse>
+        </Paper>
+
+        {/* Results Summary */}
+        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="body2" color="text.secondary">
+            Showing {filteredJobs.length} of {jobs.length} positions
+            {hasActiveFilters && (
+              <Chip 
+                label="Filtered" 
+                size="small" 
+                color="primary" 
+                sx={{ ml: 1 }} 
+              />
+            )}
+          </Typography>
+        </Box>
+
+        {/* Job Cards */}
+        {filteredJobs.length === 0 ? (
+          <Paper sx={{ p: 4, textAlign: 'center' }}>
+            <Search sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No jobs found
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Try adjusting your search terms or filters
+            </Typography>
+            {hasActiveFilters && (
+              <Button onClick={clearFilters} variant="outlined">
+                Clear Filters
+              </Button>
+            )}
+          </Paper>
+        ) : (
+          <Grid container spacing={2} sx={{ maxHeight: 400, overflow: 'auto' }}>
+            {filteredJobs.map((job) => (
+              <Grid item xs={12} sm={6} key={job._id}>
+                <Card
+                  sx={{
+                    cursor: 'pointer',
+                    border: selectedJob?._id === job._id ? '2px solid' : '1px solid',
+                    borderColor: selectedJob?._id === job._id ? 'primary.main' : 'divider',
+                    bgcolor: selectedJob?._id === job._id ? alpha(theme.palette.primary.main, 0.04) : 'background.paper',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: theme.shadows[4]
+                    }
+                  }}
+                  onClick={() => setSelectedJob(job)}
+                >
+                  <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                      <Typography variant="h6" fontWeight="bold" sx={{ flex: 1, pr: 1 }}>
+                        {job.title}
+                      </Typography>
+                      {selectedJob?._id === job._id && (
+                        <CheckCircle color="primary" sx={{ fontSize: 20 }} />
+                      )}
+                    </Box>
+                    
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      <strong>{job.company}</strong> • {job.industry}
+                    </Typography>
+                    
+                    <Chip 
+                      label={job.experienceLevel} 
+                      size="small" 
+                      color="secondary"
+                      sx={{ mb: 1 }}
+                    />
+                    
+                    {job.skillsRequired?.length > 0 && (
+                      <Box mt={1}>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                          Required Skills:
+                        </Typography>
+                        {job.skillsRequired.slice(0, 3).map((skill) => (
+                          <Chip 
+                            key={skill} 
+                            label={skill} 
+                            size="small" 
+                            variant="outlined"
+                            sx={{ mr: 0.5, mb: 0.5, fontSize: '0.7rem' }} 
+                          />
+                        ))}
+                        {job.skillsRequired.length > 3 && (
+                          <Chip 
+                            label={`+${job.skillsRequired.length - 3} more`} 
+                            size="small" 
+                            variant="outlined"
+                            sx={{ fontSize: '0.7rem' }}
+                          />
+                        )}
+                      </Box>
                     )}
-                  </Box>
-                )}
-                {selectedJob?._id === job._id && (
-                  <Box mt={1}>
-                    <Chip icon={<Check />} label="Selected" color="primary" size="small" />
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
+                    
+                    {selectedJob?._id === job._id && (
+                      <Box mt={2}>
+                        <Chip 
+                          icon={<Check />} 
+                          label="Selected for Assessment" 
+                          color="primary" 
+                          size="small"
+                          sx={{ fontWeight: 'bold' }}
+                        />
+                      </Box>
+                    )}
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
           </Grid>
-        ))}
-      </Grid>
-    </Box>
-  );
+        )}
+      </Box>
+    );
+  };
 
   const renderGenerateTest = () => (
     <Box textAlign="center">

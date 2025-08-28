@@ -20,6 +20,7 @@ import {
   Alert,
   Skeleton
 } from '@mui/material';
+import FloatingContact from '../components/FloatingContact';
 import {
   Add as AddIcon,
   Work as WorkIcon,
@@ -472,6 +473,9 @@ const EmployerDashboardPage: React.FC = () => {
           Delete Job
         </MenuItem>
       </Menu>
+      
+      {/* Floating Contact Component */}
+      <FloatingContact />
     </Box>
   );
 };

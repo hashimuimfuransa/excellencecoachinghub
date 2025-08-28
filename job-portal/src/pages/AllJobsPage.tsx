@@ -53,7 +53,14 @@ import {
   Visibility,
   People,
   WorkspacePremium,
-  Send
+  Send,
+  Language,
+  Quiz,
+  SmartToy,
+  Code,
+  Engineering,
+  TrendingUp,
+  Assignment
 } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -90,6 +97,19 @@ interface Job {
   createdAt: string;
   updatedAt: string;
   isCurated: boolean;
+  // External job fields
+  isExternalJob?: boolean;
+  externalApplicationUrl?: string;
+  externalJobSource?: string;
+  externalJobId?: string;
+  contactInfo?: {
+    email?: string;
+    phone?: string;
+    website?: string;
+    address?: string;
+    contactPerson?: string;
+    applicationInstructions?: string;
+  };
 }
 
 const AllJobsPage: React.FC = () => {
@@ -135,6 +155,12 @@ const AllJobsPage: React.FC = () => {
   }, [currentPage, searchTerm, locationFilter]);
 
   const handleApply = (job: Job) => {
+    // If it's an external job, redirect to external URL
+    if (job.isExternalJob && job.externalApplicationUrl) {
+      window.open(job.externalApplicationUrl, '_blank');
+      return;
+    }
+    
     setSelectedJob(job);
     setApplicationDialogOpen(true);
   };
@@ -291,97 +317,264 @@ const AllJobsPage: React.FC = () => {
     <Dialog
       open={preparationDialogOpen}
       onClose={() => setPreparationDialogOpen(false)}
-      maxWidth="md"
+      maxWidth="lg"
       fullWidth
     >
-      <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
-        <Box sx={{ fontWeight: 'bold', color: 'primary.main', fontSize: '1.75rem', mb: 1 }}>
-          Get Prepared for {selectedJob?.title}
+      <DialogTitle sx={{ textAlign: 'center', pb: 1, pt: 3 }}>
+        <Box sx={{ fontWeight: 'bold', color: 'primary.main', fontSize: '1.8rem', mb: 1 }}>
+          🎯 Get Ready for {selectedJob?.title}
         </Box>
-        <Typography variant="subtitle1" color="text.secondary">
-          Choose your preparation path
+        <Typography variant="subtitle1" color="text.secondary" sx={{ fontSize: '1.1rem' }}>
+          Comprehensive preparation to help you excel in this position
         </Typography>
       </DialogTitle>
-      <DialogContent>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
+      <DialogContent sx={{ px: 3, pb: 2 }}>
+        {/* Main Assessment Options */}
+        <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 'bold' }}>
+          🧠 Assessment & Testing
+        </Typography>
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} sm={6} md={3}>
             <Card 
               sx={{ 
                 height: '100%',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
-                '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 }
+                border: `2px solid ${alpha(theme.palette.warning.main, 0.2)}`,
+                '&:hover': { 
+                  transform: 'translateY(-4px)', 
+                  boxShadow: `0 8px 25px ${alpha(theme.palette.warning.main, 0.3)}`,
+                  border: `2px solid ${theme.palette.warning.main}`
+                }
               }}
               onClick={() => {
                 setPreparationDialogOpen(false);
                 navigate('/app/tests');
               }}
             >
-              <CardContent sx={{ textAlign: 'center', p: 3 }}>
-                <Assessment sx={{ fontSize: 48, color: theme.palette.warning.main, mb: 2 }} />
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
+              <CardContent sx={{ textAlign: 'center', p: 2 }}>
+                <Assessment sx={{ fontSize: 40, color: theme.palette.warning.main, mb: 1.5 }} />
+                <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ fontSize: '1rem' }}>
                   Psychometric Tests
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Assess your skills and personality fit for this role
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem' }}>
+                  Personality & cognitive assessments
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} md={4}>
+          
+          <Grid item xs={12} sm={6} md={3}>
             <Card 
               sx={{ 
                 height: '100%',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
-                '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 }
+                border: `2px solid ${alpha(theme.palette.info.main, 0.2)}`,
+                '&:hover': { 
+                  transform: 'translateY(-4px)', 
+                  boxShadow: `0 8px 25px ${alpha(theme.palette.info.main, 0.3)}`,
+                  border: `2px solid ${theme.palette.info.main}`
+                }
+              }}
+              onClick={() => {
+                setPreparationDialogOpen(false);
+                navigate('/app/smart-tests');
+              }}
+            >
+              <CardContent sx={{ textAlign: 'center', p: 2 }}>
+                <SmartToy sx={{ fontSize: 40, color: theme.palette.info.main, mb: 1.5 }} />
+                <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ fontSize: '1rem' }}>
+                  Smart Tests
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem' }}>
+                  AI-powered adaptive testing
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card 
+              sx={{ 
+                height: '100%',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                border: `2px solid ${alpha(theme.palette.secondary.main, 0.2)}`,
+                '&:hover': { 
+                  transform: 'translateY(-4px)', 
+                  boxShadow: `0 8px 25px ${alpha(theme.palette.secondary.main, 0.3)}`,
+                  border: `2px solid ${theme.palette.secondary.main}`
+                }
+              }}
+              onClick={() => {
+                setPreparationDialogOpen(false);
+                navigate('/app/job-specific-tests');
+              }}
+            >
+              <CardContent sx={{ textAlign: 'center', p: 2 }}>
+                <Assignment sx={{ fontSize: 40, color: theme.palette.secondary.main, mb: 1.5 }} />
+                <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ fontSize: '1rem' }}>
+                  Job-Specific Tests
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem' }}>
+                  Role-tailored assessments
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card 
+              sx={{ 
+                height: '100%',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                border: `2px solid ${alpha(theme.palette.success.main, 0.2)}`,
+                '&:hover': { 
+                  transform: 'translateY(-4px)', 
+                  boxShadow: `0 8px 25px ${alpha(theme.palette.success.main, 0.3)}`,
+                  border: `2px solid ${theme.palette.success.main}`
+                }
+              }}
+              onClick={() => {
+                setPreparationDialogOpen(false);
+                navigate('/app/skills-assessment');
+              }}
+            >
+              <CardContent sx={{ textAlign: 'center', p: 2 }}>
+                <TrendingUp sx={{ fontSize: 40, color: theme.palette.success.main, mb: 1.5 }} />
+                <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ fontSize: '1rem' }}>
+                  Skills Assessment
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem' }}>
+                  Technical & soft skills evaluation
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Interview & Learning Options */}
+        <Typography variant="h6" sx={{ mb: 2, color: 'primary.main', fontWeight: 'bold' }}>
+          🎤 Interview & Learning
+        </Typography>
+        <Grid container spacing={3}>
+          <Grid item xs={12} sm={6} md={4}>
+            <Card 
+              sx={{ 
+                height: '100%',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                border: `2px solid ${alpha(theme.palette.error.main, 0.2)}`,
+                '&:hover': { 
+                  transform: 'translateY(-4px)', 
+                  boxShadow: `0 8px 25px ${alpha(theme.palette.error.main, 0.3)}`,
+                  border: `2px solid ${theme.palette.error.main}`
+                }
               }}
               onClick={() => {
                 setPreparationDialogOpen(false);
                 navigate('/app/interviews');
               }}
             >
-              <CardContent sx={{ textAlign: 'center', p: 3 }}>
-                <Person sx={{ fontSize: 48, color: theme.palette.success.main, mb: 2 }} />
+              <CardContent sx={{ textAlign: 'center', p: 2.5 }}>
+                <Person sx={{ fontSize: 45, color: theme.palette.error.main, mb: 1.5 }} />
                 <Typography variant="h6" fontWeight="bold" gutterBottom>
                   Interview Practice
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Practice with AI-powered mock interviews
+                  AI-powered mock interviews & feedback
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} md={4}>
+
+          <Grid item xs={12} sm={6} md={4}>
             <Card 
               sx={{ 
                 height: '100%',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
-                '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 }
+                border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                '&:hover': { 
+                  transform: 'translateY(-4px)', 
+                  boxShadow: `0 8px 25px ${alpha(theme.palette.primary.main, 0.3)}`,
+                  border: `2px solid ${theme.palette.primary.main}`
+                }
               }}
               onClick={() => {
                 window.open('https://www.elearning.excellencecoachinghub.com/', '_blank');
                 setPreparationDialogOpen(false);
               }}
             >
-              <CardContent sx={{ textAlign: 'center', p: 3 }}>
-                <School sx={{ fontSize: 48, color: theme.palette.primary.main, mb: 2 }} />
+              <CardContent sx={{ textAlign: 'center', p: 2.5 }}>
+                <School sx={{ fontSize: 45, color: theme.palette.primary.main, mb: 1.5 }} />
                 <Typography variant="h6" fontWeight="bold" gutterBottom>
-                  Skill Courses
+                  Skill Development
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Learn the skills required for this position
+                  Learn required skills for this position
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={4}>
+            <Card 
+              sx={{ 
+                height: '100%',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                border: `2px solid ${alpha(theme.palette.success.main, 0.2)}`,
+                '&:hover': { 
+                  transform: 'translateY(-4px)', 
+                  boxShadow: `0 8px 25px ${alpha(theme.palette.success.main, 0.3)}`,
+                  border: `2px solid ${theme.palette.success.main}`
+                }
+              }}
+              onClick={() => {
+                setPreparationDialogOpen(false);
+                navigate('/app/career-guidance');
+              }}
+            >
+              <CardContent sx={{ textAlign: 'center', p: 2.5 }}>
+                <Psychology sx={{ fontSize: 45, color: theme.palette.success.main, mb: 1.5 }} />
+                <Typography variant="h6" fontWeight="bold" gutterBottom>
+                  Career Guidance
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Get personalized career advice & tips
                 </Typography>
               </CardContent>
             </Card>
           </Grid>
         </Grid>
+
+        {/* Quick Tips */}
+        <Box 
+          sx={{ 
+            mt: 3, 
+            p: 2, 
+            bgcolor: alpha(theme.palette.info.main, 0.05),
+            borderRadius: 2,
+            border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`
+          }}
+        >
+          <Typography variant="body2" color="info.main" fontWeight="bold" sx={{ mb: 1 }}>
+            💡 Pro Tip for {selectedJob?.title}:
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Start with our Smart Tests for personalized assessment, then move to job-specific tests based on your results. 
+            Complete with interview practice for the best preparation experience!
+          </Typography>
+        </Box>
       </DialogContent>
-      <DialogActions sx={{ justifyContent: 'center', pb: 3 }}>
+      <DialogActions sx={{ justifyContent: 'center', pb: 3, pt: 1 }}>
         <Button
           onClick={() => setPreparationDialogOpen(false)}
           variant="outlined"
+          sx={{ minWidth: 120 }}
         >
           Close
         </Button>
@@ -391,8 +584,15 @@ const AllJobsPage: React.FC = () => {
             navigate('/register');
           }}
           variant="contained"
+          sx={{ 
+            minWidth: 140,
+            background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
+            '&:hover': {
+              background: `linear-gradient(45deg, ${theme.palette.primary.dark} 30%, ${theme.palette.secondary.dark} 90%)`,
+            }
+          }}
         >
-          Register to Start
+          🚀 Start Preparing
         </Button>
       </DialogActions>
     </Dialog>
@@ -411,7 +611,7 @@ const AllJobsPage: React.FC = () => {
             <ArrowBack />
           </IconButton>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1, color: 'primary.main', fontWeight: 'bold' }}>
-            Excellence Coaching Hub - Jobs
+            Exjobnet - Jobs
           </Typography>
           <Button
             color="primary"
@@ -431,9 +631,60 @@ const AllJobsPage: React.FC = () => {
       </AppBar>
 
       <Container maxWidth="xl" sx={{ py: 4 }}>
-        {/* Modern Header with Stats */}
-        <Box textAlign="center" mb={6}>
-          <Box sx={{ position: 'relative', mb: 3 }}>
+        {/* Enhanced Modern Header with Animation */}
+        <Box 
+          textAlign="center" 
+          mb={6}
+          sx={{ 
+            position: 'relative',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: -50,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: 150,
+              height: 150,
+              background: `radial-gradient(circle, ${alpha(theme.palette.primary.main, 0.1)} 0%, transparent 70%)`,
+              borderRadius: '50%',
+              zIndex: -1,
+            }
+          }}
+        >
+          <Box sx={{ position: 'relative', mb: 4 }}>
+            {/* Floating Elements */}
+            <Box
+              sx={{
+                position: 'absolute',
+                top: -20,
+                right: '20%',
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                background: `linear-gradient(135deg, ${theme.palette.secondary.main}, ${theme.palette.warning.main})`,
+                opacity: 0.6,
+                animation: 'float 6s ease-in-out infinite',
+                '@keyframes float': {
+                  '0%, 100%': { transform: 'translateY(0px)' },
+                  '50%': { transform: 'translateY(-20px)' }
+                }
+              }}
+            />
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 10,
+                left: '15%',
+                width: 25,
+                height: 25,
+                borderRadius: '50%',
+                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.info.main})`,
+                opacity: 0.7,
+                animation: 'float 4s ease-in-out infinite',
+                animationDelay: '2s'
+              }}
+            />
+            
             <Typography 
               variant="h2" 
               component="h1" 
@@ -443,44 +694,99 @@ const AllJobsPage: React.FC = () => {
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
-                mb: 2
+                mb: 2,
+                position: 'relative',
+                fontSize: { xs: '2rem', sm: '3rem', md: '3.75rem' },
+                lineHeight: 1.1,
+                '&::after': {
+                  content: '"💼"',
+                  position: 'absolute',
+                  right: -60,
+                  top: -10,
+                  fontSize: '2rem',
+                  animation: 'bounce 2s infinite',
+                  '@keyframes bounce': {
+                    '0%, 20%, 50%, 80%, 100%': { transform: 'translateY(0)' },
+                    '40%': { transform: 'translateY(-10px)' },
+                    '60%': { transform: 'translateY(-5px)' }
+                  }
+                }
               }}
             >
               Discover Your Dream Job
             </Typography>
-            <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 700, mx: 'auto', mb: 3 }}>
-              Join thousands of professionals finding amazing career opportunities with our AI-powered job matching platform
+            
+            <Typography 
+              variant="h6" 
+              color="text.secondary" 
+              sx={{ 
+                maxWidth: 800, 
+                mx: 'auto', 
+                mb: 4,
+                fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
+                lineHeight: 1.6,
+                fontWeight: 400
+              }}
+            >
+              🚀 Join thousands of professionals finding amazing career opportunities with our AI-powered job matching platform
             </Typography>
             
-            {/* Stats */}
-            <Stack direction="row" spacing={4} justifyContent="center" sx={{ mt: 4 }}>
-              <Box textAlign="center">
-                <Typography variant="h4" fontWeight="bold" color="primary.main">
-                  {totalJobs}+
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Active Jobs
-                </Typography>
-              </Box>
-              <Divider orientation="vertical" flexItem />
-              <Box textAlign="center">
-                <Typography variant="h4" fontWeight="bold" color="success.main">
-                  50k+
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Happy Candidates
-                </Typography>
-              </Box>
-              <Divider orientation="vertical" flexItem />
-              <Box textAlign="center">
-                <Typography variant="h4" fontWeight="bold" color="warning.main">
-                  1000+
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Companies
-                </Typography>
-              </Box>
-            </Stack>
+            {/* Enhanced Stats with Icons */}
+            <Paper
+              elevation={0}
+              sx={{
+                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.03)} 0%, ${alpha(theme.palette.secondary.main, 0.03)} 100%)`,
+                border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                borderRadius: 4,
+                p: 3,
+                mt: 4,
+                mx: 'auto',
+                maxWidth: 800
+              }}
+            >
+              <Stack 
+                direction={{ xs: 'column', sm: 'row' }} 
+                spacing={{ xs: 3, sm: 4 }} 
+                justifyContent="center"
+                divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', sm: 'block' } }} />}
+              >
+                <Box textAlign="center" sx={{ flex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                    <Work sx={{ mr: 1, color: theme.palette.primary.main, fontSize: '1.5rem' }} />
+                    <Typography variant="h4" fontWeight="bold" color="primary.main">
+                      {totalJobs.toLocaleString()}+
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" fontWeight="500">
+                    Active Jobs Available
+                  </Typography>
+                </Box>
+                
+                <Box textAlign="center" sx={{ flex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                    <Person sx={{ mr: 1, color: theme.palette.success.main, fontSize: '1.5rem' }} />
+                    <Typography variant="h4" fontWeight="bold" color="success.main">
+                      50k+
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" fontWeight="500">
+                    Happy Job Seekers
+                  </Typography>
+                </Box>
+                
+                <Box textAlign="center" sx={{ flex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                    <Business sx={{ mr: 1, color: theme.palette.warning.main, fontSize: '1.5rem' }} />
+                    <Typography variant="h4" fontWeight="bold" color="warning.main">
+                      1,000+
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" fontWeight="500">
+                    Trusted Companies
+                  </Typography>
+                </Box>
+              </Stack>
+            </Paper>
           </Box>
         </Box>
 
@@ -757,9 +1063,32 @@ const AllJobsPage: React.FC = () => {
                     {job.title}
                   </Typography>
                   
-                  <Typography variant="body1" color="text.secondary" gutterBottom sx={{ mb: 3, fontWeight: 500 }}>
+                  <Typography variant="body1" color="text.secondary" gutterBottom sx={{ mb: 1, fontWeight: 500 }}>
                     {job.employer?.company || (job.employer ? `${job.employer.firstName} ${job.employer.lastName}` : 'Unknown Employer')}
                   </Typography>
+
+                  {/* External Job Source Indicator */}
+                  {job.isExternalJob && job.externalJobSource && (
+                    <Box sx={{ mb: 2 }}>
+                      <Chip
+                        label={`Source: ${job.externalJobSource}`}
+                        size="small"
+                        sx={{
+                          fontSize: '0.7rem',
+                          fontWeight: 'bold',
+                          bgcolor: alpha(theme.palette.secondary.main, 0.1),
+                          color: theme.palette.secondary.main,
+                          border: `1px solid ${alpha(theme.palette.secondary.main, 0.3)}`,
+                          '& .MuiChip-label': {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5
+                          }
+                        }}
+                        icon={<Language sx={{ fontSize: '12px' }} />}
+                      />
+                    </Box>
+                  )}
 
                   {/* Enhanced Job Details */}
                   <Stack spacing={1.5} sx={{ mb: 3 }}>
@@ -883,7 +1212,9 @@ const AllJobsPage: React.FC = () => {
                         fontWeight: 700,
                         borderRadius: 3,
                         py: 1.5,
-                        background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
+                        background: job.isExternalJob 
+                          ? `linear-gradient(45deg, ${theme.palette.secondary.main} 30%, ${theme.palette.warning.main} 90%)`
+                          : `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
                         boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
                         '&:hover': {
                           transform: 'translateY(-1px)',
@@ -891,7 +1222,10 @@ const AllJobsPage: React.FC = () => {
                         }
                       }}
                     >
-                      Apply Now
+                      {job.isExternalJob && job.externalJobSource 
+                        ? `Apply at ${job.externalJobSource}` 
+                        : 'Apply Now'
+                      }
                     </Button>
                     
                     <Button
@@ -907,7 +1241,7 @@ const AllJobsPage: React.FC = () => {
                         }
                       }}
                     >
-                      🚀 Get Interview Ready
+                      🎯 Get Position Ready
                     </Button>
                   </Stack>
                 </Box>

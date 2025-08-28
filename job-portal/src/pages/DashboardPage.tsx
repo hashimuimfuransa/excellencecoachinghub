@@ -79,7 +79,6 @@ import {
   LocalOffer,
   Assignment,
   PlayCircleOutline,
-  BookmarkBorder,
   Share,
   GetApp
 } from '@mui/icons-material';
@@ -286,7 +285,6 @@ const DashboardPage: React.FC = () => {
     totalApplications: 0,
     certificates: 0,
     completedTests: 0,
-    savedJobs: 0,
     profileViews: 0,
     profileCompleteness: 0
   });
@@ -407,7 +405,6 @@ const DashboardPage: React.FC = () => {
         ...prev, 
         profileCompleteness: completionPercentage,
         profileViews: userData?.profileViews || 0,
-        savedJobs: userData?.savedJobsCount || 0,
         completedTests: userData?.testsCompletedCount || 0
       }));
 
@@ -837,20 +834,7 @@ const DashboardPage: React.FC = () => {
                   </div>
                 </Zoom>
               </Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <Zoom in={!loading} timeout={1000}>
-                  <div>
-                    <StatCard
-                      title="Saved Jobs"
-                      value={dashboardStats.savedJobs}
-                      icon={<BookmarkBorder />}
-                      color={theme.palette.warning.main}
-                      onClick={() => navigate('/app/saved-jobs')}
-                      subtitle="Jobs you've bookmarked"
-                    />
-                  </div>
-                </Zoom>
-              </Grid>
+
               <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Zoom in={!loading} timeout={1200}>
                   <div>

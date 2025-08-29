@@ -139,7 +139,7 @@ const ResetPasswordPage: React.FC = () => {
         sx={{
           minHeight: '100vh',
           display: 'flex',
-          background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%)',
+          background: 'linear-gradient(135deg, #4ade80 0%, #16a34a 50%, #14532d 100%)',
           alignItems: 'center',
           justifyContent: 'center'
         }}
@@ -210,7 +210,7 @@ const ResetPasswordPage: React.FC = () => {
         sx={{
           minHeight: '100vh',
           display: 'flex',
-          background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%)',
+          background: 'linear-gradient(135deg, #4ade80 0%, #16a34a 50%, #14532d 100%)',
           alignItems: 'center',
           justifyContent: 'center'
         }}

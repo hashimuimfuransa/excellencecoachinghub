@@ -157,7 +157,7 @@ const JobDetailsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
-  const [applyDialogOpen, setApplyDialogOpen] = useState(false);
+
   const [prepareDialogOpen, setPrepareDialogOpen] = useState(false);
   const [shareMenuAnchor, setShareMenuAnchor] = useState<null | HTMLElement>(null);
 
@@ -224,16 +224,7 @@ const JobDetailsPage: React.FC = () => {
     return daysAgo === 0 ? 'Today' : `${daysAgo} days ago`;
   };
 
-  const handleApply = () => {
-    // If it's an external job, redirect to external URL
-    if (job?.isExternalJob && job?.externalApplicationUrl) {
-      window.open(job.externalApplicationUrl, '_blank');
-      return;
-    }
-    
-    // Always show the apply dialog, authentication is handled within the dialog
-    setApplyDialogOpen(true);
-  };
+
 
   const handlePrepare = () => {
     if (!user) {
@@ -246,7 +237,6 @@ const JobDetailsPage: React.FC = () => {
   };
 
   const handleGetPrepared = (selectedJob: Job) => {
-    setApplyDialogOpen(false);
     setPrepareDialogOpen(true);
   };
 
@@ -450,7 +440,7 @@ const JobDetailsPage: React.FC = () => {
         {/* Main Content */}
         <Grid item xs={12} md={8}>
           {/* Job Description */}
-          <Paper sx={{ 
+          <Paper id="job-description" sx={{ 
             p: 3, 
             mb: 3,
             borderRadius: 2,
@@ -1089,47 +1079,88 @@ const JobDetailsPage: React.FC = () => {
             border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
           }}>
             <Stack spacing={2}>
-              <Button
-                variant="contained"
-                size="large"
-                startIcon={<Send />}
-                onClick={handleApply}
-                fullWidth
-                sx={{ 
-                  py: 1.5,
-                  fontWeight: 600,
-                  fontSize: '1rem',
-                  borderRadius: 2,
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                  '&:hover': {
-                    boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
-                    transform: 'translateY(-1px)'
-                  }
-                }}
-              >
-                Apply Now
-              </Button>
-              
+              {/* Get Prepared Button */}
               <Button
                 variant="outlined"
                 size="large"
-                startIcon={<Psychology />}
+                startIcon={<Assessment />}
                 onClick={handlePrepare}
                 fullWidth
-                color="secondary"
                 sx={{ 
-                  py: 1.5,
-                  fontWeight: 600,
-                  fontSize: '0.95rem',
-                  borderRadius: 2,
+                  py: 1.8,
+                  fontWeight: 700,
+                  fontSize: '1rem',
+                  borderRadius: 3,
                   borderWidth: 2,
+                  background: `linear-gradient(45deg, ${alpha(theme.palette.primary.main, 0.02)} 0%, ${alpha(theme.palette.info.main, 0.02)} 100%)`,
                   '&:hover': {
                     borderWidth: 2,
-                    transform: 'translateY(-1px)'
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 25px ' + alpha(theme.palette.primary.main, 0.25),
+                    background: `linear-gradient(45deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.info.main, 0.05)} 100%)`
                   }
                 }}
               >
                 🎯 Get Position Ready
+              </Button>
+              
+              {/* View Job Source Button */}
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={
+                  // Determine the job source URL for icon selection
+                  (job?.isExternalJob && job?.externalApplicationUrl) ||
+                  job?.contactInfo?.website ||
+                  job?.employer?.socialLinks?.website
+                    ? <Language />
+                    : <Work />
+                }
+                onClick={() => {
+                  // Determine the job source URL
+                  let sourceUrl = null;
+                  
+                  // Priority 1: External job application URL
+                  if (job?.isExternalJob && job?.externalApplicationUrl) {
+                    sourceUrl = job.externalApplicationUrl;
+                  }
+                  // Priority 2: Contact info website
+                  else if (job?.contactInfo?.website) {
+                    sourceUrl = job.contactInfo.website;
+                  }
+                  // Priority 3: Employer's website
+                  else if (job?.employer?.socialLinks?.website) {
+                    sourceUrl = job.employer.socialLinks.website;
+                  }
+                  
+                  if (sourceUrl) {
+                    // Ensure URL has protocol
+                    if (!sourceUrl.startsWith('http://') && !sourceUrl.startsWith('https://')) {
+                      sourceUrl = 'https://' + sourceUrl;
+                    }
+                    window.open(sourceUrl, '_blank', 'noopener,noreferrer');
+                  } else {
+                    // Fallback: scroll to job description
+                    document.getElementById('job-description')?.scrollIntoView({ 
+                      behavior: 'smooth' 
+                    });
+                  }
+                }}
+                fullWidth
+                sx={{ 
+                  py: 1.8,
+                  fontWeight: 700,
+                  fontSize: '1rem',
+                  borderRadius: 3,
+                  background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.info.main} 90%)`,
+                  boxShadow: '0 6px 20px ' + alpha(theme.palette.primary.main, 0.3),
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 25px ' + alpha(theme.palette.primary.main, 0.4),
+                  }
+                }}
+              >
+                📋 View More Details
               </Button>
 
               <Stack direction="row" spacing={1}>
@@ -1707,117 +1738,7 @@ const JobDetailsPage: React.FC = () => {
         </Grid>
       </Grid>
 
-      {/* Apply Dialog */}
-      <Dialog open={applyDialogOpen} onClose={() => setApplyDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          <Typography variant="h5" fontWeight="bold" color="primary.main">
-            Ready to Apply for {job?.title}?
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          {job?.isExternalJob ? (
-            <>
-              <Typography variant="body1" paragraph>
-                This is an external job posting. You'll be redirected to the original job posting to apply directly with the employer.
-              </Typography>
-              {job.contactInfo?.applicationInstructions && (
-                <Paper sx={{ p: 2, bgcolor: alpha(theme.palette.secondary.main, 0.05), border: `1px solid ${alpha(theme.palette.secondary.main, 0.2)}`, mb: 2 }}>
-                  <Typography variant="body2" fontWeight="medium" gutterBottom>
-                    Application Instructions:
-                  </Typography>
-                  <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }}>
-                    {job.contactInfo.applicationInstructions}
-                  </Typography>
-                </Paper>
-              )}
-              <Typography variant="body1" paragraph>
-                However, we still recommend getting prepared to increase your chances of success:
-              </Typography>
-              <Box sx={{ pl: 2, mb: 3 }}>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  • Understand the job requirements better
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  • Prepare for technical and behavioral interviews
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  • Build relevant skills through targeted courses
-                </Typography>
-                <Typography variant="body2">
-                  • Practice with mock interviews and assessments
-                </Typography>
-              </Box>
-            </>
-          ) : (
-            <>
-              <Typography variant="body1" paragraph>
-                Before you apply, we recommend getting prepared to increase your chances of success.
-                Our preparation program helps you:
-              </Typography>
-              <Box sx={{ pl: 2, mb: 3 }}>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  • Understand the job requirements better
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  • Prepare for technical and behavioral interviews
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  • Build relevant skills through targeted courses
-                </Typography>
-                <Typography variant="body2">
-                  • Practice with mock interviews and assessments
-                </Typography>
-              </Box>
-            </>
-          )}
-          <Paper sx={{ p: 2, bgcolor: alpha(theme.palette.info.main, 0.05), border: `1px solid ${alpha(theme.palette.info.main, 0.2)}` }}>
-            <Typography variant="body2" color="info.main" fontWeight="medium">
-              💡 Candidates who complete our preparation program have 3x higher success rates!
-            </Typography>
-          </Paper>
-        </DialogContent>
-        <DialogActions sx={{ p: 3, gap: 2 }}>
-          <Button
-            variant="outlined"
-            onClick={() => {
-              if (!user) {
-                setApplyDialogOpen(false);
-                navigate('/login', { 
-                  state: { from: { pathname: `/jobs/${id}` } }
-                });
-                return;
-              }
-              handleGetPrepared(job!);
-            }}
-            sx={{ flex: 1 }}
-          >
-            Get Prepared First
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => {
-              if (!user) {
-                setApplyDialogOpen(false);
-                navigate('/login', { 
-                  state: { from: { pathname: `/jobs/${id}` } }
-                });
-                return;
-              }
-              setApplyDialogOpen(false);
-              // For external jobs, redirect to the actual job posting
-              if (job?.isExternalJob && job?.externalApplicationUrl) {
-                window.open(job.externalApplicationUrl, '_blank');
-              } else {
-                // For internal jobs, redirect to our application system
-                window.open('https://jobs.excellencecoachinghub.com/', '_blank');
-              }
-            }}
-            sx={{ flex: 1 }}
-          >
-            Apply Now
-          </Button>
-        </DialogActions>
-      </Dialog>
+
 
       {/* Enhanced Prepare Dialog */}
       <Dialog open={prepareDialogOpen} onClose={() => setPrepareDialogOpen(false)} maxWidth="lg" fullWidth>

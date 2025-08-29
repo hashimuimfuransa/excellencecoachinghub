@@ -9,13 +9,15 @@ import {
   updateJob,
   deleteJob,
   getJobsByEmployer,
-  getRecommendedCourses
+  getRecommendedCourses,
+  getJobCategories
 } from '@/controllers/jobController';
 
 const router = express.Router();
 
 // Public routes
 router.get('/', getJobs);
+router.get('/categories', getJobCategories);
 router.get('/curated', getCuratedJobs);
 router.get('/:id', getJobById);
 router.get('/:id/recommended-courses', getRecommendedCourses);

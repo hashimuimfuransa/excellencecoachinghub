@@ -618,20 +618,58 @@ const DashboardPage: React.FC = () => {
             )}
           </Stack>
           
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Button 
-              variant="contained" 
-              size="small" 
-              color="primary"
-              onClick={() => navigate(`/app/jobs/${job._id}`)}
-              endIcon={<ArrowForward />}
+          <Stack spacing={1}>
+            {/* Get Prepared Button */}
+            <Button
+              variant="outlined"
+              startIcon={<Assessment />}
+              onClick={() => {
+                // Open preparation dialog or navigate to preparation
+                console.log('Get prepared for:', job.title);
+              }}
+              fullWidth
+              size="small"
+              sx={{ 
+                fontWeight: 600,
+                borderRadius: 2,
+                borderWidth: 1.5,
+                '&:hover': {
+                  borderWidth: 1.5,
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 2px 8px ' + alpha(theme.palette.primary.main, 0.2)
+                }
+              }}
             >
-              View Details
+              Get Prepared
             </Button>
-            <Typography variant="caption" color="text.secondary">
-              {job.deadline ? `Deadline: ${new Date(job.deadline).toLocaleDateString()}` : 'Open until filled'}
-            </Typography>
-          </Box>
+            
+            {/* View Full Details Button */}
+            <Button
+              variant="contained"
+              startIcon={<ArrowForward />}
+              onClick={() => navigate(`/app/jobs/${job._id}`)}
+              fullWidth
+              size="small"
+              sx={{ 
+                fontWeight: 700,
+                borderRadius: 2,
+                background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.info.main} 90%)`,
+                '&:hover': {
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 3px 10px ' + alpha(theme.palette.primary.main, 0.3)
+                }
+              }}
+            >
+              View Full Details
+            </Button>
+
+            {/* Deadline info */}
+            <Box display="flex" justifyContent="center">
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                {job.deadline ? `Deadline: ${new Date(job.deadline).toLocaleDateString()}` : 'Open until filled'}
+              </Typography>
+            </Box>
+          </Stack>
         </CardContent>
       </Card>
     );

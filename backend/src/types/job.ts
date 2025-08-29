@@ -15,6 +15,15 @@ export enum JobType {
   FREELANCE = 'freelance'
 }
 
+export enum JobCategory {
+  JOBS = 'jobs',
+  TENDERS = 'tenders',
+  TRAININGS = 'trainings',
+  INTERNSHIPS = 'internships',
+  SCHOLARSHIPS = 'scholarships',
+  ACCESS_TO_FINANCE = 'access_to_finance'
+}
+
 export enum ExperienceLevel {
   ENTRY_LEVEL = 'entry_level',
   MID_LEVEL = 'mid_level',

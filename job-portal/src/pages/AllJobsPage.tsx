@@ -896,7 +896,7 @@ const AllJobsPage: React.FC = () => {
             }}
           >
             Explore <Box component="span" sx={{ fontWeight: 'bold', color: 'primary.main' }}>thousands of jobs</Box> from top companies across Africa. Build your professional network with our 
-            <Box component="span" sx={{ fontWeight: 'bold', color: 'info.main' }}> LinkedIn-style community engagement</Box> features, access comprehensive 
+            <Box component="span" sx={{ fontWeight: 'bold', color: 'info.main' }}> community engagement</Box> features, access comprehensive 
             <Box component="span" sx={{ fontWeight: 'bold', color: 'warning.main' }}> job preparation services</Box> including psychometric tests, interview coaching, and skill assessments to increase your success rate by 
             <Box component="span" sx={{ fontWeight: 'bold', color: 'success.main' }}>300%</Box>.
           </Typography>

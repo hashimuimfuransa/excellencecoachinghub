@@ -73,8 +73,6 @@ const Navbar: React.FC = () => {
   const menuItems = [
     { text: 'Home', icon: <Home />, path: '/' },
     { text: 'Jobs', icon: <Work />, path: '/jobs' },
-    { text: 'Career Guidance', icon: <TrendingUp />, path: '/app/career-guidance' },
-    { text: 'Certificates', icon: <School />, path: '/app/certificates' },
     { text: 'Companies', icon: <Business />, path: '/companies' },
     { text: 'Support', icon: <Support />, path: '/support' },
   ];
@@ -88,13 +86,8 @@ const Navbar: React.FC = () => {
             alt="ExJobNet" 
             style={{ height: 30, width: 'auto' }}
           />
-          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-            ExJobNet
-          </Typography>
+         
         </Box>
-        <IconButton onClick={handleDrawerToggle}>
-          <Close />
-        </IconButton>
       </Box>
       <Divider />
       <List>
@@ -126,9 +119,10 @@ const Navbar: React.FC = () => {
                   fontWeight: location.pathname === item.path ? 'bold' : 'normal',
                   color: location.pathname === item.path ? 'primary.main' : 'inherit'
                 } 
-              }} 
+              }}
             />
           </ListItem>
+          
         ))}
       </List>
       <Divider sx={{ my: 2 }} />
@@ -224,7 +218,7 @@ const Navbar: React.FC = () => {
                 WebkitTextFillColor: 'transparent'
               }}
             >
-              ExJobNet
+      
             </Typography>
           </Box>
 
@@ -320,10 +314,6 @@ const Navbar: React.FC = () => {
                 <MenuItem onClick={() => { navigate('/app/dashboard'); handleClose(); }}>
                   <Work sx={{ mr: 1 }} />
                   Dashboard
-                </MenuItem>
-                <MenuItem onClick={() => { navigate('/app/career-guidance'); handleClose(); }}>
-                  <TrendingUp sx={{ mr: 1 }} />
-                  Career Guidance
                 </MenuItem>
                 <Divider />
                 <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>

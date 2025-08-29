@@ -270,6 +270,12 @@ class JobService {
     const response = await apiGet<ApiResponse<string[]>>('/jobs/companies');
     return handleApiResponse(response);
   }
+
+  // Get job categories with counts
+  async getJobCategories(): Promise<{ category: string; count: number; displayName: string }[]> {
+    const response = await apiGet<ApiResponse<{ category: string; count: number; displayName: string }[]>>('/jobs/categories');
+    return handleApiResponse(response);
+  }
 }
 
 export const jobService = new JobService();

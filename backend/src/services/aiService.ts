@@ -848,6 +848,57 @@ Generate all ${questionCount} questions now:`;
       throw error;
     }
   }
+
+  /**
+   * Categorize job opportunity based on title and description
+   */
+  async categorizeJob(title: string, description: string): Promise<string> {
+    try {
+      const prompt = `
+        Analyze the following job opportunity and categorize it into one of these categories:
+
+        Categories:
+        1. "jobs" - Regular employment positions (full-time, part-time, contract, freelance)
+        2. "tenders" - Government or private sector procurement opportunities, contracts, bidding processes
+        3. "trainings" - Professional development, workshops, courses, skill-building programs, certifications
+        4. "internships" - Student placements, entry-level positions, graduate programs, apprenticeships
+        5. "scholarships" - Educational funding, grants, study abroad programs, academic awards
+        6. "access_to_finance" - Business loans, grants, funding opportunities, investment programs, microfinance
+
+        Job Title: ${title}
+        Job Description: ${description.substring(0, 1000)}
+
+        Rules:
+        - If it mentions "tender", "bid", "procurement", "contract award", "RFP", "proposal" -> "tenders"
+        - If it mentions "training", "course", "workshop", "certification", "skill development" -> "trainings"  
+        - If it mentions "intern", "graduate program", "entry level", "student placement" -> "internships"
+        - If it mentions "scholarship", "grant", "study abroad", "educational funding" -> "scholarships"
+        - If it mentions "loan", "funding", "investment", "finance", "grant", "microfinance" -> "access_to_finance"
+        - Otherwise, regular employment positions -> "jobs"
+
+        Return only the category name in lowercase, no additional text or explanation.
+      `;
+
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      const category = response.text().trim().toLowerCase();
+
+      // Validate the category
+      const validCategories = ['jobs', 'tenders', 'trainings', 'internships', 'scholarships', 'access_to_finance'];
+      
+      if (validCategories.includes(category)) {
+        return category;
+      }
+
+      // Default fallback
+      console.log(`Invalid category returned: ${category}, defaulting to 'jobs'`);
+      return 'jobs';
+
+    } catch (error) {
+      console.error('Error categorizing job with AI:', error);
+      return 'jobs'; // Default category on error
+    }
+  }
 }
 
 // Export a singleton instance

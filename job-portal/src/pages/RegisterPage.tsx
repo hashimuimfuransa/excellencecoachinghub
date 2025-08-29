@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   TextField,
@@ -20,9 +20,13 @@ import {
   useMediaQuery,
   Avatar,
   Fade,
+  Slide,
+  Grow,
   Stepper,
   Step,
-  StepLabel
+  StepLabel,
+  Chip,
+  Stack
 } from '@mui/material';
 import { 
   Email, 
@@ -59,6 +63,7 @@ const RegisterPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
+  const [mounted, setMounted] = useState(false);
   
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -66,6 +71,10 @@ const RegisterPage: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const steps = ['Account Type', 'Personal Information', 'Security'];
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | any) => {
     const { name, value } = e.target;
@@ -196,37 +205,71 @@ const RegisterPage: React.FC = () => {
       sx={{
         minHeight: '100vh',
         display: 'flex',
-        background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%)',
+        background: 'linear-gradient(135deg, #4ade80 0%, #16a34a 50%, #14532d 100%)',
         position: 'relative',
-        overflow: 'hidden',
+        overflow: 'auto',
         '&::before': {
           content: '""',
-          position: 'absolute',
+          position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'url("data:image/svg+xml,%3Csvg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z" fill="%234caf50" fill-opacity="0.05" fill-rule="evenodd"/%3E%3C/svg%3E")',
-          opacity: 0.5
+          background: `
+            radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+            radial-gradient(circle at 40% 80%, rgba(120, 219, 226, 0.3) 0%, transparent 50%)
+          `,
+          zIndex: 0,
+        },
+        '&::after': {
+          content: '""',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'url("/find job.jpg")',
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: 0.1,
+          zIndex: 0,
         }
       }}
     >
-      <Container component="main" maxWidth="md" sx={{ py: 4 }}>
-        <Fade in={true} timeout={800}>
+      <Container component="main" maxWidth="lg" sx={{ py: { xs: 4, md: 6 }, position: 'relative', zIndex: 1 }}>
+        <Slide direction="up" in={mounted} timeout={1000}>
           <Paper
-            elevation={12}
+            elevation={isMobile ? 8 : 24}
             sx={{
-              p: { xs: 3, sm: 5 },
+              p: { xs: 4, sm: 6 },
               width: '100%',
-              borderRadius: 4,
-              backdropFilter: 'blur(10px)',
-              background: 'rgba(255, 255, 255, 0.9)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-              overflow: 'hidden'
+              borderRadius: 6,
+              backdropFilter: 'blur(20px)',
+              background: 'rgba(255, 255, 255, 0.98)',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.3)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              transition: 'all 0.4s ease-in-out',
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 4,
+                background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
+              },
+              '&:hover': {
+                transform: 'translateY(-8px)',
+                boxShadow: '0 30px 80px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.3)',
+              }
             }}
           >
             {/* Back to Home Button */}
-            <Box sx={{ position: 'absolute', top: 16, left: 16 }}>
+            <Box sx={{ position: 'absolute', top: 20, left: 20, zIndex: 10 }}>
               <Button
                 component={RouterLink}
                 to="/"
@@ -234,78 +277,187 @@ const RegisterPage: React.FC = () => {
                 variant="outlined"
                 size="small"
                 sx={{
-                  borderRadius: 2,
+                  borderRadius: 3,
                   textTransform: 'none',
                   fontWeight: 600,
+                  border: '2px solid rgba(102, 126, 234, 0.2)',
+                  color: 'primary.main',
+                  backdropFilter: 'blur(10px)',
+                  background: 'rgba(255, 255, 255, 0.8)',
                   '&:hover': {
-                    transform: 'translateY(-1px)',
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 6px 20px rgba(102, 126, 234, 0.3)',
+                    border: '2px solid rgba(102, 126, 234, 0.4)',
+                    background: 'rgba(255, 255, 255, 0.9)',
                   },
-                  transition: 'all 0.3s'
+                  transition: 'all 0.3s ease'
                 }}
               >
                 Back to Home
               </Button>
             </Box>
             
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 4, justifyContent: 'center' }}>
-              <img 
-                src="/exjobnetlogo.png" 
-                alt="ExJobNet" 
-                style={{ height: 120, marginBottom: 16 }}
-              />
-              <Typography 
-                variant="h4" 
-                component="h1" 
-                sx={{ 
-                  fontWeight: 700,
-                  background: 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent'
-                }}
-              >
-                ExJobNet
-              </Typography>
-            </Box>
+            {/* Header with Logo and Brand */}
+            <Fade in={mounted} timeout={1200}>
+              <Box sx={{ textAlign: 'center', mb: 5, pt: 3 }}>
+                <Box
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mb: 3,
+                    p: 2,
+                    borderRadius: 4,
+                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
+                    border: '1px solid rgba(102, 126, 234, 0.1)',
+                  }}
+                >
+                  <img 
+                    src="/exjobnetlogo.png" 
+                    alt="ExJobNet" 
+                    style={{ height: 60, width: 60, objectFit: 'contain' }}
+                  />
+                </Box>
+                
+                <Typography 
+                  variant="h4" 
+                  component="h1" 
+                  sx={{ 
+                    fontWeight: 800,
+                    background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    mb: 1
+                  }}
+                >
+                  ExJobNet
+                </Typography>
+                
+                <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 3 }}>
+                  Africa's Premier Career Platform
+                </Typography>
+                
+                {/* Welcome Message */}
+                <Box sx={{ mb: 4 }}>
+                  <Typography 
+                    variant="h4" 
+                    component="h2" 
+                    fontWeight="bold"
+                    sx={{ 
+                      background: 'linear-gradient(45deg, #333 30%, #666 90%)',
+                      backgroundClip: 'text',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      position: 'relative',
+                      display: 'inline-block',
+                      mb: 2,
+                      '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        bottom: -8,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: 120,
+                        height: 4,
+                        borderRadius: 2,
+                        background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                      }
+                    }}
+                  >
+                    Join Our Community!
+                  </Typography>
+                  
+                  <Typography variant="body1" color="text.secondary" sx={{ mt: 3, maxWidth: 600, mx: 'auto' }}>
+                    Create your account to unlock personalized career opportunities, connect with top employers,
+                    and accelerate your professional growth across Africa's dynamic job ecosystem.
+                  </Typography>
+                </Box>
+                
+                {/* Benefits Chips */}
+                <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap" sx={{ mb: 4 }}>
+                  <Chip
+                    label="Free to Join"
+                    size="small"
+                    sx={{
+                      background: 'linear-gradient(45deg, rgba(76, 175, 80, 0.1) 30%, rgba(46, 125, 50, 0.1) 90%)',
+                      color: '#4caf50',
+                      border: '1px solid rgba(76, 175, 80, 0.2)',
+                      fontWeight: 600
+                    }}
+                  />
+                  <Chip
+                    label="Instant Access"
+                    size="small"
+                    sx={{
+                      background: 'linear-gradient(45deg, rgba(33, 150, 243, 0.1) 30%, rgba(21, 101, 192, 0.1) 90%)',
+                      color: '#2196f3',
+                      border: '1px solid rgba(33, 150, 243, 0.2)',
+                      fontWeight: 600
+                    }}
+                  />
+                  <Chip
+                    label="10,000+ Jobs"
+                    size="small"
+                    sx={{
+                      background: 'linear-gradient(45deg, rgba(102, 126, 234, 0.1) 30%, rgba(118, 75, 162, 0.1) 90%)',
+                      color: '#667eea',
+                      border: '1px solid rgba(102, 126, 234, 0.2)',
+                      fontWeight: 600
+                    }}
+                  />
+                </Stack>
+              </Box>
+            </Fade>
             
-            <Box sx={{ textAlign: 'center', mb: 4 }}>
-              <Typography 
-                variant="h4" 
-                component="h2" 
-                gutterBottom 
-                fontWeight="bold"
+            <Grow in={mounted} timeout={1500}>
+              <Stepper 
+                activeStep={activeStep} 
+                alternativeLabel 
                 sx={{ 
-                  color: 'primary.main',
-                  position: 'relative',
-                  display: 'inline-block',
-                  '&::after': {
-                    content: '""',
-                    position: 'absolute',
-                    bottom: -8,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: 60,
-                    height: 3,
-                    borderRadius: 1.5,
-                    bgcolor: 'primary.main'
+                  mb: 5,
+                  '& .MuiStepConnector-root': {
+                    top: 22,
+                    '&.Mui-completed .MuiStepConnector-line': {
+                      borderColor: '#667eea',
+                    },
+                    '&.Mui-active .MuiStepConnector-line': {
+                      borderColor: '#667eea',
+                    },
+                  },
+                  '& .MuiStepLabel-root .Mui-completed': {
+                    color: '#667eea',
+                  },
+                  '& .MuiStepLabel-root .Mui-active': {
+                    color: '#667eea',
+                  },
+                  '& .MuiStepIcon-root': {
+                    color: 'rgba(102, 126, 234, 0.2)',
+                    '&.Mui-active': {
+                      color: '#667eea',
+                    },
+                    '&.Mui-completed': {
+                      color: '#667eea',
+                    },
                   }
                 }}
               >
-                Create Your Account
-              </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mt: 3 }}>
-                Join ExJobNet to accelerate your career journey across Africa's dynamic job ecosystem
-              </Typography>
-            </Box>
-            
-            <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
-              {steps.map((label) => (
-                <Step key={label}>
-                  <StepLabel>{label}</StepLabel>
-                </Step>
-              ))}
-            </Stepper>
+                {steps.map((label) => (
+                  <Step key={label}>
+                    <StepLabel 
+                      sx={{
+                        '& .MuiStepLabel-label': {
+                          fontWeight: 600,
+                          fontSize: '1rem'
+                        }
+                      }}
+                    >
+                      {label}
+                    </StepLabel>
+                  </Step>
+                ))}
+              </Stepper>
+            </Grow>
 
             {error && (
               <Alert 
@@ -327,65 +479,141 @@ const RegisterPage: React.FC = () => {
 
             <Box component="form" onSubmit={activeStep === 2 ? handleSubmit : undefined} noValidate>
               {activeStep === 0 && (
-                <Fade in={true} timeout={500}>
+                <Slide direction="right" in={mounted} timeout={800}>
                   <Box>
-                    <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
-                      Select your account type:
+                    <Typography 
+                      variant="h5" 
+                      gutterBottom 
+                      sx={{ 
+                        mb: 4, 
+                        textAlign: 'center',
+                        fontWeight: 700,
+                        color: 'text.primary'
+                      }}
+                    >
+                      Choose Your Path to Success
                     </Typography>
                     
-                    <Grid container spacing={3}>
-                      {roleOptions.map((option) => (
+                    <Grid container spacing={4}>
+                      {roleOptions.map((option, index) => (
                         <Grid item xs={12} md={4} key={option.value}>
-                          <Paper
-                            elevation={formData.role === option.value ? 8 : 1}
-                            sx={{
-                              p: 3,
-                              borderRadius: 3,
-                              cursor: 'pointer',
-                              border: formData.role === option.value ? 2 : 1,
-                              borderColor: formData.role === option.value ? 'primary.main' : 'divider',
-                              transition: 'all 0.3s',
-                              height: '100%',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              textAlign: 'center',
-                              '&:hover': {
-                                transform: 'translateY(-4px)',
-                                boxShadow: '0 8px 16px rgba(0,0,0,0.1)'
-                              }
-                            }}
-                            onClick={() => setFormData({...formData, role: option.value})}
-                          >
-                            <Avatar
+                          <Slide direction="up" in={mounted} timeout={1000 + index * 200}>
+                            <Paper
+                              elevation={formData.role === option.value ? 12 : 3}
                               sx={{
-                                bgcolor: formData.role === option.value ? 'primary.main' : 'grey.200',
-                                width: 60,
-                                height: 60,
-                                mb: 2
+                                p: 4,
+                                borderRadius: 4,
+                                cursor: 'pointer',
+                                border: formData.role === option.value ? 3 : 2,
+                                borderColor: formData.role === option.value ? '#667eea' : 'rgba(102, 126, 234, 0.2)',
+                                transition: 'all 0.4s ease',
+                                height: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                textAlign: 'center',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                background: formData.role === option.value 
+                                  ? 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)'
+                                  : 'rgba(255, 255, 255, 0.9)',
+                                '&::before': formData.role === option.value ? {
+                                  content: '""',
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  right: 0,
+                                  height: 4,
+                                  background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
+                                } : {},
+                                '&:hover': {
+                                  transform: 'translateY(-8px)',
+                                  boxShadow: '0 15px 40px rgba(102, 126, 234, 0.3)',
+                                  borderColor: '#667eea',
+                                }
                               }}
+                              onClick={() => setFormData({...formData, role: option.value})}
                             >
-                              {option.icon}
-                            </Avatar>
-                            <Typography variant="h6" gutterBottom fontWeight="bold">
-                              {option.label}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {option.description}
-                            </Typography>
-                          </Paper>
+                              <Avatar
+                                sx={{
+                                  bgcolor: formData.role === option.value ? '#667eea' : 'rgba(102, 126, 234, 0.1)',
+                                  width: 80,
+                                  height: 80,
+                                  mb: 3,
+                                  transition: 'all 0.3s ease',
+                                  '& .MuiSvgIcon-root': {
+                                    fontSize: '2rem',
+                                    color: formData.role === option.value ? 'white' : '#667eea'
+                                  }
+                                }}
+                              >
+                                {option.icon}
+                              </Avatar>
+                              <Typography 
+                                variant="h5" 
+                                gutterBottom 
+                                fontWeight="bold"
+                                sx={{
+                                  color: formData.role === option.value ? '#667eea' : 'text.primary',
+                                  mb: 2
+                                }}
+                              >
+                                {option.label}
+                              </Typography>
+                              <Typography 
+                                variant="body1" 
+                                color="text.secondary"
+                                sx={{
+                                  lineHeight: 1.6,
+                                  fontSize: '0.95rem'
+                                }}
+                              >
+                                {option.description}
+                              </Typography>
+                              
+                              {formData.role === option.value && (
+                                <Box
+                                  sx={{
+                                    position: 'absolute',
+                                    top: 16,
+                                    right: 16,
+                                    bgcolor: '#4caf50',
+                                    borderRadius: '50%',
+                                    width: 24,
+                                    height: 24,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: 'white',
+                                    fontSize: '0.75rem'
+                                  }}
+                                >
+                                  ✓
+                                </Box>
+                              )}
+                            </Paper>
+                          </Slide>
                         </Grid>
                       ))}
                     </Grid>
                   </Box>
-                </Fade>
+                </Slide>
               )}
               
               {activeStep === 1 && (
-                <Fade in={true} timeout={500}>
+                <Slide direction="left" in={mounted} timeout={800}>
                   <Box>
-                    <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
-                      Enter your personal information:
+                    <Typography 
+                      variant="h5" 
+                      gutterBottom 
+                      sx={{ 
+                        mb: 4, 
+                        textAlign: 'center',
+                        fontWeight: 700,
+                        color: 'text.primary'
+                      }}
+                    >
+                      Tell Us About Yourself
                     </Typography>
                     
                     <Grid container spacing={3}>
@@ -403,15 +631,31 @@ const RegisterPage: React.FC = () => {
                           InputProps={{
                             startAdornment: (
                               <InputAdornment position="start">
-                                <Person color="primary" />
+                                <Person sx={{ color: '#667eea' }} />
                               </InputAdornment>
                             ),
                           }}
                           sx={{ 
                             '& .MuiOutlinedInput-root': {
-                              borderRadius: 2,
-                              '&:hover .MuiOutlinedInput-notchedOutline': {
-                                borderColor: 'primary.main',
+                              borderRadius: 3,
+                              backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                              '& fieldset': {
+                                borderColor: 'rgba(102, 126, 234, 0.2)',
+                                borderWidth: 2,
+                              },
+                              '&:hover fieldset': {
+                                borderColor: 'rgba(102, 126, 234, 0.4)',
+                              },
+                              '&.Mui-focused fieldset': {
+                                borderColor: '#667eea',
+                              },
+                              transition: 'all 0.3s ease'
+                            },
+                            '& .MuiInputLabel-root': {
+                              color: '#667eea',
+                              fontWeight: 600,
+                              '&.Mui-focused': {
+                                color: '#667eea',
                               }
                             }
                           }}
@@ -431,15 +675,31 @@ const RegisterPage: React.FC = () => {
                           InputProps={{
                             startAdornment: (
                               <InputAdornment position="start">
-                                <Person color="primary" />
+                                <Person sx={{ color: '#667eea' }} />
                               </InputAdornment>
                             ),
                           }}
                           sx={{ 
                             '& .MuiOutlinedInput-root': {
-                              borderRadius: 2,
-                              '&:hover .MuiOutlinedInput-notchedOutline': {
-                                borderColor: 'primary.main',
+                              borderRadius: 3,
+                              backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                              '& fieldset': {
+                                borderColor: 'rgba(102, 126, 234, 0.2)',
+                                borderWidth: 2,
+                              },
+                              '&:hover fieldset': {
+                                borderColor: 'rgba(102, 126, 234, 0.4)',
+                              },
+                              '&.Mui-focused fieldset': {
+                                borderColor: '#667eea',
+                              },
+                              transition: 'all 0.3s ease'
+                            },
+                            '& .MuiInputLabel-root': {
+                              color: '#667eea',
+                              fontWeight: 600,
+                              '&.Mui-focused': {
+                                color: '#667eea',
                               }
                             }
                           }}
@@ -460,15 +720,31 @@ const RegisterPage: React.FC = () => {
                           InputProps={{
                             startAdornment: (
                               <InputAdornment position="start">
-                                <Email color="primary" />
+                                <Email sx={{ color: '#667eea' }} />
                               </InputAdornment>
                             ),
                           }}
                           sx={{ 
                             '& .MuiOutlinedInput-root': {
-                              borderRadius: 2,
-                              '&:hover .MuiOutlinedInput-notchedOutline': {
-                                borderColor: 'primary.main',
+                              borderRadius: 3,
+                              backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                              '& fieldset': {
+                                borderColor: 'rgba(102, 126, 234, 0.2)',
+                                borderWidth: 2,
+                              },
+                              '&:hover fieldset': {
+                                borderColor: 'rgba(102, 126, 234, 0.4)',
+                              },
+                              '&.Mui-focused fieldset': {
+                                borderColor: '#667eea',
+                              },
+                              transition: 'all 0.3s ease'
+                            },
+                            '& .MuiInputLabel-root': {
+                              color: '#667eea',
+                              fontWeight: 600,
+                              '&.Mui-focused': {
+                                color: '#667eea',
                               }
                             }
                           }}
@@ -490,7 +766,7 @@ const RegisterPage: React.FC = () => {
                               InputProps={{
                                 startAdornment: (
                                   <InputAdornment position="start">
-                                    <Business color="primary" />
+                                    <Business sx={{ color: '#667eea' }} />
                                   </InputAdornment>
                                 ),
                               }}
@@ -517,7 +793,7 @@ const RegisterPage: React.FC = () => {
                               InputProps={{
                                 startAdornment: (
                                   <InputAdornment position="start">
-                                    <Work color="primary" />
+                                    <Work sx={{ color: '#667eea' }} />
                                   </InputAdornment>
                                 ),
                               }}
@@ -535,14 +811,23 @@ const RegisterPage: React.FC = () => {
                       )}
                     </Grid>
                   </Box>
-                </Fade>
+                </Slide>
               )}
               
               {activeStep === 2 && (
-                <Fade in={true} timeout={500}>
+                <Slide direction="right" in={mounted} timeout={800}>
                   <Box>
-                    <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
-                      Create a secure password:
+                    <Typography 
+                      variant="h5" 
+                      gutterBottom 
+                      sx={{ 
+                        mb: 4, 
+                        textAlign: 'center',
+                        fontWeight: 700,
+                        color: 'text.primary'
+                      }}
+                    >
+                      Secure Your Account
                     </Typography>
                     
                     <Grid container spacing={3}>
@@ -561,7 +846,7 @@ const RegisterPage: React.FC = () => {
                           InputProps={{
                             startAdornment: (
                               <InputAdornment position="start">
-                                <Lock color="primary" />
+                                <Lock sx={{ color: '#667eea' }} />
                               </InputAdornment>
                             ),
                             endAdornment: (
@@ -570,6 +855,12 @@ const RegisterPage: React.FC = () => {
                                   aria-label="toggle password visibility"
                                   onClick={handleTogglePasswordVisibility}
                                   edge="end"
+                                  sx={{
+                                    color: '#667eea',
+                                    '&:hover': {
+                                      backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                    }
+                                  }}
                                 >
                                   {showPassword ? <VisibilityOff /> : <Visibility />}
                                 </IconButton>
@@ -578,9 +869,25 @@ const RegisterPage: React.FC = () => {
                           }}
                           sx={{ 
                             '& .MuiOutlinedInput-root': {
-                              borderRadius: 2,
-                              '&:hover .MuiOutlinedInput-notchedOutline': {
-                                borderColor: 'primary.main',
+                              borderRadius: 3,
+                              backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                              '& fieldset': {
+                                borderColor: 'rgba(102, 126, 234, 0.2)',
+                                borderWidth: 2,
+                              },
+                              '&:hover fieldset': {
+                                borderColor: 'rgba(102, 126, 234, 0.4)',
+                              },
+                              '&.Mui-focused fieldset': {
+                                borderColor: '#667eea',
+                              },
+                              transition: 'all 0.3s ease'
+                            },
+                            '& .MuiInputLabel-root': {
+                              color: '#667eea',
+                              fontWeight: 600,
+                              '&.Mui-focused': {
+                                color: '#667eea',
                               }
                             }
                           }}
@@ -600,7 +907,7 @@ const RegisterPage: React.FC = () => {
                           InputProps={{
                             startAdornment: (
                               <InputAdornment position="start">
-                                <Lock color="primary" />
+                                <Lock sx={{ color: '#667eea' }} />
                               </InputAdornment>
                             ),
                             endAdornment: (
@@ -609,6 +916,12 @@ const RegisterPage: React.FC = () => {
                                   aria-label="toggle password visibility"
                                   onClick={handleToggleConfirmPasswordVisibility}
                                   edge="end"
+                                  sx={{
+                                    color: '#667eea',
+                                    '&:hover': {
+                                      backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                    }
+                                  }}
                                 >
                                   {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
                                 </IconButton>
@@ -617,9 +930,25 @@ const RegisterPage: React.FC = () => {
                           }}
                           sx={{ 
                             '& .MuiOutlinedInput-root': {
-                              borderRadius: 2,
-                              '&:hover .MuiOutlinedInput-notchedOutline': {
-                                borderColor: 'primary.main',
+                              borderRadius: 3,
+                              backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                              '& fieldset': {
+                                borderColor: 'rgba(102, 126, 234, 0.2)',
+                                borderWidth: 2,
+                              },
+                              '&:hover fieldset': {
+                                borderColor: 'rgba(102, 126, 234, 0.4)',
+                              },
+                              '&.Mui-focused fieldset': {
+                                borderColor: '#667eea',
+                              },
+                              transition: 'all 0.3s ease'
+                            },
+                            '& .MuiInputLabel-root': {
+                              color: '#667eea',
+                              fontWeight: 600,
+                              '&.Mui-focused': {
+                                color: '#667eea',
                               }
                             }
                           }}
@@ -639,22 +968,35 @@ const RegisterPage: React.FC = () => {
                       </Typography>
                     </Box>
                   </Box>
-                </Fade>
+                </Slide>
               )}
               
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 5 }}>
                 <Button
                   variant="outlined"
                   onClick={handleBack}
                   disabled={activeStep === 0 || loading}
                   startIcon={<ArrowBack />}
                   sx={{
-                    borderRadius: 2,
+                    borderRadius: 3,
                     borderWidth: 2,
-                    px: 3,
+                    px: 4,
+                    py: 1.5,
+                    borderColor: '#667eea',
+                    color: '#667eea',
+                    fontWeight: 600,
                     '&:hover': {
-                      borderWidth: 2
-                    }
+                      borderWidth: 2,
+                      borderColor: '#5a6fd8',
+                      color: '#5a6fd8',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(102, 126, 234, 0.2)'
+                    },
+                    '&:disabled': {
+                      borderColor: 'rgba(0, 0, 0, 0.12)',
+                      color: 'rgba(0, 0, 0, 0.26)',
+                    },
+                    transition: 'all 0.3s ease'
                   }}
                 >
                   Back
@@ -665,23 +1007,48 @@ const RegisterPage: React.FC = () => {
                     type="submit"
                     variant="contained"
                     disabled={loading}
-                    startIcon={<HowToReg />}
+                    startIcon={loading ? null : <HowToReg />}
                     sx={{
-                      px: 3,
-                      py: 1.2,
-                      borderRadius: 2,
+                      px: 4,
+                      py: 1.5,
+                      borderRadius: 3,
+                      fontSize: '1rem',
                       fontWeight: 'bold',
-                      background: 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)',
-                      boxShadow: '0 3px 5px 2px rgba(76, 175, 80, .3)',
+                      background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                      boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)',
+                      textTransform: 'none',
                       '&:hover': {
-                        background: 'linear-gradient(45deg, #66bb6a 30%, #388e3c 90%)',
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 6px 10px 2px rgba(76, 175, 80, .3)',
+                        background: 'linear-gradient(45deg, #5a6fd8 30%, #694a9e 90%)',
+                        transform: 'translateY(-3px)',
+                        boxShadow: '0 12px 35px rgba(102, 126, 234, 0.5)',
                       },
-                      transition: 'all 0.3s'
+                      '&:disabled': {
+                        background: 'linear-gradient(45deg, #ccc 30%, #999 90%)',
+                        transform: 'none',
+                        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+                      },
+                      transition: 'all 0.3s ease'
                     }}
                   >
-                    {loading ? 'Creating Account...' : 'Create Account'}
+                    {loading ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box
+                          sx={{
+                            width: 20,
+                            height: 20,
+                            border: '2px solid transparent',
+                            borderTop: '2px solid #ffffff',
+                            borderRadius: '50%',
+                            animation: 'spin 1s linear infinite',
+                            '@keyframes spin': {
+                              '0%': { transform: 'rotate(0deg)' },
+                              '100%': { transform: 'rotate(360deg)' },
+                            }
+                          }}
+                        />
+                        Creating Account...
+                      </Box>
+                    ) : 'Create Account'}
                   </Button>
                 ) : (
                   <Button
@@ -689,50 +1056,77 @@ const RegisterPage: React.FC = () => {
                     onClick={handleNext}
                     endIcon={<ArrowForward />}
                     sx={{
-                      px: 3,
-                      py: 1.2,
-                      borderRadius: 2,
+                      px: 4,
+                      py: 1.5,
+                      borderRadius: 3,
+                      fontSize: '1rem',
                       fontWeight: 'bold',
-                      background: 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)',
-                      boxShadow: '0 3px 5px 2px rgba(76, 175, 80, .3)',
+                      textTransform: 'none',
+                      background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                      boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)',
                       '&:hover': {
-                        background: 'linear-gradient(45deg, #66bb6a 30%, #388e3c 90%)',
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 6px 10px 2px rgba(76, 175, 80, .3)',
+                        background: 'linear-gradient(45deg, #5a6fd8 30%, #694a9e 90%)',
+                        transform: 'translateY(-3px)',
+                        boxShadow: '0 12px 35px rgba(102, 126, 234, 0.5)',
                       },
-                      transition: 'all 0.3s'
+                      transition: 'all 0.3s ease'
                     }}
                   >
-                    Next
+                    Next Step
                   </Button>
                 )}
               </Box>
               
-              <Divider sx={{ my: 4 }} />
+              <Divider sx={{ my: 4 }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{
+                    color: 'text.secondary',
+                    fontWeight: 600,
+                    px: 3,
+                    background: 'rgba(255, 255, 255, 0.8)',
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: 3,
+                    py: 1
+                  }}
+                >
+                  Already have an account?
+                </Typography>
+              </Divider>
               
               <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="body2">
-                  Already have an account?{' '}
-                  <Link 
-                    component={RouterLink} 
-                    to="/login" 
-                    variant="body2" 
-                    sx={{ 
-                      fontWeight: 'bold',
-                      color: 'primary.main',
-                      textDecoration: 'none',
-                      '&:hover': {
-                        textDecoration: 'underline'
-                      }
-                    }}
-                  >
-                    Sign in here
-                  </Link>
-                </Typography>
+                <Button
+                  component={RouterLink}
+                  to="/login"
+                  variant="outlined"
+                  sx={{
+                    px: 4,
+                    py: 1.5,
+                    borderRadius: 3,
+                    borderWidth: 2,
+                    fontSize: '1rem',
+                    fontWeight: 'bold',
+                    textTransform: 'none',
+                    borderColor: '#667eea',
+                    color: '#667eea',
+                    background: 'rgba(102, 126, 234, 0.05)',
+                    '&:hover': {
+                      borderWidth: 2,
+                      borderColor: '#5a6fd8',
+                      color: '#5a6fd8',
+                      background: 'rgba(102, 126, 234, 0.1)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(102, 126, 234, 0.2)'
+                    },
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  Sign In Instead
+                </Button>
               </Box>
             </Box>
           </Paper>
-        </Fade>
+        </Slide>
       </Container>
     </Box>
   );

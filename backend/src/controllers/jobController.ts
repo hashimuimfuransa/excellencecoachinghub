@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { Job, JobApplication, JobCourseMatch, StudentProfile } from '@/models';
-import { JobStatus, UserRole, EducationLevel } from '../types';
+import { JobStatus, UserRole, EducationLevel, JobCategory } from '../types';
 import { AuthRequest } from '@/middleware/auth';
 
 // Get all jobs with filtering
@@ -9,6 +9,7 @@ export const getJobs = async (req: Request, res: Response) => {
     const {
       status,
       jobType,
+      category,
       experienceLevel,
       educationLevel,
       location,
@@ -24,6 +25,7 @@ export const getJobs = async (req: Request, res: Response) => {
     // Build filter query
     if (status) query.status = status;
     if (jobType) query.jobType = jobType;
+    if (category) query.category = category;
     if (experienceLevel) query.experienceLevel = experienceLevel;
     if (educationLevel) query.educationLevel = educationLevel;
     if (location) query.location = { $regex: location, $options: 'i' };
@@ -460,6 +462,53 @@ export const getRecommendedCourses = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch recommended courses',
+      message: error.message
+    });
+  }
+};
+
+// Get job categories with counts
+export const getJobCategories = async (req: Request, res: Response) => {
+  try {
+    const categories = await Job.aggregate([
+      {
+        $match: {
+          status: JobStatus.ACTIVE,
+          $or: [
+            { applicationDeadline: { $exists: false } },
+            { applicationDeadline: { $gt: new Date() } }
+          ]
+        }
+      },
+      {
+        $group: {
+          _id: '$category',
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { count: -1 }
+      }
+    ]);
+
+    // Ensure all categories are present with 0 count if no jobs exist
+    const allCategories = Object.values(JobCategory).map(category => {
+      const found = categories.find(cat => cat._id === category);
+      return {
+        category,
+        count: found ? found.count : 0,
+        displayName: category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      data: allCategories
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch job categories',
       message: error.message
     });
   }

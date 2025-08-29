@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
-import { JobStatus, JobType, ExperienceLevel, EducationLevel } from '../types';
+import { JobStatus, JobType, ExperienceLevel, EducationLevel, JobCategory } from '../types';
 
 export interface IJobDocument extends Document {
   title: string;
@@ -8,6 +8,7 @@ export interface IJobDocument extends Document {
   employer: string; // User ID
   location: string;
   jobType: JobType;
+  category?: JobCategory;
   experienceLevel: ExperienceLevel;
   educationLevel: EducationLevel;
   salary?: {
@@ -88,6 +89,11 @@ const jobSchema = new Schema<IJobDocument>({
     type: String,
     enum: JobType ? Object.values(JobType) : ['full_time', 'part_time', 'contract', 'internship', 'freelance'],
     required: [true, 'Job type is required']
+  },
+  category: {
+    type: String,
+    enum: JobCategory ? Object.values(JobCategory) : ['jobs', 'tenders', 'trainings', 'internships', 'scholarships', 'access_to_finance'],
+    default: JobCategory ? JobCategory.JOBS : 'jobs'
   },
   experienceLevel: {
     type: String,

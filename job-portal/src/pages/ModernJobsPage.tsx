@@ -93,6 +93,19 @@ interface Job {
   isFeatured?: boolean;
   tags?: string[];
   isBookmarked?: boolean;
+  // External job fields
+  isExternalJob?: boolean;
+  externalApplicationUrl?: string;
+  externalJobSource?: string;
+  externalJobId?: string;
+  contactInfo?: {
+    email?: string;
+    phone?: string;
+    website?: string;
+    address?: string;
+    contactPerson?: string;
+    applicationInstructions?: string;
+  };
 }
 
 interface JobsState {
@@ -569,23 +582,41 @@ const ModernJobsPage: React.FC = () => {
           <Divider sx={{ opacity: 0.3 }} />
           
           <CardActions sx={{ p: 2, justifyContent: 'space-between' }}>
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<Send />}
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/app/jobs/${job._id}/apply`);
-              }}
-              sx={{
-                borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: 600,
-                px: 2
-              }}
-            >
-              Quick Apply
-            </Button>
+            {/* Show Quick Apply only for internal jobs (not external jobs) */}
+            {!job.isExternalJob && (
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={<Send />}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/app/jobs/${job._id}/apply`);
+                }}
+                sx={{
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  px: 2
+                }}
+              >
+                Quick Apply
+              </Button>
+            )}
+            
+            {/* External job indicator - show for external jobs */}
+            {job.isExternalJob && job.externalJobSource && (
+              <Chip
+                label={`External: ${job.externalJobSource}`}
+                color="info"
+                size="small"
+                variant="outlined"
+                sx={{ 
+                  fontSize: '0.7rem',
+                  fontWeight: 500
+                }}
+              />
+            )}
+            
             <Button
               variant="outlined"
               size="small"

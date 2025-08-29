@@ -2,7 +2,8 @@ import axios from 'axios';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Job, IJobDocument } from '../models/Job';
 import { User } from '../models/User';
-import { JobStatus, JobType, ExperienceLevel, EducationLevel } from '../types';
+import { JobStatus, JobType, ExperienceLevel, EducationLevel, JobCategory } from '../types';
+import { aiService } from './aiService';
 import * as cheerio from 'cheerio';
 
 // Initialize Google Gemini AI
@@ -15,6 +16,7 @@ export interface ScrapedJobData {
   company: string;
   location: string;
   jobType: JobType;
+  category?: JobCategory;
   experienceLevel: ExperienceLevel;
   educationLevel: EducationLevel;
   salary?: {
@@ -419,7 +421,21 @@ export class JobScrapingService {
       const parsedData = this.extractJsonFromResponse(response_text);
       
       // Validate and normalize the parsed data
-      return this.validateAndNormalizeJobData(parsedData, jobUrl);
+      const jobData = this.validateAndNormalizeJobData(parsedData, jobUrl);
+      
+      // Add AI categorization if job data is valid
+      if (jobData) {
+        try {
+          const category = await aiService.categorizeJob(jobData.title, jobData.description);
+          jobData.category = category as JobCategory;
+          console.log(`Job "${jobData.title}" categorized as: ${category}`);
+        } catch (error) {
+          console.error('Error categorizing job:', error);
+          jobData.category = JobCategory.JOBS; // Default fallback
+        }
+      }
+      
+      return jobData;
 
     } catch (error) {
       console.error(`Error scraping job ${jobUrl}:`, error);
@@ -525,6 +541,7 @@ export class JobScrapingService {
       employer: employerId,
       location: jobData.location,
       jobType: jobData.jobType,
+      category: jobData.category,
       experienceLevel: jobData.experienceLevel,
       educationLevel: jobData.educationLevel,
       salary: jobData.salary,

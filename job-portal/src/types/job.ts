@@ -16,6 +16,15 @@ export enum JobType {
   FREELANCE = 'freelance'
 }
 
+export enum JobCategory {
+  JOBS = 'jobs',
+  TENDERS = 'tenders',
+  TRAININGS = 'trainings',
+  INTERNSHIPS = 'internships',
+  SCHOLARSHIPS = 'scholarships',
+  ACCESS_TO_FINANCE = 'access_to_finance'
+}
+
 export enum ExperienceLevel {
   ENTRY_LEVEL = 'entry_level',
   MID_LEVEL = 'mid_level',
@@ -45,6 +54,7 @@ export interface Job {
   company: string;
   location: string;
   jobType: JobType;
+  category?: JobCategory;
   experienceLevel: ExperienceLevel;
   educationLevel: EducationLevel;
   skills: string[];
@@ -61,4 +71,17 @@ export interface Job {
   viewsCount: number;
   createdAt: string;
   updatedAt: string;
+  // External job fields
+  isExternalJob?: boolean;
+  externalApplicationUrl?: string;
+  externalJobSource?: string;
+  externalJobId?: string;
+  contactInfo?: {
+    email?: string;
+    phone?: string;
+    website?: string;
+    address?: string;
+    contactPerson?: string;
+    applicationInstructions?: string;
+  };
 }

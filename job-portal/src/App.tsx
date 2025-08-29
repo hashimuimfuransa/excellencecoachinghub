@@ -59,6 +59,7 @@ import SimplifiedTestResult from './pages/SimplifiedTestResult';
 import SmartTestPage from './pages/SmartTestPage';
 import TakeSmartTestPage from './pages/TakeSmartTestPage';
 import SmartTestResultsPage from './pages/SmartTestResultsPage';
+import QuickApplyPage from './pages/QuickApplyPage';
 
 function App() {
   // Initialize EmailJS on app start
@@ -167,6 +168,7 @@ function App() {
               <Route path="jobs" element={<JobsPage />} />
               <Route path="jobs/all" element={<AllJobsPage />} />
               <Route path="jobs/:id" element={<JobDetailsPage />} />
+              <Route path="jobs/:jobId/apply" element={<QuickApplyPage />} />
               <Route path="saved-jobs" element={<SavedJobsPage />} />
               
               {/* Applications */}

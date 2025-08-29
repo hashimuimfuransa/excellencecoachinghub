@@ -67,10 +67,10 @@ const Footer: React.FC = () => {
   ];
 
   const socialLinks = [
-    { icon: <Facebook />, url: 'https://facebook.com/excellencecoachinghub', label: 'Facebook' },
-    { icon: <Twitter />, url: 'https://x.com/ECH_coachinghub?t=Awf4GVPp9eCkSZhDlHkFew&s=08', label: 'Twitter' },
-    { icon: <LinkedIn />, url: 'https://www.linkedin.com/in/excellence-coachinghub-1b8b1a380?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app', label: 'LinkedIn' },
-    { icon: <Instagram />, url: 'https://www.instagram.com/excellencecoachinghub/?utm_source=qr&igsh=Ym5xMXh5aXZmNHVi#', label: 'Instagram' }
+    { icon: <Facebook />, url: 'https://facebook.com/excellencecoachinghub', label: 'Facebook', username: '@excellencecoachinghub' },
+    { icon: <Twitter />, url: 'https://x.com/ECH_coachinghub?t=Awf4GVPp9eCkSZhDlHkFew&s=08', label: 'Twitter', username: '@ECH_coachinghub' },
+    { icon: <LinkedIn />, url: 'https://www.linkedin.com/in/excellence-coachinghub-1b8b1a380?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app', label: 'LinkedIn', username: 'Excellence Coaching Hub' },
+    { icon: <Instagram />, url: 'https://www.instagram.com/excellencecoachinghub/?utm_source=qr&igsh=Ym5xMXh5aXZmNHVi#', label: 'Instagram', username: '@excellencecoachinghub' }
   ];
 
   const contactInfo = [
@@ -114,27 +114,43 @@ const Footer: React.FC = () => {
               </Typography>
               
               {/* Social Links */}
-              <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
-                {socialLinks.map((social, index) => (
-                  <IconButton
-                    key={index}
-                    href={social.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    sx={{
-                      color: 'white',
-                      backgroundColor: 'rgba(255,255,255,0.1)',
-                      '&:hover': {
-                        backgroundColor: 'rgba(255,255,255,0.2)',
-                        transform: 'translateY(-2px)'
-                      },
-                      transition: 'all 0.3s'
-                    }}
-                    aria-label={social.label}
-                  >
-                    {social.icon}
-                  </IconButton>
-                ))}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="body2" sx={{ mb: 2, opacity: 0.9, fontWeight: 'bold' }}>
+                  Follow Us
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  {socialLinks.map((social, index) => (
+                    <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <IconButton
+                        href={social.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{
+                          color: 'white',
+                          backgroundColor: 'rgba(255,255,255,0.1)',
+                          width: 36,
+                          height: 36,
+                          '&:hover': {
+                            backgroundColor: 'rgba(255,255,255,0.2)',
+                            transform: 'translateY(-2px)'
+                          },
+                          transition: 'all 0.3s'
+                        }}
+                        aria-label={social.label}
+                      >
+                        {social.icon}
+                      </IconButton>
+                      <Box>
+                        <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 'medium' }}>
+                          {social.label}
+                        </Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.7, fontSize: '0.75rem' }}>
+                          {social.username}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
               </Box>
 
               {/* Contact Info */}

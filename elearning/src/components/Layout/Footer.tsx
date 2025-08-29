@@ -7,8 +7,10 @@ import {
   Link,
   IconButton,
   Divider,
-  TextField,
-  Button,
+  Paper,
+  List,
+  ListItem,
+  ListItemText,
   useTheme
 } from '@mui/material';
 import {
@@ -16,333 +18,266 @@ import {
   Twitter,
   LinkedIn,
   Instagram,
-  YouTube,
   Email,
   Phone,
   LocationOn,
-  Send
+  Work,
+  School,
+  Business,
+  Support,
+  Info,
+  Security,
+  Policy,
+  Gavel
 } from '@mui/icons-material';
-import { Link as RouterLink } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const Footer: React.FC = () => {
+  const navigate = useNavigate();
   const theme = useTheme();
-  const currentYear = new Date().getFullYear();
 
-  const footerLinks = {
-    platform: [
-      { label: 'Browse Courses', path: '/courses' },
-      { label: 'Become an Instructor', path: '/teach' },
-      { label: 'Student Dashboard', path: '/student' },
-      { label: 'Mobile App', path: '/mobile' }
-    ],
-    company: [
-      { label: 'About Us', path: '/about' },
-      { label: 'Careers', path: '/careers' },
-      { label: 'Press', path: '/press' },
-      { label: 'Blog', path: '/blog' }
-    ],
-    support: [
-      { label: 'Help Center', path: '/help' },
-      { label: 'Contact Us', path: '/contact' },
-      { label: 'System Status', path: '/status' },
-      { label: 'Bug Reports', path: '/bugs' }
-    ],
-    legal: [
-      { label: 'Privacy Policy', path: '/privacy' },
-      { label: 'Terms of Service', path: '/terms' },
-      { label: 'Cookie Policy', path: '/cookies' },
-      { label: 'GDPR', path: '/gdpr' }
-    ]
-  };
+  const footerSections = [
+    {
+      title: 'Platform',
+      links: [
+        { text: 'Find Jobs', icon: <Work />, path: '/app/jobs' },
+        { text: 'Get Certified', icon: <School />, path: '/app/certificates' },
+        { text: 'Companies', icon: <Business />, path: '/companies' },
+        { text: 'AI Interview Coach', icon: <Support />, path: '/app/interviews' }
+      ]
+    },
+    {
+      title: 'Support',
+      links: [
+        { text: 'Help Center', icon: <Support />, path: '/support' },
+        { text: 'Contact Us', icon: <Email />, path: '/contact' },
+        { text: 'About Us', icon: <Info />, path: '/about' },
+        { text: 'Career Tips', icon: <School />, path: '/blog' }
+      ]
+    },
+    {
+      title: 'Legal',
+      links: [
+        { text: 'Privacy Policy', icon: <Policy />, path: '/privacy' },
+        { text: 'Terms of Service', icon: <Gavel />, path: '/terms' },
+        { text: 'Security', icon: <Security />, path: '/security' },
+        { text: 'Cookie Policy', icon: <Info />, path: '/cookies' }
+      ]
+    }
+  ];
 
   const socialLinks = [
-    { icon: <Facebook />, url: 'https://facebook.com/excellencecoachinghub', label: 'Facebook' },
-    { icon: <Twitter />, url: 'https://x.com/ECH_coachinghub?t=Awf4GVPp9eCkSZhDlHkFew&s=08', label: 'Twitter' },
-    { icon: <LinkedIn />, url: 'https://www.linkedin.com/in/excellence-coachinghub-1b8b1a380?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app', label: 'LinkedIn' },
-    { icon: <Instagram />, url: 'https://www.instagram.com/excellencecoachinghub/?utm_source=qr&igsh=Ym5xMXh5aXZmNHVi#', label: 'Instagram' },
-    { icon: <YouTube />, url: 'https://www.tiktok.com/@excellence.coachi4?_t=ZM-8zCgEouFb8w&_r=1', label: 'TikTok' }
+    { icon: <Facebook />, url: 'https://facebook.com/excellencecoachinghub', label: 'Facebook', username: '@excellencecoachinghub' },
+    { icon: <Twitter />, url: 'https://x.com/ECH_coachinghub?t=Awf4GVPp9eCkSZhDlHkFew&s=08', label: 'Twitter', username: '@ECH_coachinghub' },
+    { icon: <LinkedIn />, url: 'https://www.linkedin.com/in/excellence-coachinghub-1b8b1a380?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app', label: 'LinkedIn', username: 'Excellence Coaching Hub' },
+    { icon: <Instagram />, url: 'https://www.instagram.com/excellencecoachinghub/?utm_source=qr&igsh=Ym5xMXh5aXZmNHVi#', label: 'Instagram', username: '@excellencecoachinghub' }
+  ];
+
+  const contactInfo = [
+    { icon: <Email />, text: 'info@excellencecoachinghub.com', href: 'mailto:info@excellencecoachinghub.com' },
+    { icon: <Phone />, text: '+250 788 123 456', href: 'tel:+250788123456' },
+    { icon: <LocationOn />, text: 'Kigali, Rwanda (HQ) • Serving All of Africa', href: '#' }
   ];
 
   return (
     <Box
       component="footer"
       sx={{
-        bgcolor: 'grey.900',
+        background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)',
         color: 'white',
+        mt: 'auto',
         pt: 6,
         pb: 3
       }}
     >
       <Container maxWidth="lg">
         {/* Main Footer Content */}
-        <Grid container spacing={4}>
+        <Grid container spacing={4} sx={{ mb: 4 }}>
           {/* Company Info */}
           <Grid item xs={12} md={4}>
-            <Typography
-              variant="h5"
-              component="div"
-              gutterBottom
-              sx={{ fontWeight: 700, color: '#FFD700' }}
-            >
-              Excellence Hub
-            </Typography>
-            
-            <Typography
-              variant="body2"
-              sx={{ mb: 3, lineHeight: 1.7, color: 'grey.300' }}
-            >
-              Empowering learners worldwide with cutting-edge online education, 
-              AI-powered personalization, and expert-led courses designed for 
-              the future of work.
-            </Typography>
-
-            {/* Contact Info */}
             <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Email sx={{ mr: 1, fontSize: 18, color: 'grey.400' }} />
-                <Typography variant="body2" sx={{ color: 'grey.300' }}>
-                  info@excellencecoachinghub.com
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Phone sx={{ mr: 1, fontSize: 18, color: 'grey.400' }} />
-                <Typography variant="body2" sx={{ color: 'grey.300' }}>
-                  +250 788 123 456
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <LocationOn sx={{ mr: 1, fontSize: 18, color: 'grey.400' }} />
-                <Typography variant="body2" sx={{ color: 'grey.300' }}>
-                  Kigali, Rwanda (HQ) • Serving All of Africa
-                </Typography>
-              </Box>
-            </Box>
-
-            {/* Social Links */}
-            <Box>
-              <Typography variant="subtitle2" gutterBottom sx={{ color: 'grey.300' }}>
-                Follow Us
+              <Typography 
+                variant="h5" 
+                gutterBottom 
+                sx={{ 
+                  fontWeight: 'bold',
+                  background: 'linear-gradient(45deg, #81c784 30%, #a5d6a7 90%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
+                }}
+              >
+                ExJobNet
               </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                {socialLinks.map((social, index) => (
-                  <IconButton
-                    key={index}
-                    href={social.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    sx={{
-                      color: 'grey.400',
-                      '&:hover': {
-                        color: '#FFD700',
-                        transform: 'translateY(-2px)'
-                      },
-                      transition: 'all 0.3s ease'
-                    }}
-                    aria-label={social.label}
-                  >
-                    {social.icon}
-                  </IconButton>
+              <Typography variant="body1" sx={{ mb: 3, opacity: 0.9, lineHeight: 1.6 }}>
+                ExJobNet is a dynamic career platform combining the best of professional networking and job readiness—offering features like personalized profiles, interactive job preparation tools, live coaching, and secure certifications to empower both individuals and organizations in Africa's job ecosystem.
+              </Typography>
+              
+              {/* Social Links */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="body2" sx={{ mb: 2, opacity: 0.9, fontWeight: 'bold' }}>
+                  Follow Us
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  {socialLinks.map((social, index) => (
+                    <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <IconButton
+                        href={social.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{
+                          color: 'white',
+                          backgroundColor: 'rgba(255,255,255,0.1)',
+                          width: 36,
+                          height: 36,
+                          '&:hover': {
+                            backgroundColor: 'rgba(255,255,255,0.2)',
+                            transform: 'translateY(-2px)'
+                          },
+                          transition: 'all 0.3s'
+                        }}
+                        aria-label={social.label}
+                      >
+                        {social.icon}
+                      </IconButton>
+                      <Box>
+                        <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 'medium' }}>
+                          {social.label}
+                        </Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.7, fontSize: '0.75rem' }}>
+                          {social.username}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+
+              {/* Contact Info */}
+              <Box>
+                {contactInfo.map((contact, index) => (
+                  <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Box sx={{ mr: 2, opacity: 0.8 }}>
+                      {contact.icon}
+                    </Box>
+                    <Link
+                      href={contact.href}
+                      color="inherit"
+                      underline="hover"
+                      sx={{ opacity: 0.9, fontSize: '0.9rem' }}
+                    >
+                      {contact.text}
+                    </Link>
+                  </Box>
                 ))}
               </Box>
             </Box>
           </Grid>
 
-          {/* Quick Links */}
-          <Grid item xs={12} md={6}>
-            <Grid container spacing={3}>
-              <Grid item xs={6} sm={3}>
-                <Typography
-                  variant="subtitle1"
-                  gutterBottom
-                  sx={{ fontWeight: 600, color: 'white' }}
-                >
-                  Platform
-                </Typography>
-                <Box>
-                  {footerLinks.platform.map((link, index) => (
-                    <Link
-                      key={index}
-                      component={RouterLink}
-                      to={link.path}
-                      sx={{
-                        display: 'block',
-                        color: 'grey.300',
-                        textDecoration: 'none',
-                        mb: 1,
-                        fontSize: '0.875rem',
-                        '&:hover': {
-                          color: '#FFD700',
-                          textDecoration: 'underline'
-                        },
-                        transition: 'color 0.3s ease'
+          {/* Footer Links */}
+          {footerSections.map((section, sectionIndex) => (
+            <Grid item xs={12} sm={6} md={2.67} key={sectionIndex}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
+                {section.title}
+              </Typography>
+              <List dense sx={{ p: 0 }}>
+                {section.links.map((link, linkIndex) => (
+                  <ListItem
+                    key={linkIndex}
+                    sx={{
+                      p: 0,
+                      mb: 0.5,
+                      cursor: 'pointer',
+                      borderRadius: 1,
+                      '&:hover': {
+                        backgroundColor: 'rgba(255,255,255,0.1)',
+                        pl: 1
+                      },
+                      transition: 'all 0.3s'
+                    }}
+                    onClick={() => navigate(link.path)}
+                  >
+                    <Box sx={{ mr: 1, opacity: 0.8, fontSize: '1.2rem' }}>
+                      {link.icon}
+                    </Box>
+                    <ListItemText
+                      primary={link.text}
+                      primaryTypographyProps={{
+                        sx: { 
+                          fontSize: '0.9rem',
+                          opacity: 0.9,
+                          '&:hover': { opacity: 1 }
+                        }
                       }}
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                </Box>
-              </Grid>
-
-              <Grid item xs={6} sm={3}>
-                <Typography
-                  variant="subtitle1"
-                  gutterBottom
-                  sx={{ fontWeight: 600, color: 'white' }}
-                >
-                  Company
-                </Typography>
-                <Box>
-                  {footerLinks.company.map((link, index) => (
-                    <Link
-                      key={index}
-                      component={RouterLink}
-                      to={link.path}
-                      sx={{
-                        display: 'block',
-                        color: 'grey.300',
-                        textDecoration: 'none',
-                        mb: 1,
-                        fontSize: '0.875rem',
-                        '&:hover': {
-                          color: '#FFD700',
-                          textDecoration: 'underline'
-                        },
-                        transition: 'color 0.3s ease'
-                      }}
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                </Box>
-              </Grid>
-
-              <Grid item xs={6} sm={3}>
-                <Typography
-                  variant="subtitle1"
-                  gutterBottom
-                  sx={{ fontWeight: 600, color: 'white' }}
-                >
-                  Support
-                </Typography>
-                <Box>
-                  {footerLinks.support.map((link, index) => (
-                    <Link
-                      key={index}
-                      component={RouterLink}
-                      to={link.path}
-                      sx={{
-                        display: 'block',
-                        color: 'grey.300',
-                        textDecoration: 'none',
-                        mb: 1,
-                        fontSize: '0.875rem',
-                        '&:hover': {
-                          color: '#FFD700',
-                          textDecoration: 'underline'
-                        },
-                        transition: 'color 0.3s ease'
-                      }}
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                </Box>
-              </Grid>
-
-              <Grid item xs={6} sm={3}>
-                <Typography
-                  variant="subtitle1"
-                  gutterBottom
-                  sx={{ fontWeight: 600, color: 'white' }}
-                >
-                  Legal
-                </Typography>
-                <Box>
-                  {footerLinks.legal.map((link, index) => (
-                    <Link
-                      key={index}
-                      component={RouterLink}
-                      to={link.path}
-                      sx={{
-                        display: 'block',
-                        color: 'grey.300',
-                        textDecoration: 'none',
-                        mb: 1,
-                        fontSize: '0.875rem',
-                        '&:hover': {
-                          color: '#FFD700',
-                          textDecoration: 'underline'
-                        },
-                        transition: 'color 0.3s ease'
-                      }}
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                </Box>
-              </Grid>
+                    />
+                  </ListItem>
+                ))}
+              </List>
             </Grid>
-          </Grid>
-
-          {/* Newsletter Signup */}
-          <Grid item xs={12} md={2}>
-            <Typography
-              variant="subtitle1"
-              gutterBottom
-              sx={{ fontWeight: 600, color: 'white' }}
-            >
-              Stay Updated
-            </Typography>
-            
-            <Typography
-              variant="body2"
-              sx={{ mb: 2, color: 'grey.300', lineHeight: 1.6 }}
-            >
-              Get the latest courses and updates delivered to your inbox.
-            </Typography>
-            
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <TextField
-                size="small"
-                placeholder="Enter your email"
-                variant="outlined"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    bgcolor: 'rgba(255, 255, 255, 0.1)',
-                    color: 'white',
-                    '& fieldset': {
-                      borderColor: 'rgba(255, 255, 255, 0.3)'
-                    },
-                    '&:hover fieldset': {
-                      borderColor: 'rgba(255, 255, 255, 0.5)'
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#FFD700'
-                    }
-                  },
-                  '& .MuiInputBase-input::placeholder': {
-                    color: 'rgba(255, 255, 255, 0.7)'
-                  }
-                }}
-              />
-              <Button
-                variant="contained"
-                endIcon={<Send />}
-                sx={{
-                  bgcolor: '#FFD700',
-                  color: 'black',
-                  '&:hover': {
-                    bgcolor: '#FFC107'
-                  }
-                }}
-              >
-                Subscribe
-              </Button>
-            </Box>
-          </Grid>
+          ))}
         </Grid>
 
-        <Divider sx={{ my: 4, borderColor: 'grey.700' }} />
+        {/* Newsletter Signup */}
+        <Paper
+          elevation={0}
+          sx={{
+            p: 3,
+            mb: 4,
+            backgroundColor: 'rgba(255,255,255,0.1)',
+            borderRadius: 2,
+            textAlign: 'center'
+          }}
+        >
+          <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+            Stay Updated with Career Opportunities
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 2, opacity: 0.9 }}>
+            Get the latest job openings, career tips, and industry insights delivered to your inbox.
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1, maxWidth: 400, mx: 'auto', flexWrap: 'wrap' }}>
+            <Box sx={{ flex: 1, minWidth: 200 }}>
+              <input
+                type="email"
+                placeholder="Enter your email address"
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: '14px',
+                  backgroundColor: 'white',
+                  color: '#333'
+                }}
+              />
+            </Box>
+            <button
+              style={{
+                padding: '12px 24px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: '#81c784',
+                color: 'white',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontSize: '14px',
+                transition: 'all 0.3s'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = '#66bb6a';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = '#81c784';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              Subscribe
+            </button>
+          </Box>
+        </Paper>
+
+        <Divider sx={{ borderColor: 'rgba(255,255,255,0.2)', mb: 3 }} />
 
         {/* Bottom Footer */}
         <Box
@@ -354,12 +289,50 @@ const Footer: React.FC = () => {
             gap: 2
           }}
         >
-          <Typography variant="body2" sx={{ color: 'grey.400' }}>
-            © {currentYear} Excellence Coaching Hub. All rights reserved.
+          <Typography variant="body2" sx={{ opacity: 0.8 }}>
+            © {new Date().getFullYear()} ExJobNet. All rights reserved.
           </Typography>
           
-          <Typography variant="body2" sx={{ color: 'grey.400' }}>
-            Made with ❤️ for learners worldwide
+          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+            <Link
+              href="/privacy"
+              color="inherit"
+              underline="hover"
+              sx={{ opacity: 0.8, fontSize: '0.875rem' }}
+            >
+              Privacy
+            </Link>
+            <Link
+              href="/terms"
+              color="inherit"
+              underline="hover"
+              sx={{ opacity: 0.8, fontSize: '0.875rem' }}
+            >
+              Terms
+            </Link>
+            <Link
+              href="/cookies"
+              color="inherit"
+              underline="hover"
+              sx={{ opacity: 0.8, fontSize: '0.875rem' }}
+            >
+              Cookies
+            </Link>
+            <Link
+              href="/accessibility"
+              color="inherit"
+              underline="hover"
+              sx={{ opacity: 0.8, fontSize: '0.875rem' }}
+            >
+              Accessibility
+            </Link>
+          </Box>
+        </Box>
+
+        {/* Made with love */}
+        <Box sx={{ textAlign: 'center', mt: 3, pt: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <Typography variant="body2" sx={{ opacity: 0.7, fontSize: '0.8rem' }}>
+            Made with ❤️ for career success worldwide
           </Typography>
         </Box>
       </Container>

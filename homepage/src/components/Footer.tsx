@@ -1,511 +1,340 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Box,
   Container,
-  Typography,
   Grid,
+  Typography,
   Link,
-  TextField,
-  Button,
   IconButton,
   Divider,
-  Stack,
-  Chip,
+  Paper,
+  List,
+  ListItem,
+  ListItemText,
+  useTheme
 } from '@mui/material';
 import {
   Facebook,
   Twitter,
   LinkedIn,
   Instagram,
-  VideoLibrary,
   Email,
   Phone,
   LocationOn,
-  Send,
-  ArrowUpward,
+  Work,
+  School,
+  Business,
+  Support,
+  Info,
+  Security,
+  Policy,
+  Gavel
 } from '@mui/icons-material';
-import { motion } from 'framer-motion';
-import { toast } from 'react-toastify';
-import { useThemeContext } from '../contexts/ThemeContext';
+import { useNavigate } from 'react-router-dom';
 
 const Footer: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [subscribing, setSubscribing] = useState(false);
-  const { isDarkMode } = useThemeContext();
+  const navigate = useNavigate();
+  const theme = useTheme();
 
-  const handleNewsletterSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) {
-      toast.error('Please enter your email address');
-      return;
+  const footerSections = [
+    {
+      title: 'Platform',
+      links: [
+        { text: 'Find Jobs', icon: <Work />, path: '/app/jobs' },
+        { text: 'Get Certified', icon: <School />, path: '/app/certificates' },
+        { text: 'Companies', icon: <Business />, path: '/companies' },
+        { text: 'AI Interview Coach', icon: <Support />, path: '/app/interviews' }
+      ]
+    },
+    {
+      title: 'Support',
+      links: [
+        { text: 'Help Center', icon: <Support />, path: '/support' },
+        { text: 'Contact Us', icon: <Email />, path: '/contact' },
+        { text: 'About Us', icon: <Info />, path: '/about' },
+        { text: 'Career Tips', icon: <School />, path: '/blog' }
+      ]
+    },
+    {
+      title: 'Legal',
+      links: [
+        { text: 'Privacy Policy', icon: <Policy />, path: '/privacy' },
+        { text: 'Terms of Service', icon: <Gavel />, path: '/terms' },
+        { text: 'Security', icon: <Security />, path: '/security' },
+        { text: 'Cookie Policy', icon: <Info />, path: '/cookies' }
+      ]
     }
-
-    setSubscribing(true);
-    try {
-      // Simulate newsletter subscription
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      toast.success('Successfully subscribed to our newsletter!');
-      setEmail('');
-    } catch (error) {
-      toast.error('Failed to subscribe. Please try again.');
-    } finally {
-      setSubscribing(false);
-    }
-  };
-
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
-  };
-
-  const footerLinks = {
-    platform: [
-      { label: 'E-Learning', href: 'https://elearning.excellencecoachinghub.com' },
-      { label: 'Job Preparation', href: 'https://jobs.excellencecoachinghub.com' },
-      { label: 'Courses', href: 'https://elearning.excellencecoachinghub.com/courses' },
-      { label: 'Assessments', href: 'https://jobs.excellencecoachinghub.com/assessments' },
-      { label: 'Certifications', href: 'https://elearning.excellencecoachinghub.com/certifications' },
-    ],
-    company: [
-      { label: 'About Us', href: '#about' },
-      { label: 'Our Team', href: '/team' },
-      { label: 'Careers', href: '/careers' },
-      { label: 'Press', href: '/press' },
-      { label: 'Blog', href: '/blog' },
-    ],
-    support: [
-      { label: 'Help Center', href: '/help' },
-      { label: 'Contact Us', href: '/contact' },
-      { label: 'Community', href: '/community' },
-      { label: 'Documentation', href: '/docs' },
-      { label: 'API', href: '/api' },
-    ],
-    legal: [
-      { label: 'Privacy Policy', href: '/privacy' },
-      { label: 'Terms of Service', href: '/terms' },
-      { label: 'Cookie Policy', href: '/cookies' },
-      { label: 'GDPR', href: '/gdpr' },
-      { label: 'Accessibility', href: '/accessibility' },
-    ],
-  };
+  ];
 
   const socialLinks = [
-    { icon: <Facebook />, href: 'https://facebook.com/excellencecoachinghub', label: 'Facebook' },
-    { icon: <Twitter />, href: 'https://x.com/ECH_coachinghub?t=Awf4GVPp9eCkSZhDlHkFew&s=08', label: 'Twitter' },
-    { icon: <LinkedIn />, href: 'https://www.linkedin.com/in/excellence-coachinghub-1b8b1a380?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app', label: 'LinkedIn' },
-    { icon: <Instagram />, href: 'https://www.instagram.com/excellencecoachinghub/?utm_source=qr&igsh=Ym5xMXh5aXZmNHVi#', label: 'Instagram' },
-    { icon: <VideoLibrary />, href: 'https://www.tiktok.com/@excellence.coachi4?_t=ZM-8zCgEouFb8w&_r=1', label: 'TikTok' },
+    { icon: <Facebook />, url: 'https://facebook.com/excellencecoachinghub', label: 'Facebook', username: '@excellencecoachinghub' },
+    { icon: <Twitter />, url: 'https://x.com/ECH_coachinghub?t=Awf4GVPp9eCkSZhDlHkFew&s=08', label: 'Twitter', username: '@ECH_coachinghub' },
+    { icon: <LinkedIn />, url: 'https://www.linkedin.com/in/excellence-coachinghub-1b8b1a380?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app', label: 'LinkedIn', username: 'Excellence Coaching Hub' },
+    { icon: <Instagram />, url: 'https://www.instagram.com/excellencecoachinghub/?utm_source=qr&igsh=Ym5xMXh5aXZmNHVi#', label: 'Instagram', username: '@excellencecoachinghub' }
   ];
 
   const contactInfo = [
     { icon: <Email />, text: 'info@excellencecoachinghub.com', href: 'mailto:info@excellencecoachinghub.com' },
     { icon: <Phone />, text: '+250 788 123 456', href: 'tel:+250788123456' },
-    { icon: <LocationOn />, text: 'Kigali, Rwanda (HQ) • Serving All of Africa', href: '#' },
+    { icon: <LocationOn />, text: 'Kigali, Rwanda (HQ) • Serving All of Africa', href: '#' }
   ];
 
   return (
     <Box
       component="footer"
       sx={{
-        bgcolor: isDarkMode ? '#0f0f23' : '#1a1a2e',
+        background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)',
         color: 'white',
-        pt: { xs: 6, sm: 8 },
-        pb: { xs: 3, sm: 4 },
-        position: 'relative',
-        overflow: 'hidden',
+        mt: 'auto',
+        pt: 6,
+        pb: 3
       }}
     >
-      {/* Background Pattern */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: isDarkMode ? `
-            radial-gradient(circle at 20% 80%, rgba(74, 222, 128, 0.1) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(34, 197, 94, 0.08) 0%, transparent 50%)
-          ` : `
-            radial-gradient(circle at 20% 80%, rgba(63, 81, 181, 0.15) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(255, 107, 107, 0.1) 0%, transparent 50%)
-          `,
-        }}
-      />
-      
-      {/* Animated Shapes */}
-      <Box
-        component={motion.div}
-        sx={{
-          position: 'absolute',
-          top: '10%',
-          right: '10%',
-          width: '300px',
-          height: '300px',
-          borderRadius: '50%',
-          background: isDarkMode 
-            ? 'rgba(74, 222, 128, 0.05)'
-            : 'rgba(63, 81, 181, 0.03)',
-          filter: 'blur(40px)',
-          zIndex: 0,
-        }}
-        animate={{
-          scale: [1, 1.2, 1],
-          opacity: [0.2, 0.3, 0.2],
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-      />
-      
-      <Box
-        component={motion.div}
-        sx={{
-          position: 'absolute',
-          bottom: '15%',
-          left: '5%',
-          width: '250px',
-          height: '250px',
-          borderRadius: '50%',
-          background: isDarkMode 
-            ? 'rgba(34, 197, 94, 0.04)'
-            : 'rgba(255, 107, 107, 0.03)',
-          filter: 'blur(30px)',
-          zIndex: 0,
-        }}
-        animate={{
-          scale: [1, 1.3, 1],
-          opacity: [0.1, 0.2, 0.1],
-        }}
-        transition={{
-          duration: 10,
-          repeat: Infinity,
-          ease: 'easeInOut',
-          delay: 1,
-        }}
-      />
-
-      <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 1 }}>
+      <Container maxWidth="lg">
         {/* Main Footer Content */}
-        <Grid container spacing={4} sx={{ mb: 6 }}>
+        <Grid container spacing={4} sx={{ mb: 4 }}>
           {/* Company Info */}
           <Grid item xs={12} md={4}>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-            >
-              <Box sx={{ mb: 4 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                  <Box
-                    component="img"
-                    src="/logo1.png"
-                    alt="Excellence Coaching Hub Logo"
-                    sx={{
-                      height: 90,
-                      mr: 2,
-                      filter: 'brightness(0) invert(1)',
-                    }}
-                  />
-                  <Typography 
-                    variant="h5" 
-                    sx={{ 
-                      fontWeight: 800,
-                      background: 'linear-gradient(45deg, #ffffff, #e0e0e0)',
-                      backgroundClip: 'text',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                    }}
-                  >
-                    Excellence Coaching Hub
-                  </Typography>
-                </Box>
-                
-                <Typography
-                  variant="body1"
-                  sx={{
-                    color: 'grey.300',
-                    lineHeight: 1.6,
-                    mb: 3,
-                  }}
-                >
-                  Empowering Africa's workforce through innovative education, 
-                  career coaching, and skills development. Join thousands of 
-                  successful professionals who transformed their careers with us.
+            <Box sx={{ mb: 3 }}>
+              <Typography 
+                variant="h5" 
+                gutterBottom 
+                sx={{ 
+                  fontWeight: 'bold',
+                  background: 'linear-gradient(45deg, #81c784 30%, #a5d6a7 90%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
+                }}
+              >
+                ExJobNet
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 3, opacity: 0.9, lineHeight: 1.6 }}>
+                ExJobNet is a dynamic career platform combining the best of professional networking and job readiness—offering features like personalized profiles, interactive job preparation tools, live coaching, and secure certifications to empower both individuals and organizations in Africa's job ecosystem.
+              </Typography>
+              
+              {/* Social Links */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="body2" sx={{ mb: 2, opacity: 0.9, fontWeight: 'bold' }}>
+                  Follow Us
                 </Typography>
-
-                {/* Contact Info */}
-                <Stack spacing={2}>
-                  {contactInfo.map((contact, index) => (
-                    <Box key={index} sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Box sx={{ color: 'primary.main', mr: 2 }}>
-                        {contact.icon}
-                      </Box>
-                      <Link
-                        href={contact.href}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  {socialLinks.map((social, index) => (
+                    <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <IconButton
+                        href={social.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         sx={{
-                          color: 'grey.300',
-                          textDecoration: 'none',
+                          color: 'white',
+                          backgroundColor: 'rgba(255,255,255,0.1)',
+                          width: 36,
+                          height: 36,
                           '&:hover': {
-                            color: 'primary.main',
+                            backgroundColor: 'rgba(255,255,255,0.2)',
+                            transform: 'translateY(-2px)'
                           },
+                          transition: 'all 0.3s'
                         }}
+                        aria-label={social.label}
                       >
-                        {contact.text}
-                      </Link>
+                        {social.icon}
+                      </IconButton>
+                      <Box>
+                        <Typography variant="body2" sx={{ opacity: 0.9, fontWeight: 'medium' }}>
+                          {social.label}
+                        </Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.7, fontSize: '0.75rem' }}>
+                          {social.username}
+                        </Typography>
+                      </Box>
                     </Box>
                   ))}
-                </Stack>
+                </Box>
               </Box>
-            </motion.div>
-          </Grid>
 
-          {/* Links Sections */}
-          <Grid item xs={12} md={6}>
-            <Grid container spacing={3}>
-              {Object.entries(footerLinks).map(([category, links], index) => (
-                <Grid item xs={6} sm={3} key={category}>
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: index * 0.1 }}
-                    viewport={{ once: true }}
-                  >
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        fontWeight: 600,
-                        mb: 2,
-                        textTransform: 'capitalize',
-                        color: 'primary.main',
-                      }}
+              {/* Contact Info */}
+              <Box>
+                {contactInfo.map((contact, index) => (
+                  <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Box sx={{ mr: 2, opacity: 0.8 }}>
+                      {contact.icon}
+                    </Box>
+                    <Link
+                      href={contact.href}
+                      color="inherit"
+                      underline="hover"
+                      sx={{ opacity: 0.9, fontSize: '0.9rem' }}
                     >
-                      {category}
-                    </Typography>
-                    <Stack spacing={1}>
-                      {links.map((link, linkIndex) => (
-                        <Link
-                          key={linkIndex}
-                          href={link.href}
-                          sx={{
-                            color: 'grey.300',
-                            textDecoration: 'none',
-                            fontSize: '0.875rem',
-                            '&:hover': {
-                              color: 'primary.main',
-                              textDecoration: 'underline',
-                            },
-                          }}
-                        >
-                          {link.label}
-                        </Link>
-                      ))}
-                    </Stack>
-                  </motion.div>
-                </Grid>
-              ))}
-            </Grid>
-          </Grid>
-
-          {/* Newsletter Signup */}
-          <Grid item xs={12} md={2}>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              viewport={{ once: true }}
-            >
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 600,
-                  mb: 2,
-                  color: 'primary.main',
-                }}
-              >
-                Stay Updated
-              </Typography>
-              
-              <Typography
-                variant="body2"
-                sx={{
-                  color: 'grey.300',
-                  mb: 3,
-                  lineHeight: 1.5,
-                }}
-              >
-                Subscribe to our newsletter for the latest updates, courses, and career opportunities.
-              </Typography>
-
-              <Box
-                component={motion.form}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                onSubmit={handleNewsletterSubmit}
-                sx={{ 
-                  mb: 3,
-                  p: 2,
-                  borderRadius: '16px',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                }}
-              >
-                <TextField
-                  fullWidth
-                  size="small"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  sx={{
-                    mb: 2,
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: 'rgba(255, 255, 255, 0.1)',
-                      color: 'white',
-                      borderRadius: '30px',
-                      '& fieldset': {
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        borderWidth: '2px',
-                      },
-                      '&:hover fieldset': {
-                        borderColor: 'primary.main',
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderColor: 'primary.main',
-                      },
-                    },
-                    '& .MuiInputBase-input::placeholder': {
-                      color: 'rgba(255, 255, 255, 0.7)',
-                    },
-                  }}
-                />
-                <Button
-                  component={motion.button}
-                  whileHover={{ 
-                    scale: 1.02,
-                    boxShadow: '0 6px 20px rgba(255, 107, 107, 0.4)',
-                  }}
-                  whileTap={{ scale: 0.98 }}
-                  type="submit"
-                  variant="contained"
-                  fullWidth
-                  disabled={subscribing}
-                  endIcon={<Send />}
-                  sx={{
-                    bgcolor: 'secondary.main',
-                    borderRadius: '30px',
-                    py: 1.2,
-                    boxShadow: '0 4px 15px rgba(255, 107, 107, 0.3)',
-                    '&:hover': {
-                      bgcolor: 'secondary.dark',
-                    },
-                  }}
-                >
-                  {subscribing ? 'Subscribing...' : 'Subscribe'}
-                </Button>
-              </Box>
-
-              {/* Social Links */}
-              <Typography
-                variant="body2"
-                sx={{
-                  color: 'grey.300',
-                  mb: 2,
-                }}
-              >
-                Follow us on social media:
-              </Typography>
-              
-              <Stack direction="row" spacing={1.5} flexWrap="wrap">
-                {socialLinks.map((social, index) => (
-                  <IconButton
-                    key={index}
-                    href={social.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    sx={{
-                      color: 'white',
-                      bgcolor: 'rgba(255, 255, 255, 0.1)',
-                      backdropFilter: 'blur(5px)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        color: '#fff',
-                        bgcolor: 'primary.main',
-                        boxShadow: '0 4px 12px rgba(63, 81, 181, 0.3)',
-                      },
-                    }}
-                  >
-                    {social.icon}
-                  </IconButton>
+                      {contact.text}
+                    </Link>
+                  </Box>
                 ))}
-              </Stack>
-            </motion.div>
+              </Box>
+            </Box>
           </Grid>
+
+          {/* Footer Links */}
+          {footerSections.map((section, sectionIndex) => (
+            <Grid item xs={12} sm={6} md={2.67} key={sectionIndex}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
+                {section.title}
+              </Typography>
+              <List dense sx={{ p: 0 }}>
+                {section.links.map((link, linkIndex) => (
+                  <ListItem
+                    key={linkIndex}
+                    sx={{
+                      p: 0,
+                      mb: 0.5,
+                      cursor: 'pointer',
+                      borderRadius: 1,
+                      '&:hover': {
+                        backgroundColor: 'rgba(255,255,255,0.1)',
+                        pl: 1
+                      },
+                      transition: 'all 0.3s'
+                    }}
+                    onClick={() => navigate(link.path)}
+                  >
+                    <Box sx={{ mr: 1, opacity: 0.8, fontSize: '1.2rem' }}>
+                      {link.icon}
+                    </Box>
+                    <ListItemText
+                      primary={link.text}
+                      primaryTypographyProps={{
+                        sx: { 
+                          fontSize: '0.9rem',
+                          opacity: 0.9,
+                          '&:hover': { opacity: 1 }
+                        }
+                      }}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            </Grid>
+          ))}
         </Grid>
 
-        <Divider sx={{ bgcolor: 'rgba(255, 255, 255, 0.1)', mb: 4 }} />
-
-        {/* Bottom Footer */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
+        {/* Newsletter Signup */}
+        <Paper
+          elevation={0}
+          sx={{
+            p: 3,
+            mb: 4,
+            backgroundColor: 'rgba(255,255,255,0.1)',
+            borderRadius: 2,
+            textAlign: 'center'
+          }}
         >
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: { xs: 'column', md: 'row' },
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: 2,
-            }}
-          >
-            <Typography
-              variant="body2"
-              sx={{
-                color: 'grey.400',
-                textAlign: { xs: 'center', md: 'left' },
-              }}
-            >
-              © {new Date().getFullYear()} Excellence Coaching Hub. All rights reserved.
-              Made with ❤️ for Africa's future leaders.
-            </Typography>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Chip
-                label="Trusted by 10,000+ Students"
-                size="small"
-                sx={{
-                  bgcolor: 'rgba(25, 118, 210, 0.2)',
-                  color: 'primary.main',
-                  fontWeight: 500,
+          <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+            Stay Updated with Career Opportunities
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 2, opacity: 0.9 }}>
+            Get the latest job openings, career tips, and industry insights delivered to your inbox.
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1, maxWidth: 400, mx: 'auto', flexWrap: 'wrap' }}>
+            <Box sx={{ flex: 1, minWidth: 200 }}>
+              <input
+                type="email"
+                placeholder="Enter your email address"
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: '14px',
+                  backgroundColor: 'white',
+                  color: '#333'
                 }}
               />
-              
-              <IconButton
-                onClick={scrollToTop}
-                sx={{
-                  bgcolor: 'primary.main',
-                  color: 'white',
-                  '&:hover': {
-                    bgcolor: 'primary.dark',
-                    transform: 'translateY(-2px)',
-                  },
-                }}
-              >
-                <ArrowUpward />
-              </IconButton>
             </Box>
+            <button
+              style={{
+                padding: '12px 24px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: '#81c784',
+                color: 'white',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontSize: '14px',
+                transition: 'all 0.3s'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = '#66bb6a';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = '#81c784';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              Subscribe
+            </button>
           </Box>
-        </motion.div>
+        </Paper>
+
+        <Divider sx={{ borderColor: 'rgba(255,255,255,0.2)', mb: 3 }} />
+
+        {/* Bottom Footer */}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 2
+          }}
+        >
+          <Typography variant="body2" sx={{ opacity: 0.8 }}>
+            © {new Date().getFullYear()} ExJobNet. All rights reserved.
+          </Typography>
+          
+          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+            <Link
+              href="/privacy"
+              color="inherit"
+              underline="hover"
+              sx={{ opacity: 0.8, fontSize: '0.875rem' }}
+            >
+              Privacy
+            </Link>
+            <Link
+              href="/terms"
+              color="inherit"
+              underline="hover"
+              sx={{ opacity: 0.8, fontSize: '0.875rem' }}
+            >
+              Terms
+            </Link>
+            <Link
+              href="/cookies"
+              color="inherit"
+              underline="hover"
+              sx={{ opacity: 0.8, fontSize: '0.875rem' }}
+            >
+              Cookies
+            </Link>
+            <Link
+              href="/accessibility"
+              color="inherit"
+              underline="hover"
+              sx={{ opacity: 0.8, fontSize: '0.875rem' }}
+            >
+              Accessibility
+            </Link>
+          </Box>
+        </Box>
+
+        {/* Made with love */}
+        <Box sx={{ textAlign: 'center', mt: 3, pt: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <Typography variant="body2" sx={{ opacity: 0.7, fontSize: '0.8rem' }}>
+            Made with ❤️ for career success worldwide
+          </Typography>
+        </Box>
       </Container>
     </Box>
   );

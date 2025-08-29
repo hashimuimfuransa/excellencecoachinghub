@@ -79,6 +79,7 @@ import testRequestRoutes from '@/routes/testRequestRoutes';
 import paymentRoutes from '@/routes/paymentRoutes';
 import jobScrapingRoutes from '@/routes/jobScrapingRoutes';
 import smartTestRoutes from '@/routes/smartTestRoutes';
+import cvBuilderRoutes from '@/routes/cvBuilderRoutes';
 
 
 
@@ -701,6 +702,9 @@ app.use('/api/smart-tests', smartTestRoutes);
 
 // Test Request routes
 app.use('/api/test-requests', testRequestRoutes);
+
+// CV Builder routes
+app.use('/api/cv-builder', cvBuilderRoutes);
 
 // Test endpoint to check jobs in database
 app.get('/api/jobs-debug', async (req, res) => {

@@ -914,7 +914,7 @@ const AllJobsPage: React.FC = () => {
                 Community Networking
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Connect, engage & collaborate like LinkedIn
+                Connect, engage & collaborate
               </Typography>
             </Box>
             <Box sx={{ textAlign: 'center', flex: 1 }}>

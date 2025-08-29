@@ -69,26 +69,31 @@ const FloatingContact: React.FC = () => {
     {
       icon: <Facebook sx={{ color: '#1877F2' }} />,
       title: 'Facebook',
+      profileName: '@excellencecoachinghub',
       action: () => window.open('https://facebook.com/excellencecoachinghub', '_blank'),
     },
     {
       icon: <LinkedIn sx={{ color: '#0A66C2' }} />,
       title: 'LinkedIn',
+      profileName: 'Excellence Coaching Hub',
       action: () => window.open('https://www.linkedin.com/in/excellence-coachinghub-1b8b1a380?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app', '_blank'),
     },
     {
       icon: <Twitter sx={{ color: '#1DA1F2' }} />,
       title: 'Twitter',
+      profileName: '@ECH_coachinghub',
       action: () => window.open('https://x.com/ECH_coachinghub?t=Awf4GVPp9eCkSZhDlHkFew&s=08', '_blank'),
     },
     {
       icon: <Instagram sx={{ color: '#E4405F' }} />,
       title: 'Instagram',
+      profileName: '@excellencecoachinghub',
       action: () => window.open('https://www.instagram.com/excellencecoachinghub/?utm_source=qr&igsh=Ym5xMXh5aXZmNHVi#', '_blank'),
     },
     {
       icon: <VideoLibrary sx={{ color: '#ff0050' }} />,
       title: 'TikTok',
+      profileName: '@excellence.coachi4',
       action: () => window.open('https://www.tiktok.com/@excellence.coachi4?_t=ZM-8zCgEouFb8w&_r=1', '_blank'),
     },
   ];
@@ -247,30 +252,32 @@ const FloatingContact: React.FC = () => {
             </Typography>
             <List>
               {contactMethods.map((method, index) => (
-                <ListItem
+                <motion.div
                   key={index}
-                  component={motion.div}
                   whileHover={{ x: 5 }}
-                  button
-                  onClick={method.action}
-                  sx={{
-                    borderRadius: '12px',
-                    mb: 1,
-                    transition: 'all 0.2s ease',
-                    '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(34,197,94,0.05)',
-                    },
-                  }}
                 >
-                  <ListItemIcon sx={{ minWidth: 40 }}>
-                    {method.icon}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={method.title}
-                    secondary={method.description}
-                    primaryTypographyProps={{ fontWeight: 600 }}
-                  />
-                </ListItem>
+                  <ListItem
+                    onClick={method.action}
+                    sx={{
+                      borderRadius: '12px',
+                      mb: 1,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(34,197,94,0.05)',
+                      },
+                    }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40 }}>
+                      {method.icon}
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={method.title}
+                      secondary={method.description}
+                      primaryTypographyProps={{ fontWeight: 600 }}
+                    />
+                  </ListItem>
+                </motion.div>
               ))}
             </List>
           </Box>
@@ -325,23 +332,67 @@ const FloatingContact: React.FC = () => {
             <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'primary.main' }}>
               Follow Us
             </Typography>
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
               {socialMedia.map((social, index) => (
-                <Tooltip key={index} title={social.title} arrow>
-                  <IconButton
-                    component={motion.button}
-                    whileHover={{ scale: 1.2 }}
-                    whileTap={{ scale: 0.9 }}
+                <Tooltip 
+                  key={index} 
+                  title={
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>
+                        {social.title}
+                      </Typography>
+                      <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                        {social.profileName}
+                      </Typography>
+                    </Box>
+                  } 
+                  arrow
+                >
+                  <Box
+                    component={motion.div}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={social.action}
                     sx={{
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      cursor: 'pointer',
+                      p: 1,
+                      borderRadius: '12px',
+                      transition: 'all 0.2s ease',
                       '&:hover': {
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
                       },
                     }}
                   >
-                    {social.icon}
-                  </IconButton>
+                    <IconButton
+                      sx={{
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                        '&:hover': {
+                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                        },
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      {social.icon}
+                    </IconButton>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        fontSize: '0.65rem',
+                        textAlign: 'center',
+                        color: 'text.secondary',
+                        maxWidth: '80px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {social.profileName}
+                    </Typography>
+                  </Box>
                 </Tooltip>
               ))}
             </Box>

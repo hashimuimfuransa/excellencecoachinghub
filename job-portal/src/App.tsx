@@ -60,6 +60,7 @@ import SmartTestPage from './pages/SmartTestPage';
 import TakeSmartTestPage from './pages/TakeSmartTestPage';
 import SmartTestResultsPage from './pages/SmartTestResultsPage';
 import QuickApplyPage from './pages/QuickApplyPage';
+import CVBuilderPage from './pages/CVBuilderPage';
 
 function App() {
   // Initialize EmailJS on app start
@@ -198,6 +199,7 @@ function App() {
               <Route path="tests" element={<PsychometricTestsPage />} />
               <Route path="tests/saved" element={<SavedCardsManager />} />
               <Route path="test-results" element={<PsychometricResultsPage />} />
+              <Route path="cv-builder" element={<CVBuilderPage />} />
               
               {/* Test Routes moved to standalone for full screen experience */}
               

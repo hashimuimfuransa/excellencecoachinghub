@@ -55,7 +55,8 @@ import {
   AccountCircle,
   BarChart,
   Lightbulb,
-  History
+  History,
+  Description
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -262,6 +263,11 @@ const MainLayout: React.FC = () => {
             label: 'Interview History',
             path: '/app/interviews/history',
             icon: <History />,
+          },
+          {
+            label: 'CV Builder',
+            path: '/app/cv-builder',
+            icon: <Description />,
           },
           {
             label: 'Courses',

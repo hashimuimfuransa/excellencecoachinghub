@@ -81,6 +81,13 @@ import jobScrapingRoutes from '@/routes/jobScrapingRoutes';
 import smartTestRoutes from '@/routes/smartTestRoutes';
 import cvBuilderRoutes from '@/routes/cvBuilderRoutes';
 
+// Social Network routes
+import postRoutes from '@/routes/postRoutes';
+import connectionRoutes from '@/routes/connectionRoutes';
+import companyRoutes from '@/routes/companyRoutes';
+import eventRoutes from '@/routes/eventRoutes';
+import careerInsightRoutes from '@/routes/careerInsightRoutes';
+
 
 
 const app = express();
@@ -705,6 +712,13 @@ app.use('/api/test-requests', testRequestRoutes);
 
 // CV Builder routes
 app.use('/api/cv-builder', cvBuilderRoutes);
+
+// Social Network routes
+app.use('/api/posts', postRoutes);
+app.use('/api/connections', connectionRoutes);
+app.use('/api/companies', companyRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/insights', careerInsightRoutes);
 
 // Test endpoint to check jobs in database
 app.get('/api/jobs-debug', async (req, res) => {

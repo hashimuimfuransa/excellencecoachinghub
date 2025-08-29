@@ -116,7 +116,7 @@ export const sendWelcomeEmail = async (
     const templateParams = {
       to_name: userName,
       user_role: userRole,
-      dashboard_url: `${window.location.origin}/dashboard`,
+      dashboard_url: `${window.location.origin}/app/network`,
       jobs_url: `${window.location.origin}/jobs`,
       from_name: 'ExJobNet - Dynamic Career Platform',
 
@@ -129,7 +129,7 @@ export const sendWelcomeEmail = async (
       recipient: userEmail,
       send_to: userEmail,
 
-      message: `Welcome to ExJobNet, ${userName}!\n\nYour account has been successfully created. You can now access your dashboard and start exploring job opportunities on our dynamic career platform.\n\n🚀 Dashboard: ${window.location.origin}/dashboard\n💼 Browse Jobs: ${window.location.origin}/jobs\n\nWe're excited to help you find your dream job!\n\nBest regards,\nExJobNet Team`,
+      message: `Welcome to ExJobNet, ${userName}!\n\nYour account has been successfully created. You can now access your community and start exploring job opportunities on our dynamic career platform.\n\n🚀 Community: ${window.location.origin}/app/network\n💼 Browse Jobs: ${window.location.origin}/jobs\n\nWe're excited to help you find your dream job!\n\nBest regards,\nExJobNet Team`,
       subject: 'Welcome to ExJobNet - Dynamic Career Platform! 🎉'
     };
 
@@ -141,7 +141,7 @@ export const sendWelcomeEmail = async (
       console.log(`To: ${userEmail}`);
       console.log(`Name: ${userName}`);
       console.log(`Role: ${userRole}`);
-      console.log(`Dashboard URL: ${window.location.origin}/dashboard`);
+      console.log(`Community URL: ${window.location.origin}/app/network`);
       console.log(`Jobs URL: ${window.location.origin}/jobs`);
       console.log('=========================================================');
       console.log('💡 To send real emails, configure EmailJS credentials in emailjsService.ts');

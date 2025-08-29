@@ -34,7 +34,10 @@ import {
   Brightness7,
   Close,
   AdminPanelSettings,
-  TrendingUp
+  TrendingUp,
+  Group,
+  Public,
+  Psychology
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -73,6 +76,9 @@ const Navbar: React.FC = () => {
   const menuItems = [
     { text: 'Home', icon: <Home />, path: '/' },
     { text: 'Jobs', icon: <Work />, path: '/jobs' },
+    { text: 'Network', icon: <Public />, path: '/app/network', protected: true },
+    { text: 'Connections', icon: <Group />, path: '/app/connections', protected: true },
+    { text: 'Career Insights', icon: <Psychology />, path: '/app/career-insights', protected: true },
     { text: 'Companies', icon: <Business />, path: '/companies' },
     { text: 'Support', icon: <Support />, path: '/support' },
   ];
@@ -91,7 +97,7 @@ const Navbar: React.FC = () => {
       </Box>
       <Divider />
       <List>
-        {menuItems.map((item) => (
+        {menuItems.filter(item => !item.protected || user).map((item) => (
           <ListItem
             button
             key={item.text}
@@ -226,7 +232,7 @@ const Navbar: React.FC = () => {
 
           {!isMobile && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 3 }}>
-              {menuItems.map((item) => (
+              {menuItems.filter(item => !item.protected || user).map((item) => (
                 <Button
                   key={item.text}
                   color="inherit"

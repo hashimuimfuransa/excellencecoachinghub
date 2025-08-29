@@ -181,4 +181,7 @@ export const handlePaginatedResponse = (response: any) => {
   return response;
 };
 
+// Named export for api instance
+export { api };
+
 export default api;

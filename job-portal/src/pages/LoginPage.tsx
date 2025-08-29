@@ -54,7 +54,7 @@ const LoginPage: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  const from = location.state?.from?.pathname || '/dashboard';
+  const from = location.state?.from?.pathname || '/app/network';
 
   useEffect(() => {
     setMounted(true);

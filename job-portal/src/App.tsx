@@ -62,6 +62,18 @@ import SmartTestResultsPage from './pages/SmartTestResultsPage';
 import QuickApplyPage from './pages/QuickApplyPage';
 import CVBuilderPage from './pages/CVBuilderPage';
 
+// Social Network pages
+import SocialNetworkPage from './pages/SocialNetworkPage';
+import NetworkPage from './pages/NetworkPage';
+import NotificationsPage from './pages/NotificationsPage';
+
+// Career Insights page
+import CareerInsightsPage from './pages/CareerInsightsPage';
+
+// Chat components
+import FloatingChatButton from './components/chat/FloatingChatButton';
+import MessagesPage from './pages/MessagesPage';
+
 function App() {
   // Initialize EmailJS on app start
   useEffect(() => {
@@ -158,8 +170,8 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              {/* Default redirect to dashboard */}
-              <Route index element={<Navigate to="dashboard" replace />} />
+              {/* Default redirect to community page (network) */}
+              <Route index element={<Navigate to="network" replace />} />
               
               {/* Dashboard */}
               <Route path="dashboard" element={<ModernDashboardPage />} />
@@ -200,6 +212,15 @@ function App() {
               <Route path="tests/saved" element={<SavedCardsManager />} />
               <Route path="test-results" element={<PsychometricResultsPage />} />
               <Route path="cv-builder" element={<CVBuilderPage />} />
+              
+              {/* Social Network */}
+              <Route path="network" element={<SocialNetworkPage />} />
+              <Route path="connections" element={<NetworkPage />} />
+              <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="messages" element={<MessagesPage />} />
+              
+              {/* Career Insights */}
+              <Route path="career-insights" element={<CareerInsightsPage />} />
               
               {/* Test Routes moved to standalone for full screen experience */}
               
@@ -315,6 +336,9 @@ function App() {
             {/* Catch-all redirect */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          
+          {/* Floating Chat Button */}
+          <FloatingChatButton />
         </Router>
       </AuthProvider>
     </ThemeProvider>

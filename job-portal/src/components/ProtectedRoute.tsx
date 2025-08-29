@@ -31,7 +31,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, roles }) => {
   }
 
   if (roles && !hasAnyRole(roles)) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/app/network" replace />;
   }
 
   return <>{children}</>;

@@ -21,7 +21,9 @@ import {
   useTheme as useMuiTheme,
   alpha,
   ListSubheader,
-  Collapse
+  Collapse,
+  useMediaQuery,
+  InputBase
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -56,7 +58,12 @@ import {
   BarChart,
   Lightbulb,
   History,
-  Description
+  Description,
+  PersonAdd,
+  Mail,
+  ChevronLeft,
+  ChevronRight,
+  SearchOff
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -66,6 +73,7 @@ import CareerGuidancePopup from '../components/CareerGuidancePopup';
 import careerGuidanceService from '../services/careerGuidanceService';
 
 const drawerWidth = 260;
+const drawerWidthClosed = 72;
 
 interface NavItem {
   label: string;
@@ -78,8 +86,12 @@ interface NavItem {
 
 const MainLayout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [desktopOpen, setDesktopOpen] = useState(false); // Desktop sidebar starts minimized
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({});
+  const [hovered, setHovered] = useState(false); // Track hover state for mini drawer
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Mobile quick actions menu
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Career guidance popup state
   const [showCareerPopup, setShowCareerPopup] = useState(false);
@@ -89,6 +101,12 @@ const MainLayout: React.FC = () => {
   const { user, logout, hasRole, hasAnyRole } = useAuth();
   const { mode, toggleTheme } = useTheme();
   const muiTheme = useMuiTheme();
+  const isMobile = useMediaQuery(muiTheme.breakpoints.down('sm'));
+  
+  // Calculate current drawer width
+  const currentDrawerWidth = isMobile 
+    ? drawerWidth 
+    : (desktopOpen || hovered) ? drawerWidth : drawerWidthClosed;
 
   // Reset career test check when navigating to dashboard pages
   useEffect(() => {
@@ -347,8 +365,34 @@ const MainLayout: React.FC = () => {
       }
     ];
 
+    // Network and Social items (for all users)
+    const networkItems: NavItem[] = [
+      {
+        label: 'Community',
+        path: '/app/network',
+        icon: <People />,
+      },
+      {
+        label: 'Connections',
+        path: '/app/connections',
+        icon: <PersonAdd />,
+      },
+      {
+        label: 'Notifications',
+        path: '/app/notifications',
+        icon: <Notifications />,
+        badge: 0 // This could be dynamic based on unread notifications
+      },
+      {
+        label: 'Messages',
+        path: '/app/messages',
+        icon: <Mail />,
+        badge: 0 // This could be dynamic based on unread messages
+      }
+    ];
+
     // Combine items based on user role
-    let items = [...commonItems];
+    let items = [...commonItems, ...networkItems];
     
     if (isJobSeekerView) {
       items = [...items, ...jobSeekerItems];
@@ -372,6 +416,14 @@ const MainLayout: React.FC = () => {
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
+  };
+
+  const handleDesktopDrawerToggle = () => {
+    setDesktopOpen(!desktopOpen);
+    // Close submenus when collapsing
+    if (desktopOpen) {
+      setOpenSubMenus({});
+    }
   };
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -411,6 +463,8 @@ const MainLayout: React.FC = () => {
 
   // Recursive function to render navigation items with nested submenus
   const renderNavItems = (items: NavItem[], level: number = 0) => {
+    const isCollapsed = !isMobile && !desktopOpen && !hovered;
+    
     return items.map((item, index) => {
       // Skip items that don't match user roles
       if (item.roles && !hasAnyRole(item.roles)) {
@@ -429,63 +483,111 @@ const MainLayout: React.FC = () => {
       // Generate unique key using label and level to avoid duplicate keys when path is '#'
       const uniqueKey = `${item.label}-${level}-${index}`;
 
+      // Don't show nested items when collapsed
+      if (isCollapsed && level > 0) {
+        return null;
+      }
+
       return (
         <React.Fragment key={uniqueKey}>
-          <ListItem 
-            disablePadding 
-            sx={{ 
-              display: 'block',
-              pl: level > 0 ? 2 : 0
-            }}
+          <Tooltip 
+            title={isCollapsed ? item.label : ''} 
+            placement="right" 
+            disableHoverListener={!isCollapsed}
           >
-            <ListItemButton
-              selected={isSelected || isChildSelected}
-              onClick={() => hasChildren 
-                ? handleToggleSubMenu(item.label) 
-                : handleNavigation(item.path)
-              }
-              sx={{
-                minHeight: 48,
-                px: 2.5,
-                borderRadius: '8px',
-                mx: 1,
-                my: 0.5,
-                ...(isSelected && {
-                  bgcolor: alpha(muiTheme.palette.primary.main, 0.1),
-                  '&:hover': {
-                    bgcolor: alpha(muiTheme.palette.primary.main, 0.2),
-                  }
-                })
+            <ListItem 
+              disablePadding 
+              sx={{ 
+                display: 'block',
+                pl: level > 0 ? 2 : 0
               }}
             >
-              <ListItemIcon sx={{ 
-                minWidth: 40,
-                color: isSelected || isChildSelected 
-                  ? 'primary.main' 
-                  : 'text.secondary'
-              }}>
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText 
-                primary={item.label} 
-                primaryTypographyProps={{
-                  fontWeight: isSelected || isChildSelected ? 'medium' : 'normal',
-                  color: isSelected || isChildSelected ? 'primary.main' : 'text.primary'
+              <ListItemButton
+                selected={isSelected || isChildSelected}
+                onClick={() => {
+                  if (isCollapsed && hasChildren) {
+                    // If collapsed and has children, expand drawer first
+                    setDesktopOpen(true);
+                    setTimeout(() => handleToggleSubMenu(item.label), 50);
+                  } else {
+                    hasChildren 
+                      ? handleToggleSubMenu(item.label) 
+                      : handleNavigation(item.path);
+                  }
                 }}
-              />
-              {item.badge && (
-                <Badge 
-                  badgeContent={item.badge} 
-                  color="primary" 
-                  sx={{ mr: 1 }}
-                />
-              )}
-              {hasChildren && (isOpen ? <ExpandLess /> : <ExpandMore />)}
-            </ListItemButton>
-          </ListItem>
+                sx={{
+                  minHeight: 48,
+                  px: isCollapsed ? 1.5 : 2.5,
+                  borderRadius: '12px',
+                  mx: 1,
+                  my: 0.5,
+                  justifyContent: isCollapsed ? 'center' : 'flex-start',
+                  background: (isSelected || isChildSelected) 
+                    ? `linear-gradient(135deg, ${alpha(muiTheme.palette.primary.main, 0.15)} 0%, ${alpha(muiTheme.palette.primary.main, 0.05)} 100%)`
+                    : 'transparent',
+                  border: (isSelected || isChildSelected) 
+                    ? `1px solid ${alpha(muiTheme.palette.primary.main, 0.2)}`
+                    : '1px solid transparent',
+                  boxShadow: (isSelected || isChildSelected)
+                    ? `0 2px 8px ${alpha(muiTheme.palette.primary.main, 0.15)}`
+                    : 'none',
+                  '&:hover': {
+                    bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
+                    transform: 'translateY(-1px)',
+                    boxShadow: `0 4px 12px ${alpha(muiTheme.palette.primary.main, 0.12)}`,
+                  },
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+              >
+                <ListItemIcon sx={{ 
+                  minWidth: isCollapsed ? 0 : 40,
+                  mr: isCollapsed ? 0 : 2,
+                  justifyContent: 'center',
+                  color: isSelected || isChildSelected 
+                    ? 'primary.main' 
+                    : 'text.secondary'
+                }}>
+                  <Box
+                    sx={{
+                      p: 1,
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: (isSelected || isChildSelected) 
+                        ? alpha(muiTheme.palette.primary.main, 0.15)
+                        : 'transparent'
+                    }}
+                  >
+                    {item.icon}
+                  </Box>
+                </ListItemIcon>
+                {(!isCollapsed) && (
+                  <>
+                    <ListItemText 
+                      primary={item.label} 
+                      primaryTypographyProps={{
+                        fontWeight: isSelected || isChildSelected ? 600 : 500,
+                        color: isSelected || isChildSelected ? 'primary.main' : 'text.primary',
+                        fontSize: '0.875rem'
+                      }}
+                    />
+                    {item.badge && (
+                      <Badge 
+                        badgeContent={item.badge} 
+                        color="primary" 
+                        sx={{ mr: 1 }}
+                      />
+                    )}
+                    {hasChildren && (isOpen ? <ExpandLess /> : <ExpandMore />)}
+                  </>
+                )}
+              </ListItemButton>
+            </ListItem>
+          </Tooltip>
           
           {/* Render children if any */}
-          {hasChildren && (
+          {hasChildren && !isCollapsed && (
             <Collapse in={isOpen} timeout="auto" unmountOnExit>
               <List component="div" disablePadding>
                 {renderNavItems(item.children!, level + 1)}
@@ -498,63 +600,192 @@ const MainLayout: React.FC = () => {
   };
 
   const drawer = (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <Box 
+      sx={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        height: '100%',
+        background: mode === 'dark' 
+          ? `linear-gradient(135deg, ${muiTheme.palette.background.paper} 0%, ${alpha(muiTheme.palette.background.paper, 0.95)} 100%)`
+          : `linear-gradient(135deg, ${muiTheme.palette.background.paper} 0%, ${alpha(muiTheme.palette.primary.main, 0.02)} 100%)`,
+      }}
+      onMouseEnter={() => !isMobile && setHovered(true)}
+      onMouseLeave={() => !isMobile && setHovered(false)}
+    >
+      {/* Header with toggle button */}
       <Toolbar sx={{ 
         display: 'flex', 
         alignItems: 'center', 
-        justifyContent: 'center',
-        borderBottom: `1px solid ${alpha(muiTheme.palette.divider, 0.1)}`
+        justifyContent: (isMobile || desktopOpen || hovered) ? 'space-between' : 'center',
+        borderBottom: `1px solid ${alpha(muiTheme.palette.divider, 0.08)}`,
+        px: (isMobile || desktopOpen || hovered) ? 2 : 1.5,
+        background: `linear-gradient(135deg, ${alpha(muiTheme.palette.primary.main, 0.08)} 0%, ${alpha(muiTheme.palette.secondary.main, 0.04)} 100%)`,
       }}>
-        <Box 
-          component={Link} 
-          to="/app/dashboard"
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            textDecoration: 'none', 
-            color: 'text.primary' 
-          }}
-        >
-          <Work sx={{ color: 'primary.main', mr: 1, fontSize: 28 }} />
-          <Typography variant="h6" fontWeight="bold" noWrap component="div">
-            ExJobNet
-          </Typography>
-        </Box>
+        {(isMobile || desktopOpen || hovered) && (
+          <Box 
+            component={Link} 
+            to="/app/network"
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              textDecoration: 'none', 
+              color: 'text.primary' 
+            }}
+          >
+            <Box
+              sx={{
+                width: 32,
+                height: 32,
+                mr: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+                background: '#fff',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              }}
+            >
+              <img 
+                src="/exjobnetlogo.png" 
+                alt="ExJobNet Logo"
+                style={{ width: '80%', height: '80%', objectFit: 'contain' }}
+              />
+            </Box>
+            <Typography variant="h6" fontWeight="bold" noWrap component="div">
+              ExJobNet
+            </Typography>
+          </Box>
+        )}
+        
+        {/* Just show logo when collapsed */}
+        {!isMobile && !desktopOpen && !hovered && (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Box
+              sx={{
+                width: 28,
+                height: 28,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '50%',
+                background: '#fff',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              }}
+            >
+              <img 
+                src="/exjobnetlogo.png" 
+                alt="ExJobNet Logo"
+                style={{ width: '80%', height: '80%', objectFit: 'contain' }}
+              />
+            </Box>
+          </Box>
+        )}
+        
+        {/* Desktop toggle button */}
+        {!isMobile && (isMobile || desktopOpen || hovered) && (
+          <IconButton 
+            onClick={handleDesktopDrawerToggle}
+            sx={{
+              color: 'primary.main',
+              '&:hover': {
+                bgcolor: alpha(muiTheme.palette.primary.main, 0.1),
+              }
+            }}
+          >
+            {desktopOpen ? <ChevronLeft /> : <ChevronRight />}
+          </IconButton>
+        )}
       </Toolbar>
       
-      <Box sx={{ overflow: 'auto', flexGrow: 1, px: 1, py: 2 }}>
-        <List>
+      <Box sx={{ 
+        overflow: 'auto', 
+        flexGrow: 1, 
+        px: 0.5, 
+        py: 2,
+        '&::-webkit-scrollbar': {
+          width: '4px',
+        },
+        '&::-webkit-scrollbar-track': {
+          background: 'transparent',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          background: alpha(muiTheme.palette.primary.main, 0.3),
+          borderRadius: '2px',
+        },
+      }}>
+        <List sx={{ py: 0 }}>
           {renderNavItems(navigationItems)}
         </List>
       </Box>
       
-      <Box sx={{ p: 2, borderTop: `1px solid ${alpha(muiTheme.palette.divider, 0.1)}` }}>
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            p: 2,
-            borderRadius: 2,
-            bgcolor: alpha(muiTheme.palette.primary.main, 0.1)
-          }}
-        >
-          <Avatar
-            alt={user?.firstName}
-            src={user?.avatar}
-            sx={{ width: 40, height: 40, mr: 2 }}
+      {/* User profile section */}
+      {(isMobile || desktopOpen || hovered) && (
+        <Box sx={{ 
+          p: 1.5, 
+          borderTop: `1px solid ${alpha(muiTheme.palette.divider, 0.08)}`,
+          background: `linear-gradient(135deg, ${alpha(muiTheme.palette.primary.main, 0.05)} 0%, ${alpha(muiTheme.palette.secondary.main, 0.02)} 100%)`,
+        }}>
+          <Box 
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              p: 1.5,
+              borderRadius: '12px',
+              bgcolor: alpha(muiTheme.palette.primary.main, 0.1),
+              border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.15)}`,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                bgcolor: alpha(muiTheme.palette.primary.main, 0.15),
+                transform: 'translateY(-1px)',
+                boxShadow: `0 4px 12px ${alpha(muiTheme.palette.primary.main, 0.15)}`,
+              }
+            }}
+            onClick={handleProfileMenuOpen}
           >
-            {user?.firstName?.charAt(0)}
-          </Avatar>
-          <Box>
-            <Typography variant="subtitle2" fontWeight="medium">
-              {user?.firstName} {user?.lastName}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}
-            </Typography>
+            <Avatar
+              alt={user?.firstName}
+              src={user?.avatar}
+              sx={{ 
+                width: 36, 
+                height: 36, 
+                mr: 1.5,
+                border: `2px solid ${muiTheme.palette.primary.main}`,
+                boxShadow: `0 2px 8px ${alpha(muiTheme.palette.primary.main, 0.3)}`
+              }}
+            >
+              {user?.firstName?.charAt(0)}
+            </Avatar>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography variant="subtitle2" fontWeight="600" noWrap>
+                {user?.firstName} {user?.lastName}
+              </Typography>
+              <Typography variant="caption" color="primary.main" fontWeight="500">
+                {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}
+              </Typography>
+            </Box>
           </Box>
         </Box>
-      </Box>
+      )}
+      
+      {/* Collapsed user avatar */}
+      {!isMobile && !desktopOpen && !hovered && (
+        <Box sx={{ p: 1, display: 'flex', justifyContent: 'center' }}>
+          <IconButton onClick={handleProfileMenuOpen}>
+            <Avatar
+              alt={user?.firstName}
+              src={user?.avatar}
+              sx={{ 
+                width: 32, 
+                height: 32,
+                border: `2px solid ${muiTheme.palette.primary.main}`,
+              }}
+            >
+              {user?.firstName?.charAt(0)}
+            </Avatar>
+          </IconButton>
+        </Box>
+      )}
     </Box>
   );
 
@@ -563,48 +794,313 @@ const MainLayout: React.FC = () => {
       <CssBaseline />
       <AppBar
         position="fixed"
-        elevation={1}
+        elevation={0}
         sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-          bgcolor: 'background.paper',
-          color: 'text.primary',
-          borderBottom: `1px solid ${muiTheme.palette.divider}`
+          width: { sm: `calc(100% - ${currentDrawerWidth}px)` },
+          ml: { sm: `${currentDrawerWidth}px` },
+          bgcolor: alpha(muiTheme.palette.background.paper, 0.98),
+          backdropFilter: 'blur(20px)',
+          borderBottom: `1px solid ${alpha(muiTheme.palette.divider, 0.08)}`,
+          transition: muiTheme.transitions.create(['width', 'margin'], {
+            easing: muiTheme.transitions.easing.sharp,
+            duration: muiTheme.transitions.duration.standard,
+          }),
         }}
       >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 'medium' }}>
-            ExJobNet - Dynamic Career Platform
-          </Typography>
-          
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Tooltip title="Toggle theme">
-              <IconButton onClick={toggleTheme}>
-                {mode === 'dark' ? <LightMode /> : <DarkMode />}
+        <Toolbar sx={{ 
+          minHeight: '70px !important',
+          px: { xs: 2, sm: 3 },
+          justifyContent: 'space-between'
+        }}>
+          {/* Left Section - Logo & Mobile Menu */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {/* Mobile Menu Button */}
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              edge="start"
+              onClick={handleDrawerToggle}
+              sx={{ 
+                display: { sm: 'none' },
+                color: 'text.primary',
+                '&:hover': {
+                  bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
+                  color: 'primary.main'
+                }
+              }}
+            >
+              <MenuIcon />
+            </IconButton>
+
+            {/* Desktop Sidebar Toggle */}
+            {!isMobile && !desktopOpen && !hovered && (
+              <IconButton
+                onClick={handleDesktopDrawerToggle}
+                sx={{
+                  color: 'text.secondary',
+                  '&:hover': {
+                    bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
+                    color: 'primary.main'
+                  }
+                }}
+              >
+                <MenuIcon />
               </IconButton>
-            </Tooltip>
+            )}
             
-            <Tooltip title="Notifications">
-              <IconButton>
-                <Badge badgeContent={3} color="error">
-                  <Notifications />
+            {/* Logo - Only on larger screens */}
+            <Box 
+              component={Link} 
+              to="/app/network"
+              sx={{ 
+                display: { xs: 'none', md: 'flex' },
+                alignItems: 'center', 
+                textDecoration: 'none',
+                gap: 1,
+                '&:hover': {
+                  opacity: 0.8
+                }
+              }}
+            >
+              <Box
+                sx={{
+                  width: 32,
+                  height: 32,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '50%',
+                  background: '#fff',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                }}
+              >
+                <img 
+                  src="/exjobnetlogo.png" 
+                  alt="ExJobNet Logo"
+                  style={{ width: '80%', height: '80%', objectFit: 'contain' }}
+                />
+              </Box>
+              <Typography 
+                variant="h6" 
+                fontWeight="bold" 
+                sx={{ 
+                  background: `linear-gradient(135deg, ${muiTheme.palette.primary.main}, ${muiTheme.palette.secondary.main})`,
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  letterSpacing: '-0.5px'
+                }}
+              >
+                ExJobNet
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Center Section - Search Bar */}
+          <Box sx={{ 
+            display: { xs: 'none', md: 'flex' },
+            flexGrow: 1,
+            maxWidth: '500px',
+            mx: 4
+          }}>
+            <Box
+              sx={{
+                position: 'relative',
+                borderRadius: '12px',
+                bgcolor: alpha(muiTheme.palette.grey[50], mode === 'dark' ? 0.05 : 1),
+                border: `1px solid ${alpha(muiTheme.palette.divider, 0.1)}`,
+                '&:hover': {
+                  bgcolor: alpha(muiTheme.palette.grey[50], mode === 'dark' ? 0.08 : 1),
+                  borderColor: alpha(muiTheme.palette.primary.main, 0.3),
+                },
+                '&:focus-within': {
+                  borderColor: 'primary.main',
+                  boxShadow: `0 0 0 2px ${alpha(muiTheme.palette.primary.main, 0.1)}`,
+                },
+                width: '100%',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <Box
+                sx={{
+                  position: 'absolute',
+                  left: 12,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'text.secondary',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <Search sx={{ fontSize: 20 }} />
+              </Box>
+              <InputBase
+                placeholder="Search jobs, companies, skills..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleNavigation(`/app/jobs?search=${encodeURIComponent(searchQuery)}`);
+                  }
+                }}
+                sx={{
+                  width: '100%',
+                  '& .MuiInputBase-input': {
+                    padding: '12px 16px 12px 44px',
+                    fontSize: '0.95rem',
+                    '&::placeholder': {
+                      color: 'text.secondary',
+                      opacity: 0.8,
+                    }
+                  },
+                }}
+              />
+            </Box>
+          </Box>
+
+          {/* Right Section - Actions & Profile */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {/* Quick Actions - Desktop Only */}
+            <Box sx={{ 
+              display: { xs: 'none', lg: 'flex' },
+              gap: 1,
+              mr: 2
+            }}>
+              <Tooltip title="Career Guidance" arrow>
+                <IconButton
+                  onClick={() => handleNavigation('/app/career-guidance')}
+                  size="medium"
+                  sx={{
+                    color: 'success.main',
+                    bgcolor: alpha(muiTheme.palette.success.main, 0.1),
+                    '&:hover': {
+                      bgcolor: alpha(muiTheme.palette.success.main, 0.2),
+                      transform: 'translateY(-1px)',
+                    },
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <Psychology fontSize="small" />
+                </IconButton>
+              </Tooltip>
+
+              <Tooltip title="Find Jobs" arrow>
+                <IconButton
+                  onClick={() => handleNavigation('/app/jobs')}
+                  size="medium"
+                  sx={{
+                    color: 'primary.main',
+                    bgcolor: alpha(muiTheme.palette.primary.main, 0.1),
+                    '&:hover': {
+                      bgcolor: alpha(muiTheme.palette.primary.main, 0.2),
+                      transform: 'translateY(-1px)',
+                    },
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <Work fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+
+            {/* Messages */}
+            <Tooltip title="Messages" arrow>
+              <IconButton 
+                size="medium"
+                sx={{
+                  color: 'text.secondary',
+                  '&:hover': {
+                    color: 'primary.main',
+                    bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
+                  }
+                }}
+              >
+                <Badge 
+                  badgeContent={2} 
+                  color="primary"
+                  sx={{
+                    '& .MuiBadge-badge': {
+                      fontSize: '0.7rem',
+                      height: '16px',
+                      minWidth: '16px'
+                    }
+                  }}
+                >
+                  <Mail fontSize="small" />
                 </Badge>
               </IconButton>
             </Tooltip>
+
+            {/* Notifications */}
+            <Tooltip title="Notifications" arrow>
+              <IconButton
+                size="medium"
+                sx={{
+                  color: 'text.secondary',
+                  '&:hover': {
+                    color: 'warning.main',
+                    bgcolor: alpha(muiTheme.palette.warning.main, 0.08),
+                  }
+                }}
+              >
+                <Badge 
+                  badgeContent={3} 
+                  color="error"
+                  sx={{
+                    '& .MuiBadge-badge': {
+                      fontSize: '0.7rem',
+                      height: '16px',
+                      minWidth: '16px'
+                    }
+                  }}
+                >
+                  <Notifications fontSize="small" />
+                </Badge>
+              </IconButton>
+            </Tooltip>
+
+            {/* Theme Toggle */}
+            <Tooltip title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`} arrow>
+              <IconButton 
+                onClick={toggleTheme}
+                size="medium"
+                sx={{
+                  color: 'text.secondary',
+                  '&:hover': {
+                    color: mode === 'dark' ? 'warning.main' : 'info.main',
+                    bgcolor: mode === 'dark' 
+                      ? alpha(muiTheme.palette.warning.main, 0.08)
+                      : alpha(muiTheme.palette.info.main, 0.08),
+                  }
+                }}
+              >
+                {mode === 'dark' ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
+              </IconButton>
+            </Tooltip>
             
-            <Tooltip title="Profile">
+            {/* Divider */}
+            <Divider 
+              orientation="vertical" 
+              flexItem 
+              sx={{ 
+                mx: 1,
+                borderColor: alpha(muiTheme.palette.divider, 0.1),
+                height: '24px',
+                alignSelf: 'center'
+              }} 
+            />
+            
+            {/* Profile */}
+            <Tooltip title={`${user?.firstName} ${user?.lastName}`} arrow>
               <IconButton
                 onClick={handleProfileMenuOpen}
-                sx={{ p: 0, ml: 1 }}
+                size="medium"
+                sx={{ 
+                  p: 0.5,
+                  '&:hover': {
+                    transform: 'scale(1.05)',
+                  },
+                  transition: 'all 0.2s ease',
+                }}
               >
                 <Avatar
                   alt={user?.firstName}
@@ -612,13 +1108,50 @@ const MainLayout: React.FC = () => {
                   sx={{ 
                     width: 36, 
                     height: 36,
-                    border: `2px solid ${muiTheme.palette.primary.main}`
+                    border: `2px solid ${alpha(muiTheme.palette.primary.main, 0.2)}`,
+                    '&:hover': {
+                      borderColor: 'primary.main',
+                    },
+                    transition: 'all 0.2s ease',
                   }}
                 >
                   {user?.firstName?.charAt(0)}
                 </Avatar>
               </IconButton>
             </Tooltip>
+
+            {/* Mobile Search & Menu */}
+            <Box sx={{ display: { xs: 'flex', md: 'none' }, gap: 0.5, ml: 1 }}>
+              <Tooltip title="Search Jobs" arrow>
+                <IconButton
+                  onClick={() => handleNavigation('/app/jobs')}
+                  size="medium"
+                  sx={{
+                    color: 'text.secondary',
+                    '&:hover': {
+                      bgcolor: alpha(muiTheme.palette.info.main, 0.08),
+                      color: 'info.main'
+                    }
+                  }}
+                >
+                  <Search fontSize="small" />
+                </IconButton>
+              </Tooltip>
+
+              <IconButton
+                onClick={() => setMobileMenuOpen(true)}
+                size="medium"
+                sx={{
+                  color: 'text.secondary',
+                  '&:hover': {
+                    bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
+                    color: 'primary.main'
+                  }
+                }}
+              >
+                <Add fontSize="small" />
+              </IconButton>
+            </Box>
           </Box>
         </Toolbar>
       </AppBar>
@@ -698,11 +1231,143 @@ const MainLayout: React.FC = () => {
         </MenuItem>
       </Menu>
 
+      {/* Mobile Quick Actions Menu */}
+      <Menu
+        open={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        PaperProps={{
+          elevation: 16,
+          sx: {
+            overflow: 'visible',
+            filter: 'drop-shadow(0px 8px 32px rgba(0,0,0,0.12))',
+            mt: 1.5,
+            borderRadius: 4,
+            minWidth: 240,
+            bgcolor: 'background.paper',
+            border: `1px solid ${alpha(muiTheme.palette.divider, 0.08)}`,
+            '&:before': {
+              content: '""',
+              display: 'block',
+              position: 'absolute',
+              top: 0,
+              right: 14,
+              width: 10,
+              height: 10,
+              bgcolor: 'background.paper',
+              transform: 'translateY(-50%) rotate(45deg)',
+              zIndex: 0,
+            },
+          },
+        }}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+        anchorEl={null}
+        anchorReference="anchorPosition"
+        anchorPosition={{ top: 75, left: window.innerWidth - 60 }}
+      >
+        <Box sx={{ p: 2, pb: 1 }}>
+          <Typography variant="subtitle2" color="text.secondary" fontWeight={600}>
+            Quick Actions
+          </Typography>
+        </Box>
+
+        <MenuItem 
+          onClick={() => {
+            handleNavigation('/app/career-guidance');
+            setMobileMenuOpen(false);
+          }}
+          sx={{ 
+            py: 1.5,
+            px: 2,
+            borderRadius: 1,
+            mx: 1,
+            mb: 0.5,
+            '&:hover': {
+              bgcolor: alpha(muiTheme.palette.success.main, 0.08),
+            }
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 40 }}>
+            <Psychology sx={{ color: 'success.main', fontSize: 20 }} />
+          </ListItemIcon>
+          <ListItemText 
+            primary="Career Guidance"
+            secondary="Get prepared for success"
+            primaryTypographyProps={{ fontWeight: 500, fontSize: '0.95rem' }}
+            secondaryTypographyProps={{ fontSize: '0.8rem' }}
+          />
+        </MenuItem>
+        
+        <MenuItem 
+          onClick={() => {
+            handleNavigation('/app/jobs');
+            setMobileMenuOpen(false);
+          }}
+          sx={{ 
+            py: 1.5,
+            px: 2,
+            borderRadius: 1,
+            mx: 1,
+            mb: 0.5,
+            '&:hover': {
+              bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
+            }
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 40 }}>
+            <Work sx={{ color: 'primary.main', fontSize: 20 }} />
+          </ListItemIcon>
+          <ListItemText 
+            primary="Find Jobs"
+            secondary="Browse available positions"
+            primaryTypographyProps={{ fontWeight: 500, fontSize: '0.95rem' }}
+            secondaryTypographyProps={{ fontSize: '0.8rem' }}
+          />
+        </MenuItem>
+        
+        <Divider sx={{ my: 1 }} />
+        
+        <MenuItem 
+          onClick={() => {
+            handleNavigation('/app/network');
+            setMobileMenuOpen(false);
+          }}
+          sx={{ 
+            py: 1.5,
+            px: 2,
+            borderRadius: 1,
+            mx: 1,
+            mb: 1,
+            '&:hover': {
+              bgcolor: alpha(muiTheme.palette.secondary.main, 0.08),
+            }
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 40 }}>
+            <People sx={{ color: 'secondary.main', fontSize: 20 }} />
+          </ListItemIcon>
+          <ListItemText 
+            primary="Community"
+            secondary="Connect with professionals"
+            primaryTypographyProps={{ fontWeight: 500, fontSize: '0.95rem' }}
+            secondaryTypographyProps={{ fontSize: '0.8rem' }}
+          />
+        </MenuItem>
+      </Menu>
+
       <Box
         component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-        aria-label="mailbox folders"
+        sx={{ 
+          width: { sm: currentDrawerWidth }, 
+          flexShrink: { sm: 0 },
+          transition: muiTheme.transitions.create('width', {
+            easing: muiTheme.transitions.easing.sharp,
+            duration: muiTheme.transitions.duration.leavingScreen,
+          }),
+        }}
+        aria-label="navigation"
       >
+        {/* Mobile Drawer */}
         <Drawer
           variant="temporary"
           open={mobileOpen}
@@ -715,20 +1380,31 @@ const MainLayout: React.FC = () => {
             '& .MuiDrawer-paper': { 
               boxSizing: 'border-box', 
               width: drawerWidth,
-              borderRight: `1px solid ${muiTheme.palette.divider}`
+              borderRight: `1px solid ${alpha(muiTheme.palette.divider, 0.08)}`,
+              boxShadow: `0 8px 32px ${alpha(muiTheme.palette.common.black, 0.1)}`,
+              bgcolor: 'background.paper',
             },
           }}
         >
           {drawer}
         </Drawer>
+        
+        {/* Desktop Drawer */}
         <Drawer
           variant="permanent"
           sx={{
             display: { xs: 'none', sm: 'block' },
             '& .MuiDrawer-paper': { 
               boxSizing: 'border-box', 
-              width: drawerWidth,
-              borderRight: `1px solid ${muiTheme.palette.divider}`
+              width: currentDrawerWidth,
+              borderRight: `1px solid ${alpha(muiTheme.palette.divider, 0.08)}`,
+              boxShadow: `0 0 24px ${alpha(muiTheme.palette.common.black, 0.06)}`,
+              bgcolor: 'background.paper',
+              transition: muiTheme.transitions.create('width', {
+                easing: muiTheme.transitions.easing.sharp,
+                duration: muiTheme.transitions.duration.standard,
+              }),
+              overflowX: 'hidden',
             },
           }}
           open
@@ -741,14 +1417,74 @@ const MainLayout: React.FC = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
+          width: { sm: `calc(100% - ${currentDrawerWidth}px)` },
           minHeight: '100vh',
-          backgroundColor: 'background.default'
+          backgroundColor: 'background.default',
+          transition: muiTheme.transitions.create(['width', 'margin'], {
+            easing: muiTheme.transitions.easing.sharp,
+            duration: muiTheme.transitions.duration.standard,
+          }),
+          position: 'relative',
         }}
       >
-        <Toolbar />
-        <Outlet key={location.key} />
+        {/* Spacer for fixed AppBar */}
+        <Box sx={{ height: '70px' }} />
+        
+        {/* Main Content Container */}
+        <Box
+          sx={{
+            px: { xs: 2, sm: 3, md: 4 },
+            py: { xs: 2, sm: 3 },
+            maxWidth: '1400px',
+            mx: 'auto',
+            position: 'relative',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '1px',
+              background: `linear-gradient(90deg, transparent 0%, ${alpha(muiTheme.palette.divider, 0.1)} 50%, transparent 100%)`,
+            }
+          }}
+        >
+          {/* Page Content */}
+          <Box sx={{ 
+            opacity: 0, 
+            animation: 'slideInUp 0.6s ease-out forwards',
+            '@keyframes slideInUp': {
+              '0%': { 
+                opacity: 0, 
+                transform: 'translateY(20px)',
+              },
+              '100%': { 
+                opacity: 1, 
+                transform: 'translateY(0)',
+              },
+            }
+          }}>
+            <Outlet key={location.key} />
+          </Box>
+        </Box>
+
+        {/* Background Pattern - Subtle */}
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundImage: mode === 'dark' 
+              ? `radial-gradient(circle at 25% 25%, ${alpha(muiTheme.palette.primary.main, 0.02)} 0%, transparent 50%),
+                 radial-gradient(circle at 75% 75%, ${alpha(muiTheme.palette.secondary.main, 0.02)} 0%, transparent 50%)`
+              : `radial-gradient(circle at 25% 25%, ${alpha(muiTheme.palette.primary.main, 0.01)} 0%, transparent 50%),
+                 radial-gradient(circle at 75% 75%, ${alpha(muiTheme.palette.secondary.main, 0.01)} 0%, transparent 50%)`,
+            pointerEvents: 'none',
+            zIndex: -1,
+          }}
+        />
       </Box>
 
       {/* Career Guidance Popup - Available for job seekers */}

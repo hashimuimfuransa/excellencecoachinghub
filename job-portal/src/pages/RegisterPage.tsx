@@ -140,7 +140,7 @@ const RegisterPage: React.FC = () => {
       const { confirmPassword, ...registerData } = formData;
       await register(registerData);
       // Only navigate on successful registration
-      navigate('/dashboard');
+      navigate('/app/network');
     } catch (err: any) {
       // Extract detailed error message from backend
       const errorData = err.response?.data;

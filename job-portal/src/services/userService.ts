@@ -1,4 +1,4 @@
-import api from './api';
+import { api } from './api';
 import type { User } from '../types/user';
 
 // Helper functions for API calls with consistent error handling
@@ -289,6 +289,86 @@ export class UserService {
       console.warn('Privacy settings API not available, using fallback');
       // Store in localStorage for persistence during development
       localStorage.setItem(`privacy_settings_${userId}`, JSON.stringify(settings));
+    }
+  }
+
+  // Get all users for suggestions
+  async getAllUsers(): Promise<{ data: any[] }> {
+    try {
+      const response = await apiGet<any>('/users');
+      return response;
+    } catch (error) {
+      console.warn('Get all users API not available, using mock data');
+      // Generate mock users for development
+      const mockUsers = [
+        {
+          _id: 'mock-user-1',
+          firstName: 'Sarah',
+          lastName: 'Johnson',
+          email: 'sarah.johnson@email.com',
+          profession: 'Frontend Developer',
+          location: 'New York, NY',
+          skills: ['React', 'TypeScript', 'UI/UX'],
+          isConnected: false,
+          mutualConnections: 3
+        },
+        {
+          _id: 'mock-user-2',
+          firstName: 'Michael',
+          lastName: 'Chen',
+          email: 'michael.chen@email.com',
+          profession: 'Data Scientist',
+          location: 'San Francisco, CA',
+          skills: ['Python', 'Machine Learning', 'SQL'],
+          isConnected: false,
+          mutualConnections: 1
+        },
+        {
+          _id: 'mock-user-3',
+          firstName: 'Emily',
+          lastName: 'Davis',
+          email: 'emily.davis@email.com',
+          profession: 'Product Manager',
+          location: 'Austin, TX',
+          skills: ['Strategy', 'Analytics', 'Agile'],
+          isConnected: false,
+          mutualConnections: 2
+        },
+        {
+          _id: 'mock-user-4',
+          firstName: 'David',
+          lastName: 'Wilson',
+          email: 'david.wilson@email.com',
+          profession: 'Backend Developer',
+          location: 'Seattle, WA',
+          skills: ['Node.js', 'PostgreSQL', 'AWS'],
+          isConnected: false,
+          mutualConnections: 0
+        },
+        {
+          _id: 'mock-user-5',
+          firstName: 'Lisa',
+          lastName: 'Thompson',
+          email: 'lisa.thompson@email.com',
+          profession: 'UX Designer',
+          location: 'Los Angeles, CA',
+          skills: ['Figma', 'User Research', 'Prototyping'],
+          isConnected: false,
+          mutualConnections: 4
+        },
+        {
+          _id: 'mock-user-6',
+          firstName: 'James',
+          lastName: 'Rodriguez',
+          email: 'james.rodriguez@email.com',
+          profession: 'DevOps Engineer',
+          location: 'Denver, CO',
+          skills: ['Docker', 'Kubernetes', 'CI/CD'],
+          isConnected: false,
+          mutualConnections: 1
+        }
+      ];
+      return { data: mockUsers };
     }
   }
 

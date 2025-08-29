@@ -41,6 +41,14 @@ export { TestRequest, ITestRequestDocument, ITestRequestModel } from './TestRequ
 export { SmartTest, ISmartTest, ISmartTestQuestion } from './SmartTest';
 export { SmartTestResult, ISmartTestResult, ISmartTestDetailedResult, ISmartTestFeedback } from './SmartTestResult';
 
+// Social Network Models
+export { Post, IPostDocument, IPostModel } from './Post';
+export { Comment, ICommentDocument, ICommentModel } from './Comment';
+export { Connection, IConnectionDocument, IConnectionModel } from './Connection';
+export { Company, ICompanyDocument, ICompanyModel } from './Company';
+export { Event, IEventDocument, IEventModel } from './Event';
+export { CareerInsight, ICareerInsightDocument, ICareerInsightModel } from './CareerInsight';
+
 // Re-export shared types for convenience
 export {
   UserRole,

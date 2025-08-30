@@ -1,5 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-import { notificationService, Notification } from './notificationService';
+import { notificationService, Notification as AppNotification } from './notificationService';
 import { pushNotificationService, PushNotificationPayload } from './pushNotificationService';
 
 export interface RealtimeNotification {

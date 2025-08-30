@@ -52,6 +52,10 @@ import {
   Business,
   Groups,
   CompareArrows,
+  SmartToy,
+  Quiz,
+  RecordVoiceOver,
+  Smart,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -210,12 +214,13 @@ const SocialNetworkPage: React.FC = () => {
     },
     {
       title: 'Get Prepared',
-      subtitle: 'Interview & test prep',
+      subtitle: 'Interviews • Smart Exams • Psychometric tests',
       icon: <Psychology sx={{ fontSize: 28 }} />,
       color: '#FF9800',
       gradient: 'linear-gradient(135deg, #FF9800 0%, #f57c00 100%)',
       path: '/app/job-preparation',
-      stats: 'AI-Powered',
+      stats: '4+ Services',
+      services: [ 'Interviews • Smart Exams • Psychometric tests '],
     },
     {
       title: 'Generate CV',
@@ -614,17 +619,35 @@ const SocialNetworkPage: React.FC = () => {
                             >
                               {action.title}
                             </Typography>
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
-                                opacity: 0.9, 
-                                mb: { xs: 1, sm: 1.5, md: isTablet ? 1 : 2 },
-                                fontSize: { xs: '0.8rem', sm: '0.875rem', md: isTablet ? '0.75rem' : '0.875rem' },
-                                lineHeight: isTablet ? 1.2 : 1.4
-                              }}
-                            >
-                              {action.subtitle}
-                            </Typography>
+                            {action.title === 'Get Prepared' ? (
+                              <Box sx={{ mb: { xs: 1, sm: 1.5, md: isTablet ? 1 : 2 } }}>
+                                <Typography 
+                                  variant="body2" 
+                                  sx={{ 
+                                    opacity: 0.9, 
+                                    fontSize: { xs: '0.7rem', sm: '0.75rem', md: isTablet ? '0.7rem' : '0.8rem' },
+                                    lineHeight: 1.4,
+                                    textAlign: 'center',
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  🎯 AI Interviews • 🧠 Smart Tests<br/>
+                                  📊 Psychometric • 🎤 Mock Prep
+                                </Typography>
+                              </Box>
+                            ) : (
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  opacity: 0.9, 
+                                  mb: { xs: 1, sm: 1.5, md: isTablet ? 1 : 2 },
+                                  fontSize: { xs: '0.8rem', sm: '0.875rem', md: isTablet ? '0.75rem' : '0.875rem' },
+                                  lineHeight: isTablet ? 1.2 : 1.4
+                                }}
+                              >
+                                {action.subtitle}
+                              </Typography>
+                            )}
                             <Chip
                               label={action.stats}
                               size={isMobile ? "small" : "small"}

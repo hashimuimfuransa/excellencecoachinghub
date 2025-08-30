@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import { Notification } from '../models/Notification';
+import { PushSubscription } from '../models/PushSubscription';
 import { auth } from '../middleware/auth';
 import mongoose from 'mongoose';
 
@@ -209,6 +210,112 @@ router.post('/', auth, async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       message: 'Failed to create notification',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Subscribe to push notifications
+router.post('/subscribe', auth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+    const { subscription } = req.body;
+
+    if (!subscription || !subscription.endpoint || !subscription.keys) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid subscription data'
+      });
+    }
+
+    // Remove any existing subscription for this endpoint
+    await PushSubscription.deleteOne({ endpoint: subscription.endpoint });
+
+    // Create new subscription
+    const pushSubscription = new PushSubscription({
+      userId,
+      endpoint: subscription.endpoint,
+      expirationTime: subscription.expirationTime,
+      keys: {
+        p256dh: subscription.keys.p256dh,
+        auth: subscription.keys.auth
+      },
+      userAgent: req.headers['user-agent']
+    });
+
+    await pushSubscription.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Successfully subscribed to push notifications'
+    });
+  } catch (error) {
+    console.error('Error subscribing to push notifications:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to subscribe to push notifications',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Unsubscribe from push notifications
+router.post('/unsubscribe', auth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+    const { subscription } = req.body;
+
+    if (!subscription || !subscription.endpoint) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid subscription data'
+      });
+    }
+
+    // Remove subscription
+    const result = await PushSubscription.deleteOne({
+      endpoint: subscription.endpoint,
+      userId
+    });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Subscription not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Successfully unsubscribed from push notifications'
+    });
+  } catch (error) {
+    console.error('Error unsubscribing from push notifications:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to unsubscribe from push notifications',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get user's push subscriptions
+router.get('/subscriptions', auth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).userId;
+
+    const subscriptions = await PushSubscription.find({ userId })
+      .select('endpoint expirationTime createdAt userAgent');
+
+    res.status(200).json({
+      success: true,
+      data: subscriptions
+    });
+  } catch (error) {
+    console.error('Error fetching subscriptions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch subscriptions',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }

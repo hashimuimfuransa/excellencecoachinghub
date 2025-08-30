@@ -241,7 +241,9 @@ const TrendingJobsSection: React.FC = () => {
               <Grid item xs={12} md={4} key={job._id}>
                 <Card 
                   sx={{ 
-                    height: '100%',
+                    height: 500, // Fixed height for all cards
+                    display: 'flex',
+                    flexDirection: 'column',
                     transition: 'all 0.3s ease',
                     cursor: 'pointer',
                     border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
@@ -253,7 +255,7 @@ const TrendingJobsSection: React.FC = () => {
                   }}
                   onClick={handleViewMoreJobs}
                 >
-                  <CardContent sx={{ p: 3, pb: '24px !important' }}>
+                  <CardContent sx={{ p: 3, pb: '24px !important', display: 'flex', flexDirection: 'column', height: '100%' }}>
                     {/* Company Logo and Badges */}
                     <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
                       <Avatar
@@ -294,18 +296,49 @@ const TrendingJobsSection: React.FC = () => {
                     </Box>
 
                     {/* Job Title and Company */}
-                    <Typography variant="h6" fontWeight="bold" gutterBottom>
+                    <Typography 
+                      variant="h6" 
+                      fontWeight="bold" 
+                      gutterBottom
+                      sx={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        minHeight: '3rem' // Fixed height for consistency
+                      }}
+                    >
                       {job.title}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary" 
+                      gutterBottom
+                      sx={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        minHeight: '1.5rem'
+                      }}
+                    >
                       {job.employer?.company || (job.employer ? `${job.employer.firstName} ${job.employer.lastName}` : 'Company Name Not Available')}
                     </Typography>
 
                     {/* Job Details */}
-                    <Stack spacing={1} sx={{ mb: 2 }}>
+                    <Stack spacing={1} sx={{ mb: 2, minHeight: '5rem' }}>
                       <Box display="flex" alignItems="center" gap={0.5}>
                         <LocationOn sx={{ fontSize: '16px', color: 'text.secondary' }} />
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary"
+                          sx={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            flex: 1
+                          }}
+                        >
                           {job.location}
                         </Typography>
                       </Box>
@@ -321,10 +354,39 @@ const TrendingJobsSection: React.FC = () => {
                           {formatJobType(job.jobType)} • {getTimeAgo(job.createdAt)}
                         </Typography>
                       </Box>
+                      {/* Add Deadline */}
+                      {job.applicationDeadline && (
+                        <Box display="flex" alignItems="center" gap={0.5}>
+                          <Schedule 
+                            sx={{ 
+                              fontSize: '16px', 
+                              color: isJobUrgent(job.applicationDeadline) ? 'error.main' : 'text.secondary'
+                            }} 
+                          />
+                          <Typography 
+                            variant="body2" 
+                            color={isJobUrgent(job.applicationDeadline) ? 'error.main' : 'text.secondary'}
+                            fontWeight={isJobUrgent(job.applicationDeadline) ? 600 : 'normal'}
+                          >
+                            Deadline: {job.applicationDeadline ? new Date(job.applicationDeadline).toLocaleDateString() : 'Not specified'}
+                          </Typography>
+                        </Box>
+                      )}
                     </Stack>
 
                     {/* Skills */}
-                    <Stack direction="row" spacing={0.5} flexWrap="wrap" sx={{ gap: 0.5, mb: 3 }}>
+                    <Stack 
+                      direction="row" 
+                      spacing={0.5} 
+                      flexWrap="wrap" 
+                      sx={{ 
+                        gap: 0.5, 
+                        mb: 2, 
+                        minHeight: '2rem', 
+                        maxHeight: '4rem', 
+                        overflow: 'hidden' 
+                      }}
+                    >
                       {(job.skills || []).slice(0, 3).map((skill) => (
                         <Chip
                           key={skill}
@@ -356,6 +418,9 @@ const TrendingJobsSection: React.FC = () => {
                         />
                       )}
                     </Stack>
+
+                    {/* Spacer to push button to bottom */}
+                    <Box sx={{ flexGrow: 1 }} />
 
                     {/* View Details Button */}
                     <Button

@@ -85,8 +85,8 @@ const Navbar: React.FC = () => {
   };
 
   const menuItems = [
-    { text: 'Home', icon: <Home />, path: '/' },
-    { text: 'Jobs', icon: <Work />, path: '/jobs' },
+    { text: 'Home', icon: <Home />, path: '/home' },
+    { text: 'All Jobs', icon: <Work />, path: '/jobs' },
     { text: 'Network', icon: <Public />, path: '/app/network', protected: true },
     { text: 'Connections', icon: <Group />, path: '/app/connections', protected: true },
     { text: 'Career Insights', icon: <Psychology />, path: '/app/career-insights', protected: true },
@@ -266,7 +266,7 @@ const Navbar: React.FC = () => {
             </Box>
           )}
 
-          {!isMobile && location.pathname === '/jobs' && (
+          {!isMobile && (location.pathname === '/jobs' || location.pathname === '/') && (
             <Box sx={{ mx: 2 }}>
               <TextField
                 size="small"

@@ -21,6 +21,7 @@ import ApplicationDetailsPage from './pages/ApplicationDetailsPage';
 import ProfilePage from './pages/ProfilePage';
 import ImprovedProfilePage from './pages/ImprovedProfilePage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
+import SummaryProfilePage from './pages/SummaryProfilePage';
 import ProfessionalProfilePage from './pages/ProfessionalProfilePage';
 import SavedJobsPage from './pages/SavedJobsPage';
 import CertificatesPage from './pages/CertificatesPage';
@@ -190,7 +191,7 @@ function App() {
               
               {/* Profile */}
               <Route path="profile" element={<ProfilePage />} />
-              <Route path="profile/:userId" element={<ProfilePage />} />
+              <Route path="profile/view/:userId" element={<SummaryProfilePage />} />
               <Route path="profile/simple" element={<ImprovedProfilePage />} />
               <Route path="profile/settings" element={<ProfileSettingsPage />} />
               <Route 

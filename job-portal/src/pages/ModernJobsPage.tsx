@@ -48,6 +48,7 @@ import {
   Schedule,
   Verified,
   FilterList,
+  People,
   Sort,
   ViewList,
   ViewModule,
@@ -353,286 +354,384 @@ const ModernJobsPage: React.FC = () => {
   const JobCard: React.FC<{ job: Job; index: number }> = ({ job, index }) => {
     const isBookmarked = bookmarkedJobs.has(job._id);
 
+    const isJobNew = (createdAt: string) => {
+      const jobDate = new Date(createdAt);
+      const now = new Date();
+      const diffInHours = Math.abs(now.getTime() - jobDate.getTime()) / (1000 * 60 * 60);
+      return diffInHours <= 24;
+    };
+
+    const isJobUrgent = (createdAt: string) => {
+      const jobDate = new Date(createdAt);
+      const now = new Date();
+      const diffInDays = Math.floor((now.getTime() - jobDate.getTime()) / (1000 * 60 * 60 * 24));
+      return diffInDays <= 3;
+    };
+
     return (
       <Zoom in={true} timeout={300 + (index * 50)}>
         <Card
+          className="modern-job-card"
           sx={{
-            height: '100%',
+            width: '100%',
+            minHeight: 280,
+            maxHeight: 320,
             display: 'flex',
             flexDirection: 'column',
             borderRadius: 3,
-            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-            cursor: 'pointer',
-            border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
-            '&:hover': {
-              transform: 'translateY(-2px)',
-              boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.15)}`,
-              borderColor: alpha(theme.palette.primary.main, 0.3),
-            },
-            ...(job.isFeatured && {
-              background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.03)} 0%, ${alpha(theme.palette.secondary.main, 0.03)} 100%)`,
-              border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`
-            }),
             position: 'relative',
-            overflow: 'visible'
+            overflow: 'hidden',
+            transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+            border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+            background: `linear-gradient(145deg, 
+              ${theme.palette.background.paper} 0%, 
+              ${alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.02 : 0.01)} 100%
+            )`,
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 6px 24px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.1)'
+              : '0 6px 24px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.02)',
+            cursor: 'pointer',
+            '&:hover': {
+              transform: 'translateY(-6px) scale(1.01)',
+              boxShadow: theme.palette.mode === 'dark'
+                ? '0 16px 32px rgba(0, 0, 0, 0.4), 0 6px 12px rgba(0, 0, 0, 0.2)'
+                : '0 16px 32px rgba(0, 0, 0, 0.12), 0 6px 12px rgba(0, 0, 0, 0.06)',
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+              '& .job-card-actions': {
+                transform: 'translateY(0px)',
+                opacity: 1
+              }
+            }
           }}
           onClick={() => navigate(`/app/jobs/${job._id}`)}
         >
-          {/* Status Badges */}
-          <Box sx={{ position: 'absolute', top: 16, left: 16, zIndex: 2 }}>
-            <Stack direction="row" spacing={0.5}>
-              {job.isFeatured && (
-                <Chip
-                  icon={<Star sx={{ fontSize: '12px !important' }} />}
-                  label="Featured"
-                  size="small"
-                  color="primary"
-                  sx={{ height: 20, fontSize: '0.7rem', fontWeight: 600 }}
-                />
-              )}
-              {job.isUrgent && (
-                <Chip
-                  icon={<Schedule sx={{ fontSize: '12px !important' }} />}
-                  label="Urgent"
-                  size="small"
-                  color="error"
-                  sx={{ height: 20, fontSize: '0.7rem', fontWeight: 600 }}
-                />
-              )}
-            </Stack>
+          {/* Status Badges - More Compact */}
+          <Box sx={{ 
+            position: 'absolute', 
+            top: 12, 
+            right: 12, 
+            zIndex: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 0.5
+          }}>
+            {isJobNew(job.createdAt) && (
+              <Chip
+                label="NEW"
+                size="small"
+                icon={<Star sx={{ fontSize: 12 }} />}
+                sx={{ 
+                  fontWeight: 600,
+                  fontSize: '0.6rem',
+                  height: 20,
+                  backgroundColor: theme.palette.success.main,
+                  color: 'white',
+                  boxShadow: `0 3px 8px ${alpha(theme.palette.success.main, 0.4)}`,
+                  '& .MuiChip-icon': { color: 'white' },
+                  '& .MuiChip-label': { px: 0.5 }
+                }}
+              />
+            )}
+            {isJobUrgent(job.createdAt) && (
+              <Chip
+                label="URGENT"
+                size="small"
+                icon={<Schedule sx={{ fontSize: 12 }} />}
+                sx={{ 
+                  fontWeight: 600,
+                  fontSize: '0.6rem',
+                  height: 20,
+                  backgroundColor: theme.palette.error.main,
+                  color: 'white',
+                  boxShadow: `0 3px 8px ${alpha(theme.palette.error.main, 0.4)}`,
+                  animation: 'pulse 2s ease-in-out infinite',
+                  '& .MuiChip-icon': { color: 'white' },
+                  '& .MuiChip-label': { px: 0.5 },
+                  '@keyframes pulse': {
+                    '0%, 100%': { transform: 'scale(1)' },
+                    '50%': { transform: 'scale(1.05)' }
+                  }
+                }}
+              />
+            )}
           </Box>
 
-          {/* Action Buttons */}
-          <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 2 }}>
-            <Stack direction="row" spacing={0.5}>
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleBookmarkToggle(job._id);
-                }}
-                sx={{
-                  bgcolor: alpha(theme.palette.background.paper, 0.9),
-                  backdropFilter: 'blur(8px)',
-                  '&:hover': { bgcolor: theme.palette.background.paper }
-                }}
-              >
-                {isBookmarked ? <Bookmark color="primary" /> : <BookmarkBorder />}
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={(e) => e.stopPropagation()}
-                sx={{
-                  bgcolor: alpha(theme.palette.background.paper, 0.9),
-                  backdropFilter: 'blur(8px)',
-                  '&:hover': { bgcolor: theme.palette.background.paper }
-                }}
-              >
-                <Share />
-              </IconButton>
-            </Stack>
-          </Box>
+          {/* Bookmark Button - More Compact */}
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleBookmarkToggle(job._id);
+            }}
+            sx={{
+              position: 'absolute',
+              top: 12,
+              left: 12,
+              zIndex: 2,
+              width: 32,
+              height: 32,
+              backgroundColor: alpha(theme.palette.background.paper, 0.9),
+              backdropFilter: 'blur(10px)',
+              color: isBookmarked ? 'warning.main' : 'text.secondary',
+              '&:hover': {
+                backgroundColor: alpha(theme.palette.background.paper, 1),
+                color: 'warning.main',
+                transform: 'scale(1.05)'
+              }
+            }}
+          >
+            {isBookmarked ? <Bookmark sx={{ fontSize: 18 }} /> : <BookmarkBorder sx={{ fontSize: 18 }} />}
+          </IconButton>
 
-          <CardContent sx={{ flexGrow: 1, p: 3, pt: 5 }}>
-            {/* Company & Title */}
-            <Box display="flex" alignItems="flex-start" mb={2}>
-              <Avatar
-                sx={{
-                  width: 44,
-                  height: 44,
-                  mr: 2,
-                  bgcolor: alpha(theme.palette.primary.main, 0.1),
-                  border: `2px solid ${alpha(theme.palette.primary.main, 0.15)}`
-                }}
-              >
-                <Business color="primary" fontSize="small" />
-              </Avatar>
-              <Box flex={1} minWidth={0}>
-                <Typography
-                  variant="h6"
+          {/* Main Content */}
+          <CardContent sx={{ p: 0, flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
+            {/* Header Section - More Compact */}
+            <Box sx={{ p: 2, pb: 1.5 }}>
+              <Stack direction="row" spacing={1.5} alignItems="flex-start" sx={{ mb: 1.5 }}>
+                <Avatar
+                  sx={{ 
+                    width: 48, 
+                    height: 48, 
+                    background: `linear-gradient(135deg, ${theme.palette.background.paper} 0%, ${alpha(theme.palette.primary.main, 0.1)} 100%)`,
+                    border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                    boxShadow: `0 6px 16px ${alpha(theme.palette.primary.main, 0.15)}`,
+                  }}
+                >
+                  <Work sx={{ 
+                    fontSize: 22, 
+                    color: 'primary.main',
+                  }} />
+                </Avatar>
+                
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography 
+                    variant="h6" 
+                    onClick={() => navigate(`/app/jobs/${job._id}`)}
+                    sx={{ 
+                      fontWeight: 700, 
+                      mb: 0.5,
+                      fontSize: '1rem',
+                      lineHeight: 1.2,
+                      color: 'text.primary',
+                      cursor: 'pointer',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      height: '2.4rem',
+                      transition: 'color 0.2s ease',
+                      '&:hover': {
+                        color: 'primary.main'
+                      }
+                    }}
+                  >
+                    {job.title}
+                  </Typography>
+                  
+                  <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 0.5 }}>
+                    <Business sx={{ fontSize: 14, color: 'text.secondary' }} />
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary" 
+                      sx={{ 
+                        fontWeight: 500,
+                        fontSize: '0.8rem',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: '150px'
+                      }}
+                    >
+                      {job.company}
+                    </Typography>
+                  </Stack>
+                  
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <LocationOn sx={{ fontSize: 14, color: 'info.main' }} />
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary"
+                      sx={{
+                        fontWeight: 500,
+                        fontSize: '0.8rem',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {job.location}
+                    </Typography>
+                  </Stack>
+                </Box>
+              </Stack>
+
+              {/* Job Type & Posted Time - More Compact */}
+              <Stack direction="row" spacing={0.5} sx={{ mb: 1.5 }}>
+                <Chip
+                  label={formatJobType(job.jobType) || 'Full-time'}
+                  size="small"
+                  variant="outlined"
                   sx={{
-                    fontWeight: 700,
-                    mb: 0.5,
+                    borderRadius: 1.5,
+                    fontWeight: 500,
+                    fontSize: '0.65rem',
+                    height: 20,
+                    borderColor: alpha(theme.palette.primary.main, 0.3),
+                    color: 'primary.main',
+                    backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                    '& .MuiChip-label': { px: 1 }
+                  }}
+                />
+                <Chip
+                  label={getTimeAgo(job.createdAt)}
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    borderRadius: 1.5,
+                    fontWeight: 500,
+                    fontSize: '0.65rem',
+                    height: 20,
+                    borderColor: alpha(theme.palette.text.secondary, 0.3),
+                    color: 'text.secondary',
+                    '& .MuiChip-label': { px: 1 }
+                  }}
+                />
+              </Stack>
+
+              {/* Job Description Preview - More Compact */}
+              <Box sx={{ mb: 1.5 }}>
+                <Typography 
+                  variant="body2" 
+                  color="text.secondary" 
+                  sx={{ 
+                    lineHeight: 1.4,
+                    fontSize: '0.8rem',
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: 'vertical',
                     overflow: 'hidden',
-                    fontSize: '1.1rem'
+                    height: '2.2rem'
                   }}
                 >
-                  {job.title}
-                </Typography>
-                <Typography
-                  variant="subtitle1"
-                  sx={{
-                    color: theme.palette.primary.main,
-                    fontWeight: 600,
-                    fontSize: '0.95rem'
-                  }}
-                >
-                  {job.company}
-                </Typography>
-              </Box>
-            </Box>
-
-            {/* Job Details */}
-            <Stack spacing={1.5} mb={2}>
-              <Box display="flex" alignItems="center" gap={1}>
-                <LocationOn fontSize="small" color="action" />
-                <Typography variant="body2" color="text.secondary">
-                  {job.location}
-                </Typography>
-                <Typography variant="body2" color="text.disabled">•</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {getTimeAgo(job.createdAt)}
+                  {job.description || 'Join our team and take your career to the next level.'}
                 </Typography>
               </Box>
 
-              {job.salary && (
-                <Box display="flex" alignItems="center" gap={1}>
-                  <AttachMoney fontSize="small" color="action" />
-                  <Typography variant="body2" fontWeight="medium" color="success.main">
-                    {formatSalary(job.salary)}
+              {/* Skills Section - More Compact */}
+              {job.skills && job.skills.length > 0 && (
+                <Box sx={{ mb: 1.5 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontWeight: 600, fontSize: '0.65rem' }}>
+                    Skills:
                   </Typography>
+                  <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ maxHeight: '24px', overflow: 'hidden' }}>
+                    {job.skills.slice(0, 3).map((skill, index) => (
+                      <Chip
+                        key={index}
+                        label={skill}
+                        size="small"
+                        sx={{ 
+                          fontSize: '0.6rem',
+                          height: 18,
+                          borderRadius: 2,
+                          backgroundColor: alpha(theme.palette.info.main, 0.08),
+                          color: 'info.main',
+                          fontWeight: 500,
+                          border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+                          '& .MuiChip-label': { px: 0.75 }
+                        }}
+                      />
+                    ))}
+                    {job.skills.length > 3 && (
+                      <Chip
+                        label={`+${job.skills.length - 3}`}
+                        size="small"
+                        sx={{ 
+                          fontSize: '0.6rem',
+                          height: 18,
+                          borderRadius: 2,
+                          backgroundColor: alpha(theme.palette.text.secondary, 0.08),
+                          color: 'text.secondary',
+                          fontWeight: 500,
+                          '& .MuiChip-label': { px: 0.75 }
+                        }}
+                      />
+                    )}
+                  </Stack>
                 </Box>
               )}
 
-              <Box display="flex" alignItems="center" gap={1}>
-                <Work fontSize="small" color="action" />
-                <Typography variant="body2" color="text.secondary">
-                  {formatJobType(job.jobType)}
-                </Typography>
-                <Typography variant="body2" color="text.disabled">•</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {formatJobType(job.experienceLevel)}
-                </Typography>
-              </Box>
-            </Stack>
-
-            {/* Description */}
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{
-                mb: 2,
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-                lineHeight: 1.5
-              }}
-            >
-              {job.description}
-            </Typography>
-
-            {/* Skills */}
-            <Box mb={2}>
-              <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                {job.skills.slice(0, 3).map(skill => (
-                  <Chip
-                    key={skill}
-                    label={skill}
-                    size="small"
-                    variant="outlined"
-                    sx={{ 
-                      fontSize: '0.7rem', 
-                      height: 22,
-                      bgcolor: alpha(theme.palette.primary.main, 0.05),
-                      borderColor: alpha(theme.palette.primary.main, 0.2)
-                    }}
-                  />
-                ))}
-                {job.skills.length > 3 && (
-                  <Chip
-                    label={`+${job.skills.length - 3}`}
-                    size="small"
-                    sx={{ fontSize: '0.7rem', height: 22 }}
-                  />
+              {/* Job Stats & Salary - More Compact */}
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+                {job.salary && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <AttachMoney sx={{ fontSize: 16, color: 'success.main' }} />
+                    <Typography 
+                      variant="body2" 
+                      fontWeight="600"
+                      color="success.main"
+                      sx={{ fontSize: '0.8rem' }}
+                    >
+                      {formatSalary(job.salary)}
+                    </Typography>
+                  </Box>
                 )}
+                
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                  {job.applicationsCount !== undefined && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <People sx={{ fontSize: 14, color: 'text.secondary' }} />
+                      <Typography variant="caption" color="text.secondary" fontWeight="500" sx={{ fontSize: '0.7rem' }}>
+                        {job.applicationsCount || 0}
+                      </Typography>
+                    </Box>
+                  )}
+                </Stack>
               </Stack>
             </Box>
 
-            {/* Stats */}
-            <Box display="flex" alignItems="center" justifyContent="space-between">
-              <Stack direction="row" spacing={2}>
-                {job.applicationsCount !== undefined && (
-                  <Typography variant="caption" color="text.secondary">
-                    {job.applicationsCount} applicants
-                  </Typography>
-                )}
-                {job.viewsCount !== undefined && (
-                  <Typography variant="caption" color="text.secondary">
-                    {job.viewsCount} views
-                  </Typography>
-                )}
+            {/* Action Buttons - More Compact */}
+            <Box
+              className="job-card-actions"
+              sx={{
+                mt: 'auto',
+                pt: 1.5,
+                px: 2,
+                transform: 'translateY(4px)',
+                opacity: 0.8,
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <Stack spacing={1}>
+                {/* View Details Button - More Compact */}
+                <Button
+                  variant="contained"
+                  fullWidth
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/app/jobs/${job._id}`);
+                  }}
+                  sx={{
+                    fontWeight: 600,
+                    borderRadius: 2.5,
+                    py: 0.8,
+                    px: 2,
+                    fontSize: '0.75rem',
+                    textTransform: 'none',
+                    background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                    boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
+                    color: 'white',
+                    '&:hover': {
+                      transform: 'translateY(-1px)',
+                      boxShadow: `0 6px 16px ${alpha(theme.palette.primary.main, 0.4)}`,
+                      background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+                    }
+                  }}
+                >
+                  View Details
+                </Button>
               </Stack>
-              {job.isCurated && (
-                <Chip
-                  icon={<Verified sx={{ fontSize: '12px !important' }} />}
-                  label="Verified"
-                  size="small"
-                  color="success"
-                  variant="outlined"
-                  sx={{ height: 20, fontSize: '0.65rem' }}
-                />
-              )}
             </Box>
           </CardContent>
-
-          <Divider sx={{ opacity: 0.3 }} />
-          
-          <CardActions sx={{ p: 2, justifyContent: 'space-between' }}>
-            {/* Show Quick Apply only for internal jobs (not external jobs) */}
-            {!job.isExternalJob && (
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<Send />}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/app/jobs/${job._id}/apply`);
-                }}
-                sx={{
-                  borderRadius: 2,
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  px: 2
-                }}
-              >
-                Quick Apply
-              </Button>
-            )}
-            
-            {/* External job indicator - show for external jobs */}
-            {job.isExternalJob && job.externalJobSource && (
-              <Chip
-                label={`External: ${job.externalJobSource}`}
-                color="info"
-                size="small"
-                variant="outlined"
-                sx={{ 
-                  fontSize: '0.7rem',
-                  fontWeight: 500
-                }}
-              />
-            )}
-            
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/app/jobs/${job._id}`);
-              }}
-              sx={{
-                borderRadius: 2,
-                textTransform: 'none',
-                fontWeight: 500
-              }}
-            >
-              View Details
-            </Button>
-          </CardActions>
         </Card>
       </Zoom>
     );
@@ -640,8 +739,8 @@ const ModernJobsPage: React.FC = () => {
 
   // Skeleton Cards
   const SkeletonCard = () => (
-    <Card sx={{ height: 380, borderRadius: 3 }}>
-      <CardContent sx={{ p: 3 }}>
+    <Card sx={{ height: 320, borderRadius: 3 }}>
+      <CardContent sx={{ p: 2 }}>
         <Box display="flex" alignItems="center" mb={2}>
           <Skeleton variant="circular" width={44} height={44} sx={{ mr: 2 }} />
           <Box flex={1}>
@@ -666,61 +765,7 @@ const ModernJobsPage: React.FC = () => {
   );
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3 }}>
-      {/* Header */}
-      <Fade in={true} timeout={600}>
-        <Box mb={4}>
-          <Typography
-            variant="h3"
-            component="h1"
-            sx={{
-              fontWeight: 800,
-              background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              mb: 1,
-              fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' }
-            }}
-          >
-            Discover Your Next Opportunity
-          </Typography>
-          <Typography variant="h6" color="text.secondary" fontWeight={400} sx={{ mb: 2 }}>
-            {jobsState.totalJobs > 0 && `${jobsState.totalJobs.toLocaleString()} amazing opportunities waiting for you`}
-          </Typography>
-
-          {/* Quick Stats */}
-          <Paper
-            elevation={0}
-            sx={{
-              bgcolor: alpha(theme.palette.primary.main, 0.05),
-              borderRadius: 2,
-              p: 2,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 3,
-              border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
-            }}
-          >
-            <Box display="flex" alignItems="center" gap={1}>
-              <TrendingUp color="primary" />
-              <Typography variant="h6" fontWeight="bold">
-                {jobsState.totalJobs.toLocaleString()}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Active Jobs
-              </Typography>
-            </Box>
-            <Divider orientation="vertical" flexItem />
-            <Box display="flex" alignItems="center" gap={1}>
-              <NewReleases color="secondary" />
-              <Typography variant="body2" color="text.secondary">
-                Updated every hour
-              </Typography>
-            </Box>
-          </Paper>
-        </Box>
-      </Fade>
+    <Container maxWidth="xl" sx={{ py: 2 }}>
 
       {/* Search & Controls */}
       <Slide in={true} timeout={600} direction="up">

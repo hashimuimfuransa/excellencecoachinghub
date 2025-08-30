@@ -274,6 +274,7 @@ const AllJobsPage: React.FC = () => {
         if (searchTerm) filters.search = searchTerm;
         if (locationFilter) filters.location = locationFilter;
         
+        // Use 12 items per page (4 rows of 3 jobs each)
         const response = await jobService.getJobs(filters, currentPage, 12);
         setJobs(response.data);
         setTotalPages(response.pagination.pages);
@@ -348,6 +349,40 @@ const AllJobsPage: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const filters: any = {};
+      if (searchTerm) filters.search = searchTerm;
+      if (locationFilter) filters.location = locationFilter;
+      
+      const response = await jobService.getJobs(filters, currentPage, 12);
+      setJobs(response.data);
+      setTotalPages(response.pagination.pages);
+      setTotalJobs(response.pagination.total);
+      setSnackbarMessage('Jobs refreshed successfully');
+      setSnackbarOpen(true);
+    } catch (error) {
+      console.error('Error refreshing jobs:', error);
+      setSnackbarMessage('Failed to refresh jobs');
+      setSnackbarOpen(true);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleBookmarkToggle = (jobId: string) => {
+    setBookmarkedJobs(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(jobId)) {
+        newSet.delete(jobId);
+      } else {
+        newSet.add(jobId);
+      }
+      return newSet;
+    });
+  };
+
   const formatSalary = (salary?: { min: number; max: number; currency: string }) => {
     if (!salary) return 'Competitive salary';
     return `${salary.currency} ${salary.min.toLocaleString()} - ${salary.currency} ${salary.max.toLocaleString()}`;
@@ -389,6 +424,26 @@ const AllJobsPage: React.FC = () => {
     }
   };
 
+  const getDaysPosted = (createdAt: string) => {
+    const now = new Date();
+    const posted = new Date(createdAt);
+    const diffTime = Math.abs(now.getTime() - posted.getTime());
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffDays === 0) {
+      if (diffHours === 0) return 'Just now';
+      return `${diffHours}h ago`;
+    } else if (diffDays === 1) {
+      return '1 day ago';
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago`;
+    } else {
+      const weeks = Math.floor(diffDays / 7);
+      return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
+    }
+  };
+
   const getDeadlineColor = (applicationDeadline?: string) => {
     if (!applicationDeadline) return 'default';
     
@@ -401,18 +456,6 @@ const AllJobsPage: React.FC = () => {
     if (diffDays <= 3) return 'error';
     if (diffDays <= 7) return 'warning';
     return 'success';
-  };
-
-  const getDaysPosted = (createdAt: string) => {
-    const jobDate = new Date(createdAt);
-    const now = new Date();
-    const diffInDays = Math.floor((now.getTime() - jobDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (diffInDays === 0) return 'Today';
-    if (diffInDays === 1) return 'Yesterday';
-    if (diffInDays <= 7) return `${diffInDays} days ago`;
-    if (diffInDays <= 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
-    return `${Math.floor(diffInDays / 30)} months ago`;
   };
 
   // New helper functions for modern UI
@@ -1536,10 +1579,10 @@ const AllJobsPage: React.FC = () => {
           </Box>
         </Paper>
 
-        {/* Loading State */}
+        {/* Loading State - 3 per row */}
         {loading && (
           <Grid container spacing={3}>
-            {Array.from(new Array(6)).map((_, index) => (
+            {Array.from(new Array(9)).map((_, index) => (
               <Grid item xs={12} sm={6} md={4} key={index}>
                 <Card sx={{ borderRadius: 3 }}>
                   <CardContent>
@@ -1558,7 +1601,7 @@ const AllJobsPage: React.FC = () => {
           </Grid>
         )}
 
-        {/* Modern Jobs Grid */}
+        {/* Modern Jobs Grid - 3 per row */}
         {!loading && filteredJobs.length > 0 && (
           <Grid 
             container 
@@ -1572,31 +1615,33 @@ const AllJobsPage: React.FC = () => {
             }}
           >
             {displayJobs.map((job) => (
-              <Grid item xs={12} sm={6} lg={4} key={job._id}>
+              <Grid item xs={12} sm={6} md={4} key={job._id}>
                 <Card
                   className="modern-job-card"
                   sx={{
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    borderRadius: 4,
+                    width: '25%',
+                    minHeight: 280,
+                    maxHeight:'100%',
+                    display: 'grid',
+                    flexDirection: 'row',
+                    borderRadius: 3,
                     position: 'relative',
                     overflow: 'hidden',
-                    transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                    transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
                     border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
                     background: `linear-gradient(145deg, 
                       ${theme.palette.background.paper} 0%, 
                       ${alpha(theme.palette.primary.main, theme.palette.mode === 'dark' ? 0.02 : 0.01)} 100%
                     )`,
                     boxShadow: theme.palette.mode === 'dark' 
-                      ? '0 8px 32px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1)'
-                      : '0 8px 32px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.02)',
+                      ? '0 6px 24px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.1)'
+                      : '0 6px 24px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.02)',
                     cursor: 'pointer',
                     '&:hover': {
-                      transform: 'translateY(-12px) scale(1.02)',
+                      transform: 'translateY(-6px) scale(1.01)',
                       boxShadow: theme.palette.mode === 'dark'
-                        ? '0 24px 48px rgba(0, 0, 0, 0.4), 0 8px 16px rgba(0, 0, 0, 0.2)'
-                        : '0 24px 48px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.06)',
+                        ? '0 16px 32px rgba(0, 0, 0, 0.4), 0 6px 12px rgba(0, 0, 0, 0.2)'
+                        : '0 16px 32px rgba(0, 0, 0, 0.12), 0 6px 12px rgba(0, 0, 0, 0.06)',
                       border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
                       '& .job-card-gradient': {
                         opacity: 1,
@@ -1633,29 +1678,30 @@ const AllJobsPage: React.FC = () => {
                     }}
                   />
 
-                  {/* Status Badges */}
+                  {/* Status Badges - More Compact */}
                   <Box sx={{ 
                     position: 'absolute', 
-                    top: 16, 
-                    right: 16, 
+                    top: 12, 
+                    right: 12, 
                     zIndex: 2,
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 1
+                    gap: 0.5
                   }}>
                     {isJobNew(job.createdAt) && (
                       <Chip
                         label="NEW"
                         size="small"
-                        icon={<FiberNew sx={{ fontSize: 16 }} />}
+                        icon={<FiberNew sx={{ fontSize: 12 }} />}
                         sx={{ 
-                          fontWeight: 700,
-                          fontSize: '0.7rem',
-                          height: 24,
+                          fontWeight: 600,
+                          fontSize: '0.6rem',
+                          height: 20,
                           backgroundColor: theme.palette.success.main,
                           color: 'white',
-                          boxShadow: `0 4px 12px ${alpha(theme.palette.success.main, 0.4)}`,
-                          '& .MuiChip-icon': { color: 'white' }
+                          boxShadow: `0 3px 8px ${alpha(theme.palette.success.main, 0.4)}`,
+                          '& .MuiChip-icon': { color: 'white' },
+                          '& .MuiChip-label': { px: 0.5 }
                         }}
                       />
                     )}
@@ -1663,16 +1709,17 @@ const AllJobsPage: React.FC = () => {
                       <Chip
                         label="URGENT"
                         size="small"
-                        icon={<AccessTime sx={{ fontSize: 16 }} />}
+                        icon={<AccessTime sx={{ fontSize: 12 }} />}
                         sx={{ 
-                          fontWeight: 700,
-                          fontSize: '0.7rem',
-                          height: 24,
+                          fontWeight: 600,
+                          fontSize: '0.6rem',
+                          height: 20,
                           backgroundColor: theme.palette.error.main,
                           color: 'white',
-                          boxShadow: `0 4px 12px ${alpha(theme.palette.error.main, 0.4)}`,
+                          boxShadow: `0 3px 8px ${alpha(theme.palette.error.main, 0.4)}`,
                           animation: 'pulse 2s ease-in-out infinite',
                           '& .MuiChip-icon': { color: 'white' },
+                          '& .MuiChip-label': { px: 0.5 },
                           '@keyframes pulse': {
                             '0%, 100%': { transform: 'scale(1)' },
                             '50%': { transform: 'scale(1.05)' }
@@ -1682,49 +1729,52 @@ const AllJobsPage: React.FC = () => {
                     )}
                   </Box>
 
-                  {/* Bookmark Button */}
+                  {/* Bookmark Button - More Compact */}
                   <IconButton
+                    size="small"
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleBookmark(job._id);
                     }}
                     sx={{
                       position: 'absolute',
-                      top: 16,
-                      left: 16,
+                      top: 12,
+                      left: 12,
                       zIndex: 2,
+                      width: 32,
+                      height: 32,
                       backgroundColor: alpha(theme.palette.background.paper, 0.9),
                       backdropFilter: 'blur(10px)',
                       color: bookmarkedJobs.has(job._id) ? 'warning.main' : 'text.secondary',
                       '&:hover': {
                         backgroundColor: alpha(theme.palette.background.paper, 1),
                         color: 'warning.main',
-                        transform: 'scale(1.1)'
+                        transform: 'scale(1.05)'
                       }
                     }}
                   >
-                    {bookmarkedJobs.has(job._id) ? <Star /> : <StarBorder />}
+                    {bookmarkedJobs.has(job._id) ? <Star sx={{ fontSize: 18 }} /> : <StarBorder sx={{ fontSize: 18 }} />}
                   </IconButton>
 
                   {/* Main Content */}
                   <CardContent sx={{ p: 0, flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
-                    {/* Header Section */}
-                    <Box sx={{ p: 3, pb: 2 }}>
-                      <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ mb: 2 }}>
+                    {/* Header Section - More Compact */}
+                    <Box sx={{ p: 2, pb: 1.5 }}>
+                      <Stack direction="row" spacing={1.5} alignItems="flex-start" sx={{ mb: 1.5 }}>
                         <Avatar
                           className="job-card-avatar"
                           sx={{ 
-                            width: 64, 
-                            height: 64, 
+                            width: 48, 
+                            height: 48, 
                             background: `linear-gradient(135deg, ${theme.palette.background.paper} 0%, ${alpha(theme.palette.primary.main, 0.1)} 100%)`,
                             border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                            boxShadow: `0 8px 24px ${alpha(theme.palette.primary.main, 0.15)}`,
+                            boxShadow: `0 6px 16px ${alpha(theme.palette.primary.main, 0.15)}`,
                             transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
                             backdropFilter: 'blur(10px)'
                           }}
                         >
                           <Work sx={{ 
-                            fontSize: 28, 
+                            fontSize: 22, 
                             color: 'primary.main',
                             filter: `drop-shadow(0 2px 4px ${alpha(theme.palette.primary.main, 0.2)})`
                           }} />
@@ -1735,17 +1785,17 @@ const AllJobsPage: React.FC = () => {
                             variant="h6" 
                             onClick={() => handleViewJobDetails(job._id)}
                             sx={{ 
-                              fontWeight: 800, 
-                              mb: 1,
-                              fontSize: '1.2rem',
-                              lineHeight: 1.3,
+                              fontWeight: 700, 
+                              mb: 0.5,
+                              fontSize: '1rem',
+                              lineHeight: 1.2,
                               color: 'text.primary',
                               cursor: 'pointer',
                               display: '-webkit-box',
                               WebkitLineClamp: 2,
                               WebkitBoxOrient: 'vertical',
                               overflow: 'hidden',
-                              height: '3.2rem',
+                              height: '2.4rem',
                               transition: 'color 0.2s ease',
                               '&:hover': {
                                 color: 'primary.main'
@@ -1755,14 +1805,14 @@ const AllJobsPage: React.FC = () => {
                             {job.title}
                           </Typography>
                           
-                          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                            <Business sx={{ fontSize: 18, color: 'text.secondary' }} />
+                          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 0.5 }}>
+                            <Business sx={{ fontSize: 14, color: 'text.secondary' }} />
                             <Typography 
-                              variant="subtitle1" 
+                              variant="body2" 
                               color="text.secondary" 
                               sx={{ 
-                                fontWeight: 600,
-                                fontSize: '0.95rem',
+                                fontWeight: 500,
+                                fontSize: '0.8rem',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
@@ -1773,13 +1823,14 @@ const AllJobsPage: React.FC = () => {
                             </Typography>
                           </Stack>
                           
-                          <Stack direction="row" alignItems="center" spacing={1}>
-                            <LocationOn sx={{ fontSize: 18, color: 'info.main' }} />
+                          <Stack direction="row" alignItems="center" spacing={0.5}>
+                            <LocationOn sx={{ fontSize: 14, color: 'info.main' }} />
                             <Typography 
                               variant="body2" 
                               color="text.secondary"
                               sx={{
                                 fontWeight: 500,
+                                fontSize: '0.8rem',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
@@ -1792,19 +1843,21 @@ const AllJobsPage: React.FC = () => {
                         </Box>
                       </Stack>
 
-                      {/* Job Type & Posted Time */}
-                      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                      {/* Job Type & Posted Time - More Compact */}
+                      <Stack direction="row" spacing={0.5} sx={{ mb: 1.5 }}>
                         <Chip
                           label={job.jobType || 'Full-time'}
                           size="small"
                           variant="outlined"
                           sx={{
-                            borderRadius: 2,
-                            fontWeight: 600,
-                            fontSize: '0.75rem',
+                            borderRadius: 1.5,
+                            fontWeight: 500,
+                            fontSize: '0.65rem',
+                            height: 20,
                             borderColor: alpha(theme.palette.primary.main, 0.3),
                             color: 'primary.main',
-                            backgroundColor: alpha(theme.palette.primary.main, 0.05)
+                            backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                            '& .MuiChip-label': { px: 1 }
                           }}
                         />
                         <Chip
@@ -1812,76 +1865,130 @@ const AllJobsPage: React.FC = () => {
                           size="small"
                           variant="outlined"
                           sx={{
-                            borderRadius: 2,
+                            borderRadius: 1.5,
                             fontWeight: 500,
-                            fontSize: '0.75rem',
+                            fontSize: '0.65rem',
+                            height: 20,
                             borderColor: alpha(theme.palette.text.secondary, 0.3),
-                            color: 'text.secondary'
+                            color: 'text.secondary',
+                            '& .MuiChip-label': { px: 1 }
                           }}
                         />
                       </Stack>
 
-                      {/* Deadline Alert - Moved to top */}
+                      {/* Enhanced Deadline Alert */}
                       {job.applicationDeadline && (
                         <Box sx={{ mb: 2 }}>
                           <Alert 
                             severity={getDeadlineColor(job.applicationDeadline) as any}
-                            icon={<AccessTime />}
+                            icon={<AccessTime sx={{ fontSize: 18 }} />}
                             sx={{ 
                               borderRadius: 3,
-                              fontSize: '0.75rem',
-                              py: 0.8,
+                              fontSize: '0.8rem',
+                              py: 1,
                               fontWeight: 700,
-                              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                              background: getDeadlineColor(job.applicationDeadline) === 'error' 
+                                ? `linear-gradient(135deg, ${alpha(theme.palette.error.main, 0.1)} 0%, ${alpha(theme.palette.error.main, 0.05)} 100%)`
+                                : getDeadlineColor(job.applicationDeadline) === 'warning' 
+                                ? `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.1)} 0%, ${alpha(theme.palette.warning.main, 0.05)} 100%)`
+                                : `linear-gradient(135deg, ${alpha(theme.palette.info.main, 0.1)} 0%, ${alpha(theme.palette.info.main, 0.05)} 100%)`,
+                              border: `1px solid ${alpha(
+                                getDeadlineColor(job.applicationDeadline) === 'error' 
+                                ? theme.palette.error.main 
+                                : getDeadlineColor(job.applicationDeadline) === 'warning' 
+                                ? theme.palette.warning.main 
+                                : theme.palette.info.main, 
+                                0.3
+                              )}`,
+                              animation: getDeadlineColor(job.applicationDeadline) === 'error' 
+                                ? 'urgent-pulse 2s ease-in-out infinite' 
+                                : 'none',
+                              '@keyframes urgent-pulse': {
+                                '0%, 100%': { 
+                                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                  transform: 'scale(1)' 
+                                },
+                                '50%': { 
+                                  boxShadow: `0 6px 16px ${alpha(theme.palette.error.main, 0.3)}`,
+                                  transform: 'scale(1.02)' 
+                                }
+                              },
                               '& .MuiAlert-message': {
-                                fontSize: '0.75rem',
-                                fontWeight: 700
+                                fontSize: '0.8rem',
+                                fontWeight: 700,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1
+                              },
+                              '& .MuiAlert-icon': {
+                                fontSize: '1.1rem'
                               }
                             }}
                           >
-                            ⏰ Deadline: {formatDeadline(job.applicationDeadline)}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <ScheduleIcon sx={{ fontSize: 16 }} />
+                              <Typography component="span" sx={{ fontWeight: 700 }}>
+                                Deadline: {formatDeadline(job.applicationDeadline)}
+                              </Typography>
+                              {isJobUrgent(job.applicationDeadline) && (
+                                <Chip 
+                                  label="URGENT" 
+                                  size="small" 
+                                  color="error" 
+                                  sx={{ 
+                                    ml: 1, 
+                                    fontSize: '0.65rem', 
+                                    height: 18,
+                                    fontWeight: 800
+                                  }} 
+                                />
+                              )}
+                            </Box>
                           </Alert>
                         </Box>
                       )}
 
-                      {/* Job Description Preview */}
-                      <Box sx={{ mb: 2 }}>
+                      {/* Job Description Preview - More Compact */}
+                      <Box sx={{ mb: 1.5 }}>
                         <Typography 
                           variant="body2" 
                           color="text.secondary" 
                           sx={{ 
-                            lineHeight: 1.6,
+                            lineHeight: 1.4,
+                            fontSize: '0.8rem',
                             display: '-webkit-box',
-                            WebkitLineClamp: 3,
+                            WebkitLineClamp: 2,
                             WebkitBoxOrient: 'vertical',
                             overflow: 'hidden',
-                            height: '4.8rem'
+                            height: '2.2rem'
                           }}
                         >
-                          {job.description || 'Join our team and take your career to the next level with exciting challenges and growth opportunities.'}
+                          {job.description || 'Join our team and take your career to the next level.'}
                         </Typography>
                       </Box>
 
-                      {/* Skills Section */}
+                      {/* Skills Section - More Compact */}
                       {job.skills && job.skills.length > 0 && (
-                        <Box sx={{ mb: 2 }}>
-                          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontWeight: 600 }}>
-                            Skills Required:
+                        <Box sx={{ mb: 1.5 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block', fontWeight: 600, fontSize: '0.65rem' }}>
+                            Skills:
                           </Typography>
-                          <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ maxHeight: '48px', overflow: 'hidden' }}>
+                          <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ maxHeight: '24px', overflow: 'hidden' }}>
                             {job.skills.slice(0, 3).map((skill, index) => (
                               <Chip
                                 key={index}
                                 label={skill}
                                 size="small"
                                 sx={{ 
-                                  fontSize: '0.7rem',
-                                  height: 22,
-                                  borderRadius: 3,
+                                  fontSize: '0.6rem',
+                                  height: 18,
+                                  borderRadius: 2,
                                   backgroundColor: alpha(theme.palette.info.main, 0.08),
                                   color: 'info.main',
                                   fontWeight: 500,
-                                  border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`
+                                  border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
+                                  '& .MuiChip-label': { px: 0.75 }
                                 }}
                               />
                             ))}
@@ -1890,12 +1997,13 @@ const AllJobsPage: React.FC = () => {
                                 label={`+${job.skills.length - 3}`}
                                 size="small"
                                 sx={{ 
-                                  fontSize: '0.7rem',
-                                  height: 22,
-                                  borderRadius: 3,
+                                  fontSize: '0.6rem',
+                                  height: 18,
+                                  borderRadius: 2,
                                   backgroundColor: alpha(theme.palette.text.secondary, 0.08),
                                   color: 'text.secondary',
-                                  fontWeight: 500
+                                  fontWeight: 500,
+                                  '& .MuiChip-label': { px: 0.75 }
                                 }}
                               />
                             )}
@@ -1903,25 +2011,25 @@ const AllJobsPage: React.FC = () => {
                         </Box>
                       )}
 
-                      {/* Job Stats & Salary */}
-                      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <AttachMoney sx={{ fontSize: 18, color: 'success.main' }} />
+                      {/* Job Stats & Salary - More Compact */}
+                      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <AttachMoney sx={{ fontSize: 16, color: 'success.main' }} />
                           <Typography 
                             variant="body2" 
-                            fontWeight="700"
+                            fontWeight="600"
                             color="success.main"
-                            sx={{ fontSize: '0.9rem' }}
+                            sx={{ fontSize: '0.8rem' }}
                           >
                             {formatSalary(job.salary)}
                           </Typography>
                         </Box>
                         
-                        <Stack direction="row" alignItems="center" spacing={1}>
+                        <Stack direction="row" alignItems="center" spacing={0.5}>
                           <Tooltip title="Total applicants">
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                              <People sx={{ fontSize: 16, color: 'text.secondary' }} />
-                              <Typography variant="caption" color="text.secondary" fontWeight="600">
+                              <People sx={{ fontSize: 14, color: 'text.secondary' }} />
+                              <Typography variant="caption" color="text.secondary" fontWeight="500" sx={{ fontSize: '0.7rem' }}>
                                 {job.applicationsCount || 0}
                               </Typography>
                             </Box>
@@ -1932,20 +2040,23 @@ const AllJobsPage: React.FC = () => {
 
                     </Box>
 
-                    {/* External Job Indicator */}
+                    {/* External Job Indicator - More Compact */}
                     {job.isExternalJob && job.externalJobSource && (
-                      <Box sx={{ mb: 2 }}>
+                      <Box sx={{ mb: 1, px: 2 }}>
                         <Chip
                           label={`via ${job.externalJobSource}`}
                           size="small"
-                          icon={<Language />}
+                          icon={<Language sx={{ fontSize: 12 }} />}
                           sx={{ 
                             fontWeight: 500,
-                            borderRadius: 3,
+                            borderRadius: 2,
                             backgroundColor: alpha(theme.palette.info.main, 0.08),
                             color: 'info.main',
                             border: `1px solid ${alpha(theme.palette.info.main, 0.2)}`,
-                            fontSize: '0.7rem'
+                            fontSize: '0.6rem',
+                            height: 20,
+                            '& .MuiChip-label': { px: 0.5 },
+                            '& .MuiChip-icon': { mr: 0.5 }
                           }}
                         />
                       </Box>
@@ -1959,14 +2070,15 @@ const AllJobsPage: React.FC = () => {
                       className="job-card-actions"
                       sx={{
                         mt: 'auto',
-                        pt: 2,
-                        transform: 'translateY(8px)',
-                        opacity: 0.7,
+                        pt: 1.5,
+                        px: 2,
+                        transform: 'translateY(4px)',
+                        opacity: 0.8,
                         transition: 'all 0.3s ease'
                       }}
                     >
-                      <Stack spacing={1.5}>
-                        {/* Get Prepared Button - Now Prominent */}
+                      <Stack spacing={1}>
+                        {/* Get Prepared Button - More Compact */}
                         <Button
                           variant="contained"
                           fullWidth
@@ -1974,97 +2086,55 @@ const AllJobsPage: React.FC = () => {
                             e.stopPropagation();
                             handleGetPrepared(job);
                           }}
-                          startIcon={<Assignment />}
+                          startIcon={<Assignment sx={{ fontSize: 16 }} />}
                           sx={{
-                            fontWeight: 700,
-                            borderRadius: 3,
-                            py: 1.2,
-                            px: 3,
-                            fontSize: '0.9rem',
+                            fontWeight: 600,
+                            borderRadius: 2.5,
+                            py: 0.8,
+                            px: 2,
+                            fontSize: '0.75rem',
                             textTransform: 'none',
                             background: `linear-gradient(135deg, ${theme.palette.warning.main} 0%, ${theme.palette.warning.dark} 100%)`,
-                            boxShadow: `0 6px 20px ${alpha(theme.palette.warning.main, 0.3)}`,
+                            boxShadow: `0 4px 12px ${alpha(theme.palette.warning.main, 0.3)}`,
                             color: 'white',
                             '&:hover': {
-                              transform: 'translateY(-2px)',
-                              boxShadow: `0 8px 25px ${alpha(theme.palette.warning.main, 0.4)}`,
+                              transform: 'translateY(-1px)',
+                              boxShadow: `0 6px 16px ${alpha(theme.palette.warning.main, 0.4)}`,
                               background: `linear-gradient(135deg, ${theme.palette.warning.dark} 0%, ${theme.palette.warning.main} 100%)`,
                             }
                           }}
                         >
-                          🎯 Get Prepared for This Job
+                          🎯 Get Prepared
                         </Button>
 
-                        {/* View Details Button */}
+                        {/* View Details Button - More Compact */}
                         <Button
                           variant="outlined"
                           fullWidth
                           onClick={() => handleViewFullDetails(job)}
-                          startIcon={<ArrowForward />}
+                          startIcon={<ArrowForward sx={{ fontSize: 14 }} />}
                           sx={{
-                            fontWeight: 600,
-                            borderRadius: 3,
-                            py: 1.1,
-                            px: 3,
-                            fontSize: '0.85rem',
+                            fontWeight: 500,
+                            borderRadius: 2.5,
+                            py: 0.7,
+                            px: 2,
+                            fontSize: '0.7rem',
                             textTransform: 'none',
-                            borderWidth: 1.5,
+                            borderWidth: 1,
                             borderColor: alpha(theme.palette.primary.main, 0.4),
                             backgroundColor: alpha(theme.palette.primary.main, 0.05),
                             '&:hover': {
-                              borderWidth: 1.5,
+                              borderWidth: 1,
                               borderColor: theme.palette.primary.main,
                               backgroundColor: alpha(theme.palette.primary.main, 0.1),
                               transform: 'translateY(-1px)'
                             }
                           }}
                         >
-                          {job.isExternalJob ? 'View on External Site' : 'View Job Details'}
+                          View Details
                         </Button>
 
-                        {/* Quick Actions */}
-                        <Stack direction="row" spacing={1}>
-                          
-                          <IconButton
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              copyJobLink(job._id);
-                            }}
-                            sx={{
-                              borderRadius: 3,
-                              border: `1.5px solid ${alpha(theme.palette.primary.main, 0.3)}`,
-                              backgroundColor: alpha(theme.palette.primary.main, 0.05),
-                              color: 'primary.main',
-                              '&:hover': {
-                                backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                                borderColor: theme.palette.primary.main,
-                                transform: 'translateY(-1px)'
-                              }
-                            }}
-                          >
-                            <Send sx={{ fontSize: 18 }} />
-                          </IconButton>
 
-                          <IconButton
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewJobDetails(job._id);
-                            }}
-                            sx={{
-                              borderRadius: 3,
-                              border: `1.5px solid ${alpha(theme.palette.secondary.main, 0.3)}`,
-                              backgroundColor: alpha(theme.palette.secondary.main, 0.05),
-                              color: 'secondary.main',
-                              '&:hover': {
-                                backgroundColor: alpha(theme.palette.secondary.main, 0.1),
-                                borderColor: theme.palette.secondary.main,
-                                transform: 'translateY(-1px)'
-                              }
-                            }}
-                          >
-                            <Visibility sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Stack>
                       </Stack>
                     </Box>
                   </CardContent>
@@ -2206,22 +2276,61 @@ const AllJobsPage: React.FC = () => {
           </Paper>
         )}
 
-        {/* Pagination */}
+        {/* Enhanced Pagination */}
         {!loading && !error && jobs.length > 0 && totalPages > 1 && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-            <Stack spacing={2} alignItems="center">
-              <Typography variant="body2" color="text.secondary">
-                Showing {jobs.length} of {totalJobs} jobs (Page {currentPage} of {totalPages})
-              </Typography>
+          <Paper 
+            sx={{ 
+              mt: 4, 
+              p: 3, 
+              borderRadius: 4,
+              background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.95)} 0%, ${alpha(theme.palette.primary.main, 0.02)} 100%)`,
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
+            }}
+          >
+            <Stack spacing={3} alignItems="center">
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, color: 'primary.main' }}>
+                  📄 Page Navigation
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                  Showing <Box component="span" sx={{ fontWeight: 700, color: 'primary.main' }}>{(currentPage - 1) * 12 + 1}</Box> - <Box component="span" sx={{ fontWeight: 700, color: 'primary.main' }}>{Math.min(currentPage * 12, totalJobs)}</Box> of <Box component="span" sx={{ fontWeight: 700, color: 'success.main' }}>{totalJobs}</Box> opportunities
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Page {currentPage} of {totalPages} • 12 jobs per page
+                </Typography>
+              </Box>
+              
               <Box sx={{
                 '& .MuiPaginationItem-root': {
                   fontWeight: 'bold',
-                  borderRadius: 2,
+                  borderRadius: 3,
+                  fontSize: '1rem',
+                  minWidth: 40,
+                  height: 40,
+                  margin: '0 2px',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: `0 6px 16px ${alpha(theme.palette.primary.main, 0.25)}`
+                  },
                   '&.Mui-selected': {
                     background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
                     color: 'white',
+                    border: 'none',
+                    transform: 'scale(1.1)',
+                    boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
                     '&:hover': {
                       background: `linear-gradient(45deg, ${theme.palette.primary.dark} 30%, ${theme.palette.secondary.dark} 90%)`,
+                      transform: 'translateY(-2px) scale(1.1)',
+                      boxShadow: `0 8px 25px ${alpha(theme.palette.primary.main, 0.5)}`
+                    }
+                  },
+                  '&.MuiPaginationItem-previousNext': {
+                    background: alpha(theme.palette.primary.main, 0.08),
+                    color: 'primary.main',
+                    '&:hover': {
+                      background: alpha(theme.palette.primary.main, 0.15)
                     }
                   }
                 }
@@ -2234,10 +2343,12 @@ const AllJobsPage: React.FC = () => {
                   size="large"
                   showFirstButton
                   showLastButton
+                  siblingCount={1}
+                  boundaryCount={1}
                 />
               </Box>
             </Stack>
-          </Box>
+          </Paper>
         )}
 
         <ApplicationDialog />

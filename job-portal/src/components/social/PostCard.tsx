@@ -76,8 +76,16 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
       if (!user || post.author._id === user._id) return;
       
       try {
-        const status = await socialNetworkService.getConnectionStatus(post.author._id);
-        setConnectionStatus(status.connectionStatus || 'none');
+        const response = await socialNetworkService.getConnectionStatus(post.author._id);
+        const status = response.data?.status || 'none';
+        // Map backend status to component status
+        if (status === 'accepted') {
+          setConnectionStatus('connected');
+        } else if (status === 'pending') {
+          setConnectionStatus('pending');
+        } else {
+          setConnectionStatus('none');
+        }
       } catch (error) {
         console.error('Error checking connection status:', error);
         setConnectionStatus('none');
@@ -183,8 +191,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   };
 
   const handleViewProfile = () => {
-    // Navigate to profile page - assuming profile route exists
-    navigate(`/app/profile/${post.author._id}`);
+    // Navigate to summary profile page for other users, full profile for own posts
+    if (post.author._id === user?._id) {
+      navigate('/app/profile');
+    } else {
+      navigate(`/app/profile/view/${post.author._id}`);
+    }
   };
 
   const handleConnect = async () => {

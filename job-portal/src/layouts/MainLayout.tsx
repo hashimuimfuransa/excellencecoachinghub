@@ -63,7 +63,8 @@ import {
   Mail,
   ChevronLeft,
   ChevronRight,
-  SearchOff
+  SearchOff,
+  FilterList
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -797,8 +798,14 @@ const MainLayout: React.FC = () => {
         position="fixed"
         elevation={0}
         sx={{
-          width: { sm: `calc(100% - ${currentDrawerWidth}px)` },
-          ml: { sm: `${currentDrawerWidth}px` },
+          width: { 
+            xs: '100%',
+            sm: `calc(100% - ${currentDrawerWidth}px)` 
+          },
+          ml: { 
+            xs: 0,
+            sm: `${currentDrawerWidth}px` 
+          },
           bgcolor: alpha(muiTheme.palette.background.paper, 0.98),
           backdropFilter: 'blur(20px)',
           borderBottom: `1px solid ${alpha(muiTheme.palette.divider, 0.08)}`,
@@ -806,12 +813,14 @@ const MainLayout: React.FC = () => {
             easing: muiTheme.transitions.easing.sharp,
             duration: muiTheme.transitions.duration.standard,
           }),
+          zIndex: (theme) => theme.zIndex.drawer + 1,
         }}
       >
         <Toolbar sx={{ 
-          minHeight: '70px !important',
-          px: { xs: 2, sm: 3 },
-          justifyContent: 'space-between'
+          minHeight: { xs: '64px !important', sm: '70px !important' },
+          px: { xs: 1, sm: 2, md: 3 },
+          justifyContent: 'space-between',
+          position: 'relative'
         }}>
           {/* Left Section - Logo & Mobile Menu */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -823,11 +832,17 @@ const MainLayout: React.FC = () => {
               onClick={handleDrawerToggle}
               sx={{ 
                 display: { sm: 'none' },
-                color: 'text.primary',
+                p: 1.5,
+                borderRadius: '16px',
+                bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
+                border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.12)}`,
+                color: 'primary.main',
                 '&:hover': {
-                  bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
-                  color: 'primary.main'
-                }
+                  bgcolor: alpha(muiTheme.palette.primary.main, 0.15),
+                  transform: 'scale(1.05)',
+                  boxShadow: `0 4px 15px ${alpha(muiTheme.palette.primary.main, 0.2)}`
+                },
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             >
               <MenuIcon />
@@ -838,163 +853,184 @@ const MainLayout: React.FC = () => {
               <IconButton
                 onClick={handleDesktopDrawerToggle}
                 sx={{
-                  color: 'text.secondary',
+                  p: 1.5,
+                  borderRadius: '16px',
+                  bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
+                  border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.12)}`,
+                  color: 'primary.main',
                   '&:hover': {
-                    bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
-                    color: 'primary.main'
-                  }
+                    bgcolor: alpha(muiTheme.palette.primary.main, 0.15),
+                    transform: 'scale(1.05)',
+                    boxShadow: `0 4px 15px ${alpha(muiTheme.palette.primary.main, 0.2)}`
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
               >
                 <MenuIcon />
               </IconButton>
             )}
             
-            {/* Logo - Only on larger screens */}
+            {/* Enhanced Logo */}
             <Box 
               component={Link} 
-              to="/app/network"
+              to="/app/dashboard"
               sx={{ 
                 display: { xs: 'none', md: 'flex' },
                 alignItems: 'center', 
                 textDecoration: 'none',
-                gap: 1,
+                gap: 1.5,
+                p: 1,
+                borderRadius: '16px',
                 '&:hover': {
-                  opacity: 0.8
-                }
+                  bgcolor: alpha(muiTheme.palette.primary.main, 0.05),
+                  transform: 'scale(1.02)'
+                },
+                transition: 'all 0.3s ease'
               }}
             >
               <Box
                 sx={{
-                  width: 32,
-                  height: 32,
+                  width: 40,
+                  height: 40,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  borderRadius: '50%',
-                  background: '#fff',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                }}
-              >
-                <img 
-                  src="/exjobnetlogo.png" 
-                  alt="ExJobNet Logo"
-                  style={{ width: '80%', height: '80%', objectFit: 'contain' }}
-                />
-              </Box>
-              <Typography 
-                variant="h6" 
-                fontWeight="bold" 
-                sx={{ 
+                  borderRadius: '12px',
                   background: `linear-gradient(135deg, ${muiTheme.palette.primary.main}, ${muiTheme.palette.secondary.main})`,
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  letterSpacing: '-0.5px'
+                  boxShadow: `0 4px 15px ${alpha(muiTheme.palette.primary.main, 0.3)}`,
+                  position: 'relative',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    inset: 1,
+                    borderRadius: '11px',
+                    background: `linear-gradient(135deg, ${alpha(muiTheme.palette.common.white, 0.2)}, transparent)`,
+                  }
                 }}
               >
-                ExJobNet
-              </Typography>
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    fontWeight: 900,
+                    color: 'white',
+                    textShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                    position: 'relative',
+                    zIndex: 1
+                  }}
+                >
+                  E
+                </Typography>
+              </Box>
+              <Box>
+                <Typography 
+                  variant="h6" 
+                  fontWeight="bold" 
+                  sx={{ 
+                    background: `linear-gradient(135deg, ${muiTheme.palette.primary.main}, ${muiTheme.palette.secondary.main})`,
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    letterSpacing: '-0.5px',
+                    lineHeight: 1
+                  }}
+                >
+                  Excellence Hub
+                </Typography>
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    color: 'text.secondary',
+                    fontSize: '0.7rem',
+                    fontWeight: 'medium',
+                    lineHeight: 1
+                  }}
+                >
+                  Career Portal
+                </Typography>
+              </Box>
             </Box>
           </Box>
 
-          {/* Center Section - Enhanced Search Bar */}
+          {/* Center Section - Simplified Search Bar */}
           <Box sx={{ 
             display: { xs: 'none', md: 'flex' },
             flexGrow: 1,
-            maxWidth: '500px',
-            mx: 4
+            maxWidth: '400px',
+            mx: 3
           }}>
-            <EnhancedSearchBar 
-              placeholder="Search jobs, people, companies, skills..."
-              onSearch={(query) => {
-                navigate(`/app/jobs?search=${encodeURIComponent(query)}`);
+            <Box
+              sx={{
+                position: 'relative',
+                width: '100%',
+                borderRadius: '16px',
+                bgcolor: alpha(muiTheme.palette.background.paper, 0.9),
+                border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.2)}`,
+                backdropFilter: 'blur(8px)',
+                '&:focus-within': {
+                  border: `1px solid ${muiTheme.palette.primary.main}`,
+                  boxShadow: `0 4px 12px ${alpha(muiTheme.palette.primary.main, 0.15)}`,
+                },
+                transition: 'all 0.2s ease'
               }}
-            />
+            >
+              <InputBase
+                placeholder="Search jobs..."
+                sx={{
+                  width: '100%',
+                  px: 2,
+                  py: 1,
+                  fontSize: '0.9rem',
+                  color: 'text.primary',
+                  '& .MuiInputBase-input': {
+                    '&::placeholder': {
+                      color: 'text.secondary',
+                      opacity: 0.7
+                    }
+                  }
+                }}
+                startAdornment={
+                  <Search 
+                    sx={{ 
+                      mr: 1, 
+                      color: 'text.secondary',
+                      fontSize: '1.1rem' 
+                    }} 
+                  />
+                }
+              />
+            </Box>
           </Box>
 
-          {/* Right Section - Actions & Profile */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {/* Quick Actions - Desktop Only */}
-            <Box sx={{ 
-              display: { xs: 'none', lg: 'flex' },
-              gap: 1,
-              mr: 2
-            }}>
-              <Tooltip title="Career Guidance" arrow>
-                <IconButton
-                  onClick={() => handleNavigation('/app/career-guidance')}
-                  size="medium"
+          {/* Right Section - Essential Actions & Profile */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, md: 1 } }}>
+            {/* Mobile Search Icon */}
+            <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+              <Tooltip title="Search Jobs">
+                <IconButton 
+                  onClick={() => navigate('/app/jobs')}
+                  size="small"
                   sx={{
-                    color: 'success.main',
-                    bgcolor: alpha(muiTheme.palette.success.main, 0.1),
+                    color: 'text.secondary',
                     '&:hover': {
-                      bgcolor: alpha(muiTheme.palette.success.main, 0.2),
-                      transform: 'translateY(-1px)',
-                    },
-                    transition: 'all 0.2s ease',
+                      color: 'primary.main',
+                      bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
+                    }
                   }}
                 >
-                  <Psychology fontSize="small" />
-                </IconButton>
-              </Tooltip>
-
-              <Tooltip title="Find Jobs" arrow>
-                <IconButton
-                  onClick={() => handleNavigation('/app/jobs')}
-                  size="medium"
-                  sx={{
-                    color: 'primary.main',
-                    bgcolor: alpha(muiTheme.palette.primary.main, 0.1),
-                    '&:hover': {
-                      bgcolor: alpha(muiTheme.palette.primary.main, 0.2),
-                      transform: 'translateY(-1px)',
-                    },
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  <Work fontSize="small" />
+                  <Search fontSize="small" />
                 </IconButton>
               </Tooltip>
             </Box>
 
-            {/* Messages */}
-            <Tooltip title="Messages" arrow>
-              <IconButton 
-                onClick={() => navigate('/app/messages')}
-                size="medium"
+            {/* Notifications */}
+            <Tooltip title="Notifications">
+              <IconButton
+                onClick={() => navigate('/app/notifications')}
+                size="small"
                 sx={{
                   color: 'text.secondary',
                   '&:hover': {
                     color: 'primary.main',
                     bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
-                  }
-                }}
-              >
-                <Badge 
-                  badgeContent={2} 
-                  color="primary"
-                  sx={{
-                    '& .MuiBadge-badge': {
-                      fontSize: '0.7rem',
-                      height: '16px',
-                      minWidth: '16px'
-                    }
-                  }}
-                >
-                  <Mail fontSize="small" />
-                </Badge>
-              </IconButton>
-            </Tooltip>
-
-            {/* Notifications */}
-            <Tooltip title="Notifications" arrow>
-              <IconButton
-                onClick={() => navigate('/app/notifications')}
-                size="medium"
-                sx={{
-                  color: 'text.secondary',
-                  '&:hover': {
-                    color: 'warning.main',
-                    bgcolor: alpha(muiTheme.palette.warning.main, 0.08),
                   }
                 }}
               >
@@ -1004,8 +1040,8 @@ const MainLayout: React.FC = () => {
                   sx={{
                     '& .MuiBadge-badge': {
                       fontSize: '0.7rem',
-                      height: '16px',
-                      minWidth: '16px'
+                      height: '14px',
+                      minWidth: '14px'
                     }
                   }}
                 >
@@ -1014,44 +1050,33 @@ const MainLayout: React.FC = () => {
               </IconButton>
             </Tooltip>
 
-            {/* Theme Toggle */}
-            <Tooltip title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`} arrow>
-              <IconButton 
-                onClick={toggleTheme}
-                size="medium"
-                sx={{
-                  color: 'text.secondary',
-                  '&:hover': {
-                    color: mode === 'dark' ? 'warning.main' : 'info.main',
-                    bgcolor: mode === 'dark' 
-                      ? alpha(muiTheme.palette.warning.main, 0.08)
-                      : alpha(muiTheme.palette.info.main, 0.08),
-                  }
-                }}
-              >
-                {mode === 'dark' ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
-              </IconButton>
-            </Tooltip>
-            
-            {/* Divider */}
-            <Divider 
-              orientation="vertical" 
-              flexItem 
-              sx={{ 
-                mx: 1,
-                borderColor: alpha(muiTheme.palette.divider, 0.1),
-                height: '24px',
-                alignSelf: 'center'
-              }} 
-            />
+            {/* Theme Toggle - Desktop Only */}
+            <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+              <Tooltip title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}>
+                <IconButton 
+                  onClick={toggleTheme}
+                  size="small"
+                  sx={{
+                    color: 'text.secondary',
+                    '&:hover': {
+                      color: 'primary.main',
+                      bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
+                    }
+                  }}
+                >
+                  {mode === 'dark' ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
+                </IconButton>
+              </Tooltip>
+            </Box>
             
             {/* Profile */}
-            <Tooltip title={`${user?.firstName} ${user?.lastName}`} arrow>
+            <Tooltip title={`${user?.firstName} ${user?.lastName}`}>
               <IconButton
                 onClick={handleProfileMenuOpen}
-                size="medium"
+                size="small"
                 sx={{ 
                   p: 0.5,
+                  ml: { xs: 0.5, md: 1 },
                   '&:hover': {
                     transform: 'scale(1.05)',
                   },
@@ -1062,8 +1087,8 @@ const MainLayout: React.FC = () => {
                   alt={user?.firstName}
                   src={user?.avatar}
                   sx={{ 
-                    width: 36, 
-                    height: 36,
+                    width: { xs: 32, md: 36 }, 
+                    height: { xs: 32, md: 36 },
                     border: `2px solid ${alpha(muiTheme.palette.primary.main, 0.2)}`,
                     '&:hover': {
                       borderColor: 'primary.main',
@@ -1075,39 +1100,6 @@ const MainLayout: React.FC = () => {
                 </Avatar>
               </IconButton>
             </Tooltip>
-
-            {/* Mobile Search & Menu */}
-            <Box sx={{ display: { xs: 'flex', md: 'none' }, gap: 0.5, ml: 1 }}>
-              <Tooltip title="Search Jobs" arrow>
-                <IconButton
-                  onClick={() => handleNavigation('/app/jobs')}
-                  size="medium"
-                  sx={{
-                    color: 'text.secondary',
-                    '&:hover': {
-                      bgcolor: alpha(muiTheme.palette.info.main, 0.08),
-                      color: 'info.main'
-                    }
-                  }}
-                >
-                  <Search fontSize="small" />
-                </IconButton>
-              </Tooltip>
-
-              <IconButton
-                onClick={() => setMobileMenuOpen(true)}
-                size="medium"
-                sx={{
-                  color: 'text.secondary',
-                  '&:hover': {
-                    bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
-                    color: 'primary.main'
-                  }
-                }}
-              >
-                <Add fontSize="small" />
-              </IconButton>
-            </Box>
           </Box>
         </Toolbar>
       </AppBar>
@@ -1373,7 +1365,11 @@ const MainLayout: React.FC = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          width: { sm: `calc(100% - ${currentDrawerWidth}px)` },
+          width: { 
+            xs: '100vw', 
+            sm: `calc(100% - ${currentDrawerWidth}px)` 
+          },
+          maxWidth: { xs: '100vw', sm: 'none' },
           minHeight: '100vh',
           backgroundColor: 'background.default',
           transition: muiTheme.transitions.create(['width', 'margin'], {
@@ -1381,45 +1377,86 @@ const MainLayout: React.FC = () => {
             duration: muiTheme.transitions.duration.standard,
           }),
           position: 'relative',
+          overflow: { xs: 'hidden', sm: 'auto' }, // Better mobile overflow handling
+          ml: { xs: 0, sm: `${currentDrawerWidth}px` },
         }}
       >
         {/* Spacer for fixed AppBar */}
-        <Box sx={{ height: '70px' }} />
+        <Box sx={{ height: { xs: '64px', sm: '70px' } }} />
         
-        {/* Main Content Container */}
+        {/* Main Content Container - Enhanced Mobile Optimization */}
         <Box
           sx={{
-            px: { xs: 2, sm: 3, md: 4 },
-            py: { xs: 2, sm: 3 },
-            maxWidth: '1400px',
+            px: { xs: 0, sm: 1, md: 2 },
+            py: { xs: 0, sm: 1, md: 2 },
+            maxWidth: '100%',
             mx: 'auto',
             position: 'relative',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '1px',
-              background: `linear-gradient(90deg, transparent 0%, ${alpha(muiTheme.palette.divider, 0.1)} 50%, transparent 100%)`,
+            minHeight: 'calc(100vh - 64px)',
+            width: '100%',
+            // Better mobile handling
+            '& > *': {
+              maxWidth: '100%',
+              overflowX: 'hidden'
             }
           }}
         >
-          {/* Page Content */}
-          <Box sx={{ 
-            opacity: 0, 
-            animation: 'slideInUp 0.6s ease-out forwards',
-            '@keyframes slideInUp': {
-              '0%': { 
-                opacity: 0, 
-                transform: 'translateY(20px)',
+          {/* Page Content - Enhanced Mobile Optimization */}
+          <Box 
+            sx={{ 
+              opacity: 0, 
+              animation: 'slideInUp 0.4s ease-out forwards',
+              width: '100%',
+              height: '100%',
+              // Global mobile responsive overrides
+              '& .MuiContainer-root': {
+                px: { xs: 0.5, sm: 1, md: 2 },
+                maxWidth: '100% !important',
+                width: '100%',
+                mx: 0
               },
-              '100%': { 
-                opacity: 1, 
-                transform: 'translateY(0)',
+              '& .MuiGrid-container': {
+                mx: { xs: 0, sm: 'auto' },
+                width: '100%',
+                maxWidth: '100%'
               },
-            }
-          }}>
+              '& .MuiCard-root': {
+                mx: { xs: 0, sm: 'auto' },
+                borderRadius: { xs: 1, sm: 2, md: 3 },
+                width: '100%',
+                maxWidth: '100%'
+              },
+              '& .MuiPaper-root': {
+                mx: { xs: 0, sm: 'auto' },
+                borderRadius: { xs: 1, sm: 2, md: 3 },
+                width: { xs: '100%', sm: 'auto' },
+                maxWidth: '100%'
+              },
+              // Tab optimization
+              '& .MuiTabs-root': {
+                minHeight: { xs: 40, md: 48 }
+              },
+              '& .MuiTab-root': {
+                minWidth: { xs: 60, sm: 90 },
+                fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                py: { xs: 1, md: 1.5 }
+              },
+              // Better mobile spacing
+              '& .MuiBox-root': {
+                maxWidth: { xs: '100%', sm: 'none' }
+              },
+              '@keyframes slideInUp': {
+                '0%': { 
+                  opacity: 0, 
+                  transform: 'translateY(10px)',
+                },
+                '100%': { 
+                  opacity: 1, 
+                  transform: 'translateY(0)',
+                },
+              }
+            }}
+          >
             <Outlet key={location.key} />
           </Box>
         </Box>

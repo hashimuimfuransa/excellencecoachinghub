@@ -758,53 +758,78 @@ const DashboardPage: React.FC = () => {
 
   return (
     <Container maxWidth="xl">
-      <Box mb={4}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+      {/* Simplified Header */}
+      <Box mb={3}>
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', md: 'row' },
+            justifyContent: 'space-between', 
+            alignItems: { xs: 'flex-start', md: 'center' },
+            gap: { xs: 2, md: 0 },
+            mb: 3
+          }}
+        >
           <Box flex={1}>
-            <Typography variant="h3" component="h1" fontWeight="bold" gutterBottom>
-              Welcome back, {user?.firstName}! 👋
+            <Typography 
+              variant="h4" 
+              component="h1" 
+              fontWeight="bold" 
+              sx={{
+                fontSize: { xs: '1.75rem', md: '2.25rem' },
+                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                mb: 1
+              }}
+            >
+              Hello, {user?.firstName}! 👋
             </Typography>
-            <Typography variant="h6" color="text.secondary" gutterBottom>
+            <Typography 
+              variant="body1" 
+              color="text.secondary"
+              sx={{
+                fontSize: { xs: '0.9rem', md: '1rem' },
+                fontWeight: 500
+              }}
+            >
               {isJobSeekerView 
-                ? "Your personalized job search dashboard" 
-                : "Manage your recruitment activities"}
+                ? "Ready to find your next opportunity?" 
+                : "Manage your job postings and applications"}
             </Typography>
-            {isJobSeekerView && (
-              <Button
-                variant="contained"
-                size="large"
-                startIcon={<Psychology />}
-                onClick={() => setPreparationDialogOpen(true)}
-                sx={{
-                  mt: 2,
-                  borderRadius: 2,
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  px: 3,
-                  py: 1.5,
-                  background: `linear-gradient(45deg, ${theme.palette.success.main} 30%, ${theme.palette.primary.main} 90%)`,
-                  boxShadow: `0 4px 14px 0 ${alpha(theme.palette.success.main, 0.3)}`,
-                  '&:hover': {
-                    background: `linear-gradient(45deg, ${theme.palette.success.dark} 30%, ${theme.palette.primary.dark} 90%)`,
-                    boxShadow: `0 6px 20px 0 ${alpha(theme.palette.success.main, 0.4)}`,
-                  }
-                }}
-              >
-                Start Prepare for Job
-              </Button>
-            )}
           </Box>
-          <Tooltip title="Refresh data">
-            <IconButton onClick={handleRefresh} disabled={refreshing}>
-              {refreshing ? <CircularProgress size={24} /> : <Refresh />}
-            </IconButton>
-          </Tooltip>
+          
+          {/* Action Button */}
+          {isJobSeekerView && (
+            <Button
+              variant="contained"
+              startIcon={<Psychology />}
+              onClick={() => setPreparationDialogOpen(true)}
+              sx={{
+                alignSelf: { xs: 'stretch', md: 'center' },
+                borderRadius: 3,
+                textTransform: 'none',
+                fontWeight: 600,
+                px: { xs: 2, md: 3 },
+                py: { xs: 1.5, md: 1.5 },
+                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                boxShadow: `0 4px 15px ${alpha(theme.palette.primary.main, 0.3)}`,
+                '&:hover': {
+                  transform: 'translateY(-1px)',
+                  boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+                },
+                transition: 'all 0.2s ease'
+              }}
+            >
+              Get Job Ready
+            </Button>
+          )}
         </Box>
 
         {/* Error Alert */}
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-            <AlertTitle>Error</AlertTitle>
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
             {error}
           </Alert>
         )}
@@ -826,130 +851,59 @@ const DashboardPage: React.FC = () => {
           </Fade>
         )}
 
-        {/* Stats Cards - Different for job seekers and employers */}
-        <Grid container spacing={3} mb={4}>
-          {loading ? (
-            // Loading skeletons
-            Array.from({ length: 4 }).map((_, index) => (
-              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
-                <Card sx={{ height: '100%' }}>
-                  <CardContent>
-                    <Skeleton variant="rectangular" height={40} sx={{ mb: 2 }} />
-                    <Skeleton variant="text" height={60} sx={{ mb: 1 }} />
-                    <Skeleton variant="text" height={20} />
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))
-          ) : isJobSeekerView ? (
-            // Job Seeker Stats
-            <>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <Zoom in={!loading} timeout={600}>
-                  <div>
-                    <StatCard
-                      title="Available Jobs"
-                      value={dashboardStats.totalJobs}
-                      icon={<Work />}
-                      color={theme.palette.primary.main}
-                      onClick={() => navigate('/app/jobs')}
-                      subtitle="Browse open positions"
-                    />
-                  </div>
-                </Zoom>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <Zoom in={!loading} timeout={800}>
-                  <div>
-                    <StatCard
-                      title="My Applications"
-                      value={dashboardStats.totalApplications}
-                      icon={<Assignment />}
-                      color={theme.palette.success.main}
-                      onClick={() => navigate('/app/applications')}
-                      subtitle="Track your job applications"
-                    />
-                  </div>
-                </Zoom>
-              </Grid>
-
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <Zoom in={!loading} timeout={1200}>
-                  <div>
-                    <StatCard
-                      title="Profile Views"
-                      value={dashboardStats.profileViews}
-                      icon={<Visibility />}
-                      color={theme.palette.info.main}
-                      onClick={() => navigate('/app/profile')}
-                      subtitle="Employers who viewed your profile"
-                    />
-                  </div>
-                </Zoom>
-              </Grid>
-            </>
-          ) : (
-            // Employer Stats
-            <>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <Zoom in={!loading} timeout={600}>
-                  <div>
-                    <StatCard
-                      title="Active Jobs"
-                      value={dashboardStats.totalJobs}
-                      icon={<Work />}
-                      color={theme.palette.primary.main}
-                      onClick={() => navigate('/app/employer/jobs')}
-                      subtitle="Your posted positions"
-                    />
-                  </div>
-                </Zoom>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <Zoom in={!loading} timeout={800}>
-                  <div>
-                    <StatCard
-                      title="Applications"
-                      value={dashboardStats.totalApplications}
-                      icon={<Group />}
-                      color={theme.palette.success.main}
-                      onClick={() => navigate('/app/employer/candidates')}
-                      subtitle="Candidates who applied"
-                    />
-                  </div>
-                </Zoom>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <Zoom in={!loading} timeout={1000}>
-                  <div>
-                    <StatCard
-                      title="Interviews"
-                      value={1}
-                      icon={<Assessment />}
-                      color={theme.palette.warning.main}
-                      onClick={() => navigate('/app/employer/interviews')}
-                      subtitle="Scheduled interviews"
-                    />
-                  </div>
-                </Zoom>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <Zoom in={!loading} timeout={1200}>
-                  <div>
-                    <StatCard
-                      title="Hired"
-                      value={0}
-                      icon={<CheckCircle />}
-                      color={theme.palette.info.main}
-                      onClick={() => navigate('/app/employer/hired')}
-                      subtitle="Candidates you've hired"
-                    />
-                  </div>
-                </Zoom>
-              </Grid>
-            </>
-          )}
-        </Grid>
+        {/* Quick Actions - Only show for employers or loading state */}
+        {!isJobSeekerView && (
+          <Grid container spacing={2} mb={3}>
+            {loading ? (
+              // Loading skeleton for employers only
+              Array.from({ length: 3 }).map((_, index) => (
+                <Grid size={{ xs: 12, sm: 4 }} key={index}>
+                  <Card sx={{ height: '100%' }}>
+                    <CardContent>
+                      <Skeleton variant="rectangular" height={30} sx={{ mb: 1 }} />
+                      <Skeleton variant="text" height={40} sx={{ mb: 1 }} />
+                      <Skeleton variant="text" height={15} />
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))
+            ) : (
+              // Employer Stats - Simplified
+              <>
+                <Grid size={{ xs: 12, sm: 4 }}>
+                  <StatCard
+                    title="Active Jobs"
+                    value={dashboardStats.totalJobs}
+                    icon={<Work />}
+                    color={theme.palette.primary.main}
+                    onClick={() => navigate('/app/employer/jobs')}
+                    subtitle="Your posted positions"
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 4 }}>
+                  <StatCard
+                    title="Applications"
+                    value={dashboardStats.totalApplications}
+                    icon={<Group />}
+                    color={theme.palette.success.main}
+                    onClick={() => navigate('/app/employer/candidates')}
+                    subtitle="Candidates who applied"
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 4 }}>
+                  <StatCard
+                    title="Interviews"
+                    value={1}
+                    icon={<Assessment />}
+                    color={theme.palette.warning.main}
+                    onClick={() => navigate('/app/employer/interviews')}
+                    subtitle="Scheduled interviews"
+                  />
+                </Grid>
+              </>
+            )}
+          </Grid>
+        )}
 
         {/* Main Content Area */}
         <Grid container spacing={3}>

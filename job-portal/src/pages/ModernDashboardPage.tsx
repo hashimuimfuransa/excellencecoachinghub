@@ -572,7 +572,13 @@ const ModernDashboardPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Container 
+        maxWidth="xl" 
+        sx={{ 
+          py: { xs: 2, sm: 3, md: 4 },
+          px: { xs: 1, sm: 2, md: 3 }
+        }}
+      >
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
           <CircularProgress size={40} />
         </Box>
@@ -581,32 +587,119 @@ const ModernDashboardPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3 }}>
-      {/* Header Section */}
-      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={4}>
-        <Box>
-          <Typography variant="h3" fontWeight="bold" gutterBottom>
-            Hello, {user?.firstName}! 👋
-          </Typography>
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            Ready to take the next step in your career?
-          </Typography>
-        </Box>
-        <Stack direction="row" spacing={2}>
-          <Tooltip title="Notifications">
-            <IconButton>
-              <Badge badgeContent={3} color="error">
-                <Notifications />
-              </Badge>
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Refresh dashboard">
-            <IconButton onClick={handleRefresh} disabled={refreshing}>
-              {refreshing ? <CircularProgress size={24} /> : <Refresh />}
-            </IconButton>
-          </Tooltip>
+    <Container 
+      maxWidth="xl" 
+      sx={{ 
+        py: { xs: 1, sm: 2 },
+        px: { xs: 1, sm: 2, md: 3 }
+      }}
+    >
+      {/* Modern Header Section - Mobile Optimized */}
+      <Box 
+        sx={{ 
+          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.1)} 100%)`,
+          borderRadius: { xs: 2, md: 3 },
+          p: { xs: 2, sm: 3, md: 4 },
+          mb: { xs: 2, sm: 3, md: 4 },
+          position: 'relative',
+          overflow: 'hidden',
+          mx: { xs: 0, sm: 'auto' },
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: { xs: 3, md: 4 },
+            background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main}, ${theme.palette.success.main})`,
+            borderRadius: { xs: '2px 2px 0 0', md: '3px 3px 0 0' }
+          }
+        }}
+      >
+        <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'center', md: 'flex-start' }} spacing={3}>
+          <Box textAlign={{ xs: 'center', md: 'left' }}>
+            <Typography 
+              variant="h2" 
+              fontWeight="800" 
+              gutterBottom
+              sx={{
+                background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                mb: 1,
+                fontSize: { xs: '2rem', md: '3rem' }
+              }}
+            >
+              Welcome back, {user?.firstName}! 🚀
+            </Typography>
+            <Typography 
+              variant="h5" 
+              color="text.secondary" 
+              gutterBottom 
+              sx={{ 
+                fontWeight: 'medium',
+                fontSize: { xs: '1.1rem', md: '1.3rem' }
+              }}
+            >
+              Your journey to success continues today
+            </Typography>
+            <Stack direction="row" spacing={2} justifyContent={{ xs: 'center', md: 'flex-start' }} mt={2}>
+              <Chip 
+                icon={<CheckCircle />} 
+                label={`Profile ${profileCompletion}% Complete`} 
+                color={isProfileComplete ? "success" : "warning"}
+                variant="outlined"
+                sx={{ fontWeight: 'bold' }}
+              />
+              <Chip 
+                icon={<TrendingUp />} 
+                label={`${stats.totalApplications} Applications`} 
+                color="primary"
+                variant="outlined"
+                sx={{ fontWeight: 'bold' }}
+              />
+            </Stack>
+          </Box>
+          
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Tooltip title="Notifications">
+              <IconButton 
+                size="large"
+                sx={{
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  '&:hover': {
+                    bgcolor: alpha(theme.palette.primary.main, 0.2),
+                    transform: 'scale(1.05)'
+                  },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <Badge badgeContent={3} color="error">
+                  <Notifications color="primary" />
+                </Badge>
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Refresh dashboard">
+              <IconButton 
+                onClick={handleRefresh} 
+                disabled={refreshing}
+                size="large"
+                sx={{
+                  bgcolor: alpha(theme.palette.secondary.main, 0.1),
+                  '&:hover': {
+                    bgcolor: alpha(theme.palette.secondary.main, 0.2),
+                    transform: 'scale(1.05)'
+                  },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {refreshing ? <CircularProgress size={24} /> : <Refresh color="secondary" />}
+              </IconButton>
+            </Tooltip>
+          </Stack>
         </Stack>
-      </Stack>
+      </Box>
 
       {/* Welcome Setup for New Users */}
       {isNewUser && showWelcome && (
@@ -620,6 +713,8 @@ const ModernDashboardPage: React.FC = () => {
           onEditProfile={() => forceNavigate('/app/profile?edit=true', 'profile completion button')}
         />
       )}
+
+
 
       {/* Enhanced Dashboard Actions */}
       <EnhancedDashboardActions 
@@ -638,12 +733,71 @@ const ModernDashboardPage: React.FC = () => {
         {/* Left Column */}
         <Grid item xs={12} lg={8}>
 
-          {/* Recommended Jobs */}
-          <Paper sx={{ p: 3, mb: 4, borderRadius: 2 }}>
+          {/* Modern Job Recommendations */}
+          <Paper 
+            sx={{ 
+              p: 4, 
+              mb: 4, 
+              borderRadius: 4,
+              background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.03)} 0%, ${alpha(theme.palette.info.main, 0.03)} 100%)`,
+              border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`,
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 3,
+                background: `linear-gradient(90deg, ${theme.palette.success.main}, ${theme.palette.info.main})`,
+                borderRadius: '4px 4px 0 0'
+              }
+            }}
+          >
+            <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
+              <Box>
+                <Typography 
+                  variant="h4" 
+                  fontWeight="bold" 
+                  sx={{
+                    background: `linear-gradient(45deg, ${theme.palette.success.main}, ${theme.palette.info.main})`,
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    mb: 1
+                  }}
+                >
+                  🎯 Perfect Matches for You
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  AI-curated opportunities based on your profile and preferences
+                </Typography>
+              </Box>
+              <Button
+                variant="contained"
+                startIcon={<ArrowForward />}
+                onClick={() => forceNavigate('/app/jobs', 'job recommendations view all')}
+                sx={{
+                  background: `linear-gradient(45deg, ${theme.palette.success.main}, ${theme.palette.info.main})`,
+                  borderRadius: 3,
+                  textTransform: 'none',
+                  fontWeight: 'bold',
+                  px: 3,
+                  '&:hover': {
+                    boxShadow: `0 8px 25px ${alpha(theme.palette.success.main, 0.4)}`,
+                    transform: 'translateY(-2px)'
+                  }
+                }}
+              >
+                View All Jobs
+              </Button>
+            </Stack>
+            
             <JobRecommendations
               jobs={recentJobs}
-              title="Recommended for You"
-              subtitle="Jobs that match your skills and preferences"
+              title=""
+              subtitle=""
               onViewAll={() => forceNavigate('/app/jobs', 'job recommendations view all')}
               compact
             />
@@ -652,95 +806,193 @@ const ModernDashboardPage: React.FC = () => {
 
         {/* Right Column */}
         <Grid item xs={12} lg={4}>
-          {/* Recent Activity */}
-          <Paper sx={{ p: 3, mb: 4, borderRadius: 2 }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom mb={2}>
-              Recent Activity
-            </Typography>
-            <List>
-              {recentActivity.map((activity) => (
-                <ListItem key={activity.id} sx={{ px: 0 }}>
+          {/* Modern Activity Feed */}
+          <Paper 
+            sx={{ 
+              p: 3, 
+              mb: 4, 
+              borderRadius: 3,
+              background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.02)} 0%, ${alpha(theme.palette.secondary.main, 0.02)} 100%)`,
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 3,
+                background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                borderRadius: '3px 3px 0 0'
+              }
+            }}
+          >
+            <Stack direction="row" alignItems="center" mb={3}>
+              <Timeline sx={{ mr: 2, color: theme.palette.primary.main }} />
+              <Typography variant="h5" fontWeight="bold" sx={{ color: theme.palette.primary.main }}>
+                Activity Feed
+              </Typography>
+            </Stack>
+            
+            <List sx={{ py: 0 }}>
+              {recentActivity.map((activity, index) => (
+                <ListItem key={activity.id} sx={{ px: 0, py: 2 }}>
                   <ListItemIcon>
                     <Avatar 
                       sx={{ 
-                        width: 32, 
-                        height: 32, 
+                        width: 36, 
+                        height: 36, 
                         bgcolor: alpha(theme.palette[activity.color as keyof typeof theme.palette].main, 0.1),
-                        color: theme.palette[activity.color as keyof typeof theme.palette].main
+                        color: theme.palette[activity.color as keyof typeof theme.palette].main,
+                        border: `2px solid ${alpha(theme.palette[activity.color as keyof typeof theme.palette].main, 0.2)}`
                       }}
                     >
                       {activity.icon}
                     </Avatar>
                   </ListItemIcon>
                   <ListItemText
-                    primary={activity.title}
+                    primary={
+                      <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                        {activity.title}
+                      </Typography>
+                    }
                     secondary={
-                      <>
+                      <Stack spacing={0.5}>
                         <Typography variant="body2" color="text.secondary">
                           {activity.description}
                         </Typography>
-                        <Typography variant="caption" color="text.disabled">
+                        <Typography variant="caption" color="text.disabled" sx={{ fontWeight: 'medium' }}>
                           {activity.time}
                         </Typography>
-                      </>
+                      </Stack>
                     }
                   />
+                  {index < recentActivity.length - 1 && (
+                    <Divider sx={{ mt: 2, opacity: 0.3 }} />
+                  )}
                 </ListItem>
               ))}
             </List>
+            
             {recentActivity.length === 0 && (
-              <Box textAlign="center" py={3}>
-                <Timeline sx={{ fontSize: 36, color: 'text.disabled', mb: 1 }} />
-                <Typography variant="body2" color="text.secondary">
+              <Box textAlign="center" py={4}>
+                <Timeline sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+                <Typography variant="h6" color="text.secondary" gutterBottom>
                   No recent activity
+                </Typography>
+                <Typography variant="body2" color="text.disabled">
+                  Start applying to jobs to see your activity here
                 </Typography>
               </Box>
             )}
           </Paper>
 
-          {/* Tips & Progress */}
-          <Paper sx={{ p: 3, borderRadius: 2 }}>
-            <Typography variant="h6" fontWeight="bold" gutterBottom mb={2}>
-              💡 Quick Tips
-            </Typography>
+          {/* Modern Tips & Insights */}
+          <Paper 
+            sx={{ 
+              p: 3, 
+              borderRadius: 3,
+              background: `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.02)} 0%, ${alpha(theme.palette.success.main, 0.02)} 100%)`,
+              border: `1px solid ${alpha(theme.palette.warning.main, 0.15)}`,
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 3,
+                background: `linear-gradient(90deg, ${theme.palette.warning.main}, ${theme.palette.success.main})`,
+                borderRadius: '3px 3px 0 0'
+              }
+            }}
+          >
+            <Stack direction="row" alignItems="center" mb={3}>
+              <Lightbulb sx={{ mr: 2, color: theme.palette.warning.main }} />
+              <Typography variant="h5" fontWeight="bold" sx={{ color: theme.palette.warning.main }}>
+                Career Insights
+              </Typography>
+            </Stack>
             
             <Stack spacing={2}>
-              <Alert severity="info" sx={{ border: 'none' }}>
-                <Typography variant="body2">
-                  <strong>Profile Tip:</strong> Complete your profile to get {isProfileComplete ? 'more' : 'better'} job matches
+              <Alert 
+                severity="info" 
+                sx={{ 
+                  border: 'none',
+                  borderRadius: 2,
+                  '& .MuiAlert-icon': {
+                    fontSize: '1.5rem'
+                  }
+                }}
+              >
+                <Typography variant="body2" fontWeight="medium">
+                  <strong>Profile Boost:</strong> Complete your profile to get {isProfileComplete ? 'more' : 'better'} job matches
                 </Typography>
               </Alert>
               
               {profileCompletion < 100 && (
-                <Alert severity="warning" sx={{ border: 'none' }}>
-                  <Typography variant="body2">
-                    <strong>Profile:</strong> {profileCompletion}% complete
+                <Alert 
+                  severity="warning" 
+                  sx={{ 
+                    border: 'none',
+                    borderRadius: 2,
+                    '& .MuiAlert-icon': {
+                      fontSize: '1.5rem'
+                    }
+                  }}
+                >
+                  <Typography variant="body2" fontWeight="medium" gutterBottom>
+                    <strong>Profile Completion:</strong> {profileCompletion}% complete
                   </Typography>
                   <LinearProgress 
                     variant="determinate" 
                     value={profileCompletion} 
-                    sx={{ mt: 1, borderRadius: 1 }}
+                    sx={{ 
+                      mt: 1, 
+                      borderRadius: 2,
+                      height: 8,
+                      bgcolor: alpha(theme.palette.warning.main, 0.1),
+                      '& .MuiLinearProgress-bar': {
+                        borderRadius: 2
+                      }
+                    }}
                   />
                 </Alert>
               )}
               
-              <Alert severity="success" sx={{ border: 'none' }}>
-                <Typography variant="body2">
-                  <strong>Success Rate:</strong> Take psychometric tests to increase your application success rate by 40%
+              <Alert 
+                severity="success" 
+                sx={{ 
+                  border: 'none',
+                  borderRadius: 2,
+                  '& .MuiAlert-icon': {
+                    fontSize: '1.5rem'
+                  }
+                }}
+              >
+                <Typography variant="body2" fontWeight="medium">
+                  <strong>Pro Tip:</strong> Take psychometric tests to boost your application success rate by 40%
                 </Typography>
               </Alert>
               
               <Button
-                variant="outlined"
+                variant="contained"
                 fullWidth
                 startIcon={<Lightbulb />}
                 onClick={() => forceNavigate('/app/career-guidance', 'career guidance')}
                 sx={{ 
                   textTransform: 'none',
-                  mt: 1
+                  mt: 2,
+                  borderRadius: 2,
+                  fontWeight: 'bold',
+                  background: `linear-gradient(45deg, ${theme.palette.warning.main}, ${theme.palette.success.main})`,
+                  '&:hover': {
+                    boxShadow: `0 8px 25px ${alpha(theme.palette.warning.main, 0.4)}`,
+                    transform: 'translateY(-2px)'
+                  }
                 }}
               >
-                Get Career Guidance
+                Get Personalized Career Guidance
               </Button>
             </Stack>
           </Paper>

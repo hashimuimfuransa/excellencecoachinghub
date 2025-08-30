@@ -18,7 +18,10 @@ import {
   useTheme,
   Divider,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  TextField,
+  InputAdornment,
+  alpha
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -37,7 +40,8 @@ import {
   TrendingUp,
   Group,
   Public,
-  Psychology
+  Psychology,
+  Search
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -54,6 +58,7 @@ const Navbar: React.FC = () => {
   
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -71,6 +76,12 @@ const Navbar: React.FC = () => {
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
+  };
+
+  const handleSearch = (e: React.KeyboardEvent | React.MouseEvent) => {
+    if (searchTerm.trim()) {
+      navigate(`/jobs?search=${encodeURIComponent(searchTerm.trim())}`);
+    }
   };
 
   const menuItems = [
@@ -99,7 +110,7 @@ const Navbar: React.FC = () => {
       <List>
         {menuItems.filter(item => !item.protected || user).map((item) => (
           <ListItem
-            button
+            component="button"
             key={item.text}
             onClick={() => {
               navigate(item.path);
@@ -252,6 +263,38 @@ const Navbar: React.FC = () => {
                   {item.text}
                 </Button>
               ))}
+            </Box>
+          )}
+
+          {!isMobile && location.pathname === '/jobs' && (
+            <Box sx={{ mx: 2 }}>
+              <TextField
+                size="small"
+                placeholder="Search jobs..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch(e)}
+                sx={{
+                  width: 300,
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: alpha(theme.palette.background.paper, 0.8),
+                    borderRadius: 2,
+                    '&:hover': {
+                      backgroundColor: alpha(theme.palette.background.paper, 0.9),
+                    },
+                    '&.Mui-focused': {
+                      backgroundColor: theme.palette.background.paper,
+                    }
+                  }
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search sx={{ color: 'text.secondary' }} />
+                    </InputAdornment>
+                  ),
+                }}
+              />
             </Box>
           )}
 

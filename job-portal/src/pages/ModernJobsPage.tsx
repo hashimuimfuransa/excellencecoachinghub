@@ -374,8 +374,8 @@ const ModernJobsPage: React.FC = () => {
           className="modern-job-card"
           sx={{
             width: '100%',
-            minHeight: 280,
-            maxHeight: 320,
+            minHeight: 380,
+            maxHeight: 450,
             display: 'flex',
             flexDirection: 'column',
             borderRadius: 3,
@@ -739,7 +739,7 @@ const ModernJobsPage: React.FC = () => {
 
   // Skeleton Cards
   const SkeletonCard = () => (
-    <Card sx={{ height: 320, borderRadius: 3 }}>
+    <Card sx={{ height: 380, borderRadius: 3 }}>
       <CardContent sx={{ p: 2 }}>
         <Box display="flex" alignItems="center" mb={2}>
           <Skeleton variant="circular" width={44} height={44} sx={{ mr: 2 }} />
@@ -941,7 +941,7 @@ const ModernJobsPage: React.FC = () => {
         {jobsState.jobs.length > 0 ? (
           <Grid container spacing={3}>
             {jobsState.jobs.map((job, index) => (
-              <Grid item xs={12} sm={6} lg={4} key={job._id}>
+              <Grid item xs={12} sm={6} md={3} key={job._id}>
                 <JobCard job={job} index={index} />
               </Grid>
             ))}
@@ -949,7 +949,7 @@ const ModernJobsPage: React.FC = () => {
         ) : jobsState.loading ? (
           <Grid container spacing={3}>
             {Array.from({ length: SKELETON_COUNT }).map((_, index) => (
-              <Grid item xs={12} sm={6} lg={4} key={index}>
+              <Grid item xs={12} sm={6} md={3} key={index}>
                 <SkeletonCard />
               </Grid>
             ))}

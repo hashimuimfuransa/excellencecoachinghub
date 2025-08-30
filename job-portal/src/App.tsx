@@ -87,7 +87,7 @@ function App() {
         <Router>
           <Routes>
             {/* Public Routes */}
-            <Route path="/" element={<HomePage />} />
+            <Route path="/" element={<AllJobsPage />} />
             <Route path="/jobs" element={<AllJobsPage />} />
             <Route path="/jobs/:id" element={<JobDetailsPage />} />
             <Route path="/login" element={<LoginPage />} />
@@ -96,6 +96,7 @@ function App() {
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/companies" element={<CompaniesPage />} />
             <Route path="/support" element={<SupportPage />} />
+            <Route path="/home" element={<HomePage />} />
             
             {/* CV Upload Test - Public for testing */}
             <Route path="/cv-upload-test" element={<CVUploadTest />} />

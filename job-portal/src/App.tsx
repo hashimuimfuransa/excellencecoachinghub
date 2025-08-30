@@ -12,8 +12,6 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
-import DashboardPage from './pages/DashboardPage';
-import ModernDashboardPage from './pages/ModernDashboardPage';
 import JobsPage from './pages/ModernJobsPage';
 import JobDetailsPage from './pages/JobDetailsPage';
 import ApplicationsPage from './pages/ApplicationsPage';
@@ -174,10 +172,6 @@ function App() {
             >
               {/* Default redirect to community page (network) */}
               <Route index element={<Navigate to="network" replace />} />
-              
-              {/* Dashboard */}
-              <Route path="dashboard" element={<ModernDashboardPage />} />
-              <Route path="dashboard/legacy" element={<DashboardPage />} />
               
               {/* Jobs */}
               <Route path="jobs" element={<JobsPage />} />

@@ -110,11 +110,11 @@ const MainLayout: React.FC = () => {
     ? drawerWidth 
     : (desktopOpen || hovered) ? drawerWidth : drawerWidthClosed;
 
-  // Reset career test check when navigating to dashboard pages
+  // Reset career test check when navigating to home page
   useEffect(() => {
-    const isDashboardPage = location.pathname === '/app' || location.pathname === '/app/dashboard' || location.pathname === '/app/';
-    if (isDashboardPage && hasCheckedCareerTest) {
-      console.log('🔄 [ExJobNet] Resetting career test check for dashboard visit');
+    const isHomePage = location.pathname === '/app' || location.pathname === '/app/network' || location.pathname === '/app/';
+    if (isHomePage && hasCheckedCareerTest) {
+      console.log('🔄 [ExJobNet] Resetting career test check for home visit');
       setHasCheckedCareerTest(false);
     }
   }, [location.pathname, hasCheckedCareerTest]);
@@ -141,11 +141,11 @@ const MainLayout: React.FC = () => {
         return;
       }
       
-      // Only show popup on dashboard pages
-      const dashboardPages = ['/app', '/app/dashboard', '/app/'];
-      const isDashboard = dashboardPages.includes(location.pathname);
-      if (!isDashboard) {
-        console.log('❌ [Job Portal] Skipping career popup - not on dashboard page');
+      // Only show popup on home page
+      const homePages = ['/app', '/app/network', '/app/'];
+      const isHome = homePages.includes(location.pathname);
+      if (!isHome) {
+        console.log('❌ [Job Portal] Skipping career popup - not on home page');
         return;
       }
 
@@ -221,14 +221,8 @@ const MainLayout: React.FC = () => {
     // For job seekers (students or professionals)
     const isJobSeekerView = isStudent || isJobSeeker;
 
-    // Common items for all users
-    const commonItems: NavItem[] = [
-      {
-        label: 'Dashboard',
-        path: isEmployer ? '/app/employer/dashboard' : '/app/dashboard',
-        icon: <Dashboard />,
-      }
-    ];
+    // Common items for all users - Start with Network as main page
+    const commonItems: NavItem[] = [];
 
     // Job seeker specific items
     const jobSeekerItems: NavItem[] = [
@@ -370,9 +364,9 @@ const MainLayout: React.FC = () => {
     // Network and Social items (for all users)
     const networkItems: NavItem[] = [
       {
-        label: 'Community',
+        label: 'Home',
         path: '/app/network',
-        icon: <People />,
+        icon: <Dashboard />,
       },
       {
         label: 'Connections',
@@ -873,7 +867,7 @@ const MainLayout: React.FC = () => {
             {/* Enhanced Logo */}
             <Box 
               component={Link} 
-              to="/app/dashboard"
+              to="/app/network"
               sx={{ 
                 display: { xs: 'none', md: 'flex' },
                 alignItems: 'center', 

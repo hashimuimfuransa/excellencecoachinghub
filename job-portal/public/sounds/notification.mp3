@@ -1,0 +1,9 @@
+# This is a placeholder for the notification sound file
+# In a real application, you would place an actual MP3 audio file here
+# You can use sounds from https://pixabay.com/sound-effects/ or record your own
+# Example sounds:
+# - A gentle "ding" or "chime" sound for regular notifications
+# - A more prominent sound for urgent notifications
+# - Different sounds for different types of notifications (message, connection, etc.)
+
+# For now, the browser will gracefully handle the missing audio file

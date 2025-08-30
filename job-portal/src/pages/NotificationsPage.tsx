@@ -16,6 +16,15 @@ import {
   Alert,
   Divider,
   useTheme,
+  Switch,
+  FormControlLabel,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Fab,
+  Snackbar,
+  Card,
+  CardContent,
 } from '@mui/material';
 import {
   Notifications as NotificationsIcon,
@@ -27,21 +36,89 @@ import {
   Event,
   MarkEmailRead,
   DeleteSweep,
+  Settings,
+  ExpandMore,
+  TestTube,
+  VolumeUp,
+  VolumeOff,
+  Vibration,
+  NotificationsActive,
+  NotificationsOff,
 } from '@mui/icons-material';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { notificationService, Notification } from '../services/notificationService';
+import { realTimeNotificationService, NotificationPreferences } from '../services/realTimeNotificationService';
+import { useAuth } from '../contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 
 const NotificationsPage: React.FC = () => {
   const theme = useTheme();
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [preferences, setPreferences] = useState<NotificationPreferences>({
+    email: true,
+    push: true,
+    inApp: true,
+    sound: true,
+    vibration: true,
+    connectionRequests: true,
+    messages: true,
+    jobMatches: true,
+    courseUpdates: true,
+    systemNotifications: true,
+  });
+  const [realTimeConnected, setRealTimeConnected] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     loadNotifications();
+    initializeRealTimeNotifications();
+    
+    return () => {
+      realTimeNotificationService.disconnect();
+    };
   }, []);
+
+  const initializeRealTimeNotifications = async () => {
+    if (!user) return;
+
+    try {
+      await realTimeNotificationService.init(user._id);
+      setPreferences(realTimeNotificationService.getPreferences());
+      setUnreadCount(realTimeNotificationService.getUnreadCount());
+
+      // Listen for real-time events
+      realTimeNotificationService.on('socket-connected', setRealTimeConnected);
+      realTimeNotificationService.on('new-notification', handleNewNotification);
+      realTimeNotificationService.on('unread-count-changed', setUnreadCount);
+      realTimeNotificationService.on('notification-read', handleNotificationRead);
+      realTimeNotificationService.on('notification-deleted', handleNotificationDeleted);
+    } catch (error) {
+      console.error('Error initializing real-time notifications:', error);
+    }
+  };
+
+  const handleNewNotification = (notification: any) => {
+    setNotifications(prev => [notification, ...prev]);
+    setSuccessMessage('New notification received!');
+    setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
+  const handleNotificationRead = (data: { notificationId: string }) => {
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif._id === data.notificationId ? { ...notif, isRead: true } : notif
+      )
+    );
+  };
+
+  const handleNotificationDeleted = (data: { notificationId: string }) => {
+    setNotifications(prev => prev.filter(notif => notif._id !== data.notificationId));
+  };
 
   const loadNotifications = async () => {
     try {
@@ -59,7 +136,7 @@ const NotificationsPage: React.FC = () => {
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {
-      await notificationService.markAsRead(notificationId);
+      await realTimeNotificationService.markAsRead(notificationId);
       setNotifications(prev => 
         prev.map(notif => 
           notif._id === notificationId ? { ...notif, isRead: true } : notif
@@ -72,7 +149,7 @@ const NotificationsPage: React.FC = () => {
 
   const handleMarkAllAsRead = async () => {
     try {
-      await notificationService.markAllAsRead();
+      await realTimeNotificationService.markAllAsRead();
       setNotifications(prev => prev.map(notif => ({ ...notif, isRead: true })));
       setSuccessMessage('All notifications marked as read');
       setTimeout(() => setSuccessMessage(null), 3000);
@@ -85,13 +162,42 @@ const NotificationsPage: React.FC = () => {
 
   const handleDeleteNotification = async (notificationId: string) => {
     try {
-      await notificationService.deleteNotification(notificationId);
+      await realTimeNotificationService.deleteNotification(notificationId);
       setNotifications(prev => prev.filter(notif => notif._id !== notificationId));
       setSuccessMessage('Notification deleted');
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (error) {
       console.error('Error deleting notification:', error);
       setError('Failed to delete notification');
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
+  const handlePreferenceChange = async (key: keyof NotificationPreferences, value: boolean) => {
+    const newPreferences = { ...preferences, [key]: value };
+    setPreferences(newPreferences);
+    
+    try {
+      await realTimeNotificationService.updatePreferences({ [key]: value });
+      setSuccessMessage('Preferences updated successfully');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (error) {
+      console.error('Error updating preferences:', error);
+      setError('Failed to update preferences');
+      setTimeout(() => setError(null), 3000);
+      // Revert the change
+      setPreferences(preferences);
+    }
+  };
+
+  const handleTestNotification = async () => {
+    try {
+      await realTimeNotificationService.testNotification();
+      setSuccessMessage('Test notification sent!');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (error) {
+      console.error('Error sending test notification:', error);
+      setError('Failed to send test notification');
       setTimeout(() => setError(null), 3000);
     }
   };
@@ -129,7 +235,7 @@ const NotificationsPage: React.FC = () => {
     }
   };
 
-  const unreadCount = notifications.filter(notif => !notif.isRead).length;
+  const displayUnreadCount = unreadCount || notifications.filter(notif => !notif.isRead).length;
 
   if (loading) {
     return (
@@ -149,8 +255,8 @@ const NotificationsPage: React.FC = () => {
         transition={{ duration: 0.5 }}
       >
         {/* Header */}
-        <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
             <Typography
               variant="h4"
               sx={{
@@ -163,27 +269,189 @@ const NotificationsPage: React.FC = () => {
             >
               Notifications
             </Typography>
-            {unreadCount > 0 && (
+            {displayUnreadCount > 0 && (
               <Chip
-                label={`${unreadCount} unread`}
+                label={`${displayUnreadCount} unread`}
                 color="error"
                 size="small"
                 sx={{ fontWeight: 600 }}
               />
             )}
+            <Chip
+              icon={realTimeConnected ? <NotificationsActive /> : <NotificationsOff />}
+              label={realTimeConnected ? 'Live' : 'Offline'}
+              color={realTimeConnected ? 'success' : 'default'}
+              size="small"
+              variant="outlined"
+            />
           </Box>
           
-          {unreadCount > 0 && (
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             <Button
               variant="outlined"
-              startIcon={<MarkEmailRead />}
-              onClick={handleMarkAllAsRead}
+              startIcon={<TestTube />}
+              onClick={handleTestNotification}
+              size="small"
               sx={{ textTransform: 'none' }}
             >
-              Mark All Read
+              Test
             </Button>
-          )}
+            {displayUnreadCount > 0 && (
+              <Button
+                variant="outlined"
+                startIcon={<MarkEmailRead />}
+                onClick={handleMarkAllAsRead}
+                sx={{ textTransform: 'none' }}
+              >
+                Mark All Read
+              </Button>
+            )}
+            <Button
+              variant="contained"
+              startIcon={<Settings />}
+              onClick={() => setShowSettings(!showSettings)}
+              sx={{ textTransform: 'none' }}
+            >
+              Settings
+            </Button>
+          </Box>
         </Box>
+
+        {/* Notification Settings */}
+        <AnimatePresence>
+          {showSettings && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card sx={{ mb: 3 }}>
+                <CardContent>
+                  <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Settings /> Notification Preferences
+                  </Typography>
+                  
+                  {/* General Settings */}
+                  <Accordion>
+                    <AccordionSummary expandIcon={<ExpandMore />}>
+                      <Typography variant="subtitle1">General Settings</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={preferences.inApp}
+                              onChange={(e) => handlePreferenceChange('inApp', e.target.checked)}
+                            />
+                          }
+                          label="In-app notifications"
+                        />
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={preferences.push}
+                              onChange={(e) => handlePreferenceChange('push', e.target.checked)}
+                            />
+                          }
+                          label="Push notifications"
+                        />
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={preferences.email}
+                              onChange={(e) => handlePreferenceChange('email', e.target.checked)}
+                            />
+                          }
+                          label="Email notifications"
+                        />
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={preferences.sound}
+                              onChange={(e) => handlePreferenceChange('sound', e.target.checked)}
+                              icon={<VolumeOff />}
+                              checkedIcon={<VolumeUp />}
+                            />
+                          }
+                          label="Notification sounds"
+                        />
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={preferences.vibration}
+                              onChange={(e) => handlePreferenceChange('vibration', e.target.checked)}
+                              icon={<Vibration sx={{ opacity: 0.3 }} />}
+                              checkedIcon={<Vibration />}
+                            />
+                          }
+                          label="Vibration (mobile)"
+                        />
+                      </Box>
+                    </AccordionDetails>
+                  </Accordion>
+
+                  {/* Notification Types */}
+                  <Accordion>
+                    <AccordionSummary expandIcon={<ExpandMore />}>
+                      <Typography variant="subtitle1">Notification Types</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={preferences.connectionRequests}
+                              onChange={(e) => handlePreferenceChange('connectionRequests', e.target.checked)}
+                            />
+                          }
+                          label="Connection requests"
+                        />
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={preferences.messages}
+                              onChange={(e) => handlePreferenceChange('messages', e.target.checked)}
+                            />
+                          }
+                          label="Messages"
+                        />
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={preferences.jobMatches}
+                              onChange={(e) => handlePreferenceChange('jobMatches', e.target.checked)}
+                            />
+                          }
+                          label="Job matches"
+                        />
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={preferences.courseUpdates}
+                              onChange={(e) => handlePreferenceChange('courseUpdates', e.target.checked)}
+                            />
+                          }
+                          label="Course updates"
+                        />
+                        <FormControlLabel
+                          control={
+                            <Switch
+                              checked={preferences.systemNotifications}
+                              onChange={(e) => handlePreferenceChange('systemNotifications', e.target.checked)}
+                            />
+                          }
+                          label="System notifications"
+                        />
+                      </Box>
+                    </AccordionDetails>
+                  </Accordion>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Success/Error Messages */}
         {error && (
@@ -315,6 +583,31 @@ const NotificationsPage: React.FC = () => {
             </List>
           )}
         </Paper>
+
+        {/* Floating Action Button for Settings */}
+        <Fab
+          color="primary"
+          aria-label="settings"
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+            zIndex: 1000,
+            display: { xs: 'flex', md: 'none' } // Only show on mobile
+          }}
+          onClick={() => setShowSettings(!showSettings)}
+        >
+          <Settings />
+        </Fab>
+
+        {/* Snackbar for success messages */}
+        <Snackbar
+          open={!!successMessage}
+          autoHideDuration={3000}
+          onClose={() => setSuccessMessage(null)}
+          message={successMessage}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        />
       </motion.div>
     </Container>
   );

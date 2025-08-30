@@ -95,6 +95,12 @@ class ChatService {
 
     this.socket.on('new-message', (data: { chatId: string; message: Message }) => {
       this.emit('new-message', data);
+      
+      // Update unread count for the chat
+      this.emit('chat-unread-updated', { 
+        chatId: data.chatId, 
+        unreadCount: 1 // increment by 1
+      });
     });
 
     this.socket.on('messages-read', (data: { chatId: string; readBy: string }) => {

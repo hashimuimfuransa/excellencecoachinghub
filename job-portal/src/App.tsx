@@ -5,6 +5,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './layouts/MainLayout';
 import { initEmailJS } from './services/emailjsService';
+import { pushNotificationService } from './services/pushNotificationService';
 
 // Import all pages
 import HomePage from './pages/HomePage';
@@ -74,9 +75,12 @@ import FloatingChatButton from './components/chat/FloatingChatButton';
 import MessagesPage from './pages/MessagesPage';
 
 function App() {
-  // Initialize EmailJS on app start
+  // Initialize services on app start
   useEffect(() => {
     initEmailJS();
+    
+    // Initialize push notifications
+    pushNotificationService.init().catch(console.error);
   }, []);
 
   return (

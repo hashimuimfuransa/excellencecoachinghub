@@ -65,7 +65,7 @@ class PushNotificationService {
       await this.requestPermission();
       
       // Subscribe to push notifications if permission granted
-      if (Notification.permission === 'granted') {
+      if (window.Notification && window.Notification.permission === 'granted') {
         await this.subscribeUser();
       }
     } catch (error) {
@@ -77,10 +77,14 @@ class PushNotificationService {
    * Request notification permission from user
    */
   async requestPermission(): Promise<NotificationPermission> {
-    let permission = Notification.permission;
+    if (!window.Notification) {
+      return 'denied';
+    }
+    
+    let permission = window.Notification.permission;
 
     if (permission === 'default') {
-      permission = await Notification.requestPermission();
+      permission = await window.Notification.requestPermission();
     }
 
     if (permission === 'granted') {
@@ -197,7 +201,7 @@ class PushNotificationService {
     try {
       if (!this.swRegistration) {
         // Fallback to browser notification if service worker not available
-        new Notification(payload.title, {
+        new window.Notification(payload.title, {
           body: payload.body,
           icon: payload.icon,
           badge: payload.badge,

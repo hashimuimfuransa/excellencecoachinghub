@@ -152,7 +152,7 @@ class RealTimeNotificationService {
       }
 
       // Show desktop notification if page is not visible
-      if (document.hidden && Notification.permission === 'granted') {
+      if (document.hidden && window.Notification && window.Notification.permission === 'granted') {
         await this.showDesktopNotification(notification);
       }
 
@@ -208,7 +208,7 @@ class RealTimeNotificationService {
    * Show desktop notification
    */
   private async showDesktopNotification(notification: RealtimeNotification): Promise<void> {
-    const desktopNotification = new Notification(notification.title, {
+    const desktopNotification = new window.Notification(notification.title, {
       body: notification.message,
       icon: this.getNotificationIcon(notification.type),
       badge: '/logo192.png',

@@ -830,264 +830,829 @@ const AllJobsPage: React.FC = () => {
       <Container maxWidth="xl">
 
 
-        {/* Services Overview Section */}
-        <Paper
-          sx={{ 
-            p: 1.5, 
-            mb: 2, 
-            borderRadius: 2,
-            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.02)} 0%, ${alpha(theme.palette.secondary.main, 0.02)} 100%)`,
-            boxShadow: '0 1px 4px rgba(0, 0, 0, 0.1)',
-            border: `1px solid ${alpha(theme.palette.divider, 0.2)}`
-          }}
-        >
-          <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main', mb: 2, textAlign: 'center' }}>
-            🌟 Our Complete Career Development Platform
-          </Typography>
-          
-          {/* Services Grid */}
-          <Grid container spacing={1}>
-            <Grid item xs={6} sm={3} md={2}>
-              <Card sx={{ 
-                textAlign: 'center', 
-                p: 1, 
-                height: '100%',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                '&:hover': { 
-                  transform: 'translateY(-2px)', 
-                  boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`
-                }
-              }} onClick={() => navigate('/jobs')}>
-                <Work sx={{ fontSize: 24, color: 'primary.main', mb: 0.5 }} />
-                <Typography variant="caption" fontWeight="bold" display="block" sx={{ fontSize: '0.75rem' }}>
-                  Job Portal
-                </Typography>
-              </Card>
-            </Grid>
-            
-            <Grid item xs={6} sm={3} md={2}>
-              <Card sx={{ 
-                textAlign: 'center', 
-                p: 1, 
-                height: '100%',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                '&:hover': { 
-                  transform: 'translateY(-2px)', 
-                  boxShadow: `0 4px 12px ${alpha(theme.palette.secondary.main, 0.2)}`
-                }
-              }} onClick={() => navigate('/app/interviews')}>
-                <SmartToy sx={{ fontSize: 24, color: 'secondary.main', mb: 0.5 }} />
-                <Typography variant="caption" fontWeight="bold" display="block" sx={{ fontSize: '0.75rem' }}>
-                  AI Interviews
-                </Typography>
-              </Card>
-            </Grid>
-
-            <Grid item xs={6} sm={3} md={2}>
-              <Card sx={{ 
-                textAlign: 'center', 
-                p: 1, 
-                height: '100%',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                '&:hover': { 
-                  transform: 'translateY(-2px)', 
-                  boxShadow: `0 4px 12px ${alpha(theme.palette.info.main, 0.2)}`
-                }
-              }} onClick={() => navigate('/app/tests')}>
-                <Assessment sx={{ fontSize: 24, color: 'info.main', mb: 0.5 }} />
-                <Typography variant="caption" fontWeight="bold" display="block" sx={{ fontSize: '0.75rem' }}>
-                  Psychometric Tests
-                </Typography>
-              </Card>
-            </Grid>
-
-            <Grid item xs={6} sm={3} md={2}>
-              <Card sx={{ 
-                textAlign: 'center', 
-                p: 1, 
-                height: '100%',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                '&:hover': { 
-                  transform: 'translateY(-2px)', 
-                  boxShadow: `0 4px 12px ${alpha(theme.palette.success.main, 0.2)}`
-                }
-              }} onClick={() => navigate('/app/cv-builder')}>
-                <Description sx={{ fontSize: 24, color: 'success.main', mb: 0.5 }} />
-                <Typography variant="caption" fontWeight="bold" display="block" sx={{ fontSize: '0.75rem' }}>
-                  CV Builder
-                </Typography>
-              </Card>
-            </Grid>
-
-            <Grid item xs={6} sm={3} md={2}>
-              <Card sx={{ 
-                textAlign: 'center', 
-                p: 1, 
-                height: '100%',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                '&:hover': { 
-                  transform: 'translateY(-2px)', 
-                  boxShadow: `0 4px 12px ${alpha(theme.palette.warning.main, 0.2)}`
-                }
-              }} onClick={() => navigate('/app/career-guidance')}>
-                <Psychology sx={{ fontSize: 24, color: 'warning.main', mb: 0.5 }} />
-                <Typography variant="caption" fontWeight="bold" display="block" sx={{ fontSize: '0.75rem' }}>
-                  Career Guidance
-                </Typography>
-              </Card>
-            </Grid>
-
-            <Grid item xs={6} sm={3} md={2}>
-              <Card sx={{ 
-                textAlign: 'center', 
-                p: 1, 
-                height: '100%',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                '&:hover': { 
-                  transform: 'translateY(-2px)', 
-                  boxShadow: `0 4px 12px ${alpha(theme.palette.error.main, 0.2)}`
-                }
-              }} onClick={() => navigate('/app/network')}>
-                <Groups sx={{ fontSize: 24, color: 'error.main', mb: 0.5 }} />
-                <Typography variant="caption" fontWeight="bold" display="block" sx={{ fontSize: '0.75rem' }}>
-                  Professional Network
-                </Typography>
-              </Card>
-            </Grid>
-
-            <Grid item xs={6} sm={3} md={2}>
-              <Card sx={{ 
-                textAlign: 'center', 
-                p: 1, 
-                height: '100%',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                '&:hover': { 
-                  transform: 'translateY(-2px)', 
-                  boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`
-                }
-              }} onClick={() => navigate('/app/courses')}>
-                <School sx={{ fontSize: 24, color: 'primary.main', mb: 0.5 }} />
-                <Typography variant="caption" fontWeight="bold" display="block" sx={{ fontSize: '0.75rem' }}>
-                  Learning Courses
-                </Typography>
-              </Card>
-            </Grid>
-
-            <Grid item xs={6} sm={3} md={2}>
-              <Card sx={{ 
-                textAlign: 'center', 
-                p: 1, 
-                height: '100%',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                '&:hover': { 
-                  transform: 'translateY(-2px)', 
-                  boxShadow: `0 4px 12px ${alpha(theme.palette.secondary.main, 0.2)}`
-                }
-              }} onClick={() => navigate('/app/certificates')}>
-                <EmojiEvents sx={{ fontSize: 24, color: 'secondary.main', mb: 0.5 }} />
-                <Typography variant="caption" fontWeight="bold" display="block" sx={{ fontSize: '0.75rem' }}>
-                  Certificates
-                </Typography>
-              </Card>
-            </Grid>
-
-            <Grid item xs={6} sm={3} md={2}>
-              <Card sx={{ 
-                textAlign: 'center', 
-                p: 1, 
-                height: '100%',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                '&:hover': { 
-                  transform: 'translateY(-2px)', 
-                  boxShadow: `0 4px 12px ${alpha(theme.palette.info.main, 0.2)}`
-                }
-              }} onClick={() => navigate('/app/smart-tests')}>
-                <Code sx={{ fontSize: 24, color: 'info.main', mb: 0.5 }} />
-                <Typography variant="caption" fontWeight="bold" display="block" sx={{ fontSize: '0.75rem' }}>
-                  Smart Tests
-                </Typography>
-              </Card>
-            </Grid>
-
-            <Grid item xs={6} sm={3} md={2}>
-              <Card sx={{ 
-                textAlign: 'center', 
-                p: 1, 
-                height: '100%',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                '&:hover': { 
-                  transform: 'translateY(-2px)', 
-                  boxShadow: `0 4px 12px ${alpha(theme.palette.success.main, 0.2)}`
-                }
-              }} onClick={() => navigate('/app/career-insights')}>
-                <TrendingUp sx={{ fontSize: 24, color: 'success.main', mb: 0.5 }} />
-                <Typography variant="caption" fontWeight="bold" display="block" sx={{ fontSize: '0.75rem' }}>
-                  Career Insights
-                </Typography>
-              </Card>
-            </Grid>
-
-            <Grid item xs={6} sm={3} md={2}>
-              <Card sx={{ 
-                textAlign: 'center', 
-                p: 1, 
-                height: '100%',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                '&:hover': { 
-                  transform: 'translateY(-2px)', 
-                  boxShadow: `0 4px 12px ${alpha(theme.palette.warning.main, 0.2)}`
-                }
-              }} onClick={() => navigate('/app/messages')}>
-                <Email sx={{ fontSize: 24, color: 'warning.main', mb: 0.5 }} />
-                <Typography variant="caption" fontWeight="bold" display="block" sx={{ fontSize: '0.75rem' }}>
-                  Messaging
-                </Typography>
-              </Card>
-            </Grid>
-
-            <Grid item xs={6} sm={3} md={2}>
-              <Card sx={{ 
-                textAlign: 'center', 
-                p: 1, 
-                height: '100%',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                '&:hover': { 
-                  transform: 'translateY(-2px)', 
-                  boxShadow: `0 4px 12px ${alpha(theme.palette.error.main, 0.2)}`
-                }
-              }} onClick={() => navigate('/companies')}>
-                <Business sx={{ fontSize: 24, color: 'error.main', mb: 0.5 }} />
-                <Typography variant="caption" fontWeight="bold" display="block" sx={{ fontSize: '0.75rem' }}>
-                  Company Profiles
-                </Typography>
-              </Card>
-            </Grid>
-          </Grid>
-        </Paper>
-
-        {/* Category Tabs */}
+        {/* Ultra-Modern Animated Services Section */}
         <Paper 
           sx={{ 
-            mb: 2, 
-            borderRadius: 4,
-            background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.95)} 0%, ${alpha(theme.palette.background.paper, 0.98)} 100%)`,
-            backdropFilter: 'blur(20px)',
-            boxShadow: '0 15px 35px rgba(0,0,0,0.08)',
-            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-            overflow: 'hidden',
+            mb: 3, 
+            p: { xs: 3, md: 4 }, 
+            borderRadius: 6,
+            background: `
+              radial-gradient(circle at 20% 20%, ${alpha(theme.palette.primary.main, 0.05)} 0%, transparent 50%),
+              radial-gradient(circle at 80% 80%, ${alpha(theme.palette.secondary.main, 0.05)} 0%, transparent 50%),
+              radial-gradient(circle at 40% 60%, ${alpha(theme.palette.success.main, 0.03)} 0%, transparent 50%)
+            `,
+            backdropFilter: 'blur(30px)',
+            border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
             position: 'relative',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: '-100%',
+              right: 0,
+              height: 5,
+              background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main}, ${theme.palette.success.main}, ${theme.palette.warning.main}, ${theme.palette.error.main})`,
+              borderRadius: '6px 6px 0 0',
+              animation: 'slideShine 8s infinite linear'
+            },
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              top: -2,
+              left: -2,
+              right: -2,
+              bottom: -2,
+              background: `linear-gradient(45deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.1)}, ${alpha(theme.palette.success.main, 0.1)})`,
+              borderRadius: 8,
+              zIndex: -1,
+              filter: 'blur(20px)',
+              opacity: 0.3
+            },
+            '@keyframes slideShine': {
+              '0%': { left: '-100%' },
+              '100%': { left: '100%' }
+            }
+          }}
+        >
+          {/* Ultra-Modern Animated Header */}
+          <Box sx={{ textAlign: 'center', mb: 5, mt: 2, position: 'relative' }}>
+            {/* Floating Background Elements */}
+            <Box sx={{ 
+              position: 'absolute', 
+              top: -10, 
+              left: '10%', 
+              width: 60, 
+              height: 60, 
+              borderRadius: '50%', 
+              background: `radial-gradient(circle, ${alpha(theme.palette.primary.main, 0.15)} 0%, transparent 70%)`,
+              animation: 'float 6s ease-in-out infinite',
+              '@keyframes float': {
+                '0%, 100%': { transform: 'translateY(0px)' },
+                '50%': { transform: 'translateY(-20px)' }
+              }
+            }} />
+            <Box sx={{ 
+              position: 'absolute', 
+              top: 20, 
+              right: '15%', 
+              width: 40, 
+              height: 40, 
+              borderRadius: '50%', 
+              background: `radial-gradient(circle, ${alpha(theme.palette.secondary.main, 0.15)} 0%, transparent 70%)`,
+              animation: 'float 4s ease-in-out infinite 2s',
+              '@keyframes float': {
+                '0%, 100%': { transform: 'translateY(0px)' },
+                '50%': { transform: 'translateY(-15px)' }
+              }
+            }} />
+            
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 900,
+                background: `linear-gradient(45deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 30%, ${theme.palette.success.main} 60%, ${theme.palette.warning.main} 100%)`,
+                backgroundSize: '300% 100%',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                animation: 'gradientShift 4s ease-in-out infinite',
+                mb: 2,
+                fontSize: { xs: '1.8rem', md: '2.2rem' },
+                letterSpacing: '-0.02em',
+                position: 'relative',
+                '&::after': {
+                  content: '""',
+                  position: 'absolute',
+                  bottom: -5,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: 80,
+                  height: 3,
+                  background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  borderRadius: 2,
+                  animation: 'pulse 2s infinite'
+                },
+                '@keyframes gradientShift': {
+                  '0%, 100%': { backgroundPosition: '0% 50%' },
+                  '50%': { backgroundPosition: '100% 50%' }
+                },
+                '@keyframes pulse': {
+                  '0%, 100%': { opacity: 1, transform: 'translateX(-50%) scaleX(1)' },
+                  '50%': { opacity: 0.7, transform: 'translateX(-50%) scaleX(1.2)' }
+                }
+              }}
+            >
+              🚀 Our Professional Services
+            </Typography>
+            
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                maxWidth: 700, 
+                mx: 'auto',
+                fontSize: { xs: '1rem', md: '1.1rem' },
+                color: 'text.secondary',
+                lineHeight: 1.6,
+                fontWeight: 400,
+                opacity: 0.9,
+                animation: 'fadeInUp 1s ease-out 0.5s both',
+                '@keyframes fadeInUp': {
+                  '0%': { opacity: 0, transform: 'translateY(30px)' },
+                  '100%': { opacity: 0.9, transform: 'translateY(0)' }
+                }
+              }}
+            >
+              Comprehensive tools and professional solutions to accelerate your career growth
+            </Typography>
+            
+            {/* Animated CTA Badge */}
+            <Box sx={{ 
+              mt: 2, 
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 1,
+              px: 3,
+              py: 1,
+              background: `linear-gradient(45deg, ${alpha(theme.palette.success.main, 0.1)}, ${alpha(theme.palette.primary.main, 0.1)})`,
+              borderRadius: 25,
+              border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
+              animation: 'bounce 2s infinite',
+              '@keyframes bounce': {
+                '0%, 20%, 50%, 80%, 100%': { transform: 'translateY(0)' },
+                '40%': { transform: 'translateY(-5px)' },
+                '60%': { transform: 'translateY(-3px)' }
+              }
+            }}>
+              <EmojiEvents sx={{ color: 'warning.main', fontSize: '1.2rem' }} />
+              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                Choose Your Path to Success
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Ultra-Advanced Animated Sliding Services */}
+          <Box sx={{ position: 'relative', overflow: 'hidden' }}>
+            {/* Navigation Controls */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center',
+              gap: 2,
+              mb: 3
+            }}>
+              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                Swipe to Explore Services
+              </Typography>
+              <Box sx={{
+                display: 'flex',
+                gap: 1
+              }}>
+                {[0, 1, 2, 3, 4, 5].map((dot) => (
+                  <Box key={dot} sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: dot === 0 ? theme.palette.primary.main : alpha(theme.palette.primary.main, 0.3),
+                    animation: dot === 0 ? 'dotPulse 2s infinite' : 'none',
+                    '@keyframes dotPulse': {
+                      '0%, 100%': { transform: 'scale(1)' },
+                      '50%': { transform: 'scale(1.2)' }
+                    }
+                  }} />
+                ))}
+              </Box>
+            </Box>
+            
+            {/* Auto-Sliding Container */}
+            <Box
+              sx={{
+                display: 'flex',
+                gap: { xs: 2, md: 3 },
+                overflowX: 'auto',
+                pb: 3,
+                px: 1,
+                scrollBehavior: 'smooth',
+                maskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
+                '&::-webkit-scrollbar': {
+                  height: 10,
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: `linear-gradient(90deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.1)})`,
+                  borderRadius: 10,
+                  margin: '0 20px'
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main}, ${theme.palette.success.main})`,
+                  borderRadius: 10,
+                  border: '2px solid transparent',
+                  backgroundClip: 'content-box',
+                  animation: 'scrollGlow 3s infinite'
+                },
+                '&::-webkit-scrollbar-thumb:hover': {
+                  background: `linear-gradient(90deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark}, ${theme.palette.success.dark})`,
+                },
+                '@keyframes scrollGlow': {
+                  '0%, 100%': { boxShadow: `0 0 5px ${theme.palette.primary.main}` },
+                  '50%': { boxShadow: `0 0 15px ${theme.palette.secondary.main}` }
+                }
+              }}
+            >
+              {/* AI Interviews - Hyper-Animated Card */}
+              <Card sx={{ 
+                minWidth: { xs: 220, md: 260 },
+                height: 180,
+                cursor: 'pointer',
+                borderRadius: 4,
+                position: 'relative',
+                overflow: 'hidden',
+                background: `
+                  radial-gradient(circle at 30% 20%, ${alpha(theme.palette.secondary.main, 0.15)} 0%, transparent 50%),
+                  linear-gradient(135deg, ${alpha(theme.palette.secondary.main, 0.08)} 0%, ${alpha(theme.palette.secondary.main, 0.03)} 100%)
+                `,
+                border: `2px solid ${alpha(theme.palette.secondary.main, 0.2)}`,
+                backdropFilter: 'blur(10px)',
+                animation: 'cardFloat 6s ease-in-out infinite',
+                transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: '-100%',
+                  width: '100%',
+                  height: '100%',
+                  background: `linear-gradient(90deg, transparent, ${alpha(theme.palette.secondary.main, 0.1)}, transparent)`,
+                  transition: 'all 0.6s ease',
+                },
+                '&:hover': { 
+                  transform: 'translateY(-15px) scale(1.05) rotateX(5deg)', 
+                  boxShadow: `
+                    0 25px 50px ${alpha(theme.palette.secondary.main, 0.4)},
+                    0 0 30px ${alpha(theme.palette.secondary.main, 0.2)},
+                    inset 0 1px 0 ${alpha('#fff', 0.1)}
+                  `,
+                  '&::before': {
+                    left: '100%'
+                  },
+                  '& .service-icon': {
+                    transform: 'scale(1.3) rotate(360deg)',
+                    filter: 'drop-shadow(0 0 20px rgba(156, 39, 176, 0.5))'
+                  },
+                  '& .service-bg': {
+                    transform: 'scale(1.5) rotate(45deg)',
+                    opacity: 1
+                  },
+                  '& .service-glow': {
+                    opacity: 0.8,
+                    transform: 'scale(1.2)'
+                  }
+                },
+                '@keyframes cardFloat': {
+                  '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+                  '33%': { transform: 'translateY(-5px) rotate(0.5deg)' },
+                  '66%': { transform: 'translateY(2px) rotate(-0.5deg)' }
+                }
+              }} onClick={() => navigate('/app/interviews')}>
+                {/* Animated Background Elements */}
+                <Box className="service-bg" sx={{
+                  position: 'absolute',
+                  top: -30, right: -30,
+                  width: 100, height: 100,
+                  borderRadius: '50%',
+                  background: `
+                    radial-gradient(circle, ${alpha(theme.palette.secondary.main, 0.3)} 0%, transparent 60%),
+                    conic-gradient(from 0deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark}, ${theme.palette.secondary.main})
+                  `,
+                  animation: 'bgRotate 8s linear infinite',
+                  transition: 'all 0.6s ease',
+                  '@keyframes bgRotate': {
+                    '0%': { transform: 'rotate(0deg)' },
+                    '100%': { transform: 'rotate(360deg)' }
+                  }
+                }} />
+                
+                {/* Glow Effect */}
+                <Box className="service-glow" sx={{
+                  position: 'absolute',
+                  top: 20, left: 20,
+                  width: 40, height: 40,
+                  borderRadius: '50%',
+                  background: `radial-gradient(circle, ${alpha(theme.palette.secondary.main, 0.4)} 0%, transparent 70%)`,
+                  filter: 'blur(10px)',
+                  opacity: 0.6,
+                  transition: 'all 0.6s ease'
+                }} />
+
+                <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', zIndex: 2 }}>
+                  <Box>
+                    <SmartToy className="service-icon" sx={{ 
+                      fontSize: 50, 
+                      color: 'secondary.main', 
+                      mb: 2, 
+                      transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      filter: 'drop-shadow(0 4px 8px rgba(156, 39, 176, 0.2))'
+                    }} />
+                    <Typography variant="h6" sx={{ 
+                      fontWeight: 800, 
+                      color: 'secondary.main', 
+                      mb: 1,
+                      fontSize: '1.1rem',
+                      textShadow: `0 2px 4px ${alpha(theme.palette.secondary.main, 0.3)}`
+                    }}>
+                      AI Interviews
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ 
+                      fontSize: '0.85rem',
+                      lineHeight: 1.4,
+                      fontWeight: 500
+                    }}>
+                      Practice with AI-powered mock interviews
+                    </Typography>
+                  </Box>
+                  
+                  {/* Animated Progress Bar */}
+                  <Box sx={{ 
+                    mt: 2,
+                    height: 3,
+                    background: alpha(theme.palette.secondary.main, 0.2),
+                    borderRadius: 2,
+                    overflow: 'hidden'
+                  }}>
+                    <Box sx={{
+                      height: '100%',
+                      width: '75%',
+                      background: `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.light})`,
+                      borderRadius: 2,
+                      animation: 'progressGlow 2s ease-in-out infinite alternate',
+                      '@keyframes progressGlow': {
+                        '0%': { boxShadow: '0 0 5px rgba(156, 39, 176, 0.5)' },
+                        '100%': { boxShadow: '0 0 15px rgba(156, 39, 176, 0.8)' }
+                      }
+                    }} />
+                  </Box>
+                </CardContent>
+              </Card>
+
+              {/* Smart Tests - Hyper-Animated Card */}
+              <Card sx={{ 
+                minWidth: { xs: 220, md: 260 },
+                height: 180,
+                cursor: 'pointer',
+                borderRadius: 4,
+                position: 'relative',
+                overflow: 'hidden',
+                background: `
+                  radial-gradient(circle at 30% 20%, ${alpha(theme.palette.info.main, 0.15)} 0%, transparent 50%),
+                  linear-gradient(135deg, ${alpha(theme.palette.info.main, 0.08)} 0%, ${alpha(theme.palette.info.main, 0.03)} 100%)
+                `,
+                border: `2px solid ${alpha(theme.palette.info.main, 0.2)}`,
+                backdropFilter: 'blur(10px)',
+                animation: 'cardFloat 6s ease-in-out infinite 1s',
+                transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+                '&:hover': { 
+                  transform: 'translateY(-15px) scale(1.05) rotateY(5deg)', 
+                  boxShadow: `
+                    0 25px 50px ${alpha(theme.palette.info.main, 0.4)},
+                    0 0 30px ${alpha(theme.palette.info.main, 0.2)}
+                  `,
+                  '& .service-icon': {
+                    transform: 'scale(1.3) rotate(-360deg)',
+                    filter: 'drop-shadow(0 0 20px rgba(2, 136, 209, 0.5))'
+                  },
+                  '& .service-bg': {
+                    transform: 'scale(1.5) rotate(-45deg)',
+                    opacity: 1
+                  }
+                }
+              }} onClick={() => navigate('/app/tests')}>
+                <Box className="service-bg" sx={{
+                  position: 'absolute',
+                  top: -30, right: -30,
+                  width: 100, height: 100,
+                  borderRadius: '50%',
+                  background: `conic-gradient(from 45deg, ${theme.palette.info.main}, ${theme.palette.info.light}, ${theme.palette.info.main})`,
+                  animation: 'bgRotate 6s linear infinite reverse',
+                  transition: 'all 0.6s ease'
+                }} />
+                
+                <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', zIndex: 2 }}>
+                  <Box>
+                    <Assessment className="service-icon" sx={{ 
+                      fontSize: 50, 
+                      color: 'info.main', 
+                      mb: 2, 
+                      transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      filter: 'drop-shadow(0 4px 8px rgba(2, 136, 209, 0.2))'
+                    }} />
+                    <Typography variant="h6" sx={{ 
+                      fontWeight: 800, 
+                      color: 'info.main', 
+                      mb: 1,
+                      fontSize: '1.1rem'
+                    }}>
+                      Smart Tests
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ 
+                      fontSize: '0.85rem',
+                      lineHeight: 1.4,
+                      fontWeight: 500
+                    }}>
+                      Advanced psychometric assessments
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ 
+                    mt: 2,
+                    height: 3,
+                    background: alpha(theme.palette.info.main, 0.2),
+                    borderRadius: 2,
+                    overflow: 'hidden'
+                  }}>
+                    <Box sx={{
+                      height: '100%',
+                      width: '85%',
+                      background: `linear-gradient(90deg, ${theme.palette.info.main}, ${theme.palette.info.light})`,
+                      borderRadius: 2,
+                      animation: 'progressGlow 2s ease-in-out infinite alternate'
+                    }} />
+                  </Box>
+                </CardContent>
+              </Card>
+
+              {/* CV Builder - Hyper-Animated Card */}
+              <Card sx={{ 
+                minWidth: { xs: 220, md: 260 },
+                height: 180,
+                cursor: 'pointer',
+                borderRadius: 4,
+                position: 'relative',
+                overflow: 'hidden',
+                background: `
+                  radial-gradient(circle at 30% 20%, ${alpha(theme.palette.success.main, 0.15)} 0%, transparent 50%),
+                  linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.08)} 0%, ${alpha(theme.palette.success.main, 0.03)} 100%)
+                `,
+                border: `2px solid ${alpha(theme.palette.success.main, 0.2)}`,
+                backdropFilter: 'blur(10px)',
+                animation: 'cardFloat 6s ease-in-out infinite 2s',
+                transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+                '&:hover': { 
+                  transform: 'translateY(-15px) scale(1.05) rotateZ(2deg)', 
+                  boxShadow: `
+                    0 25px 50px ${alpha(theme.palette.success.main, 0.4)},
+                    0 0 30px ${alpha(theme.palette.success.main, 0.2)}
+                  `,
+                  '& .service-icon': {
+                    transform: 'scale(1.3) rotateY(180deg)',
+                    filter: 'drop-shadow(0 0 20px rgba(76, 175, 80, 0.5))'
+                  },
+                  '& .service-bg': {
+                    transform: 'scale(1.5) rotate(90deg)',
+                    opacity: 1
+                  }
+                }
+              }} onClick={() => navigate('/app/cv-builder')}>
+                <Box className="service-bg" sx={{
+                  position: 'absolute',
+                  top: -30, right: -30,
+                  width: 100, height: 100,
+                  background: `linear-gradient(45deg, ${alpha(theme.palette.success.main, 0.3)}, ${alpha(theme.palette.success.light, 0.2)})`,
+                  clipPath: 'polygon(0% 0%, 100% 0%, 80% 100%, 0% 80%)',
+                  animation: 'bgPulse 4s ease-in-out infinite',
+                  transition: 'all 0.6s ease',
+                  '@keyframes bgPulse': {
+                    '0%, 100%': { transform: 'scale(1) rotate(0deg)' },
+                    '50%': { transform: 'scale(1.1) rotate(45deg)' }
+                  }
+                }} />
+                
+                <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', zIndex: 2 }}>
+                  <Box>
+                    <Description className="service-icon" sx={{ 
+                      fontSize: 50, 
+                      color: 'success.main', 
+                      mb: 2, 
+                      transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      filter: 'drop-shadow(0 4px 8px rgba(76, 175, 80, 0.2))'
+                    }} />
+                    <Typography variant="h6" sx={{ 
+                      fontWeight: 800, 
+                      color: 'success.main', 
+                      mb: 1,
+                      fontSize: '1.1rem'
+                    }}>
+                      CV Builder
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ 
+                      fontSize: '0.85rem',
+                      lineHeight: 1.4,
+                      fontWeight: 500
+                    }}>
+                      Create professional resumes instantly
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ 
+                    mt: 2,
+                    height: 3,
+                    background: alpha(theme.palette.success.main, 0.2),
+                    borderRadius: 2,
+                    overflow: 'hidden'
+                  }}>
+                    <Box sx={{
+                      height: '100%',
+                      width: '92%',
+                      background: `linear-gradient(90deg, ${theme.palette.success.main}, ${theme.palette.success.light})`,
+                      borderRadius: 2,
+                      animation: 'progressGlow 2s ease-in-out infinite alternate'
+                    }} />
+                  </Box>
+                </CardContent>
+              </Card>
+
+              {/* Career Guidance - Hyper-Animated Card */}
+              <Card sx={{ 
+                minWidth: { xs: 220, md: 260 },
+                height: 180,
+                cursor: 'pointer',
+                borderRadius: 4,
+                position: 'relative',
+                overflow: 'hidden',
+                background: `
+                  radial-gradient(circle at 30% 20%, ${alpha(theme.palette.warning.main, 0.15)} 0%, transparent 50%),
+                  linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.08)} 0%, ${alpha(theme.palette.warning.main, 0.03)} 100%)
+                `,
+                border: `2px solid ${alpha(theme.palette.warning.main, 0.2)}`,
+                backdropFilter: 'blur(10px)',
+                animation: 'cardFloat 6s ease-in-out infinite 3s',
+                transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+                '&:hover': { 
+                  transform: 'translateY(-15px) scale(1.05) rotateX(-5deg)', 
+                  boxShadow: `
+                    0 25px 50px ${alpha(theme.palette.warning.main, 0.4)},
+                    0 0 30px ${alpha(theme.palette.warning.main, 0.2)}
+                  `,
+                  '& .service-icon': {
+                    transform: 'scale(1.3) rotate(15deg)',
+                    filter: 'drop-shadow(0 0 20px rgba(255, 152, 0, 0.5))'
+                  },
+                  '& .service-bg': {
+                    transform: 'scale(1.5) rotate(-90deg)',
+                    opacity: 1
+                  }
+                }
+              }} onClick={() => navigate('/app/career-guidance')}>
+                <Box className="service-bg" sx={{
+                  position: 'absolute',
+                  top: -30, left: -30,
+                  width: 100, height: 100,
+                  background: `radial-gradient(ellipse at center, ${alpha(theme.palette.warning.main, 0.4)} 0%, transparent 60%)`,
+                  animation: 'bgWave 5s ease-in-out infinite',
+                  transition: 'all 0.6s ease',
+                  '@keyframes bgWave': {
+                    '0%, 100%': { transform: 'scale(1) skewX(0deg)' },
+                    '50%': { transform: 'scale(1.2) skewX(15deg)' }
+                  }
+                }} />
+                
+                <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', zIndex: 2 }}>
+                  <Box>
+                    <Psychology className="service-icon" sx={{ 
+                      fontSize: 50, 
+                      color: 'warning.main', 
+                      mb: 2, 
+                      transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      filter: 'drop-shadow(0 4px 8px rgba(255, 152, 0, 0.2))'
+                    }} />
+                    <Typography variant="h6" sx={{ 
+                      fontWeight: 800, 
+                      color: 'warning.main', 
+                      mb: 1,
+                      fontSize: '1.1rem'
+                    }}>
+                      Career Guidance
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ 
+                      fontSize: '0.85rem',
+                      lineHeight: 1.4,
+                      fontWeight: 500
+                    }}>
+                      Personalized career path recommendations
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ 
+                    mt: 2,
+                    height: 3,
+                    background: alpha(theme.palette.warning.main, 0.2),
+                    borderRadius: 2,
+                    overflow: 'hidden'
+                  }}>
+                    <Box sx={{
+                      height: '100%',
+                      width: '78%',
+                      background: `linear-gradient(90deg, ${theme.palette.warning.main}, ${theme.palette.warning.light})`,
+                      borderRadius: 2,
+                      animation: 'progressGlow 2s ease-in-out infinite alternate'
+                    }} />
+                  </Box>
+                </CardContent>
+              </Card>
+
+              {/* Professional Network - Hyper-Animated Card */}
+              <Card sx={{ 
+                minWidth: { xs: 220, md: 260 },
+                height: 180,
+                cursor: 'pointer',
+                borderRadius: 4,
+                position: 'relative',
+                overflow: 'hidden',
+                background: `
+                  radial-gradient(circle at 30% 20%, ${alpha(theme.palette.error.main, 0.15)} 0%, transparent 50%),
+                  linear-gradient(135deg, ${alpha(theme.palette.error.main, 0.08)} 0%, ${alpha(theme.palette.error.main, 0.03)} 100%)
+                `,
+                border: `2px solid ${alpha(theme.palette.error.main, 0.2)}`,
+                backdropFilter: 'blur(10px)',
+                animation: 'cardFloat 6s ease-in-out infinite 4s',
+                transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+                '&:hover': { 
+                  transform: 'translateY(-15px) scale(1.05) rotateY(-5deg)', 
+                  boxShadow: `
+                    0 25px 50px ${alpha(theme.palette.error.main, 0.4)},
+                    0 0 30px ${alpha(theme.palette.error.main, 0.2)}
+                  `,
+                  '& .service-icon': {
+                    transform: 'scale(1.3) rotate(-15deg)',
+                    filter: 'drop-shadow(0 0 20px rgba(244, 67, 54, 0.5))'
+                  },
+                  '& .service-bg': {
+                    transform: 'scale(1.5) rotate(180deg)',
+                    opacity: 1
+                  }
+                }
+              }} onClick={() => navigate('/app/network')}>
+                <Box className="service-bg" sx={{
+                  position: 'absolute',
+                  top: -15, right: -15,
+                  width: 80, height: 80,
+                  background: `conic-gradient(from 180deg, ${theme.palette.error.main}, transparent, ${theme.palette.error.main})`,
+                  borderRadius: '50%',
+                  animation: 'bgSpin 10s linear infinite',
+                  transition: 'all 0.6s ease',
+                  '@keyframes bgSpin': {
+                    '0%': { transform: 'rotate(0deg)' },
+                    '100%': { transform: 'rotate(360deg)' }
+                  }
+                }} />
+                
+                <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', zIndex: 2 }}>
+                  <Box>
+                    <Groups className="service-icon" sx={{ 
+                      fontSize: 50, 
+                      color: 'error.main', 
+                      mb: 2, 
+                      transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      filter: 'drop-shadow(0 4px 8px rgba(244, 67, 54, 0.2))'
+                    }} />
+                    <Typography variant="h6" sx={{ 
+                      fontWeight: 800, 
+                      color: 'error.main', 
+                      mb: 1,
+                      fontSize: '1.1rem'
+                    }}>
+                      Professional Network
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ 
+                      fontSize: '0.85rem',
+                      lineHeight: 1.4,
+                      fontWeight: 500
+                    }}>
+                      Connect with industry professionals
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ 
+                    mt: 2,
+                    height: 3,
+                    background: alpha(theme.palette.error.main, 0.2),
+                    borderRadius: 2,
+                    overflow: 'hidden'
+                  }}>
+                    <Box sx={{
+                      height: '100%',
+                      width: '68%',
+                      background: `linear-gradient(90deg, ${theme.palette.error.main}, ${theme.palette.error.light})`,
+                      borderRadius: 2,
+                      animation: 'progressGlow 2s ease-in-out infinite alternate'
+                    }} />
+                  </Box>
+                </CardContent>
+              </Card>
+
+              {/* Learning Hub - Hyper-Animated Card */}
+              <Card sx={{ 
+                minWidth: { xs: 220, md: 260 },
+                height: 180,
+                cursor: 'pointer',
+                borderRadius: 4,
+                position: 'relative',
+                overflow: 'hidden',
+                background: `
+                  radial-gradient(circle at 30% 20%, ${alpha(theme.palette.primary.main, 0.15)} 0%, transparent 50%),
+                  linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.08)} 0%, ${alpha(theme.palette.primary.main, 0.03)} 100%)
+                `,
+                border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                backdropFilter: 'blur(10px)',
+                animation: 'cardFloat 6s ease-in-out infinite 5s',
+                transition: 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+                '&:hover': { 
+                  transform: 'translateY(-15px) scale(1.05) rotateX(5deg)', 
+                  boxShadow: `
+                    0 25px 50px ${alpha(theme.palette.primary.main, 0.4)},
+                    0 0 30px ${alpha(theme.palette.primary.main, 0.2)}
+                  `,
+                  '& .service-icon': {
+                    transform: 'scale(1.3) rotate(720deg)',
+                    filter: 'drop-shadow(0 0 20px rgba(63, 81, 181, 0.5))'
+                  },
+                  '& .service-bg': {
+                    transform: 'scale(1.5) rotate(270deg)',
+                    opacity: 1
+                  }
+                }
+              }} onClick={() => navigate('/app/courses')}>
+                <Box className="service-bg" sx={{
+                  position: 'absolute',
+                  top: -20, left: -20,
+                  width: 90, height: 90,
+                  background: `linear-gradient(45deg, ${alpha(theme.palette.primary.main, 0.2)}, transparent 50%, ${alpha(theme.palette.primary.light, 0.3)})`,
+                  borderRadius: '30%',
+                  animation: 'bgMorph 8s ease-in-out infinite',
+                  transition: 'all 0.6s ease',
+                  '@keyframes bgMorph': {
+                    '0%, 100%': { borderRadius: '30%', transform: 'scale(1)' },
+                    '33%': { borderRadius: '50%', transform: 'scale(1.1)' },
+                    '66%': { borderRadius: '20%', transform: 'scale(0.9)' }
+                  }
+                }} />
+                
+                <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', zIndex: 2 }}>
+                  <Box>
+                    <School className="service-icon" sx={{ 
+                      fontSize: 50, 
+                      color: 'primary.main', 
+                      mb: 2, 
+                      transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      filter: 'drop-shadow(0 4px 8px rgba(63, 81, 181, 0.2))'
+                    }} />
+                    <Typography variant="h6" sx={{ 
+                      fontWeight: 800, 
+                      color: 'primary.main', 
+                      mb: 1,
+                      fontSize: '1.1rem'
+                    }}>
+                      Learning Hub
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ 
+                      fontSize: '0.85rem',
+                      lineHeight: 1.4,
+                      fontWeight: 500
+                    }}>
+                      Upskill with expert-led courses
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ 
+                    mt: 2,
+                    height: 3,
+                    background: alpha(theme.palette.primary.main, 0.2),
+                    borderRadius: 2,
+                    overflow: 'hidden'
+                  }}>
+                    <Box sx={{
+                      height: '100%',
+                      width: '88%',
+                      background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.light})`,
+                      borderRadius: 2,
+                      animation: 'progressGlow 2s ease-in-out infinite alternate'
+                    }} />
+                  </Box>
+                </CardContent>
+              </Card>
+            </Box>
+          </Box>
+        </Paper>
+
+        {/* Enhanced Search and Filter Bar with Category Integration */}
+        <Paper 
+          sx={{ 
+            p: 3, 
+            mb: 3,
+            borderRadius: 4,
+            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.03)} 0%, ${alpha(theme.palette.secondary.main, 0.03)} 100%)`,
+            backdropFilter: 'blur(20px)',
+            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            position: 'relative',
+            overflow: 'hidden',
             '&::before': {
               content: '""',
               position: 'absolute',
@@ -1095,157 +1660,98 @@ const AllJobsPage: React.FC = () => {
               left: 0,
               right: 0,
               height: 3,
-              background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 50%, ${theme.palette.info.main} 100%)`,
+              background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main}, ${theme.palette.success.main})`,
             }
           }}
         >
-          <Box sx={{ p: 1.5 }}>
-            <Box sx={{ textAlign: 'center', mb: 2 }}>
-              <Typography 
-                variant="h6" 
-                sx={{ 
-                  fontWeight: 'bold',
-                  background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  fontSize: '1.1rem'
-                }}
-              >
-                🎯 Browse by Category
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Find opportunities that match your interests
-              </Typography>
-            </Box>
-
-            {/* Category Tabs for Mobile */}
-            <Box sx={{ display: { xs: 'block', md: 'none' } }}>
-              <Tabs
-                value={selectedCategory}
-                onChange={(e, newValue) => setSelectedCategory(newValue)}
-                variant="scrollable"
-                scrollButtons="auto"
-                allowScrollButtonsMobile
-                sx={{
-                  '& .MuiTabs-flexContainer': {
-                    gap: 1
-                  },
-                  '& .MuiTab-root': {
-                    minWidth: 120,
-                    borderRadius: 3,
-                    margin: 0.5,
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    transition: 'all 0.3s ease',
-                    '&.Mui-selected': {
-                      background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
-                      color: 'white',
-                      transform: 'scale(1.05)'
-                    }
-                  }
-                }}
-              >
-                {categories.map((category) => {
-                  const jobCount = categoryCounts[category.key] || 0;
-                  return (
-                    <Tab
-                      key={category.key}
-                      value={category.key}
-                      label={`${category.label} (${jobCount})`}
-                      icon={category.icon}
-                      iconPosition="start"
-                    />
-                  );
-                })}
-              </Tabs>
-            </Box>
-
-            {/* Category Cards for Desktop */}
-            <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-              <Grid container spacing={1.5}>
-                {categories.map((category) => {
-                  const isSelected = selectedCategory === category.key;
-                  const jobCount = categoryCounts[category.key] || 0;
-                  
-                  return (
-                    <Grid item xs={6} sm={4} md={2} key={category.key}>
-                      <Card
-                        sx={{
-                          cursor: 'pointer',
-                          textAlign: 'center',
-                          p: 2,
-                          height: '100%',
-                          transition: 'all 0.3s ease',
-                          border: isSelected 
-                            ? `2px solid ${getThemeColor(category.color)}` 
-                            : `1px solid ${alpha(theme.palette.divider, 0.2)}`,
-                          backgroundColor: isSelected 
-                            ? alpha(getThemeColor(category.color), 0.05)
-                            : 'background.paper',
-                          '&:hover': {
-                            transform: 'translateY(-4px)',
-                            boxShadow: `0 8px 25px ${alpha(getThemeColor(category.color), 0.2)}`,
-                            borderColor: getThemeColor(category.color)
-                          }
-                        }}
-                        onClick={() => setSelectedCategory(category.key)}
-                      >
-                        <Box sx={{ 
-                          color: isSelected ? getThemeColor(category.color) : 'text.secondary',
-                          mb: 1.5,
-                          fontSize: '2rem'
-                        }}>
-                          {category.icon}
-                        </Box>
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            fontWeight: 600,
-                            color: isSelected ? getThemeColor(category.color) : 'text.primary',
-                            mb: 0.5,
-                            fontSize: '0.85rem'
-                          }}
-                        >
-                          {category.label}
-                        </Typography>
-                        <Chip
-                          label={jobCount}
-                          size="small"
-                          sx={{
-                            backgroundColor: isSelected 
-                              ? alpha(getThemeColor(category.color), 0.2) 
-                              : alpha(theme.palette.primary.main, 0.1),
-                            color: isSelected ? getThemeColor(category.color) : 'primary.main',
-                            fontWeight: 'bold',
-                            fontSize: '0.7rem'
-                          }}
-                        />
-                      </Card>
-                    </Grid>
-                  );
-                })}
-              </Grid>
-            </Box>
+          {/* Header with integrated category browsing */}
+          <Box sx={{ mb: 3, textAlign: 'center' }}>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                fontWeight: 700,
+                background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                mb: 0.5,
+                fontSize: { xs: '1.1rem', md: '1.3rem' }
+              }}
+            >
+              🎯 Find Your Next Opportunity
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.85rem', md: '0.95rem' } }}>
+              Search across all categories and find opportunities that match your interests
+            </Typography>
           </Box>
-        </Paper>
 
-        {/* Search and Filter Bar */}
-        <Paper 
-          sx={{ 
-            p: 2, 
-            mb: 3,
-            borderRadius: 3,
-            background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.8)} 0%, ${alpha(theme.palette.background.paper, 0.95)} 100%)`,
-            backdropFilter: 'blur(10px)',
-            border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
-          }}
-        >
-          <Grid container spacing={2} alignItems="center">
+          {/* Category Pills */}
+          <Box sx={{ mb: 3 }}>
+            <Stack 
+              direction="row" 
+              spacing={1} 
+              sx={{ 
+                overflowX: 'auto',
+                pb: 1,
+                '&::-webkit-scrollbar': {
+                  height: 6,
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: alpha(theme.palette.divider, 0.1),
+                  borderRadius: 3,
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: theme.palette.primary.main,
+                  borderRadius: 3,
+                },
+              }}
+            >
+              {categories.map((category) => {
+                const isSelected = selectedCategory === category.key;
+                const jobCount = categoryCounts[category.key] || 0;
+                
+                return (
+                  <Chip
+                    key={category.key}
+                    icon={category.icon}
+                    label={`${category.label} (${jobCount})`}
+                    onClick={() => setSelectedCategory(category.key)}
+                    variant={isSelected ? 'filled' : 'outlined'}
+                    sx={{
+                      minWidth: 'fit-content',
+                      height: 32,
+                      borderRadius: 4,
+                      fontWeight: 600,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      ...(isSelected ? {
+                        background: `linear-gradient(45deg, ${getThemeColor(category.color)} 30%, ${alpha(getThemeColor(category.color), 0.8)} 90%)`,
+                        color: 'white',
+                        border: 'none',
+                        transform: 'scale(1.05)',
+                        boxShadow: `0 4px 12px ${alpha(getThemeColor(category.color), 0.4)}`
+                      } : {
+                        borderColor: alpha(getThemeColor(category.color), 0.3),
+                        color: getThemeColor(category.color),
+                        '&:hover': {
+                          borderColor: getThemeColor(category.color),
+                          backgroundColor: alpha(getThemeColor(category.color), 0.05),
+                          transform: 'translateY(-1px)'
+                        }
+                      })
+                    }}
+                  />
+                );
+              })}
+            </Stack>
+          </Box>
+
+          {/* Search Fields */}
+          <Grid container spacing={3} alignItems="center">
             <Grid item xs={12} md={4}>
               <TextField
                 fullWidth
-                size="small"
+                size="medium"
                 placeholder="Search jobs, companies..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -1253,14 +1759,26 @@ const AllJobsPage: React.FC = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Search sx={{ color: 'text.secondary', fontSize: '1.1rem' }} />
+                      <Search sx={{ color: 'primary.main', fontSize: '1.2rem' }} />
                     </InputAdornment>
                   ),
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
-                    backgroundColor: 'background.paper'
+                    borderRadius: 3,
+                    backgroundColor: 'background.paper',
+                    border: `2px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                    '&:hover': {
+                      borderColor: alpha(theme.palette.primary.main, 0.3),
+                    },
+                    '&.Mui-focused': {
+                      borderColor: theme.palette.primary.main,
+                      boxShadow: `0 0 0 4px ${alpha(theme.palette.primary.main, 0.1)}`,
+                    }
+                  },
+                  '& .MuiInputBase-input': {
+                    fontSize: '1rem',
+                    fontWeight: 500
                   }
                 }}
               />
@@ -1268,7 +1786,7 @@ const AllJobsPage: React.FC = () => {
             <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
-                size="small"
+                size="medium"
                 placeholder="Location"
                 value={locationFilter}
                 onChange={(e) => setLocationFilter(e.target.value)}
@@ -1276,40 +1794,80 @@ const AllJobsPage: React.FC = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <LocationOn sx={{ color: 'text.secondary', fontSize: '1.1rem' }} />
+                      <LocationOn sx={{ color: 'secondary.main', fontSize: '1.2rem' }} />
                     </InputAdornment>
                   ),
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
-                    backgroundColor: 'background.paper'
+                    borderRadius: 3,
+                    backgroundColor: 'background.paper',
+                    border: `2px solid ${alpha(theme.palette.secondary.main, 0.1)}`,
+                    '&:hover': {
+                      borderColor: alpha(theme.palette.secondary.main, 0.3),
+                    },
+                    '&.Mui-focused': {
+                      borderColor: theme.palette.secondary.main,
+                      boxShadow: `0 0 0 4px ${alpha(theme.palette.secondary.main, 0.1)}`,
+                    }
+                  },
+                  '& .MuiInputBase-input': {
+                    fontSize: '1rem',
+                    fontWeight: 500
                   }
                 }}
               />
             </Grid>
             <Grid item xs={12} md={5}>
-              <Stack direction="row" spacing={1}>
+              <Stack direction="row" spacing={2} justifyContent="flex-end">
                 <Button
                   variant="contained"
+                  size="large"
                   onClick={handleSearch}
                   disabled={loading}
-                  startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <Search />}
+                  startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <Search />}
                   sx={{ 
-                    borderRadius: 2,
+                    borderRadius: 3,
                     textTransform: 'none',
-                    fontWeight: 600
+                    fontWeight: 700,
+                    fontSize: '1rem',
+                    px: 3,
+                    py: 1.5,
+                    background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.secondary.main} 90%)`,
+                    boxShadow: `0 4px 15px ${alpha(theme.palette.primary.main, 0.3)}`,
+                    '&:hover': {
+                      background: `linear-gradient(45deg, ${theme.palette.primary.dark} 30%, ${theme.palette.secondary.dark} 90%)`,
+                      boxShadow: `0 6px 20px ${alpha(theme.palette.primary.main, 0.4)}`,
+                      transform: 'translateY(-1px)'
+                    },
+                    '&:disabled': {
+                      background: alpha(theme.palette.action.disabled, 0.12),
+                      color: theme.palette.action.disabled
+                    }
                   }}
                 >
-                  {loading ? 'Searching...' : 'Search'}
+                  {loading ? 'Searching...' : 'Search Jobs'}
                 </Button>
                 <IconButton
                   onClick={handleRefresh}
                   disabled={refreshing}
-                  sx={{ borderRadius: 2 }}
+                  size="large"
+                  sx={{ 
+                    borderRadius: 3,
+                    width: 48,
+                    height: 48,
+                    border: `2px solid ${alpha(theme.palette.success.main, 0.2)}`,
+                    color: 'success.main',
+                    '&:hover': {
+                      backgroundColor: alpha(theme.palette.success.main, 0.1),
+                      borderColor: theme.palette.success.main,
+                      transform: 'rotate(180deg)',
+                      transition: 'transform 0.6s ease'
+                    }
+                  }}
                 >
                   {refreshing ? (
-                    <CircularProgress size={20} />
+                    <CircularProgress size={22} color="success" />
                   ) : (
                     <Refresh />
                   )}
@@ -1372,15 +1930,26 @@ const AllJobsPage: React.FC = () => {
             </Box>
 
             {/* Jobs Grid/List */}
-            <Grid container spacing={viewMode === 'grid' ? 2 : 3}>
+            <Box
+              sx={{
+                display: 'grid',
+                gap: viewMode === 'grid' ? 2 : 3,
+                gridTemplateColumns: viewMode === 'grid' ? {
+                  xs: 'repeat(1, 1fr)',
+                  sm: 'repeat(2, 1fr)', 
+                  md: 'repeat(3, 1fr)',
+                  lg: 'repeat(4, 1fr)'
+                } : 'repeat(1, 1fr)',
+              }}
+            >
               {filteredJobs.map((job) => (
-                <Grid 
-                  item 
-                  xs={12} 
-                  sm={viewMode === 'grid' ? 6 : 12}
-                  md={viewMode === 'grid' ? 4 : 12}
-                  lg={viewMode === 'grid' ? 3 : 12}
+                <Box 
                   key={job._id}
+                  sx={{
+                    minWidth: 0, // Allow shrinking
+                    maxWidth: '100%', // Prevent expansion
+                    overflow: 'hidden'
+                  }}
                 >
                   {viewMode === 'grid' ? (
                     // Grid View - Compact like HomePage
@@ -1389,18 +1958,30 @@ const AllJobsPage: React.FC = () => {
                       sx={{ 
                         p: 2.5, 
                         borderRadius: 3,
-                        height: '100%',
+                        height: 420, // Increased height to accommodate View Details button
+                        minHeight: 420, // Ensure minimum height
+                        width: '100%', // Full width of grid item
+                        maxWidth: '100%', // Prevent expansion
+                        minWidth: 0, // Allow shrinking
                         display: 'flex',
                         flexDirection: 'column',
                         transition: 'all 0.3s ease',
                         cursor: 'pointer',
                         position: 'relative',
+                        overflow: 'hidden', // Prevent content overflow
+                        boxSizing: 'border-box', // Include padding in width calculation
+                        wordWrap: 'break-word', // Force word breaking at paper level
+                        overflowWrap: 'break-word', // Additional word breaking
                         '&:hover': {
                           transform: 'translateY(-5px)',
                           boxShadow: '0 12px 20px rgba(0,0,0,0.1)'
+                        },
+                        '& *': { // Apply word breaking to all children
+                          wordWrap: 'break-word',
+                          overflowWrap: 'break-word'
                         }
                       }}
-                      onClick={() => handleViewJobDetails(job._id)}
+                      onClick={() => handleViewFullDetails(job)}
                     >
                       {/* New tag if job is recent */}
                       {isJobNew(job.createdAt) && (
@@ -1443,7 +2024,11 @@ const AllJobsPage: React.FC = () => {
                         alignItems: 'center',
                         mb: 2,
                         gap: 1.5,
-                        mt: 1
+                        mt: 1,
+                        width: '100%',
+                        maxWidth: '100%',
+                        minWidth: 0, // Allow shrinking
+                        overflow: 'hidden' // Prevent content overflow
                       }}>
                         <Avatar 
                           sx={{ 
@@ -1456,7 +2041,13 @@ const AllJobsPage: React.FC = () => {
                         >
                           {job.company?.charAt(0)}
                         </Avatar>
-                        <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Box sx={{ 
+                          minWidth: 0, 
+                          flex: 1,
+                          width: '100%',
+                          maxWidth: '100%',
+                          overflow: 'hidden' // Prevent content from expanding container
+                        }}>
                           <Typography 
                             variant="h6" 
                             fontWeight="bold" 
@@ -1464,11 +2055,18 @@ const AllJobsPage: React.FC = () => {
                               fontSize: '1rem',
                               lineHeight: 1.3,
                               display: '-webkit-box',
-                              WebkitLineClamp: 2,
+                              WebkitLineClamp: 3, // Allow up to 3 lines for long titles
                               WebkitBoxOrient: 'vertical',
                               overflow: 'hidden',
-                              wordBreak: 'break-word',
-                              mb: 0.25
+                              wordBreak: 'break-all', // Break even within words if necessary
+                              overflowWrap: 'anywhere', // Break anywhere to prevent overflow
+                              hyphens: 'auto', // Enable hyphenation
+                              mb: 0.5,
+                              height: '3.9em', // Fixed height for 3 lines (1.3 * 3)
+                              minHeight: '3.9em', // Ensure consistent height even for short titles
+                              width: '100%', // Full width of container
+                              maxWidth: '100%', // Prevent expansion
+                              whiteSpace: 'normal' // Allow normal text wrapping
                             }}
                             title={job.title}
                           >
@@ -1480,9 +2078,18 @@ const AllJobsPage: React.FC = () => {
                             sx={{
                               fontSize: '0.875rem',
                               display: '-webkit-box',
-                              WebkitLineClamp: 1,
+                              WebkitLineClamp: 2, // Allow up to 2 lines for company names
                               WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden'
+                              overflow: 'hidden',
+                              wordBreak: 'break-all', // Break even within words if necessary
+                              overflowWrap: 'anywhere', // Break anywhere to prevent overflow
+                              hyphens: 'auto', // Enable hyphenation
+                              lineHeight: 1.2,
+                              height: '2.4em', // Fixed height for 2 lines (1.2 * 2)
+                              minHeight: '2.4em', // Ensure consistent height
+                              width: '100%', // Full width of container
+                              maxWidth: '100%', // Prevent expansion
+                              whiteSpace: 'normal' // Allow normal text wrapping
                             }}
                             title={job.company}
                           >
@@ -1492,16 +2099,17 @@ const AllJobsPage: React.FC = () => {
                       </Box>
                       
                       {/* Job details */}
-                      <Box sx={{ mb: 2, flex: 1 }}>
+                      <Box sx={{ mb: 2, flex: 1, display: 'flex', flexDirection: 'column', minHeight: '120px' }}>
                         <Box sx={{ 
                           display: 'flex', 
                           alignItems: 'center', 
-                          mb: 1
+                          mb: 1,
+                          minHeight: '20px' // Consistent height for location row
                         }}>
                           <LocationOn 
                             fontSize="small" 
                             color="action" 
-                            sx={{ mr: 1, fontSize: '1rem' }} 
+                            sx={{ mr: 1, fontSize: '1rem', flexShrink: 0 }} 
                           />
                           <Typography 
                             variant="body2" 
@@ -1511,7 +2119,8 @@ const AllJobsPage: React.FC = () => {
                               display: '-webkit-box',
                               WebkitLineClamp: 1,
                               WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden'
+                              overflow: 'hidden',
+                              wordBreak: 'break-word'
                             }}
                           >
                             {job.location}
@@ -1521,17 +2130,21 @@ const AllJobsPage: React.FC = () => {
                         <Box sx={{ 
                           display: 'flex', 
                           alignItems: 'center', 
-                          mb: 1
+                          mb: 1,
+                          minHeight: '20px' // Consistent height for job type row
                         }}>
                           <Work 
                             fontSize="small" 
                             color="action" 
-                            sx={{ mr: 1, fontSize: '1rem' }} 
+                            sx={{ mr: 1, fontSize: '1rem', flexShrink: 0 }} 
                           />
                           <Typography 
                             variant="body2" 
                             color="text.secondary" 
-                            sx={{ fontSize: '0.8rem' }}
+                            sx={{ 
+                              fontSize: '0.8rem',
+                              wordBreak: 'break-word'
+                            }}
                           >
                             {job.jobType}
                           </Typography>
@@ -1541,12 +2154,13 @@ const AllJobsPage: React.FC = () => {
                           <Box sx={{ 
                             display: 'flex', 
                             alignItems: 'center', 
-                            mb: 1
+                            mb: 1,
+                            minHeight: '20px' // Consistent height for salary row
                           }}>
                             <AttachMoney 
                               fontSize="small" 
                               color="action" 
-                              sx={{ mr: 1, fontSize: '1rem' }} 
+                              sx={{ mr: 1, fontSize: '1rem', flexShrink: 0 }} 
                             />
                             <Typography 
                               variant="body2" 
@@ -1557,7 +2171,8 @@ const AllJobsPage: React.FC = () => {
                                 display: '-webkit-box',
                                 WebkitLineClamp: 1,
                                 WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden'
+                                overflow: 'hidden',
+                                wordBreak: 'break-word'
                               }}
                             >
                               {formatSalary(job.salary)}
@@ -1568,29 +2183,73 @@ const AllJobsPage: React.FC = () => {
                         <Box sx={{ 
                           display: 'flex', 
                           alignItems: 'center',
-                          mb: 1
+                          mb: 1,
+                          minHeight: '20px' // Consistent height for time posted row
                         }}>
                           <AccessTime 
                             fontSize="small" 
                             color="action" 
-                            sx={{ mr: 1, fontSize: '1rem' }} 
+                            sx={{ mr: 1, fontSize: '1rem', flexShrink: 0 }} 
                           />
                           <Typography 
                             variant="body2" 
                             color="text.secondary" 
-                            sx={{ fontSize: '0.8rem' }}
+                            sx={{ 
+                              fontSize: '0.8rem',
+                              wordBreak: 'break-word'
+                            }}
                           >
                             {getDaysPosted(job.createdAt)}
                           </Typography>
                         </Box>
                       </Box>
                       
+                      {/* Deadline section - visible and prominent */}
+                      {job.applicationDeadline && (
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center',
+                          mb: 1,
+                          minHeight: '20px'
+                        }}>
+                          <Event 
+                            fontSize="small" 
+                            color="action" 
+                            sx={{ mr: 1, fontSize: '1rem', flexShrink: 0 }} 
+                          />
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontSize: '0.8rem',
+                              wordBreak: 'break-word',
+                              mr: 1
+                            }}
+                            color="text.secondary"
+                          >
+                            Deadline: 
+                          </Typography>
+                          <Chip
+                            label={formatDeadline(job.applicationDeadline)}
+                            size="small"
+                            color={getDeadlineColor(job.applicationDeadline)}
+                            variant="filled"
+                            sx={{ 
+                              fontSize: '0.7rem', 
+                              height: 18,
+                              fontWeight: 500
+                            }}
+                          />
+                        </Box>
+                      )}
+                      
                       {/* Skills/tags */}
                       <Box sx={{ 
                         display: 'flex', 
                         flexWrap: 'wrap', 
-                        gap: 0.5, 
-                        mb: 2 
+                        gap: 0.5,
+                        mb: 2,
+                        minHeight: '30px',
+                        alignContent: 'flex-start'
                       }}>
                         {job.skills?.slice(0, 2).map((skill, idx) => (
                           <Chip 
@@ -1602,23 +2261,37 @@ const AllJobsPage: React.FC = () => {
                               color: 'primary.dark',
                               fontWeight: 500,
                               fontSize: '0.7rem',
-                              height: 22
+                              height: 22,
+                              maxWidth: '100px',
+                              '& .MuiChip-label': {
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                              }
                             }} 
                           />
                         ))}
-                        {job.applicationDeadline && (
-                          <Chip
-                            label={formatDeadline(job.applicationDeadline)}
-                            size="small"
-                            color={getDeadlineColor(job.applicationDeadline)}
-                            variant="filled"
-                            sx={{ 
-                              fontSize: '0.7rem', 
-                              height: 22,
-                              fontWeight: 500
-                            }}
-                          />
-                        )}
+                      </Box>
+                      
+                      {/* View Details Button */}
+                      <Box sx={{ mt: 'auto', pt: 1 }}>
+                        <Button
+                          variant="contained"
+                          fullWidth
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent card click
+                            handleViewFullDetails(job);
+                          }}
+                          sx={{
+                            borderRadius: 2,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            py: 0.8,
+                            fontSize: '0.8rem'
+                          }}
+                        >
+                          View Details
+                        </Button>
                       </Box>
                     </Paper>
                   ) : (
@@ -1634,7 +2307,7 @@ const AllJobsPage: React.FC = () => {
                           borderColor: 'primary.main'
                         }
                       }}
-                      onClick={() => handleViewJobDetails(job._id)}
+                      onClick={() => handleViewFullDetails(job)}
                     >
                       <CardContent sx={{ p: 3 }}>
                         <Box sx={{ 
@@ -1740,28 +2413,61 @@ const AllJobsPage: React.FC = () => {
                             )}
                             
                             {job.applicationDeadline && (
-                              <Chip
-                                label={formatDeadline(job.applicationDeadline)}
-                                size="small"
-                                color={getDeadlineColor(job.applicationDeadline)}
-                                variant="filled"
-                              />
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                                <Event fontSize="small" color="action" />
+                                <Typography 
+                                  variant="caption" 
+                                  color="text.secondary"
+                                  sx={{ fontSize: '0.75rem' }}
+                                >
+                                  Deadline: 
+                                </Typography>
+                                <Chip
+                                  label={formatDeadline(job.applicationDeadline)}
+                                  size="small"
+                                  color={getDeadlineColor(job.applicationDeadline)}
+                                  variant="filled"
+                                  sx={{ fontSize: '0.7rem', height: 20 }}
+                                />
+                              </Box>
                             )}
                             
                             <Typography 
                               variant="caption" 
                               color="text.secondary"
+                              sx={{ mb: 1.5 }}
                             >
                               {getDaysPosted(job.createdAt)}
                             </Typography>
+                            
+                            {/* View Details Button */}
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewFullDetails(job);
+                              }}
+                              sx={{
+                                borderRadius: 2,
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                px: 2,
+                                py: 0.5,
+                                fontSize: '0.8rem',
+                                minWidth: 120
+                              }}
+                            >
+                              View Details
+                            </Button>
                           </Box>
                         </Box>
                       </CardContent>
                     </Card>
                   )}
-                </Grid>
+                </Box>
               ))}
-            </Grid>
+            </Box>
 
             {/* Pagination */}
             {totalPages > 1 && (

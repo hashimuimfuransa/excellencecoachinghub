@@ -46,7 +46,7 @@ import {
   NotificationsOff,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { notificationService, Notification } from '../services/notificationService';
+import { notificationService, Notification as AppNotification } from '../services/notificationService';
 import { realTimeNotificationService, NotificationPreferences } from '../services/realTimeNotificationService';
 import { useAuth } from '../contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
@@ -54,7 +54,7 @@ import { formatDistanceToNow } from 'date-fns';
 const NotificationsPage: React.FC = () => {
   const theme = useTheme();
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -202,7 +202,7 @@ const NotificationsPage: React.FC = () => {
     }
   };
 
-  const getNotificationIcon = (type: string) => {
+  const getNotificationIcon = (type: AppNotification['type']) => {
     switch (type) {
       case 'connection_accepted':
       case 'connection_request':
@@ -218,7 +218,7 @@ const NotificationsPage: React.FC = () => {
     }
   };
 
-  const getNotificationColor = (type: string) => {
+  const getNotificationColor = (type: AppNotification['type']) => {
     switch (type) {
       case 'connection_accepted':
         return 'success';

@@ -12,6 +12,8 @@ import {
   Skeleton,
   Alert,
   Divider,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import {
   PersonAdd,
@@ -24,6 +26,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { socialNetworkService } from '../../services/socialNetworkService';
+import { useNavigate } from 'react-router-dom';
 
 interface SuggestedUser {
   _id: string;
@@ -45,7 +48,10 @@ interface SuggestedUser {
 }
 
 const SuggestedConnections: React.FC = () => {
+  const theme = useTheme();
+  const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [suggestedUsers, setSuggestedUsers] = useState<SuggestedUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,8 +65,9 @@ const SuggestedConnections: React.FC = () => {
     setError(null);
 
     try {
-      // Use the dedicated connection suggestions endpoint
-      const response = await socialNetworkService.getConnectionSuggestions(12);
+      // Use the dedicated connection suggestions endpoint - show fewer on tablets to save space
+      const limit = isTablet ? 6 : 12;
+      const response = await socialNetworkService.getConnectionSuggestions(limit);
       console.log('Connection suggestions response:', response);
       
       if (response.success && response.data) {
@@ -153,14 +160,14 @@ const SuggestedConnections: React.FC = () => {
   }
 
   return (
-    <Card sx={{ borderRadius: 3, overflow: 'hidden' }}>
-      <CardContent sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" fontWeight="600">
+    <Card sx={{ borderRadius: isTablet ? 2 : 3, overflow: 'hidden' }}>
+      <CardContent sx={{ p: isTablet ? 2 : 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isTablet ? 1.5 : 2 }}>
+          <Typography variant={isTablet ? "subtitle1" : "h6"} fontWeight="600" sx={{ fontSize: isTablet ? '1rem' : '1.25rem' }}>
             Suggested Connections
           </Typography>
           <IconButton onClick={handleRefresh} size="small" sx={{ color: 'primary.main' }}>
-            <Refresh />
+            <Refresh sx={{ fontSize: isTablet ? 18 : 20 }} />
           </IconButton>
         </Box>
 
@@ -171,16 +178,16 @@ const SuggestedConnections: React.FC = () => {
         )}
 
         <AnimatePresence mode="popLayout">
-          <Stack spacing={2}>
+          <Stack spacing={isTablet ? 1.5 : 2}>
             {suggestedUsers.length === 0 && !loading ? (
-              <Box sx={{ textAlign: 'center', py: 3 }}>
-                <Typography variant="body2" color="text.secondary">
+              <Box sx={{ textAlign: 'center', py: isTablet ? 2 : 3 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: isTablet ? '0.8rem' : '0.875rem' }}>
                   No new suggestions available
                 </Typography>
                 <Button 
                   onClick={handleRefresh} 
                   size="small" 
-                  sx={{ mt: 1 }}
+                  sx={{ mt: 1, fontSize: isTablet ? '0.75rem' : '0.875rem' }}
                 >
                   Refresh
                 </Button>
@@ -198,9 +205,9 @@ const SuggestedConnections: React.FC = () => {
                     sx={{
                       display: 'flex',
                       alignItems: 'flex-start',
-                      gap: 2,
-                      p: 2,
-                      borderRadius: 2,
+                      gap: isTablet ? 1.5 : 2,
+                      p: isTablet ? 1.5 : 2,
+                      borderRadius: isTablet ? 1.5 : 2,
                       transition: 'all 0.2s ease',
                       '&:hover': {
                         bgcolor: 'action.hover',
@@ -225,9 +232,10 @@ const SuggestedConnections: React.FC = () => {
                     <Avatar
                       src={suggestedUser.profilePicture || suggestedUser.avatar}
                       sx={{
-                        width: 48,
-                        height: 48,
+                        width: isTablet ? 40 : 48,
+                        height: isTablet ? 40 : 48,
                         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        fontSize: isTablet ? '0.875rem' : '1rem'
                       }}
                     >
                       {suggestedUser.firstName?.[0]}{suggestedUser.lastName?.[0]}
@@ -239,7 +247,8 @@ const SuggestedConnections: React.FC = () => {
                         fontWeight="600"
                         sx={{ 
                           cursor: 'pointer',
-                          '&:hover': { color: 'primary.main' }
+                          '&:hover': { color: 'primary.main' },
+                          fontSize: isTablet ? '0.85rem' : '0.875rem'
                         }}
                         noWrap
                       >
@@ -247,9 +256,9 @@ const SuggestedConnections: React.FC = () => {
                       </Typography>
 
                       {(suggestedUser.jobTitle || suggestedUser.profession) && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-                          <Work sx={{ fontSize: 12, color: 'text.secondary' }} />
-                          <Typography variant="caption" color="text.secondary" noWrap>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: isTablet ? 0.25 : 0.5 }}>
+                          <Work sx={{ fontSize: isTablet ? 11 : 12, color: 'text.secondary' }} />
+                          <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: isTablet ? '0.7rem' : '0.75rem' }}>
                             {suggestedUser.jobTitle || suggestedUser.profession}
                             {suggestedUser.company && ` at ${suggestedUser.company}`}
                           </Typography>
@@ -257,9 +266,9 @@ const SuggestedConnections: React.FC = () => {
                       )}
 
                       {(suggestedUser.role || suggestedUser.userType) && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-                          <Person sx={{ fontSize: 12, color: 'text.secondary' }} />
-                          <Typography variant="caption" color="text.secondary" noWrap>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: isTablet ? 0.25 : 0.5 }}>
+                          <Person sx={{ fontSize: isTablet ? 11 : 12, color: 'text.secondary' }} />
+                          <Typography variant="caption" color="text.secondary" noWrap sx={{ fontSize: isTablet ? '0.7rem' : '0.75rem' }}>
                             {((suggestedUser.role || suggestedUser.userType) === 'job_seeker' || (suggestedUser.role || suggestedUser.userType) === 'jobseeker') 
                               ? 'Job Seeker' 
                               : (suggestedUser.role || suggestedUser.userType)?.charAt(0).toUpperCase() + (suggestedUser.role || suggestedUser.userType)?.slice(1)}
@@ -327,16 +336,16 @@ const SuggestedConnections: React.FC = () => {
                         whileTap={{ scale: 0.98 }}
                         variant="contained"
                         size="small"
-                        startIcon={<PersonAdd />}
+                        startIcon={<PersonAdd sx={{ fontSize: isTablet ? 14 : 16 }} />}
                         onClick={() => handleConnect(suggestedUser._id)}
                         loading={connectingUsers.includes(suggestedUser._id)}
                         disabled={connectingUsers.includes(suggestedUser._id)}
                         sx={{
-                          borderRadius: 2,
+                          borderRadius: isTablet ? 1.5 : 2,
                           textTransform: 'none',
-                          fontSize: '0.75rem',
-                          py: 0.5,
-                          px: 1.5,
+                          fontSize: isTablet ? '0.7rem' : '0.75rem',
+                          py: isTablet ? 0.4 : 0.5,
+                          px: isTablet ? 1.2 : 1.5,
                           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                           '&:hover': {
                             background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
@@ -347,7 +356,7 @@ const SuggestedConnections: React.FC = () => {
                       </Button>
 
                       {suggestedUser.mutualConnections && suggestedUser.mutualConnections > 0 && (
-                        <Typography variant="caption" color="primary.main" sx={{ mt: 0.5, display: 'block' }}>
+                        <Typography variant="caption" color="primary.main" sx={{ mt: isTablet ? 0.4 : 0.5, display: 'block', fontSize: isTablet ? '0.7rem' : '0.75rem' }}>
                           {suggestedUser.mutualConnections} mutual connection{suggestedUser.mutualConnections > 1 ? 's' : ''}
                         </Typography>
                       )}
@@ -361,15 +370,17 @@ const SuggestedConnections: React.FC = () => {
         </AnimatePresence>
 
         {suggestedUsers.length > 0 && (
-          <Box sx={{ textAlign: 'center', mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
+          <Box sx={{ textAlign: 'center', mt: isTablet ? 1.5 : 2, pt: isTablet ? 1.5 : 2, borderTop: 1, borderColor: 'divider' }}>
             <Button
               variant="text"
               size="small"
-              onClick={handleRefresh}
+              onClick={() => navigate('/app/connections')}
               sx={{
                 textTransform: 'none',
-                fontSize: '0.85rem',
+                fontSize: isTablet ? '0.75rem' : '0.85rem',
                 fontWeight: 600,
+                py: isTablet ? 0.5 : 0.75,
+                px: isTablet ? 1 : 1.5,
               }}
             >
               See More Suggestions

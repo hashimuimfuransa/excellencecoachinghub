@@ -14,6 +14,7 @@ import {
   Divider,
   IconButton,
   useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import {
   Refresh,
@@ -32,6 +33,7 @@ import SuggestedConnections from '../network/SuggestedConnections';
 
 const FeedSidebar: React.FC = () => {
   const theme = useTheme();
+  const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
   const [connections, setConnections] = useState<SocialConnection[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<SocialEvent[]>([]);
   const [suggestedCompanies, setSuggestedCompanies] = useState<SocialCompany[]>([]);
@@ -84,14 +86,18 @@ const FeedSidebar: React.FC = () => {
   };
 
   return (
-    <Box sx={{ width: 300, display: { xs: 'none', lg: 'block' } }}>
+    <Box sx={{ 
+      width: isTablet ? '100%' : 300, 
+      display: { xs: 'none', md: 'block' },
+      maxWidth: isTablet ? 'none' : '300px'
+    }}>
       {/* Suggested Connections */}
       <motion.div
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <Box sx={{ mb: 3 }}>
+        <Box sx={{ mb: isTablet ? 2 : 3 }}>
           <SuggestedConnections />
         </Box>
       </motion.div>
@@ -101,28 +107,28 @@ const FeedSidebar: React.FC = () => {
         component={motion.div}
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
-        sx={{ mb: 3, borderRadius: 2 }}
+        sx={{ mb: isTablet ? 2 : 3, borderRadius: isTablet ? 2 : 2 }}
       >
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <TrendingUp color="primary" sx={{ mr: 1 }} />
-            <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+        <CardContent sx={{ p: isTablet ? 2 : 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: isTablet ? 1.5 : 2 }}>
+            <TrendingUp color="primary" sx={{ mr: 1, fontSize: isTablet ? 20 : 24 }} />
+            <Typography variant={isTablet ? "subtitle1" : "h6"} sx={{ fontSize: isTablet ? '1rem' : '1.1rem', fontWeight: 600 }}>
               Trending Topics
             </Typography>
             <IconButton size="small" sx={{ ml: 'auto' }} onClick={loadSidebarData}>
-              <Refresh />
+              <Refresh sx={{ fontSize: isTablet ? 18 : 20 }} />
             </IconButton>
           </Box>
           
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {trendingTopics.map((topic, index) => (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: isTablet ? 0.5 : 1 }}>
+            {trendingTopics.slice(0, isTablet ? 4 : 5).map((topic, index) => (
               <Box
                 key={index}
                 sx={{
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  p: 1,
+                  p: isTablet ? 0.75 : 1,
                   borderRadius: 1,
                   cursor: 'pointer',
                   '&:hover': {
@@ -132,14 +138,14 @@ const FeedSidebar: React.FC = () => {
                   },
                 }}
               >
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                <Typography variant="body2" sx={{ fontWeight: 500, fontSize: isTablet ? '0.8rem' : '0.875rem' }}>
                   #{topic.name}
                 </Typography>
                 <Chip 
                   label={topic.count} 
                   size="small" 
                   variant="outlined"
-                  sx={{ fontSize: '0.75rem' }}
+                  sx={{ fontSize: isTablet ? '0.65rem' : '0.75rem', height: isTablet ? 20 : 24 }}
                 />
               </Box>
             ))}
@@ -153,35 +159,35 @@ const FeedSidebar: React.FC = () => {
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.1 }}
-        sx={{ mb: 3, borderRadius: 2 }}
+        sx={{ mb: isTablet ? 2 : 3, borderRadius: 2 }}
       >
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Group color="primary" sx={{ mr: 1 }} />
-            <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+        <CardContent sx={{ p: isTablet ? 2 : 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: isTablet ? 1.5 : 2 }}>
+            <Group color="primary" sx={{ mr: 1, fontSize: isTablet ? 20 : 24 }} />
+            <Typography variant={isTablet ? "subtitle1" : "h6"} sx={{ fontSize: isTablet ? '1rem' : '1.1rem', fontWeight: 600 }}>
               Your Network
             </Typography>
           </Box>
           
           <List sx={{ p: 0 }}>
-            {connections.slice(0, 4).map((connection, index) => (
-              <ListItem key={connection._id} sx={{ px: 0, py: 1 }}>
+            {connections.slice(0, isTablet ? 3 : 4).map((connection, index) => (
+              <ListItem key={connection._id} sx={{ px: 0, py: isTablet ? 0.75 : 1 }}>
                 <ListItemAvatar>
                   <Avatar
                     src={connection.user.profilePicture}
-                    sx={{ width: 32, height: 32 }}
+                    sx={{ width: isTablet ? 28 : 32, height: isTablet ? 28 : 32 }}
                   >
                     {connection.user.firstName[0]}{connection.user.lastName[0]}
                   </Avatar>
                 </ListItemAvatar>
                 <ListItemText
                   primary={
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 500, fontSize: isTablet ? '0.8rem' : '0.875rem' }}>
                       {connection.user.firstName} {connection.user.lastName}
                     </Typography>
                   }
                   secondary={
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: isTablet ? '0.7rem' : '0.75rem' }}>
                       {connection.user.jobTitle || 'Professional'}
                     </Typography>
                   }
@@ -190,123 +196,127 @@ const FeedSidebar: React.FC = () => {
             ))}
           </List>
           
-          {connections.length > 4 && (
-            <Button size="small" sx={{ mt: 1 }}>
+          {connections.length > (isTablet ? 3 : 4) && (
+            <Button size="small" sx={{ mt: 1, fontSize: isTablet ? '0.75rem' : '0.875rem' }}>
               View all {connections.length} connections
             </Button>
           )}
         </CardContent>
       </Card>
 
-      {/* Upcoming Events */}
-      <Card
-        component={motion.div}
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.2 }}
-        sx={{ mb: 3, borderRadius: 2 }}
-      >
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Event color="primary" sx={{ mr: 1 }} />
-            <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-              Upcoming Events
-            </Typography>
-          </Box>
-          
-          {upcomingEvents.length > 0 ? (
-            <List sx={{ p: 0 }}>
-              {upcomingEvents.map((event, index) => (
-                <ListItem key={event._id} sx={{ px: 0, py: 1 }}>
-                  <ListItemText
-                    primary={
-                      <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
-                        {event.title}
-                      </Typography>
-                    }
-                    secondary={
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">
-                          {new Date(event.date).toLocaleDateString()}
+      {/* Upcoming Events - Show only on desktop to save space on tablets */}
+      {!isTablet && (
+        <Card
+          component={motion.div}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+          sx={{ mb: 3, borderRadius: 2 }}
+        >
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Event color="primary" sx={{ mr: 1 }} />
+              <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                Upcoming Events
+              </Typography>
+            </Box>
+            
+            {upcomingEvents.length > 0 ? (
+              <List sx={{ p: 0 }}>
+                {upcomingEvents.map((event, index) => (
+                  <ListItem key={event._id} sx={{ px: 0, py: 1 }}>
+                    <ListItemText
+                      primary={
+                        <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+                          {event.title}
                         </Typography>
-                        <Chip
-                          label={event.eventType}
-                          size="small"
-                          variant="outlined"
-                          sx={{ ml: 1, fontSize: '0.7rem' }}
-                        />
-                      </Box>
-                    }
-                  />
-                </ListItem>
-              ))}
-            </List>
-          ) : (
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
-              No upcoming events
-            </Typography>
-          )}
-        </CardContent>
-      </Card>
+                      }
+                      secondary={
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">
+                            {new Date(event.date).toLocaleDateString()}
+                          </Typography>
+                          <Chip
+                            label={event.eventType}
+                            size="small"
+                            variant="outlined"
+                            sx={{ ml: 1, fontSize: '0.7rem' }}
+                          />
+                        </Box>
+                      }
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+                No upcoming events
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Suggested Companies */}
-      <Card
-        component={motion.div}
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.3 }}
-        sx={{ borderRadius: 2 }}
-      >
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Business color="primary" sx={{ mr: 1 }} />
-            <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
-              Companies to Follow
-            </Typography>
-          </Box>
-          
-          {suggestedCompanies.length > 0 ? (
-            <List sx={{ p: 0 }}>
-              {suggestedCompanies.map((company, index) => (
-                <ListItem key={company._id} sx={{ px: 0, py: 1 }}>
-                  <ListItemAvatar>
-                    <Avatar
-                      src={company.logo}
-                      sx={{ width: 32, height: 32 }}
+      {/* Suggested Companies - Show only on desktop to save space on tablets */}
+      {!isTablet && (
+        <Card
+          component={motion.div}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+          sx={{ borderRadius: 2 }}
+        >
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Business color="primary" sx={{ mr: 1 }} />
+              <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: 600 }}>
+                Companies to Follow
+              </Typography>
+            </Box>
+            
+            {suggestedCompanies.length > 0 ? (
+              <List sx={{ p: 0 }}>
+                {suggestedCompanies.map((company, index) => (
+                  <ListItem key={company._id} sx={{ px: 0, py: 1 }}>
+                    <ListItemAvatar>
+                      <Avatar
+                        src={company.logo}
+                        sx={{ width: 32, height: 32 }}
+                      >
+                        {company.name[0]}
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {company.name}
+                        </Typography>
+                      }
+                      secondary={
+                        <Typography variant="caption" color="text.secondary">
+                          {company.followersCount} followers
+                        </Typography>
+                      }
+                    />
+                    <Button
+                      size="small"
+                      variant={company.isFollowing ? "outlined" : "contained"}
+                      onClick={() => handleFollowCompany(company._id)}
+                      sx={{ ml: 1 }}
                     >
-                      {company.name[0]}
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {company.name}
-                      </Typography>
-                    }
-                    secondary={
-                      <Typography variant="caption" color="text.secondary">
-                        {company.followersCount} followers
-                      </Typography>
-                    }
-                  />
-                  <Button
-                    size="small"
-                    variant={company.isFollowing ? "outlined" : "contained"}
-                    onClick={() => handleFollowCompany(company._id)}
-                    sx={{ ml: 1 }}
-                  >
-                    {company.isFollowing ? 'Following' : 'Follow'}
-                  </Button>
-                </ListItem>
-              ))}
-            </List>
-          ) : (
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
-              No company suggestions
-            </Typography>
-          )}
-        </CardContent>
-      </Card>
+                      {company.isFollowing ? 'Following' : 'Follow'}
+                    </Button>
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+                No company suggestions
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </Box>
   );
 };

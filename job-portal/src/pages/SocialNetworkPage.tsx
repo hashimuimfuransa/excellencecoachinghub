@@ -22,6 +22,15 @@ import {
   Stack,
   Badge,
   alpha,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  ListItemButton,
 } from '@mui/material';
 import { 
   Add, 
@@ -80,6 +89,12 @@ const SocialNetworkPage: React.FC = () => {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
   const [showWelcomeHeader, setShowWelcomeHeader] = useState(true);
+  const [showMobileConnections, setShowMobileConnections] = useState(false);
+  
+  // Suggested connections state
+  const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
+  const [connectingUsers, setConnectingUsers] = useState<string[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(true);
 
   // Load posts on component mount and when filter changes
   useEffect(() => {
@@ -140,8 +155,47 @@ const SocialNetworkPage: React.FC = () => {
     setPosts(prev => prev.filter(post => post._id !== postId));
   };
 
+  // Load suggested connections
+  useEffect(() => {
+    const loadSuggestedConnections = async () => {
+      if (!user) return;
+      
+      setSuggestionsLoading(true);
+      try {
+        const response = await socialNetworkService.getSuggestedConnections();
+        if (response.success) {
+          setSuggestedUsers(response.data || []);
+        }
+      } catch (error) {
+        console.error('Error loading suggested connections:', error);
+      } finally {
+        setSuggestionsLoading(false);
+      }
+    };
+
+    loadSuggestedConnections();
+  }, [user]);
+
+  // Handle connection request
+  const handleConnect = async (userId: string) => {
+    if (!user || connectingUsers.includes(userId)) return;
+
+    setConnectingUsers(prev => [...prev, userId]);
+    try {
+      const response = await socialNetworkService.sendConnectionRequest(userId);
+      if (response.success) {
+        // Remove the connected user from suggestions
+        setSuggestedUsers(prev => prev.filter(u => u._id !== userId));
+      }
+    } catch (error) {
+      console.error('Error sending connection request:', error);
+    } finally {
+      setConnectingUsers(prev => prev.filter(id => id !== userId));
+    }
+  };
+
   const feedFilters: FeedOptions['filter'][] = ['all', 'jobs', 'people', 'training'];
-  const tabLabels = ['All Posts', 'Job Posts', 'People', 'Training'];
+  const tabLabels = ['All Posts', 'Job Posts', 'People', 'Training', 'Suggestions'];
 
   // Quick Action Buttons Data
   const quickActions = [
@@ -260,9 +314,15 @@ const SocialNetworkPage: React.FC = () => {
       <Container 
         maxWidth={false} 
         sx={{ 
-          py: { xs: 2, sm: 3, md: 4 },
-          px: { xs: 1, sm: 2, md: 3, lg: 4 },
-          maxWidth: { xs: '100%', sm: '100%', md: '1600px' },
+          py: { xs: 2, sm: 3, md: 3, lg: 4 },
+          px: { xs: 1, sm: 2, md: 2, lg: 3, xl: 4 },
+          maxWidth: { 
+            xs: '100%', 
+            sm: '100%', 
+            md: '1200px', 
+            lg: '1500px',
+            xl: '1700px' 
+          },
           mx: 'auto',
           position: 'relative',
           zIndex: 1,
@@ -468,9 +528,9 @@ const SocialNetworkPage: React.FC = () => {
             >
               Quick Actions
             </Typography>
-            <Grid container spacing={{ xs: 2, sm: 3, md: 4, lg: 5 }}>
+            <Grid container spacing={{ xs: 2, sm: 3, md: 2, lg: 3, xl: 4 }}>
                 {quickActions.map((action, index) => (
-                  <Grid size={{ xs: 6, sm: 6, md: 4, lg: 3 }} key={action.title}>
+                  <Grid size={{ xs: 6, sm: 4, md: 3, lg: 3, xl: 3 }} key={action.title}>
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -480,8 +540,8 @@ const SocialNetworkPage: React.FC = () => {
                       <Card
                         sx={{
                           height: '100%',
-                          minHeight: { xs: '140px', sm: '160px', md: '180px' },
-                          borderRadius: { xs: 2, sm: 3 },
+                          minHeight: { xs: '140px', sm: '160px', md: isTablet ? '140px' : '180px' },
+                          borderRadius: { xs: 2, sm: 3, md: isTablet ? 2 : 3 },
                           background: action.gradient,
                           color: 'white',
                           cursor: 'pointer',
@@ -499,16 +559,16 @@ const SocialNetworkPage: React.FC = () => {
                             position: 'absolute',
                             top: 0,
                             right: 0,
-                            width: { xs: 40, sm: 60 },
-                            height: { xs: 40, sm: 60 },
+                            width: { xs: 40, sm: 60, md: isTablet ? 40 : 60 },
+                            height: { xs: 40, sm: 60, md: isTablet ? 40 : 60 },
                             background: `radial-gradient(circle, ${alpha('#fff', 0.2)} 0%, transparent 70%)`,
-                            transform: { xs: 'translate(15px, -15px)', sm: 'translate(20px, -20px)' },
+                            transform: { xs: 'translate(15px, -15px)', sm: 'translate(20px, -20px)', md: isTablet ? 'translate(15px, -15px)' : 'translate(20px, -20px)' },
                           },
                         }}
                         onClick={() => navigate(action.path)}
                       >
                         <CardContent sx={{ 
-                          p: { xs: 1.5, sm: 2.5, md: 3 }, 
+                          p: { xs: 1.5, sm: 2.5, md: isTablet ? 2 : 3 }, 
                           height: '100%', 
                           display: 'flex', 
                           flexDirection: 'column' 
@@ -517,26 +577,26 @@ const SocialNetworkPage: React.FC = () => {
                             display: 'flex', 
                             justifyContent: 'space-between', 
                             alignItems: 'flex-start', 
-                            mb: { xs: 1, sm: 1.5 } 
+                            mb: { xs: 1, sm: 1.5, md: isTablet ? 1 : 1.5 } 
                           }}>
                             <Box
                               sx={{
                                 background: alpha('#fff', 0.2),
-                                borderRadius: { xs: 1.5, sm: 2 },
-                                p: { xs: 0.75, sm: 1 },
+                                borderRadius: { xs: 1.5, sm: 2, md: isTablet ? 1.5 : 2 },
+                                p: { xs: 0.75, sm: 1, md: isTablet ? 0.75 : 1 },
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                               }}
                             >
                               {React.cloneElement(action.icon, { 
-                                sx: { fontSize: { xs: 24, sm: 28 } } 
+                                sx: { fontSize: { xs: 24, sm: 28, md: isTablet ? 22 : 28 } } 
                               })}
                             </Box>
                             <ArrowForward 
                               className="action-arrow"
                               sx={{ 
-                                fontSize: { xs: 18, sm: 20 },
+                                fontSize: { xs: 18, sm: 20, md: isTablet ? 16 : 20 },
                                 transition: 'transform 0.3s ease',
                                 opacity: 0.8,
                               }} 
@@ -547,8 +607,9 @@ const SocialNetworkPage: React.FC = () => {
                               variant="h6" 
                               fontWeight="700" 
                               sx={{ 
-                                mb: 0.5, 
-                                fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' } 
+                                mb: isTablet ? 0.25 : 0.5, 
+                                fontSize: { xs: '1rem', sm: '1.1rem', md: isTablet ? '0.95rem' : '1.25rem' },
+                                lineHeight: isTablet ? 1.2 : 1.3
                               }}
                             >
                               {action.title}
@@ -557,8 +618,9 @@ const SocialNetworkPage: React.FC = () => {
                               variant="body2" 
                               sx={{ 
                                 opacity: 0.9, 
-                                mb: { xs: 1, sm: 1.5, md: 2 },
-                                fontSize: { xs: '0.8rem', sm: '0.875rem' }
+                                mb: { xs: 1, sm: 1.5, md: isTablet ? 1 : 2 },
+                                fontSize: { xs: '0.8rem', sm: '0.875rem', md: isTablet ? '0.75rem' : '0.875rem' },
+                                lineHeight: isTablet ? 1.2 : 1.4
                               }}
                             >
                               {action.subtitle}
@@ -571,8 +633,8 @@ const SocialNetworkPage: React.FC = () => {
                                 color: 'white',
                                 border: `1px solid ${alpha('#fff', 0.3)}`,
                                 fontWeight: 600,
-                                fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                                height: { xs: 24, sm: 28 },
+                                fontSize: { xs: '0.7rem', sm: '0.75rem', md: isTablet ? '0.65rem' : '0.75rem' },
+                                height: { xs: 24, sm: 28, md: isTablet ? 22 : 28 },
                               }}
                             />
                           </Box>
@@ -585,25 +647,25 @@ const SocialNetworkPage: React.FC = () => {
             </Box>
           </motion.div>
 
-          {/* Main Content Grid - Mobile Optimized */}
-          <Grid container spacing={ { xs: 2, sm: 3, md: 4 } }>
-            {/* Left Sidebar - Hide on mobile and tablet */}
-            {!isMobile && !isTablet && (
-              <Grid size={{ xl: 2.5, lg: 3 }}>
+          {/* Main Content Grid - Balanced Layout */}
+          <Grid container spacing={{ xs: 2, sm: 3, md: 2, lg: 3, xl: 4 }}>
+            {/* Left Sidebar - Hide only on mobile */}
+            {!isMobile && (
+              <Grid size={{ xl: 3, lg: 3, md: 3 }}>
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.5, delay: 0.4 }}
                 >
-                  <Stack spacing={3}>
+                  <Stack spacing={isTablet ? 2 : 3}>
                     {/* Profile Quick View */}
-                    <Card sx={{ borderRadius: 3 }}>
-                      <CardContent sx={{ p: 5 }}>
+                    <Card sx={{ borderRadius: isTablet ? 2 : 3 }}>
+                      <CardContent sx={{ p: isTablet ? 3 : 5 }}>
                         <Box sx={{ textAlign: 'center', mb: 2 }}>
                           <Avatar
                             sx={{
-                              width: 60,
-                              height: 60,
+                              width: isTablet ? 50 : 60,
+                              height: isTablet ? 50 : 60,
                               mx: 'auto',
                               mb: 1,
                               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -611,10 +673,10 @@ const SocialNetworkPage: React.FC = () => {
                           >
                             {user?.firstName?.[0] || 'U'}
                           </Avatar>
-                          <Typography variant="h6" fontWeight="600">
+                          <Typography variant={isTablet ? "subtitle1" : "h6"} fontWeight="600">
                             {user?.firstName} {user?.lastName}
                           </Typography>
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: isTablet ? '0.8rem' : '0.875rem' }}>
                             {user?.profession || 'Professional'}
                           </Typography>
                         </Box>
@@ -622,7 +684,8 @@ const SocialNetworkPage: React.FC = () => {
                           fullWidth
                           variant="outlined"
                           onClick={() => navigate('/app/profile')}
-                          sx={{ borderRadius: 2 }}
+                          sx={{ borderRadius: 2, fontSize: isTablet ? '0.75rem' : '0.875rem' }}
+                          size={isTablet ? "small" : "medium"}
                         >
                           View Profile
                         </Button>
@@ -630,12 +693,12 @@ const SocialNetworkPage: React.FC = () => {
                     </Card>
 
                     {/* Trending Topics */}
-                    <Card sx={{ borderRadius: 3 }}>
-                      <CardContent sx={{ p: 5 }}>
-                        <Typography variant="h6" fontWeight="600" sx={{ mb: 3 }}>
+                    <Card sx={{ borderRadius: isTablet ? 2 : 3 }}>
+                      <CardContent sx={{ p: isTablet ? 3 : 5 }}>
+                        <Typography variant={isTablet ? "subtitle1" : "h6"} fontWeight="600" sx={{ mb: isTablet ? 2 : 3 }}>
                           Trending Today
                         </Typography>
-                        <Stack spacing={3}>
+                        <Stack spacing={isTablet ? 2 : 3}>
                           {[
                             { topic: '#RemoteWork', posts: '2.4k posts' },
                             { topic: '#AI Jobs', posts: '1.8k posts' },
@@ -643,10 +706,10 @@ const SocialNetworkPage: React.FC = () => {
                             { topic: '#Networking', posts: '743 posts' },
                           ].map((trend, index) => (
                             <Box key={trend.topic} sx={{ cursor: 'pointer' }}>
-                              <Typography variant="body2" fontWeight="600" color="primary">
+                              <Typography variant="body2" fontWeight="600" color="primary" sx={{ fontSize: isTablet ? '0.8rem' : '0.875rem' }}>
                                 {trend.topic}
                               </Typography>
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: isTablet ? '0.7rem' : '0.75rem' }}>
                                 {trend.posts}
                               </Typography>
                             </Box>
@@ -659,23 +722,23 @@ const SocialNetworkPage: React.FC = () => {
               </Grid>
             )}
 
-            {/* Center Feed - Full width on mobile */}
+            {/* Center Feed - Optimized sizing for better post viewing */}
             <Grid size={{ 
               xs: 12, 
               sm: 12, 
-              md: isMobile || isTablet ? 12 : 7, 
-              lg: isMobile || isTablet ? 12 : 6, 
-              xl: isMobile || isTablet ? 12 : 7 
+              md: 6, 
+              lg: 5, 
+              xl: 6 
             }}>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
               >
-                {/* Enhanced Navigation Tabs - Mobile Optimized */}
+                {/* Enhanced Navigation Tabs - Responsive */}
                 <Card 
                   sx={{ 
-                    mb: { xs: 2, sm: 3, md: 4 }, 
+                    mb: { xs: 2, sm: 2, md: 3, lg: 4 }, 
                     borderRadius: { xs: 2, md: 3 },
                     background: theme.palette.mode === 'dark'
                       ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
@@ -738,9 +801,9 @@ const SocialNetworkPage: React.FC = () => {
                   </Tabs>
                 </Card>
 
-                {/* Create Post Section - Mobile Optimized */}
+                {/* Create Post Section - Responsive */}
                 {(showCreatePost || !isMobile) && (
-                  <Box sx={{ mb: { xs: 2, md: 3 }, mx: { xs: 0, sm: 'auto' } }}>
+                  <Box sx={{ mb: { xs: 2, sm: 2, md: 3 }, mx: { xs: 0, sm: 'auto' } }}>
                     <CreatePost
                       onPostCreated={handlePostCreated}
                       onCancel={isMobile ? () => setShowCreatePost(false) : undefined}
@@ -771,7 +834,7 @@ const SocialNetworkPage: React.FC = () => {
                         </Typography>
                       </Card>
                     ) : (
-                      <Stack spacing={{ xs: 2, sm: 3, md: 4 }}>
+                      <Stack spacing={{ xs: 2, sm: 2.5, md: 3, lg: 3.5 }}>
                         {posts.map((post, index) => (
                           <motion.div
                             key={post._id}
@@ -789,7 +852,7 @@ const SocialNetworkPage: React.FC = () => {
                           >
                             <Box
                               sx={{
-                                borderRadius: { xs: 2, sm: 3, md: 4 },
+                                borderRadius: { xs: 2, sm: 3, md: 3, lg: 4 },
                                 overflow: 'hidden',
                                 background: theme.palette.mode === 'dark'
                                   ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
@@ -873,9 +936,9 @@ const SocialNetworkPage: React.FC = () => {
               </motion.div>
             </Grid>
 
-            {/* Right Sidebar - Suggestions & Activities */}
-            {!isMobile && !isTablet && (
-              <Grid size={{ xl: 2.5, lg: 3 }}>
+            {/* Right Sidebar - Balanced for connections display */}
+            {!isMobile && (
+              <Grid size={{ xl: 3, lg: 4, md: 3 }}>
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -956,8 +1019,159 @@ const SocialNetworkPage: React.FC = () => {
                   <Chat />
                 </Fab>
               </motion.div>
+              
+              {/* Suggested Connections Button for Mobile */}
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2 }}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <Fab
+                  color="success"
+                  size="medium"
+                  sx={{
+                    background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
+                    boxShadow: '0 6px 20px rgba(76, 175, 80, 0.4)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #45a049 0%, #4CAF50 100%)',
+                      boxShadow: '0 8px 25px rgba(76, 175, 80, 0.5)',
+                      transform: 'translateY(-2px)',
+                    },
+                    '& .MuiSvgIcon-root': {
+                      fontSize: 22,
+                    }
+                  }}
+                  onClick={() => setShowMobileConnections(true)}
+                >
+                  <People />
+                </Fab>
+              </motion.div>
             </Box>
           )}
+
+          {/* Mobile Suggested Connections Modal */}
+          <Dialog
+            open={showMobileConnections}
+            onClose={() => setShowMobileConnections(false)}
+            maxWidth="sm"
+            fullWidth
+            PaperProps={{
+              sx: {
+                borderRadius: { xs: 0, sm: 3 },
+                maxHeight: '80vh',
+                margin: { xs: 0, sm: 2 },
+                width: { xs: '100%', sm: 'auto' },
+              }
+            }}
+          >
+            <DialogTitle sx={{ 
+              pb: 1,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2
+            }}>
+              <People />
+              Suggested Connections
+            </DialogTitle>
+            <DialogContent sx={{ p: 0 }}>
+              <List>
+                {/* Show real suggested connections */}
+                {suggestedUsers.slice(0, 5).map((connection, index) => (
+                  <ListItem key={index} disablePadding>
+                    <ListItemButton 
+                      sx={{ 
+                        py: 2,
+                        '&:hover': {
+                          backgroundColor: alpha(theme.palette.primary.main, 0.04)
+                        }
+                      }}
+                    >
+                      <ListItemAvatar>
+                        <Avatar 
+                          src={connection.profilePicture || connection.avatar}
+                          sx={{ 
+                            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                            width: 48,
+                            height: 48
+                          }}
+                        >
+                          {connection.firstName?.[0]}{connection.lastName?.[0]}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={
+                          <Typography variant="subtitle1" fontWeight="600">
+                            {connection.firstName} {connection.lastName}
+                          </Typography>
+                        }
+                        secondary={
+                          <Stack spacing={0.5}>
+                            <Typography variant="body2" color="text.secondary">
+                              {(connection.jobTitle || connection.profession) && 
+                                `${connection.jobTitle || connection.profession}${connection.company ? ` at ${connection.company}` : ''}`
+                              }
+                            </Typography>
+                            {connection.mutualConnections > 0 && (
+                              <Typography variant="caption" color="primary">
+                                {connection.mutualConnections} mutual connections
+                              </Typography>
+                            )}
+                          </Stack>
+                        }
+                      />
+                      <Button 
+                        variant="outlined" 
+                        size="small"
+                        onClick={() => handleConnect(connection._id)}
+                        disabled={connectingUsers.includes(connection._id)}
+                        sx={{ 
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          minWidth: 'auto',
+                          px: 2
+                        }}
+                      >
+                        {connectingUsers.includes(connection._id) ? 'Connecting...' : 'Connect'}
+                      </Button>
+                    </ListItemButton>
+                  </ListItem>
+                ))}
+              </List>
+            </DialogContent>
+            <DialogActions sx={{ p: 2, pt: 1, gap: 1 }}>
+              <Button 
+                onClick={() => {
+                  setShowMobileConnections(false);
+                  navigate('/app/connections');
+                }}
+                variant="contained"
+                sx={{ 
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  flex: 1
+                }}
+              >
+                View All Connections
+              </Button>
+              <Button 
+                onClick={() => setShowMobileConnections(false)}
+                variant="outlined"
+                sx={{ 
+                  borderRadius: 2,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  minWidth: 80
+                }}
+              >
+                Close
+              </Button>
+            </DialogActions>
+          </Dialog>
       </Container>
     </Box>
   );

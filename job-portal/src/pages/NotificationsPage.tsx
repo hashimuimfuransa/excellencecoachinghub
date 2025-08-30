@@ -38,7 +38,7 @@ import {
   DeleteSweep,
   Settings,
   ExpandMore,
-  TestTube,
+  Science,
   VolumeUp,
   VolumeOff,
   Vibration,
@@ -289,7 +289,7 @@ const NotificationsPage: React.FC = () => {
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             <Button
               variant="outlined"
-              startIcon={<TestTube />}
+              startIcon={<Science />}
               onClick={handleTestNotification}
               size="small"
               sx={{ textTransform: 'none' }}

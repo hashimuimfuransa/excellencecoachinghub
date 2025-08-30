@@ -187,9 +187,7 @@ const ModernJobsPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [totalJobs, setTotalJobs] = useState(0);
-  const [selectedCategory, setSelectedCategory] = useState<JobCategory | 'all'>(
-    (searchParams.get('category') as JobCategory) || 'all'
-  );
+  const [selectedCategory, setSelectedCategory] = useState<JobCategory | 'all'>('all');
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
   
   // New state for modern UI
@@ -220,49 +218,56 @@ const ModernJobsPage: React.FC = () => {
       label: 'All Opportunities', 
       icon: Work, 
       color: 'primary.main',
-      description: 'Browse all available opportunities'
+      description: 'Browse all available jobs'
     },
     { 
-      key: JobCategory.JOBS, 
-      label: 'Jobs', 
-      icon: WorkOutline, 
-      color: 'primary.main',
-      description: 'Traditional employment opportunities'
-    },
-    { 
-      key: JobCategory.TENDERS, 
-      label: 'Tenders', 
-      icon: Gavel, 
+      key: JobCategory.SOFTWARE_ENGINEERING, 
+      label: 'Tech & Engineering', 
+      icon: Code, 
       color: 'info.main',
-      description: 'Business tenders and procurement opportunities'
+      description: 'Software, hardware, and technical roles'
     },
     { 
-      key: JobCategory.TRAININGS, 
-      label: 'Trainings', 
-      icon: School, 
-      color: 'success.main',
-      description: 'Professional development and training programs'
-    },
-    { 
-      key: JobCategory.INTERNSHIPS, 
-      label: 'Internships', 
-      icon: EmojiEvents, 
-      color: 'warning.main',
-      description: 'Internship and entry-level opportunities'
-    },
-    { 
-      key: JobCategory.SCHOLARSHIPS, 
-      label: 'Scholarships', 
-      icon: CardGiftcard, 
+      key: JobCategory.DATA_SCIENCE, 
+      label: 'Data & AI', 
+      icon: SmartToy, 
       color: 'secondary.main',
-      description: 'Educational scholarships and grants'
+      description: 'Data science, AI, and analytics'
     },
     { 
-      key: JobCategory.ACCESS_TO_FINANCE, 
-      label: 'Access to Finance', 
+      key: JobCategory.MARKETING, 
+      label: 'Marketing & Sales', 
+      icon: TrendingUp, 
+      color: 'success.main',
+      description: 'Marketing, sales, and growth roles'
+    },
+    { 
+      key: JobCategory.DESIGN, 
+      label: 'Design & Creative', 
+      icon: Psychology, 
+      color: 'warning.main',
+      description: 'UI/UX, graphic design, and creative roles'
+    },
+    { 
+      key: JobCategory.FINANCE, 
+      label: 'Finance & Banking', 
       icon: AccountBalance, 
       color: 'error.main',
-      description: 'Funding and financial opportunities'
+      description: 'Finance, accounting, and banking'
+    },
+    { 
+      key: JobCategory.HEALTHCARE, 
+      label: 'Healthcare & Medical', 
+      icon: LocalFireDepartment, 
+      color: 'primary.dark',
+      description: 'Healthcare, medical, and wellness'
+    },
+    { 
+      key: JobCategory.EDUCATION, 
+      label: 'Education & Training', 
+      icon: School, 
+      color: 'info.dark',
+      description: 'Teaching, training, and education'
     }
   ];
 
@@ -393,11 +398,6 @@ const ModernJobsPage: React.FC = () => {
   useEffect(() => {
     let filtered = jobs;
 
-    // Apply category filter first
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(job => job.category === selectedCategory);
-    }
-
     // Apply client-side filtering for better UX
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
@@ -406,14 +406,6 @@ const ModernJobsPage: React.FC = () => {
         job.company.toLowerCase().includes(searchLower) ||
         job.location.toLowerCase().includes(searchLower) ||
         job.skills.some(skill => skill.toLowerCase().includes(searchLower))
-      );
-    }
-
-    // Apply location filter
-    if (locationFilter) {
-      const locationLower = locationFilter.toLowerCase();
-      filtered = filtered.filter(job => 
-        job.location.toLowerCase().includes(locationLower)
       );
     }
 
@@ -427,35 +419,7 @@ const ModernJobsPage: React.FC = () => {
     }
 
     setFilteredJobs(filtered);
-  }, [jobs, selectedCategory, searchTerm, locationFilter, salaryRange]);
-
-  // Handle category change
-  const handleCategoryChange = (event: React.SyntheticEvent, newValue: JobCategory | 'all') => {
-    setSelectedCategory(newValue);
-    setCurrentPage(1); // Reset to first page when category changes
-    
-    // Update URL parameters
-    const newSearchParams = new URLSearchParams(searchParams);
-    if (newValue === 'all') {
-      newSearchParams.delete('category');
-    } else {
-      newSearchParams.set('category', newValue);
-    }
-    navigate({ search: newSearchParams.toString() }, { replace: true });
-  };
-
-  // Handle URL parameter changes
-  useEffect(() => {
-    const categoryFromUrl = searchParams.get('category') as JobCategory;
-    if (categoryFromUrl && categoryFromUrl !== selectedCategory) {
-      // Validate category exists in our categories list
-      const validCategories = ['all', ...categories.map(c => c.key)];
-      if (validCategories.includes(categoryFromUrl)) {
-        setSelectedCategory(categoryFromUrl);
-        setCurrentPage(1);
-      }
-    }
-  }, [searchParams]);
+  }, [jobs, searchTerm, locationFilter, salaryRange]);
 
   // Fetch jobs on filter/sort changes
   useEffect(() => {
@@ -536,20 +500,9 @@ const ModernJobsPage: React.FC = () => {
   if (loading && jobs.length === 0) {
     return (
       <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 2,
-            gridTemplateColumns: {
-              xs: '1fr',
-              sm: 'repeat(2, 1fr)',
-              md: 'repeat(3, 1fr)',
-              lg: 'repeat(4, 1fr)'
-            }
-          }}
-        >
+        <Grid container spacing={3}>
           {Array.from({ length: 12 }).map((_, index) => (
-            <Box key={index} sx={{ minWidth: 0, maxWidth: '100%' }}>
+            <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
               <Card>
                 <CardContent>
                   <Skeleton variant="rectangular" width="100%" height={200} />
@@ -560,9 +513,9 @@ const ModernJobsPage: React.FC = () => {
                   </Box>
                 </CardContent>
               </Card>
-            </Box>
+            </Grid>
           ))}
-        </Box>
+        </Grid>
       </Container>
     );
   }
@@ -719,7 +672,7 @@ const ModernJobsPage: React.FC = () => {
         <Box sx={{ mt: 3, mb: 2 }}>
           <Tabs
             value={selectedCategory}
-            onChange={handleCategoryChange}
+            onChange={(e, newValue) => setSelectedCategory(newValue)}
             variant="scrollable"
             scrollButtons="auto"
             sx={{
@@ -752,11 +705,7 @@ const ModernJobsPage: React.FC = () => {
                   value={category.key}
                   label={
                     <Stack direction="row" alignItems="center" spacing={1}>
-                      {loading && selectedCategory === category.key ? (
-                        <CircularProgress size={18} color="inherit" />
-                      ) : (
-                        <IconComponent sx={{ fontSize: 18 }} />
-                      )}
+                      <IconComponent sx={{ fontSize: 18 }} />
                       <span>{category.label}</span>
                       {count > 0 && (
                         <Chip 
@@ -798,25 +747,15 @@ const ModernJobsPage: React.FC = () => {
           </Box>
         )}
 
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 2,
-            gridTemplateColumns: viewMode === 'grid' ? {
-              xs: '1fr',
-              sm: 'repeat(2, 1fr)',
-              md: 'repeat(3, 1fr)',
-              lg: 'repeat(4, 1fr)'
-            } : 'repeat(1, 1fr)',
-          }}
-        >
+        <Grid container spacing={3}>
           {filteredJobs.map((job, index) => (
-            <Box 
+            <Grid 
+              item 
+              xs={12} 
+              sm={viewMode === 'grid' ? 6 : 12} 
+              md={viewMode === 'grid' ? 4 : 12} 
+              lg={viewMode === 'grid' ? 3 : 12}
               key={job._id}
-              sx={{
-                minWidth: 0, // Allow shrinking
-                maxWidth: '100%', // Prevent expansion
-              }}
             >
               {viewMode === 'grid' ? (
                 // Grid View - Vertical layout
@@ -1157,9 +1096,9 @@ const ModernJobsPage: React.FC = () => {
                   <Typography variant="body2" color="text.secondary">{job.company}</Typography>
                 </Paper>
               )}
-            </Box>
+            </Grid>
           ))}
-        </Box>
+        </Grid>
 
         {/* Pagination */}
         {totalPages > 1 && (

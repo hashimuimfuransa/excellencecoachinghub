@@ -49,6 +49,9 @@ export { Company, ICompanyDocument, ICompanyModel } from './Company';
 export { Event, IEventDocument, IEventModel } from './Event';
 export { CareerInsight, ICareerInsightDocument, ICareerInsightModel } from './CareerInsight';
 
+// Chat Models
+export { Chat, ChatMessage, IChat, IChatMessage } from './Chat';
+
 // Re-export shared types for convenience
 export {
   UserRole,

@@ -138,6 +138,10 @@ export interface IUserDocument extends Document {
   testsCompletedCount?: number;
   interviewsCount?: number;
   
+  // Chat system fields
+  isOnline?: boolean;
+  lastSeen?: Date;
+  
   createdAt: Date;
   updatedAt: Date;
   
@@ -465,7 +469,11 @@ const userSchema = new Schema<IUserDocument>({
   savedJobsCount: { type: Number, default: 0, min: 0 },
   certificatesCount: { type: Number, default: 0, min: 0 },
   testsCompletedCount: { type: Number, default: 0, min: 0 },
-  interviewsCount: { type: Number, default: 0, min: 0 }
+  interviewsCount: { type: Number, default: 0, min: 0 },
+  
+  // Chat system fields
+  isOnline: { type: Boolean, default: false },
+  lastSeen: { type: Date, default: Date.now }
 }, {
   timestamps: true,
   toJSON: {

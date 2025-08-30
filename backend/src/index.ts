@@ -88,7 +88,8 @@ import companyRoutes from '@/routes/companyRoutes';
 import eventRoutes from '@/routes/eventRoutes';
 import careerInsightRoutes from '@/routes/careerInsightRoutes';
 
-
+// Chat routes
+import chatRoutes from '@/routes/chatRoutes';
 
 const app = express();
 const server = createServer(app);
@@ -719,6 +720,9 @@ app.use('/api/connections', connectionRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/insights', careerInsightRoutes);
+
+// Chat routes
+app.use('/api/chat', chatRoutes);
 
 // Test endpoint to check jobs in database
 app.get('/api/jobs-debug', async (req, res) => {

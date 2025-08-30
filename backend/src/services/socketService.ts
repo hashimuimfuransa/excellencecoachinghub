@@ -3,7 +3,10 @@ import { hmsVideoService, UserRole } from './hmsVideoService';
 import { User } from '../models/User';
 import { LiveSession } from '../models/LiveSession';
 
-export const setupSocketIO = (io: Server): void => {
+export let io: Server;
+
+export const setupSocketIO = (ioInstance: Server): void => {
+  io = ioInstance;
   io.on('connection', (socket) => {
     console.log(`User connected: ${socket.id}`);
 
@@ -307,6 +310,53 @@ export const setupSocketIO = (io: Server): void => {
         candidate: data.candidate
       });
       console.log(`ICE candidate sent from ${socket.id} to ${data.targetUserId}`);
+    });
+
+    // Chat System Events
+    socket.on('chat:join', (userId: string) => {
+      socket.join(`user_${userId}`);
+      console.log(`User ${userId} joined chat system`);
+      
+      // Update user online status
+      User.findByIdAndUpdate(userId, { 
+        isOnline: true, 
+        lastSeen: new Date() 
+      }).catch(err => console.error('Error updating user online status:', err));
+      
+      // Notify other users that this user is online
+      socket.broadcast.emit('user:online', userId);
+    });
+
+    socket.on('chat:leave', (userId: string) => {
+      socket.leave(`user_${userId}`);
+      console.log(`User ${userId} left chat system`);
+      
+      // Update user offline status
+      User.findByIdAndUpdate(userId, { 
+        isOnline: false, 
+        lastSeen: new Date() 
+      }).catch(err => console.error('Error updating user offline status:', err));
+      
+      // Notify other users that this user is offline
+      socket.broadcast.emit('user:offline', userId);
+    });
+
+    socket.on('chat:join-room', (chatId: string) => {
+      socket.join(`chat_${chatId}`);
+      console.log(`User joined chat room: ${chatId}`);
+    });
+
+    socket.on('chat:leave-room', (chatId: string) => {
+      socket.leave(`chat_${chatId}`);
+      console.log(`User left chat room: ${chatId}`);
+    });
+
+    socket.on('chat:typing', (data: { chatId: string; userId: string; isTyping: boolean }) => {
+      socket.to(`chat_${data.chatId}`).emit('user:typing', {
+        chatId: data.chatId,
+        userId: data.userId,
+        isTyping: data.isTyping
+      });
     });
 
     socket.on('disconnect', () => {

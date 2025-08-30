@@ -138,7 +138,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const handleStartChat = async (participant: ChatUser) => {
     try {
-      const chat = await chatService.createOrGetChat(participant._id);
+      const chat = await chatService.createOrGetChat([participant._id]);
       setChats(prevChats => {
         const existingIndex = prevChats.findIndex(c => c._id === chat._id);
         if (existingIndex >= 0) {
@@ -157,7 +157,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const filteredChats = chats.filter(chat =>
     chat.participants.some(p => 
       p._id !== user?._id && 
-      p.name.toLowerCase().includes(searchQuery.toLowerCase())
+      (`${p.firstName || ''} ${p.lastName || ''}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+       p.email.toLowerCase().includes(searchQuery.toLowerCase()))
     )
   );
 
@@ -318,7 +319,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                                   background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
                                 }}
                               >
-                                {otherParticipant.name.charAt(0).toUpperCase()}
+                                {otherParticipant.firstName?.charAt(0)?.toUpperCase() || otherParticipant.lastName?.charAt(0)?.toUpperCase() || '?'}
                               </Avatar>
                             </Badge>
                           </ListItemAvatar>
@@ -332,7 +333,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                                     color: isSelected ? 'primary.main' : 'text.primary',
                                   }}
                                 >
-                                  {otherParticipant.name}
+                                  {`${otherParticipant.firstName || ''} ${otherParticipant.lastName || ''}`.trim() || otherParticipant.email}
                                 </Typography>
                                 {otherParticipant.role === 'employer' && (
                                   <Work sx={{ fontSize: 12, color: 'primary.main' }} />
@@ -427,13 +428,13 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 >
                   <ListItemAvatar>
                     <Avatar src={user.profilePicture}>
-                      {user.name.charAt(0).toUpperCase()}
+                      {user.firstName?.charAt(0)?.toUpperCase() || user.lastName?.charAt(0)?.toUpperCase() || '?'}
                     </Avatar>
                   </ListItemAvatar>
                   <ListItemText
                     primary={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {user.name}
+                        {`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email}
                         {user.role === 'employer' && (
                           <Chip
                             label="Employer"

@@ -32,7 +32,8 @@ import {
   Switch,
   FormControlLabel,
   Fade,
-  Slide
+  Slide,
+  Menu
 } from '@mui/material';
 import {
   Person,
@@ -57,16 +58,25 @@ import {
   EmojiEvents,
   Settings,
   Warning,
-  CheckCircle
+  CheckCircle,
+  Article,
+  People,
+  Timeline,
+  Public,
+  Lock,
+  PlayCircleOutline,
+  Delete,
+  MoreVert
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { userService } from '../services/userService';
 import type { User } from '../types/user';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import ProfileCompletion from '../components/ProfileCompletion';
 import ComprehensiveProfileForm from '../components/ComprehensiveProfileForm';
 import { validateProfile } from '../utils/profileValidation';
 import { validateProfileSimple } from '../utils/simpleProfileValidation';
+import { socialNetworkService } from '../services/socialNetworkService';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -92,6 +102,8 @@ function TabPanel(props: TabPanelProps) {
 const ProfilePage: React.FC = () => {
   const { user, updateUser, setUserData } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { userId } = useParams();
   const [currentTab, setCurrentTab] = useState(0);
   const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -105,6 +117,19 @@ const ProfilePage: React.FC = () => {
   const [profileValidation, setProfileValidation] = useState<any>(null);
   const [isFileUploading, setIsFileUploading] = useState(false);
   const [recentFileUpload, setRecentFileUpload] = useState(false);
+  
+  // Check if viewing own profile or another user's profile
+  const isOwnProfile = !userId || userId === user?._id;
+  const targetUserId = userId || user?._id;
+  
+  // Social features state
+  const [userPosts, setUserPosts] = useState<any[]>([]);
+  const [postsLoading, setPostsLoading] = useState(false);
+  const [connections, setConnections] = useState<any[]>([]);
+  const [connectionsLoading, setConnectionsLoading] = useState(false);
+  const [socialActivity, setSocialActivity] = useState<any[]>([]);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [postMenuAnchor, setPostMenuAnchor] = useState<{ [key: string]: HTMLElement | null }>({});
 
   // Password change form
   const [passwordForm, setPasswordForm] = useState({
@@ -126,8 +151,9 @@ const ProfilePage: React.FC = () => {
   // Initialize profile on mount and user change
   useEffect(() => {
     console.log('🚀 ProfilePage mounted/remounted on location:', location.pathname);
-    if (user && location.pathname === '/app/profile') {
-      console.log('🔄 ProfilePage initializing for user:', user.email);
+    console.log('🚀 Target user ID:', targetUserId, 'Is own profile:', isOwnProfile);
+    if (targetUserId) {
+      console.log('🔄 ProfilePage initializing for user:', targetUserId);
       // Reset all states to ensure fresh render
       setLoading(true);
       setProfile(null);
@@ -136,7 +162,7 @@ const ProfilePage: React.FC = () => {
       setCurrentTab(0);
       loadUserProfile();
     }
-  }, [user]); // Only depend on user, not location.key to prevent unwanted refreshes
+  }, [targetUserId, user]); // Depend on targetUserId and user
 
 
 
@@ -168,12 +194,12 @@ const ProfilePage: React.FC = () => {
   }, [profile]);
 
   const loadUserProfile = async () => {
-    if (!user?._id) return;
+    if (!targetUserId) return;
     
-    console.log('🔍 ProfilePage loading user profile for:', user._id);
+    console.log('🔍 ProfilePage loading user profile for:', targetUserId);
     setLoading(true);
     try {
-      const userProfile = await userService.getUserProfile(user._id);
+      const userProfile = await userService.getUserProfile(targetUserId);
       console.log('📋 ProfilePage loaded user profile:', userProfile);
       setProfile(userProfile);
       setEditedProfile(userProfile);
@@ -185,9 +211,7 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setCurrentTab(newValue);
-  };
+
 
   const handleEditToggle = () => {
     setEditMode(!editMode);
@@ -339,6 +363,102 @@ const ProfilePage: React.FC = () => {
     setComprehensiveEditMode(true);
   };
 
+  // Social data loading functions
+  const loadUserPosts = async () => {
+    if (!user?._id) return;
+    
+    setPostsLoading(true);
+    try {
+      const response = await socialNetworkService.getUserPosts(user._id);
+      setUserPosts(response.data);
+    } catch (error) {
+      console.error('Error loading user posts:', error);
+      setUserPosts([]);
+    } finally {
+      setPostsLoading(false);
+    }
+  };
+
+  const loadConnections = async () => {
+    if (!user?._id) return;
+    
+    setConnectionsLoading(true);
+    try {
+      // This would need to be implemented in the social service
+      // const response = await socialNetworkService.getUserConnections(user._id);
+      // setConnections(response.data);
+      setConnections([]); // Placeholder for now
+    } catch (error) {
+      console.error('Error loading connections:', error);
+      setConnections([]);
+    } finally {
+      setConnectionsLoading(false);
+    }
+  };
+
+  const loadSocialActivity = async () => {
+    if (!user?._id) return;
+    
+    setActivityLoading(true);
+    try {
+      // This would need to be implemented in the social service
+      // const response = await socialNetworkService.getUserActivity(user._id);
+      // setSocialActivity(response.data);
+      setSocialActivity([]); // Placeholder for now
+    } catch (error) {
+      console.error('Error loading social activity:', error);
+      setSocialActivity([]);
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (!postId) return;
+    
+    try {
+      await socialNetworkService.deletePost(postId);
+      // Remove the deleted post from the userPosts array
+      setUserPosts(prev => prev.filter(post => post._id !== postId));
+      setSuccessMessage('Post deleted successfully');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      setErrorMessage('Failed to delete post');
+      setTimeout(() => setErrorMessage(''), 3000);
+    }
+  };
+
+  const handleNavigateToConnections = () => {
+    navigate('/app/connections');
+  };
+
+  const handlePostMenuOpen = (event: React.MouseEvent<HTMLElement>, postId: string) => {
+    setPostMenuAnchor(prev => ({ ...prev, [postId]: event.currentTarget }));
+  };
+
+  const handlePostMenuClose = (postId: string) => {
+    setPostMenuAnchor(prev => ({ ...prev, [postId]: null }));
+  };
+
+  // Load social data when tab changes
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setCurrentTab(newValue);
+    
+    // Load data based on the selected tab
+    switch (newValue) {
+      case 1: // My Posts
+        if (userPosts.length === 0) loadUserPosts();
+        break;
+      case 2: // Connections
+        if (connections.length === 0) loadConnections();
+        break;
+      case 3: // Social Activity
+        if (socialActivity.length === 0) loadSocialActivity();
+        break;
+    }
+  };
+
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -488,28 +608,30 @@ const ProfilePage: React.FC = () => {
                 sx={{ mb: 2 }}
               />
               
-              <Box sx={{ mt: 3 }}>
-                <Button
-                  variant={editMode ? "outlined" : "contained"}
-                  onClick={handleEditToggle}
-                  startIcon={editMode ? <Cancel /> : <Edit />}
-                  fullWidth
-                  sx={{ mb: 1 }}
-                >
-                  {editMode ? 'Cancel Edit' : 'Edit Profile'}
-                </Button>
-                {editMode && (
+              {isOwnProfile && (
+                <Box sx={{ mt: 3 }}>
                   <Button
-                    variant="contained"
-                    onClick={handleSaveProfile}
-                    startIcon={<Save />}
+                    variant={editMode ? "outlined" : "contained"}
+                    onClick={handleEditToggle}
+                    startIcon={editMode ? <Cancel /> : <Edit />}
                     fullWidth
-                    disabled={loading}
+                    sx={{ mb: 1 }}
                   >
-                    Save Changes
+                    {editMode ? 'Cancel Edit' : 'Edit Profile'}
                   </Button>
-                )}
-              </Box>
+                  {editMode && (
+                    <Button
+                      variant="contained"
+                      onClick={handleSaveProfile}
+                      startIcon={<Save />}
+                      fullWidth
+                      disabled={loading}
+                    >
+                      Save Changes
+                    </Button>
+                  )}
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -518,8 +640,11 @@ const ProfilePage: React.FC = () => {
         <Grid item xs={12} md={8}>
           <Card>
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-              <Tabs value={currentTab} onChange={handleTabChange}>
+              <Tabs value={currentTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
                 <Tab label="Personal Info" icon={<Person />} />
+                <Tab label="My Posts" icon={<Article />} />
+                <Tab label="Connections" icon={<People />} />
+                <Tab label="Social Activity" icon={<Timeline />} />
                 <Tab label="Security" icon={<Security />} />
                 <Tab label="Privacy" icon={<Settings />} />
                 <Tab label="Activity" icon={<Assignment />} />
@@ -595,8 +720,317 @@ const ProfilePage: React.FC = () => {
               </Grid>
             </TabPanel>
 
-            {/* Security Tab */}
+            {/* My Posts Tab */}
             <TabPanel value={currentTab} index={1}>
+              <Box>
+                <Typography variant="h6" gutterBottom>
+                  My Posts
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Manage your posts and see how they're performing
+                </Typography>
+                
+                {postsLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                    <LinearProgress sx={{ width: '100%' }} />
+                  </Box>
+                ) : userPosts.length === 0 ? (
+                  <Alert severity="info">
+                    You haven't created any posts yet. Start sharing your thoughts and connect with your professional network!
+                  </Alert>
+                ) : (
+                  <Box sx={{ space: 2 }}>
+                    {userPosts.map((post, index) => (
+                      <Card key={post._id || index} sx={{ mb: 2 }}>
+                        <CardContent>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                            <Box>
+                              <Chip 
+                                label={post.postType?.replace('_', ' ').toUpperCase()} 
+                                size="small" 
+                                sx={{ mb: 1 }}
+                              />
+                              <Typography variant="body2" color="text.secondary">
+                                {new Date(post.createdAt).toLocaleDateString()}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Chip 
+                                label={post.visibility} 
+                                size="small"
+                                icon={post.visibility === 'public' ? <Public fontSize="small" /> : <Lock fontSize="small" />}
+                              />
+                              <IconButton
+                                size="small"
+                                onClick={(e) => handlePostMenuOpen(e, post._id)}
+                                sx={{ ml: 1 }}
+                              >
+                                <MoreVert />
+                              </IconButton>
+                              <Menu
+                                anchorEl={postMenuAnchor[post._id]}
+                                open={Boolean(postMenuAnchor[post._id])}
+                                onClose={() => handlePostMenuClose(post._id)}
+                              >
+                                <MenuItem
+                                  onClick={() => {
+                                    handleDeletePost(post._id);
+                                    handlePostMenuClose(post._id);
+                                  }}
+                                  sx={{ color: 'error.main' }}
+                                >
+                                  <Delete fontSize="small" sx={{ mr: 1 }} />
+                                  Delete Post
+                                </MenuItem>
+                              </Menu>
+                            </Box>
+                          </Box>
+                          
+                          <Typography variant="body1" sx={{ mb: 2 }}>
+                            {post.content}
+                          </Typography>
+                          
+                          {post.media && post.media.length > 0 && (
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                              {post.media.map((mediaItem: any, mediaIndex: number) => (
+                                <Box key={mediaIndex} sx={{ width: 100, height: 100, borderRadius: 1, overflow: 'hidden' }}>
+                                  {mediaItem.type === 'image' ? (
+                                    <img 
+                                      src={mediaItem.url} 
+                                      alt="Post media" 
+                                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    />
+                                  ) : (
+                                    <Box sx={{ 
+                                      width: '100%', 
+                                      height: '100%', 
+                                      bgcolor: 'grey.200', 
+                                      display: 'flex', 
+                                      alignItems: 'center', 
+                                      justifyContent: 'center' 
+                                    }}>
+                                      <PlayCircleOutline />
+                                    </Box>
+                                  )}
+                                </Box>
+                              ))}
+                            </Box>
+                          )}
+                          
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Box sx={{ display: 'flex', gap: 2 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                👍 {post.likesCount || 0} likes
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                💬 {post.commentsCount || 0} comments
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary">
+                                🔄 {post.sharesCount || 0} shares
+                              </Typography>
+                            </Box>
+                            <Button size="small" color="primary">
+                              View Details
+                            </Button>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Box>
+                )}
+              </Box>
+            </TabPanel>
+
+            {/* Connections Tab */}
+            <TabPanel value={currentTab} index={2}>
+              <Box>
+                <Typography variant="h6" gutterBottom>
+                  My Connections
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  View and manage your professional connections
+                </Typography>
+                
+                {connectionsLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                    <LinearProgress sx={{ width: '100%' }} />
+                  </Box>
+                ) : connections.length === 0 ? (
+                  <Alert severity="info">
+                    You don't have any connections yet. Start networking with other professionals to grow your network!
+                  </Alert>
+                ) : (
+                  <Grid container spacing={2}>
+                    {connections.map((connection: any, index: number) => (
+                      <Grid item xs={12} sm={6} md={4} key={connection._id || index}>
+                        <Card>
+                          <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                              <Avatar 
+                                src={connection.profilePicture} 
+                                sx={{ width: 50, height: 50, mr: 2 }}
+                              >
+                                {connection.firstName?.[0]}{connection.lastName?.[0]}
+                              </Avatar>
+                              <Box>
+                                <Typography variant="subtitle1" fontWeight="bold">
+                                  {connection.firstName} {connection.lastName}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  {connection.jobTitle || 'Professional'}
+                                </Typography>
+                              </Box>
+                            </Box>
+                            
+                            {connection.company && (
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                <Work fontSize="small" sx={{ mr: 1, verticalAlign: 'middle' }} />
+                                {connection.company}
+                              </Typography>
+                            )}
+                            
+                            {connection.location && (
+                              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                <LocationOn fontSize="small" sx={{ mr: 1, verticalAlign: 'middle' }} />
+                                {connection.location}
+                              </Typography>
+                            )}
+                            
+                            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between' }}>
+                              <Button size="small" variant="outlined">
+                                Message
+                              </Button>
+                              <Button size="small" variant="text" color="error">
+                                Remove
+                              </Button>
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    ))}
+                  </Grid>
+                )}
+                
+                <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+                  <Button 
+                    variant="outlined" 
+                    startIcon={<People />}
+                    onClick={handleNavigateToConnections}
+                  >
+                    Find More Connections
+                  </Button>
+                </Box>
+              </Box>
+            </TabPanel>
+
+            {/* Social Activity Tab */}
+            <TabPanel value={currentTab} index={3}>
+              <Box>
+                <Typography variant="h6" gutterBottom>
+                  Social Activity
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  View your likes, comments, and social engagement
+                </Typography>
+                
+                {activityLoading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                    <LinearProgress sx={{ width: '100%' }} />
+                  </Box>
+                ) : socialActivity.length === 0 ? (
+                  <Alert severity="info">
+                    No social activity yet. Start engaging with posts by liking and commenting to see your activity here!
+                  </Alert>
+                ) : (
+                  <Box>
+                    {socialActivity.map((activity: any, index: number) => (
+                      <Card key={activity._id || index} sx={{ mb: 2 }}>
+                        <CardContent>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              {activity.type === 'like' && (
+                                <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+                                  <Star color="primary" fontSize="small" />
+                                  <Typography variant="body2" sx={{ ml: 1 }}>
+                                    You liked a post
+                                  </Typography>
+                                </Box>
+                              )}
+                              {activity.type === 'comment' && (
+                                <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+                                  <Assignment color="secondary" fontSize="small" />
+                                  <Typography variant="body2" sx={{ ml: 1 }}>
+                                    You commented on a post
+                                  </Typography>
+                                </Box>
+                              )}
+                              {activity.type === 'connection' && (
+                                <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+                                  <People color="success" fontSize="small" />
+                                  <Typography variant="body2" sx={{ ml: 1 }}>
+                                    New connection added
+                                  </Typography>
+                                </Box>
+                              )}
+                            </Box>
+                            <Typography variant="caption" color="text.secondary">
+                              {new Date(activity.createdAt).toLocaleDateString()}
+                            </Typography>
+                          </Box>
+                          
+                          {activity.content && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, ml: 4 }}>
+                              {activity.content}
+                            </Typography>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Box>
+                )}
+                
+                <Box sx={{ mt: 3, p: 3, bgcolor: 'grey.50', borderRadius: 2 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Engagement Summary
+                  </Typography>
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} sm={4}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="h4" color="primary">
+                          {userPosts.reduce((sum, post) => sum + (post.likesCount || 0), 0)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Total Likes Received
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="h4" color="secondary">
+                          {userPosts.reduce((sum, post) => sum + (post.commentsCount || 0), 0)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Total Comments Received
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="h4" color="success.main">
+                          {userPosts.reduce((sum, post) => sum + (post.sharesCount || 0), 0)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Total Shares
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+                </Box>
+              </Box>
+            </TabPanel>
+
+            {/* Security Tab */}
+            <TabPanel value={currentTab} index={4}>
               <Box>
                 <Typography variant="h6" gutterBottom>
                   Account Security
@@ -641,7 +1075,7 @@ const ProfilePage: React.FC = () => {
             </TabPanel>
 
             {/* Privacy Tab */}
-            <TabPanel value={currentTab} index={2}>
+            <TabPanel value={currentTab} index={5}>
               <Box>
                 <Typography variant="h6" gutterBottom>
                   Privacy Settings
@@ -705,7 +1139,7 @@ const ProfilePage: React.FC = () => {
             </TabPanel>
 
             {/* Activity Tab */}
-            <TabPanel value={currentTab} index={3}>
+            <TabPanel value={currentTab} index={6}>
               <Box>
                 <Typography variant="h6" gutterBottom>
                   Recent Activity

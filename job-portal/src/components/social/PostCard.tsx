@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -15,6 +15,8 @@ import {
   MenuItem,
   Divider,
   useTheme,
+  Dialog,
+  DialogContent,
 } from '@mui/material';
 import {
   Favorite,
@@ -30,6 +32,13 @@ import {
   Chat,
   Work,
   Person,
+  PlayArrow,
+  Fullscreen,
+  VolumeOff,
+  VolumeUp,
+  Close,
+  PersonAdd,
+  Check,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
@@ -37,6 +46,7 @@ import { SocialPost, SocialComment } from '../../types/social';
 import { socialNetworkService } from '../../services/socialNetworkService';
 import { chatService } from '../../services/chatService';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface PostCardProps {
   post: SocialPost;
@@ -47,6 +57,7 @@ interface PostCardProps {
 const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete }) => {
   const theme = useTheme();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likesCount);
   const [sharesCount, setSharesCount] = useState(post.sharesCount);
@@ -55,6 +66,26 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   const [newComment, setNewComment] = useState('');
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState<number | null>(null);
+  const [videoStates, setVideoStates] = useState<{ [key: number]: { playing: boolean; muted: boolean } }>({});
+  const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'connected' | 'loading'>('none');
+
+  // Check connection status on component mount
+  useEffect(() => {
+    const checkConnectionStatus = async () => {
+      if (!user || post.author._id === user._id) return;
+      
+      try {
+        const status = await socialNetworkService.getConnectionStatus(post.author._id);
+        setConnectionStatus(status.connectionStatus || 'none');
+      } catch (error) {
+        console.error('Error checking connection status:', error);
+        setConnectionStatus('none');
+      }
+    };
+
+    checkConnectionStatus();
+  }, [user, post.author._id]);
 
   const handleLike = async () => {
     try {
@@ -129,7 +160,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     
     try {
       const chat = await chatService.createOrGetChat(
-        post.author._id, 
+        [post.author._id], 
         `Hi! I saw your post about ${post.postType === 'job_post' ? 'the job position' : 'your post'}. I'd like to know more.`
       );
       
@@ -139,6 +170,308 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     } catch (error) {
       console.error('Error starting chat:', error);
     }
+  };
+
+  const handleVideoToggle = (index: number, action: 'play' | 'mute') => {
+    setVideoStates(prev => ({
+      ...prev,
+      [index]: {
+        playing: action === 'play' ? !prev[index]?.playing : (prev[index]?.playing || false),
+        muted: action === 'mute' ? !prev[index]?.muted : (prev[index]?.muted || true),
+      }
+    }));
+  };
+
+  const handleViewProfile = () => {
+    // Navigate to profile page - assuming profile route exists
+    navigate(`/app/profile/${post.author._id}`);
+  };
+
+  const handleConnect = async () => {
+    if (!user || post.author._id === user._id || connectionStatus === 'loading') return;
+    
+    try {
+      setConnectionStatus('loading');
+      
+      if (connectionStatus === 'none') {
+        await socialNetworkService.sendConnectionRequest(post.author._id, 'connect');
+        setConnectionStatus('pending');
+      } else if (connectionStatus === 'pending') {
+        // Cancel request if it was sent by current user
+        await socialNetworkService.cancelConnectionRequest(post.author._id);
+        setConnectionStatus('none');
+      }
+    } catch (error) {
+      console.error('Error handling connection:', error);
+      // Revert to previous state
+      setConnectionStatus(connectionStatus === 'none' ? 'none' : 'pending');
+    }
+  };
+
+  const getConnectButtonText = () => {
+    switch (connectionStatus) {
+      case 'connected': return 'Connected';
+      case 'pending': return 'Pending';
+      case 'loading': return 'Loading...';
+      default: return 'Connect';
+    }
+  };
+
+  const getConnectButtonIcon = () => {
+    switch (connectionStatus) {
+      case 'connected': return <Check />;
+      case 'pending': return <AccessTime />;
+      case 'loading': return <AccessTime />;
+      default: return <PersonAdd />;
+    }
+  };
+
+  const renderMediaGallery = () => {
+    if (!post.media || post.media.length === 0) return null;
+
+    const mediaCount = post.media.length;
+    
+    return (
+      <Box sx={{ mb: 2 }}>
+        {mediaCount === 1 ? (
+          // Single media - full width
+          <Box
+            sx={{
+              position: 'relative',
+              borderRadius: 2,
+              overflow: 'hidden',
+              backgroundColor: theme.palette.grey[100],
+              aspectRatio: post.media[0].type === 'video' ? '16/9' : 'auto',
+              maxHeight: 400,
+            }}
+          >
+            {post.media[0].type === 'image' ? (
+              <img
+                src={post.media[0].url}
+                alt="Post media"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  cursor: 'pointer',
+                }}
+                onClick={() => setSelectedMedia(0)}
+              />
+            ) : (
+              <Box sx={{ position: 'relative' }}>
+                <video
+                  src={post.media[0].url}
+                  poster={post.media[0].thumbnail}
+                  controls
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                  }}
+                  muted={videoStates[0]?.muted !== false}
+                />
+              </Box>
+            )}
+          </Box>
+        ) : (
+          // Multiple media - grid layout
+          <Box sx={{ display: 'grid', gap: 1, borderRadius: 2, overflow: 'hidden' }}>
+            {mediaCount === 2 && (
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+                {post.media.slice(0, 2).map((media, index) => (
+                  <Box
+                    key={index}
+                    sx={{
+                      position: 'relative',
+                      aspectRatio: '1',
+                      backgroundColor: theme.palette.grey[100],
+                      borderRadius: 1,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {media.type === 'image' ? (
+                      <img
+                        src={media.url}
+                        alt={`Post media ${index + 1}`}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          cursor: 'pointer',
+                        }}
+                        onClick={() => setSelectedMedia(index)}
+                      />
+                    ) : (
+                      <Box sx={{ position: 'relative', height: '100%' }}>
+                        <video
+                          src={media.url}
+                          poster={media.thumbnail}
+                          muted
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                          }}
+                        />
+                        <IconButton
+                          onClick={() => setSelectedMedia(index)}
+                          sx={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                            color: 'white',
+                            '&:hover': {
+                              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            },
+                          }}
+                        >
+                          <PlayArrow fontSize="large" />
+                        </IconButton>
+                      </Box>
+                    )}
+                  </Box>
+                ))}
+              </Box>
+            )}
+            
+            {mediaCount >= 3 && (
+              <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 1, aspectRatio: '2/1' }}>
+                {/* First large media */}
+                <Box
+                  sx={{
+                    position: 'relative',
+                    backgroundColor: theme.palette.grey[100],
+                    borderRadius: 1,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {post.media[0].type === 'image' ? (
+                    <img
+                      src={post.media[0].url}
+                      alt="Post media 1"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => setSelectedMedia(0)}
+                    />
+                  ) : (
+                    <Box sx={{ position: 'relative', height: '100%' }}>
+                      <video
+                        src={post.media[0].url}
+                        poster={post.media[0].thumbnail}
+                        muted
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                        }}
+                      />
+                      <IconButton
+                        onClick={() => setSelectedMedia(0)}
+                        sx={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -50%)',
+                          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                          color: 'white',
+                        }}
+                      >
+                        <PlayArrow fontSize="large" />
+                      </IconButton>
+                    </Box>
+                  )}
+                </Box>
+                
+                {/* Smaller media grid */}
+                <Box sx={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: 1 }}>
+                  {post.media.slice(1, 3).map((media, index) => (
+                    <Box
+                      key={index + 1}
+                      sx={{
+                        position: 'relative',
+                        backgroundColor: theme.palette.grey[100],
+                        borderRadius: 1,
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {media.type === 'image' ? (
+                        <img
+                          src={media.url}
+                          alt={`Post media ${index + 2}`}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => setSelectedMedia(index + 1)}
+                        />
+                      ) : (
+                        <Box sx={{ position: 'relative', height: '100%' }}>
+                          <video
+                            src={media.url}
+                            poster={media.thumbnail}
+                            muted
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                            }}
+                          />
+                          <IconButton
+                            onClick={() => setSelectedMedia(index + 1)}
+                            sx={{
+                              position: 'absolute',
+                              top: '50%',
+                              left: '50%',
+                              transform: 'translate(-50%, -50%)',
+                              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                              color: 'white',
+                              fontSize: '1.2rem',
+                            }}
+                          >
+                            <PlayArrow />
+                          </IconButton>
+                        </Box>
+                      )}
+                      
+                      {/* Show "+X more" overlay for the last visible item if there are more media */}
+                      {index === 1 && mediaCount > 3 && (
+                        <Box
+                          onClick={() => setSelectedMedia(index + 1)}
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <Typography variant="h6" sx={{ color: 'white', fontWeight: 700 }}>
+                            +{mediaCount - 3} more
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            )}
+          </Box>
+        )}
+      </Box>
+    );
   };
 
   return (
@@ -159,13 +492,35 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
         <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
           <Avatar
             src={post.author.profilePicture}
-            sx={{ width: 48, height: 48, mr: 2 }}
+            sx={{ 
+              width: 48, 
+              height: 48, 
+              mr: 2,
+              cursor: 'pointer',
+              '&:hover': {
+                transform: 'scale(1.05)',
+                transition: 'transform 0.2s ease-in-out'
+              }
+            }}
+            onClick={handleViewProfile}
           >
             {post.author.firstName[0]}{post.author.lastName[0]}
           </Avatar>
           
           <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                fontWeight: 600, 
+                fontSize: '1rem',
+                cursor: 'pointer',
+                '&:hover': {
+                  color: 'primary.main',
+                  textDecoration: 'underline'
+                }
+              }}
+              onClick={handleViewProfile}
+            >
               {post.author.firstName} {post.author.lastName}
             </Typography>
             {post.author.jobTitle && (
@@ -179,6 +534,26 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {/* Connect Button - Only show if not the current user's post */}
+            {user && post.author._id !== user._id && (
+              <Button
+                size="small"
+                variant={connectionStatus === 'connected' ? 'contained' : 'outlined'}
+                color={connectionStatus === 'connected' ? 'success' : 'primary'}
+                startIcon={getConnectButtonIcon()}
+                onClick={handleConnect}
+                disabled={connectionStatus === 'loading'}
+                sx={{
+                  minWidth: 100,
+                  fontSize: '0.75rem',
+                  textTransform: 'none',
+                  borderRadius: 2,
+                }}
+              >
+                {getConnectButtonText()}
+              </Button>
+            )}
+            
             <Chip
               label={post.postType.replace('_', ' ').toUpperCase()}
               size="small"
@@ -202,6 +577,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
         <Typography variant="body1" sx={{ mb: 2, lineHeight: 1.6 }}>
           {post.content}
         </Typography>
+
+        {/* Media Gallery */}
+        {renderMediaGallery()}
 
         {/* Tags */}
         {post.tags.length > 0 && (
@@ -390,6 +768,124 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
         <MenuItem onClick={() => setMenuAnchor(null)}>Save</MenuItem>
         <MenuItem onClick={() => setMenuAnchor(null)}>Report</MenuItem>
       </Menu>
+
+      {/* Media Viewer Dialog */}
+      <Dialog
+        open={selectedMedia !== null}
+        onClose={() => setSelectedMedia(null)}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            borderRadius: 2,
+          }
+        }}
+      >
+        <DialogContent sx={{ p: 0, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          {selectedMedia !== null && post.media?.[selectedMedia] && (
+            <>
+              <IconButton
+                onClick={() => setSelectedMedia(null)}
+                sx={{
+                  position: 'absolute',
+                  top: 16,
+                  right: 16,
+                  zIndex: 1,
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  }
+                }}
+              >
+                <Close />
+              </IconButton>
+
+              {post.media[selectedMedia].type === 'image' ? (
+                <img
+                  src={post.media[selectedMedia].url}
+                  alt={`Media ${selectedMedia + 1}`}
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '90vh',
+                    objectFit: 'contain',
+                  }}
+                />
+              ) : (
+                <video
+                  src={post.media[selectedMedia].url}
+                  controls
+                  autoPlay
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '90vh',
+                    objectFit: 'contain',
+                  }}
+                />
+              )}
+
+              {/* Navigation arrows for multiple media */}
+              {post.media.length > 1 && (
+                <>
+                  <IconButton
+                    onClick={() => setSelectedMedia(selectedMedia > 0 ? selectedMedia - 1 : post.media!.length - 1)}
+                    sx={{
+                      position: 'absolute',
+                      left: 16,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      color: 'white',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                      }
+                    }}
+                  >
+                    <PlayArrow sx={{ transform: 'rotate(180deg)' }} />
+                  </IconButton>
+
+                  <IconButton
+                    onClick={() => setSelectedMedia(selectedMedia < post.media!.length - 1 ? selectedMedia + 1 : 0)}
+                    sx={{
+                      position: 'absolute',
+                      right: 16,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      color: 'white',
+                      '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                      }
+                    }}
+                  >
+                    <PlayArrow />
+                  </IconButton>
+
+                  {/* Media counter */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      bottom: 16,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                      color: 'white',
+                      px: 2,
+                      py: 1,
+                      borderRadius: 1,
+                    }}
+                  >
+                    <Typography variant="body2">
+                      {selectedMedia + 1} / {post.media.length}
+                    </Typography>
+                  </Box>
+                </>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

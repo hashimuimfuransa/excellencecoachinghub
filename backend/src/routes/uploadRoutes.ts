@@ -40,6 +40,35 @@ const upload = multer({
   },
 });
 
+// Configure multer for media uploads (images and videos)
+const mediaUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit for media files
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow media types
+    const allowedTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/jpg',
+      'image/gif',
+      'image/webp',
+      'video/mp4',
+      'video/webm',
+      'video/ogg',
+      'video/avi',
+      'video/mov'
+    ];
+    
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only JPG, PNG, GIF, WebP, MP4, WebM, OGG, AVI, and MOV files are allowed!'));
+    }
+  },
+});
+
 // @desc    Upload CV/Resume/Portfolio files
 // @route   POST /api/upload/documents
 // @access  Private
@@ -107,6 +136,56 @@ router.post('/documents', protect, upload.array('files', 10), async (req, res) =
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to upload documents'
+    });
+  }
+});
+
+// @desc    Upload media files for posts (images and videos)
+// @route   POST /api/upload/media
+// @access  Private
+router.post('/media', protect, mediaUpload.single('file'), async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const file = req.file;
+    const type = req.body.type || 'post'; // post, chat, etc.
+    
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No media file uploaded'
+      });
+    }
+
+    // Determine the folder based on file type and usage
+    const isVideo = file.mimetype.startsWith('video/');
+    const mediaType = isVideo ? 'videos' : 'images';
+    const folder = `excellence-coaching-hub/media/${type}/${mediaType}/${userId}`;
+
+    // Upload to Cloudinary
+    const result = await uploadToCloudinary(
+      file.buffer,
+      userId,
+      file.originalname,
+      folder
+    );
+
+    res.status(200).json({
+      success: true,
+      data: {
+        url: result.url,
+        publicId: result.publicId,
+        fileName: file.originalname,
+        fileSize: result.size,
+        mimeType: file.mimetype,
+        type: isVideo ? 'video' : 'image'
+      },
+      message: 'Media uploaded successfully'
+    });
+  } catch (error: any) {
+    console.error('Media upload error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to upload media'
     });
   }
 });

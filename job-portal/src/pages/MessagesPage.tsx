@@ -42,6 +42,7 @@ import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { ChatRoom, ChatMessage } from '../types/chat';
 import { chatService } from '../services/chatService';
+import { realTimeNotificationService } from '../services/realTimeNotificationService';
 import { useAuth } from '../contexts/AuthContext';
 
 const MessagesPage: React.FC = () => {
@@ -62,7 +63,86 @@ const MessagesPage: React.FC = () => {
 
   useEffect(() => {
     loadChatRooms();
-  }, []);
+    
+    // Initialize real-time messaging
+    if (user?._id) {
+      chatService.initializeSocket(user._id);
+      
+      // Listen for real-time messages
+      chatService.on('new-message', handleNewMessage);
+      chatService.on('chat-unread-updated', handleUnreadUpdate);
+      chatService.on('user-online', handleUserOnline);
+      chatService.on('user-offline', handleUserOffline);
+      
+      return () => {
+        chatService.off('new-message', handleNewMessage);
+        chatService.off('chat-unread-updated', handleUnreadUpdate);
+        chatService.off('user-online', handleUserOnline);
+        chatService.off('user-offline', handleUserOffline);
+      };
+    }
+  }, [user]);
+
+  const handleNewMessage = (data: { chatId: string; message: ChatMessage }) => {
+    const { chatId, message } = data;
+    
+    // Update messages if this is the selected room
+    if (selectedRoom && selectedRoom._id === chatId) {
+      setMessages(prev => [...prev, message]);
+    }
+    
+    // Update chat room's last message
+    setChatRooms(prev => 
+      prev.map(room => 
+        room._id === chatId 
+          ? { 
+              ...room, 
+              lastMessage: message, 
+              updatedAt: message.createdAt,
+              unreadCount: room._id === selectedRoom?._id ? 0 : room.unreadCount + 1
+            }
+          : room
+      )
+    );
+  };
+
+  const handleUnreadUpdate = (data: { chatId: string; unreadCount: number }) => {
+    setChatRooms(prev => 
+      prev.map(room => 
+        room._id === data.chatId 
+          ? { ...room, unreadCount: room.unreadCount + data.unreadCount }
+          : room
+      )
+    );
+  };
+
+  const handleUserOnline = (userId: string) => {
+    // Update user online status in chat rooms
+    setChatRooms(prev => 
+      prev.map(room => ({
+        ...room,
+        participants: room.participants.map(participant => 
+          participant._id === userId 
+            ? { ...participant, isOnline: true }
+            : participant
+        )
+      }))
+    );
+  };
+
+  const handleUserOffline = (userId: string) => {
+    // Update user offline status in chat rooms
+    setChatRooms(prev => 
+      prev.map(room => ({
+        ...room,
+        participants: room.participants.map(participant => 
+          participant._id === userId 
+            ? { ...participant, isOnline: false }
+            : participant
+        )
+      }))
+    );
+  };
 
   useEffect(() => {
     if (selectedRoom) {
@@ -79,9 +159,75 @@ const MessagesPage: React.FC = () => {
       setLoading(true);
       const rooms = await chatService.getChats();
       setChatRooms(rooms);
-      // Auto-select the first room if available
-      if (rooms.length > 0 && !selectedRoom) {
-        setSelectedRoom(rooms[0]);
+      
+      // Check if there's a pre-selected chat from navigation
+      const selectedChatDataStr = sessionStorage.getItem('selectedChatData');
+      if (selectedChatDataStr) {
+        try {
+          const selectedChatData = JSON.parse(selectedChatDataStr);
+          const { chatId, targetUserId, targetUserName, timestamp, requestId } = selectedChatData;
+          
+          // Check if the data is not too old (within last 5 minutes)
+          if (Date.now() - timestamp < 5 * 60 * 1000) {
+            let targetRoom: any = null;
+            
+            // First, try to find the chat by chat ID
+            targetRoom = rooms.find(room => room._id === chatId);
+            
+            // If not found by chat ID, try to find a chat that includes the target user
+            if (!targetRoom && targetUserId) {
+              targetRoom = rooms.find(room => 
+                room.participants.some((participant: any) => participant._id === targetUserId)
+              );
+            }
+            
+            // If still not found, try to create/get a chat with the target user
+            if (!targetRoom && targetUserId) {
+              try {
+                const newChat = await chatService.createOrGetChat([targetUserId]);
+                
+                // Reload chat rooms to include the new chat
+                const updatedRooms = await chatService.getChats();
+                setChatRooms(updatedRooms);
+                
+                // Find the newly created/retrieved chat
+                targetRoom = updatedRooms.find(room => room._id === newChat._id);
+              } catch (chatError) {
+                console.error('Error creating/getting chat:', chatError);
+              }
+            }
+            
+            // Select the target room if found
+            if (targetRoom) {
+              setSelectedRoom(targetRoom);
+            } else {
+              // Fallback to first room
+              if (rooms.length > 0 && !selectedRoom) {
+                setSelectedRoom(rooms[0]);
+              }
+            }
+            
+            // Clear the stored chat data after using it
+            sessionStorage.removeItem('selectedChatData');
+          } else {
+            // Data is too old, ignore it
+            sessionStorage.removeItem('selectedChatData');
+            if (rooms.length > 0 && !selectedRoom) {
+              setSelectedRoom(rooms[0]);
+            }
+          }
+        } catch (parseError) {
+          console.error('Error parsing selectedChatData:', parseError);
+          sessionStorage.removeItem('selectedChatData');
+          if (rooms.length > 0 && !selectedRoom) {
+            setSelectedRoom(rooms[0]);
+          }
+        }
+      } else {
+        // Auto-select the first room if available and no room is currently selected
+        if (rooms.length > 0 && !selectedRoom) {
+          setSelectedRoom(rooms[0]);
+        }
       }
     } catch (error) {
       console.error('Error loading chat rooms:', error);
@@ -105,21 +251,36 @@ const MessagesPage: React.FC = () => {
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedRoom || !user) return;
 
+    const messageContent = newMessage.trim();
+    setNewMessage(''); // Clear input immediately for better UX
+
     try {
-      const message = await chatService.sendMessage(selectedRoom._id, { content: newMessage.trim() });
-      setMessages(prev => [...prev, message]);
-      setNewMessage('');
+      const message = await chatService.sendMessage(selectedRoom._id, { content: messageContent });
+      
+      // The message will be added to the UI via the real-time handler
+      // but add it immediately for the sender to see
+      setMessages(prev => {
+        // Check if message already exists (from real-time update)
+        const exists = prev.some(m => m._id === message._id);
+        return exists ? prev : [...prev, message];
+      });
       
       // Update the selected room's last message
       setChatRooms(prev => 
         prev.map(room => 
           room._id === selectedRoom._id 
-            ? { ...room, lastMessage: message, updatedAt: message.createdAt }
+            ? { ...room, lastMessage: message, updatedAt: message.createdAt, unreadCount: 0 }
             : room
         )
       );
+
+      // Mark messages as read for this chat
+      await chatService.markMessagesAsRead(selectedRoom._id);
+      
     } catch (error) {
       console.error('Error sending message:', error);
+      // Restore the message in the input field if sending failed
+      setNewMessage(messageContent);
     }
   };
 

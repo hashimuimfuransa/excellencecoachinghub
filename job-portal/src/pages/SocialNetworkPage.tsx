@@ -64,7 +64,6 @@ import CreatePost from '../components/social/CreatePost';
 import FeedSidebar from '../components/social/FeedSidebar';
 import { SocialPost } from '../types/social';
 import { socialNetworkService, FeedOptions } from '../services/socialNetworkService';
-import { chatService } from '../services/chatService';
 import { useAuth } from '../contexts/AuthContext';
 
 interface TabPanelProps {
@@ -1015,33 +1014,6 @@ const SocialNetworkPage: React.FC = () => {
                   </Fab>
                 </motion.div>
               )}
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.1 }}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <Fab
-                  color="secondary"
-                  size="medium"
-                  sx={{
-                    background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-                    boxShadow: '0 6px 20px rgba(79, 172, 254, 0.4)',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #00f2fe 0%, #4facfe 100%)',
-                      boxShadow: '0 8px 25px rgba(79, 172, 254, 0.5)',
-                      transform: 'translateY(-2px)',
-                    },
-                    '& .MuiSvgIcon-root': {
-                      fontSize: 24,
-                    }
-                  }}
-                  onClick={() => navigate('/app/messages')}
-                >
-                  <Chat />
-                </Fab>
-              </motion.div>
               
               {/* Suggested Connections Button for Mobile */}
               <motion.div

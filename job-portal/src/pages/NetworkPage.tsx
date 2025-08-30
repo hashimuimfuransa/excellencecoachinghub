@@ -12,13 +12,26 @@ import {
   Button,
   TextField,
   InputAdornment,
-  Grid,
   Chip,
   IconButton,
   useTheme,
   CircularProgress,
   Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Collapse,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Checkbox,
+  FormControlLabel,
+  FormGroup,
+  Stack,
+  Divider,
 } from '@mui/material';
+import { Grid } from '@mui/material';
 import {
   Search,
   Group,
@@ -27,11 +40,20 @@ import {
   Close,
   Message,
   CheckCircle,
+  FilterList,
+  ExpandMore,
+  Work,
+  LocationOn,
+  Business,
+  School,
+  Sort,
+  Clear,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { SocialConnection, ConnectionRequest, SentRequest } from '../types/social';
 import { socialNetworkService } from '../services/socialNetworkService';
 import { chatService } from '../services/chatService';
+import { useNavigate } from 'react-router-dom';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -47,6 +69,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
 
 const NetworkPage: React.FC = () => {
   const theme = useTheme();
+  const navigate = useNavigate();
   const [currentTab, setCurrentTab] = useState(0);
   const [connections, setConnections] = useState<SocialConnection[]>([]);
   const [pendingRequests, setPendingRequests] = useState<ConnectionRequest[]>([]);
@@ -58,9 +81,142 @@ const NetworkPage: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [requestingUsers, setRequestingUsers] = useState<Set<string>>(new Set());
 
+  // Filter states for Discover tab
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    role: '',
+    location: '',
+    company: '',
+    skills: [] as string[],
+    industry: '',
+    experienceLevel: '',
+    sortBy: 'newest', // newest, connections, completion
+  });
+
   useEffect(() => {
     loadNetworkData();
   }, []);
+
+  // Filter and sort suggestions
+  const filteredSuggestions = suggestions.filter(user => {
+    // Search query filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+      const title = (user.jobTitle || '').toLowerCase();
+      const company = (user.company || '').toLowerCase();
+      const bio = (user.bio || '').toLowerCase();
+      
+      if (!fullName.includes(query) && !title.includes(query) && !company.includes(query) && !bio.includes(query)) {
+        return false;
+      }
+    }
+
+    // Role filter
+    if (filters.role && (user.role || user.userType) !== filters.role) {
+      return false;
+    }
+
+    // Company filter
+    if (filters.company && !user.company?.toLowerCase().includes(filters.company.toLowerCase())) {
+      return false;
+    }
+
+    // Location filter
+    if (filters.location && !user.location?.toLowerCase().includes(filters.location.toLowerCase())) {
+      return false;
+    }
+
+    // Industry filter
+    if (filters.industry && user.industry !== filters.industry) {
+      return false;
+    }
+
+    // Skills filter
+    if (filters.skills.length > 0) {
+      const userSkills = user.skills || [];
+      const hasMatchingSkill = filters.skills.some(skill => 
+        userSkills.some((userSkill: string) => 
+          userSkill.toLowerCase().includes(skill.toLowerCase())
+        )
+      );
+      if (!hasMatchingSkill) {
+        return false;
+      }
+    }
+
+    return true;
+  }).sort((a, b) => {
+    switch (filters.sortBy) {
+      case 'connections':
+        return (b.connectionsCount || 0) - (a.connectionsCount || 0);
+      case 'completion':
+        return (b.profileCompletion || 0) - (a.profileCompletion || 0);
+      case 'alphabetical':
+        return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
+      case 'newest':
+      default:
+        return new Date(b.createdAt || b.joinedAt || '').getTime() - new Date(a.createdAt || a.joinedAt || '').getTime();
+    }
+  });
+
+  // Filter management functions
+  const handleFilterChange = (filterType: string, value: any) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }));
+  };
+
+  const handleSkillToggle = (skill: string) => {
+    setFilters(prev => ({
+      ...prev,
+      skills: prev.skills.includes(skill)
+        ? prev.skills.filter(s => s !== skill)
+        : [...prev.skills, skill]
+    }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      role: '',
+      location: '',
+      company: '',
+      skills: [],
+      industry: '',
+      experienceLevel: '',
+      sortBy: 'newest',
+    });
+    setSearchQuery('');
+  };
+
+  // Get unique values for filter options
+  const getUniqueOptions = (field: string) => {
+    const values = suggestions
+      .map(user => user[field])
+      .filter(Boolean)
+      .filter((value, index, array) => array.indexOf(value) === index);
+    return values.sort();
+  };
+
+  const getAllSkills = () => {
+    const allSkills = suggestions
+      .flatMap(user => user.skills || [])
+      .filter((skill, index, array) => array.indexOf(skill) === index);
+    return allSkills.sort();
+  };
+
+  const getActiveFiltersCount = () => {
+    let count = 0;
+    if (filters.role) count++;
+    if (filters.location) count++;
+    if (filters.company) count++;
+    if (filters.skills.length > 0) count++;
+    if (filters.industry) count++;
+    if (filters.experienceLevel) count++;
+    if (searchQuery) count++;
+    return count;
+  };
 
   const loadNetworkData = async () => {
     try {
@@ -184,12 +340,30 @@ const NetworkPage: React.FC = () => {
 
   const handleStartChat = async (userId: string, userName: string) => {
     try {
-      const chat = await chatService.createOrGetChat(userId, `Hi ${userName}! I'd like to connect with you.`);
-      // This would ideally open the chat window or navigate to messages
-      console.log('Chat started:', chat);
-      // You could dispatch an action here to open a chat modal or navigate to chat page
+      // Create or get existing chat with the user
+      const chat = await chatService.createOrGetChat([userId]);
+      
+      // Store both chat ID and target user info in sessionStorage for reliable selection
+      const chatSelectionData = {
+        chatId: chat._id,
+        targetUserId: userId,
+        targetUserName: userName,
+        timestamp: Date.now(),
+        requestId: `${userId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+      };
+      sessionStorage.setItem('selectedChatData', JSON.stringify(chatSelectionData));
+      
+      // Navigate to messages page
+      navigate('/app/messages');
+      
+      // Show success message
+      setSuccessMessage(`Opening chat with ${userName}...`);
+      setTimeout(() => setSuccessMessage(null), 2000);
+      
     } catch (error) {
       console.error('Error starting chat:', error);
+      setError(`Failed to start chat with ${userName}. Please try again.`);
+      setTimeout(() => setError(null), 5000);
     }
   };
 
@@ -373,7 +547,13 @@ const NetworkPage: React.FC = () => {
                         variant="outlined"
                         size="small"
                         startIcon={<Message />}
-                        onClick={() => handleStartChat(connection.user._id, connection.user.firstName)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const userId = connection.user._id;
+                          const userName = `${connection.user.firstName} ${connection.user.lastName}`;
+                          handleStartChat(userId, userName);
+                        }}
                       >
                         Message
                       </Button>
@@ -635,101 +815,364 @@ const NetworkPage: React.FC = () => {
 
         {/* Discover Tab */}
         <TabPanel value={currentTab} index={2}>
-          <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-              Discover Professionals
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Connect with job seekers, students with completed profiles, and employers. 
-              Build your professional network to unlock new opportunities!
-            </Typography>
-          </Box>
-          <Grid container spacing={2}>
-            {suggestions.map((user) => (
-              <Grid item xs={12} sm={6} md={4} key={user._id}>
-                <Card
-                  component={motion.div}
-                  whileHover={{ y: -4 }}
-                  sx={{ borderRadius: 2 }}
+          <Box sx={{ mb: 3 }}>
+            {/* Header */}
+            <Paper sx={{ p: 2, borderRadius: 2, mb: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                    Discover Professionals
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Connect with job seekers, students, and employers. Build your professional network!
+                  </Typography>
+                </Box>
+                <Button
+                  variant="outlined"
+                  startIcon={<FilterList />}
+                  onClick={() => setShowFilters(!showFilters)}
+                  sx={{ minWidth: 120 }}
                 >
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Avatar
-                      src={user.profilePicture}
-                      sx={{ width: 64, height: 64, mx: 'auto', mb: 2 }}
-                    >
-                      {user.firstName[0]}{user.lastName[0]}
-                    </Avatar>
-                    
-                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                      {user.firstName} {user.lastName}
-                    </Typography>
-                    
-                    {user.jobTitle && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        {user.jobTitle}
-                      </Typography>
-                    )}
-                    
-                    {user.company && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        at {user.company}
-                      </Typography>
-                    )}
+                  Filters {getActiveFiltersCount() > 0 && `(${getActiveFiltersCount()})`}
+                </Button>
+              </Box>
 
-                    {/* Show user role/type */}
-                    {(user.role || user.userType) && (
-                      <Chip
-                        label={
-                          ((user.role || user.userType) === 'job_seeker' || (user.role || user.userType) === 'jobseeker') 
-                            ? 'Job Seeker' 
-                            : (user.role || user.userType)?.charAt(0).toUpperCase() + (user.role || user.userType)?.slice(1)
-                        }
-                        size="small"
-                        color="info"
-                        variant="filled"
-                        sx={{ mb: 1 }}
-                      />
-                    )}
+              {/* Search Bar */}
+              <TextField
+                placeholder="Search professionals by name, title, company..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                fullWidth
+                size="small"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search />
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchQuery && (
+                    <InputAdornment position="end">
+                      <IconButton onClick={() => setSearchQuery('')} size="small">
+                        <Clear />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ mt: 1 }}
+              />
+            </Paper>
 
-                    {/* Profile Completion Badge */}
-                    {(user as any).profileCompletion && (
-                      <Chip
-                        label={`${(user as any).profileCompletion}% Complete`}
-                        size="small"
-                        color={(user as any).profileCompletion >= 90 ? 'success' : 
-                              (user as any).profileCompletion >= 70 ? 'warning' : 'error'}
-                        variant="outlined"
-                        sx={{ mb: 2 }}
-                      />
-                    )}
+            {/* Filters Panel */}
+            <Collapse in={showFilters}>
+              <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                  <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <FilterList />
+                    Filters
+                  </Typography>
+                  <Button
+                    startIcon={<Clear />}
+                    onClick={clearFilters}
+                    color="secondary"
+                    disabled={getActiveFiltersCount() === 0}
+                  >
+                    Clear All
+                  </Button>
+                </Box>
 
-                    {user.bio && (
-                      <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
-                        {user.bio.length > 80 ? `${user.bio.substring(0, 80)}...` : user.bio}
-                      </Typography>
-                    )}
+                <Grid container spacing={3}>
+                  {/* Role Filter */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Role</InputLabel>
+                      <Select
+                        value={filters.role}
+                        label="Role"
+                        onChange={(e) => handleFilterChange('role', e.target.value)}
+                        startAdornment={<Work sx={{ mr: 1, color: 'text.secondary' }} />}
+                      >
+                        <MenuItem value="">All Roles</MenuItem>
+                        <MenuItem value="job_seeker">Job Seeker</MenuItem>
+                        <MenuItem value="employer">Employer</MenuItem>
+                        <MenuItem value="student">Student</MenuItem>
+                        <MenuItem value="recruiter">Recruiter</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
 
-                    <Button
-                      variant="contained"
+                  {/* Company Filter */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      fullWidth
                       size="small"
-                      startIcon={requestingUsers.has(user._id) ? <CircularProgress size={16} color="inherit" /> : <PersonAdd />}
-                      onClick={() => handleSendRequest(user._id)}
-                      disabled={requestingUsers.has(user._id)}
-                      sx={{
-                        background: requestingUsers.has(user._id) 
-                          ? 'linear-gradient(45deg, #ccc 30%, #ddd 90%)'
-                          : 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-                        textTransform: 'none',
-                        fontWeight: 600,
+                      label="Company"
+                      value={filters.company}
+                      onChange={(e) => handleFilterChange('company', e.target.value)}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Business />
+                          </InputAdornment>
+                        ),
                       }}
-                    >
-                      {requestingUsers.has(user._id) ? 'Sending...' : 'Connect'}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
+                      placeholder="Enter company name"
+                    />
+                  </Grid>
+
+                  {/* Location Filter */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Location"
+                      value={filters.location}
+                      onChange={(e) => handleFilterChange('location', e.target.value)}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <LocationOn />
+                          </InputAdornment>
+                        ),
+                      }}
+                      placeholder="Enter location"
+                    />
+                  </Grid>
+
+                  {/* Industry Filter */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Industry</InputLabel>
+                      <Select
+                        value={filters.industry}
+                        label="Industry"
+                        onChange={(e) => handleFilterChange('industry', e.target.value)}
+                      >
+                        <MenuItem value="">All Industries</MenuItem>
+                        <MenuItem value="Technology">Technology</MenuItem>
+                        <MenuItem value="Healthcare">Healthcare</MenuItem>
+                        <MenuItem value="Finance">Finance</MenuItem>
+                        <MenuItem value="Education">Education</MenuItem>
+                        <MenuItem value="Marketing">Marketing</MenuItem>
+                        <MenuItem value="Sales">Sales</MenuItem>
+                        <MenuItem value="Engineering">Engineering</MenuItem>
+                        <MenuItem value="Design">Design</MenuItem>
+                        <MenuItem value="Other">Other</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+
+                  {/* Sort By */}
+                  <Grid item xs={12} sm={6} md={4}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Sort By</InputLabel>
+                      <Select
+                        value={filters.sortBy}
+                        label="Sort By"
+                        onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+                        startAdornment={<Sort sx={{ mr: 1, color: 'text.secondary' }} />}
+                      >
+                        <MenuItem value="newest">Newest First</MenuItem>
+                        <MenuItem value="alphabetical">Alphabetical</MenuItem>
+                        <MenuItem value="connections">Most Connected</MenuItem>
+                        <MenuItem value="completion">Profile Completion</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+
+                  {/* Skills Filter */}
+                  {getAllSkills().length > 0 && (
+                    <Grid item xs={12}>
+                      <Accordion>
+                        <AccordionSummary expandIcon={<ExpandMore />}>
+                          <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <School />
+                            Skills {filters.skills.length > 0 && `(${filters.skills.length} selected)`}
+                          </Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                          <FormGroup row>
+                            {getAllSkills().slice(0, 20).map((skill) => (
+                              <FormControlLabel
+                                key={skill}
+                                control={
+                                  <Checkbox
+                                    checked={filters.skills.includes(skill)}
+                                    onChange={() => handleSkillToggle(skill)}
+                                    size="small"
+                                  />
+                                }
+                                label={skill}
+                                sx={{ mb: 1, mr: 2 }}
+                              />
+                            ))}
+                          </FormGroup>
+                          {getAllSkills().length > 20 && (
+                            <Typography variant="caption" color="text.secondary">
+                              Showing top 20 skills
+                            </Typography>
+                          )}
+                        </AccordionDetails>
+                      </Accordion>
+                    </Grid>
+                  )}
+                </Grid>
+              </Paper>
+            </Collapse>
+
+            {/* Results Count */}
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography variant="body2" color="text.secondary">
+                {filteredSuggestions.length} professional{filteredSuggestions.length !== 1 ? 's' : ''} found
+              </Typography>
+              {filters.skills.length > 0 && (
+                <Stack direction="row" spacing={1}>
+                  {filters.skills.map((skill) => (
+                    <Chip
+                      key={skill}
+                      label={skill}
+                      size="small"
+                      onDelete={() => handleSkillToggle(skill)}
+                      color="primary"
+                      variant="outlined"
+                    />
+                  ))}
+                </Stack>
+              )}
+            </Box>
+          </Box>
+
+          {filteredSuggestions.length > 0 ? (
+            <Grid container spacing={2}>
+              {filteredSuggestions.map((user) => (
+                <Grid item xs={12} sm={6} md={4} key={user._id}>
+                  <Card
+                    component={motion.div}
+                    whileHover={{ y: -4 }}
+                    sx={{ borderRadius: 2 }}
+                  >
+                    <CardContent sx={{ textAlign: 'center' }}>
+                      <Avatar
+                        src={user.profilePicture}
+                        sx={{ width: 64, height: 64, mx: 'auto', mb: 2 }}
+                      >
+                        {user.firstName[0]}{user.lastName[0]}
+                      </Avatar>
+                      
+                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                        {user.firstName} {user.lastName}
+                      </Typography>
+                      
+                      {user.jobTitle && (
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                          {user.jobTitle}
+                        </Typography>
+                      )}
+                      
+                      {user.company && (
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                          at {user.company}
+                        </Typography>
+                      )}
+
+                      {/* Show user role/type */}
+                      {(user.role || user.userType) && (
+                        <Chip
+                          label={
+                            ((user.role || user.userType) === 'job_seeker' || (user.role || user.userType) === 'jobseeker') 
+                              ? 'Job Seeker' 
+                              : (user.role || user.userType)?.charAt(0).toUpperCase() + (user.role || user.userType)?.slice(1)
+                          }
+                          size="small"
+                          color="info"
+                          variant="filled"
+                          sx={{ mb: 1 }}
+                        />
+                      )}
+
+                      {/* Profile Completion Badge */}
+                      {(user as any).profileCompletion && (
+                        <Chip
+                          label={`${(user as any).profileCompletion}% Complete`}
+                          size="small"
+                          color={(user as any).profileCompletion >= 90 ? 'success' : 
+                                (user as any).profileCompletion >= 70 ? 'warning' : 'error'}
+                          variant="outlined"
+                          sx={{ mb: 2 }}
+                        />
+                      )}
+
+                      {user.bio && (
+                        <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+                          {user.bio.length > 80 ? `${user.bio.substring(0, 80)}...` : user.bio}
+                        </Typography>
+                      )}
+
+                      <Stack direction="row" spacing={1} justifyContent="center">
+                        <Button
+                          variant="contained"
+                          size="small"
+                          startIcon={requestingUsers.has(user._id) ? <CircularProgress size={16} color="inherit" /> : <PersonAdd />}
+                          onClick={() => handleSendRequest(user._id)}
+                          disabled={requestingUsers.has(user._id)}
+                          sx={{
+                            background: requestingUsers.has(user._id) 
+                              ? 'linear-gradient(45deg, #ccc 30%, #ddd 90%)'
+                              : 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            flex: 1,
+                          }}
+                        >
+                          {requestingUsers.has(user._id) ? 'Sending...' : 'Connect'}
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<Message />}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const userId = user._id;
+                            const userName = `${user.firstName} ${user.lastName}`;
+                            handleStartChat(userId, userName);
+                          }}
+                          sx={{
+                            textTransform: 'none',
+                            fontWeight: 600,
+                          }}
+                        >
+                          Message
+                        </Button>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          ) : (
+            <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 2 }}>
+              <Box sx={{ mb: 3 }}>
+                <Search sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+              </Box>
+              <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+                No professionals found
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 400, mx: 'auto' }}>
+                {getActiveFiltersCount() > 0 
+                  ? "Try adjusting your filters or search terms to find more professionals."
+                  : "No professionals match your search criteria. Try a different search term."}
+              </Typography>
+              {getActiveFiltersCount() > 0 && (
+                <Button
+                  variant="outlined"
+                  startIcon={<Clear />}
+                  onClick={clearFilters}
+                >
+                  Clear Filters
+                </Button>
+              )}
+            </Paper>
+          )}
 
           {suggestions.length === 0 && (
             <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 2 }}>

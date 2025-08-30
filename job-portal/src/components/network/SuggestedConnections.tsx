@@ -22,10 +22,12 @@ import {
   Refresh,
   Close,
   Person,
+  Message,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { socialNetworkService } from '../../services/socialNetworkService';
+import { chatService } from '../../services/chatService';
 import { useNavigate } from 'react-router-dom';
 
 interface SuggestedUser {
@@ -57,6 +59,7 @@ const SuggestedConnections: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [dismissedUsers, setDismissedUsers] = useState<string[]>([]);
   const [connectingUsers, setConnectingUsers] = useState<string[]>([]);
+  const [messagingUsers, setMessagingUsers] = useState<string[]>([]);
 
   const fetchSuggestedUsers = async () => {
     if (!user) return;
@@ -133,6 +136,33 @@ const SuggestedConnections: React.FC = () => {
   const handleRefresh = () => {
     setDismissedUsers([]);
     fetchSuggestedUsers();
+  };
+
+  const handleStartChat = async (userId: string, userName: string) => {
+    if (!user || messagingUsers.includes(userId)) return;
+
+    setMessagingUsers(prev => [...prev, userId]);
+    try {
+      // Create or get existing chat with the user
+      const chat = await chatService.createOrGetChat([userId]);
+      
+      // Store both chat ID and target user info in sessionStorage for reliable selection
+      const chatSelectionData = {
+        chatId: chat._id,
+        targetUserId: userId,
+        targetUserName: userName,
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem('selectedChatData', JSON.stringify(chatSelectionData));
+      
+      // Navigate to messages page
+      navigate('/app/messages');
+    } catch (error) {
+      console.error('Error starting chat:', error);
+      setError(`Failed to start chat with ${userName}. Please try again.`);
+    } finally {
+      setMessagingUsers(prev => prev.filter(id => id !== userId));
+    }
   };
 
   if (loading && suggestedUsers.length === 0) {
@@ -330,30 +360,60 @@ const SuggestedConnections: React.FC = () => {
                         </Box>
                       )}
 
-                      <Button
-                        component={motion.button}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        variant="contained"
-                        size="small"
-                        startIcon={<PersonAdd sx={{ fontSize: isTablet ? 14 : 16 }} />}
-                        onClick={() => handleConnect(suggestedUser._id)}
-                        loading={connectingUsers.includes(suggestedUser._id)}
-                        disabled={connectingUsers.includes(suggestedUser._id)}
-                        sx={{
-                          borderRadius: isTablet ? 1.5 : 2,
-                          textTransform: 'none',
-                          fontSize: isTablet ? '0.7rem' : '0.75rem',
-                          py: isTablet ? 0.4 : 0.5,
-                          px: isTablet ? 1.2 : 1.5,
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                          '&:hover': {
-                            background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-                          },
-                        }}
-                      >
-                        {connectingUsers.includes(suggestedUser._id) ? 'Connecting...' : 'Connect'}
-                      </Button>
+                      <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+                        <Button
+                          component={motion.button}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          variant="contained"
+                          size="small"
+                          startIcon={<PersonAdd sx={{ fontSize: isTablet ? 14 : 16 }} />}
+                          onClick={() => handleConnect(suggestedUser._id)}
+                          loading={connectingUsers.includes(suggestedUser._id)}
+                          disabled={connectingUsers.includes(suggestedUser._id)}
+                          sx={{
+                            borderRadius: isTablet ? 1.5 : 2,
+                            textTransform: 'none',
+                            fontSize: isTablet ? '0.7rem' : '0.75rem',
+                            py: isTablet ? 0.4 : 0.5,
+                            px: isTablet ? 1.2 : 1.5,
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            flex: 1,
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                            },
+                          }}
+                        >
+                          {connectingUsers.includes(suggestedUser._id) ? 'Connecting...' : 'Connect'}
+                        </Button>
+                        
+                        <Button
+                          component={motion.button}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          variant="outlined"
+                          size="small"
+                          startIcon={<Message sx={{ fontSize: isTablet ? 14 : 16 }} />}
+                          onClick={() => handleStartChat(suggestedUser._id, `${suggestedUser.firstName} ${suggestedUser.lastName}`)}
+                          disabled={messagingUsers.includes(suggestedUser._id)}
+                          sx={{
+                            borderRadius: isTablet ? 1.5 : 2,
+                            textTransform: 'none',
+                            fontSize: isTablet ? '0.7rem' : '0.75rem',
+                            py: isTablet ? 0.4 : 0.5,
+                            px: isTablet ? 1.2 : 1.5,
+                            flex: 1,
+                            borderColor: 'primary.main',
+                            color: 'primary.main',
+                            '&:hover': {
+                              backgroundColor: 'primary.main',
+                              color: 'white',
+                            },
+                          }}
+                        >
+                          {messagingUsers.includes(suggestedUser._id) ? 'Starting...' : 'Message'}
+                        </Button>
+                      </Box>
 
                       {suggestedUser.mutualConnections && suggestedUser.mutualConnections > 0 && (
                         <Typography variant="caption" color="primary.main" sx={{ mt: isTablet ? 0.4 : 0.5, display: 'block', fontSize: isTablet ? '0.7rem' : '0.75rem' }}>

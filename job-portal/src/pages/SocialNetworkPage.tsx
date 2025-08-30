@@ -260,9 +260,9 @@ const SocialNetworkPage: React.FC = () => {
       <Container 
         maxWidth={false} 
         sx={{ 
-          py: { xs: 4, md: 6 },
-          px: { xs: 4, sm: 5, md: 8, lg: 10 },
-          maxWidth: '1900px', // Increased from 1600px
+          py: { xs: 2, sm: 3, md: 4 },
+          px: { xs: 1, sm: 2, md: 3, lg: 4 },
+          maxWidth: { xs: '100%', sm: '100%', md: '1600px' },
           mx: 'auto',
           position: 'relative',
           zIndex: 1,
@@ -468,9 +468,9 @@ const SocialNetworkPage: React.FC = () => {
             >
               Quick Actions
             </Typography>
-            <Grid container spacing={5}>
+            <Grid container spacing={{ xs: 2, sm: 3, md: 4, lg: 5 }}>
                 {quickActions.map((action, index) => (
-                  <Grid item xs={12} sm={6} lg={3} key={action.title}>
+                  <Grid size={{ xs: 6, sm: 6, md: 4, lg: 3 }} key={action.title}>
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -480,7 +480,8 @@ const SocialNetworkPage: React.FC = () => {
                       <Card
                         sx={{
                           height: '100%',
-                          borderRadius: 3,
+                          minHeight: { xs: '140px', sm: '160px', md: '180px' },
+                          borderRadius: { xs: 2, sm: 3 },
                           background: action.gradient,
                           color: 'white',
                           cursor: 'pointer',
@@ -498,52 +499,80 @@ const SocialNetworkPage: React.FC = () => {
                             position: 'absolute',
                             top: 0,
                             right: 0,
-                            width: 60,
-                            height: 60,
+                            width: { xs: 40, sm: 60 },
+                            height: { xs: 40, sm: 60 },
                             background: `radial-gradient(circle, ${alpha('#fff', 0.2)} 0%, transparent 70%)`,
-                            transform: 'translate(20px, -20px)',
+                            transform: { xs: 'translate(15px, -15px)', sm: 'translate(20px, -20px)' },
                           },
                         }}
                         onClick={() => navigate(action.path)}
                       >
-                        <CardContent sx={{ p: 4, height: '100%', display: 'flex', flexDirection: 'column' }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                        <CardContent sx={{ 
+                          p: { xs: 1.5, sm: 2.5, md: 3 }, 
+                          height: '100%', 
+                          display: 'flex', 
+                          flexDirection: 'column' 
+                        }}>
+                          <Box sx={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'flex-start', 
+                            mb: { xs: 1, sm: 1.5 } 
+                          }}>
                             <Box
                               sx={{
                                 background: alpha('#fff', 0.2),
-                                borderRadius: 2,
-                                p: 1,
+                                borderRadius: { xs: 1.5, sm: 2 },
+                                p: { xs: 0.75, sm: 1 },
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                               }}
                             >
-                              {action.icon}
+                              {React.cloneElement(action.icon, { 
+                                sx: { fontSize: { xs: 24, sm: 28 } } 
+                              })}
                             </Box>
                             <ArrowForward 
                               className="action-arrow"
                               sx={{ 
-                                fontSize: 20,
+                                fontSize: { xs: 18, sm: 20 },
                                 transition: 'transform 0.3s ease',
                                 opacity: 0.8,
                               }} 
                             />
                           </Box>
                           <Box sx={{ flexGrow: 1 }}>
-                            <Typography variant="h6" fontWeight="700" sx={{ mb: 0.5 }}>
+                            <Typography 
+                              variant="h6" 
+                              fontWeight="700" 
+                              sx={{ 
+                                mb: 0.5, 
+                                fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' } 
+                              }}
+                            >
                               {action.title}
                             </Typography>
-                            <Typography variant="body2" sx={{ opacity: 0.9, mb: 2 }}>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                opacity: 0.9, 
+                                mb: { xs: 1, sm: 1.5, md: 2 },
+                                fontSize: { xs: '0.8rem', sm: '0.875rem' }
+                              }}
+                            >
                               {action.subtitle}
                             </Typography>
                             <Chip
                               label={action.stats}
-                              size="small"
+                              size={isMobile ? "small" : "small"}
                               sx={{
                                 bgcolor: alpha('#fff', 0.2),
                                 color: 'white',
                                 border: `1px solid ${alpha('#fff', 0.3)}`,
                                 fontWeight: 600,
+                                fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                                height: { xs: 24, sm: 28 },
                               }}
                             />
                           </Box>
@@ -556,17 +585,17 @@ const SocialNetworkPage: React.FC = () => {
             </Box>
           </motion.div>
 
-          {/* Main Content Grid */}
-          <Grid container spacing={6}>
-            {/* Left Sidebar - User Actions & Trending */}
+          {/* Main Content Grid - Mobile Optimized */}
+          <Grid container spacing={ { xs: 2, sm: 3, md: 4 } }>
+            {/* Left Sidebar - Hide on mobile and tablet */}
             {!isMobile && !isTablet && (
-              <Grid item xl={2.5} lg={3}>
+              <Grid size={{ xl: 2.5, lg: 3 }}>
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.5, delay: 0.4 }}
                 >
-                  <Stack spacing={5}>
+                  <Stack spacing={3}>
                     {/* Profile Quick View */}
                     <Card sx={{ borderRadius: 3 }}>
                       <CardContent sx={{ p: 5 }}>
@@ -630,28 +659,35 @@ const SocialNetworkPage: React.FC = () => {
               </Grid>
             )}
 
-            {/* Center Feed */}
-            <Grid item xs={12} xl={isMobile ? 12 : isTablet ? 12 : 7} lg={isMobile ? 12 : isTablet ? 12 : 6}>
+            {/* Center Feed - Full width on mobile */}
+            <Grid size={{ 
+              xs: 12, 
+              sm: 12, 
+              md: isMobile || isTablet ? 12 : 7, 
+              lg: isMobile || isTablet ? 12 : 6, 
+              xl: isMobile || isTablet ? 12 : 7 
+            }}>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
               >
-                {/* Enhanced Navigation Tabs */}
+                {/* Enhanced Navigation Tabs - Mobile Optimized */}
                 <Card 
                   sx={{ 
-                    mb: 4, 
-                    borderRadius: 4,
+                    mb: { xs: 2, sm: 3, md: 4 }, 
+                    borderRadius: { xs: 2, md: 3 },
                     background: theme.palette.mode === 'dark'
                       ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
                       : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
                     backdropFilter: 'blur(20px)',
                     boxShadow: theme.palette.mode === 'dark'
-                      ? '0 8px 32px rgba(0,0,0,0.3)'
-                      : '0 8px 32px rgba(102, 126, 234, 0.1)',
+                      ? '0 4px 16px rgba(0,0,0,0.3)'
+                      : '0 4px 16px rgba(102, 126, 234, 0.1)',
                     border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(102, 126, 234, 0.1)'}`,
                     overflow: 'hidden',
                     position: 'relative',
+                    mx: { xs: 0, sm: 'auto' },
                     '&::before': {
                       content: '""',
                       position: 'absolute',
@@ -666,14 +702,17 @@ const SocialNetworkPage: React.FC = () => {
                   <Tabs
                     value={currentTab}
                     onChange={handleTabChange}
-                    variant={isMobile ? "scrollable" : "fullWidth"}
+                    variant="scrollable"
                     scrollButtons="auto"
+                    allowScrollButtonsMobile
                     sx={{
                       '& .MuiTab-root': {
                         textTransform: 'none',
-                        fontWeight: 700,
-                        py: 2.5,
-                        fontSize: '0.95rem',
+                        fontWeight: 600,
+                        py: { xs: 1.5, md: 2 },
+                        px: { xs: 1, md: 2 },
+                        fontSize: { xs: '0.85rem', md: '0.95rem' },
+                        minWidth: { xs: 'auto', md: 90 },
                         transition: 'all 0.3s ease',
                         '&.Mui-selected': {
                           background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
@@ -688,6 +727,9 @@ const SocialNetworkPage: React.FC = () => {
                         borderRadius: '3px 3px 0 0',
                         background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
                       },
+                      '& .MuiTabs-scrollButtons': {
+                        color: theme.palette.primary.main,
+                      },
                     }}
                   >
                     {tabLabels.map((label, index) => (
@@ -696,9 +738,9 @@ const SocialNetworkPage: React.FC = () => {
                   </Tabs>
                 </Card>
 
-                {/* Create Post Section */}
+                {/* Create Post Section - Mobile Optimized */}
                 {(showCreatePost || !isMobile) && (
-                  <Box sx={{ mb: 3 }}>
+                  <Box sx={{ mb: { xs: 2, md: 3 }, mx: { xs: 0, sm: 'auto' } }}>
                     <CreatePost
                       onPostCreated={handlePostCreated}
                       onCancel={isMobile ? () => setShowCreatePost(false) : undefined}
@@ -729,7 +771,7 @@ const SocialNetworkPage: React.FC = () => {
                         </Typography>
                       </Card>
                     ) : (
-                      <Stack spacing={4}>
+                      <Stack spacing={{ xs: 2, sm: 3, md: 4 }}>
                         {posts.map((post, index) => (
                           <motion.div
                             key={post._id}
@@ -747,17 +789,19 @@ const SocialNetworkPage: React.FC = () => {
                           >
                             <Box
                               sx={{
-                                borderRadius: 4,
+                                borderRadius: { xs: 2, sm: 3, md: 4 },
                                 overflow: 'hidden',
                                 background: theme.palette.mode === 'dark'
                                   ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
                                   : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
                                 backdropFilter: 'blur(20px)',
                                 boxShadow: theme.palette.mode === 'dark'
-                                  ? '0 8px 32px rgba(0,0,0,0.3)'
-                                  : '0 8px 32px rgba(102, 126, 234, 0.08)',
+                                  ? { xs: '0 4px 16px rgba(0,0,0,0.2)', sm: '0 6px 24px rgba(0,0,0,0.25)', md: '0 8px 32px rgba(0,0,0,0.3)' }
+                                  : { xs: '0 4px 16px rgba(102, 126, 234, 0.06)', sm: '0 6px 24px rgba(102, 126, 234, 0.07)', md: '0 8px 32px rgba(102, 126, 234, 0.08)' },
                                 border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(102, 126, 234, 0.08)'}`,
                                 position: 'relative',
+                                mx: { xs: 0, sm: 'auto' },
+                                maxWidth: '100%',
                                 '&::before': {
                                   content: '""',
                                   position: 'absolute',
@@ -831,7 +875,7 @@ const SocialNetworkPage: React.FC = () => {
 
             {/* Right Sidebar - Suggestions & Activities */}
             {!isMobile && !isTablet && (
-              <Grid item xl={2.5} lg={3}>
+              <Grid size={{ xl: 2.5, lg: 3 }}>
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}

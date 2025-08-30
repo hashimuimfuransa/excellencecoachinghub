@@ -14,6 +14,7 @@ import {
   Divider,
   Badge,
   useTheme,
+  useMediaQuery,
   CircularProgress,
   Chip,
   Button,
@@ -24,6 +25,7 @@ import {
   Fab,
   Menu,
   MenuItem,
+  alpha,
 } from '@mui/material';
 import {
   Send,
@@ -44,6 +46,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 const MessagesPage: React.FC = () => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user } = useAuth();
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
@@ -163,7 +166,13 @@ const MessagesPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 3 }}>
+      <Container 
+        maxWidth="lg" 
+        sx={{ 
+          py: { xs: 2, sm: 3 },
+          px: { xs: 1, sm: 2, md: 3 }
+        }}
+      >
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
           <CircularProgress />
         </Box>
@@ -172,7 +181,14 @@ const MessagesPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3, height: 'calc(100vh - 120px)' }}>
+    <Container 
+      maxWidth="xl" 
+      sx={{ 
+        py: { xs: 1, sm: 2, md: 3 }, 
+        px: { xs: 1, sm: 2, md: 3 },
+        height: { xs: 'calc(100vh - 80px)', sm: 'calc(100vh - 120px)' }
+      }}
+    >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -182,55 +198,116 @@ const MessagesPage: React.FC = () => {
         <Box sx={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
-          alignItems: 'center', 
-          mb: 3 
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          mb: { xs: 2, sm: 3 },
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: { xs: 2, sm: 0 }
         }}>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              fontWeight: 700,
+              fontSize: { xs: '1.5rem', sm: '2rem' }
+            }}
+          >
             Messages
           </Typography>
           
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: { xs: 1, sm: 2 }, 
+            alignItems: 'center',
+            flexWrap: { xs: 'wrap', sm: 'nowrap' },
+            width: { xs: '100%', sm: 'auto' }
+          }}>
+            <IconButton
+              color="primary"
+              onClick={handleRefresh}
+              size={isMobile ? "small" : "medium"}
+              title="Refresh"
+              sx={{ 
+                border: `1px solid ${theme.palette.primary.main}`,
+                borderRadius: 1,
+                display: { xs: 'inline-flex', sm: 'none' }
+              }}
+            >
+              <Refresh />
+            </IconButton>
+            
             <Button
               variant="outlined"
-              startIcon={<Refresh />}
+              startIcon={!isMobile ? <Refresh /> : undefined}
               onClick={handleRefresh}
+              size="small"
+              sx={{ 
+                display: { xs: 'none', sm: 'inline-flex' },
+                minWidth: 'auto'
+              }}
             >
-              Refresh
+              {!isMobile && 'Refresh'}
             </Button>
             
             <Button
               variant="outlined"
-              startIcon={<FilterList />}
+              startIcon={!isMobile ? <FilterList /> : undefined}
               onClick={handleMenuOpen}
+              size="small"
+              sx={{ 
+                minWidth: { xs: 'auto', sm: '120px' },
+                fontSize: { xs: '0.75rem', sm: '0.875rem' }
+              }}
             >
-              Filter: {filterType === 'all' ? 'All' : 'Unread'}
+              {isMobile ? 'Filter' : `Filter: ${filterType === 'all' ? 'All' : 'Unread'}`}
             </Button>
             
             <Button
               variant="contained"
-              startIcon={<Add />}
+              startIcon={!isMobile ? <Add /> : undefined}
               onClick={() => setShowChatList(true)}
+              size="small"
+              sx={{ 
+                minWidth: { xs: 'auto', sm: '110px' },
+                fontSize: { xs: '0.75rem', sm: '0.875rem' }
+              }}
             >
-              New Chat
+              {isMobile ? <Add /> : 'New Chat'}
             </Button>
           </Box>
         </Box>
 
         {/* Main Messages Area */}
-        <Paper sx={{ height: 'calc(100% - 80px)', display: 'flex', flexDirection: 'column' }}>
+        <Paper sx={{ 
+          height: { xs: 'calc(100vh - 200px)', sm: 'calc(100vh - 180px)', md: 'calc(100% - 80px)' }, 
+          display: 'flex', 
+          flexDirection: 'column',
+          borderRadius: { xs: 1, sm: 2, md: 3 },
+          overflow: 'hidden'
+        }}>
           {selectedRoom ? (
             <>
               {/* Chat Header */}
               <Box sx={{ 
-                p: 2, 
+                p: { xs: 1, sm: 1.5, md: 2 }, 
                 borderBottom: 1, 
                 borderColor: 'divider',
                 background: theme.palette.mode === 'dark' 
                   ? 'linear-gradient(45deg, #1a1a2e, #16213e)'
-                  : 'linear-gradient(45deg, #f8f9fa, #ffffff)'
+                  : 'linear-gradient(45deg, #f8f9fa, #ffffff)',
+                flexShrink: 0
               }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  gap: { xs: 1, sm: 2 }
+                }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: { xs: 1, sm: 1.5 },
+                    flex: 1,
+                    minWidth: 0 // Allow text truncation
+                  }}>
                     <Badge
                       color="success"
                       variant="dot"
@@ -238,57 +315,131 @@ const MessagesPage: React.FC = () => {
                     >
                       <Avatar 
                         src={getOtherParticipant(selectedRoom)?.profilePicture}
-                        sx={{ width: 50, height: 50 }}
+                        sx={{ 
+                          width: { xs: 36, sm: 44, md: 50 }, 
+                          height: { xs: 36, sm: 44, md: 50 },
+                          flexShrink: 0
+                        }}
                       >
-                        {getOtherParticipant(selectedRoom)?.firstName[0]}{getOtherParticipant(selectedRoom)?.lastName[0]}
+                        {getOtherParticipant(selectedRoom)?.firstName?.[0]}{getOtherParticipant(selectedRoom)?.lastName?.[0]}
                       </Avatar>
                     </Badge>
-                    <Box>
-                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontWeight: 600,
+                          fontSize: { xs: '0.9rem', sm: '1rem', md: '1.25rem' },
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
                         {getOtherParticipant(selectedRoom)?.firstName} {getOtherParticipant(selectedRoom)?.lastName}
                       </Typography>
                       {getOtherParticipant(selectedRoom)?.isOnline ? (
-                        <Typography variant="caption" color="success.main" sx={{ fontWeight: 500 }}>
+                        <Typography 
+                          variant="caption" 
+                          color="success.main" 
+                          sx={{ 
+                            fontWeight: 500,
+                            fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.75rem' },
+                            display: 'block',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
                           Active now
                         </Typography>
                       ) : (
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography 
+                          variant="caption" 
+                          color="text.secondary"
+                          sx={{ 
+                            fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.75rem' },
+                            display: 'block',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                        >
                           {getOtherParticipant(selectedRoom)?.lastSeen && 
                             `Last seen ${formatDistanceToNow(new Date(getOtherParticipant(selectedRoom)!.lastSeen!), { addSuffix: true })}`
                           }
                         </Typography>
                       )}
                       {getOtherParticipant(selectedRoom)?.company && (
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                        <Typography 
+                          variant="caption" 
+                          color="text.secondary" 
+                          sx={{ 
+                            display: { xs: 'none', sm: 'block' },
+                            fontSize: '0.7rem',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                        >
                           {getOtherParticipant(selectedRoom)?.company}
                         </Typography>
                       )}
                     </Box>
                   </Box>
                   
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <IconButton color="primary" title="Voice Call">
-                      <Phone />
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: { xs: 0.25, sm: 0.5, md: 1 },
+                    flexShrink: 0
+                  }}>
+                    <IconButton 
+                      color="primary" 
+                      title="Voice Call"
+                      size="small"
+                      sx={{ 
+                        display: { xs: 'none', md: 'inline-flex' },
+                        p: { sm: 0.5, md: 1 }
+                      }}
+                    >
+                      <Phone fontSize="small" />
                     </IconButton>
-                    <IconButton color="primary" title="Video Call">
-                      <VideoCall />
+                    <IconButton 
+                      color="primary" 
+                      title="Video Call"
+                      size="small"
+                      sx={{ 
+                        display: { xs: 'none', md: 'inline-flex' },
+                        p: { sm: 0.5, md: 1 }
+                      }}
+                    >
+                      <VideoCall fontSize="small" />
                     </IconButton>
                     <IconButton 
                       color="primary" 
                       title="Switch Conversation"
                       onClick={() => setShowChatList(true)}
+                      size="small"
+                      sx={{ p: { xs: 0.5, sm: 0.75, md: 1 } }}
                     >
-                      <Search />
+                      <Search fontSize="small" />
                     </IconButton>
-                    <IconButton>
-                      <MoreVert />
+                    <IconButton 
+                      size="small"
+                      sx={{ p: { xs: 0.5, sm: 0.75, md: 1 } }}
+                    >
+                      <MoreVert fontSize="small" />
                     </IconButton>
                   </Box>
                 </Box>
               </Box>
 
               {/* Messages */}
-              <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
+              <Box sx={{ 
+                flexGrow: 1, 
+                overflow: 'auto', 
+                p: { xs: 1, sm: 1.5, md: 2 },
+                minHeight: 0, // Important for proper scrolling
+                display: 'flex',
+                flexDirection: 'column'
+              }}>
                 {messagesLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                     <CircularProgress />
@@ -312,48 +463,100 @@ const MessagesPage: React.FC = () => {
                         </Typography>
                       </Box>
                     ) : (
-                      messages.map((message) => (
-                        <Box
-                          key={message._id}
-                          sx={{
-                            display: 'flex',
-                            justifyContent: message.sender._id === user?._id ? 'flex-end' : 'flex-start',
-                            mb: 2,
-                          }}
-                        >
-                          <Paper
-                            elevation={2}
+                      messages.map((message) => {
+                        const isSentByUser = message.sender._id === user?._id;
+                        return (
+                          <Box
+                            key={message._id}
                             sx={{
-                              p: 2,
-                              maxWidth: '75%',
-                              backgroundColor: message.sender._id === user?._id 
-                                ? theme.palette.primary.main 
-                                : theme.palette.mode === 'dark' 
-                                  ? theme.palette.grey[800]
-                                  : theme.palette.grey[100],
-                              color: message.sender._id === user?._id 
-                                ? 'white' 
-                                : 'inherit',
-                              borderRadius: message.sender._id === user?._id 
-                                ? '20px 20px 5px 20px'
-                                : '20px 20px 20px 5px',
+                              display: 'flex',
+                              alignItems: 'flex-end',
+                              mb: { xs: 1.5, sm: 2 },
+                              px: { xs: 1, sm: 2 },
+                              width: '100%',
+                              flexDirection: isSentByUser ? 'row-reverse' : 'row',
+                              gap: 1,
                             }}
                           >
-                            <Typography variant="body1" sx={{ mb: 0.5 }}>
-                              {message.content}
-                            </Typography>
-                            <Typography 
-                              variant="caption" 
-                              sx={{ 
-                                opacity: 0.7,
-                                display: 'block',
+                            {/* Avatar for received messages - always show for received */}
+                            {!isSentByUser && (
+                              <Avatar 
+                                src={getOtherParticipant(selectedRoom)?.profilePicture}
+                                sx={{ 
+                                  width: { xs: 28, sm: 32, md: 36 }, 
+                                  height: { xs: 28, sm: 32, md: 36 }, 
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {getOtherParticipant(selectedRoom)?.firstName?.[0] || 'U'}
+                              </Avatar>
+                            )}
+                            
+                            {/* Message content */}
+                            <Box
+                              sx={{
+                                maxWidth: { xs: '70%', sm: '65%', md: '60%' },
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: isSentByUser ? 'flex-end' : 'flex-start',
                               }}
                             >
-                              {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
-                            </Typography>
-                          </Paper>
-                        </Box>
-                      ))
+                              <Paper
+                                elevation={isSentByUser ? 2 : 1}
+                                sx={{
+                                  p: { xs: 1.5, sm: 2 },
+                                  backgroundColor: isSentByUser 
+                                    ? theme.palette.primary.main 
+                                    : theme.palette.mode === 'dark' 
+                                      ? theme.palette.grey[800]
+                                      : theme.palette.grey[100],
+                                  color: isSentByUser 
+                                    ? 'white' 
+                                    : 'inherit',
+                                  borderRadius: isSentByUser 
+                                    ? '20px 20px 6px 20px'
+                                    : '20px 20px 20px 6px',
+                                  boxShadow: isSentByUser 
+                                    ? `0 2px 8px ${alpha(theme.palette.primary.main, 0.3)}`
+                                    : theme.palette.mode === 'dark'
+                                      ? '0 1px 3px rgba(255, 255, 255, 0.1)'
+                                      : '0 1px 3px rgba(0, 0, 0, 0.1)',
+                                }}
+                              >
+                                <Typography 
+                                  variant="body1" 
+                                  sx={{ 
+                                    fontSize: { xs: '0.875rem', sm: '1rem' },
+                                    lineHeight: 1.4,
+                                    wordBreak: 'break-word',
+                                  }}
+                                >
+                                  {message.content}
+                                </Typography>
+                              </Paper>
+                              
+                              {/* Timestamp */}
+                              <Typography 
+                                variant="caption" 
+                                sx={{ 
+                                  color: 'text.secondary',
+                                  fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                                  mt: 0.5,
+                                  px: 1,
+                                  textAlign: isSentByUser ? 'right' : 'left',
+                                }}
+                              >
+                                {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
+                              </Typography>
+                            </Box>
+
+                            {/* Avatar placeholder for sent messages to keep alignment */}
+                            {isSentByUser && (
+                              <Box sx={{ width: { xs: 28, sm: 32, md: 36 }, flexShrink: 0 }} />
+                            )}
+                          </Box>
+                        );
+                      })
                     )}
                     <div ref={messagesEndRef} />
                   </>
@@ -362,19 +565,25 @@ const MessagesPage: React.FC = () => {
 
               {/* Message Input */}
               <Box sx={{ 
-                p: 2, 
+                p: { xs: 1.5, sm: 2 }, 
                 borderTop: 1, 
                 borderColor: 'divider',
                 background: theme.palette.mode === 'dark' 
                   ? 'rgba(255,255,255,0.02)'
-                  : 'rgba(0,0,0,0.02)'
+                  : 'rgba(0,0,0,0.02)',
+                flexShrink: 0
               }}>
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: { xs: 1, sm: 2 }, 
+                  alignItems: 'flex-end' 
+                }}>
                   <IconButton 
-                    size="small" 
+                    size={isMobile ? "small" : "medium"} 
                     color="primary"
                     sx={{ 
                       backgroundColor: theme.palette.action.hover,
+                      display: { xs: 'none', sm: 'inline-flex' }, // Hide on mobile to save space
                       '&:hover': {
                         backgroundColor: theme.palette.action.selected,
                       }
@@ -385,8 +594,8 @@ const MessagesPage: React.FC = () => {
                   <TextField
                     fullWidth
                     multiline
-                    maxRows={4}
-                    placeholder="Type a message..."
+                    maxRows={isMobile ? 3 : 4}
+                    placeholder={isMobile ? "Message..." : "Type a message..."}
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyPress={(e) => {
@@ -396,11 +605,15 @@ const MessagesPage: React.FC = () => {
                       }
                     }}
                     variant="outlined"
-                    size="small"
+                    size={isMobile ? "small" : "small"}
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        borderRadius: '25px',
+                        borderRadius: { xs: '20px', sm: '25px' },
                         backgroundColor: theme.palette.background.paper,
+                        fontSize: { xs: '0.875rem', sm: '1rem' },
+                        '& .MuiOutlinedInput-input': {
+                          py: { xs: 1, sm: 1.25 },
+                        }
                       }
                     }}
                   />
@@ -408,15 +621,22 @@ const MessagesPage: React.FC = () => {
                     color="primary" 
                     onClick={handleSendMessage}
                     disabled={!newMessage.trim()}
+                    size={isMobile ? "medium" : "large"}
                     sx={{ 
                       backgroundColor: newMessage.trim() ? theme.palette.primary.main : theme.palette.action.disabledBackground,
                       color: newMessage.trim() ? 'white' : theme.palette.action.disabled,
+                      width: { xs: 44, sm: 48 },
+                      height: { xs: 44, sm: 48 },
+                      minWidth: 'auto',
                       '&:hover': {
                         backgroundColor: newMessage.trim() ? theme.palette.primary.dark : theme.palette.action.disabledBackground,
+                      },
+                      '&:disabled': {
+                        backgroundColor: theme.palette.action.disabledBackground,
                       }
                     }}
                   >
-                    <Send />
+                    <Send sx={{ fontSize: { xs: 18, sm: 20 } }} />
                   </IconButton>
                 </Box>
               </Box>

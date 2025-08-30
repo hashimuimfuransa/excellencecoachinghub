@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -15,6 +15,13 @@ import {
   Typography,
   useTheme,
   Autocomplete,
+  LinearProgress,
+  Dialog,
+  DialogContent,
+  DialogActions,
+  DialogTitle,
+  Grid,
+  Alert,
 } from '@mui/material';
 import {
   Image,
@@ -25,10 +32,23 @@ import {
   Group,
   Lock,
   Close,
+  CloudUpload,
+  DeleteOutline,
+  PlayCircleOutline,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { CreatePostData, socialNetworkService } from '../../services/socialNetworkService';
+import { uploadService } from '../../services/uploadService';
 import { useAuth } from '../../contexts/AuthContext';
+
+interface MediaFile {
+  file: File;
+  type: 'image' | 'video';
+  url: string;
+  thumbnail?: string;
+  uploading?: boolean;
+  uploadProgress?: number;
+}
 
 interface CreatePostProps {
   onPostCreated?: (post: any) => void;
@@ -44,18 +64,39 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated, onCancel }) => {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const [showMediaDialog, setShowMediaDialog] = useState(false);
+  const [uploadError, setUploadError] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async () => {
-    if (!content.trim()) return;
+    if (!content.trim() && mediaFiles.length === 0) return;
 
     setIsSubmitting(true);
     try {
+      // Upload media files first if any
+      const uploadedMediaList = [];
+      for (const mediaFile of mediaFiles) {
+        if (!mediaFile.uploading) {
+          const uploadedMedia = await uploadMediaFile(mediaFile);
+          uploadedMediaList.push(uploadedMedia);
+        }
+      }
+
       const postData: CreatePostData = {
         content: content.trim(),
         postType,
         visibility,
         tags: tags.length > 0 ? tags : undefined,
+        media: uploadedMediaList.length > 0 ? uploadedMediaList : undefined,
       };
+
+      // Temporarily only allow text posts and training posts
+      if (postType === 'job_post' || postType === 'event' || postType === 'company_update') {
+        setUploadError(`${postType.replace('_', ' ')} posts are not yet available. Please use text or training post types.`);
+        return;
+      }
 
       const response = await socialNetworkService.createPost(postData);
       onPostCreated?.(response.data);
@@ -66,11 +107,126 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated, onCancel }) => {
       setVisibility('public');
       setTags([]);
       setTagInput('');
+      setMediaFiles([]);
+      setUploadError('');
     } catch (error) {
       console.error('Error creating post:', error);
+      setUploadError('Failed to create post. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const uploadMediaFile = async (mediaFile: MediaFile): Promise<{ type: 'image' | 'video'; url: string; thumbnail?: string }> => {
+    try {
+      // Update upload progress
+      setMediaFiles(prev => prev.map(m => 
+        m.url === mediaFile.url ? { ...m, uploading: true, uploadProgress: 0 } : m
+      ));
+
+      const response = await uploadService.uploadFile(mediaFile.file, 'post');
+      
+      setMediaFiles(prev => prev.map(m => 
+        m.url === mediaFile.url ? { ...m, uploading: false, uploadProgress: 100 } : m
+      ));
+
+      return {
+        type: mediaFile.type,
+        url: response.data.url,
+        thumbnail: mediaFile.thumbnail,
+      };
+    } catch (error) {
+      console.error('Media upload error:', error);
+      setMediaFiles(prev => prev.map(m => 
+        m.url === mediaFile.url ? { ...m, uploading: false, uploadProgress: 0 } : m
+      ));
+      
+      // For development/testing, use the preview URL
+      console.warn('Using preview URL for development');
+      return {
+        type: mediaFile.type,
+        url: mediaFile.url,
+        thumbnail: mediaFile.thumbnail,
+      };
+    }
+  };
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
+    const files = event.target.files;
+    if (!files) return;
+
+    const maxFiles = 5; // Maximum 5 media files per post
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      // Check total files limit
+      if (mediaFiles.length >= maxFiles) {
+        setUploadError(`Maximum ${maxFiles} files allowed per post.`);
+        break;
+      }
+
+      // Validate file using upload service
+      const validation = uploadService.validateFile(file, type);
+      if (!validation.valid) {
+        setUploadError(validation.error || 'Invalid file');
+        continue;
+      }
+
+      // Create preview URL
+      const url = uploadService.createPreviewUrl(file);
+      const newMedia: MediaFile = {
+        file,
+        type,
+        url,
+        uploading: false,
+        uploadProgress: 0,
+      };
+
+      // Generate thumbnail for videos
+      if (type === 'video') {
+        try {
+          const thumbnail = await uploadService.generateVideoThumbnail(file);
+          newMedia.thumbnail = thumbnail;
+        } catch (error) {
+          console.error('Failed to generate thumbnail:', error);
+        }
+      }
+
+      setMediaFiles(prev => [...prev, newMedia]);
+      setUploadError('');
+    }
+
+    // Reset input
+    if (event.target) {
+      event.target.value = '';
+    }
+  };
+
+
+
+  const handleRemoveMedia = (index: number) => {
+    setMediaFiles(prev => {
+      const newFiles = [...prev];
+      const mediaToRemove = newFiles[index];
+      
+      // Cleanup URLs
+      uploadService.revokePreviewUrl(mediaToRemove.url);
+      if (mediaToRemove.thumbnail) {
+        uploadService.revokePreviewUrl(mediaToRemove.thumbnail);
+      }
+      
+      newFiles.splice(index, 1);
+      return newFiles;
+    });
+  };
+
+  const handleImageUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleVideoUpload = () => {
+    videoInputRef.current?.click();
   };
 
   const handleAddTag = (tag: string) => {
@@ -307,16 +463,181 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated, onCancel }) => {
           )}
         />
 
-        {/* Media Options (Coming Soon) */}
-        <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
-          <IconButton disabled>
+        {/* Upload Error Alert */}
+        {uploadError && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setUploadError('')}>
+            {uploadError}
+          </Alert>
+        )}
+
+        {/* Media Preview */}
+        {mediaFiles.length > 0 && (
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="body2" sx={{ mb: 2, fontWeight: 600 }}>
+              Media ({mediaFiles.length}/5)
+            </Typography>
+            <Grid container spacing={2}>
+              {mediaFiles.map((media, index) => (
+                <Grid item xs={6} sm={4} md={3} key={media.url}>
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      aspectRatio: '1',
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      background: theme.palette.grey[100],
+                    }}
+                  >
+                    {media.type === 'image' ? (
+                      <img
+                        src={media.url}
+                        alt="Preview"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                        }}
+                      />
+                    ) : (
+                      <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+                        {media.thumbnail ? (
+                          <img
+                            src={media.thumbnail}
+                            alt="Video thumbnail"
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                            }}
+                          />
+                        ) : (
+                          <video
+                            src={media.url}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                            }}
+                            muted
+                          />
+                        )}
+                        <PlayCircleOutline
+                          sx={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            fontSize: 40,
+                            color: 'white',
+                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                            borderRadius: '50%',
+                          }}
+                        />
+                      </Box>
+                    )}
+                    
+                    {/* Remove Button */}
+                    <IconButton
+                      size="small"
+                      onClick={() => handleRemoveMedia(index)}
+                      sx={{
+                        position: 'absolute',
+                        top: 4,
+                        right: 4,
+                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                        color: 'white',
+                        '&:hover': {
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        },
+                      }}
+                    >
+                      <Close fontSize="small" />
+                    </IconButton>
+
+                    {/* Upload Progress */}
+                    {media.uploading && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                          p: 1,
+                        }}
+                      >
+                        <LinearProgress
+                          variant="determinate"
+                          value={media.uploadProgress || 0}
+                          sx={{ mb: 0.5 }}
+                        />
+                        <Typography variant="caption" color="white">
+                          Uploading... {media.uploadProgress || 0}%
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        )}
+
+        {/* Media Upload Options */}
+        <Box sx={{ display: 'flex', gap: 1, mb: 3, alignItems: 'center' }}>
+          <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            accept="image/*"
+            multiple
+            onChange={(e) => handleFileSelect(e, 'image')}
+          />
+          <input
+            type="file"
+            ref={videoInputRef}
+            style={{ display: 'none' }}
+            accept="video/*"
+            multiple
+            onChange={(e) => handleFileSelect(e, 'video')}
+          />
+          
+          <IconButton
+            onClick={handleImageUpload}
+            disabled={mediaFiles.length >= 5}
+            sx={{
+              backgroundColor: theme.palette.action.hover,
+              '&:hover': {
+                backgroundColor: theme.palette.action.selected,
+              },
+              '&:disabled': {
+                opacity: 0.5,
+              }
+            }}
+          >
             <Image />
           </IconButton>
-          <IconButton disabled>
+          
+          <IconButton
+            onClick={handleVideoUpload}
+            disabled={mediaFiles.length >= 5}
+            sx={{
+              backgroundColor: theme.palette.action.hover,
+              '&:hover': {
+                backgroundColor: theme.palette.action.selected,
+              },
+              '&:disabled': {
+                opacity: 0.5,
+              }
+            }}
+          >
             <VideoLibrary />
           </IconButton>
-          <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center', ml: 1 }}>
-            Media uploads coming soon
+          
+          <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+            Add photos or videos (Max 5 files, 5MB images / 50MB videos)
           </Typography>
         </Box>
 
@@ -330,7 +651,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated, onCancel }) => {
           <Button
             variant="contained"
             onClick={handleSubmit}
-            disabled={!content.trim() || isSubmitting}
+            disabled={(!content.trim() && mediaFiles.length === 0) || isSubmitting}
             sx={{
               background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
               '&:hover': {

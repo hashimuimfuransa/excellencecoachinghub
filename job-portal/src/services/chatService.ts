@@ -3,23 +3,28 @@ import { io, Socket } from 'socket.io-client';
 
 export interface ChatUser {
   _id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   profilePicture?: string;
   isOnline?: boolean;
   lastSeen?: string;
-  role?: 'job_seeker' | 'employer' | 'admin';
+  role: 'job_seeker' | 'employer' | 'admin';
   company?: string;
+  title?: string;
+  location?: string;
 }
 
 export interface Message {
   _id: string;
-  chatId: string;
+  chat: string;
   sender: ChatUser;
   content: string;
-  timestamp: string;
+  createdAt: string;
+  updatedAt: string;
   isRead: boolean;
-  messageType?: 'text' | 'file' | 'image';
+  readBy: string[];
+  messageType: 'text' | 'file' | 'image';
   fileUrl?: string;
   fileName?: string;
 }
@@ -27,22 +32,24 @@ export interface Message {
 export interface ChatRoom {
   _id: string;
   participants: ChatUser[];
-  messages: Message[];
   lastMessage?: Message;
   unreadCount: number;
-  isGroup?: boolean;
+  isGroup: boolean;
   groupName?: string;
+  groupAvatar?: string;
+  createdBy: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateChatRequest {
-  participantId: string;
+  participantIds: string[];
+  isGroup?: boolean;
+  groupName?: string;
   initialMessage?: string;
 }
 
 export interface SendMessageRequest {
-  chatId: string;
   content: string;
   messageType?: 'text' | 'file' | 'image';
   fileUrl?: string;
@@ -60,12 +67,14 @@ class ChatService {
       this.socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000', {
         auth: {
           token,
-          userId,
         },
         transports: ['websocket', 'polling'],
       });
 
       this.setupSocketEvents();
+      
+      // Join chat system
+      this.socket.emit('chat:join', userId);
     }
     return this.socket;
   }
@@ -84,23 +93,23 @@ class ChatService {
       this.emit('socket-connected', false);
     });
 
-    this.socket.on('new-message', (message: Message) => {
-      this.emit('new-message', message);
+    this.socket.on('new-message', (data: { chatId: string; message: Message }) => {
+      this.emit('new-message', data);
     });
 
-    this.socket.on('message-read', (data: { chatId: string; messageId: string; readBy: string }) => {
-      this.emit('message-read', data);
+    this.socket.on('messages-read', (data: { chatId: string; readBy: string }) => {
+      this.emit('messages-read', data);
     });
 
-    this.socket.on('user-online', (userId: string) => {
+    this.socket.on('user:online', (userId: string) => {
       this.emit('user-online', userId);
     });
 
-    this.socket.on('user-offline', (userId: string) => {
+    this.socket.on('user:offline', (userId: string) => {
       this.emit('user-offline', userId);
     });
 
-    this.socket.on('typing', (data: { chatId: string; userId: string; isTyping: boolean }) => {
+    this.socket.on('user:typing', (data: { chatId: string; userId: string; isTyping: boolean }) => {
       this.emit('typing', data);
     });
   }
@@ -163,10 +172,10 @@ class ChatService {
   }
 
   // Create new chat or get existing one
-  async createOrGetChat(participantId: string, initialMessage?: string): Promise<ChatRoom> {
+  async createOrGetChat(participantIds: string[], initialMessage?: string): Promise<ChatRoom> {
     try {
       const response = await apiPost<{ success: boolean; data: ChatRoom }>('/chat/create', {
-        participantId,
+        participantIds,
         initialMessage,
       });
       return response.data;
@@ -177,14 +186,9 @@ class ChatService {
   }
 
   // Send message
-  async sendMessage(data: SendMessageRequest): Promise<Message> {
+  async sendMessage(chatId: string, data: SendMessageRequest): Promise<Message> {
     try {
-      const response = await apiPost<{ success: boolean; data: Message }>('/chat/message', data);
-      
-      // Emit via socket for real-time updates
-      if (this.socket) {
-        this.socket.emit('send-message', response.data);
-      }
+      const response = await apiPost<{ success: boolean; data: Message }>(`/chat/${chatId}/message`, data);
       
       return response.data;
     } catch (error) {
@@ -211,7 +215,7 @@ class ChatService {
   // Search users to chat with
   async searchUsers(query: string, userType?: 'all' | 'job_seekers' | 'employers'): Promise<ChatUser[]> {
     try {
-      const response = await apiGet<{ success: boolean; data: ChatUser[] }>('/users/search', {
+      const response = await apiGet<{ success: boolean; data: ChatUser[] }>('/chat/users/search', {
         query,
         type: userType || 'all',
         excludeCurrentUser: true,
@@ -237,19 +241,19 @@ class ChatService {
   // Socket methods for real-time features
   joinChat(chatId: string) {
     if (this.socket) {
-      this.socket.emit('join-chat', chatId);
+      this.socket.emit('chat:join-room', chatId);
     }
   }
 
   leaveChat(chatId: string) {
     if (this.socket) {
-      this.socket.emit('leave-chat', chatId);
+      this.socket.emit('chat:leave-room', chatId);
     }
   }
 
-  sendTypingIndicator(chatId: string, isTyping: boolean) {
+  sendTypingIndicator(chatId: string, userId: string, isTyping: boolean) {
     if (this.socket) {
-      this.socket.emit('typing', { chatId, isTyping });
+      this.socket.emit('chat:typing', { chatId, userId, isTyping });
     }
   }
 
@@ -274,8 +278,11 @@ class ChatService {
   }
 
   // Cleanup socket connection
-  disconnect() {
+  disconnect(userId?: string) {
     if (this.socket) {
+      if (userId) {
+        this.socket.emit('chat:leave', userId);
+      }
       this.socket.disconnect();
       this.socket = null;
     }

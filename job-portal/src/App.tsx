@@ -190,6 +190,7 @@ function App() {
               
               {/* Profile */}
               <Route path="profile" element={<ProfilePage />} />
+              <Route path="profile/:userId" element={<ProfilePage />} />
               <Route path="profile/simple" element={<ImprovedProfilePage />} />
               <Route path="profile/settings" element={<ProfileSettingsPage />} />
               <Route 

@@ -131,8 +131,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onClose }) => {
     setSending(true);
 
     try {
-      await chatService.sendMessage({
-        chatId: chat._id,
+      await chatService.sendMessage(chat._id, {
         content: messageContent,
         messageType: 'text',
       });
@@ -153,8 +152,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onClose }) => {
       setSending(true);
       const { fileUrl, fileName } = await chatService.uploadChatFile(file);
       
-      await chatService.sendMessage({
-        chatId: chat._id,
+      await chatService.sendMessage(chat._id, {
         content: fileName,
         messageType: file.type.startsWith('image/') ? 'image' : 'file',
         fileUrl,
@@ -169,7 +167,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onClose }) => {
 
   const handleTypingIndicator = (value: string) => {
     setNewMessage(value);
-    chatService.sendTypingIndicator(chat._id, value.length > 0);
+    if (user?._id) {
+      chatService.sendTypingIndicator(chat._id, user._id, value.length > 0);
+    }
   };
 
   const formatMessageTime = (timestamp: string) => {
@@ -236,13 +236,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onClose }) => {
                   background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
                 }}
               >
-                {otherParticipant.name.charAt(0).toUpperCase()}
+                {otherParticipant.firstName?.charAt(0)?.toUpperCase() || otherParticipant.lastName?.charAt(0)?.toUpperCase() || '?'}
               </Avatar>
             </Badge>
             <Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  {otherParticipant.name}
+                  {`${otherParticipant.firstName || ''} ${otherParticipant.lastName || ''}`.trim() || otherParticipant.email}
                 </Typography>
                 {otherParticipant.role === 'employer' && (
                   <Chip
@@ -317,7 +317,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onClose }) => {
                           src={message.sender.profilePicture}
                           sx={{ width: 24, height: 24, mr: 1 }}
                         >
-                          {message.sender.name.charAt(0)}
+                          {message.sender.firstName?.charAt(0)?.toUpperCase() || message.sender.lastName?.charAt(0)?.toUpperCase() || '?'}
                         </Avatar>
                       )}
                       
@@ -329,7 +329,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onClose }) => {
                       >
                         {!isOwn && !isConsecutive && (
                           <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                            {message.sender.name}
+                            {`${message.sender.firstName || ''} ${message.sender.lastName || ''}`.trim() || message.sender.email}
                           </Typography>
                         )}
                         
@@ -408,7 +408,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onClose }) => {
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <Avatar sx={{ width: 24, height: 24, mr: 1 }}>
-                    {otherParticipant.name.charAt(0)}
+                    {otherParticipant.firstName?.charAt(0)?.toUpperCase() || otherParticipant.lastName?.charAt(0)?.toUpperCase() || '?'}
                   </Avatar>
                   <Paper
                     sx={{
@@ -418,7 +418,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onClose }) => {
                     }}
                   >
                     <Typography variant="caption" color="text.secondary">
-                      {otherParticipant.name} is typing...
+                      {`${otherParticipant.firstName || ''} ${otherParticipant.lastName || ''}`.trim() || otherParticipant.email} is typing...
                     </Typography>
                   </Paper>
                 </Box>

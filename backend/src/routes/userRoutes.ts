@@ -165,6 +165,7 @@ router.post('/upload-avatar', multerUpload.single('avatar'), uploadAvatar);
 // Profile routes with user ID parameter (for frontend compatibility)
 router.get('/:id/profile', getCurrentProfile);
 router.put('/:id/profile', updateProfileValidation, validateRequest, updateProfile);
+router.post('/:id/profile-picture', multerUpload.single('profilePicture'), uploadAvatar);
 
 // Debug route to check environment variables (remove in production)
 router.get('/debug/env', (req, res) => {

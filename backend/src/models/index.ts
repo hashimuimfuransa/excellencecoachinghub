@@ -5,6 +5,7 @@ export { Quiz, IQuizDocument, IQuizModel, IQuizQuestionDocument } from './Quiz';
 export { ExamAttempt, IExamAttemptDocument, IExamAttemptModel } from './ExamAttempt';
 export { ProctoringSession, IProctoringSessionDocument, IProctoringSessionModel, IProctoringEventDocument } from './ProctoringSession';
 export { Notification, INotificationDocument, INotificationModel } from './Notification';
+export { PushSubscription, IPushSubscription } from './PushSubscription';
 export { Badge, IBadgeDocument, IBadgeModel } from './Badge';
 export { UserBadge, IUserBadgeDocument, IUserBadgeModel } from './UserBadge';
 export { Enrollment, IEnrollmentDocument, IEnrollmentModel } from './Enrollment';

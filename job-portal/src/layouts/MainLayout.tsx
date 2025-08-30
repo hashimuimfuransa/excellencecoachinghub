@@ -23,7 +23,7 @@ import {
   ListSubheader,
   Collapse,
   useMediaQuery,
-  InputBase
+  InputBase,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -71,6 +71,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { UserRole } from '../contexts/AuthContext';
 import CareerGuidancePopup from '../components/CareerGuidancePopup';
 import careerGuidanceService from '../services/careerGuidanceService';
+import SearchBar from '../components/search/SearchBar';
+import EnhancedSearchBar from '../components/search/EnhancedSearchBar';
 
 const drawerWidth = 260;
 const drawerWidthClosed = 72;
@@ -91,7 +93,6 @@ const MainLayout: React.FC = () => {
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({});
   const [hovered, setHovered] = useState(false); // Track hover state for mini drawer
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Mobile quick actions menu
-  const [searchQuery, setSearchQuery] = useState('');
   
   // Career guidance popup state
   const [showCareerPopup, setShowCareerPopup] = useState(false);
@@ -442,7 +443,7 @@ const MainLayout: React.FC = () => {
 
   const handleNavigation = (path: string) => {
     if (path !== '#') {
-      window.location.href = path;
+      navigate(path);
       if (mobileOpen) {
         setMobileOpen(false);
       }
@@ -458,7 +459,7 @@ const MainLayout: React.FC = () => {
 
   const handleTakeJobReadinessTest = () => {
     setShowCareerPopup(false);
-    window.location.href = '/app/career-guidance';
+    navigate('/app/career-guidance');
   };
 
   // Recursive function to render navigation items with nested submenus
@@ -895,66 +896,19 @@ const MainLayout: React.FC = () => {
             </Box>
           </Box>
 
-          {/* Center Section - Search Bar */}
+          {/* Center Section - Enhanced Search Bar */}
           <Box sx={{ 
             display: { xs: 'none', md: 'flex' },
             flexGrow: 1,
             maxWidth: '500px',
             mx: 4
           }}>
-            <Box
-              sx={{
-                position: 'relative',
-                borderRadius: '12px',
-                bgcolor: alpha(muiTheme.palette.grey[50], mode === 'dark' ? 0.05 : 1),
-                border: `1px solid ${alpha(muiTheme.palette.divider, 0.1)}`,
-                '&:hover': {
-                  bgcolor: alpha(muiTheme.palette.grey[50], mode === 'dark' ? 0.08 : 1),
-                  borderColor: alpha(muiTheme.palette.primary.main, 0.3),
-                },
-                '&:focus-within': {
-                  borderColor: 'primary.main',
-                  boxShadow: `0 0 0 2px ${alpha(muiTheme.palette.primary.main, 0.1)}`,
-                },
-                width: '100%',
-                transition: 'all 0.2s ease',
+            <EnhancedSearchBar 
+              placeholder="Search jobs, people, companies, skills..."
+              onSearch={(query) => {
+                navigate(`/app/jobs?search=${encodeURIComponent(query)}`);
               }}
-            >
-              <Box
-                sx={{
-                  position: 'absolute',
-                  left: 12,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: 'text.secondary',
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-              >
-                <Search sx={{ fontSize: 20 }} />
-              </Box>
-              <InputBase
-                placeholder="Search jobs, companies, skills..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleNavigation(`/app/jobs?search=${encodeURIComponent(searchQuery)}`);
-                  }
-                }}
-                sx={{
-                  width: '100%',
-                  '& .MuiInputBase-input': {
-                    padding: '12px 16px 12px 44px',
-                    fontSize: '0.95rem',
-                    '&::placeholder': {
-                      color: 'text.secondary',
-                      opacity: 0.8,
-                    }
-                  },
-                }}
-              />
-            </Box>
+            />
           </Box>
 
           {/* Right Section - Actions & Profile */}
@@ -1005,6 +959,7 @@ const MainLayout: React.FC = () => {
             {/* Messages */}
             <Tooltip title="Messages" arrow>
               <IconButton 
+                onClick={() => navigate('/app/messages')}
                 size="medium"
                 sx={{
                   color: 'text.secondary',
@@ -1033,6 +988,7 @@ const MainLayout: React.FC = () => {
             {/* Notifications */}
             <Tooltip title="Notifications" arrow>
               <IconButton
+                onClick={() => navigate('/app/notifications')}
                 size="medium"
                 sx={{
                   color: 'text.secondary',
@@ -1192,19 +1148,19 @@ const MainLayout: React.FC = () => {
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
-        <MenuItem onClick={() => window.location.href = '/app/profile'}>
+        <MenuItem onClick={() => navigate('/app/profile')}>
           <ListItemIcon>
             <Person fontSize="small" />
           </ListItemIcon>
           My Profile
         </MenuItem>
-        <MenuItem onClick={() => window.location.href = '/app/applications'}>
+        <MenuItem onClick={() => navigate('/app/applications')}>
           <ListItemIcon>
             <Work fontSize="small" />
           </ListItemIcon>
           My Applications
         </MenuItem>
-        <MenuItem onClick={() => window.location.href = '/app/settings'}>
+        <MenuItem onClick={() => navigate('/app/profile/settings')}>
           <ListItemIcon>
             <Settings fontSize="small" />
           </ListItemIcon>

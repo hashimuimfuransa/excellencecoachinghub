@@ -1,463 +1,404 @@
 import { io, Socket } from 'socket.io-client';
-import { notificationService, Notification as AppNotification } from './notificationService';
-import { pushNotificationService, PushNotificationPayload } from './pushNotificationService';
+import { notificationService, Notification } from './notificationService';
 
-export interface RealtimeNotification {
-  id: string;
-  type: string;
+// Types for real-time events
+export interface RealTimeNotification {
+  _id: string;
+  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'event_reminder';
   title: string;
   message: string;
-  data?: any;
-  priority?: 'low' | 'medium' | 'high' | 'urgent';
-  actionUrl?: string;
-  actionText?: string;
-  sender?: any;
+  data?: {
+    userId?: string;
+    userName?: string;
+    userProfilePicture?: string;
+    chatId?: string;
+    jobId?: string;
+    eventId?: string;
+    url?: string;
+  };
+  isRead: boolean;
   createdAt: string;
+  timestamp: number;
+}
+
+export interface NewMessage {
+  _id: string;
+  chatId: string;
+  sender: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+  };
+  content: string;
+  messageType: 'text' | 'image' | 'file';
+  timestamp: string;
   isRead: boolean;
 }
 
-export interface NotificationPreferences {
-  email: boolean;
-  push: boolean;
-  inApp: boolean;
-  sound: boolean;
-  vibration: boolean;
-  connectionRequests: boolean;
-  messages: boolean;
-  jobMatches: boolean;
-  courseUpdates: boolean;
-  systemNotifications: boolean;
+export interface ConnectionRequest {
+  fromUserId: string;
+  fromUserName: string;
+  timestamp: string;
+}
+
+export interface ConnectionAccepted {
+  acceptedBy: string;
+  accepterName: string;
+  timestamp: string;
 }
 
 class RealTimeNotificationService {
   private socket: Socket | null = null;
-  private eventListeners: Map<string, Function[]> = new Map();
-  private unreadCount: number = 0;
-  private preferences: NotificationPreferences = {
-    email: true,
-    push: true,
-    inApp: true,
-    sound: true,
-    vibration: true,
-    connectionRequests: true,
-    messages: true,
-    jobMatches: true,
-    courseUpdates: true,
-    systemNotifications: true
-  };
-  private audioContext: AudioContext | null = null;
-  private notificationSound: AudioBuffer | null = null;
+  private userId: string | null = null;
+  private isConnected = false;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private listeners: Map<string, Set<(...args: any[]) => void>> = new Map();
 
-  /**
-   * Initialize the real-time notification service
-   */
-  async init(userId: string): Promise<void> {
-    try {
-      await this.initializeSocket(userId);
-      await this.loadPreferences();
-      await this.initializeAudio();
-      await pushNotificationService.init();
-      
-      console.log('Real-time notification service initialized');
-    } catch (error) {
-      console.error('Error initializing real-time notification service:', error);
+  // Initialize connection
+  connect(userId: string, token: string) {
+    if (this.socket?.connected && this.userId === userId) {
+      return; // Already connected for this user
     }
-  }
 
-  /**
-   * Initialize Socket.IO connection
-   */
-  private async initializeSocket(userId: string): Promise<void> {
-    if (!this.socket) {
-      const token = localStorage.getItem('token');
-      this.socket = io(import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000', {
-        auth: { token },
-        transports: ['websocket', 'polling'],
-      });
+    this.userId = userId;
+    this.disconnect(); // Disconnect any existing connection
 
-      this.setupSocketEvents();
-      this.socket.emit('notification:join', userId);
-    }
-  }
-
-  /**
-   * Setup socket event listeners
-   */
-  private setupSocketEvents(): void {
-    if (!this.socket) return;
-
-    this.socket.on('connect', () => {
-      console.log('Connected to notification server');
-      this.emit('socket-connected', true);
+    const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    
+    this.socket = io(baseUrl, {
+      auth: { token },
+      transports: ['websocket', 'polling'],
+      forceNew: true,
+      reconnection: true,
+      reconnectionAttempts: this.maxReconnectAttempts,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      maxReconnectionAttempts: this.maxReconnectAttempts,
+      timeout: 20000,
     });
 
-    this.socket.on('disconnect', () => {
-      console.log('Disconnected from notification server');
-      this.emit('socket-connected', false);
-    });
-
-    this.socket.on('notification', (notificationData: RealtimeNotification) => {
-      this.handleIncomingNotification(notificationData);
-    });
-
-    this.socket.on('notification:read', (data: { notificationId: string }) => {
-      this.emit('notification-read', data);
-    });
-
-    this.socket.on('notification:deleted', (data: { notificationId: string }) => {
-      this.emit('notification-deleted', data);
-    });
-
-    this.socket.on('unread-count', (count: number) => {
-      this.unreadCount = count;
-      this.emit('unread-count-changed', count);
-    });
+    this.setupEventListeners();
+    console.log(`🔄 Connecting to real-time notifications for user: ${userId}`);
   }
 
-  /**
-   * Handle incoming notifications
-   */
-  private async handleIncomingNotification(notification: RealtimeNotification): Promise<void> {
-    try {
-      console.log('Received real-time notification:', notification);
-
-      // Check if notification type is enabled
-      if (!this.isNotificationTypeEnabled(notification.type)) {
-        console.log('Notification type disabled:', notification.type);
-        return;
-      }
-
-      // Update unread count
-      this.unreadCount++;
-      this.emit('unread-count-changed', this.unreadCount);
-
-      // Show in-app notification
-      if (this.preferences.inApp) {
-        this.emit('new-notification', notification);
-      }
-
-      // Play notification sound
-      if (this.preferences.sound) {
-        this.playNotificationSound();
-      }
-
-      // Vibrate if supported and enabled
-      if (this.preferences.vibration && 'vibrate' in navigator) {
-        navigator.vibrate([200, 100, 200]);
-      }
-
-      // Show push notification if page is not visible
-      if (this.preferences.push && document.hidden) {
-        await this.showPushNotification(notification);
-      }
-
-      // Show desktop notification if page is not visible
-      if (document.hidden && window.Notification && window.Notification.permission === 'granted') {
-        await this.showDesktopNotification(notification);
-      }
-
-    } catch (error) {
-      console.error('Error handling incoming notification:', error);
-    }
-  }
-
-  /**
-   * Check if notification type is enabled in preferences
-   */
-  private isNotificationTypeEnabled(type: string): boolean {
-    switch (type) {
-      case 'connection_request':
-      case 'connection_accepted':
-        return this.preferences.connectionRequests;
-      case 'message':
-        return this.preferences.messages;
-      case 'job_match':
-        return this.preferences.jobMatches;
-      case 'course_enrolled':
-      case 'course_updated':
-        return this.preferences.courseUpdates;
-      default:
-        return this.preferences.systemNotifications;
-    }
-  }
-
-  /**
-   * Show push notification
-   */
-  private async showPushNotification(notification: RealtimeNotification): Promise<void> {
-    const payload: PushNotificationPayload = {
-      title: notification.title,
-      body: notification.message,
-      icon: this.getNotificationIcon(notification.type),
-      badge: '/logo192.png',
-      data: {
-        id: notification.id,
-        type: notification.type,
-        actionUrl: notification.actionUrl,
-        ...notification.data
-      },
-      tag: `notification-${notification.id}`,
-      requireInteraction: notification.priority === 'urgent',
-      timestamp: new Date(notification.createdAt).getTime()
-    };
-
-    await pushNotificationService.showLocalNotification(payload);
-  }
-
-  /**
-   * Show desktop notification
-   */
-  private async showDesktopNotification(notification: RealtimeNotification): Promise<void> {
-    const desktopNotification = new window.Notification(notification.title, {
-      body: notification.message,
-      icon: this.getNotificationIcon(notification.type),
-      badge: '/logo192.png',
-      data: notification.data,
-      tag: `notification-${notification.id}`,
-      requireInteraction: notification.priority === 'urgent',
-      timestamp: new Date(notification.createdAt).getTime()
-    });
-
-    desktopNotification.onclick = () => {
-      window.focus();
-      if (notification.actionUrl) {
-        window.location.href = notification.actionUrl;
-      }
-      desktopNotification.close();
-    };
-
-    // Auto-close after 5 seconds for non-urgent notifications
-    if (notification.priority !== 'urgent') {
-      setTimeout(() => {
-        desktopNotification.close();
-      }, 5000);
-    }
-  }
-
-  /**
-   * Get notification icon based on type
-   */
-  private getNotificationIcon(type: string): string {
-    switch (type) {
-      case 'connection_request':
-      case 'connection_accepted':
-        return '/icons/connection.png';
-      case 'message':
-        return '/icons/message.png';
-      case 'job_match':
-        return '/icons/job.png';
-      case 'course_enrolled':
-      case 'course_updated':
-        return '/icons/course.png';
-      default:
-        return '/logo192.png';
-    }
-  }
-
-  /**
-   * Initialize audio context and load notification sound
-   */
-  private async initializeAudio(): Promise<void> {
-    try {
-      if ('AudioContext' in window || 'webkitAudioContext' in (window as any)) {
-        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        
-        // Load notification sound
-        const response = await fetch('/sounds/notification.mp3');
-        if (response.ok) {
-          const arrayBuffer = await response.arrayBuffer();
-          this.notificationSound = await this.audioContext.decodeAudioData(arrayBuffer);
-        }
-      }
-    } catch (error) {
-      console.warn('Could not initialize audio:', error);
-    }
-  }
-
-  /**
-   * Play notification sound
-   */
-  private playNotificationSound(): void {
-    try {
-      if (this.audioContext && this.notificationSound) {
-        const source = this.audioContext.createBufferSource();
-        source.buffer = this.notificationSound;
-        source.connect(this.audioContext.destination);
-        source.start(0);
-      }
-    } catch (error) {
-      console.warn('Could not play notification sound:', error);
-    }
-  }
-
-  /**
-   * Load user notification preferences
-   */
-  private async loadPreferences(): Promise<void> {
-    try {
-      const response = await fetch('/api/user/notification-preferences', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        this.preferences = { ...this.preferences, ...data };
-      }
-    } catch (error) {
-      console.error('Error loading notification preferences:', error);
-      // Use default preferences
-    }
-  }
-
-  /**
-   * Update notification preferences
-   */
-  async updatePreferences(newPreferences: Partial<NotificationPreferences>): Promise<void> {
-    try {
-      this.preferences = { ...this.preferences, ...newPreferences };
-      
-      await fetch('/api/user/notification-preferences', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(this.preferences)
-      });
-      
-      console.log('Notification preferences updated');
-    } catch (error) {
-      console.error('Error updating notification preferences:', error);
-    }
-  }
-
-  /**
-   * Get current notification preferences
-   */
-  getPreferences(): NotificationPreferences {
-    return { ...this.preferences };
-  }
-
-  /**
-   * Get current unread count
-   */
-  getUnreadCount(): number {
-    return this.unreadCount;
-  }
-
-  /**
-   * Mark notification as read
-   */
-  async markAsRead(notificationId: string): Promise<void> {
-    try {
-      await notificationService.markAsRead(notificationId);
-      this.unreadCount = Math.max(0, this.unreadCount - 1);
-      this.emit('unread-count-changed', this.unreadCount);
-      
-      if (this.socket) {
-        this.socket.emit('notification:read', { notificationId });
-      }
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-    }
-  }
-
-  /**
-   * Mark all notifications as read
-   */
-  async markAllAsRead(): Promise<void> {
-    try {
-      await notificationService.markAllAsRead();
-      this.unreadCount = 0;
-      this.emit('unread-count-changed', this.unreadCount);
-      
-      if (this.socket) {
-        this.socket.emit('notification:mark-all-read');
-      }
-    } catch (error) {
-      console.error('Error marking all notifications as read:', error);
-    }
-  }
-
-  /**
-   * Delete notification
-   */
-  async deleteNotification(notificationId: string): Promise<void> {
-    try {
-      await notificationService.deleteNotification(notificationId);
-      
-      if (this.socket) {
-        this.socket.emit('notification:deleted', { notificationId });
-      }
-    } catch (error) {
-      console.error('Error deleting notification:', error);
-    }
-  }
-
-  /**
-   * Event system for components to listen to notification events
-   */
-  on(event: string, callback: Function): void {
-    if (!this.eventListeners.has(event)) {
-      this.eventListeners.set(event, []);
-    }
-    this.eventListeners.get(event)!.push(callback);
-  }
-
-  off(event: string, callback: Function): void {
-    const listeners = this.eventListeners.get(event);
-    if (listeners) {
-      const index = listeners.indexOf(callback);
-      if (index > -1) {
-        listeners.splice(index, 1);
-      }
-    }
-  }
-
-  private emit(event: string, data: any): void {
-    const listeners = this.eventListeners.get(event);
-    if (listeners) {
-      listeners.forEach(callback => callback(data));
-    }
-  }
-
-  /**
-   * Test notification (for development/testing)
-   */
-  async testNotification(): Promise<void> {
-    const testNotification: RealtimeNotification = {
-      id: 'test-' + Date.now(),
-      type: 'message',
-      title: 'Test Notification',
-      message: 'This is a test notification to check if everything is working properly.',
-      data: { test: true },
-      priority: 'medium',
-      actionUrl: '/app',
-      actionText: 'Open App',
-      createdAt: new Date().toISOString(),
-      isRead: false
-    };
-
-    await this.handleIncomingNotification(testNotification);
-  }
-
-  /**
-   * Cleanup and disconnect
-   */
-  disconnect(): void {
+  // Disconnect
+  disconnect() {
     if (this.socket) {
       this.socket.disconnect();
       this.socket = null;
+      this.isConnected = false;
+      this.userId = null;
+      console.log('🔌 Disconnected from real-time notifications');
     }
-    
-    if (this.audioContext) {
-      this.audioContext.close();
-      this.audioContext = null;
+  }
+
+  // Setup socket event listeners
+  private setupEventListeners() {
+    if (!this.socket || !this.userId) return;
+
+    // Connection events
+    this.socket.on('connect', () => {
+      this.isConnected = true;
+      this.reconnectAttempts = 0;
+      console.log('✅ Connected to real-time notifications');
+
+      // Join user-specific rooms
+      this.socket?.emit('user:join', this.userId);
+      this.socket?.emit('notification:join', this.userId);
+
+      // Send heartbeat every 30 seconds
+      const heartbeatInterval = setInterval(() => {
+        if (this.socket?.connected) {
+          this.socket.emit('heartbeat', this.userId);
+        } else {
+          clearInterval(heartbeatInterval);
+        }
+      }, 30000);
+    });
+
+    this.socket.on('disconnect', (reason) => {
+      this.isConnected = false;
+      console.log(`❌ Disconnected from real-time notifications: ${reason}`);
+      
+      if (reason === 'io server disconnect') {
+        // Server disconnected, try to reconnect
+        this.reconnectAttempts++;
+        if (this.reconnectAttempts <= this.maxReconnectAttempts) {
+          console.log(`🔄 Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+        }
+      }
+    });
+
+    this.socket.on('connect_error', (error) => {
+      console.error('❌ Connection error:', error);
+      this.isConnected = false;
+    });
+
+    // Heartbeat acknowledgment
+    this.socket.on('heartbeat-ack', (data) => {
+      console.log('💓 Heartbeat acknowledged:', data);
+    });
+
+    // Real-time notification events
+    this.socket.on('notification:new', (notification: RealTimeNotification) => {
+      console.log('🔔 New real-time notification:', notification);
+      this.handleNewNotification(notification);
+      this.emit('notification:new', notification);
+    });
+
+    this.socket.on('notification:read', (data: { notificationId: string; timestamp: number }) => {
+      console.log('✅ Notification marked as read:', data.notificationId);
+      this.emit('notification:read', data);
+    });
+
+    this.socket.on('notification:all-read', (data: { timestamp: number }) => {
+      console.log('✅ All notifications marked as read');
+      this.emit('notification:all-read', data);
+    });
+
+    this.socket.on('notification:deleted', (data: { notificationId: string; timestamp: number }) => {
+      console.log('🗑️ Notification deleted:', data.notificationId);
+      this.emit('notification:deleted', data);
+    });
+
+    // Chat message events
+    this.socket.on('new-message', (data: { chatId: string; message: any; sender: any; timestamp: string }) => {
+      console.log('💬 New message received:', data);
+      this.handleNewMessage(data);
+      this.emit('new-message', data);
+    });
+
+    this.socket.on('message:new', (message: NewMessage) => {
+      console.log('💬 New real-time message:', message);
+      this.emit('message:new', message);
+    });
+
+    this.socket.on('message:read-receipt', (data: { messageId: string; readBy: string; timestamp: string }) => {
+      console.log('✅ Message read receipt:', data);
+      this.emit('message:read-receipt', data);
+    });
+
+    // Connection events
+    this.socket.on('connection:request-received', (data: ConnectionRequest) => {
+      console.log('🤝 Connection request received:', data);
+      this.emit('connection:request-received', data);
+      
+      // Show browser notification if permission granted
+      this.showBrowserNotification(
+        'New Connection Request',
+        `${data.fromUserName} wants to connect with you`,
+        '/app/connections?tab=requests'
+      );
+    });
+
+    this.socket.on('connection:accepted', (data: ConnectionAccepted) => {
+      console.log('✅ Connection accepted:', data);
+      this.emit('connection:accepted', data);
+      
+      // Show browser notification if permission granted
+      this.showBrowserNotification(
+        'Connection Accepted',
+        `${data.accepterName} accepted your connection request`,
+        '/app/connections'
+      );
+    });
+
+    // User status events
+    this.socket.on('user:status-update', (data: { userId: string; status: string; timestamp: string }) => {
+      console.log('👤 User status update:', data);
+      this.emit('user:status-update', data);
+    });
+  }
+
+  // Handle new notification
+  private handleNewNotification(notification: RealTimeNotification) {
+    // Show browser notification if permission granted
+    this.showBrowserNotification(
+      notification.title,
+      notification.message,
+      notification.data?.url || '/app/notifications'
+    );
+
+    // Play notification sound (optional)
+    this.playNotificationSound();
+  }
+
+  // Handle new message
+  private handleNewMessage(data: { chatId: string; message: any; sender: any; timestamp: string }) {
+    // Show browser notification for messages if permission granted
+    const senderName = `${data.sender.firstName} ${data.sender.lastName}`;
+    this.showBrowserNotification(
+      `New message from ${senderName}`,
+      data.message.content,
+      `/app/chat/${data.chatId}`
+    );
+
+    // Play message sound (optional)
+    this.playMessageSound();
+  }
+
+  // Show browser notification
+  private showBrowserNotification(title: string, body: string, url?: string) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const notification = new Notification(title, {
+        body,
+        icon: '/logo192.png',
+        badge: '/badge-icon.png',
+        tag: 'realtime-notification',
+        requireInteraction: true,
+      });
+
+      notification.onclick = () => {
+        window.focus();
+        if (url) {
+          window.location.href = url;
+        }
+        notification.close();
+      };
+
+      // Auto close after 10 seconds
+      setTimeout(() => {
+        notification.close();
+      }, 10000);
     }
-    
-    this.eventListeners.clear();
+  }
+
+  // Play notification sound
+  private playNotificationSound() {
+    try {
+      const audio = new Audio('/notification-sound.mp3');
+      audio.volume = 0.3;
+      audio.play().catch(e => console.log('Could not play notification sound:', e));
+    } catch (error) {
+      console.log('Could not play notification sound:', error);
+    }
+  }
+
+  // Play message sound
+  private playMessageSound() {
+    try {
+      const audio = new Audio('/message-sound.mp3');
+      audio.volume = 0.2;
+      audio.play().catch(e => console.log('Could not play message sound:', e));
+    } catch (error) {
+      console.log('Could not play message sound:', error);
+    }
+  }
+
+  // Event listener management
+  on(eventName: string, callback: (...args: any[]) => void) {
+    if (!this.listeners.has(eventName)) {
+      this.listeners.set(eventName, new Set());
+    }
+    this.listeners.get(eventName)!.add(callback);
+  }
+
+  off(eventName: string, callback: (...args: any[]) => void) {
+    const eventListeners = this.listeners.get(eventName);
+    if (eventListeners) {
+      eventListeners.delete(callback);
+      if (eventListeners.size === 0) {
+        this.listeners.delete(eventName);
+      }
+    }
+  }
+
+  private emit(eventName: string, ...args: any[]) {
+    const eventListeners = this.listeners.get(eventName);
+    if (eventListeners) {
+      eventListeners.forEach(callback => callback(...args));
+    }
+  }
+
+  // Send real-time message
+  sendMessage(data: {
+    chatId: string;
+    senderId: string;
+    senderName: string;
+    content: string;
+    messageType: 'text' | 'image' | 'file';
+    recipientId?: string;
+  }) {
+    if (this.socket?.connected) {
+      this.socket.emit('message:send', data);
+    } else {
+      console.warn('Cannot send message: socket not connected');
+    }
+  }
+
+  // Join chat room
+  joinChatRoom(chatId: string) {
+    if (this.socket?.connected) {
+      this.socket.emit('chat:join', chatId);
+      console.log(`💬 Joined chat room: ${chatId}`);
+    }
+  }
+
+  // Leave chat room
+  leaveChatRoom(chatId: string) {
+    if (this.socket?.connected) {
+      this.socket.emit('chat:leave', chatId);
+      console.log(`💬 Left chat room: ${chatId}`);
+    }
+  }
+
+  // Send typing indicator
+  sendTypingIndicator(chatId: string, isTyping: boolean) {
+    if (this.socket?.connected && this.userId) {
+      this.socket.emit('chat:typing', {
+        chatId,
+        userId: this.userId,
+        isTyping
+      });
+    }
+  }
+
+  // Mark message as read
+  markMessageAsRead(messageId: string, chatId: string) {
+    if (this.socket?.connected && this.userId) {
+      this.socket.emit('message:read', {
+        messageId,
+        chatId,
+        userId: this.userId
+      });
+    }
+  }
+
+  // Update user status
+  updateUserStatus(status: 'online' | 'away' | 'busy' | 'offline') {
+    if (this.socket?.connected && this.userId) {
+      this.socket.emit('user:status', {
+        userId: this.userId,
+        status
+      });
+    }
+  }
+
+  // Request browser notification permission
+  async requestNotificationPermission(): Promise<NotificationPermission> {
+    if (!('Notification' in window)) {
+      console.warn('This browser does not support notifications');
+      return 'denied';
+    }
+
+    if (Notification.permission === 'default') {
+      const permission = await Notification.requestPermission();
+      console.log('Notification permission:', permission);
+      return permission;
+    }
+
+    return Notification.permission;
+  }
+
+  // Get connection status
+  get connected(): boolean {
+    return this.isConnected;
+  }
+
+  // Get current user ID
+  get currentUserId(): string | null {
+    return this.userId;
   }
 }
 

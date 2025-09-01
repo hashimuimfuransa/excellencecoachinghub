@@ -29,13 +29,32 @@ export interface PushNotificationPayload {
 
 class PushNotificationService {
   private swRegistration: ServiceWorkerRegistration | null = null;
-  private vapidPublicKey = 'BOxZ9nZnr7CyOeOFwYgVYGNXmhLTGwgz0fgTr7W3GNxnWgYJgJvEYKQmQXVXQGZjEgHnE7dQE5C1PjO5vE5LnV4'; // Replace with your actual VAPID key
+  private vapidPublicKey = '';
+
+  /**
+   * Initialize VAPID key from backend
+   */
+  async initVapidKey(): Promise<void> {
+    try {
+      const response = await api.get('/notifications/vapid-public-key');
+      if (response.data.success) {
+        this.vapidPublicKey = response.data.data.publicKey;
+      }
+    } catch (error) {
+      console.error('Error fetching VAPID public key:', error);
+      // Fallback to hardcoded key
+      this.vapidPublicKey = 'BOxZ9nZnr7CyOeOFwYgVYGNXmhLTGwgz0fgTr7W3GNxnWgYJgJvEYKQmQXVXQGZjEgHnE7dQE5C1PjO5vE5LnV4';
+    }
+  }
 
   /**
    * Initialize service worker and check for notification permission
    */
   async init(): Promise<void> {
     try {
+      // Initialize VAPID key first
+      await this.initVapidKey();
+
       // Check if service workers are supported
       if (!('serviceWorker' in navigator)) {
         console.warn('Service workers not supported');

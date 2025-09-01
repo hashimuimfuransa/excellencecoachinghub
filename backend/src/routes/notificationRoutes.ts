@@ -1,342 +1,351 @@
-import express, { Request, Response } from 'express';
-import { Notification } from '../models/Notification';
-import { PushSubscription } from '../models/PushSubscription';
+import express from 'express';
 import { auth } from '../middleware/auth';
-import mongoose from 'mongoose';
+import { notificationService } from '../services/notificationService';
+import { pushNotificationService } from '../services/pushNotificationService';
+import { PushSubscription } from '../models/PushSubscription';
+import { validationResult, body, param, query } from 'express-validator';
 
 const router = express.Router();
 
-// Get notifications for current user
-router.get('/', auth, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
-    const skip = (page - 1) * limit;
-
-    const notifications = await Notification.find({ recipient: userId })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .select('type title message data isRead createdAt updatedAt');
-
-    const total = await Notification.countDocuments({ recipient: userId });
-
-    res.status(200).json({
-      success: true,
-      data: notifications,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching notifications:', error);
-    res.status(500).json({
+// Validation middleware
+const handleValidationErrors = (req: any, res: any, next: any) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
       success: false,
-      message: 'Failed to fetch notifications',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: 'Validation error',
+      errors: errors.array()
     });
   }
-});
-
-// Get unread notifications count
-router.get('/unread/count', auth, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-
-    const unreadCount = await Notification.countDocuments({ 
-      recipient: userId,
-      isRead: false
-    });
-
-    res.status(200).json({
-      success: true,
-      data: { count: unreadCount }
-    });
-  } catch (error) {
-    console.error('Error fetching unread count:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch unread count',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Mark notification as read
-router.put('/:id/read', auth, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-    const notificationId = req.params.id;
-
-    if (!mongoose.Types.ObjectId.isValid(notificationId)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid notification ID'
-      });
-    }
-
-    const notification = await Notification.findOneAndUpdate(
-      { _id: notificationId, recipient: userId },
-      { isRead: true },
-      { new: true }
-    );
-
-    if (!notification) {
-      return res.status(404).json({
-        success: false,
-        message: 'Notification not found'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: notification,
-      message: 'Notification marked as read'
-    });
-  } catch (error) {
-    console.error('Error marking notification as read:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to mark notification as read',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Mark all notifications as read
-router.put('/read/all', auth, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-
-    const result = await Notification.updateMany(
-      { recipient: userId, isRead: false },
-      { isRead: true }
-    );
-
-    res.status(200).json({
-      success: true,
-      data: { modifiedCount: result.modifiedCount },
-      message: `Marked ${result.modifiedCount} notifications as read`
-    });
-  } catch (error) {
-    console.error('Error marking all notifications as read:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to mark all notifications as read',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Delete notification
-router.delete('/:id', auth, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-    const notificationId = req.params.id;
-
-    if (!mongoose.Types.ObjectId.isValid(notificationId)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid notification ID'
-      });
-    }
-
-    const notification = await Notification.findOneAndDelete({
-      _id: notificationId,
-      recipient: userId
-    });
-
-    if (!notification) {
-      return res.status(404).json({
-        success: false,
-        message: 'Notification not found'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Notification deleted successfully'
-    });
-  } catch (error) {
-    console.error('Error deleting notification:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete notification',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Create notification (internal use - for testing or admin)
-router.post('/', auth, async (req: Request, res: Response) => {
-  try {
-    const { recipient, type, title, message, data } = req.body;
-
-    if (!recipient || !type || !title || !message) {
-      return res.status(400).json({
-        success: false,
-        message: 'Missing required fields: recipient, type, title, message'
-      });
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(recipient)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid recipient ID'
-      });
-    }
-
-    const notification = new Notification({
-      recipient,
-      type,
-      title,
-      message,
-      data
-    });
-
-    await notification.save();
-
-    res.status(201).json({
-      success: true,
-      data: notification,
-      message: 'Notification created successfully'
-    });
-  } catch (error) {
-    console.error('Error creating notification:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create notification',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Subscribe to push notifications
-router.post('/subscribe', auth, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-    const { subscription } = req.body;
-
-    if (!subscription || !subscription.endpoint || !subscription.keys) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid subscription data'
-      });
-    }
-
-    // Remove any existing subscription for this endpoint
-    await PushSubscription.deleteOne({ endpoint: subscription.endpoint });
-
-    // Create new subscription
-    const pushSubscription = new PushSubscription({
-      userId,
-      endpoint: subscription.endpoint,
-      expirationTime: subscription.expirationTime,
-      keys: {
-        p256dh: subscription.keys.p256dh,
-        auth: subscription.keys.auth
-      },
-      userAgent: req.headers['user-agent']
-    });
-
-    await pushSubscription.save();
-
-    res.status(201).json({
-      success: true,
-      message: 'Successfully subscribed to push notifications'
-    });
-  } catch (error) {
-    console.error('Error subscribing to push notifications:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to subscribe to push notifications',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Unsubscribe from push notifications
-router.post('/unsubscribe', auth, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-    const { subscription } = req.body;
-
-    if (!subscription || !subscription.endpoint) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid subscription data'
-      });
-    }
-
-    // Remove subscription
-    const result = await PushSubscription.deleteOne({
-      endpoint: subscription.endpoint,
-      userId
-    });
-
-    if (result.deletedCount === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Subscription not found'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Successfully unsubscribed from push notifications'
-    });
-  } catch (error) {
-    console.error('Error unsubscribing from push notifications:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to unsubscribe from push notifications',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Get user's push subscriptions
-router.get('/subscriptions', auth, async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
-
-    const subscriptions = await PushSubscription.find({ userId })
-      .select('endpoint expirationTime createdAt userAgent');
-
-    res.status(200).json({
-      success: true,
-      data: subscriptions
-    });
-  } catch (error) {
-    console.error('Error fetching subscriptions:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch subscriptions',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Helper function to create notification (can be imported and used by other modules)
-export const createNotification = async (notificationData: {
-  recipient: string;
-  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'event_reminder';
-  title: string;
-  message: string;
-  data?: any;
-}) => {
-  try {
-    const notification = new Notification(notificationData);
-    await notification.save();
-    return notification;
-  } catch (error) {
-    console.error('Error creating notification:', error);
-    throw error;
-  }
+  next();
 };
+
+/**
+ * GET /api/notifications
+ * Get user notifications with pagination
+ */
+router.get(
+  '/',
+  auth,
+  [
+    query('page').optional().isInt({ min: 1 }).withMessage('Page must be a positive integer'),
+    query('limit').optional().isInt({ min: 1, max: 50 }).withMessage('Limit must be between 1 and 50')
+  ],
+  handleValidationErrors,
+  async (req: any, res: any) => {
+    try {
+      const userId = req.user.userId;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+
+      const result = await notificationService.getUserNotifications(userId, page, limit);
+
+      res.json({
+        success: true,
+        data: {
+          notifications: result.notifications,
+          totalCount: result.totalCount,
+          unreadCount: result.unreadCount,
+          hasMore: result.hasMore,
+          currentPage: page,
+          limit
+        }
+      });
+    } catch (error) {
+      console.error('Error getting notifications:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get notifications'
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/notifications/unread-count
+ * Get unread notification count
+ */
+router.get(
+  '/unread-count',
+  auth,
+  async (req: any, res: any) => {
+    try {
+      const userId = req.user.userId;
+      const count = await notificationService.getUnreadCount(userId);
+
+      res.json({
+        success: true,
+        data: { count }
+      });
+    } catch (error) {
+      console.error('Error getting unread count:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get unread count'
+      });
+    }
+  }
+);
+
+/**
+ * PUT /api/notifications/:id/read
+ * Mark notification as read
+ */
+router.put(
+  '/:id/read',
+  auth,
+  [
+    param('id').isMongoId().withMessage('Invalid notification ID')
+  ],
+  handleValidationErrors,
+  async (req: any, res: any) => {
+    try {
+      const userId = req.user.userId;
+      const notificationId = req.params.id;
+
+      const success = await notificationService.markAsRead(notificationId, userId);
+
+      if (success) {
+        res.json({
+          success: true,
+          message: 'Notification marked as read'
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          message: 'Notification not found'
+        });
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to mark notification as read'
+      });
+    }
+  }
+);
+
+/**
+ * PUT /api/notifications/read-all
+ * Mark all notifications as read
+ */
+router.put(
+  '/read-all',
+  auth,
+  async (req: any, res: any) => {
+    try {
+      const userId = req.user.userId;
+      const count = await notificationService.markAllAsRead(userId);
+
+      res.json({
+        success: true,
+        message: `${count} notifications marked as read`,
+        data: { markedCount: count }
+      });
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to mark all notifications as read'
+      });
+    }
+  }
+);
+
+/**
+ * DELETE /api/notifications/:id
+ * Delete notification
+ */
+router.delete(
+  '/:id',
+  auth,
+  [
+    param('id').isMongoId().withMessage('Invalid notification ID')
+  ],
+  handleValidationErrors,
+  async (req: any, res: any) => {
+    try {
+      const userId = req.user.userId;
+      const notificationId = req.params.id;
+
+      const success = await notificationService.deleteNotification(notificationId, userId);
+
+      if (success) {
+        res.json({
+          success: true,
+          message: 'Notification deleted'
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          message: 'Notification not found'
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete notification'
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/notifications/push-subscription
+ * Subscribe to push notifications
+ */
+router.post(
+  '/push-subscription',
+  auth,
+  [
+    body('subscription').notEmpty().withMessage('Push subscription is required'),
+    body('subscription.endpoint').isURL().withMessage('Valid endpoint URL is required'),
+    body('subscription.keys').notEmpty().withMessage('Subscription keys are required'),
+    body('subscription.keys.p256dh').notEmpty().withMessage('p256dh key is required'),
+    body('subscription.keys.auth').notEmpty().withMessage('auth key is required')
+  ],
+  handleValidationErrors,
+  async (req: any, res: any) => {
+    try {
+      const userId = req.user.userId;
+      const { subscription } = req.body;
+
+      // Check if subscription already exists
+      const existingSubscription = await PushSubscription.findOne({
+        userId,
+        endpoint: subscription.endpoint
+      });
+
+      if (existingSubscription) {
+        return res.json({
+          success: true,
+          message: 'Push subscription already exists'
+        });
+      }
+
+      // Create new subscription
+      const pushSubscription = new PushSubscription({
+        userId,
+        endpoint: subscription.endpoint,
+        keys: {
+          p256dh: subscription.keys.p256dh,
+          auth: subscription.keys.auth
+        },
+        expirationTime: subscription.expirationTime
+      });
+
+      await pushSubscription.save();
+
+      res.status(201).json({
+        success: true,
+        message: 'Push subscription saved successfully'
+      });
+    } catch (error) {
+      console.error('Error saving push subscription:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to save push subscription'
+      });
+    }
+  }
+);
+
+/**
+ * DELETE /api/notifications/push-subscription
+ * Unsubscribe from push notifications
+ */
+router.delete(
+  '/push-subscription',
+  auth,
+  [
+    body('endpoint').isURL().withMessage('Valid endpoint URL is required')
+  ],
+  handleValidationErrors,
+  async (req: any, res: any) => {
+    try {
+      const userId = req.user.userId;
+      const { endpoint } = req.body;
+
+      await PushSubscription.findOneAndDelete({
+        userId,
+        endpoint
+      });
+
+      res.json({
+        success: true,
+        message: 'Push subscription removed successfully'
+      });
+    } catch (error) {
+      console.error('Error removing push subscription:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to remove push subscription'
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/notifications/vapid-public-key
+ * Get VAPID public key for push notifications
+ */
+router.get('/vapid-public-key', (req: any, res: any) => {
+  try {
+    const publicKey = pushNotificationService.getVapidPublicKey();
+    res.json({
+      success: true,
+      data: { publicKey }
+    });
+  } catch (error) {
+    console.error('Error getting VAPID public key:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get VAPID public key'
+    });
+  }
+});
+
+/**
+ * POST /api/notifications/test
+ * Send test notification (development only)
+ */
+if (process.env.NODE_ENV === 'development') {
+  router.post(
+    '/test',
+    auth,
+    [
+      body('title').notEmpty().withMessage('Title is required'),
+      body('message').notEmpty().withMessage('Message is required'),
+      body('type').optional().isIn(['connection_accepted', 'connection_request', 'message', 'job_match', 'event_reminder'])
+    ],
+    handleValidationErrors,
+    async (req: any, res: any) => {
+      try {
+        const userId = req.user.userId;
+        const { title, message, type = 'message' } = req.body;
+
+        await notificationService.sendRealTimeNotification({
+          recipient: userId,
+          type,
+          title,
+          message
+        });
+
+        res.json({
+          success: true,
+          message: 'Test notification sent'
+        });
+      } catch (error) {
+        console.error('Error sending test notification:', error);
+        res.status(500).json({
+          success: false,
+          message: 'Failed to send test notification'
+        });
+      }
+    }
+  );
+}
 
 export default router;

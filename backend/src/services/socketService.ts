@@ -359,8 +359,120 @@ export const setupSocketIO = (ioInstance: Server): void => {
       });
     });
 
-    socket.on('disconnect', () => {
-      console.log(`User disconnected: ${socket.id}`);
+    // Real-time message events
+    socket.on('message:send', (data: {
+      chatId: string;
+      senderId: string;
+      senderName: string;
+      content: string;
+      messageType: 'text' | 'image' | 'file';
+      recipientId?: string;
+    }) => {
+      try {
+        // Create message object
+        const message = {
+          _id: Date.now().toString(), // Temporary ID, should be replaced with actual DB ID
+          chatId: data.chatId,
+          sender: data.senderId,
+          senderName: data.senderName,
+          content: data.content,
+          messageType: data.messageType,
+          timestamp: new Date(),
+          isRead: false
+        };
+
+        // Emit to chat room
+        io.to(`chat_${data.chatId}`).emit('message:new', message);
+
+        // If direct message, also emit to recipient's personal room
+        if (data.recipientId) {
+          io.to(`user_${data.recipientId}`).emit('message:new', message);
+          
+          // Send notification to recipient (handled by message service)
+          console.log(`📨 Real-time message sent from ${data.senderName} to chat ${data.chatId}`);
+        }
+
+        console.log(`💬 Message broadcast to chat room: ${data.chatId}`);
+      } catch (error) {
+        console.error('Error handling real-time message:', error);
+        socket.emit('message:error', { error: 'Failed to send message' });
+      }
+    });
+
+    // Message read receipt
+    socket.on('message:read', (data: { messageId: string; chatId: string; userId: string }) => {
+      socket.to(`chat_${data.chatId}`).emit('message:read-receipt', {
+        messageId: data.messageId,
+        readBy: data.userId,
+        timestamp: new Date()
+      });
+      console.log(`✅ Message ${data.messageId} marked as read by ${data.userId}`);
+    });
+
+    // Notification events
+    socket.on('notification:join', (userId: string) => {
+      socket.join(`notifications_${userId}`);
+      console.log(`🔔 User ${userId} joined notification channel`);
+    });
+
+    socket.on('notification:leave', (userId: string) => {
+      socket.leave(`notifications_${userId}`);
+      console.log(`🔔 User ${userId} left notification channel`);
+    });
+
+    // Connection status events
+    socket.on('user:status', (data: { userId: string; status: 'online' | 'away' | 'busy' | 'offline' }) => {
+      // Broadcast status to all connected users
+      socket.broadcast.emit('user:status-update', {
+        userId: data.userId,
+        status: data.status,
+        timestamp: new Date()
+      });
+      console.log(`👤 User ${data.userId} status changed to ${data.status}`);
+    });
+
+    // Connection request events
+    socket.on('connection:request', (data: { fromUserId: string; toUserId: string; fromUserName: string }) => {
+      // Emit to target user
+      io.to(`user_${data.toUserId}`).emit('connection:request-received', {
+        fromUserId: data.fromUserId,
+        fromUserName: data.fromUserName,
+        timestamp: new Date()
+      });
+      console.log(`🤝 Connection request from ${data.fromUserName} to user ${data.toUserId}`);
+    });
+
+    socket.on('connection:accept', (data: { fromUserId: string; toUserId: string; accepterName: string }) => {
+      // Emit to both users
+      io.to(`user_${data.fromUserId}`).emit('connection:accepted', {
+        acceptedBy: data.toUserId,
+        accepterName: data.accepterName,
+        timestamp: new Date()
+      });
+      
+      io.to(`user_${data.toUserId}`).emit('connection:accepted', {
+        acceptedBy: data.toUserId,
+        accepterName: data.accepterName,
+        timestamp: new Date()
+      });
+      
+      console.log(`✅ Connection accepted between ${data.fromUserId} and ${data.toUserId}`);
+    });
+
+    // Heartbeat to keep connection alive
+    socket.on('heartbeat', (userId: string) => {
+      socket.emit('heartbeat-ack', { 
+        userId, 
+        timestamp: Date.now(),
+        socketId: socket.id 
+      });
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log(`User disconnected: ${socket.id}, reason: ${reason}`);
+      
+      // You can handle cleanup here if needed
+      // For example, update user's last seen timestamp
     });
   });
 };

@@ -3,6 +3,7 @@ import { PsychometricTestResult, Job, TestPurchase, TestSession } from '../model
 import { GeneratedPsychometricTest } from '../models/GeneratedPsychometricTest';
 import { AuthRequest } from '../middleware/auth';
 import { aiService } from '../services/aiService';
+import { validateObjectIdParam } from '../utils/validation';
 import mongoose from 'mongoose';
 
 /**
@@ -189,6 +190,11 @@ export const startPsychometricTest = async (req: AuthRequest, res: Response) => 
     const { sessionId } = req.params;
     const userId = req.user?.id;
 
+    // Validate sessionId
+    if (!validateObjectIdParam(sessionId, res, 'session ID')) {
+      return;
+    }
+
     if (!userId) {
       return res.status(401).json({
         success: false,
@@ -250,6 +256,75 @@ export const startPsychometricTest = async (req: AuthRequest, res: Response) => 
 };
 
 /**
+ * @desc Get psychometric test session details
+ * @route GET /api/psychometric-tests/session/:sessionId
+ * @access Private
+ */
+export const getPsychometricTestSession = async (req: AuthRequest, res: Response) => {
+  try {
+    const { sessionId } = req.params;
+    const userId = req.user?.id;
+
+    // Validate sessionId
+    if (!validateObjectIdParam(sessionId, res, 'session ID')) {
+      return;
+    }
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    // Get test session (can be ready or in_progress)
+    const testSession = await TestSession.findOne({
+      _id: sessionId,
+      user: userId,
+      status: { $in: ['ready', 'in_progress'] }
+    }).populate('job', 'title company industry experienceLevel');
+
+    if (!testSession) {
+      return res.status(404).json({
+        success: false,
+        error: 'Test session not found or access denied'
+      });
+    }
+
+    // Return questions without correct answers
+    const questionsForUser = testSession.questions.map((q: any, index: number) => ({
+      id: index,
+      question: q.question,
+      options: q.options,
+      category: q.category
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        sessionId: testSession._id,
+        questions: questionsForUser,
+        timeLimit: testSession.timeLimit,
+        startedAt: testSession.startedAt || testSession.createdAt,
+        job: testSession.job
+      },
+      message: 'Test session retrieved successfully!'
+    });
+
+  } catch (error: any) {
+    console.error('❌ Error getting psychometric test session:', error);
+    
+    // Return error details for debugging
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get test session',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+/**
  * @desc Submit psychometric test answers
  * @route POST /api/psychometric-tests/submit/:sessionId
  * @access Private
@@ -268,6 +343,11 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
       answersType: typeof answers,
       requestBody: req.body
     });
+
+    // Validate sessionId
+    if (!validateObjectIdParam(sessionId, res, 'session ID')) {
+      return;
+    }
 
     if (!userId) {
       console.error('❌ User not authenticated');
@@ -617,6 +697,11 @@ export const getDetailedTestResult = async (req: AuthRequest, res: Response) => 
   try {
     const { resultId } = req.params;
     const userId = req.user?.id;
+
+    // Validate resultId
+    if (!validateObjectIdParam(resultId, res, 'result ID')) {
+      return;
+    }
 
     if (!userId) {
       return res.status(401).json({

@@ -991,8 +991,8 @@ export const getTestSession = async (req: AuthRequest, res: Response) => {
 
     const session = await TestSession.findById(sessionId)
       .populate('user', 'firstName lastName')
-      .populate('test', 'title timeLimit')
-      .populate('job', 'title company');
+      .populate('job', 'title company')
+      .populate('purchase', 'testLevel levelName');
 
     if (!session) {
       return res.status(404).json({

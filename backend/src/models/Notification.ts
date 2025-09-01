@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface INotification extends Document {
   recipient: mongoose.Types.ObjectId;
-  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'event_reminder';
+  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'event_reminder' | 'payment_approved' | 'payment_rejected' | 'payment_success' | 'payment_failed';
   title: string;
   message: string;
   data?: {
@@ -12,6 +12,9 @@ export interface INotification extends Document {
     chatId?: mongoose.Types.ObjectId;
     jobId?: mongoose.Types.ObjectId;
     eventId?: mongoose.Types.ObjectId;
+    paymentRequestId?: mongoose.Types.ObjectId;
+    testType?: string;
+    url?: string;
   };
   isRead: boolean;
   createdAt: Date;
@@ -27,7 +30,7 @@ const NotificationSchema = new Schema<INotification>({
   },
   type: {
     type: String,
-    enum: ['connection_accepted', 'connection_request', 'message', 'job_match', 'event_reminder'],
+    enum: ['connection_accepted', 'connection_request', 'message', 'job_match', 'event_reminder', 'payment_approved', 'payment_rejected', 'payment_success', 'payment_failed'],
     required: true
   },
   title: {
@@ -46,7 +49,10 @@ const NotificationSchema = new Schema<INotification>({
     userProfilePicture: { type: String },
     chatId: { type: Schema.Types.ObjectId },
     jobId: { type: Schema.Types.ObjectId },
-    eventId: { type: Schema.Types.ObjectId }
+    eventId: { type: Schema.Types.ObjectId },
+    paymentRequestId: { type: Schema.Types.ObjectId },
+    testType: { type: String },
+    url: { type: String }
   },
   isRead: {
     type: Boolean,

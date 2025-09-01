@@ -295,6 +295,17 @@ class ChatService {
     this.eventListeners.clear();
   }
 
+  // Get total unread messages count
+  async getTotalUnreadCount(): Promise<number> {
+    try {
+      const chats = await this.getChats();
+      return chats.reduce((sum, chat) => sum + (chat.unreadCount || 0), 0);
+    } catch (error) {
+      console.error('Error getting total unread count:', error);
+      return 0;
+    }
+  }
+
   // Get socket connection status
   isConnected(): boolean {
     return this.socket?.connected || false;

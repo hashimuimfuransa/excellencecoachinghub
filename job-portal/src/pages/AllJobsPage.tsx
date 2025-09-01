@@ -226,7 +226,8 @@ const AllJobsPage: React.FC = () => {
     setCategoriesLoading(true);
     try {
       const fetchedCategories = await jobService.getJobCategories();
-      setCategories(fetchedCategories);
+      // Ensure categories is always an array
+      setCategories(Array.isArray(fetchedCategories) ? fetchedCategories : []);
     } catch (err) {
       console.error('Error fetching categories:', err);
       // Set some default categories if API fails
@@ -604,7 +605,7 @@ const AllJobsPage: React.FC = () => {
                   )}
                   
                   {/* Real categories from API */}
-                  {categories.map((category) => (
+                  {Array.isArray(categories) && categories.map((category) => (
                     <Chip
                       key={category.category}
                       label={`${category.displayName} (${category.count})`}
@@ -677,7 +678,7 @@ const AllJobsPage: React.FC = () => {
               </Typography>
               <Grid container spacing={3}>
                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <Grid key={i} xs={12} md={6} lg={4}>
+                  <Grid key={i} item xs={12} md={6} lg={4}>
                     <Card sx={{ borderRadius: 3, overflow: 'hidden' }}>
                       <CardContent>
                         <Skeleton variant="text" width="60%" height={30} />
@@ -835,7 +836,7 @@ const AllJobsPage: React.FC = () => {
                   } : 'repeat(1, 1fr)',
                 }}
               >
-                {displayJobs.map((job, index) => (
+                {Array.isArray(displayJobs) && displayJobs.map((job, index) => (
                   <Box 
                     key={job._id}
                     sx={{
@@ -862,7 +863,7 @@ const AllJobsPage: React.FC = () => {
                             borderColor: 'primary.main'
                           }
                         }}
-                        onClick={() => navigate(`/jobs/${job._id}`)}
+                        onClick={() => navigate('/login')}
                       >
                         {/* Status badges */}
                         {job.featured && (
@@ -1193,7 +1194,7 @@ const AllJobsPage: React.FC = () => {
                             borderColor: 'primary.main'
                           }
                         }}
-                        onClick={() => navigate(`/jobs/${job._id}`)}
+                        onClick={() => navigate('/login')}
                       >
                         {/* Company logo */}
                         <Avatar 

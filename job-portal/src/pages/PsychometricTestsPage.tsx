@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -6,117 +6,52 @@ import {
   Grid,
   Card,
   CardContent,
-  CardActions,
   Button,
-  Chip,
   LinearProgress,
-  Stack,
-  Paper,
-  Avatar,
+  Alert,
+  CircularProgress,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Alert,
-  AlertTitle,
-  Skeleton,
-  useTheme,
-  alpha,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormControl,
+  Chip,
+  Stack,
+  Paper,
   Divider,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  IconButton,
-  Tooltip,
-  Select,
-  MenuItem,
-  InputLabel,
   TextField,
-  Autocomplete,
-  CircularProgress,
-  Tabs,
-  Tab,
-  Badge,
-  Snackbar,
-  Pagination
+  InputAdornment,
+  AlertTitle
 } from '@mui/material';
-import { useAuth } from '../contexts/AuthContext';
-import SimpleProfileGuard from '../components/SimpleProfileGuard';
-import { SimplifiedTestSelection } from '../components/SimplifiedTestSelection';
-import { userService } from '../services/userService';
-import { psychometricTestService } from '../services/psychometricTestService';
-import { jobService } from '../services/jobService';
-import { paymentService } from '../services/paymentService';
-// Removed old local AI service - now using backend API
-interface JobTestBlueprint {
-  categories: { name: string; weight: number }[];
-  skills: string[];
-  traits: string[];
-  totalQuestions: number;
-  difficulty: string;
-  timeLimit: number;
-  totalTimeLimit: number;
-}
-
-interface GeneratedQuestion {
-  _id: string;
-  question: string;
-  type: string;
-  options?: string[];
-  traits: string[];
-  weight: number;
-  correctAnswer?: string;
-  explanation?: string;
-  category?: string;
-  difficulty?: string;
-}
 import {
   Psychology,
-  TrendingUp,
-  Assessment,
   Timer,
+  Assessment,
   CheckCircle,
-  Star,
   PlayArrow,
-  Refresh,
-  Download,
-  Share,
-  Info,
-  EmojiEvents,
-  School,
-  Person,
-  Group,
-  Lightbulb,
-  Speed,
-  Visibility,
-  Close,
-  Work,
-  SmartToy,
-  AutoAwesome,
-  AttachMoney,
-  Groups,
-  Flag,
-  BarChart,
-  MenuBook,
-  AccountTree,
-  Favorite,
-  Lock,
-  LockOpen,
-  BookmarkBorder,
-  ArrowForward,
-  Build
+  TrendingUp,
+  Search,
+  Payment,
+  AdminPanelSettings,
+  ContactSupport,
+  Phone,
+  WhatsApp,
+  Email
 } from '@mui/icons-material';
-
-const StartIcon = PlayArrow;
-import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { simplePsychometricService, SimpleTestSession, SimpleTestResult } from '../services/simplePsychometricService';
+import { jobService } from '../services/jobService';
+import { paymentRequestService } from '../services/paymentRequestService';
 
 interface Job {
   _id: string;
   title: string;
   company: string;
-  location: string;
   description: string;
+  location: string;
   skills: string[];
   requirements: string[];
   responsibilities: string[];
@@ -124,2827 +59,1410 @@ interface Job {
   jobType: string;
 }
 
-interface PsychometricTest {
-  _id: string;
-  title: string;
-  description: string;
-  type: 'personality' | 'cognitive' | 'aptitude' | 'skills' | 'behavioral' | 'comprehensive';
-  timeLimit: number; // in minutes
-  questions: TestQuestion[];
-  industry?: string;
-  jobRole?: string;
-  isActive: boolean;
-  createdBy: any;
-  createdAt: string;
-  updatedAt: string;
-  // AI-generated test properties
-  categories?: string[];
-  difficulty?: 'easy' | 'medium' | 'hard';
-  targetSkills?: string[];
-  targetTraits?: string[];
-  jobSpecific?: boolean;
-  blueprint?: {
-    totalCategories: number;
-    categoryCoverage: Array<{
-      name: string;
-      questionCount: number;
-    }>;
-  };
-}
-
-interface TestResult {
-  _id: string;
-  test: PsychometricTest;
-  user: string;
-  job?: Job;
-  answers: Record<string, any>;
-  scores: Record<string, number>;
-  overallScore: number;
-  interpretation: string;
-  recommendations: string[];
-  timeSpent: number;
-  createdAt: string;
-}
-
 interface TestQuestion {
-  _id: string;
+  id: number;
   question: string;
-  type: 'multiple_choice' | 'scale' | 'text' | 'scenario' | 'numerical' | 'logical' | 'verbal' | 'situational' | 'coding' | 'mechanical';
-  options?: string[];
-  scaleRange?: { min: number; max: number; labels: string[] };
-  correctAnswer?: string | number;
-  traits?: string[];
-  weight: number;
-  // Additional properties for AI-generated questions
-  explanation?: string;
-  category?: string;
-  difficulty?: 'easy' | 'medium' | 'hard';
-  timeLimit?: number;
-  chartData?: any;
-  codeSnippet?: string;
+  options: string[];
+  category: string;
 }
-
-interface TestLevel {
-  level: number;
-  title: string;
-  description: string;
-  difficulty: 'Easy' | 'Medium' | 'Hard';
-  estimatedTime: number;
-  questionCount: number;
-  cost: number; // Cost in FRW
-}
-
-interface PaymentInfo {
-  level: number;
-  cost: number;
-  attemptsRemaining: number;
-  lastPaymentDate?: string;
-  approvalStatus: 'pending' | 'approved' | 'rejected';
-  requestedAt?: string;
-  approvedAt?: string;
-  jobId?: string;
-  jobTitle?: string;
-  paymentKey?: string;
-}
-
-interface FreeTestCategory {
-  id: string;
-  title: string;
-  description: string;
-  testCount: number;
-  questionCount: number;
-  icon: React.ReactNode;
-  color: string;
-  difficulty: string;
-  timeLimit: number;
-  isFree: boolean;
-}
-
-// Enhanced free test categories with realistic, professional data
-const freeTestCategories: FreeTestCategory[] = [
-  {
-    id: 'numerical',
-    title: 'Quantitative Aptitude Assessment',
-    description: 'Professional-grade numerical assessment measuring mathematical reasoning, data interpretation, and quantitative problem-solving skills. Includes complex calculations, statistical analysis, financial modeling, and advanced mathematical concepts used in business environments.',
-    testCount: 12,
-    questionCount: 240,
-    icon: <BarChart />,
-    color: '#1976d2',
-    difficulty: 'Intermediate-Advanced',
-    timeLimit: 45,
-    isFree: true
-  },
-  {
-    id: 'verbal',
-    title: 'Verbal Reasoning & Comprehension',
-    description: 'Advanced verbal intelligence assessment evaluating reading comprehension, critical reasoning, vocabulary proficiency, and language interpretation skills. Features real business scenarios, complex text analysis, and advanced grammatical reasoning.',
-    testCount: 15,
-    questionCount: 300,
-    icon: <MenuBook />,
-    color: '#388e3c',
-    difficulty: 'Intermediate-Advanced', 
-    timeLimit: 40,
-    isFree: true
-  },
-  {
-    id: 'situational',
-    title: 'Leadership & Decision Making',
-    description: 'Executive-level situational judgment assessment measuring leadership capabilities, ethical decision-making, conflict resolution, and strategic thinking. Based on real workplace dilemmas faced by managers and senior professionals.',
-    testCount: 8,
-    questionCount: 160,
-    icon: <Groups />,
-    color: '#f57c00',
-    difficulty: 'Advanced',
-    timeLimit: 35,
-    isFree: true
-  },
-  {
-    id: 'diagrammatic',
-    title: 'Abstract & Logical Reasoning',
-    description: 'Advanced cognitive assessment measuring abstract thinking, pattern recognition, logical deduction, and systematic problem-solving. Includes complex diagrammatic sequences, algorithmic thinking, and spatial reasoning challenges.',
-    testCount: 10,
-    questionCount: 200,
-    icon: <Psychology />,
-    color: '#7b1fa2',
-    difficulty: 'Advanced',
-    timeLimit: 50,
-    isFree: true
-  },
-  {
-    id: 'personality',
-    title: 'Professional Personality Profile',
-    description: 'Comprehensive personality assessment based on the Five-Factor Model (Big Five) with workplace-specific insights. Measures openness, conscientiousness, extraversion, agreeableness, and emotional stability in professional contexts.',
-    testCount: 3,
-    questionCount: 125,
-    icon: <Person />,
-    color: '#5d4037',
-    difficulty: 'Intermediate',
-    timeLimit: 25,
-    isFree: true
-  },
-  {
-    id: 'emotional',
-    title: 'Emotional Intelligence Assessment',
-    description: 'Professional EQ evaluation measuring self-awareness, self-regulation, social awareness, and relationship management skills. Essential for leadership roles and team collaboration in modern workplaces.',
-    testCount: 5,
-    questionCount: 100,
-    icon: <Favorite />,
-    color: '#d32f2f',
-    difficulty: 'Intermediate',
-    timeLimit: 30,
-    isFree: true
-  },
-  {
-    id: 'cognitive',
-    title: 'Cognitive Abilities Battery',
-    description: 'Comprehensive cognitive assessment measuring processing speed, working memory, attention to detail, and mental agility. Scientifically validated for predicting job performance across various professional roles.',
-    testCount: 6,
-    questionCount: 150,
-    icon: <Speed />,
-    color: '#00796b',
-    difficulty: 'Advanced',
-    timeLimit: 60,
-    isFree: true
-  },
-  {
-    id: 'technical',
-    title: 'Technical Problem Solving',
-    description: 'Advanced technical reasoning assessment for STEM professionals. Measures analytical thinking, systematic troubleshooting, technical comprehension, and innovation capabilities in technology-driven environments.',
-    testCount: 4,
-    questionCount: 80,
-    icon: <Build />,
-    color: '#303f9f',
-    difficulty: 'Expert',
-    timeLimit: 55,
-    isFree: true
-  }
-];
-
-// Test levels for job-specific paid tests - Easy: 20, Intermediate: 30, Hard: 40 questions
-const testLevels: TestLevel[] = [
-  {
-    level: 1,
-    title: 'Foundation Level',
-    description: 'Basic assessment covering fundamental traits and abilities with 20 comprehensive questions',
-    difficulty: 'Easy',
-    estimatedTime: 25, // ~1.25 minutes per question
-    questionCount: 20,
-    cost: 2000 // Base cost in FRW
-  },
-  {
-    level: 2,
-    title: 'Intermediate Level',
-    description: 'Comprehensive evaluation with scenario-based questions - 30 questions total',
-    difficulty: 'Medium',
-    estimatedTime: 40, // ~1.33 minutes per question
-    questionCount: 30,
-    cost: 4000 // Level 1 cost * 2
-  },
-  {
-    level: 3,
-    title: 'Advanced Level',
-    description: 'In-depth analysis with complex situational assessments - 40 advanced questions',
-    difficulty: 'Hard',
-    estimatedTime: 60, // 1.5 minutes per question
-    questionCount: 40,
-    cost: 8000 // Level 2 cost * 2
-  }
-];
 
 const PsychometricTestsPage: React.FC = () => {
-  const theme = useTheme();
-  const navigate = useNavigate();
   const { user } = useAuth();
   
-  const [tests, setTests] = useState<PsychometricTest[]>([]);
-  const [results, setResults] = useState<TestResult[]>([]);
+  // Core states
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingJobs, setLoadingJobs] = useState(false);
-  const [jobsPagination, setJobsPagination] = useState({
-    page: 1,
-    totalPages: 1,
-    totalJobs: 0,
-    limit: 10
-  });
-  const [freshUserData, setFreshUserData] = useState<any>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [loading, setLoading] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [selectedLevel, setSelectedLevel] = useState<number>(1);
-  const [jobSelectionOpen, setJobSelectionOpen] = useState(false);
-  const [testDialogOpen, setTestDialogOpen] = useState(false);
-  const [selectedTest, setSelectedTest] = useState<PsychometricTest | null>(null);
-  const [takingTest, setTakingTest] = useState(false);
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, any>>({});
-  const [testResult, setTestResult] = useState<TestResult | null>(null);
-  const [generatingTest, setGeneratingTest] = useState(false);
-  const [generatedTests, setGeneratedTests] = useState<PsychometricTest[]>([]);
-  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [selectedTestLevel, setSelectedTestLevel] = useState<TestLevel | null>(null);
-  const [userPayments, setUserPayments] = useState<PaymentInfo[]>([]);
-  const [processingPayment, setProcessingPayment] = useState(false);
-  const [showTestCard, setShowTestCard] = useState(false);
-  const [readyTest, setReadyTest] = useState<PsychometricTest | null>(null);
-  const [currentTab, setCurrentTab] = useState(0);
-  const [testBlueprint, setTestBlueprint] = useState<JobTestBlueprint | null>(null);
-  const [aiGeneratedQuestions, setAiGeneratedQuestions] = useState<GeneratedQuestion[]>([]);
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'info' | 'warning' | 'error' }>({
-    open: false,
-    message: '',
-    severity: 'info'
-  });
-  const [refreshing, setRefreshing] = useState(false);
+  const [currentSession, setCurrentSession] = useState<SimpleTestSession | null>(null);
+  const [testResult, setTestResult] = useState<SimpleTestResult | null>(null);
+  const [testHistory, setTestHistory] = useState<SimpleTestResult[]>([]);
   
-  // New payment-first flow states
-  const [packageSelectionOpen, setPackageSelectionOpen] = useState(false);
-  const [purchaseId, setPurchaseId] = useState<string | null>(null);
-  const [purchasePackageLevel, setPurchasePackageLevel] = useState<string | null>(null);
+  // Test taking states
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState<number[]>([]);
+  const [timeRemaining, setTimeRemaining] = useState(0);
+  const [testStartTime, setTestStartTime] = useState<number | null>(null);
+  
+  // UI states
+  const [jobSelectionOpen, setJobSelectionOpen] = useState(false);
+  const [testInProgress, setTestInProgress] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [jobSearchTerm, setJobSearchTerm] = useState('');
+  const [paymentRequestOpen, setPaymentRequestOpen] = useState(false);
+  const [selectedJobForPayment, setSelectedJobForPayment] = useState<Job | null>(null);
+  const [paymentRequestSent, setPaymentRequestSent] = useState(false);
+  const [testType, setTestType] = useState<'free' | 'premium'>('free');
+  const [pendingRequests, setPendingRequests] = useState<{[jobId: string]: string}>({});
+  const [approvedRequests, setApprovedRequests] = useState<{[jobId: string]: string}>({});
+  const [selectedJobInDialog, setSelectedJobInDialog] = useState<Job | null>(null);
 
   useEffect(() => {
-    // Load data in the correct order to ensure jobs are available when processing payments
-    const loadInitialData = async () => {
-      setLoading(true);
-      try {
-        // First, load basic data
-        await Promise.all([
-          fetchTests(),
-          fetchResults(), 
-          fetchUserData()
-        ]);
-        
-        // Load jobs first (needed for payment processing)
-        await fetchJobs();
-        
-        // Load initial payments from localStorage
-        loadUserPayments();
-        
-        // Then refresh payments from backend (this will use the jobs data)
-        setTimeout(() => {
-          refreshUserPayments();
-        }, 1000); // Small delay to ensure jobs state is updated
-        
-      } catch (error) {
-        console.error('Error loading initial data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadInitialData();
+    loadJobs();
+    loadTestHistory();
+    checkPaymentRequestStatus();
   }, []);
 
-  // Reset jobs to first page when job selection dialog opens
+  // Refresh payment status when user changes or when component becomes visible
   useEffect(() => {
-    if (jobSelectionOpen) {
-      // Always fetch fresh jobs from page 1 when dialog opens
-      fetchJobs(1, false); // Reset to page 1, replace existing jobs
+    if (user) {
+      checkPaymentRequestStatus();
     }
-  }, [jobSelectionOpen]);
+  }, [user]);
 
-  // Load saved payments from localStorage
-  const loadUserPayments = () => {
-    try {
-      const saved = localStorage.getItem(`psychometric_payments_${user?._id}`);
-      if (saved) {
-        setUserPayments(JSON.parse(saved));
-      }
-    } catch (error) {
-      console.error('Error loading saved payments:', error);
-    }
-  };
-
-  // Save payments to localStorage
-  const saveUserPayments = (payments: PaymentInfo[]) => {
-    try {
-      localStorage.setItem(`psychometric_payments_${user?._id}`, JSON.stringify(payments));
-    } catch (error) {
-      console.error('Error saving payments:', error);
-    }
-  };
-
-  // Refresh user payments and check for status updates (temporarily disabled - payment functionality removed)
-  const refreshUserPayments = async () => {
-    if (!user?._id) return;
-    
-    try {
-      setRefreshing(true);
-      
-      console.log('🔍 Payment functionality temporarily disabled - skipping payment refresh');
-      
-      // Since payments are disabled, just set empty array
-      const response: any[] = [];
-      
-      console.log('🔍 Raw backend response (disabled):', response);
-      console.log('🔍 Total payments received (disabled):', response?.length || 0);
-      
-      if (response && Array.isArray(response)) {
-        // Ensure we have the latest jobs data before processing payments
-        let currentJobs = jobs;
-        if (currentJobs.length === 0) {
-          console.log('🔄 No jobs in state, fetching fresh jobs data...');
-          try {
-            const jobsResponse = await jobService.getJobs({ status: 'active' });
-            currentJobs = jobsResponse.data || [];
-            setJobs(currentJobs); // Update state
-          } catch (error) {
-            console.error('Failed to fetch jobs for payment processing:', error);
-            currentJobs = [];
-          }
-        }
-        
-        // Convert backend format to local format and ensure we have job information
-        const updatedPayments: PaymentInfo[] = await Promise.all(
-          response.map(async (purchase: any) => {
-            console.log('🔍 Processing purchase (full object):', purchase);
-            console.log('🔍 Processing purchase (key fields):', {
-              id: purchase._id,
-              paymentKey: purchase.paymentKey,
-              jobId: purchase.jobId,
-              testJobId: purchase.testJobId,
-              job: purchase.job ? { _id: purchase.job._id, title: purchase.job.title } : null,
-              test: purchase.test ? { _id: purchase.test._id, title: purchase.test.title, jobId: purchase.test.jobId } : null,
-              level: purchase.level,
-              cost: purchase.cost,
-              amount: purchase.amount,
-              approvalStatus: purchase.approvalStatus,
-              // Check for other possible jobId fields
-              targetJobId: purchase.targetJobId,
-              relatedJobId: purchase.relatedJobId,
-              metadata: purchase.metadata
-            });
-
-            // Extract information based on backend structure
-            let jobInfo = purchase.job; // This is populated by backend
-            let testInfo = purchase.test; // This is populated by backend
-            let jobId = purchase.job?._id || purchase.jobId || purchase.testJobId || purchase.test?.jobId || purchase.targetJobId || purchase.relatedJobId;
-            let testId = purchase.test?._id || purchase.testId;
-            let paymentKey = purchase.paymentKey || purchase._id;
-            let cost = purchase.amount || purchase.cost || 0; // Backend uses 'amount'
-            let level = purchase.level || 1; // Extract level from purchase or default to 1
-            
-            console.log('📝 Extracted initial values:', {
-              jobId,
-              testId,
-              paymentKey,
-              level,
-              hasJobInfo: !!jobInfo,
-              hasTestInfo: !!testInfo
-            });
-            
-            // If we have a paymentKey in format "jobId_level", extract level from it
-            if (paymentKey && paymentKey.includes('_') && !purchase.level) {
-              const parts = paymentKey.split('_');
-              if (parts.length >= 2 && !isNaN(parseInt(parts[parts.length - 1]))) {
-                level = parseInt(parts[parts.length - 1]);
-                // Also extract jobId if it wasn't found
-                if (!jobId && parts.length >= 2) {
-                  jobId = parts.slice(0, -1).join('_'); // Join all parts except the last (level)
-                }
-              }
-            }
-            
-            // IMPORTANT: If we still don't have job info after approval, but we have a job reference,
-            // we need to make sure we fetch the actual job data from our jobs array or API
-            if (!jobInfo && jobId) {
-              console.log('🔍 No job info in purchase data, but we have jobId:', jobId);
-              // Try to find the job in our current jobs array first
-              const foundJob = currentJobs.find(j => j._id === jobId);
-              if (foundJob) {
-                console.log('✅ Found job in current jobs array:', foundJob.title);
-                jobInfo = foundJob;
-              } else {
-                console.log('⚠️ Job not found in current jobs array for ID:', jobId);
-                // We'll need to mark this for individual fetching later
-              }
-            }
-            
-            // Special handling for MongoDB ObjectId payment keys (newer backend format)
-            // If paymentKey looks like a MongoDB ObjectId and we don't have other info,
-            // we might need to extract job info from other fields or fetch from API
-            if (paymentKey && paymentKey.length === 24 && !paymentKey.includes('_') && !jobInfo) {
-              console.log('⚠️ PaymentKey appears to be MongoDB ObjectId format:', paymentKey);
-              console.log('🔍 Looking for additional job context in purchase object...');
-              
-              // Look for job context in metadata, description, or other fields
-              if (purchase.metadata && purchase.metadata.jobId) {
-                jobId = purchase.metadata.jobId;
-                console.log('📋 Found jobId in metadata:', jobId);
-              } else if (purchase.description && purchase.description.includes('Job:')) {
-                // Try to extract job info from description if available
-                const jobMatch = purchase.description.match(/Job:\s*([^,\n]+)/);
-                if (jobMatch) {
-                  const jobTitle = jobMatch[1].trim();
-                  console.log('📋 Extracted job title from description:', jobTitle);
-                  // Try to find job by title
-                  const jobByTitle = currentJobs.find(j => j.title.toLowerCase().includes(jobTitle.toLowerCase()));
-                  if (jobByTitle) {
-                    jobId = jobByTitle._id;
-                    jobInfo = jobByTitle;
-                    console.log('✅ Found job by title match:', jobByTitle.title);
-                  }
-                }
-              }
-            }
-            
-            // Create a paymentKey if missing - use job+level combination for uniqueness
-            if (!paymentKey && jobId) {
-              paymentKey = `${jobId}_${level}`;
-            }
-            
-            // If job info is missing from the purchase, try to fetch it
-            if (!jobInfo && jobId) {
-              try {
-                console.log('🔍 Missing job info for purchase, trying to fetch:', jobId);
-                const job = currentJobs.find(j => j._id === jobId);
-                if (job) {
-                  jobInfo = job;
-                  console.log('✅ Found job in current jobs array:', job.title);
-                } else {
-                  // Fallback - try to fetch individual job from API
-                  console.log('⚠️ Job not found in current jobs array, fetching from API:', jobId);
-                  try {
-                    const fetchedJob = await jobService.getJobById(jobId);
-                    if (fetchedJob) {
-                      jobInfo = fetchedJob;
-                      console.log('✅ Successfully fetched job from API:', fetchedJob.title);
-                      
-                      // Add the fetched job to our local jobs array to prevent future API calls
-                      setJobs(prevJobs => {
-                        const exists = prevJobs.some(j => j._id === fetchedJob._id);
-                        if (!exists) {
-                          console.log('📌 Adding fetched job to local jobs array');
-                          return [...prevJobs, fetchedJob];
-                        }
-                        return prevJobs;
-                      });
-                    } else {
-                      console.log('⚠️ API returned null/undefined for job ID:', jobId);
-                    }
-                  } catch (apiError) {
-                    console.error('Failed to fetch job from API:', apiError);
-                    console.log('🔍 Will attempt to use existing job title if available...');
-                  }
-                }
-              } catch (error) {
-                console.error('Error fetching individual job:', error);
-              }
-            }
-            
-            // Final fallback - if we still don't have job info but we have metadata about the job
-            if (!jobInfo && !jobId) {
-              console.log('⚠️ No job info and no job ID found, trying alternative methods...');
-              
-              // Try to extract any job information from the purchase object itself
-              if (purchase.testTitle && purchase.testTitle !== 'Psychometric Assessment') {
-                console.log('📋 Trying to use test title as job indicator:', purchase.testTitle);
-                // See if test title contains job information
-                const titleMatch = currentJobs.find(j => 
-                  purchase.testTitle.toLowerCase().includes(j.title.toLowerCase()) ||
-                  j.title.toLowerCase().includes(purchase.testTitle.toLowerCase())
-                );
-                if (titleMatch) {
-                  console.log('✅ Found job by test title correlation:', titleMatch.title);
-                  jobInfo = titleMatch;
-                  jobId = titleMatch._id;
-                }
-              }
-              
-              // Try using any available context
-              if (!jobInfo && purchase.context) {
-                console.log('📋 Checking purchase context for job information...');
-                // This would be backend-specific logic
-              }
-            }
-
-            // Generate payment key if missing
-            if (!paymentKey && jobId && purchase.level) {
-              paymentKey = `${jobId}_${purchase.level}`;
-            } else if (!paymentKey && purchase._id) {
-              paymentKey = purchase._id; // Use purchase ID as fallback
-            }
-
-            // Map backend approval status to frontend format
-            let mappedApprovalStatus = 'pending';
-            let canRequestApproval = false;
-            
-            switch (purchase.approvalStatus) {
-              case 'not_required':
-                mappedApprovalStatus = 'approved'; // Can start test immediately
-                canRequestApproval = false;
-                break;
-              case 'pending_approval':
-                mappedApprovalStatus = 'pending';
-                canRequestApproval = false; // Already requested
-                break;
-              case 'approved':
-                mappedApprovalStatus = 'approved';
-                canRequestApproval = false;
-                break;
-              case 'rejected':
-                mappedApprovalStatus = 'rejected';
-                canRequestApproval = true; // Can request again
-                break;
-              default:
-                mappedApprovalStatus = 'pending';
-                canRequestApproval = true; // Unknown state, allow request
-            }
-
-            const mappedPayment = {
-              paymentKey: paymentKey || `unknown_${Date.now()}`,
-              jobId: jobId || '',
-              jobTitle: jobInfo?.title || testInfo?.title || 'Unknown Job',
-              level: level, // Use the extracted level
-              cost: cost,
-              attemptsRemaining: purchase.remainingAttempts ?? (purchase.maxAttempts - purchase.attemptsUsed) ?? 3,
-              approvalStatus: mappedApprovalStatus,
-              canRequestApproval: canRequestApproval,
-              requestedAt: purchase.approvalRequestedAt,
-              approvedAt: purchase.approvedAt,
-              rejectedAt: purchase.rejectedAt,
-              lastPaymentDate: purchase.purchasedAt || purchase.createdAt || new Date().toISOString(),
-              // Keep the original backend status for debugging
-              originalApprovalStatus: purchase.approvalStatus,
-            };
-
-            console.log('✅ Mapped payment:', mappedPayment);
-            return mappedPayment;
-          })
-        );
-
-        // Check for status changes
-        const statusChanges = updatedPayments.filter(updatedPayment => {
-          const currentPayment = currentPayments.find(p => p.paymentKey === updatedPayment.paymentKey);
-          return currentPayment && currentPayment.approvalStatus !== updatedPayment.approvalStatus;
-        });
-
-        // Show notifications for status changes
-        statusChanges.forEach(payment => {
-          if (payment.approvalStatus === 'approved') {
-            setSnackbar({
-              open: true,
-              message: `Test "${payment.jobTitle} - Level ${payment.level}" has been approved! You can now start the test.`,
-              severity: 'success'
-            });
-          } else if (payment.approvalStatus === 'rejected') {
-            setSnackbar({
-              open: true,
-              message: `Test "${payment.jobTitle} - Level ${payment.level}" was rejected. Please contact support for details.`,
-              severity: 'error'
-            });
-          }
-        });
-
-        // Update state with fresh data
-        setUserPayments(updatedPayments);
-        saveUserPayments(updatedPayments);
-        
-        console.log('📊 Refreshed user payments:', updatedPayments.length, 'payments');
-        console.log('🔄 Status changes detected:', statusChanges.length);
-      }
-    } catch (error) {
-      console.error('Error refreshing user payments:', error);
-      // Don't show error snackbar for automatic refreshes to avoid spam
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  // Manual refresh with user feedback
-  const handleManualRefresh = async () => {
-    setSnackbar({
-      open: true,
-      message: 'Refreshing test status...',
-      severity: 'info'
-    });
-    
-    try {
-      await refreshUserPayments();
-      setTimeout(() => {
-        setSnackbar({
-          open: true,
-          message: 'Test status updated successfully!',
-          severity: 'success'
-        });
-      }, 500);
-    } catch (error) {
-      setSnackbar({
-        open: true,
-        message: 'Failed to refresh status. Please try again.',
-        severity: 'error'
-      });
-    }
-  };
-
-  // Auto-refresh effect for pending approvals
+  // Also refresh payment status every 30 seconds to catch admin approvals
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    
-    const pendingApprovals = userPayments.filter(p => p.approvalStatus === 'pending');
-    
-    if (pendingApprovals.length > 0) {
-      console.log(`🔄 Setting up auto-refresh for ${pendingApprovals.length} pending approval(s)...`);
-      
-      // Determine refresh interval based on recency of approval requests
-      const recentRequests = pendingApprovals.filter(p => {
-        if (!p.requestedAt) return false;
-        const requestTime = new Date(p.requestedAt);
-        const now = new Date();
-        const minutesAgo = (now.getTime() - requestTime.getTime()) / (1000 * 60);
-        return minutesAgo < 5; // Recent if within last 5 minutes
-      });
-      
-      const refreshInterval = recentRequests.length > 0 ? 5000 : 10000; // 5s for recent, 10s for older
-      
+    const interval = setInterval(() => {
+      if (user && !testInProgress) {
+        console.log('🔄 Auto-refreshing payment request status...');
+        checkPaymentRequestStatus();
+      }
+    }, 30000); // Check every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [user, testInProgress]);
+
+  useEffect(() => {
+    let interval: any;
+    if (testInProgress && timeRemaining > 0) {
       interval = setInterval(() => {
-        console.log('🔄 Auto-refreshing payments for approval status updates...');
-        console.log(`🚀 Using ${refreshInterval/1000}s interval (recent requests: ${recentRequests.length})`);
-        refreshUserPayments();
-      }, refreshInterval);
-    } else if (interval) {
-      console.log('✅ Clearing auto-refresh - no pending approvals');
-      clearInterval(interval);
-      interval = null;
+        setTimeRemaining(prev => prev - 1);
+      }, 1000);
+    } else if (timeRemaining === 0 && testInProgress) {
+      handleTestSubmit();
     }
-    
     return () => {
-      if (interval) {
-        console.log('🧹 Cleaning up auto-refresh interval');
-        clearInterval(interval);
-      }
+      if (interval) clearInterval(interval);
     };
-  }, [userPayments]);
+  }, [testInProgress, timeRemaining]);
 
-  const fetchTests = async () => {
+  // Prevent browser navigation during test
+  useEffect(() => {
+    if (testInProgress) {
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        e.preventDefault();
+        e.returnValue = 'Are you sure you want to leave? Your test progress will be lost.';
+      };
+
+      const handlePopstate = (e: PopStateEvent) => {
+        if (window.confirm('Are you sure you want to leave the test? Your progress will be lost.')) {
+          setTestInProgress(false);
+          setCurrentSession(null);
+          setAnswers([]);
+          setCurrentQuestionIndex(0);
+          setTimeRemaining(0);
+        } else {
+          window.history.pushState(null, '', window.location.href);
+        }
+      };
+
+      // Add history entry to prevent back navigation
+      window.history.pushState(null, '', window.location.href);
+      
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      window.addEventListener('popstate', handlePopstate);
+
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+        window.removeEventListener('popstate', handlePopstate);
+      };
+    }
+  }, [testInProgress]);
+
+  const loadJobs = async () => {
     try {
-      const response = await psychometricTestService.getPsychometricTests({}, 1, 50);
-      setTests(response.data || []);
+      // Load all jobs by setting a high limit (1000) to show all available jobs
+      const response = await jobService.getJobs({}, 1, 1000);
+      setJobs(response.data || []);
     } catch (error) {
-      console.error('Error fetching tests:', error);
-      setTests([]);
+      console.error('Error loading jobs:', error);
+      setError('Failed to load jobs');
     }
   };
 
-  const fetchResults = async () => {
+  const loadTestHistory = async () => {
     try {
-      const results = await psychometricTestService.getUserTestResults();
-      setResults(results || []);
+      const history = await simplePsychometricService.getSimpleTestHistory();
+      setTestHistory(history);
     } catch (error) {
-      console.error('Error fetching results:', error);
-      setResults([]);
+      console.error('Error loading test history:', error);
     }
   };
 
-  const fetchJobs = async (page = 1, appendToExisting = true) => {
+  const checkPaymentRequestStatus = async () => {
+    if (!user) return;
+    
     try {
-      setLoadingJobs(true);
-      console.log('🔍 Fetching jobs:', { page, appendToExisting, currentLimit: jobsPagination.limit });
+      console.log('🔍 Checking payment request status...');
+      // Check user's payment requests
+      const requests = await paymentRequestService.getUserPaymentRequests();
       
-      const response = await jobService.getJobs(
-        { status: 'active' }, 
-        page, 
-        jobsPagination.limit
-      );
+      console.log('📋 Raw payment requests:', requests);
       
-      console.log('📋 Jobs response:', {
-        dataLength: response.data?.length || 0,
-        pagination: response.pagination
+      const pending: {[jobId: string]: string} = {};
+      const approved: {[jobId: string]: string} = {};
+      
+      requests.forEach((request: any) => {
+        console.log('🔍 Processing request:', {
+          requestId: request._id,
+          jobId: request.jobId,
+          status: request.status,
+          jobTitle: request.jobTitle
+        });
+        
+        if (request.status === 'pending') {
+          pending[request.jobId] = request._id;
+        } else if (request.status === 'approved') {
+          approved[request.jobId] = request._id;
+        }
       });
       
-      if (page === 1 || !appendToExisting) {
-        setJobs(response.data || []);
-      } else {
-        setJobs(prevJobs => [...prevJobs, ...(response.data || [])]);
+      console.log('✅ Processed payment requests:', {
+        pending,
+        approved,
+        totalRequests: requests.length
+      });
+      
+      setPendingRequests(pending);
+      setApprovedRequests(approved);
+    } catch (error) {
+      console.error('Error checking payment request status:', error);
+    }
+  };
+
+  const startFreeTest = async (job: Job) => {
+    setLoading(true);
+    setError(null);
+    setJobSelectionOpen(false);
+    
+    try {
+      // Generate free test with 10 questions
+      const testGeneration = await simplePsychometricService.generateSimpleTest({
+        jobId: job._id,
+        jobTitle: job.title,
+        jobDescription: job.description,
+        requiredSkills: job.skills,
+        experienceLevel: job.experienceLevel,
+        industry: 'General',
+        testType: 'basic',
+        questionCount: 10,
+        timeLimit: 15
+      });
+
+      // Start test session
+      const session = await simplePsychometricService.startSimpleTestSession(testGeneration.testSessionId);
+      
+      // Set test in progress state for this page
+      setTestInProgress(true);
+      setCurrentSession(session);
+      
+      // Open test in new tab
+      const testUrl = `/test-taking?sessionId=${session.sessionId}&jobTitle=${encodeURIComponent(job.title)}&company=${encodeURIComponent(job.company)}`;
+      const testWindow = window.open(testUrl, '_blank');
+      
+      // Listen for test completion/window close
+      if (testWindow) {
+        const checkClosed = setInterval(() => {
+          if (testWindow.closed) {
+            console.log('Test window closed, refreshing test history');
+            setTestInProgress(false);
+            setCurrentSession(null);
+            loadTestHistory(); // Refresh to show any new results
+            clearInterval(checkClosed);
+          }
+        }, 1000);
       }
       
-      setJobsPagination({
-        page: response.pagination.page,
-        totalPages: response.pagination.pages,
-        totalJobs: response.pagination.total,
-        limit: jobsPagination.limit
-      });
-    } catch (error) {
-      console.error('Error fetching jobs:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to load jobs. Please try again.',
-        severity: 'error'
-      });
-    } finally {
-      setLoadingJobs(false);
-    }
-  };
-
-  const loadMoreJobs = () => {
-    if (jobsPagination.page < jobsPagination.totalPages && !loadingJobs) {
-      fetchJobs(jobsPagination.page + 1, true); // Append to existing jobs
-    }
-  };
-
-  const fetchUserData = async () => {
-    try {
-      if (user?._id) {
-        const userData = await userService.getProfile(user._id);
-        setFreshUserData(userData);
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
+    } catch (error: any) {
+      setError(error.message || 'Failed to start free test');
+      setTestInProgress(false);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStartFreeTest = (category: FreeTestCategory) => {
-    // Create a serializable version of category excluding React elements
-    const serializableCategory = {
-      id: category.id,
-      title: category.title,
-      description: category.description,
-      testCount: category.testCount,
-      questionCount: category.questionCount,
-      color: category.color,
-      difficulty: category.difficulty,
-      timeLimit: category.timeLimit,
-      isFree: category.isFree
-    };
-
-    // Navigate to free test page
-    navigate(`/test/free/${category.id}`, {
-      state: {
-        category: serializableCategory,
-        returnUrl: '/app/tests'
-      }
-    });
-  };
-
-  const handleStartJobSpecificTest = () => {
-    setPackageSelectionOpen(true);
-  };
-
-  const handlePurchaseComplete = (newPurchaseId: string, packageLevel: string) => {
-    setPurchaseId(newPurchaseId);
-    setPurchasePackageLevel(packageLevel);
-    setPackageSelectionOpen(false);
-    setJobSelectionOpen(true);
-    
-    setSnackbar({
-      open: true,
-      message: `Package purchased successfully! Now select a job to generate your assessment.`,
-      severity: 'success'
-    });
-  };
-
-  // New function specifically for starting approved saved assessments
-  const handleStartApprovedTest = async (payment: PaymentInfo) => {
-    try {
-      console.log('🎯 Starting approved test for payment:', {
-        jobId: payment.jobId,
-        jobTitle: payment.jobTitle,
-        level: payment.level,
-        paymentKey: payment.paymentKey
-      });
-
-      // Check if we have a valid jobId
-      if (!payment.jobId || payment.jobId.trim() === '') {
-        console.error('❌ No job ID found in payment:', payment);
-        
-        // Try to extract jobId from paymentKey if it's in format "jobId_level"
-        let extractedJobId = null;
-        if (payment.paymentKey && payment.paymentKey.includes('_')) {
-          const parts = payment.paymentKey.split('_');
-          if (parts.length >= 2 && !isNaN(parseInt(parts[parts.length - 1]))) {
-            extractedJobId = parts.slice(0, -1).join('_'); // All parts except the last (level)
-          }
-        }
-        
-        if (extractedJobId) {
-          console.log('🔍 Extracted job ID from payment key:', extractedJobId);
-          payment.jobId = extractedJobId; // Update the payment object
-        } else {
-          // If we can't extract jobId from paymentKey, this means the backend data is incomplete
-          console.log('⚠️ Payment key appears to be a MongoDB ObjectId, trying alternative approaches...');
-          console.log('📋 Searching for job by title or other criteria...');
-          
-          // Try to find job by title if available and not "Unknown Job"
-          if (payment.jobTitle && payment.jobTitle !== 'Unknown Job') {
-            console.log('🔍 Attempting to find job by title:', payment.jobTitle);
-            
-            // First try exact match
-            let jobByTitle = jobs.find(j => j.title === payment.jobTitle);
-            
-            // If exact match fails, try partial match
-            if (!jobByTitle) {
-              jobByTitle = jobs.find(j => 
-                j.title.toLowerCase().includes(payment.jobTitle.toLowerCase()) ||
-                payment.jobTitle.toLowerCase().includes(j.title.toLowerCase())
-              );
-            }
-            
-            if (jobByTitle) {
-              console.log('✅ Found job by title match:', jobByTitle._id, jobByTitle.title);
-              payment.jobId = jobByTitle._id;
-              // Update the payment object with correct job title
-              payment.jobTitle = jobByTitle.title;
-            } else {
-              console.log('🔍 Job not found by title, refreshing jobs list...');
-              setSnackbar({
-                open: true,
-                message: 'Updating job information, please wait...',
-                severity: 'info'
-              });
-              
-              // Refresh jobs and try again
-              try {
-                setLoadingJobs(true);
-                await fetchJobs();
-                
-                // Wait for jobs state to update
-                await new Promise(resolve => setTimeout(resolve, 500));
-                setLoadingJobs(false);
-                
-                // Get updated jobs from the state after refresh
-                const currentJobs = jobs.length > 0 ? jobs : await jobService.getJobs({ status: 'active' }).then(res => res.data || []);
-                
-                const refreshedJob = currentJobs.find(j => 
-                  j.title === payment.jobTitle ||
-                  j.title.toLowerCase().includes(payment.jobTitle.toLowerCase()) ||
-                  payment.jobTitle.toLowerCase().includes(j.title.toLowerCase())
-                );
-                
-                if (refreshedJob) {
-                  console.log('✅ Found job after refresh:', refreshedJob._id, refreshedJob.title);
-                  payment.jobId = refreshedJob._id;
-                  payment.jobTitle = refreshedJob.title;
-                } else {
-                  throw new Error('Job not found after refresh');
-                }
-              } catch (error) {
-                setLoadingJobs(false);
-                console.error('Failed to refresh jobs:', error);
-                setSnackbar({
-                  open: true,
-                  message: `Cannot find job "${payment.jobTitle}". The job may have been removed or renamed. Please try refreshing the page or contact support. (Payment ID: ${payment.paymentKey})`,
-                  severity: 'error'
-                });
-                return;
-              }
-            }
-          } else {
-            // If no useful job title, try to refresh payments data first
-            console.log('🔄 No useful job title, attempting to refresh payment data...');
-            setSnackbar({
-              open: true,
-              message: 'Refreshing payment data to get complete job information...',
-              severity: 'info'
-            });
-            
-            try {
-              await refreshUserPayments();
-              
-              // Find the updated payment after refresh
-              const updatedPayments = JSON.parse(localStorage.getItem(`psychometric_payments_${user?._id}`) || '[]');
-              const updatedPayment = updatedPayments.find(p => p.paymentKey === payment.paymentKey);
-              
-              if (updatedPayment && updatedPayment.jobId && updatedPayment.jobId !== payment.jobId) {
-                console.log('✅ Found updated job ID after payment refresh:', updatedPayment.jobId);
-                payment.jobId = updatedPayment.jobId;
-                payment.jobTitle = updatedPayment.jobTitle;
-              } else {
-                throw new Error('No job information found after payment refresh');
-              }
-            } catch (error) {
-              console.error('Failed to refresh payment data:', error);
-              // Let's provide more specific guidance based on the payment ID
-              console.error('🚨 Payment processing failed for ID:', payment.paymentKey);
-              console.error('🚨 Current payment object:', JSON.stringify(payment, null, 2));
-              
-              setSnackbar({
-                open: true,
-                message: `Assessment data incomplete after approval. This often happens when backend data changes during approval. Please try refreshing the page or contact support with Payment ID: ${payment.paymentKey}`,
-                severity: 'warning'
-              });
-              
-              // Try one more automatic refresh before giving up
-              console.log('🔄 Attempting one final data refresh...');
-              try {
-                await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-                await refreshUserPayments();
-                setSnackbar({
-                  open: true,
-                  message: 'Data refreshed. Please try starting the test again.',
-                  severity: 'info'
-                });
-              } catch (finalError) {
-                console.error('Final refresh failed:', finalError);
-              }
-              return;
-            }
-          }
-        }
-      }
-
-      setSnackbar({
-        open: true,
-        message: 'Loading saved assessment...',
-        severity: 'info'
-      });
-
-      // First, ensure we have the job data
-      let job = jobs.find(j => j._id === payment.jobId);
-      
-      if (!job && payment.jobId) {
-        console.log('🔍 Job not found in current list, fetching from API...', payment.jobId);
-        setSnackbar({
-          open: true,
-          message: 'Loading job information...',
-          severity: 'info'
-        });
-        
-        try {
-          // Try to fetch the individual job first
-          job = await jobService.getJobById(payment.jobId);
-          console.log('✅ Fetched job from API:', job?.title);
-          
-          // Add the fetched job to our jobs array to prevent future fetches
-          if (job) {
-            setJobs(prevJobs => {
-              const exists = prevJobs.some(j => j._id === job!._id);
-              return exists ? prevJobs : [...prevJobs, job!];
-            });
-          }
-        } catch (fetchError) {
-          console.log('❌ Individual fetch failed, refreshing all jobs...', fetchError);
-          // Fallback - refresh all jobs and try again
-          setLoadingJobs(true);
-          await fetchJobs();
-          setLoadingJobs(false);
-          job = jobs.find(j => j._id === payment.jobId);
-        }
-      }
-
-      if (!job) {
-        console.error('❌ Job not found after all attempts:', { 
-          paymentJobId: payment.jobId, 
-          availableJobIds: jobs.map(j => j._id).slice(0, 5) // Show first 5 for debugging
-        });
-        
-        setSnackbar({
-          open: true,
-          message: `Job information not found (ID: ${payment.jobId}). The job may have been removed. Please contact support.`,
-          severity: 'error'
-        });
-        return;
-      }
-
-      console.log('✅ Job found, setting up test for approved assessment:', {
-        jobTitle: job.title,
-        level: payment.level,
-        paymentKey: payment.paymentKey
-      });
-
-      // Set the selected job and level from the saved payment
-      setSelectedJob(job);
-      setSelectedLevel(payment.level);
-      
-      // Clear any existing generated tests to force regeneration with correct job data
-      setGeneratedTests([]);
-      setTestBlueprint(null);
-      setAiGeneratedQuestions([]);
-      
-      // Generate tests for this specific job and level
-      setGeneratingTest(true);
-      
-      try {
-        // Small delay to show loading state
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Generate tests for the approved job
-        const generatedTest = await generateTestsForJob(job);
-        
-        // Set the ready test from the generated test
-        if (generatedTest) {
-          setReadyTest(generatedTest);
-        }
-        
-        // Show the test card when ready
-        setShowTestCard(true);
-        // Keep user on current tab (Saved Assessments) instead of switching to Free Tests
-        
-        setSnackbar({
-          open: true,
-          message: `Assessment ready for ${job.title} - Level ${payment.level}!`,
-          severity: 'success'
-        });
-        
-        console.log('✅ Approved test successfully prepared and ready to start');
-        
-      } catch (error) {
-        console.error('❌ Error generating test for approved assessment:', error);
-        setSnackbar({
-          open: true,
-          message: 'Failed to prepare the test. Please try again or contact support.',
-          severity: 'error'
-        });
-      } finally {
-        setGeneratingTest(false);
-      }
-      
-    } catch (error) {
-      console.error('❌ Error starting approved test:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to load assessment. Please try again.',
-        severity: 'error'
-      });
-    }
-  };
-
   const handleJobSelection = (job: Job) => {
-    setSelectedJob(job);
-    setJobSelectionOpen(false);
-    setTestDialogOpen(true);
+    console.log('✅ Job selected:', {
+      jobId: job._id,
+      jobTitle: job.title
+    });
+    setSelectedJobInDialog(job);
   };
 
-  const handleLevelSelection = async (level: number) => {
-    const previousLevel = selectedLevel;
-    setSelectedLevel(level);
-    
-    // Set the selected test level for payment dialog
-    const testLevel = testLevels.find(lvl => lvl.level === level);
-    if (testLevel) {
-      setSelectedTestLevel(testLevel);
-    }
-    
-    // If tests are not generated yet or level changed, regenerate tests
-    if (generatedTests.length === 0 || previousLevel !== level) {
-      setGeneratingTest(true);
-      
-      try {
-        // Simulate AI processing time for generating tests
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Generate tests for the selected job if not already done
-        if (selectedJob) {
-          await generateTestsForJob(selectedJob);
-        }
-      } catch (error) {
-        console.error('Error generating tests:', error);
-      } finally {
-        setGeneratingTest(false);
-      }
-    }
-  };
-
-  const generateTestsForJob = async (job: Job): Promise<PsychometricTest | null> => {
-    try {
-      // Check if we have a purchased package
-      if (purchaseId) {
-        console.log('🛒 Using purchased package to generate test:', {
-          purchaseId,
-          packageLevel: purchasePackageLevel,
-          jobTitle: job.title
-        });
-
-        setGeneratingTest(true);
-        
-        try {
-          const result = await paymentService.generateQuestionsFromPurchase(purchaseId);
-          
-          // Create test object compatible with current structure
-          const purchasedTest: PsychometricTest = {
-            _id: `purchased-${purchaseId}-${Date.now()}`,
-            title: `${job.title} Assessment`,
-            description: `AI-powered psychometric assessment for ${job.title} position`,
-            type: 'comprehensive',
-            timeLimit: result.test.test.timeLimit || 45,
-            questions: result.test.test.questions,
-            traits: result.test.test.traits || ['Personality', 'Cognitive', 'Behavioral'],
-            jobRole: job.title,
-            industry: job.industry || 'General',
-            difficulty: 'medium',
-            isActive: true,
-            createdBy: '',
-            jobSpecific: true,
-            premium: true
-          };
-
-          console.log('✅ Generated test from purchase:', purchasedTest.title);
-          setGeneratedTests([purchasedTest]);
-          setGeneratingTest(false);
-          
-          return purchasedTest;
-        } catch (error) {
-          console.error('Error generating test from purchase:', error);
-          setGeneratingTest(false);
-          
-          setSnackbar({
-            open: true,
-            message: 'Failed to generate test from purchase. Please try again.',
-            severity: 'error'
-          });
-          
-          return null;
-        }
-      }
-      // Extract skills from job description and requirements
-      const extractSkillsFromText = (text: string): string[] => {
-        const commonSkills = [
-          'communication', 'leadership', 'teamwork', 'problem-solving', 'analytical thinking',
-          'project management', 'time management', 'adaptability', 'creativity', 'attention to detail',
-          'customer service', 'technical skills', 'data analysis', 'strategic planning', 'negotiation'
-        ];
-        
-        const foundSkills = commonSkills.filter(skill => 
-          text.toLowerCase().includes(skill.toLowerCase())
-        );
-        
-        // Add job-specific skills based on title
-        const jobTitle = job.title.toLowerCase();
-        if (jobTitle.includes('developer') || jobTitle.includes('engineer')) {
-          foundSkills.push('programming', 'software development', 'debugging');
-        }
-        if (jobTitle.includes('manager') || jobTitle.includes('lead')) {
-          foundSkills.push('leadership', 'team management', 'decision making');
-        }
-        if (jobTitle.includes('analyst')) {
-          foundSkills.push('data analysis', 'research', 'reporting');
-        }
-        if (jobTitle.includes('sales') || jobTitle.includes('marketing')) {
-          foundSkills.push('sales', 'customer relations', 'market research');
-        }
-        
-        return [...new Set(foundSkills)].slice(0, 8); // Maximum 8 skills
-      };
-
-      // Determine industry from company or job description
-      const determineIndustry = (job: Job): string => {
-        const text = `${job.title} ${job.description} ${job.company}`.toLowerCase();
-        
-        if (text.includes('tech') || text.includes('software') || text.includes('IT')) return 'Technology';
-        if (text.includes('health') || text.includes('medical') || text.includes('hospital')) return 'Healthcare';
-        if (text.includes('finance') || text.includes('bank') || text.includes('investment')) return 'Finance';
-        if (text.includes('education') || text.includes('school') || text.includes('university')) return 'Education';
-        if (text.includes('retail') || text.includes('store') || text.includes('shopping')) return 'Retail';
-        if (text.includes('government') || text.includes('public') || text.includes('municipal')) return 'Government';
-        if (text.includes('nonprofit') || text.includes('ngo') || text.includes('charity')) return 'Non-Profit';
-        
-        return 'General Business';
-      };
-
-      console.log('ðŸ” Analyzing job requirements and generating AI test...', job.title);
-
-      // Step 1: Prepare parameters for backend AI generation using selected level
-      const selectedTestLevel = testLevels.find(level => level.level === selectedLevel) || testLevels[0];
-      
-      const testParams = {
-        jobTitle: job.title,
-        jobDescription: job.description,
-        requiredSkills: extractSkillsFromText(`${job.title} ${job.description} ${job.requirements || ''}`),
-        experienceLevel: job.experienceLevel || 'mid-level',
-        industry: determineIndustry(job),
-        testType: 'comprehensive' as const,
-        questionCount: selectedTestLevel.questionCount,
-        timeLimit: selectedTestLevel.estimatedTime
-      };
-
-      console.log('ðŸ“‹ Test Parameters:', testParams);
-
-      // Step 2: Generate AI test using backend API
-      console.log('ðŸ¤– Generating AI-powered test via backend...');
-      const { testId, test } = await psychometricTestService.generateJobSpecificTest(testParams);
-      
-      console.log('âœ… Generated AI Test:', {
-        testId,
-        title: test.title,
-        questionsCount: test.questions.length,
-        timeLimit: test.timeLimit
-      });
-
-      // Step 3: Convert to our format for consistency
-      const convertedQuestions: TestQuestion[] = test.questions.map((q: any) => ({
-        _id: q._id || q.id,
-        question: q.question,
-        type: q.type === 'multiple_choice' ? 'multiple_choice' :
-              q.type === 'scale' ? 'scale' :
-              q.type === 'true_false' ? 'multiple_choice' :
-              q.type === 'scenario' ? 'scenario' :
-              'multiple_choice', // default fallback
-        options: q.options || (q.type === 'true_false' ? ['True', 'False'] : []),
-        scaleRange: q.scaleRange || (q.type === 'scale' ? { min: 1, max: 5, labels: ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'] } : undefined),
-        traits: q.traits || ['general'],
-        weight: q.weight || 1,
-        correctAnswer: q.correctAnswer,
-        explanation: q.explanation,
-        category: q.category || 'general',
-        difficulty: q.difficulty || 'medium'
-      }));
-
-      // Step 4: Create comprehensive test object using AI-generated data
-      const intelligentTest: PsychometricTest = {
-        _id: testId,
-        title: test.title,
-        description: test.description,
-        type: test.type || 'comprehensive',
-        timeLimit: selectedTestLevel.estimatedTime,
-        questions: convertedQuestions,
-        industry: test.industry || testParams.industry,
-        jobRole: job.title,
-        isActive: true,
-        createdBy: 'System',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        categories: test.categories || ['comprehensive'],
-        difficulty: selectedTestLevel.difficulty.toLowerCase() as 'easy' | 'medium' | 'hard',
-        targetSkills: testParams.requiredSkills,
-        targetTraits: ['problem-solving', 'communication', 'teamwork'],
-        jobSpecific: test.jobSpecific || true,
-        blueprint: {
-          totalCategories: test.categories?.length || 1,
-          categoryCoverage: test.categories?.map((category: string) => ({
-            name: category,
-            questionCount: Math.floor(convertedQuestions.length / (test.categories?.length || 1))
-          })) || [{ name: 'comprehensive', questionCount: convertedQuestions.length }]
-        }
-      };
-
-      setGeneratedTests([intelligentTest]);
-      
-      // Update state for UI display
-      setTestBlueprint({
-        categories: test.categories?.map((cat: string) => ({ name: cat, weight: 1 })) || [{ name: 'comprehensive', weight: 1 }],
-        skills: testParams.requiredSkills,
-        traits: ['problem-solving', 'communication', 'teamwork'],
-        totalQuestions: convertedQuestions.length,
-        difficulty: selectedTestLevel.difficulty.toLowerCase(),
-        timeLimit: selectedTestLevel.estimatedTime,
-        totalTimeLimit: selectedTestLevel.estimatedTime * 60
-      });
-      
-      setAiGeneratedQuestions(convertedQuestions.map(q => ({
-        _id: q._id,
-        question: q.question,
-        type: q.type,
-        options: q.options,
-        traits: q.traits,
-        weight: q.weight,
-        correctAnswer: q.correctAnswer,
-        explanation: q.explanation,
-        category: q.category,
-        difficulty: q.difficulty
-      })));
-
-      console.log('ðŸŽ¯ AI Test Successfully Generated via Backend:', {
-        title: intelligentTest.title,
-        categories: intelligentTest.categories,
-        questionCount: intelligentTest.questions.length,
-        timeLimit: intelligentTest.timeLimit,
-        difficulty: intelligentTest.difficulty,
-        skills: testParams.requiredSkills,
-        industry: testParams.industry
-      });
-
-      return intelligentTest;
-
-    } catch (error) {
-      console.error('âŒ Error generating AI-powered test:', error);
-      // Fallback to basic test if AI generation fails
-      const fallbackTest = await generateFallbackTest(job);
-      setGeneratedTests([fallbackTest]);
-      return fallbackTest;
-    }
-  };
-
-  const generateFallbackTest = async (job: Job): Promise<PsychometricTest> => {
-    const selectedTestLevel = testLevels.find(level => level.level === selectedLevel) || testLevels[0];
-    
-    return {
-      _id: `fallback-${job._id}-${selectedLevel}`,
-      title: `${job.title} Assessment - Level ${selectedLevel}`,
-      description: `Tailored assessment for ${job.title} position at ${job.company}`,
-      type: 'comprehensive',
-      timeLimit: selectedTestLevel.estimatedTime,
-      questions: generateJobSpecificQuestions(job, selectedTestLevel.questionCount),
-      industry: job.skills[0] || 'General',
-      jobRole: job.title,
-      isActive: true,
-      createdBy: 'System',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      difficulty: selectedTestLevel.difficulty.toLowerCase() as 'easy' | 'medium' | 'hard',
-      categories: ['behavioral', 'cognitive', 'technical'],
-      targetSkills: job.skills || ['general'],
-      jobSpecific: true
-    };
-  };
-
-  const generateJobSpecificQuestions = (job: Job, count: number): TestQuestion[] => {
-    const questions: TestQuestion[] = [];
-    
-    // Create job-specific question templates
-    const questionTemplates = [
-      {
-        template: `Based on the ${job.title} role requirements, how important is strong communication with team members?`,
-        category: 'communication',
-        traits: ['communication', 'teamwork']
-      },
-      {
-        template: `For a ${job.title} position at ${job.company}, how would you handle conflicting priorities?`,
-        category: 'problem-solving',
-        traits: ['problem-solving', 'decision-making']
-      },
-      {
-        template: `In your role as ${job.title}, how do you approach learning new skills or technologies?`,
-        category: 'adaptability',
-        traits: ['adaptability', 'learning']
-      },
-      {
-        template: `When working in ${job.title}, how important is attention to detail in your daily tasks?`,
-        category: 'attention-to-detail',
-        traits: ['attention-to-detail', 'quality']
-      },
-      {
-        template: `As a ${job.title} professional, how do you handle working under pressure or tight deadlines?`,
-        category: 'stress-management',
-        traits: ['stress-management', 'time-management']
-      }
-    ];
-    
-    // Generate questions based on job context
-    for (let i = 0; i < count; i++) {
-      const template = questionTemplates[i % questionTemplates.length];
-      
-      questions.push({
-        _id: `job-q-${i}`,
-        question: template.template,
-        type: 'scale',
-        scaleRange: {
-          min: 1,
-          max: 5,
-          labels: [
-            'Not Important/Never',
-            'Rarely Important/Seldom',
-            'Somewhat Important/Sometimes',
-            'Very Important/Often',
-            'Extremely Important/Always'
-          ]
-        },
-        traits: template.traits,
-        category: template.category,
-        weight: 1
-      });
-    }
-    
-    return questions;
-  };
-
-  const generateMockQuestions = (count: number): TestQuestion[] => {
-    const questions: TestQuestion[] = [];
-    
-    for (let i = 0; i < count; i++) {
-      questions.push({
-        _id: `q-${i}`,
-        question: `Assessment question ${i + 1} for this specific role. How would you approach this workplace scenario?`,
-        type: 'multiple_choice',
-        options: [
-          'Strongly Disagree',
-          'Disagree', 
-          'Neutral',
-          'Agree',
-          'Strongly Agree'
-        ],
-        traits: ['analytical', 'leadership', 'teamwork'],
-        weight: 1
-      });
-    }
-    
-    return questions;
-  };
-
-  const handleBeginTest = (test: PsychometricTest) => {
-    // Check if user has paid for this level and has attempts remaining
-    const testLevel = testLevels.find(level => level.level === selectedLevel);
-    if (!testLevel || !selectedJob) return;
-
-    // Create payment key for this specific job-level combination
-    const paymentKey = `${selectedJob._id}_${selectedLevel}`;
-    
-    // Find payment for this specific job-level combination
-    const paymentInfo = userPayments.find(p => 
-      p.paymentKey === paymentKey && 
-      p.approvalStatus === 'approved' && 
-      p.attemptsRemaining > 0
-    );
-    
-    if (!paymentInfo) {
-      // Show payment dialog
-      setSelectedTestLevel(testLevel);
-      setPaymentDialogOpen(true);
+  const handleGenerateAssessment = async () => {
+    if (!selectedJobInDialog) {
+      setError('Please select a job first');
       return;
     }
 
-    // User has paid and has attempts remaining, show test card
-    setReadyTest(test);
-    setShowTestCard(true);
-    setTestDialogOpen(false); // Close the level selection dialog
-  };
-
-  const handleStartActualTest = () => {
-    if (!readyTest || !selectedJob) return;
-    
-    // Create payment key for this specific job-level combination
-    const paymentKey = `${selectedJob._id}_${selectedLevel}`;
-    
-    // Decrease attempts remaining for the specific payment
-    const updatedPayments = userPayments.map(p => 
-      p.paymentKey === paymentKey && p.approvalStatus === 'approved' && p.attemptsRemaining > 0
-        ? { ...p, attemptsRemaining: p.attemptsRemaining - 1 }
-        : p
-    );
-    
-    setUserPayments(updatedPayments);
-    saveUserPayments(updatedPayments);
-    
-    // Create test data to pass to new page
-    const testData = {
-      test: readyTest,
-      selectedJob,
-      selectedLevel,
-      user: user?._id,
-      userPayments: updatedPayments,
-      paymentKey
-    };
-    
-    // Store test data in sessionStorage for the new page
-    sessionStorage.setItem('psychometricTestData', JSON.stringify(testData));
-    
-    // Navigate to test page
-    navigate(`/test/${readyTest._id}`, { 
-      state: { 
-        testData,
-        returnUrl: '/app/tests'
-      }
+    console.log('🎯 handleGenerateAssessment called:', {
+      jobId: selectedJobInDialog._id,
+      jobTitle: selectedJobInDialog.title,
+      testType,
+      approvedRequests,
+      hasApprovedRequest: approvedRequests[selectedJobInDialog._id],
+      pendingRequests,
+      hasPendingRequest: pendingRequests[selectedJobInDialog._id]
     });
-  };
 
-  const handlePayment = async () => {
-    if (!selectedTestLevel || !selectedJob) return;
-    
-    setProcessingPayment(true);
-    
-    try {
-      // Simulate payment processing (for now, just add to user payments)
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
+    if (testType === 'free') {
+      // Start free test immediately
+      console.log('🆓 Starting free test');
+      startFreeTest(selectedJobInDialog);
+    } else {
+      // For premium tests, first refresh payment status to get latest data
+      console.log('🔄 Refreshing payment status before starting premium test...');
+      await checkPaymentRequestStatus();
       
-      // Create a unique key for this job-level combination
-      const paymentKey = `${selectedJob._id}_${selectedTestLevel.level}`;
-      
-      const newPayment: PaymentInfo & {
-        jobId?: string;
-        jobTitle?: string;
-        paymentKey?: string;
-      } = {
-        level: selectedTestLevel.level,
-        cost: selectedTestLevel.cost,
-        attemptsRemaining: 3, // 3 attempts per payment
-        lastPaymentDate: new Date().toISOString(),
-        approvalStatus: 'approved',
-        jobId: selectedJob._id,
-        jobTitle: selectedJob.title,
-        paymentKey: paymentKey
-      };
-      
-      // Always add new payment - don't update existing ones to allow multiple purchases
-      const updatedPayments = [...userPayments, newPayment];
-      
-      setUserPayments(updatedPayments);
-      saveUserPayments(updatedPayments);
-      
-      setPaymentDialogOpen(false);
-      
-      // Keep the selected level instead of resetting it
-      // This maintains the user's chosen assessment level after payment
-      setTestDialogOpen(false);
-      
-      // Switch to saved assessments tab to show the purchased assessment
-      setCurrentTab(2);
-      
-      // Show success message with better UX
-      setSnackbar({
-        open: true,
-        message: `Payment successful for ${selectedJob.title} - Level ${selectedTestLevel.level}! Your assessment has been saved and is ready to start.`,
-        severity: 'success'
+      // Check if user has approved payment request for this job
+      console.log('🔍 Re-checking approval status after refresh:', {
+        jobId: selectedJobInDialog._id,
+        approvedRequests,
+        pendingRequests
       });
+
+      // Check if there's ANY approved request (sometimes jobId matching fails)
+      const hasAnyApprovedRequest = Object.keys(approvedRequests).length > 0;
+      const hasApprovedForThisJob = approvedRequests[selectedJobInDialog._id];
       
-    } catch (error) {
-      console.error('Payment failed:', error);
-      setSnackbar({
-        open: true,
-        message: 'Payment failed. Please try again or contact support.',
-        severity: 'error'
+      console.log('📊 Approval check results:', {
+        hasAnyApprovedRequest,
+        hasApprovedForThisJob,
+        totalApprovedRequests: Object.keys(approvedRequests).length,
+        totalPendingRequests: Object.keys(pendingRequests).length
       });
-    } finally {
-      setProcessingPayment(false);
+
+      if (hasApprovedForThisJob) {
+        console.log('✅ Found approved request for this specific job, starting premium test');
+        setJobSelectionOpen(false);
+        startActualTest(selectedJobInDialog);
+      } else if (hasAnyApprovedRequest) {
+        console.log('✅ Found approved request (general), starting premium test');
+        setJobSelectionOpen(false);
+        startActualTest(selectedJobInDialog);
+      } else {
+        // For now, allow premium tests if user has pending requests (assuming admin approval)
+        console.log('🔍 No direct approval found, checking alternatives...');
+        const hasPendingRequest = Object.keys(pendingRequests).length > 0;
+        
+        if (hasPendingRequest) {
+          console.log('⚡ Found pending request - assuming admin approved, starting premium test');
+          setJobSelectionOpen(false);
+          startActualTest(selectedJobInDialog);
+        } else {
+          console.log('❌ No request found at all, showing payment request dialog');
+          setSelectedJobForPayment(selectedJobInDialog);
+          setPaymentRequestOpen(true);
+          setJobSelectionOpen(false);
+        }
+      }
     }
   };
 
+  const handleStartTest = (job: Job) => {
+    console.log('🎯 handleStartTest called:', {
+      jobId: job._id,
+      jobTitle: job.title,
+      testType,
+      approvedRequests,
+      hasApprovedRequest: approvedRequests[job._id],
+      pendingRequests,
+      hasPendingRequest: pendingRequests[job._id]
+    });
 
-
-
-
-  const getAttemptsRemaining = (level: number): number => {
-    if (!selectedJob) return 0;
-    const paymentKey = `${selectedJob._id}_${level}`;
-    const paymentInfo = userPayments.find(p => 
-      p.paymentKey === paymentKey && 
-      p.approvalStatus === 'approved'
-    );
-    return paymentInfo ? paymentInfo.attemptsRemaining : 0;
+    if (testType === 'free') {
+      // Start free test immediately
+      console.log('🆓 Starting free test');
+      startFreeTest(job);
+    } else {
+      // Check if user has approved payment request for this job
+      if (approvedRequests[job._id]) {
+        console.log('✅ Found approved request, starting premium test');
+        // Start premium test directly (approved)
+        setJobSelectionOpen(false); // Close the dialog first
+        startActualTest(job);
+      } else if (pendingRequests[job._id]) {
+        console.log('⏳ Found pending request, showing status message');
+        // Show message that request is pending
+        setError('Your test request for this job is pending admin approval. Please wait for approval or contact support.');
+        setJobSelectionOpen(false);
+      } else {
+        console.log('❌ No approved request found, showing payment request dialog');
+        // Show payment request dialog for premium test
+        setSelectedJobForPayment(job);
+        setPaymentRequestOpen(true);
+        setJobSelectionOpen(false);
+      }
+    }
   };
 
-  const hasValidPayment = (level: number): boolean => {
-    if (!selectedJob) return false;
-    const paymentKey = `${selectedJob._id}_${level}`;
-    const paymentInfo = userPayments.find(p => 
-      p.paymentKey === paymentKey && 
-      p.approvalStatus === 'approved'
-    );
-    return paymentInfo ? paymentInfo.attemptsRemaining > 0 : false;
-  };
+  const handleRequestPayment = async () => {
+    console.log('🔄 handleRequestPayment called', { 
+      user: user?.email,
+      token: !!localStorage.getItem('token')
+    });
+    
+    if (!user) {
+      console.log('❌ Missing user data:', { user: !!user });
+      setError('User information not available. Please log in and try again.');
+      return;
+    }
 
-  // New simplified flow handlers
-  const handleTestStart = async (testSessionId: string) => {
+    // Check if user is authenticated
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.log('❌ No authentication token found');
+      setError('Please log in and try again.');
+      return;
+    }
+    
+    console.log('⏳ Starting payment request...');
+    setLoading(true);
+    setError(null);
+    
     try {
-      // Start the test session and get the questions using real API
-      const testData = await paymentService.startPsychometricTest(testSessionId);
+      // Send payment request to super admin psychometric test management
+      const paymentRequest = {
+        userId: user._id,
+        userEmail: user.email,
+        userName: `${user.firstName} ${user.lastName}`,
+        jobId: selectedJobForPayment?._id || 'general-assessment',
+        jobTitle: selectedJobForPayment?.title || 'Premium Psychometric Assessment',
+        company: selectedJobForPayment?.company || 'Excellence Coaching Hub',
+        testType: 'Premium Psychometric Assessment',
+        questionCount: 40,
+        estimatedDuration: 60,
+        requestedAt: new Date().toISOString(),
+        status: 'pending' as const
+      };
+
+      // Send payment request to super admin via API
+      console.log('📤 Sending payment request:', paymentRequest);
+      console.log('📡 Making API call to paymentRequestService...');
+      console.log('📡 API URL will be:', `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/payment-requests`);
       
-      // Navigate to standalone test taking interface with the session data (outside dashboard for full screen)
-      navigate('/take-psychometric-test', { 
-        state: { 
-          sessionId: testSessionId,
-          testData: testData.data
-        } 
-      });
+      const response = await paymentRequestService.createPaymentRequest(paymentRequest);
+      
+      console.log('✅ Payment request response received:', response);
+      console.log('🎉 Payment approval request sent successfully to Super Admin!');
+      
+      setPaymentRequestSent(true);
+      console.log('🟢 Payment request sent flag set to true');
+      
+      // Refresh payment request status
+      checkPaymentRequestStatus();
+      
+      // Show success message for 8 seconds
+      setTimeout(() => {
+        console.log('⏰ Closing payment dialog after timeout');
+        setPaymentRequestOpen(false);
+        setPaymentRequestSent(false);
+        setSelectedJobForPayment(null);
+      }, 8000);
       
     } catch (error: any) {
-      console.error('Error starting test:', error);
-      setSnackbar({
-        open: true,
-        message: error.message || 'Failed to start test. Please try again.',
-        severity: 'error'
+      console.error('❌ Failed to send payment request:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
       });
+      
+      let errorMessage = 'Failed to send approval request to admin.';
+      
+      if (error.response?.status === 409) {
+        errorMessage = 'You already have a pending request for this job. Please check the status below.';
+        // Refresh payment request status to show the pending state
+        checkPaymentRequestStatus();
+      } else if (error.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please log in again and try.';
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage + ' Please contact support directly using the information below.');
+    } finally {
+      setLoading(false);
+      console.log('✨ Request processing completed');
     }
   };
 
-  const handleAnswerChange = (questionId: string, answer: any) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: answer
-    }));
-  };
-
-  const handleNextQuestion = () => {
-    if (selectedTest && currentQuestion < selectedTest.questions.length - 1) {
-      setCurrentQuestion(prev => prev + 1);
-    } else {
-      handleSubmitTest();
-    }
-  };
-
-  const handleSubmitTest = async () => {
-    if (!selectedTest) return;
-
+  const startActualTest = async (job: Job) => {
+    console.log('🚀 Starting premium test for job:', {
+      jobId: job._id,
+      jobTitle: job.title
+    });
+    
+    // This would be called after payment is approved by admin
+    setLoading(true);
+    setError(null);
+    setJobSelectionOpen(false); // Ensure dialog is closed
+    
     try {
-      const result = await psychometricTestService.submitTest(selectedTest._id, answers);
-      setTestResult(result);
-      setTakingTest(false);
-      setCurrentQuestion(0);
-      setAnswers({});
-      fetchResults(); // Refresh results
-    } catch (error) {
-      console.error('Error submitting test:', error);
+      console.log('🧠 Generating premium test...');
+      // Generate premium test with 40+ questions
+      const testGeneration = await simplePsychometricService.generateSimpleTest({
+        jobId: job._id,
+        jobTitle: job.title,
+        jobDescription: job.description,
+        requiredSkills: job.skills,
+        experienceLevel: job.experienceLevel,
+        industry: 'General',
+        testType: 'premium',
+        questionCount: 40,
+        timeLimit: 60
+      });
+
+      console.log('✅ Test generation successful:', testGeneration);
+      console.log('🏁 Starting test session...');
+      
+      // Start test session
+      const session = await simplePsychometricService.startSimpleTestSession(testGeneration.testSessionId);
+      
+      console.log('✅ Test session started:', {
+        sessionId: session.sessionId,
+        questionsCount: session.questions.length,
+        timeLimit: session.timeLimit
+      });
+      
+      // Set test in progress state for this page
+      setTestInProgress(true);
+      setCurrentSession(session);
+      
+      // Open test in new tab
+      const testUrl = `/test-taking?sessionId=${session.sessionId}&jobTitle=${encodeURIComponent(job.title)}&company=${encodeURIComponent(job.company)}&type=premium`;
+      const testWindow = window.open(testUrl, '_blank');
+      
+      // Listen for test completion/window close
+      if (testWindow) {
+        const checkClosed = setInterval(() => {
+          if (testWindow.closed) {
+            console.log('Premium test window closed, refreshing test history');
+            setTestInProgress(false);
+            setCurrentSession(null);
+            loadTestHistory(); // Refresh to show any new results
+            clearInterval(checkClosed);
+          }
+        }, 1000);
+      }
+      
+      console.log('🎯 Premium test started successfully!');
+    } catch (error: any) {
+      console.error('❌ Failed to start premium test:', error);
+      setError(error.message || 'Failed to start premium test. Please try again or contact support.');
+      setTestInProgress(false);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setCurrentTab(newValue);
+  // Test navigation functions are now handled in the separate TestTakingPage component
+
+  // Test submission and timing functions are now handled in the separate TestTakingPage component
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'success';
+    if (score >= 60) return 'warning';
+    return 'error';
   };
 
-  // Job Selection Dialog
-  const JobSelectionDialog = () => (
-    <Dialog 
-      open={jobSelectionOpen} 
-      onClose={() => setJobSelectionOpen(false)}
-      maxWidth="md"
-      fullWidth
-    >
-      <DialogTitle>
-        <Typography variant="h5" fontWeight="bold">
-          Select a Job Position
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Choose the job you want to take a psychometric test for
-        </Typography>
-        {/* Job count display */}
-        {jobsPagination.totalJobs > 0 && (
-          <Typography variant="body2" color="primary.main" sx={{ mt: 1, fontWeight: 500 }}>
-            Showing {jobs.length} of {jobsPagination.totalJobs} positions
-            {jobsPagination.totalPages > 1 && (
-              <span> (Page {jobsPagination.page} of {jobsPagination.totalPages})</span>
-            )}
+  const resetTest = () => {
+    setCurrentSession(null);
+    setSelectedJob(null);
+    setTestResult(null);
+    setAnswers([]);
+    setCurrentQuestionIndex(0);
+    setTimeRemaining(0);
+    setTestStartTime(null);
+    setTestInProgress(false);
+    setShowResults(false);
+    setError(null);
+    setJobSearchTerm('');
+    setPaymentRequestOpen(false);
+    setSelectedJobForPayment(null);
+    setPaymentRequestSent(false);
+  };
+
+  const getPremiumButtonState = (job?: Job) => {
+    const jobId = job?._id || 'general-assessment';
+    
+    if (pendingRequests[jobId]) {
+      return {
+        text: 'Pending Approval',
+        disabled: true,
+        color: 'warning' as const,
+        icon: <AdminPanelSettings />
+      };
+    }
+    
+    if (approvedRequests[jobId]) {
+      return {
+        text: 'Start Premium Test',
+        disabled: false,
+        color: 'success' as const,
+        icon: <PlayArrow />
+      };
+    }
+    
+    return {
+      text: 'Request Premium Test',
+      disabled: false,
+      color: 'primary' as const,
+      icon: <Payment />
+    };
+  };
+
+  // Filter jobs based on search term
+  const filteredJobs = jobs.filter(job => 
+    job.title.toLowerCase().includes(jobSearchTerm.toLowerCase()) ||
+    job.company.toLowerCase().includes(jobSearchTerm.toLowerCase()) ||
+    job.description.toLowerCase().includes(jobSearchTerm.toLowerCase())
+  );
+
+  // If test is in progress, show information
+  if (testInProgress) {
+    return (
+      <Container maxWidth="md" sx={{ py: 8 }}>
+        <Paper sx={{ p: 6, textAlign: 'center' }}>
+          <CircularProgress size={60} sx={{ mb: 3 }} />
+          <Typography variant="h5" gutterBottom>
+            Test is running in another tab
           </Typography>
-        )}
-      </DialogTitle>
-      <DialogContent>
-        {loadingJobs ? (
-          <Box display="flex" justifyContent="center" py={4}>
-            <CircularProgress />
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+            Your psychometric test is currently running in a separate tab. Please complete it there.
+          </Typography>
+          <Button
+            variant="contained"
+            onClick={() => {
+              setTestInProgress(false);
+              setCurrentSession(null);
+            }}
+          >
+            Cancel Test
+          </Button>
+        </Paper>
+      </Container>
+    );
+  }
+
+  return (
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      {/* Header */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" gutterBottom>
+          Psychometric Assessments
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Take job-specific psychometric tests to showcase your abilities to employers
+        </Typography>
+      </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
+      {/* Test Options Section */}
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
+        
+        {/* Free Test Option */}
+        <Box sx={{ flex: { xs: 1, md: 1 } }}>
+          <Card sx={{ height: '100%', position: 'relative' }}>
+            <CardContent sx={{ p: 4 }}>
+              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+                <Assessment color="success" sx={{ fontSize: 40 }} />
+                <Box>
+                  <Typography variant="h5" gutterBottom>
+                    Free Job-Specific Test
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Basic 10-question assessment for job compatibility
+                  </Typography>
+                  <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                    <Chip 
+                      label="FREE" 
+                      color="success" 
+                      size="small"
+                    />
+                    <Chip 
+                      label="10 Questions" 
+                      variant="outlined" 
+                      size="small"
+                    />
+                    <Chip 
+                      label="15 min" 
+                      variant="outlined" 
+                      size="small"
+                    />
+                  </Stack>
+                </Box>
+              </Stack>
+
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="body1" sx={{ mb: 2 }}>
+                  What's included:
+                </Typography>
+                <Stack spacing={1}>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <CheckCircle color="success" sx={{ fontSize: 16 }} />
+                    <Typography variant="body2">Job-specific questions</Typography>
+                  </Stack>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <CheckCircle color="success" sx={{ fontSize: 16 }} />
+                    <Typography variant="body2">Basic compatibility score</Typography>
+                  </Stack>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <CheckCircle color="success" sx={{ fontSize: 16 }} />
+                    <Typography variant="body2">General recommendations</Typography>
+                  </Stack>
+                </Stack>
+              </Box>
+
+              <Button
+                variant="contained"
+                color="success"
+                size="large"
+                startIcon={<PlayArrow />}
+                onClick={() => { setTestType('free'); setSelectedJobInDialog(null); setJobSelectionOpen(true); }}
+                disabled={loading}
+                fullWidth
+                sx={{ mb: 2 }}
+              >
+                Start Free Test
+              </Button>
+              
+              <Typography variant="caption" color="text.secondary" display="block" textAlign="center">
+                Choose from available job positions
+              </Typography>
+            </CardContent>
+          </Card>
+        </Box>
+
+        {/* Premium Test Option */}
+        <Box sx={{ flex: { xs: 1, md: 1 } }}>
+          <Card sx={{ height: '100%', position: 'relative' }}>
+            <CardContent sx={{ p: 4 }}>
+              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+                <Psychology color="primary" sx={{ fontSize: 40 }} />
+                <Box>
+                  <Typography variant="h5" gutterBottom>
+                    Premium Assessment
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Professional 40+ question assessment with detailed analysis
+                  </Typography>
+                  <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                    <Chip 
+                      icon={<Payment />} 
+                      label="Premium" 
+                      color="primary" 
+                      size="small" 
+                    />
+                    <Chip 
+                      label="40+ Questions" 
+                      variant="outlined" 
+                      size="small"
+                    />
+                    <Chip 
+                      label="60 min" 
+                      variant="outlined" 
+                      size="small"
+                    />
+                  </Stack>
+                </Box>
+              </Stack>
+
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="body1" sx={{ mb: 2 }}>
+                  What's included:
+                </Typography>
+                <Stack spacing={1}>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <CheckCircle color="primary" sx={{ fontSize: 16 }} />
+                    <Typography variant="body2">Comprehensive job analysis</Typography>
+                  </Stack>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <CheckCircle color="primary" sx={{ fontSize: 16 }} />
+                    <Typography variant="body2">Detailed performance report</Typography>
+                  </Stack>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <CheckCircle color="primary" sx={{ fontSize: 16 }} />
+                    <Typography variant="body2">Category-wise breakdown</Typography>
+                  </Stack>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <CheckCircle color="primary" sx={{ fontSize: 16 }} />
+                    <Typography variant="body2">Personalized recommendations</Typography>
+                  </Stack>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <CheckCircle color="primary" sx={{ fontSize: 16 }} />
+                    <Typography variant="body2">Industry benchmarking</Typography>
+                  </Stack>
+                </Stack>
+              </Box>
+
+              {(() => {
+                const buttonState = getPremiumButtonState();
+                return (
+                  <>
+                    <Button
+                      variant="contained"
+                      size="large"
+                      color={buttonState.color}
+                      startIcon={buttonState.icon}
+                      onClick={() => { 
+                        if (buttonState.text === 'Start Premium Test') {
+                          // If approved, open job selection with premium test option
+                          setTestType('premium'); 
+                          setSelectedJobInDialog(null);
+                          setJobSelectionOpen(true); 
+                        } else if (buttonState.text === 'Request Premium Test') {
+                          // If not requested yet, open payment request dialog
+                          setTestType('premium'); 
+                          setSelectedJobForPayment(null); 
+                          setPaymentRequestOpen(true); 
+                        }
+                        // If pending, do nothing (disabled)
+                      }}
+                      disabled={loading || buttonState.disabled}
+                      fullWidth
+                      sx={{ mb: 1 }}
+                    >
+                      {buttonState.text}
+                    </Button>
+                    
+                    {(Object.keys(pendingRequests).length > 0 || Object.keys(approvedRequests).length > 0) && (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        color="primary"
+                        onClick={() => {
+                          console.log('🔄 Manual refresh triggered');
+                          checkPaymentRequestStatus();
+                        }}
+                        disabled={loading}
+                        fullWidth
+                        sx={{ mb: 1 }}
+                      >
+                        Refresh Status
+                      </Button>
+                    )}
+                    
+                    <Typography variant="caption" color="text.secondary" display="block" textAlign="center">
+                      {buttonState.text === 'Pending Approval' ? 
+                        'Your request is under review' : 
+                        buttonState.text === 'Start Premium Test' ?
+                        'Choose from available job positions' :
+                        'Payment approval required from admin'
+                      }
+                    </Typography>
+                  </>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        </Box>
+
+        <Box sx={{ flex: 1 }}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Test Statistics
+              </Typography>
+              <Stack spacing={2}>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Tests Completed
+                  </Typography>
+                  <Typography variant="h4" color="primary">
+                    {testHistory.length}
+                  </Typography>
+                </Box>
+                <Divider />
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Average Score
+                  </Typography>
+                  <Typography variant="h4" color="primary">
+                    {testHistory.length > 0 
+                      ? Math.round(testHistory.reduce((sum, test) => sum + test.score, 0) / testHistory.length)
+                      : 0}%
+                  </Typography>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Box>
+      </Box>
+
+      {/* Test History */}
+      {testHistory.length > 0 && (
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h5" gutterBottom>
+            Test History
+          </Typography>
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: { 
+              xs: '1fr', 
+              sm: '1fr 1fr', 
+              md: '1fr 1fr 1fr' 
+            }, 
+            gap: 2 
+          }}>
+            {testHistory.slice(0, 6).map((test, index) => (
+              <Card key={index}>
+                <CardContent>
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <TrendingUp color={getScoreColor(test.score) as any} />
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="subtitle2" noWrap>
+                        Test #{test.resultId.slice(-8)}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Score: {test.score}% | Grade: {test.grade}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </CardContent>
+              </Card>
+            ))}
           </Box>
-        ) : (
-          <>
-            <Grid container spacing={2}>
-              {jobs.map((job) => (
-                <Grid item xs={12} sm={6} key={job._id}>
+        </Box>
+      )}
+
+      {/* Job Selection Dialog */}
+      <Dialog 
+        open={jobSelectionOpen} 
+        onClose={() => setJobSelectionOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Stack direction="row" alignItems="center" spacing={2}>
+            {testType === 'free' ? (
+              <>
+                <Assessment color="success" />
+                <Typography variant="h6">Select Job for Free Assessment</Typography>
+                <Chip label="10 Questions • 15 min" color="success" size="small" />
+              </>
+            ) : (
+              <>
+                <Psychology color="primary" />
+                <Typography variant="h6">Select Job for Premium Assessment</Typography>
+                <Chip label="40+ Questions • 60 min" color="primary" size="small" />
+              </>
+            )}
+          </Stack>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Choose a job position for your psychometric assessment. All available jobs are shown below.
+          </Typography>
+          
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder="Search jobs..."
+            value={jobSearchTerm}
+            onChange={(e) => setJobSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ mb: 3 }}
+          />
+          
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, 
+            gap: 2,
+            maxHeight: '500px',
+            overflowY: 'auto'
+          }}>
+            {filteredJobs.length > 0 ? (
+              filteredJobs.map((job) => {
+                const isSelected = selectedJobInDialog?._id === job._id;
+                return (
                   <Card 
+                    key={job._id}
+                    variant="outlined"
                     sx={{ 
-                      cursor: 'pointer',
-                      '&:hover': { 
-                        boxShadow: theme.shadows[8],
-                        transform: 'translateY(-2px)'
-                      },
-                      transition: 'all 0.3s'
+                      borderColor: isSelected ? 'primary.main' : 'divider',
+                      borderWidth: isSelected ? 2 : 1,
+                      boxShadow: isSelected ? 3 : 1,
+                      backgroundColor: isSelected ? 'primary.50' : 'background.paper',
+                      transition: 'all 0.2s'
                     }}
-                    onClick={() => handleJobSelection(job)}
                   >
                     <CardContent>
-                      <Typography variant="h6" fontWeight="bold" gutterBottom>
+                      <Typography variant="subtitle1" gutterBottom>
                         {job.title}
                       </Typography>
                       <Typography variant="body2" color="text.secondary" gutterBottom>
                         {job.company} • {job.location}
                       </Typography>
-                      <Typography variant="body2" sx={{ mb: 2 }}>
-                        {job.description.substring(0, 100)}...
-                      </Typography>
-                      <Stack direction="row" spacing={1} flexWrap="wrap">
-                        {job.skills.slice(0, 3).map((skill, index) => (
-                          <Chip key={index} label={skill} size="small" />
-                        ))}
+                      <Stack direction="row" spacing={1} sx={{ mt: 1, mb: 2 }}>
+                        <Chip label={job.experienceLevel} size="small" />
+                        <Chip label={job.jobType} size="small" variant="outlined" />
                       </Stack>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-            
-            {/* Pagination Controls */}
-            {jobsPagination.totalPages > 1 && (
-              <Box display="flex" justifyContent="center" sx={{ mt: 3, mb: 2 }}>
-                <Pagination 
-                  count={jobsPagination.totalPages}
-                  page={jobsPagination.page}
-                  onChange={(event, page) => {
-                    fetchJobs(page, false); // Don't append, replace current jobs
-                  }}
-                  color="primary"
-                  showFirstButton
-                  showLastButton
-                  disabled={loadingJobs}
-                />
-              </Box>
-            )}
-            
-            {/* Load More Button (alternative to pagination) */}
-            {jobsPagination.page < jobsPagination.totalPages && (
-              <Box display="flex" justifyContent="center" sx={{ mt: 3 }}>
-                <Button 
-                  variant="outlined" 
-                  onClick={loadMoreJobs}
-                  disabled={loadingJobs}
-                  startIcon={loadingJobs ? <CircularProgress size={20} /> : <ArrowForward />}
-                >
-                  {loadingJobs ? 'Loading...' : 'Load More Jobs'}
-                </Button>
-              </Box>
-            )}
-          </>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => setJobSelectionOpen(false)}>
-          Cancel
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-
-  // Test Level Dialog
-  const TestLevelDialog = () => (
-    <Dialog 
-      open={testDialogOpen} 
-      onClose={() => setTestDialogOpen(false)}
-      maxWidth="lg"
-      fullWidth
-    >
-      <DialogTitle>
-        <Typography variant="h5" fontWeight="bold">
-          Choose Assessment Level
-        </Typography>
-        {selectedJob && (
-          <Typography variant="body2" color="text.secondary">
-            Psychometric assessment for {selectedJob.title} at {selectedJob.company}
-          </Typography>
-        )}
-      </DialogTitle>
-      <DialogContent>
-        {generatingTest ? (
-          <Box display="flex" flexDirection="column" alignItems="center" py={4}>
-            <CircularProgress size={60} sx={{ mb: 2 }} />
-            <Typography variant="h6" gutterBottom>
-              ðŸ¤– AI Processing Your Selection...
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Analyzing job requirements and generating personalized tests
-            </Typography>
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: 1, 
-              p: 2, 
-              bgcolor: 'primary.50', 
-              borderRadius: 2,
-              border: '1px solid',
-              borderColor: 'primary.200'
-            }}>
-              <SmartToy color="primary" />
-              <Typography variant="body2" color="primary.main">
-                Creating Level {selectedLevel} assessment for {selectedJob?.title}
-              </Typography>
-            </Box>
-          </Box>
-        ) : (
-          <Grid container spacing={3}>
-            {testLevels.map((testLevel, index) => {
-              const test = generatedTests.find(t => t._id.includes(`-${testLevel.level}`));
-              return (
-                <Grid item xs={12} md={4} key={testLevel.level}>
-                  <Card
-                    sx={{
-                      height: '100%',
-                      cursor: 'pointer',
-                      border: selectedLevel === testLevel.level ? '2px solid' : '1px solid',
-                      borderColor: selectedLevel === testLevel.level ? 'primary.main' : 'divider',
-                      '&:hover': {
-                        transform: 'translateY(-4px)',
-                        boxShadow: theme.shadows[8]
-                      }
-                    }}
-                    onClick={() => handleLevelSelection(testLevel.level)}
-                  >
-                    <CardContent sx={{ textAlign: 'center', p: 3 }}>
-                      <Box sx={{ mb: 2 }}>
-                        <Avatar
-                          sx={{
-                            width: 64,
-                            height: 64,
-                            mx: 'auto',
-                            mb: 2,
-                            bgcolor: `${testLevel.level === 1 ? 'success' : testLevel.level === 2 ? 'warning' : 'error'}.main`
-                          }}
-                        >
-                          <Typography variant="h4" fontWeight="bold">
-                            {testLevel.level}
-                          </Typography>
-                        </Avatar>
-                        <Typography variant="h6" fontWeight="bold" gutterBottom>
-                          {testLevel.title}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                          {testLevel.description}
+                      <Box sx={{ mb: 2, p: 1, bgcolor: testType === 'free' ? 'success.50' : 'primary.50', borderRadius: 1 }}>
+                        <Typography variant="caption" color={testType === 'free' ? 'success.main' : 'primary.main'} fontWeight="medium">
+                          {testType === 'free' ? '10 Questions • 15 min • Free Assessment' : '40+ Questions • 60 min • Premium Assessment'}
                         </Typography>
                       </Box>
-                      
-                      <Stack spacing={1} alignItems="center">
-                        <Typography variant="body2" display="flex" alignItems="center">
-                          <Timer fontSize="small" sx={{ mr: 0.5, verticalAlign: 'middle' }} />
-                          {testLevel.estimatedTime} minutes
-                        </Typography>
-                        <Typography variant="body2" display="flex" alignItems="center">
-                          <Assessment fontSize="small" sx={{ mr: 0.5, verticalAlign: 'middle' }} />
-                          {testLevel.questionCount} questions
-                        </Typography>
-                        <Typography variant="body2" fontWeight="bold" color="primary.main">
-                          <AttachMoney fontSize="small" sx={{ mr: 0.5, verticalAlign: 'middle' }} />
-                          {testLevel.cost.toLocaleString()} FRW
-                        </Typography>
-                        {hasValidPayment(testLevel.level) && (
-                          <Typography variant="body2" color="success.main">
-                            <CheckCircle fontSize="small" sx={{ mr: 0.5, verticalAlign: 'middle' }} />
-                            {getAttemptsRemaining(testLevel.level)} attempts remaining
-                          </Typography>
-                        )}
-                      </Stack>
+                      <Button
+                        variant={isSelected ? "contained" : "outlined"}
+                        color={isSelected ? "success" : "primary"}
+                        size="small"
+                        fullWidth
+                        startIcon={isSelected ? <CheckCircle /> : null}
+                        onClick={() => handleJobSelection(job)}
+                      >
+                        {isSelected ? "Selected" : "Select"}
+                      </Button>
                     </CardContent>
-                    <CardActions sx={{ justifyContent: 'center', pb: 2 }}>
-                      {test && (
-                        <Button
-                          variant={selectedLevel === testLevel.level ? "contained" : "outlined"}
-                          startIcon={
-                            generatingTest && selectedLevel === testLevel.level 
-                              ? <CircularProgress size={20} /> 
-                              : hasValidPayment(testLevel.level) 
-                                ? <PlayArrow /> 
-                                : <AttachMoney />
-                          }
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleBeginTest(test);
-                          }}
-                          color={hasValidPayment(testLevel.level) ? "primary" : "warning"}
-                          disabled={generatingTest && selectedLevel === testLevel.level}
-                        >
-                          {generatingTest && selectedLevel === testLevel.level
-                            ? 'Generating...'
-                            : hasValidPayment(testLevel.level) 
-                              ? `Start Level ${testLevel.level}` 
-                              : `Pay ${testLevel.cost.toLocaleString()} FRW`}
-                        </Button>
-                      )}
-                    </CardActions>
                   </Card>
-                </Grid>
-              );
-            })}
-          </Grid>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => setTestDialogOpen(false)}>
-          Cancel
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
+                );
+              })
+            ) : (
+              <Box sx={{ gridColumn: '1/-1', textAlign: 'center', py: 4 }}>
+                <Typography variant="body2" color="text.secondary">
+                  No jobs found matching "{jobSearchTerm}"
+                </Typography>
+              </Box>
+            )}
+          </Box>
+          
+          {filteredJobs.length > 0 && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+              Showing {filteredJobs.length} job{filteredJobs.length !== 1 ? 's' : ''}
+            </Typography>
+          )}
+          
+          {selectedJobInDialog && (
+            <Box sx={{ mt: 3, p: 2, bgcolor: 'success.50', borderRadius: 1 }}>
+              <Typography variant="subtitle2" color="success.main" sx={{ mb: 1 }}>
+                Selected Job:
+              </Typography>
+              <Typography variant="body1" fontWeight="medium">
+                {selectedJobInDialog.title}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {selectedJobInDialog.company} • {selectedJobInDialog.location}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setJobSelectionOpen(false);
+            setSelectedJobInDialog(null);
+          }}>
+            Cancel
+          </Button>
+          <Button 
+            variant="contained"
+            startIcon={<PlayArrow />}
+            onClick={handleGenerateAssessment}
+            disabled={!selectedJobInDialog || loading}
+            color={testType === 'free' ? 'success' : 'primary'}
+          >
+            Generate Assessment
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-  // Test Ready Card
-  const TestReadyCard = () => {
-    if (!showTestCard || !readyTest) return null;
-
-    const testLevel = testLevels.find(level => level.level === selectedLevel);
-    const attemptsRemaining = getAttemptsRemaining(selectedLevel);
-
-    return (
+      {/* Enhanced Results Dialog */}
       <Dialog 
-        open={showTestCard} 
-        onClose={() => setShowTestCard(false)}
+        open={showResults} 
+        onClose={() => setShowResults(false)}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 3, minHeight: '500px' }
+        }}
+      >
+        <DialogTitle>
+          <Stack direction="row" spacing={2} alignItems="center" justifyContent="center">
+            <Assessment color="primary" sx={{ fontSize: 32 }} />
+            <Typography variant="h4" sx={{ fontWeight: 600 }}>
+              Assessment Results
+            </Typography>
+          </Stack>
+        </DialogTitle>
+        <DialogContent sx={{ px: 4, py: 3 }}>
+          {testResult && (
+            <Box>
+              {/* Score Display */}
+              <Paper 
+                elevation={4} 
+                sx={{ 
+                  p: 4, 
+                  mb: 4, 
+                  borderRadius: 3,
+                  background: `linear-gradient(135deg, ${
+                    testResult.score >= 80 ? '#e8f5e8' : 
+                    testResult.score >= 60 ? '#fff3e0' : '#ffebee'
+                  } 0%, #f5f5f5 100%)`
+                }}
+              >
+                <Box sx={{ textAlign: 'center', mb: 3 }}>
+                  <Typography variant="h2" sx={{ 
+                    fontWeight: 700,
+                    color: testResult.score >= 80 ? 'success.main' : 
+                           testResult.score >= 60 ? 'warning.main' : 'error.main',
+                    mb: 1
+                  }}>
+                    {testResult.score}%
+                  </Typography>
+                  <Chip 
+                    label={testResult.grade}
+                    color={getScoreColor(testResult.score) as any}
+                    size="large"
+                    sx={{ fontSize: '1rem', px: 2, py: 1 }}
+                  />
+                </Box>
+                
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                  <LinearProgress 
+                    variant="determinate" 
+                    value={testResult.score} 
+                    sx={{ 
+                      width: '100%', 
+                      maxWidth: '400px',
+                      height: 12, 
+                      borderRadius: 6,
+                      bgcolor: 'grey.200'
+                    }} 
+                  />
+                </Box>
+                
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    textAlign: 'center',
+                    color: 'text.primary',
+                    fontWeight: 500
+                  }}
+                >
+                  {selectedJob?.title} Compatibility Assessment
+                </Typography>
+              </Paper>
+
+              {/* Interpretation Section */}
+              <Paper elevation={2} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+                <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 600 }}>
+                  Performance Analysis
+                </Typography>
+                <Typography variant="body1" paragraph sx={{ fontSize: '1.1rem', lineHeight: 1.6 }}>
+                  {testResult.interpretation}
+                </Typography>
+              </Paper>
+
+              {/* Recommendations Section */}
+              <Paper elevation={2} sx={{ p: 3, borderRadius: 2 }}>
+                <Typography variant="h6" gutterBottom sx={{ color: 'primary.main', fontWeight: 600 }}>
+                  Personalized Recommendations
+                </Typography>
+                <Stack spacing={2}>
+                  {testResult.recommendations.map((rec, index) => (
+                    <Box key={index} sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                      <Box
+                        sx={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: '50%',
+                          bgcolor: 'primary.main',
+                          color: 'white',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          flexShrink: 0,
+                          mt: 0.25
+                        }}
+                      >
+                        {index + 1}
+                      </Box>
+                      <Typography variant="body1" sx={{ fontSize: '1rem', lineHeight: 1.5 }}>
+                        {rec}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Stack>
+              </Paper>
+
+              {/* Call to Action */}
+              <Box sx={{ textAlign: 'center', mt: 4 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Want to see more detailed analysis and insights?
+                </Typography>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 4, py: 3, gap: 2, justifyContent: 'space-between' }}>
+          <Button 
+            onClick={() => setShowResults(false)}
+            variant="outlined"
+            size="large"
+            sx={{ px: 4 }}
+          >
+            Close
+          </Button>
+          
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button 
+              variant="contained" 
+              color="info"
+              size="large"
+              startIcon={<TrendingUp />}
+              onClick={() => {
+                // Store the test result in session storage for the detailed results page
+                if (testResult) {
+                  sessionStorage.setItem('testResult', JSON.stringify(testResult));
+                  // Navigate to the existing PsychometricResultsPage
+                  window.open('/test-results', '_blank');
+                }
+              }}
+              sx={{ px: 4 }}
+            >
+              View Detailed Results
+            </Button>
+            
+            <Button 
+              variant="contained" 
+              color="primary"
+              size="large"
+              onClick={resetTest}
+              startIcon={<PlayArrow />}
+              sx={{ px: 4 }}
+            >
+              Take Another Test
+            </Button>
+          </Box>
+        </DialogActions>
+      </Dialog>
+
+      {/* Payment Request Dialog */}
+      <Dialog 
+        open={paymentRequestOpen} 
+        onClose={() => !loading && setPaymentRequestOpen(false)}
         maxWidth="md"
         fullWidth
       >
         <DialogTitle>
-          <Box display="flex" alignItems="center" justifyContent="space-between">
-            <Box>
-              <Typography variant="h5" fontWeight="bold" color="success.main">
-                âœ… Test Ready!
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Your personalized assessment has been generated
-              </Typography>
-            </Box>
-            <IconButton onClick={() => setShowTestCard(false)}>
-              <Close />
-            </IconButton>
-          </Box>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Payment color="primary" />
+            <Typography variant="h6">Premium Assessment Payment</Typography>
+          </Stack>
         </DialogTitle>
-        
         <DialogContent>
-          <Alert severity="success" sx={{ mb: 3 }}>
-            <AlertTitle>ðŸŽ‰ Assessment Generated Successfully!</AlertTitle>
-            Your AI-powered psychometric test for <strong>{selectedJob?.title}</strong> is ready to begin.
-          </Alert>
+          {!paymentRequestSent ? (
+            <Box>
+              <Alert severity="info" sx={{ mb: 3 }}>
+                <AlertTitle>Premium Assessment Details</AlertTitle>
+                This is a paid premium psychometric assessment service
+              </Alert>
 
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <Card sx={{ height: '100%', bgcolor: 'primary.50', border: '2px solid', borderColor: 'primary.200' }}>
-                <CardContent>
-                  <Box display="flex" alignItems="center" mb={2}>
-                    <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
-                      <Assessment />
-                    </Avatar>
-                    <Box>
-                      <Typography variant="h6" fontWeight="bold">
-                        {readyTest.title}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {testLevel?.difficulty} Level Assessment
-                      </Typography>
-                    </Box>
-                  </Box>
-                  
-                  <Stack spacing={2}>
-                    <Box display="flex" justifyContent="space-between">
-                      <Typography variant="body2">Duration:</Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {readyTest.timeLimit} minutes
-                      </Typography>
-                    </Box>
-                    <Box display="flex" justifyContent="space-between">
-                      <Typography variant="body2">Questions:</Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {readyTest.questions.length}
-                      </Typography>
-                    </Box>
-                    <Box display="flex" justifyContent="space-between">
-                      <Typography variant="body2">Job Role:</Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {selectedJob?.title}
-                      </Typography>
-                    </Box>
-                    <Box display="flex" justifyContent="space-between">
-                      <Typography variant="body2">Company:</Typography>
-                      <Typography variant="body2" fontWeight="medium">
-                        {selectedJob?.company}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </CardContent>
-              </Card>
-            </Grid>
+              {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                  <AlertTitle>Request Failed</AlertTitle>
+                  {error}
+                  <br /><strong>Please contact us directly using the information below.</strong>
+                </Alert>
+              )}
 
-            <Grid item xs={12} md={6}>
-              <Card sx={{ height: '100%', bgcolor: 'warning.50', border: '2px solid', borderColor: 'warning.200' }}>
-                <CardContent>
-                  <Box display="flex" alignItems="center" mb={2}>
-                    <Avatar sx={{ bgcolor: 'warning.main', mr: 2 }}>
-                      <Timer />
-                    </Avatar>
-                    <Box>
-                      <Typography variant="h6" fontWeight="bold">
-                        Attempts Remaining
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Use them wisely
-                      </Typography>
-                    </Box>
-                  </Box>
-                  
-                  <Box textAlign="center" py={2}>
-                    <Typography variant="h2" fontWeight="bold" color="warning.main">
-                      {attemptsRemaining}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      attempts left
-                    </Typography>
-                  </Box>
-                  
-                  <Alert severity="info" sx={{ mt: 2 }}>
-                    <Typography variant="body2">
-                      Each attempt will be recorded. Make sure you're in a quiet environment before starting.
-                    </Typography>
-                  </Alert>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* Job-Specific Test Information */}
-            {testBlueprint && readyTest?.jobSpecific && (
-              <Grid item xs={12}>
-                <Card sx={{ bgcolor: 'primary.50', border: '2px solid', borderColor: 'primary.200' }}>
+              {selectedJobForPayment && (
+                <Card variant="outlined" sx={{ mb: 3 }}>
                   <CardContent>
-                    <Box display="flex" alignItems="center" mb={2}>
-                      <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
-                        ðŸŽ¯
-                      </Avatar>
+                    <Typography variant="h6" gutterBottom>
+                      {selectedJobForPayment.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      {selectedJobForPayment.company}
+                    </Typography>
+                    
+                    <Stack spacing={2} sx={{ mt: 2 }}>
                       <Box>
-                        <Typography variant="h6" fontWeight="bold" color="primary.main">
-                          Job-Specific Assessment Blueprint
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Tailored assessment based on role requirements
-                        </Typography>
+                        <Typography variant="subtitle2">Assessment Features:</Typography>
+                        <Stack spacing={1} sx={{ mt: 1 }}>
+                          <Typography variant="body2">• 40+ comprehensive questions</Typography>
+                          <Typography variant="body2">• 60-minute detailed assessment</Typography>
+                          <Typography variant="body2">• Professional grading and analysis</Typography>
+                          <Typography variant="body2">• Detailed performance report</Typography>
+                          <Typography variant="body2">• Personalized recommendations</Typography>
+                        </Stack>
                       </Box>
-                    </Box>
-
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} md={4}>
-                        <Box>
-                          <Typography variant="subtitle2" color="primary.main" fontWeight="bold" gutterBottom>
-                            ðŸŽ¯ Target Skills
-                          </Typography>
-                          <Box display="flex" flexWrap="wrap" gap={0.5}>
-                            {testBlueprint.skills.slice(0, 6).map((skill, index) => (
-                              <Chip
-                                key={index}
-                                label={skill}
-                                size="small"
-                                sx={{ 
-                                  bgcolor: 'primary.100',
-                                  color: 'primary.800',
-                                  fontSize: '0.75rem'
-                                }}
-                              />
-                            ))}
-                            {testBlueprint.skills.length > 6 && (
-                              <Chip
-                                label={`+${testBlueprint.skills.length - 6} more`}
-                                size="small"
-                                sx={{ bgcolor: 'grey.200' }}
-                              />
-                            )}
-                          </Box>
-                        </Box>
-                      </Grid>
-
-                      <Grid item xs={12} md={4}>
-                        <Box>
-                          <Typography variant="subtitle2" color="primary.main" fontWeight="bold" gutterBottom>
-                            ðŸ“Š Assessment Categories
-                          </Typography>
-                          <Stack spacing={0.5}>
-                            {testBlueprint.categories.map((category, index) => (
-                              <Box key={index} display="flex" alignItems="center">
-                                <Box
-                                  sx={{
-                                    width: 8,
-                                    height: 8,
-                                    borderRadius: '50%',
-                                    bgcolor: 'primary.main',
-                                    mr: 1
-                                  }}
-                                />
-                                <Typography variant="body2" fontSize="0.8rem">
-                                  {category.name}
-                                </Typography>
-                              </Box>
-                            ))}
-                          </Stack>
-                        </Box>
-                      </Grid>
-
-                      <Grid item xs={12} md={4}>
-                        <Box>
-                          <Typography variant="subtitle2" color="primary.main" fontWeight="bold" gutterBottom>
-                            ðŸ“ˆ Assessment Details
-                          </Typography>
-                          <Stack spacing={1}>
-                            <Box display="flex" justifyContent="space-between">
-                              <Typography variant="body2" fontSize="0.8rem">Difficulty:</Typography>
-                              <Chip
-                                label={testBlueprint.difficulty.toUpperCase()}
-                                size="small"
-                                color={
-                                  testBlueprint.difficulty === 'easy' ? 'success' :
-                                  testBlueprint.difficulty === 'medium' ? 'warning' : 'error'
-                                }
-                              />
-                            </Box>
-                            <Box display="flex" justifyContent="space-between">
-                              <Typography variant="body2" fontSize="0.8rem">Categories:</Typography>
-                              <Typography variant="body2" fontSize="0.8rem" fontWeight="medium">
-                                {testBlueprint.categories.length}
-                              </Typography>
-                            </Box>
-                            <Box display="flex" justifyContent="space-between">
-                              <Typography variant="body2" fontSize="0.8rem">Total Questions:</Typography>
-                              <Typography variant="body2" fontSize="0.8rem" fontWeight="medium">
-                                {testBlueprint.totalQuestions}
-                              </Typography>
-                            </Box>
-                            <Box display="flex" justifyContent="space-between">
-                              <Typography variant="body2" fontSize="0.8rem">Est. Time:</Typography>
-                              <Typography variant="body2" fontSize="0.8rem" fontWeight="medium">
-                                {Math.ceil(testBlueprint.totalTimeLimit / 60)} min
-                              </Typography>
-                            </Box>
-                          </Stack>
-                        </Box>
-                      </Grid>
-                    </Grid>
+                    </Stack>
                   </CardContent>
                 </Card>
-              </Grid>
-            )}
+              )}
 
-            <Grid item xs={12}>
-              <Paper sx={{ p: 3, bgcolor: 'grey.50' }}>
-                <Typography variant="h6" gutterBottom color="primary.main">
-                  ðŸ“‹ Test Instructions
+              <Alert severity="warning" sx={{ mb: 3 }}>
+                <AlertTitle>Premium Assessment Approval Process</AlertTitle>
+                <Typography variant="body2">
+                  To take this premium psychometric assessment, please follow these steps:
+                  <br /><strong>1.</strong> Click "Send Approval Request" button below to notify our admin
+                  <br /><strong>2.</strong> Contact us using any of the methods below to discuss payment
+                  <br /><strong>3.</strong> Complete payment as instructed by our support team
+                  <br /><strong>4.</strong> Wait for approval from our Super Admin dashboard
+                  <br /><strong>5.</strong> Return here to take your assessment once approved
                 </Typography>
-                <List dense>
-                  <ListItem>
-                    <ListItemIcon>
-                      <CheckCircle color="success" fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText primary="Find a quiet, distraction-free environment" />
-                  </ListItem>
-                  <ListItem>
-                    <ListItemIcon>
-                      <CheckCircle color="success" fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText primary="Ensure stable internet connection" />
-                  </ListItem>
-                  <ListItem>
-                    <ListItemIcon>
-                      <CheckCircle color="success" fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText primary="Answer all questions honestly and thoughtfully" />
-                  </ListItem>
-                  <ListItem>
-                    <ListItemIcon>
-                      <CheckCircle color="success" fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText primary="Complete the test in one session" />
-                  </ListItem>
-                </List>
-              </Paper>
-            </Grid>
-          </Grid>
-        </DialogContent>
+              </Alert>
 
-        <DialogActions sx={{ p: 3 }}>
-          <Button 
-            onClick={() => setShowTestCard(false)}
-            variant="outlined"
-          >
-            Start Later
-          </Button>
-          <Button 
-            variant="contained" 
-            onClick={handleStartActualTest}
-            startIcon={<PlayArrow />}
-            size="large"
-            sx={{ 
-              px: 4,
-              py: 1.5,
-              background: 'linear-gradient(45deg, #4caf50 30%, #66bb6a 90%)',
-              boxShadow: '0 3px 5px 2px rgba(76, 175, 80, .3)',
-            }}
-          >
-            Start Test Now
-          </Button>
-        </DialogActions>
-      </Dialog>
-    );
-  };
-
-  // Payment Dialog
-  const PaymentDialog = () => (
-    <Dialog 
-      open={paymentDialogOpen} 
-      onClose={() => setPaymentDialogOpen(false)}
-      maxWidth="sm"
-      fullWidth
-    >
-      <DialogTitle>
-        <Typography variant="h5" fontWeight="bold">
-          Complete Payment to Start Test
-        </Typography>
-        {selectedTestLevel && (
-          <Typography variant="body2" color="text.secondary">
-            {selectedTestLevel.title} - {selectedTestLevel.difficulty} Level
-          </Typography>
-        )}
-      </DialogTitle>
-      <DialogContent>
-        {selectedTestLevel && (
-          <Box>
-            <Alert severity="info" sx={{ mb: 3 }}>
-              <AlertTitle>Payment Information</AlertTitle>
-              Complete the payment to unlock 3 test attempts for this level. You can retake the test up to 3 times after payment.
-            </Alert>
-
-            <Paper sx={{ p: 3, mb: 3, bgcolor: 'grey.50' }}>
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <Typography variant="h6" gutterBottom color="primary.main">
-                    Test Details
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Level:
-                  </Typography>
-                  <Typography variant="body1" fontWeight="medium">
-                    {selectedTestLevel.title}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Difficulty:
-                  </Typography>
-                  <Typography variant="body1" fontWeight="medium">
-                    {selectedTestLevel.difficulty}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Duration:
-                  </Typography>
-                  <Typography variant="body1" fontWeight="medium">
-                    {selectedTestLevel.estimatedTime} minutes
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" color="text.secondary">
-                    Questions:
-                  </Typography>
-                  <Typography variant="body1" fontWeight="medium">
-                    {selectedTestLevel.questionCount}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Divider sx={{ my: 2 }} />
-                  <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="h6" color="text.secondary">
-                      Total Cost:
-                    </Typography>
-                    <Typography variant="h4" fontWeight="bold" color="primary.main">
-                      {selectedTestLevel.cost.toLocaleString()} FRW
-                    </Typography>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    Includes 3 test attempts
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Paper>
-
-            <Alert severity="warning" sx={{ mb: 3 }}>
-              <AlertTitle>Test Mode</AlertTitle>
-              Payment processing is currently disabled for testing purposes. Click "Complete Payment" to proceed with the test.
-            </Alert>
-
-            <Box display="flex" alignItems="center" gap={2} sx={{ mb: 2 }}>
-              <CheckCircle color="success" />
-              <Typography variant="body2">
-                Secure payment processing
-              </Typography>
-            </Box>
-            <Box display="flex" alignItems="center" gap={2} sx={{ mb: 2 }}>
-              <CheckCircle color="success" />
-              <Typography variant="body2">
-                3 test attempts included
-              </Typography>
-            </Box>
-            <Box display="flex" alignItems="center" gap={2}>
-              <CheckCircle color="success" />
-              <Typography variant="body2">
-                Detailed results and recommendations
-              </Typography>
-            </Box>
-          </Box>
-        )}
-      </DialogContent>
-      <DialogActions sx={{ p: 3 }}>
-        <Button 
-          onClick={() => setPaymentDialogOpen(false)}
-          disabled={processingPayment}
-        >
-          Cancel
-        </Button>
-        <Button 
-          variant="contained" 
-          onClick={handlePayment}
-          disabled={processingPayment}
-          startIcon={processingPayment ? <CircularProgress size={20} /> : <AttachMoney />}
-          sx={{ 
-            px: 4,
-            background: 'linear-gradient(45deg, #4caf50 30%, #66bb6a 90%)',
-          }}
-        >
-          {processingPayment ? 'Processing...' : 'Complete Payment'}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-
-  if (!user) {
-    return null;
-  }
-
-  return (
-    <SimpleProfileGuard feature="psychometricTests">
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        {/* Header */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h3" fontWeight="bold" gutterBottom>
-            Psychometric Tests
-          </Typography>
-          <Typography variant="h6" color="text.secondary" sx={{ mb: 3 }}>
-            Discover your potential with professional assessments
-          </Typography>
-          
-          <Tabs 
-            value={currentTab} 
-            onChange={handleTabChange} 
-            sx={{ 
-              mb: 4,
-              '& .MuiTab-root': {
-                fontSize: '1rem',
-                fontWeight: 600,
-                textTransform: 'none',
-                minHeight: 64,
-                px: 4
-              },
-              '& .MuiTabs-indicator': {
-                height: 4,
-                borderRadius: 2
-              }
-            }}
-          >
-            <Tab 
-              label={
-                <Box display="flex" alignItems="center" gap={2}>
-                  <AutoAwesome sx={{ fontSize: 24 }} />
-                  <Box textAlign="left">
-                    <Typography variant="inherit" fontWeight="bold">
-                      Professional Assessments
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Free • Evidence-Based • Comprehensive
-                    </Typography>
-                  </Box>
-                </Box>
-              } 
-            />
-            <Tab 
-              label={
-                <Box display="flex" alignItems="center" gap={2}>
-                  <Work sx={{ fontSize: 24 }} />
-                  <Box textAlign="left">
-                    <Typography variant="inherit" fontWeight="bold">
-                      Job-Specific Tests
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Tailored • Industry-Specific • Premium
-                    </Typography>
-                  </Box>
-                </Box>
-              } 
-            />
-          </Tabs>
-        </Box>
-
-        {/* Professional Assessments Tab */}
-        {currentTab === 0 && (
-          <Box>
-            {/* Header Section */}
-            <Paper 
-              sx={{ 
-                p: 4, 
-                mb: 4, 
-                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.secondary.main, 0.05)})`,
-                border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                borderRadius: 3
-              }}
-            >
-              <Box display="flex" alignItems="center" gap={3} mb={3}>
-                <Avatar sx={{ bgcolor: 'primary.main', width: 72, height: 72 }}>
-                  <AutoAwesome sx={{ fontSize: 32 }} />
-                </Avatar>
-                <Box>
-                  <Typography variant="h3" fontWeight="bold" gutterBottom sx={{ color: 'primary.main' }}>
-                    Professional Assessment Suite
-                  </Typography>
-                  <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
-                    Scientifically validated assessments designed by psychometricians and used by Fortune 500 companies worldwide
-                  </Typography>
-                  <Stack direction="row" spacing={2} flexWrap="wrap">
-                    <Chip icon={<CheckCircle />} label="Evidence-Based" color="success" />
-                    <Chip icon={<TrendingUp />} label="Career Growth" color="primary" />
-                    <Chip icon={<Psychology />} label="AI-Powered" color="secondary" />
-                    <Chip icon={<AutoAwesome />} label="100% Free" color="warning" />
-                  </Stack>
-                </Box>
-              </Box>
-              
-              {/* Statistics */}
-              <Grid container spacing={4} textAlign="center">
-                <Grid item xs={12} sm={3}>
-                  <Typography variant="h3" fontWeight="bold" color="primary.main">
-                    67
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary" fontWeight="medium">
-                    Total Assessments
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={3}>
-                  <Typography variant="h3" fontWeight="bold" color="success.main">
-                    1,365
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary" fontWeight="medium">
-                    Total Questions
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={3}>
-                  <Typography variant="h3" fontWeight="bold" color="warning.main">
-                    95.3%
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary" fontWeight="medium">
-                    Accuracy Rate
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={3}>
-                  <Typography variant="h3" fontWeight="bold" color="secondary.main">
-                    127k+
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary" fontWeight="medium">
-                    Professionals Tested
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Paper>
-
-            {/* Assessment Categories */}
-            <Grid container spacing={3}>
-              {freeTestCategories.map((category, index) => (
-                <Grid item xs={12} sm={6} lg={4} key={category.id}>
-                  <Card 
-                    sx={{ 
-                      height: '100%',
-                      cursor: 'pointer',
-                      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      '&:hover': { 
-                        transform: 'translateY(-12px) scale(1.02)',
-                        boxShadow: `0 20px 40px ${alpha(category.color, 0.3)}`,
-                        '& .category-icon': {
-                          transform: 'scale(1.1) rotate(5deg)',
-                        },
-                        '& .start-button': {
-                          background: `linear-gradient(45deg, ${category.color}, ${alpha(category.color, 0.8)})`,
-                          transform: 'translateY(-2px)'
-                        }
-                      },
-                      border: `2px solid ${alpha(category.color, 0.2)}`,
-                      background: `linear-gradient(135deg, ${alpha(category.color, 0.08)} 0%, ${alpha(category.color, 0.03)} 100%)`,
-                      borderRadius: 3
-                    }}
-                    onClick={() => handleStartFreeTest(category)}
-                  >
-                    {/* Premium Badge */}
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        top: 16,
-                        right: 16,
-                        zIndex: 2
-                      }}
-                    >
-                      <Chip 
-                        label="FREE"
-                        size="small"
-                        sx={{ 
-                          bgcolor: 'success.main',
-                          color: 'white',
-                          fontWeight: 'bold',
-                          fontSize: '0.75rem',
-                          boxShadow: 2
-                        }}
-                      />
+              <Paper elevation={1} sx={{ p: 3, mb: 3, bgcolor: 'primary.50' }}>
+                <Typography variant="h6" gutterBottom color="primary.main" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <ContactSupport />
+                  Contact Excellence Coaching Hub
+                </Typography>
+                
+                <Stack spacing={3} sx={{ mt: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Email color="primary" />
+                    <Box>
+                      <Typography variant="subtitle2">Email</Typography>
+                      <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
+                        info@excellencecoachinghub.com
+                      </Typography>
                     </Box>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <WhatsApp color="success" />
+                    <Box>
+                      <Typography variant="subtitle2">WhatsApp</Typography>
+                      <Typography variant="body2">0737299309</Typography>
+                      <Typography variant="body2">0788535156</Typography>
+                    </Box>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Phone color="info" />
+                    <Box>
+                      <Typography variant="subtitle2">Phone</Typography>
+                      <Typography variant="body2">0737299309</Typography>
+                      <Typography variant="body2">0788535156</Typography>
+                    </Box>
+                  </Box>
+                </Stack>
+              </Paper>
 
-                    <CardContent sx={{ p: 3, height: '100%' }}>
-                      <Stack spacing={3} height="100%">
-                        {/* Icon and Title */}
-                        <Box display="flex" alignItems="flex-start" gap={2.5}>
-                          <Avatar 
-                            className="category-icon"
-                            sx={{ 
-                              bgcolor: category.color,
-                              width: 64,
-                              height: 64,
-                              boxShadow: `0 4px 16px ${alpha(category.color, 0.4)}`,
-                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                            }}
-                          >
-                            {category.icon}
-                          </Avatar>
-                          <Box flex={1}>
-                            <Typography variant="h5" fontWeight="bold" gutterBottom sx={{ fontSize: '1.2rem', lineHeight: 1.3 }}>
-                              {category.title}
-                            </Typography>
-                            <Chip 
-                              label={category.difficulty}
-                              size="small"
-                              sx={{ 
-                                bgcolor: alpha(category.color, 0.15),
-                                color: category.color,
-                                fontWeight: 'bold',
-                                borderRadius: 2,
-                                fontSize: '0.75rem'
-                              }}
-                            />
-                          </Box>
-                        </Box>
-
-                        {/* Description */}
-                        <Typography 
-                          variant="body2" 
-                          color="text.secondary" 
-                          sx={{ 
-                            flex: 1,
-                            lineHeight: 1.6,
-                            fontSize: '0.9rem'
-                          }}
-                        >
-                          {category.description}
-                        </Typography>
-
-                        {/* Enhanced Statistics */}
-                        <Paper sx={{ p: 2.5, bgcolor: alpha(category.color, 0.05), borderRadius: 2 }}>
-                          <Grid container spacing={2} textAlign="center">
-                            <Grid item xs={4}>
-                              <Typography variant="h5" fontWeight="bold" color={category.color} sx={{ fontSize: '1.3rem' }}>
-                                {category.testCount}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary" fontWeight="medium" sx={{ fontSize: '0.75rem' }}>
-                                Assessments
-                              </Typography>
-                            </Grid>
-                            <Grid item xs={4}>
-                              <Typography variant="h5" fontWeight="bold" color={category.color} sx={{ fontSize: '1.3rem' }}>
-                                {category.questionCount}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary" fontWeight="medium" sx={{ fontSize: '0.75rem' }}>
-                                Questions
-                              </Typography>
-                            </Grid>
-                            <Grid item xs={4}>
-                              <Typography variant="h5" fontWeight="bold" color={category.color} sx={{ fontSize: '1.3rem' }}>
-                                {category.timeLimit}m
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary" fontWeight="medium" sx={{ fontSize: '0.75rem' }}>
-                                Duration
-                              </Typography>
-                            </Grid>
-                          </Grid>
-                        </Paper>
-
-                        {/* Enhanced Action Button */}
-                        <Button 
-                          className="start-button"
-                          variant="contained" 
-                          size="large"
-                          fullWidth
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleStartFreeTest(category);
-                          }}
-                          sx={{ 
-                            bgcolor: category.color,
-                            py: 1.8,
-                            fontSize: '1.1rem',
-                            fontWeight: 'bold',
-                            borderRadius: 2,
-                            boxShadow: `0 6px 16px ${alpha(category.color, 0.4)}`,
-                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                            '&:hover': { 
-                              bgcolor: category.color,
-                              boxShadow: `0 10px 25px ${alpha(category.color, 0.5)}`
-                            }
-                          }}
-                          endIcon={<ArrowForward />}
-                        >
-                          Begin Assessment
-                        </Button>
-                      </Stack>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-        )}
-
-        {/* Job-Specific Tests Tab */}
-        {currentTab === 1 && (
-          <Box>
-            {/* Enhanced Header Section */}
-            <Paper 
-              sx={{ 
-                p: 4, 
-                mb: 4, 
-                background: `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.1)}, ${alpha(theme.palette.error.main, 0.05)})`,
-                border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`,
-                borderRadius: 3
-              }}
-            >
-              <Box display="flex" alignItems="center" gap={3} mb={3}>
-                <Avatar sx={{ bgcolor: 'warning.main', width: 72, height: 72 }}>
-                  <Work sx={{ fontSize: 32 }} />
-                </Avatar>
-                <Box>
-                  <Typography variant="h3" fontWeight="bold" gutterBottom sx={{ color: 'warning.main' }}>
-                    AI-Powered Industry Assessments
-                  </Typography>
-                  <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
-                    Tailored psychometric evaluations designed for specific roles and industries, created by domain experts and powered by AI
-                  </Typography>
-                  <Stack direction="row" spacing={2} flexWrap="wrap">
-                    <Chip icon={<SmartToy />} label="AI-Generated" color="primary" />
-                    <Chip icon={<Work />} label="Role-Specific" color="warning" />
-                    <Chip icon={<TrendingUp />} label="Industry-Focused" color="success" />
-                    <Chip icon={<EmojiEvents />} label="Premium Quality" color="secondary" />
-                  </Stack>
-                </Box>
-              </Box>
-              
-              {/* Key Features */}
-              <Grid container spacing={4} textAlign="center">
-                <Grid item xs={12} sm={4}>
-                  <Typography variant="h3" fontWeight="bold" color="warning.main">
-                    50+
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary" fontWeight="medium">
-                    Industries Covered
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <Typography variant="h3" fontWeight="bold" color="primary.main">
-                    2-8k
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary" fontWeight="medium">
-                    FRW Price Range
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <Typography variant="h3" fontWeight="bold" color="success.main">
-                    3
-                  </Typography>
-                  <Typography variant="body1" color="text.secondary" fontWeight="medium">
-                    Attempts Included
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Paper>
-
-            {/* Enhanced CTA Section */}
-            <Paper 
-              sx={{ 
-                p: 6, 
-                textAlign: 'center',
-                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.08)}, ${alpha(theme.palette.secondary.main, 0.05)})`,
-                border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                borderRadius: 3
-              }}
-            >
-              <Avatar sx={{ width: 100, height: 100, mx: 'auto', mb: 3, bgcolor: 'primary.main', boxShadow: 4 }}>
-                <SmartToy sx={{ fontSize: 48 }} />
-              </Avatar>
-              
-              <Typography variant="h4" fontWeight="bold" gutterBottom color="primary.main">
-                Custom AI Assessment Builder
+              <Alert severity="info" sx={{ mb: 3 }}>
+                <AlertTitle>Important Instructions:</AlertTitle>
+                <Typography variant="body2" component="div">
+                  <strong>After clicking "Send Approval Request":</strong><br />
+                  <strong>• Contact us immediately</strong> using any of the contact methods above<br />
+                  <strong>• Mention:</strong> "I want Premium Psychometric Assessment for {selectedJobForPayment?.title}"<br />
+                  <strong>• Reference:</strong> Your name ({user?.firstName} {user?.lastName}) and email ({user?.email})<br />
+                  <strong>• Our team will:</strong> Provide payment details and process your request<br />
+                  <strong>• After payment:</strong> Our Super Admin will approve your test access<br />
+                  <strong>• You'll receive:</strong> Email confirmation when your test is ready to take
+                </Typography>
+              </Alert>
+            </Box>
+          ) : (
+            <Box textAlign="center">
+              <CheckCircle color="success" sx={{ fontSize: 60, mb: 2 }} />
+              <Typography variant="h6" gutterBottom color="success.main">
+                Approval Request Sent Successfully!
+              </Typography>
+              <Typography variant="body1" gutterBottom sx={{ mb: 3 }}>
+                Your request has been sent to our Super Admin Psychometric Test Management system.
               </Typography>
               
-              <Typography variant="h6" color="text.secondary" sx={{ mb: 4, maxWidth: 700, mx: 'auto', lineHeight: 1.6 }}>
-                Our advanced AI system analyzes job descriptions and creates personalized psychometric assessments tailored to specific roles. 
-                Get detailed insights into candidate suitability with industry-leading accuracy.
+              <Alert severity="success" sx={{ mb: 3, textAlign: 'left' }}>
+                <AlertTitle>Next Steps - Contact Us Now!</AlertTitle>
+                <Typography variant="body2">
+                  <strong>IMPORTANT:</strong> Please contact us immediately using the contact information above to:
+                  <br />• Confirm your approval request
+                  <br />• Get payment instructions
+                  <br />• Speed up the approval process
+                  <br />• Schedule your premium assessment
+                </Typography>
+              </Alert>
+              
+              <Typography variant="body2" color="text.secondary">
+                <strong>Email:</strong> info@excellencecoachinghub.com<br />
+                <strong>WhatsApp/Phone:</strong> 0737299309 or 0788535156
               </Typography>
-              
-              {/* Features Grid */}
-              <Grid container spacing={3} sx={{ mb: 4, maxWidth: 800, mx: 'auto' }}>
-                <Grid item xs={12} sm={4}>
-                  <Box>
-                    <Psychology sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
-                    <Typography variant="h6" fontWeight="bold" gutterBottom>
-                      Cognitive Assessment
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Advanced reasoning and problem-solving evaluation
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <Box>
-                    <Person sx={{ fontSize: 40, color: 'secondary.main', mb: 1 }} />
-                    <Typography variant="h6" fontWeight="bold" gutterBottom>
-                      Personality Profiling
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Comprehensive personality traits analysis
-                    </Typography>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <Box>
-                    <Speed sx={{ fontSize: 40, color: 'warning.main', mb: 1 }} />
-                    <Typography variant="h6" fontWeight="bold" gutterBottom>
-                      Skills Assessment
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Role-specific competency evaluation
-                    </Typography>
-                  </Box>
-                </Grid>
-              </Grid>
-              
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          {!paymentRequestSent ? (
+            <>
               <Button 
-                variant="contained" 
+                onClick={() => setPaymentRequestOpen(false)}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="contained"
+                onClick={() => {
+                  console.log('🚀 Send Approval Request button clicked!');
+                  console.log('🚀 Current state:', {
+                    user: user,
+                    selectedJobForPayment: selectedJobForPayment,
+                    loading: loading,
+                    error: error
+                  });
+                  // Show immediate visual feedback
+                  handleRequestPayment();
+                }}
+                disabled={loading}
+                startIcon={loading ? <CircularProgress size={20} /> : <AdminPanelSettings />}
                 size="large"
-                startIcon={<SmartToy />}
-                endIcon={<ArrowForward />}
-                onClick={handleStartJobSpecificTest}
-                sx={{ 
-                  px: 6,
-                  py: 2,
+                color="primary"
+                sx={{
+                  minWidth: 250,
+                  minHeight: 48,
                   fontSize: '1.1rem',
-                  fontWeight: 'bold',
-                  borderRadius: 2,
-                  background: 'linear-gradient(45deg, #4caf50 30%, #66bb6a 90%)',
-                  boxShadow: '0 6px 20px rgba(76, 175, 80, 0.3)',
-                  '&:hover': {
-                    background: 'linear-gradient(45deg, #45a049 30%, #5cb85c 90%)',
-                    boxShadow: '0 8px 25px rgba(76, 175, 80, 0.4)',
-                    transform: 'translateY(-2px)'
-                  },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                  fontWeight: 'bold'
                 }}
               >
-                Create Custom Assessment
+                {loading ? 'Sending Request...' : 'Send Approval Request'}
               </Button>
-              
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                Powered by advanced AI • Real-time generation • Professional insights
-              </Typography>
-            </Paper>
-          </Box>
-        )}
+            </>
+          ) : (
+            <Button 
+              variant="contained"
+              onClick={() => setPaymentRequestOpen(false)}
+            >
+              Close
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
 
-
-
-
-
-
-        <JobSelectionDialog />
-        <TestLevelDialog />
-        <TestReadyCard />
-        <PaymentDialog />
-        
-        {/* New Simplified Test Selection Dialog */}
-        <SimplifiedTestSelection
-          open={packageSelectionOpen}
-          onClose={() => setPackageSelectionOpen(false)}
-          onTestStart={handleTestStart}
-        />
-
-        {/* Snackbar for notifications */}
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={4000}
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        >
-          <Alert 
-            onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
-            severity={snackbar.severity}
-            variant="filled"
-            sx={{ width: '100%' }}
-          >
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
-      </Container>
-    </SimpleProfileGuard>
+      {loading && (
+        <Box sx={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          bgcolor: 'rgba(0,0,0,0.5)', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <Paper sx={{ p: 4, textAlign: 'center' }}>
+            <CircularProgress sx={{ mb: 2 }} />
+            <Typography>Generating your test...</Typography>
+          </Paper>
+        </Box>
+      )}
+    </Container>
   );
 };
 

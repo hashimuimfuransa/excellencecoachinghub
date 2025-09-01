@@ -34,7 +34,7 @@ router.get(
   handleValidationErrors,
   async (req: any, res: any) => {
     try {
-      const userId = req.user.userId;
+      const userId = req.user._id;
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
 
@@ -70,7 +70,7 @@ router.get(
   auth,
   async (req: any, res: any) => {
     try {
-      const userId = req.user.userId;
+      const userId = req.user._id;
       const count = await notificationService.getUnreadCount(userId);
 
       res.json({
@@ -100,7 +100,7 @@ router.put(
   handleValidationErrors,
   async (req: any, res: any) => {
     try {
-      const userId = req.user.userId;
+      const userId = req.user._id;
       const notificationId = req.params.id;
 
       const success = await notificationService.markAsRead(notificationId, userId);
@@ -135,7 +135,7 @@ router.put(
   auth,
   async (req: any, res: any) => {
     try {
-      const userId = req.user.userId;
+      const userId = req.user._id;
       const count = await notificationService.markAllAsRead(userId);
 
       res.json({
@@ -166,7 +166,7 @@ router.delete(
   handleValidationErrors,
   async (req: any, res: any) => {
     try {
-      const userId = req.user.userId;
+      const userId = req.user._id;
       const notificationId = req.params.id;
 
       const success = await notificationService.deleteNotification(notificationId, userId);
@@ -209,7 +209,7 @@ router.post(
   handleValidationErrors,
   async (req: any, res: any) => {
     try {
-      const userId = req.user.userId;
+      const userId = req.user._id;
       const { subscription } = req.body;
 
       // Check if subscription already exists
@@ -265,7 +265,7 @@ router.delete(
   handleValidationErrors,
   async (req: any, res: any) => {
     try {
-      const userId = req.user.userId;
+      const userId = req.user._id;
       const { endpoint } = req.body;
 
       await PushSubscription.findOneAndDelete({
@@ -323,7 +323,7 @@ if (process.env.NODE_ENV === 'development') {
     handleValidationErrors,
     async (req: any, res: any) => {
       try {
-        const userId = req.user.userId;
+        const userId = req.user._id;
         const { title, message, type = 'message' } = req.body;
 
         await notificationService.sendRealTimeNotification({

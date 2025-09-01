@@ -1,5 +1,5 @@
 import express from 'express';
-import { auth } from '@/middleware/auth';
+import { auth } from '../middleware/auth';
 import {
   getJobs,
   getJobsForStudent,
@@ -10,8 +10,11 @@ import {
   deleteJob,
   getJobsByEmployer,
   getRecommendedCourses,
-  getJobCategories
-} from '@/controllers/jobController';
+  getJobCategories,
+  getAIMatchedJobs
+} from '../controllers/jobController';
+import { testAIMatchedJobs } from '../controllers/testJobController';
+import { getAIMatchedJobsSimple } from '../controllers/jobControllerSimple';
 
 const router = express.Router();
 
@@ -26,6 +29,8 @@ router.get('/:id/recommended-courses', getRecommendedCourses);
 router.use(auth); // All routes below require authentication
 
 router.get('/student/available', getJobsForStudent);
+router.get('/ai-matched-test', testAIMatchedJobs);  // Test endpoint
+router.get('/ai-matched', getAIMatchedJobsSimple);  // Simple AI-powered job matching endpoint
 router.get('/employer/my-jobs', getJobsByEmployer);
 router.post('/', createJob);
 router.put('/:id', updateJob);

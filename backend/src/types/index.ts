@@ -67,6 +67,8 @@ export enum NotificationType {
   SECURITY_ALERT = 'security_alert',
   PAYMENT_SUCCESS = 'payment_success',
   PAYMENT_FAILED = 'payment_failed',
+  PAYMENT_APPROVED = 'payment_approved',
+  PAYMENT_REJECTED = 'payment_rejected',
   GENERAL = 'general'
 }
 

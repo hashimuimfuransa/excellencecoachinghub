@@ -572,6 +572,25 @@ class PsychometricTestService {
     if (score >= 60) return 'D';
     return 'F';
   }
+
+  // Submit assessment request to admin
+  async submitAssessmentRequest(requestData: {
+    userId: string;
+    jobTitle: string;
+    company?: string;
+    jobDescription?: string;
+    category: string;
+    urgency: string;
+    additionalRequirements?: string;
+    userProfile: {
+      firstName: string;
+      lastName: string;
+      email: string;
+    };
+  }): Promise<ApiResponse<any>> {
+    const response = await apiPost<ApiResponse<any>>('/assessment-requests', requestData);
+    return response;
+  }
 }
 
 export const psychometricTestService = new PsychometricTestService();

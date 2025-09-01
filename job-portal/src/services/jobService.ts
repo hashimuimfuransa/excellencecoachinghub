@@ -276,6 +276,28 @@ class JobService {
     const response = await apiGet<ApiResponse<{ category: string; count: number; displayName: string }[]>>('/jobs/categories');
     return handleApiResponse(response);
   }
+
+  // Get AI-matched jobs for the current user
+  async getAIMatchedJobs(): Promise<{
+    data: Job[];
+    meta: {
+      totalJobsEvaluated: number;
+      matchesFound: number;
+      userSkillsCount: number;
+      averageMatchPercentage: number;
+    };
+  }> {
+    const response = await apiGet<ApiResponse<{
+      data: Job[];
+      meta: {
+        totalJobsEvaluated: number;
+        matchesFound: number;
+        userSkillsCount: number;
+        averageMatchPercentage: number;
+      };
+    }>>('/jobs/ai-matched');
+    return handleApiResponse(response);
+  }
 }
 
 export const jobService = new JobService();

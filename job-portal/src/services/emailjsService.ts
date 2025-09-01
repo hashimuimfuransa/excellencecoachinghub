@@ -6,6 +6,7 @@ const EMAILJS_CONFIG = {
   VERIFICATION_TEMPLATE_ID: 'template_sikm5se', // Your EmailJS template ID for email verification
   PASSWORD_RESET_TEMPLATE_ID: 'template_9apzq9s', // Your EmailJS template ID for password reset
   WELCOME_TEMPLATE_ID: 'template_sikm5se', // Your EmailJS template ID for welcome email
+  JOB_APPLICATION_TEMPLATE_ID: 'template_btwevvq', // Your EmailJS template ID for job applications
   PUBLIC_KEY: 'VLY7_POWX21gRHMof' // Your EmailJS public key
 };
 
@@ -238,10 +239,147 @@ export const testEmailJSConnection = async (testEmail: string): Promise<boolean>
   }
 };
 
+// Send job application email to employer
+export const sendJobApplicationEmail = async (
+  employerEmail: string,
+  candidateData: {
+    name: string;
+    email: string;
+    phone?: string;
+    location?: string;
+    jobTitle?: string;
+    skills?: string[];
+    summary?: string;
+    experience?: any[];
+    education?: any[];
+    resume?: string;
+    cvFile?: string;
+    profileCompletion: number;
+  },
+  jobData: {
+    title: string;
+    company: string;
+    location: string;
+  }
+): Promise<boolean> => {
+  try {
+    const templateParams = {
+      // Recipient (EmailJS "To email" should be set to {{to_email}} in the dashboard)
+      to_email: employerEmail,
+      reply_to: candidateData.email,
+
+      // Job information
+      job_title: jobData.title,
+      job_company: jobData.company,
+      job_location: jobData.location,
+
+      // Candidate information
+      candidate_name: candidateData.name,
+      candidate_email: candidateData.email,
+      candidate_phone: candidateData.phone || 'Not provided',
+      candidate_location: candidateData.location || 'Not provided',
+      candidate_job_title: candidateData.jobTitle || 'Not specified',
+
+      // Skills as a simple string (template displays {{candidate_skills}})
+      candidate_skills: candidateData.skills?.join(', ') || 'No skills listed',
+
+      // Summary
+      candidate_summary: candidateData.summary || 'No summary provided',
+
+      // CV/Resume download link
+      cv_download_link: candidateData.resume || candidateData.cvFile || '',
+      // CV text and hint (avoid handlebars conditionals in template)
+      cv_section_text: (candidateData.resume || candidateData.cvFile)
+        ? 'CV/Resume available. Use the button below to download.'
+        : 'No CV/Resume uploaded. Contact the candidate for their CV.',
+      cv_hint_text: (candidateData.resume || candidateData.cvFile)
+        ? 'Their CV/Resume is available below.'
+        : 'Request their CV/Resume when you contact them.',
+
+      // Professional background counts
+      experience_count: candidateData.experience?.length || 0,
+      education_count: candidateData.education?.length || 0,
+
+      // Dates
+      application_date: new Date().toLocaleDateString(),
+
+      // Optional email meta
+      from_name: 'ExJobNet - Dynamic Career Platform',
+      subject: `New Job Application: ${candidateData.name} - ${jobData.title}`
+    };
+
+    // Check if EmailJS is properly configured
+    if (EMAILJS_CONFIG.PUBLIC_KEY === 'YOUR_EMAILJS_PUBLIC_KEY') {
+      // Fallback to console logging
+      console.log('💼 JOB APPLICATION EMAIL (Demo Mode)');
+      console.log('=========================================================');
+      console.log(`To: ${employerEmail}`);
+      console.log(`From: ${candidateData.name} (${candidateData.email})`);
+      console.log(`Job: ${jobData.title} at ${jobData.company}`);
+
+      console.log('=========================================================');
+      console.log('💡 To send real emails, configure EmailJS credentials in emailjsService.ts');
+      return true;
+    }
+
+    // Send real email using EmailJS
+    console.log('📧 Sending job application email to employer:', employerEmail);
+    console.log('📧 Candidate:', candidateData.name);
+    console.log('📧 Job:', jobData.title, 'at', jobData.company);
+    console.log('📧 Using template:', EMAILJS_CONFIG.JOB_APPLICATION_TEMPLATE_ID);
+
+    // Sanitize params: coerce to simple strings and remove unsupported types
+    const sanitizedParams = Object.fromEntries(
+      Object.entries(templateParams).map(([key, value]) => {
+        if (value === undefined || value === null) return [key, ''];
+        if (Array.isArray(value)) return [key, value.join(', ')];
+        if (typeof value === 'boolean') return [key, value ? 'Yes' : 'No'];
+        if (typeof value === 'object') return [key, ''];
+        return [key, String(value)];
+      })
+    );
+
+    const result = await emailjs.send(
+      EMAILJS_CONFIG.SERVICE_ID,
+      EMAILJS_CONFIG.JOB_APPLICATION_TEMPLATE_ID,
+      sanitizedParams,
+      EMAILJS_CONFIG.PUBLIC_KEY
+    );
+
+    if (result.status === 200) {
+      console.log('✅ Job application email sent successfully to:', employerEmail);
+      return true;
+    } else {
+      console.error('❌ Failed to send job application email, status:', result.status);
+      console.error('❌ EmailJS response:', result);
+      return false;
+    }
+  } catch (error: any) {
+    console.error('❌ Failed to send job application email:', error);
+    console.error('❌ Error details:', error.text || error.message || error);
+
+    // Check if it's an EmailJS specific error
+    if (error.status) {
+      console.error('❌ EmailJS Error Status:', error.status);
+    }
+
+    // Fallback to console logging
+    console.log('💼 JOB APPLICATION EMAIL (Fallback)');
+    console.log('=================================');
+    console.log(`To: ${employerEmail}`);
+    console.log(`From: ${candidateData.name} (${candidateData.email})`);
+    console.log(`Job: ${jobData.title} at ${jobData.company}`);
+    console.log(`Contact: ${candidateData.email}`);
+    console.log('=================================');
+    return false;
+  }
+};
+
 const jobPortalEmailjsService = {
   initEmailJS,
   sendPasswordResetEmail,
   sendWelcomeEmail,
+  sendJobApplicationEmail,
   isValidEmail,
   generateVerificationCode,
   testEmailJSConnection

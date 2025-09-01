@@ -24,6 +24,7 @@ import {
   Collapse,
   useMediaQuery,
   InputBase,
+  Paper,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -74,6 +75,8 @@ import CareerGuidancePopup from '../components/CareerGuidancePopup';
 import careerGuidanceService from '../services/careerGuidanceService';
 import SearchBar from '../components/search/SearchBar';
 import EnhancedSearchBar from '../components/search/EnhancedSearchBar';
+import { notificationService } from '../services/notificationService';
+import { chatService } from '../services/chatService';
 
 const drawerWidth = 260;
 const drawerWidthClosed = 72;
@@ -98,6 +101,14 @@ const MainLayout: React.FC = () => {
   // Career guidance popup state
   const [showCareerPopup, setShowCareerPopup] = useState(false);
   const [hasCheckedCareerTest, setHasCheckedCareerTest] = useState(false);
+  
+  // Real-time counts
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  
+  // Search functionality
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout, hasRole, hasAnyRole } = useAuth();
@@ -204,12 +215,78 @@ const MainLayout: React.FC = () => {
     }
   }, [user, location.pathname, hasCheckedCareerTest, hasRole]);
 
+  // Load real-time notification and message counts
+  useEffect(() => {
+    const loadCounts = async () => {
+      if (!user) return;
+      
+      try {
+        // Load unread notifications
+        const notificationResponse = await notificationService.getUnreadCount();
+        setUnreadNotifications(notificationResponse.data?.count || 0);
+
+        // Load unread messages from chat conversations
+        const totalUnreadMessages = await chatService.getTotalUnreadCount();
+        setUnreadMessages(totalUnreadMessages);
+
+        // Initialize chat service for real-time updates
+        chatService.initializeSocket(user._id);
+
+        // Listen for new messages
+        chatService.on('new-message', () => {
+          setUnreadMessages(prev => prev + 1);
+        });
+
+        // Listen for messages read
+        chatService.on('messages-read', () => {
+          loadCounts(); // Reload counts when messages are read
+        });
+
+      } catch (error) {
+        console.error('Error loading counts:', error);
+      }
+    };
+
+    loadCounts();
+    
+    // Set up periodic refresh every 30 seconds
+    const interval = setInterval(loadCounts, 30000);
+    
+    return () => {
+      clearInterval(interval);
+      chatService.disconnect();
+    };
+  }, [user]);
+
   // Toggle submenu open/closed state
   const handleToggleSubMenu = (label: string) => {
     setOpenSubMenus(prev => ({
       ...prev,
       [label]: !prev[label]
     }));
+  };
+
+  // Search handlers
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value);
+  };
+
+  const handleSearchSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/app/jobs?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+      setSearchFocused(false);
+    }
+  };
+
+  const handleSearchKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      handleSearchSubmit(event);
+    } else if (event.key === 'Escape') {
+      setSearchQuery('');
+      setSearchFocused(false);
+    }
   };
 
   // Define navigation items with categories and sub-items
@@ -377,13 +454,13 @@ const MainLayout: React.FC = () => {
         label: 'Notifications',
         path: '/app/notifications',
         icon: <Notifications />,
-        badge: 0 // This could be dynamic based on unread notifications
+        badge: unreadNotifications
       },
       {
         label: 'Messages',
         path: '/app/messages',
         icon: <Mail />,
-        badge: 0 // This could be dynamic based on unread messages
+        badge: unreadMessages
       }
     ];
 
@@ -864,7 +941,7 @@ const MainLayout: React.FC = () => {
               </IconButton>
             )}
             
-            {/* Enhanced Logo */}
+            {/* Modern Logo */}
             <Box 
               component={Link} 
               to="/app/network"
@@ -874,124 +951,180 @@ const MainLayout: React.FC = () => {
                 textDecoration: 'none',
                 gap: 1.5,
                 p: 1,
-                borderRadius: '16px',
+                borderRadius: '20px',
                 '&:hover': {
-                  bgcolor: alpha(muiTheme.palette.primary.main, 0.05),
-                  transform: 'scale(1.02)'
+                  bgcolor: alpha(muiTheme.palette.primary.main, 0.04),
+                  transform: 'translateY(-1px)',
+                  boxShadow: `0 8px 25px ${alpha(muiTheme.palette.primary.main, 0.15)}`,
                 },
-                transition: 'all 0.3s ease'
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             >
               <Box
+                component="img"
+                src="/exjobnetlogo.png"
+                alt="ExJobNet Logo"
                 sx={{
-                  width: 40,
-                  height: 40,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: '12px',
-                  background: `linear-gradient(135deg, ${muiTheme.palette.primary.main}, ${muiTheme.palette.secondary.main})`,
-                  boxShadow: `0 4px 15px ${alpha(muiTheme.palette.primary.main, 0.3)}`,
-                  position: 'relative',
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    inset: 1,
-                    borderRadius: '11px',
-                    background: `linear-gradient(135deg, ${alpha(muiTheme.palette.common.white, 0.2)}, transparent)`,
-                  }
+                  width: { md: 45, lg: 50 },
+                  height: { md: 45, lg: 50 },
+                  borderRadius: '14px',
+                  boxShadow: `0 4px 20px ${alpha(muiTheme.palette.primary.main, 0.2)}`,
+                  border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.1)}`,
+                  '&:hover': {
+                    transform: 'scale(1.05) rotate(1deg)',
+                    boxShadow: `0 8px 30px ${alpha(muiTheme.palette.primary.main, 0.3)}`,
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
-              >
-                <Typography 
-                  variant="h5" 
-                  sx={{ 
-                    fontWeight: 900,
-                    color: 'white',
-                    textShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                    position: 'relative',
-                    zIndex: 1
-                  }}
-                >
-                  E
-                </Typography>
-              </Box>
+              />
               <Box>
                 <Typography 
                   variant="h6" 
-                  fontWeight="bold" 
+                  fontWeight="800"
                   sx={{ 
-                    background: `linear-gradient(135deg, ${muiTheme.palette.primary.main}, ${muiTheme.palette.secondary.main})`,
+                    background: `linear-gradient(135deg, ${muiTheme.palette.primary.main}, #667eea, ${muiTheme.palette.secondary.main})`,
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
-                    letterSpacing: '-0.5px',
-                    lineHeight: 1
+                    backgroundSize: '200% 100%',
+                    letterSpacing: '-0.8px',
+                    lineHeight: 1.1,
+                    fontSize: { md: '1.1rem', lg: '1.25rem' },
+                    fontFamily: '"Inter", "Roboto", sans-serif',
+                    '&:hover': {
+                      backgroundPosition: '100% 0',
+                    },
+                    transition: 'background-position 0.5s ease',
                   }}
                 >
-                  Excellence Hub
+                  ExJobNet
                 </Typography>
                 <Typography 
                   variant="caption" 
                   sx={{ 
                     color: 'text.secondary',
                     fontSize: '0.7rem',
-                    fontWeight: 'medium',
-                    lineHeight: 1
+                    fontWeight: '600',
+                    lineHeight: 1,
+                    letterSpacing: '0.5px',
+                    textTransform: 'uppercase',
+                    opacity: 0.8,
                   }}
                 >
-                  Career Portal
+                  Career Hub
                 </Typography>
               </Box>
             </Box>
           </Box>
 
-          {/* Center Section - Simplified Search Bar */}
+          {/* Center Section - Enhanced Search Bar */}
           <Box sx={{ 
             display: { xs: 'none', md: 'flex' },
             flexGrow: 1,
-            maxWidth: '400px',
-            mx: 3
+            maxWidth: { md: '350px', lg: '450px' },
+            mx: { md: 2, lg: 3 }
           }}>
-            <Box
+            <Paper
+              component="form"
+              onSubmit={handleSearchSubmit}
+              elevation={0}
               sx={{
                 position: 'relative',
                 width: '100%',
-                borderRadius: '16px',
-                bgcolor: alpha(muiTheme.palette.background.paper, 0.9),
-                border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.2)}`,
-                backdropFilter: 'blur(8px)',
-                '&:focus-within': {
-                  border: `1px solid ${muiTheme.palette.primary.main}`,
-                  boxShadow: `0 4px 12px ${alpha(muiTheme.palette.primary.main, 0.15)}`,
+                borderRadius: '20px',
+                bgcolor: searchFocused 
+                  ? alpha(muiTheme.palette.background.paper, 0.95)
+                  : alpha(muiTheme.palette.background.paper, 0.7),
+                border: searchFocused 
+                  ? `2px solid ${muiTheme.palette.primary.main}`
+                  : `1px solid ${alpha(muiTheme.palette.primary.main, 0.15)}`,
+                backdropFilter: 'blur(12px)',
+                boxShadow: searchFocused 
+                  ? `0 8px 25px ${alpha(muiTheme.palette.primary.main, 0.15)}`
+                  : `0 2px 10px ${alpha(muiTheme.palette.common.black, 0.05)}`,
+                '&:hover': {
+                  border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.3)}`,
+                  bgcolor: alpha(muiTheme.palette.background.paper, 0.9),
                 },
-                transition: 'all 0.2s ease'
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                overflow: 'hidden',
               }}
             >
               <InputBase
-                placeholder="Search jobs..."
+                value={searchQuery}
+                onChange={handleSearchChange}
+                onKeyDown={handleSearchKeyDown}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
+                placeholder="Search jobs, companies, skills..."
                 sx={{
                   width: '100%',
-                  px: 2,
-                  py: 1,
+                  px: 2.5,
+                  py: 1.5,
                   fontSize: '0.9rem',
+                  fontWeight: '400',
                   color: 'text.primary',
                   '& .MuiInputBase-input': {
                     '&::placeholder': {
                       color: 'text.secondary',
-                      opacity: 0.7
+                      opacity: 0.8,
+                      fontWeight: '400',
                     }
                   }
                 }}
                 startAdornment={
                   <Search 
                     sx={{ 
-                      mr: 1, 
-                      color: 'text.secondary',
-                      fontSize: '1.1rem' 
+                      mr: 1.5, 
+                      color: searchFocused ? 'primary.main' : 'text.secondary',
+                      fontSize: '1.2rem',
+                      transition: 'color 0.2s ease'
                     }} 
                   />
                 }
+                endAdornment={searchQuery && (
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setSearchFocused(false);
+                    }}
+                    sx={{
+                      p: 0.5,
+                      color: 'text.secondary',
+                      '&:hover': {
+                        color: 'text.primary',
+                        bgcolor: alpha(muiTheme.palette.action.hover, 0.5),
+                      }
+                    }}
+                  >
+                    <Box component="span" sx={{ fontSize: '1rem' }}>×</Box>
+                  </IconButton>
+                )}
               />
-            </Box>
+              
+              {/* Search suggestion hint */}
+              {searchFocused && !searchQuery && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    mt: 1,
+                    p: 2,
+                    bgcolor: muiTheme.palette.background.paper,
+                    borderRadius: '12px',
+                    boxShadow: `0 8px 25px ${alpha(muiTheme.palette.common.black, 0.1)}`,
+                    border: `1px solid ${alpha(muiTheme.palette.divider, 0.1)}`,
+                    zIndex: 1000,
+                  }}
+                >
+                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: '500' }}>
+                    Try searching for: "Software Engineer", "Remote", "Marketing"
+                  </Typography>
+                </Box>
+              )}
+            </Paper>
           </Box>
 
           {/* Right Section - Essential Actions & Profile */}
@@ -1022,20 +1155,28 @@ const MainLayout: React.FC = () => {
                 size="small"
                 sx={{
                   color: 'text.secondary',
+                  position: 'relative',
+                  borderRadius: '12px',
                   '&:hover': {
                     color: 'primary.main',
                     bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
-                  }
+                    transform: 'scale(1.05)',
+                  },
+                  transition: 'all 0.2s ease'
                 }}
               >
                 <Badge 
-                  badgeContent={3} 
+                  badgeContent={unreadNotifications} 
                   color="error"
                   sx={{
                     '& .MuiBadge-badge': {
-                      fontSize: '0.7rem',
-                      height: '14px',
-                      minWidth: '14px'
+                      fontSize: '0.65rem',
+                      height: '16px',
+                      minWidth: '16px',
+                      borderRadius: '8px',
+                      fontWeight: '600',
+                      border: `2px solid ${muiTheme.palette.background.paper}`,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                     }
                   }}
                 >
@@ -1044,53 +1185,172 @@ const MainLayout: React.FC = () => {
               </IconButton>
             </Tooltip>
 
-            {/* Theme Toggle - Desktop Only */}
+            {/* Messages */}
+            <Tooltip title="Messages">
+              <IconButton
+                onClick={() => navigate('/app/messages')}
+                size="small"
+                sx={{
+                  color: 'text.secondary',
+                  position: 'relative',
+                  borderRadius: '12px',
+                  '&:hover': {
+                    color: 'primary.main',
+                    bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
+                    transform: 'scale(1.05)',
+                  },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <Badge 
+                  badgeContent={unreadMessages} 
+                  color="error"
+                  sx={{
+                    '& .MuiBadge-badge': {
+                      fontSize: '0.65rem',
+                      height: '16px',
+                      minWidth: '16px',
+                      borderRadius: '8px',
+                      fontWeight: '600',
+                      border: `2px solid ${muiTheme.palette.background.paper}`,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                    }
+                  }}
+                >
+                  <Mail fontSize="small" />
+                </Badge>
+              </IconButton>
+            </Tooltip>
+
+            {/* Enhanced Theme Toggle - Desktop Only */}
             <Box sx={{ display: { xs: 'none', md: 'block' } }}>
               <Tooltip title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}>
                 <IconButton 
                   onClick={toggleTheme}
                   size="small"
                   sx={{
+                    position: 'relative',
+                    borderRadius: '12px',
                     color: 'text.secondary',
+                    bgcolor: alpha(muiTheme.palette.background.default, 0.5),
+                    border: `1px solid ${alpha(muiTheme.palette.divider, 0.1)}`,
+                    backdropFilter: 'blur(8px)',
                     '&:hover': {
                       color: 'primary.main',
                       bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
+                      transform: 'scale(1.05)',
+                      boxShadow: `0 4px 15px ${alpha(muiTheme.palette.primary.main, 0.15)}`,
+                    },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: 'inherit',
+                      background: mode === 'dark' 
+                        ? 'linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 152, 0, 0.1))'
+                        : 'linear-gradient(135deg, rgba(63, 81, 181, 0.1), rgba(33, 150, 243, 0.1))',
+                      opacity: 0,
+                      transition: 'opacity 0.3s ease',
+                    },
+                    '&:hover::before': {
+                      opacity: 1,
                     }
                   }}
                 >
-                  {mode === 'dark' ? <LightMode fontSize="small" /> : <DarkMode fontSize="small" />}
+                  {mode === 'dark' ? (
+                    <LightMode 
+                      fontSize="small" 
+                      sx={{ 
+                        color: 'warning.main',
+                        filter: 'drop-shadow(0 2px 4px rgba(255, 193, 7, 0.3))',
+                      }} 
+                    />
+                  ) : (
+                    <DarkMode 
+                      fontSize="small"
+                      sx={{ 
+                        color: 'primary.main',
+                        filter: 'drop-shadow(0 2px 4px rgba(63, 81, 181, 0.3))',
+                      }} 
+                    />
+                  )}
                 </IconButton>
               </Tooltip>
             </Box>
             
-            {/* Profile */}
-            <Tooltip title={`${user?.firstName} ${user?.lastName}`}>
+            {/* Enhanced Profile */}
+            <Tooltip 
+              title={
+                <Box sx={{ textAlign: 'center', p: 1 }}>
+                  <Typography variant="body2" sx={{ fontWeight: '600' }}>
+                    {user?.firstName} {user?.lastName}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {user?.email}
+                  </Typography>
+                </Box>
+              }
+            >
               <IconButton
                 onClick={handleProfileMenuOpen}
                 size="small"
                 sx={{ 
                   p: 0.5,
-                  ml: { xs: 0.5, md: 1 },
+                  ml: { xs: 0.5, md: 1.5 },
+                  position: 'relative',
+                  borderRadius: '50%',
                   '&:hover': {
-                    transform: 'scale(1.05)',
+                    transform: 'scale(1.08) translateY(-1px)',
+                    '& .MuiAvatar-root': {
+                      boxShadow: `0 8px 25px ${alpha(muiTheme.palette.primary.main, 0.3)}`,
+                    }
                   },
-                  transition: 'all 0.2s ease',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    inset: -2,
+                    borderRadius: '50%',
+                    background: `conic-gradient(from 0deg, ${muiTheme.palette.primary.main}, ${muiTheme.palette.secondary.main}, ${muiTheme.palette.primary.main})`,
+                    opacity: 0,
+                    transition: 'opacity 0.3s ease',
+                  },
+                  '&:hover::before': {
+                    opacity: 0.6,
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
               >
                 <Avatar
                   alt={user?.firstName}
                   src={user?.avatar}
                   sx={{ 
-                    width: { xs: 32, md: 36 }, 
-                    height: { xs: 32, md: 36 },
-                    border: `2px solid ${alpha(muiTheme.palette.primary.main, 0.2)}`,
-                    '&:hover': {
-                      borderColor: 'primary.main',
-                    },
-                    transition: 'all 0.2s ease',
+                    width: { xs: 34, md: 40 }, 
+                    height: { xs: 34, md: 40 },
+                    border: `3px solid ${muiTheme.palette.background.paper}`,
+                    boxShadow: `0 4px 15px ${alpha(muiTheme.palette.common.black, 0.1)}`,
+                    background: user?.avatar ? 'transparent' : `linear-gradient(135deg, ${muiTheme.palette.primary.main}, ${muiTheme.palette.secondary.main})`,
+                    color: 'white',
+                    fontWeight: '700',
+                    fontSize: '1rem',
+                    position: 'relative',
+                    zIndex: 1,
+                    transition: 'all 0.3s ease',
+                    '&::after': {
+                      content: '""',
+                      position: 'absolute',
+                      bottom: 2,
+                      right: 2,
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      bgcolor: 'success.main',
+                      border: `2px solid ${muiTheme.palette.background.paper}`,
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                    }
                   }}
                 >
-                  {user?.firstName?.charAt(0)}
+                  {user?.firstName?.charAt(0)?.toUpperCase()}
                 </Avatar>
               </IconButton>
             </Tooltip>

@@ -256,7 +256,7 @@ class PushNotificationService {
    */
   private async sendSubscriptionToServer(subscription: any): Promise<void> {
     try {
-      await api.post('/notifications/subscribe', {
+      await api.post('/notifications/push-subscription', {
         subscription: this.subscriptionToObject(subscription)
       });
     } catch (error) {
@@ -269,8 +269,10 @@ class PushNotificationService {
    */
   private async removeSubscriptionFromServer(subscription: any): Promise<void> {
     try {
-      await api.post('/notifications/unsubscribe', {
-        subscription: this.subscriptionToObject(subscription)
+      await api.delete('/notifications/push-subscription', {
+        data: {
+          endpoint: subscription.endpoint
+        }
       });
     } catch (error) {
       console.error('Error removing subscription from server:', error);

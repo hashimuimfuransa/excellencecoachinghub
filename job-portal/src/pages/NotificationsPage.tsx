@@ -125,10 +125,25 @@ const NotificationsPage: React.FC = () => {
       setLoading(true);
       setError(null);
       const response = await notificationService.getNotifications(1, 50);
-      setNotifications(response.data || []);
-    } catch (err) {
-      setError('Failed to load notifications. Please try again.');
+      
+      console.log('Notifications API response:', response); // Debug log
+      
+      // The API returns { success: true, data: { notifications: [...], ... } }
+      const notificationsData = response.data?.notifications || response.notifications || [];
+      
+      console.log('Extracted notifications data:', notificationsData); // Debug log
+      
+      if (!Array.isArray(notificationsData)) {
+        console.warn('Notifications data is not an array:', typeof notificationsData, notificationsData);
+        setNotifications([]);
+      } else {
+        setNotifications(notificationsData);
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to load notifications. Please try again.';
+      setError(errorMessage);
       console.error('Error loading notifications:', err);
+      setNotifications([]); // Ensure notifications is always an array
     } finally {
       setLoading(false);
     }
@@ -136,7 +151,7 @@ const NotificationsPage: React.FC = () => {
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {
-      await realTimeNotificationService.markAsRead(notificationId);
+      await notificationService.markAsRead(notificationId);
       setNotifications(prev => 
         prev.map(notif => 
           notif._id === notificationId ? { ...notif, isRead: true } : notif
@@ -149,7 +164,7 @@ const NotificationsPage: React.FC = () => {
 
   const handleMarkAllAsRead = async () => {
     try {
-      await realTimeNotificationService.markAllAsRead();
+      await notificationService.markAllAsRead();
       setNotifications(prev => prev.map(notif => ({ ...notif, isRead: true })));
       setSuccessMessage('All notifications marked as read');
       setTimeout(() => setSuccessMessage(null), 3000);
@@ -162,7 +177,7 @@ const NotificationsPage: React.FC = () => {
 
   const handleDeleteNotification = async (notificationId: string) => {
     try {
-      await realTimeNotificationService.deleteNotification(notificationId);
+      await notificationService.deleteNotification(notificationId);
       setNotifications(prev => prev.filter(notif => notif._id !== notificationId));
       setSuccessMessage('Notification deleted');
       setTimeout(() => setSuccessMessage(null), 3000);
@@ -235,7 +250,7 @@ const NotificationsPage: React.FC = () => {
     }
   };
 
-  const displayUnreadCount = unreadCount || notifications.filter(notif => !notif.isRead).length;
+  const displayUnreadCount = unreadCount || (Array.isArray(notifications) ? notifications.filter(notif => !notif.isRead).length : 0);
 
   if (loading) {
     return (
@@ -468,7 +483,7 @@ const NotificationsPage: React.FC = () => {
 
         {/* Notifications List */}
         <Paper sx={{ borderRadius: 2, overflow: 'hidden' }}>
-          {notifications.length === 0 ? (
+          {!Array.isArray(notifications) || notifications.length === 0 ? (
             <Box sx={{ p: 4, textAlign: 'center' }}>
               <NotificationsIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
               <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
@@ -577,7 +592,7 @@ const NotificationsPage: React.FC = () => {
                       </IconButton>
                     </Box>
                   </ListItem>
-                  {index < notifications.length - 1 && <Divider />}
+                  {Array.isArray(notifications) && index < notifications.length - 1 && <Divider />}
                 </React.Fragment>
               ))}
             </List>

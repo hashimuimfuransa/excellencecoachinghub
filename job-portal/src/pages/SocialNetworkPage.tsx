@@ -31,6 +31,9 @@ import {
   ListItemAvatar,
   ListItemText,
   ListItemButton,
+  CardActions,
+  LinearProgress,
+  Tooltip,
 } from '@mui/material';
 import { 
   Add, 
@@ -55,7 +58,12 @@ import {
   SmartToy,
   Quiz,
   RecordVoiceOver,
-  Smart,
+  LocationOn,
+  AttachMoney,
+  Schedule,
+  BookmarkBorder,
+  PersonAdd,
+  AccountCircle,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -65,6 +73,10 @@ import FeedSidebar from '../components/social/FeedSidebar';
 import { SocialPost } from '../types/social';
 import { socialNetworkService, FeedOptions } from '../services/socialNetworkService';
 import { useAuth } from '../contexts/AuthContext';
+import { jobService } from '../services/jobService';
+import { profileService } from '../services/profileService';
+import { userService } from '../services/userService';
+import { User } from '../types/user';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -99,10 +111,26 @@ const SocialNetworkPage: React.FC = () => {
   const [connectingUsers, setConnectingUsers] = useState<string[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(true);
 
+  // Jobs state
+  const [matchedJobs, setMatchedJobs] = useState<any[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(false);
+  const [profileCompletion, setProfileCompletion] = useState<any>(null);
+  const [profileValidation, setProfileValidation] = useState<any>(null);
+  const [bookmarkedJobs, setBookmarkedJobs] = useState<Set<string>>(new Set());
+
   // Load posts on component mount and when filter changes
   useEffect(() => {
-    loadPosts(true);
+    if (currentTab === 1) { // Job Posts tab
+      loadMatchedJobs();
+    } else {
+      loadPosts(true);
+    }
   }, [currentTab]);
+
+  // Load profile completion and validation on mount
+  useEffect(() => {
+    loadProfileData();
+  }, [user]);
 
   const loadPosts = async (reset = false) => {
     if (!user) return;
@@ -156,6 +184,143 @@ const SocialNetworkPage: React.FC = () => {
 
   const handlePostDelete = (postId: string) => {
     setPosts(prev => prev.filter(post => post._id !== postId));
+  };
+
+  // Load profile completion and validation data
+  const loadProfileData = async () => {
+    if (!user?._id) return;
+
+    try {
+      console.log('🔍 SocialNetworkPage fetching fresh user data for:', user._id);
+      // Fetch fresh user data from the server to get the most up-to-date profile
+      const freshUser = await userService.getUserProfile(user._id);
+      console.log('📋 SocialNetworkPage received fresh user data:', freshUser);
+      
+      // Use fresh user data for validation
+      const validation = await profileService.validateUserProfile(freshUser as User);
+      console.log('✅ Profile validation result:', validation);
+      setProfileValidation(validation);
+
+      const completion = await profileService.getProfileCompletionStatus();
+      console.log('📊 Profile completion status:', completion);
+      setProfileCompletion(completion);
+    } catch (error) {
+      console.error('❌ Error loading profile data:', error);
+      // Fallback to using auth context user data
+      try {
+        const validation = await profileService.validateUserProfile(user as User);
+        setProfileValidation(validation);
+        
+        const completion = await profileService.getProfileCompletionStatus();
+        setProfileCompletion(completion);
+      } catch (fallbackError) {
+        console.error('❌ Fallback profile validation also failed:', fallbackError);
+      }
+    }
+  };
+
+  // Load AI-matched jobs based on user skills and profile
+  const loadMatchedJobs = async () => {
+    if (!user?._id) return;
+
+    setJobsLoading(true);
+    setError(null);
+
+    try {
+      console.log('🤖 Loading AI-matched jobs for user:', user._id);
+      
+      // Fetch fresh user data to get the most up-to-date profile
+      const freshUser = await userService.getUserProfile(user._id);
+      console.log('📋 Fresh user data for job matching:', freshUser);
+
+      // Validate the fresh profile data
+      const validation = await profileService.validateUserProfile(freshUser as User);
+      console.log('✅ Profile validation for job matching:', validation);
+
+      // Check if profile is complete enough for job matching
+      if (!validation || validation.completionPercentage < 30) {
+        console.log('⚠️ Profile not complete enough for job matching. Completion:', validation?.completionPercentage || 0, '%');
+        setMatchedJobs([]);
+        setJobsLoading(false);
+        return;
+      }
+
+      // Get user skills for basic validation
+      const userSkills = (freshUser as User).skills || [];
+      const experienceSkills = ((freshUser as User).experience || [])
+        .flatMap(exp => exp.technologies || [])
+        .filter(tech => tech && tech.trim());
+      const allSkills = [...userSkills, ...experienceSkills];
+
+      console.log('🎯 User skills for matching:', allSkills);
+
+      if (allSkills.length === 0) {
+        console.log('⚠️ No skills found for job matching');
+        setMatchedJobs([]);
+        setJobsLoading(false);
+        return;
+      }
+
+      // Use enhanced AI-powered job matching service
+      console.log('🤖 Calling enhanced AI-powered job matching service...');
+      const response = await jobService.getAIMatchedJobs();
+
+      console.log('📋 Enhanced AI Job matching response:', response);
+      console.log('✅ AI found', response.data?.length || 0, 'matched jobs');
+      console.log('📊 Matching stats:', response.meta);
+
+      setMatchedJobs(response.data);
+    } catch (err: any) {
+      console.error('❌ Error loading AI-matched jobs:', err);
+      
+      // If AI matching fails, fall back to basic skill matching
+      console.log('🔄 Falling back to basic skill matching...');
+      try {
+        const freshUser = await userService.getUserProfile(user._id);
+        const userSkills = (freshUser as User).skills || [];
+        const technicalSkills = ((freshUser as User).technicalSkills || []).map(ts => ts.skill);
+        const allSkills = [...userSkills, ...technicalSkills];
+
+        if (allSkills.length > 0) {
+          const fallbackResponse = await jobService.getJobs({
+            skills: allSkills.slice(0, 10),
+            status: 'active' as any
+          }, 1, 15);
+
+          if (fallbackResponse.success) {
+            console.log('✅ Fallback found', fallbackResponse.data.length, 'matched jobs');
+            setMatchedJobs(fallbackResponse.data);
+          } else {
+            throw new Error('Failed to load jobs with fallback method');
+          }
+        } else {
+          setMatchedJobs([]);
+        }
+      } catch (fallbackErr: any) {
+        console.error('❌ Fallback job matching also failed:', fallbackErr);
+        setError(fallbackErr.response?.data?.error || fallbackErr.message || 'Failed to load matched jobs');
+        setMatchedJobs([]);
+      }
+    } finally {
+      setJobsLoading(false);
+    }
+  };
+
+  // Handle job bookmark toggle
+  const handleJobBookmark = async (jobId: string) => {
+    const newBookmarks = new Set(bookmarkedJobs);
+    if (bookmarkedJobs.has(jobId)) {
+      newBookmarks.delete(jobId);
+    } else {
+      newBookmarks.add(jobId);
+    }
+    setBookmarkedJobs(newBookmarks);
+    // Here you could add API call to save bookmark
+  };
+
+  // Handle job application
+  const handleJobApply = (jobId: string) => {
+    navigate(`/app/jobs/${jobId}`);
   };
 
   // Load suggested connections
@@ -842,116 +1007,492 @@ const SocialNetworkPage: React.FC = () => {
                       </Alert>
                     )}
 
-                    {loading && posts.length === 0 ? (
-                      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                        <CircularProgress />
-                      </Box>
-                    ) : posts.length === 0 ? (
-                      <Card sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
-                        <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
-                          No posts found
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Be the first to share something in this category! 🚀
-                        </Typography>
-                      </Card>
-                    ) : (
-                      <Stack spacing={{ xs: 2, sm: 2.5, md: 3, lg: 3.5 }}>
-                        {posts.map((post, index) => (
-                          <motion.div
-                            key={post._id}
-                            initial={{ opacity: 0, y: 30 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ 
-                              duration: 0.5, 
-                              delay: index * 0.1,
-                              ease: [0.25, 0.46, 0.45, 0.94]
-                            }}
-                            whileHover={{ 
-                              y: -2,
-                              transition: { duration: 0.2 }
-                            }}
-                          >
-                            <Box
+                    {index === 1 ? (
+                      // Job Posts Tab - Show matched jobs
+                      <>
+                        {!profileValidation || profileValidation.completionPercentage < 30 ? (
+                          <Card sx={{ 
+                            p: 4, 
+                            textAlign: 'center', 
+                            borderRadius: 3,
+                            background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.05) 0%, rgba(255, 193, 7, 0.05) 100%)',
+                            border: '1px solid rgba(255, 152, 0, 0.2)'
+                          }}>
+                            <Avatar sx={{ 
+                              width: 64, 
+                              height: 64, 
+                              mx: 'auto', 
+                              mb: 2,
+                              bgcolor: 'warning.main'
+                            }}>
+                              <AccountCircle sx={{ fontSize: 40 }} />
+                            </Avatar>
+                            <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+                              Complete Your Profile to See Matched Jobs
+                            </Typography>
+                            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                              We need to know more about your skills and experience to show you jobs that fit your profile perfectly.
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                              Profile Completion: {profileValidation?.completionPercentage || 0}% 
+                              (Minimum 30% required)
+                            </Typography>
+                            <Button 
+                              variant="contained" 
+                              startIcon={<PersonAdd />}
+                              onClick={() => navigate('/app/profile')}
                               sx={{
-                                borderRadius: { xs: 2, sm: 3, md: 3, lg: 4 },
-                                overflow: 'hidden',
-                                background: theme.palette.mode === 'dark'
-                                  ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
-                                  : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                                backdropFilter: 'blur(20px)',
-                                boxShadow: theme.palette.mode === 'dark'
-                                  ? { xs: '0 4px 16px rgba(0,0,0,0.2)', sm: '0 6px 24px rgba(0,0,0,0.25)', md: '0 8px 32px rgba(0,0,0,0.3)' }
-                                  : { xs: '0 4px 16px rgba(102, 126, 234, 0.06)', sm: '0 6px 24px rgba(102, 126, 234, 0.07)', md: '0 8px 32px rgba(102, 126, 234, 0.08)' },
-                                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(102, 126, 234, 0.08)'}`,
-                                position: 'relative',
-                                mx: { xs: 0, sm: 'auto' },
-                                maxWidth: '100%',
-                                '&::before': {
-                                  content: '""',
-                                  position: 'absolute',
-                                  top: 0,
-                                  left: 0,
-                                  right: 0,
-                                  height: '2px',
-                                  background: 'linear-gradient(90deg, transparent 0%, rgba(102, 126, 234, 0.5) 50%, transparent 100%)',
-                                },
+                                borderRadius: 3,
+                                px: 4,
+                                py: 1.5,
+                                textTransform: 'none',
+                                fontWeight: 'bold',
+                                background: 'linear-gradient(135deg, #FF9800 0%, #FF5722 100%)',
                                 '&:hover': {
-                                  boxShadow: theme.palette.mode === 'dark'
-                                    ? '0 12px 40px rgba(0,0,0,0.4)'
-                                    : '0 12px 40px rgba(102, 126, 234, 0.12)',
+                                  background: 'linear-gradient(135deg, #F57C00 0%, #E64A19 100%)',
                                   transform: 'translateY(-2px)',
-                                  transition: 'all 0.3s ease',
+                                  boxShadow: '0 8px 25px rgba(255, 152, 0, 0.3)'
                                 }
                               }}
                             >
-                              <PostCard
-                                post={post}
-                                onPostUpdate={handlePostUpdate}
-                                onPostDelete={handlePostDelete}
-                              />
-                            </Box>
-                          </motion.div>
-                        ))}
-
-                        {/* Enhanced Load More Button */}
-                        {hasMore && (
-                          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-                            <motion.div
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                            >
-                              <Button
-                                variant="contained"
-                                onClick={loadMorePosts}
-                                disabled={loading}
-                                sx={{
-                                  borderRadius: 4,
-                                  px: 6,
-                                  py: 2,
+                              Complete Profile
+                            </Button>
+                          </Card>
+                        ) : jobsLoading ? (
+                          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                            <CircularProgress />
+                          </Box>
+                        ) : matchedJobs.length === 0 ? (
+                          <Card sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
+                            <Work sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                            <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+                              No Matched Jobs Found
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                              We couldn't find jobs that match your current skills. Try updating your profile with more skills.
+                            </Typography>
+                            <Stack direction="row" spacing={2} justifyContent="center">
+                              <Button 
+                                variant="outlined" 
+                                startIcon={<PersonAdd />}
+                                onClick={() => navigate('/app/profile')}
+                                sx={{ borderRadius: 2, textTransform: 'none' }}
+                              >
+                                Update Profile
+                              </Button>
+                              <Button 
+                                variant="contained" 
+                                startIcon={<Search />}
+                                onClick={() => navigate('/app/jobs')}
+                                sx={{ 
+                                  borderRadius: 2, 
                                   textTransform: 'none',
-                                  fontWeight: 700,
-                                  fontSize: '1rem',
                                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                  boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
-                                  border: 'none',
-                                  '&:hover': {
-                                    background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-                                    boxShadow: '0 12px 35px rgba(102, 126, 234, 0.4)',
-                                    transform: 'translateY(-2px)',
-                                  },
-                                  '&:disabled': {
-                                    background: 'linear-gradient(135deg, #ccc 0%, #999 100%)',
-                                    boxShadow: 'none',
-                                  }
                                 }}
                               >
-                                {loading ? '🔄 Loading...' : '📜 Load More Posts'}
+                                Browse All Jobs
                               </Button>
-                            </motion.div>
-                          </Box>
+                            </Stack>
+                          </Card>
+                        ) : (
+                          <Stack spacing={{ xs: 2, sm: 2.5, md: 3, lg: 3.5 }}>
+                            {/* AI-powered job matching header */}
+                            <Card sx={{ 
+                              p: 2, 
+                              borderRadius: 3,
+                              background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
+                              border: '1px solid rgba(102, 126, 234, 0.2)'
+                            }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                <SmartToy color="primary" sx={{ fontSize: 20 }} />
+                                <Typography variant="body2" color="primary" sx={{ fontWeight: 'bold' }}>
+                                  AI-Powered Job Matching
+                                </Typography>
+                              </Box>
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                                Showing {matchedJobs.length} jobs intelligently matched to your profile using advanced AI analysis
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Your skills: {((user as User)?.skills || []).slice(0, 3).join(', ')}
+                                {((user as User)?.skills?.length || 0) > 3 && ` +${((user as User)?.skills?.length || 0) - 3} more`}
+                              </Typography>
+                            </Card>
+
+                            {matchedJobs.map((job, index) => (
+                              <motion.div
+                                key={job._id}
+                                initial={{ opacity: 0, y: 30 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ 
+                                  duration: 0.5, 
+                                  delay: index * 0.1,
+                                  ease: [0.25, 0.46, 0.45, 0.94]
+                                }}
+                                whileHover={{ 
+                                  y: -2,
+                                  transition: { duration: 0.2 }
+                                }}
+                              >
+                                <Card
+                                  sx={{
+                                    borderRadius: { xs: 2, sm: 3, md: 3, lg: 4 },
+                                    overflow: 'hidden',
+                                    background: theme.palette.mode === 'dark'
+                                      ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
+                                      : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                                    backdropFilter: 'blur(20px)',
+                                    boxShadow: theme.palette.mode === 'dark'
+                                      ? { xs: '0 4px 16px rgba(0,0,0,0.2)', sm: '0 6px 24px rgba(0,0,0,0.25)', md: '0 8px 32px rgba(0,0,0,0.3)' }
+                                      : { xs: '0 4px 16px rgba(102, 126, 234, 0.06)', sm: '0 6px 24px rgba(102, 126, 234, 0.07)', md: '0 8px 32px rgba(102, 126, 234, 0.08)' },
+                                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(102, 126, 234, 0.08)'}`,
+                                    position: 'relative',
+                                    cursor: 'pointer',
+                                    '&:hover': {
+                                      boxShadow: theme.palette.mode === 'dark'
+                                        ? '0 12px 40px rgba(0,0,0,0.4)'
+                                        : '0 12px 40px rgba(102, 126, 234, 0.12)',
+                                      transform: 'translateY(-2px)',
+                                      transition: 'all 0.3s ease',
+                                    }
+                                  }}
+                                  onClick={() => handleJobApply(job._id)}
+                                >
+                                  {/* AI Job match indicator */}
+                                  <Box sx={{ position: 'relative' }}>
+                                    <LinearProgress 
+                                      variant="determinate" 
+                                      value={job.matchPercentage || 75} 
+                                      sx={{ 
+                                        height: 4,
+                                        backgroundColor: 'rgba(0,0,0,0.1)',
+                                        '& .MuiLinearProgress-bar': {
+                                          backgroundColor: job.matchPercentage >= 90 ? '#4CAF50' : 
+                                                         job.matchPercentage >= 75 ? '#FF9800' : '#2196F3'
+                                        }
+                                      }}
+                                    />
+                                    <Typography 
+                                      variant="caption" 
+                                      sx={{ 
+                                        position: 'absolute',
+                                        right: 8,
+                                        top: -20,
+                                        fontSize: '0.7rem',
+                                        fontWeight: 'bold',
+                                        color: job.matchPercentage >= 90 ? 'success.main' : 
+                                               job.matchPercentage >= 75 ? 'warning.main' : 'primary.main'
+                                      }}
+                                    >
+                                      🤖 {job.matchPercentage || 75}% AI Match
+                                    </Typography>
+                                  </Box>
+                                  
+                                  <CardContent sx={{ p: 3 }}>
+                                    {/* Header with company and bookmark */}
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
+                                        <Avatar 
+                                          sx={{ 
+                                            width: 48, 
+                                            height: 48, 
+                                            bgcolor: 'primary.main',
+                                            fontSize: '1.2rem',
+                                            fontWeight: 'bold'
+                                          }}
+                                        >
+                                          {job.company?.charAt(0) || 'J'}
+                                        </Avatar>
+                                        <Box sx={{ minWidth: 0, flex: 1 }}>
+                                          <Typography variant="h6" sx={{ 
+                                            fontWeight: 'bold',
+                                            fontSize: '1.1rem',
+                                            lineHeight: 1.2,
+                                            display: '-webkit-box',
+                                            WebkitLineClamp: 2,
+                                            WebkitBoxOrient: 'vertical',
+                                            overflow: 'hidden'
+                                          }}>
+                                            {job.title}
+                                          </Typography>
+                                          <Typography variant="body2" color="text.secondary">
+                                            {job.company}
+                                          </Typography>
+                                        </Box>
+                                      </Box>
+                                      <Tooltip title={bookmarkedJobs.has(job._id) ? 'Remove bookmark' : 'Bookmark job'}>
+                                        <IconButton
+                                          size="small"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleJobBookmark(job._id);
+                                          }}
+                                        >
+                                          {bookmarkedJobs.has(job._id) ? <Bookmark color="primary" /> : <BookmarkBorder />}
+                                        </IconButton>
+                                      </Tooltip>
+                                    </Box>
+
+                                    {/* Job details */}
+                                    <Stack spacing={1} sx={{ mb: 2 }}>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <LocationOn fontSize="small" color="action" />
+                                        <Typography variant="body2" color="text.secondary">
+                                          {job.location || 'Remote'}
+                                        </Typography>
+                                      </Box>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Schedule fontSize="small" color="action" />
+                                        <Typography variant="body2" color="text.secondary">
+                                          {job.type || 'Full-time'}
+                                        </Typography>
+                                      </Box>
+                                      {job.salary && (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                          <AttachMoney fontSize="small" color="action" />
+                                          <Typography variant="body2" color="text.secondary">
+                                            {typeof job.salary === 'object' 
+                                              ? `$${job.salary.min?.toLocaleString()} - $${job.salary.max?.toLocaleString()}`
+                                              : `$${job.salary.toLocaleString()}`
+                                            }
+                                          </Typography>
+                                        </Box>
+                                      )}
+                                    </Stack>
+
+                                    {/* AI-powered Skills match */}
+                                    <Box sx={{ mb: 2 }}>
+                                      <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                                        🤖 AI Skills Analysis:
+                                      </Typography>
+                                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
+                                        {/* Show AI-matched skills if available */}
+                                        {(job.matchingSkills && job.matchingSkills.length > 0) ? (
+                                          job.matchingSkills.slice(0, 4).map((skill: string, skillIndex: number) => (
+                                            <Chip
+                                              key={skillIndex}
+                                              label={skill}
+                                              size="small"
+                                              color="success"
+                                              variant="filled"
+                                              icon={<SmartToy sx={{ fontSize: 14 }} />}
+                                              sx={{ 
+                                                fontSize: '0.7rem',
+                                                height: 24,
+                                                '& .MuiChip-label': {
+                                                  px: 1
+                                                },
+                                                '& .MuiChip-icon': {
+                                                  fontSize: 14,
+                                                  marginLeft: 1
+                                                }
+                                              }}
+                                            />
+                                          ))
+                                        ) : (
+                                          // Fallback to required skills with basic matching
+                                          job.requiredSkills?.slice(0, 3).map((skill: string, skillIndex: number) => {
+                                            const userSkills = [...((user as User)?.skills || []), ...((user as User)?.technicalSkills?.map(ts => ts.skill) || [])];
+                                            const isMatch = userSkills.some(userSkill => 
+                                              userSkill.toLowerCase().includes(skill.toLowerCase()) ||
+                                              skill.toLowerCase().includes(userSkill.toLowerCase())
+                                            );
+                                            
+                                            return (
+                                              <Chip
+                                                key={skillIndex}
+                                                label={skill}
+                                                size="small"
+                                                color={isMatch ? "primary" : "default"}
+                                                variant={isMatch ? "filled" : "outlined"}
+                                                sx={{ 
+                                                  fontSize: '0.7rem',
+                                                  height: 24,
+                                                  '& .MuiChip-label': {
+                                                    px: 1
+                                                  }
+                                                }}
+                                              />
+                                            );
+                                          })
+                                        )}
+                                        {((job.matchingSkills?.length || job.requiredSkills?.length || 0) > 3) && (
+                                          <Chip
+                                            label={`+${((job.matchingSkills?.length || job.requiredSkills?.length || 0) - 3)} more`}
+                                            size="small"
+                                            variant="outlined"
+                                            sx={{ fontSize: '0.7rem', height: 24 }}
+                                          />
+                                        )}
+                                      </Box>
+                                      {/* AI recommendation reason */}
+                                      {job.recommendationReason && (
+                                        <Typography variant="caption" color="success.main" sx={{ fontStyle: 'italic' }}>
+                                          ✨ {job.recommendationReason}
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  </CardContent>
+
+                                  <CardActions sx={{ px: 3, pb: 2, pt: 0 }}>
+                                    <Button
+                                      variant="contained"
+                                      startIcon={<ArrowForward />}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleJobApply(job._id);
+                                      }}
+                                      sx={{
+                                        borderRadius: 2,
+                                        textTransform: 'none',
+                                        fontWeight: 'bold',
+                                        flex: 1,
+                                        background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
+                                        '&:hover': {
+                                          background: 'linear-gradient(135deg, #45a049 0%, #4CAF50 100%)',
+                                          transform: 'translateY(-1px)',
+                                          boxShadow: '0 6px 20px rgba(76, 175, 80, 0.3)'
+                                        }
+                                      }}
+                                    >
+                                      Apply Now
+                                    </Button>
+                                    <Button
+                                      variant="outlined"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/app/jobs/${job._id}`);
+                                      }}
+                                      sx={{
+                                        borderRadius: 2,
+                                        textTransform: 'none',
+                                        borderColor: 'primary.main',
+                                        color: 'primary.main'
+                                      }}
+                                    >
+                                      View Details
+                                    </Button>
+                                  </CardActions>
+                                </Card>
+                              </motion.div>
+                            ))}
+                          </Stack>
                         )}
-                      </Stack>
+                      </>
+                    ) : (
+                      // Regular posts for other tabs
+                      <>
+                        {(loading && posts.length === 0) || (index === 1 && jobsLoading) ? (
+                          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                            <CircularProgress />
+                          </Box>
+                        ) : posts.length === 0 ? (
+                          <Card sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
+                            <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+                              No posts found
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Be the first to share something in this category! 🚀
+                            </Typography>
+                          </Card>
+                        ) : (
+                          <Stack spacing={{ xs: 2, sm: 2.5, md: 3, lg: 3.5 }}>
+                            {posts.map((post, postIndex) => (
+                              <motion.div
+                                key={post._id}
+                                initial={{ opacity: 0, y: 30 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ 
+                                  duration: 0.5, 
+                                  delay: postIndex * 0.1,
+                                  ease: [0.25, 0.46, 0.45, 0.94]
+                                }}
+                                whileHover={{ 
+                                  y: -2,
+                                  transition: { duration: 0.2 }
+                                }}
+                              >
+                                <Box
+                                  sx={{
+                                    borderRadius: { xs: 2, sm: 3, md: 3, lg: 4 },
+                                    overflow: 'hidden',
+                                    background: theme.palette.mode === 'dark'
+                                      ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
+                                      : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                                    backdropFilter: 'blur(20px)',
+                                    boxShadow: theme.palette.mode === 'dark'
+                                      ? { xs: '0 4px 16px rgba(0,0,0,0.2)', sm: '0 6px 24px rgba(0,0,0,0.25)', md: '0 8px 32px rgba(0,0,0,0.3)' }
+                                      : { xs: '0 4px 16px rgba(102, 126, 234, 0.06)', sm: '0 6px 24px rgba(102, 126, 234, 0.07)', md: '0 8px 32px rgba(102, 126, 234, 0.08)' },
+                                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(102, 126, 234, 0.08)'}`,
+                                    position: 'relative',
+                                    mx: { xs: 0, sm: 'auto' },
+                                    maxWidth: '100%',
+                                    '&::before': {
+                                      content: '""',
+                                      position: 'absolute',
+                                      top: 0,
+                                      left: 0,
+                                      right: 0,
+                                      height: '2px',
+                                      background: 'linear-gradient(90deg, transparent 0%, rgba(102, 126, 234, 0.5) 50%, transparent 100%)',
+                                    },
+                                    '&:hover': {
+                                      boxShadow: theme.palette.mode === 'dark'
+                                        ? '0 12px 40px rgba(0,0,0,0.4)'
+                                        : '0 12px 40px rgba(102, 126, 234, 0.12)',
+                                      transform: 'translateY(-2px)',
+                                      transition: 'all 0.3s ease',
+                                    }
+                                  }}
+                                >
+                                  <PostCard
+                                    post={post}
+                                    onPostUpdate={handlePostUpdate}
+                                    onPostDelete={handlePostDelete}
+                                  />
+                                </Box>
+                              </motion.div>
+                            ))}
+
+                            {/* Enhanced Load More Button */}
+                            {hasMore && index !== 1 && (
+                              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                                <motion.div
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                >
+                                  <Button
+                                    variant="contained"
+                                    onClick={loadMorePosts}
+                                    disabled={loading}
+                                    sx={{
+                                      borderRadius: 4,
+                                      px: 6,
+                                      py: 2,
+                                      textTransform: 'none',
+                                      fontWeight: 700,
+                                      fontSize: '1rem',
+                                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                      boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
+                                      border: 'none',
+                                      '&:hover': {
+                                        background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                                        boxShadow: '0 12px 35px rgba(102, 126, 234, 0.4)',
+                                        transform: 'translateY(-2px)',
+                                      },
+                                      '&:disabled': {
+                                        background: 'linear-gradient(135deg, #ccc 0%, #999 100%)',
+                                        boxShadow: 'none',
+                                      }
+                                    }}
+                                  >
+                                    {loading ? '🔄 Loading...' : '📜 Load More Posts'}
+                                  </Button>
+                                </motion.div>
+                              </Box>
+                            )}
+                          </Stack>
+                        )}
+                      </>
                     )}
                   </TabPanel>
                 ))}

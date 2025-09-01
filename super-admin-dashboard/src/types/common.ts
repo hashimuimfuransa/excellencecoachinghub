@@ -71,3 +71,25 @@ export interface JobCertificate {
   expiresAt?: string;
   createdAt: string;
 }
+
+export interface PaymentRequest {
+  _id: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  jobId: string;
+  jobTitle: string;
+  company: string;
+  testType: string;
+  questionCount: number;
+  estimatedDuration: number;
+  requestedAt: string;
+  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  adminNotes?: string;
+  approvedAt?: string;
+  approvedBy?: string;
+  paymentAmount?: number;
+  paymentMethod?: string;
+  createdAt: string;
+  updatedAt: string;
+}

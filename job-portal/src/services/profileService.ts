@@ -262,6 +262,22 @@ class ProfileService {
   }
 
   /**
+   * Get current user profile
+   */
+  async getCurrentUserProfile(): Promise<User> {
+    try {
+      const currentUser = await userService.getCurrentUser();
+      if (!currentUser) {
+        throw new Error('No user found');
+      }
+      return currentUser;
+    } catch (error) {
+      console.error('Error getting current user profile:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get job seeker profile
    */
   async getJobSeekerProfile(): Promise<User> {

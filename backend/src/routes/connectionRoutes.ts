@@ -3,7 +3,7 @@ import { protect, AuthRequest } from '../middleware/auth';
 import { Connection, User } from '../models';
 import { IPopulatedConnectionDocument } from '../models/Connection';
 import { asyncHandler } from '../middleware/asyncHandler';
-import { createNotification } from './notificationRoutes';
+import { notificationService } from '../services/notificationService';
 
 const router = Router();
 
@@ -60,6 +60,24 @@ router.post('/request/:userId', protect, asyncHandler(async (req: AuthRequest, r
 
   await connection.populate('recipient', 'firstName lastName profilePicture company jobTitle');
 
+  // Get requester info for notifications
+  const requester = await User.findById(requesterId).select('firstName lastName profilePicture');
+  const requesterName = requester ? `${requester.firstName} ${requester.lastName}` : 'Someone';
+
+  // Send real-time notification for connection request
+  try {
+    await notificationService.sendConnectionRequestNotification(
+      recipientId,
+      requesterName,
+      requesterId,
+      requester?.profilePicture
+    );
+    console.log(`🤝 Connection request notification sent from ${requesterName} to ${recipient.firstName} ${recipient.lastName}`);
+  } catch (notificationError) {
+    console.error('Error sending connection request notification:', notificationError);
+    // Don't fail the request if notification fails
+  }
+
   res.status(201).json({
     success: true,
     data: connection,
@@ -95,22 +113,19 @@ router.post('/accept/:userId', protect, asyncHandler(async (req: AuthRequest, re
 
   // Get recipient user info for notification
   const recipient = req.user!;
+  const accepterName = `${recipient.firstName} ${recipient.lastName}`;
   
-  // Create notification for the requester
+  // Send real-time notification for connection acceptance
   try {
-    await createNotification({
-      recipient: requesterId,
-      type: 'connection_accepted',
-      title: 'Connection Request Accepted!',
-      message: `${recipient.firstName} ${recipient.lastName} accepted your connection request`,
-      data: {
-        userId: recipientId,
-        userName: `${recipient.firstName} ${recipient.lastName}`,
-        userProfilePicture: recipient.profilePicture
-      }
-    });
+    await notificationService.sendConnectionAcceptedNotification(
+      requesterId,
+      accepterName,
+      recipientId,
+      recipient.profilePicture
+    );
+    console.log(`✅ Connection accepted notification sent from ${accepterName} to requester ${requesterId}`);
   } catch (notificationError) {
-    console.error('Error creating notification:', notificationError);
+    console.error('Error sending connection acceptance notification:', notificationError);
     // Don't fail the request if notification fails
   }
 

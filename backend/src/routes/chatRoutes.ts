@@ -6,6 +6,8 @@ import { validateRequest } from '@/middleware/validateRequest';
 import { body, param, query } from 'express-validator';
 import mongoose from 'mongoose';
 import { io } from '@/services/socketService';
+import { pushNotificationService } from '@/services/pushNotificationService';
+import { notificationService } from '@/services/notificationService';
 
 const router = express.Router();
 
@@ -195,14 +197,51 @@ router.post('/create', auth, createChatValidation, validateRequest, async (req: 
       chat.lastMessage = message._id as any;
       await chat.save();
 
-      // Emit new message to participants
+      // Get sender info for notifications
+      const sender = await User.findById(userId).select('firstName lastName');
+      const senderName = sender ? `${sender.firstName} ${sender.lastName}` : 'Someone';
+
+      // Emit new message to participants and send comprehensive notifications
       if (io) {
-        chat.participants.forEach((participant: any) => {
+        chat.participants.forEach(async (participant: any) => {
           if (participant._id.toString() !== userId) {
+            // 1. Send real-time socket message
             io.to(`user_${participant._id}`).emit('new-message', {
               chatId: chat._id,
               message: message,
+              sender: {
+                _id: userId,
+                firstName: sender?.firstName || 'Unknown',
+                lastName: sender?.lastName || 'User'
+              },
+              timestamp: new Date()
             });
+
+            // Also emit to chat room
+            io.to(`chat_${chat._id}`).emit('message:new', {
+              _id: message._id,
+              chatId: chat._id,
+              sender: userId,
+              senderName,
+              content: initialMessage,
+              messageType: 'text',
+              timestamp: message.createdAt,
+              isRead: false
+            });
+
+            // 2. Send comprehensive notification through notification service
+            try {
+              await notificationService.sendMessageNotification(
+                participant._id.toString(),
+                senderName,
+                userId,
+                initialMessage,
+                chat._id.toString(),
+                participant.profilePicture
+              );
+            } catch (error) {
+              console.error('Error sending comprehensive notification:', error);
+            }
           }
         });
       }
@@ -265,14 +304,53 @@ router.post('/:chatId/message', auth, sendMessageValidation, validateRequest, as
     chat.lastMessage = message._id as any;
     await chat.save();
 
-    // Emit new message to all participants except sender
+    // Get sender info for notifications
+    const sender = await User.findById(userId).select('firstName lastName');
+    const senderName = sender ? `${sender.firstName} ${sender.lastName}` : 'Someone';
+
+    // Emit new message to all participants except sender and send comprehensive notifications
     if (io) {
-      chat.participants.forEach((participant: any) => {
+      chat.participants.forEach(async (participant: any) => {
         if (participant._id.toString() !== userId) {
+          // 1. Send real-time socket message to user's personal room
           io.to(`user_${participant._id}`).emit('new-message', {
             chatId: chat._id,
             message: message,
+            sender: {
+              _id: userId,
+              firstName: sender?.firstName || 'Unknown',
+              lastName: sender?.lastName || 'User'
+            },
+            timestamp: new Date()
           });
+
+          // 2. Send real-time message to chat room
+          io.to(`chat_${chat._id}`).emit('message:new', {
+            _id: message._id,
+            chatId: chat._id,
+            sender: userId,
+            senderName,
+            content,
+            messageType,
+            timestamp: message.createdAt,
+            isRead: false,
+            fileUrl,
+            fileName
+          });
+
+          // 3. Send comprehensive notification through notification service
+          try {
+            await notificationService.sendMessageNotification(
+              participant._id.toString(),
+              senderName,
+              userId,
+              content,
+              chat._id.toString(),
+              participant.profilePicture
+            );
+          } catch (error) {
+            console.error('Error sending comprehensive notification:', error);
+          }
         }
       });
     }

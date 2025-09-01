@@ -149,6 +149,139 @@ const emailTemplates = {
         This is an automated email, please do not reply.
       </p>
     </div>
+  `,
+
+  jobApplication: (data: any) => `
+    <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; background-color: #f9f9f9; padding: 30px;">
+      <div style="background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h2 style="color: #1976d2; margin: 0;">🎯 New Job Application Received</h2>
+          <p style="color: #666; margin: 10px 0;">Excellence Coaching Hub - Job Portal</p>
+        </div>
+
+        <div style="background-color: #e3f2fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #1565c0; margin-top: 0;">📋 Job Details</h3>
+          <p><strong>Position:</strong> ${data.jobTitle}</p>
+          <p><strong>Company:</strong> ${data.company}</p>
+          <p><strong>Location:</strong> ${data.location}</p>
+          <p><strong>Application Date:</strong> ${new Date().toLocaleDateString()}</p>
+        </div>
+
+        <div style="background-color: #f1f8e9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #2e7d32; margin-top: 0;">👤 Candidate Profile</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+              <p><strong>Name:</strong> ${data.candidateName}</p>
+              <p><strong>Email:</strong> ${data.candidateEmail}</p>
+              <p><strong>Phone:</strong> ${data.candidatePhone || 'Not provided'}</p>
+            </div>
+            <div>
+              <p><strong>Location:</strong> ${data.candidateLocation || 'Not provided'}</p>
+              <p><strong>Job Title:</strong> ${data.candidateJobTitle || 'Not specified'}</p>
+              <p><strong>Experience:</strong> ${data.candidateExperienceLevel || 'Not specified'}</p>
+            </div>
+          </div>
+        </div>
+
+        ${data.candidateSkills && data.candidateSkills.length > 0 ? `
+        <div style="background-color: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #ef6c00; margin-top: 0;">🛠️ Skills & Expertise</h3>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            ${data.candidateSkills.map((skill: string) => `
+              <span style="background-color: #ff9800; color: white; padding: 5px 12px; border-radius: 15px; font-size: 12px; font-weight: 600;">
+                ${skill}
+              </span>
+            `).join('')}
+          </div>
+        </div>
+        ` : ''}
+
+        ${data.candidateSummary ? `
+        <div style="background-color: #fce4ec; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #c2185b; margin-top: 0;">📝 Professional Summary</h3>
+          <p style="line-height: 1.6; color: #333;">${data.candidateSummary}</p>
+        </div>
+        ` : ''}
+
+        ${data.candidateEducation && data.candidateEducation.length > 0 ? `
+        <div style="background-color: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #388e3c; margin-top: 0;">🎓 Education Background</h3>
+          ${data.candidateEducation.map((edu: any) => `
+            <div style="margin-bottom: 15px; padding: 15px; background-color: white; border-radius: 6px;">
+              <p><strong>${edu.degree || 'Degree'}</strong> ${edu.major ? `in ${edu.major}` : ''}</p>
+              <p style="color: #666; margin: 5px 0;">${edu.institution}</p>
+              <p style="color: #888; font-size: 14px;">${edu.startDate && edu.endDate ? `${edu.startDate} - ${edu.endDate}` : ''}</p>
+            </div>
+          `).join('')}
+        </div>
+        ` : ''}
+
+        ${data.candidateExperience && data.candidateExperience.length > 0 ? `
+        <div style="background-color: #e1f5fe; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #0277bd; margin-top: 0;">💼 Work Experience</h3>
+          ${data.candidateExperience.map((exp: any) => `
+            <div style="margin-bottom: 15px; padding: 15px; background-color: white; border-radius: 6px;">
+              <p><strong>${exp.jobTitle || 'Position'}</strong> at <strong>${exp.company}</strong></p>
+              <p style="color: #666; margin: 5px 0;">${exp.location || ''}</p>
+              <p style="color: #888; font-size: 14px;">${exp.startDate && exp.endDate ? `${exp.startDate} - ${exp.endDate}` : ''}</p>
+              ${exp.description ? `<p style="margin-top: 10px; color: #555; font-size: 14px;">${exp.description}</p>` : ''}
+            </div>
+          `).join('')}
+        </div>
+        ` : ''}
+
+        <div style="background-color: #fff8e1; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ff9800;">
+          <h3 style="color: #f57c00; margin-top: 0;">📊 Profile Completion</h3>
+          <div style="background-color: #eeeeee; height: 10px; border-radius: 5px; overflow: hidden;">
+            <div style="background-color: ${data.profileCompletion >= 80 ? '#4caf50' : data.profileCompletion >= 60 ? '#ff9800' : '#f44336'}; height: 100%; width: ${data.profileCompletion}%; transition: width 0.3s ease;"></div>
+          </div>
+          <p style="margin: 10px 0 0 0; font-size: 14px; color: #666;">
+            Profile: <strong>${data.profileCompletion}% Complete</strong>
+            ${data.profileCompletion < 70 ? ' - <em>Candidate may benefit from completing their profile</em>' : ' - <em>Well-completed profile</em>'}
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+          <h3 style="color: #1976d2;">⚡ Quick Actions</h3>
+          <div style="display: inline-block; margin: 0 10px;">
+            <a href="mailto:${data.candidateEmail}" 
+               style="background-color: #1976d2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 5px;">
+              📧 Contact Candidate
+            </a>
+          </div>
+          <div style="display: inline-block; margin: 0 10px;">
+            <a href="${data.candidateProfileUrl || '#'}" 
+               style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 5px;">
+              👤 View Full Profile
+            </a>
+          </div>
+          ${data.candidateResume ? `
+          <div style="display: inline-block; margin: 0 10px;">
+            <a href="${data.candidateResume}" 
+               style="background-color: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 5px;" 
+               download>
+              📄 Download Resume
+            </a>
+          </div>
+          ` : ''}
+        </div>
+
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        
+        <div style="background-color: #f5f5f5; padding: 20px; border-radius: 6px; text-align: center;">
+          <p style="margin: 0; color: #666; font-size: 14px;">
+            <strong>📍 Excellence Coaching Hub - Job Portal</strong><br>
+            Connecting African talent with global opportunities<br>
+            <em>This application was submitted through our AI-powered job matching platform</em>
+          </p>
+        </div>
+        
+        <p style="color: #888; font-size: 12px; text-align: center; margin-top: 20px;">
+          This is an automated notification. Please do not reply to this email.<br>
+          For support, contact us through our platform or visit our help center.
+        </p>
+      </div>
+    </div>
   `
 };
 

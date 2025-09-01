@@ -42,6 +42,7 @@ import liveStreamRoutes from '@/routes/liveStreamRoutes';
 import proctoringRoutes from '@/routes/proctoringRoutes';
 import assessmentRoutes from '@/routes/enhancedAssessmentRoutes';
 import regularAssessmentRoutes from '@/routes/assessmentRoutes';
+import assessmentRequestRoutes from '@/routes/assessmentRequestRoutes';
 import studentRoutes from '@/routes/studentRoutes';
 import teacherProfileRoutes from '@/routes/teacherProfileRoutes';
 import quizRoutes from '@/routes/quizRoutes';
@@ -77,6 +78,7 @@ import superAdminRoutes from '@/routes/superAdminRoutes';
 import employerRoutes from '@/routes/employerRoutes';
 import testRequestRoutes from '@/routes/testRequestRoutes';
 import paymentRoutes from '@/routes/paymentRoutes';
+import paymentRequestRoutes from '@/routes/paymentRequestRoutes';
 import jobScrapingRoutes from '@/routes/jobScrapingRoutes';
 import smartTestRoutes from '@/routes/smartTestRoutes';
 import cvBuilderRoutes from '@/routes/cvBuilderRoutes';
@@ -672,6 +674,7 @@ app.use('/api/live-stream', liveStreamRoutes);
 app.use('/api/proctoring', proctoringRoutes);
 app.use('/api/enhanced-assessments', assessmentRoutes);
 app.use('/api/assessments', regularAssessmentRoutes);
+app.use('/api/assessment-requests', assessmentRequestRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/teacher-profiles', teacherProfileRoutes);
 app.use('/api/quizzes', quizRoutes);
@@ -693,6 +696,8 @@ app.use('/api/test', testRoutes);
 // Job Portal routes
 app.use('/api/jobs', jobRoutes);
 app.use('/api/job-applications', jobApplicationRoutes);
+// Additional mounting for frontend compatibility
+app.use('/api/applications', jobApplicationRoutes);
 app.use('/api/psychometric-tests', psychometricTestRoutes);
 app.use('/api/simple-psychometric', simplePsychometricRoutes);
 // Additional mounting for frontend compatibility
@@ -710,6 +715,9 @@ app.use('/api/smart-tests', smartTestRoutes);
 
 // Test Request routes
 app.use('/api/test-requests', testRequestRoutes);
+
+// Payment Request routes
+app.use('/api/payment-requests', paymentRequestRoutes);
 
 // CV Builder routes
 app.use('/api/cv-builder', cvBuilderRoutes);

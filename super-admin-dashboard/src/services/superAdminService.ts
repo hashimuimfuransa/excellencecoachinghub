@@ -3,7 +3,7 @@ import type { User } from '../types/user';
 import type { Job } from '../types/job';
 import type { Course } from '../types/course';
 import type { PsychometricTest } from '../types/test';
-import type { JobApplication, AIInterview, JobCertificate } from '../types/common';
+import type { JobApplication, AIInterview, JobCertificate, PaymentRequest } from '../types/common';
 
 // Dashboard Statistics Interface
 export interface DashboardStats {
@@ -1428,6 +1428,74 @@ class SuperAdminService {
     targetRoles?: string[];
   }): Promise<void> {
     return apiPost('/admin/system/notifications', notification);
+  }
+
+  // Payment Request Management
+  async getPaymentRequests(status?: string, page: number = 1, limit: number = 20): Promise<{
+    data: PaymentRequest[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      pages: number;
+    };
+  }> {
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString()
+      });
+      
+      if (status) {
+        params.append('status', status);
+      }
+
+      const response = await apiGet<any>(`/payment-requests?${params}`);
+      return this.extractApiData(response);
+    } catch (error) {
+      console.error('Failed to get payment requests:', error);
+      throw error;
+    }
+  }
+
+  async approvePaymentRequest(requestId: string, approvalData?: {
+    adminNotes?: string;
+    paymentAmount?: number;
+    paymentMethod?: string;
+  }): Promise<PaymentRequest> {
+    try {
+      const response = await apiPut<any>(`/payment-requests/${requestId}/status`, {
+        status: 'approved',
+        ...approvalData
+      });
+      return this.extractApiData(response);
+    } catch (error) {
+      console.error('Failed to approve payment request:', error);
+      throw error;
+    }
+  }
+
+  async rejectPaymentRequest(requestId: string, adminNotes?: string): Promise<PaymentRequest> {
+    try {
+      const response = await apiPut<any>(`/payment-requests/${requestId}/status`, {
+        status: 'rejected',
+        adminNotes
+      });
+      return this.extractApiData(response);
+    } catch (error) {
+      console.error('Failed to reject payment request:', error);
+      throw error;
+    }
+  }
+
+  async getPendingPaymentRequestsCount(): Promise<number> {
+    try {
+      const response = await apiGet<any>('/payment-requests/pending-count');
+      return this.extractApiData(response);
+    } catch (error) {
+      console.error('Failed to get pending payment requests count:', error);
+      return 0;
+    }
   }
 }
 

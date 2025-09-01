@@ -20,7 +20,8 @@ import {
   Slide,
   Grow,
   Chip,
-  Stack
+  Stack,
+  Grid
 } from '@mui/material';
 import { 
   Email, 
@@ -35,7 +36,12 @@ import {
   Security,
   Speed,
   Star,
-  CheckCircle
+  CheckCircle,
+  Assessment,
+  Psychology,
+  School,
+  Business,
+  Home
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -104,26 +110,87 @@ const LoginPage: React.FC = () => {
     setShowPassword((prev) => !prev);
   };
 
-  const features = [
+  const services = [
     {
       icon: <WorkOutline sx={{ fontSize: 24, color: '#4caf50' }} />,
-      title: 'Find Your Dream Job',
-      description: 'Access thousands of job opportunities across Africa'
+      title: 'Job Portal',
+      description: 'Access thousands of job opportunities across Africa',
+      category: 'Jobs & Applications'
     },
     {
-      icon: <TrendingUp sx={{ fontSize: 24, color: '#2196f3' }} />,
-      title: 'Career Growth',
-      description: 'Advanced tools to accelerate your career development'
+      icon: <Assessment sx={{ fontSize: 24, color: '#2196f3' }} />,
+      title: 'Psychometric Tests',
+      description: 'Advanced personality and skills assessments',
+      category: 'Testing & Assessment'
+    },
+       {
+      icon: <Assessment sx={{ fontSize: 24, color: '#2196f3' }} />,
+      title: 'Smart Exams',
+      description: 'Advanced job specific exams',
+      category: 'Testing & Assessment'
     },
     {
-      icon: <Security sx={{ fontSize: 24, color: '#ff9800' }} />,
-      title: 'Secure Platform',
-      description: 'Your data is protected with enterprise-grade security'
+      icon: <Psychology sx={{ fontSize: 24, color: '#9c27b0' }} />,
+      title: 'Interviews',
+      description: 'Practice with intelligent interview simulations',
+      category: 'Testing & Assessment'
+    },
+     {
+      icon: <PersonAdd sx={{ fontSize: 24, color: '#00bcd4' }} />,
+      title: 'CV Builder',
+      description: 'Professional resume builder with AI optimization',
+      category: 'Career Tools'
+    },
+
+   {
+      icon: <Security sx={{ fontSize: 24, color: '#607d8b' }} />,
+      title: 'Social Network',
+      description: 'Professional networking and connections',
+      category: 'Professional Network'
     },
     {
-      icon: <Speed sx={{ fontSize: 24, color: '#9c27b0' }} />,
-      title: 'Fast Matching',
-      description: 'AI-powered job matching for better opportunities'
+      icon: <TrendingUp sx={{ fontSize: 24, color: '#ff9800' }} />,
+      title: 'Career Guidance',
+      description: 'Personalized career development and insights',
+      category: 'Career Development'
+    },
+    {
+      icon: <School sx={{ fontSize: 24, color: '#673ab7' }} />,
+      title: 'E-Learning Courses',
+      description: 'Professional development courses and certifications',
+      category: 'Learning & Growth'
+    },
+ 
+    {
+      icon: <Business sx={{ fontSize: 24, color: '#795548' }} />,
+      title: 'Company Profiles',
+      description: 'Discover top companies and their culture',
+      category: 'Company Discovery'
+    },
+  
+    {
+      icon: <Speed sx={{ fontSize: 24, color: '#ff5722' }} />,
+      title: 'Smart Matching',
+      description: 'AI-powered job and candidate matching',
+      category: 'AI Technology'
+    },
+    {
+      icon: <CheckCircle sx={{ fontSize: 24, color: '#4caf50' }} />,
+      title: 'Certificates',
+      description: 'Professional certifications and achievements',
+      category: 'Credentials'
+    },
+    {
+      icon: <Star sx={{ fontSize: 24, color: '#ffc107' }} />,
+      title: 'Career Events',
+      description: 'Job fairs, webinars, and networking events',
+      category: 'Events & Networking'
+    },
+    {
+      icon: <Home sx={{ fontSize: 24, color: '#3f51b5' }} />,
+      title: 'Employer Dashboard',
+      description: 'Complete hiring and talent management solution',
+      category: 'For Employers'
     }
   ];
 
@@ -252,89 +319,125 @@ const LoginPage: React.FC = () => {
                         Join thousands of professionals who trust ExJobNet for personalized career growth, 
                         interactive learning, and meaningful connections.
                       </Typography>
-                      
-                      {/* Stats */}
-                      <Stack direction="row" spacing={3} sx={{ mb: 4 }}>
-                        <Box sx={{ textAlign: 'center' }}>
-                          <Typography variant="h5" fontWeight="bold" color="white">
-                            10K+
-                          </Typography>
-                          <Typography variant="body2" color="rgba(255, 255, 255, 0.8)">
-                            Active Users
-                          </Typography>
-                        </Box>
-                        <Box sx={{ textAlign: 'center' }}>
-                          <Typography variant="h5" fontWeight="bold" color="white">
-                            500+
-                          </Typography>
-                          <Typography variant="body2" color="rgba(255, 255, 255, 0.8)">
-                            Companies
-                          </Typography>
-                        </Box>
-                        <Box sx={{ textAlign: 'center' }}>
-                          <Typography variant="h5" fontWeight="bold" color="white">
-                            95%
-                          </Typography>
-                          <Typography variant="body2" color="rgba(255, 255, 255, 0.8)">
-                            Success Rate
-                          </Typography>
-                        </Box>
-                      </Stack>
                     </Box>
                   </Grow>
                   
-                  {/* Features */}
-                  <Box sx={{ maxWidth: '90%' }}>
-                    {features.map((feature, index) => (
-                      <Slide 
-                        key={feature.title} 
-                        direction="right" 
-                        in={mounted} 
-                        timeout={1000 + index * 200}
-                      >
-                        <Box 
-                          sx={{ 
-                            display: 'flex', 
-                            alignItems: 'flex-start', 
-                            gap: 3, 
-                            mb: 3,
-                            p: 2.5,
-                            borderRadius: 3,
-                            background: 'rgba(255, 255, 255, 0.1)',
-                            backdropFilter: 'blur(10px)',
-                            border: '1px solid rgba(255, 255, 255, 0.15)',
-                            transition: 'all 0.3s ease',
-                            '&:hover': {
-                              transform: 'translateX(10px)',
-                              background: 'rgba(255, 255, 255, 0.15)',
-                            }
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              background: 'rgba(255, 255, 255, 0.2)',
-                              borderRadius: 2,
-                              p: 1.5,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              minWidth: 48,
-                              height: 48
-                            }}
+                  {/* Our Complete Services */}
+                  <Box sx={{ maxWidth: '100%' }}>
+                    <Typography 
+                      variant="h5" 
+                      fontWeight="bold" 
+                      color="white" 
+                      sx={{ mb: 3, textAlign: 'center' }}
+                    >
+                      🌟 Our Complete Services
+                    </Typography>
+                    
+                    {/* Services Grid - Show first 6 most important services */}
+                    <Grid container spacing={2} sx={{ mb: 4 }}>
+                      {services.slice(0, 6).map((service, index) => (
+                        <Grid item xs={12} sm={6} key={service.title}>
+                          <Slide 
+                            direction="right" 
+                            in={mounted} 
+                            timeout={1000 + index * 100}
                           >
-                            {feature.icon}
-                          </Box>
-                          <Box>
-                            <Typography variant="h6" fontWeight="600" color="white" sx={{ mb: 0.5 }}>
-                              {feature.title}
-                            </Typography>
-                            <Typography variant="body2" color="rgba(255, 255, 255, 0.8)">
-                              {feature.description}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Slide>
-                    ))}
+                            <Box 
+                              sx={{ 
+                                p: 2,
+                                borderRadius: 2,
+                                background: 'rgba(255, 255, 255, 0.08)',
+                                backdropFilter: 'blur(10px)',
+                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                transition: 'all 0.3s ease',
+                                height: '100%',
+                                '&:hover': {
+                                  transform: 'translateY(-4px)',
+                                  background: 'rgba(255, 255, 255, 0.12)',
+                                  boxShadow: '0 8px 32px rgba(255, 255, 255, 0.1)',
+                                }
+                              }}
+                            >
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                <Box
+                                  sx={{
+                                    background: 'rgba(255, 255, 255, 0.15)',
+                                    borderRadius: 1.5,
+                                    p: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    mr: 1.5,
+                                    minWidth: 36,
+                                    height: 36
+                                  }}
+                                >
+                                  {service.icon}
+                                </Box>
+                                <Box>
+                                  <Typography variant="body1" fontWeight="600" color="white" sx={{ fontSize: '0.95rem' }}>
+                                    {service.title}
+                                  </Typography>
+                                  <Chip 
+                                    label={service.category} 
+                                    size="small" 
+                                    sx={{ 
+                                      fontSize: '0.7rem', 
+                                      height: 16,
+                                      color: 'rgba(255, 255, 255, 0.8)',
+                                      background: 'rgba(255, 255, 255, 0.1)',
+                                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                                      '& .MuiChip-label': { px: 1 }
+                                    }} 
+                                  />
+                                </Box>
+                              </Box>
+                              <Typography variant="body2" color="rgba(255, 255, 255, 0.75)" sx={{ fontSize: '0.85rem', lineHeight: 1.4 }}>
+                                {service.description}
+                              </Typography>
+                            </Box>
+                          </Slide>
+                        </Grid>
+                      ))}
+                    </Grid>
+
+                    {/* Additional Services Summary */}
+                    <Fade in={mounted} timeout={2000}>
+                      <Box 
+                        sx={{ 
+                          textAlign: 'center',
+                          p: 2.5,
+                          borderRadius: 3,
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          backdropFilter: 'blur(10px)',
+                          border: '1px solid rgba(255, 255, 255, 0.12)',
+                        }}
+                      >
+                        <Typography variant="body1" fontWeight="600" color="white" sx={{ mb: 1 }}>
+                          And Much More...
+                        </Typography>
+                        <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap" sx={{ gap: 1 }}>
+                          {services.slice(6).map((service) => (
+                            <Chip 
+                              key={service.title}
+                              label={service.title} 
+                              size="small" 
+                              sx={{ 
+                                color: 'rgba(255, 255, 255, 0.9)',
+                                background: 'rgba(255, 255, 255, 0.12)',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                '&:hover': {
+                                  background: 'rgba(255, 255, 255, 0.18)',
+                                }
+                              }} 
+                            />
+                          ))}
+                        </Stack>
+                        <Typography variant="body2" color="rgba(255, 255, 255, 0.7)" sx={{ mt: 2 }}>
+                          Access all premium features after login
+                        </Typography>
+                      </Box>
+                    </Fade>
                   </Box>
                   
                   {/* Trust Indicators */}

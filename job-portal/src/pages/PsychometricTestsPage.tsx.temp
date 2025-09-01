@@ -1,0 +1,65 @@
+                    <MenuItem value="comprehensive">Comprehensive Assessment (All Categories)</MenuItem>
+                  </Select>
+                </FormControl>
+                
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  label="Job Description"
+                  value={assessmentRequest.jobDescription}
+                  onChange={(e) => setAssessmentRequest(prev => ({ ...prev, jobDescription: e.target.value }))}
+                  placeholder="Describe the role, responsibilities, and requirements..."
+                />
+
+                <FormControl fullWidth>
+                  <InputLabel>Urgency</InputLabel>
+                  <Select
+                    value={assessmentRequest.urgency}
+                    label="Urgency"
+                    onChange={(e) => setAssessmentRequest(prev => ({ ...prev, urgency: e.target.value }))}
+                  >
+                    <MenuItem value="low">Low - Within 2 weeks</MenuItem>
+                    <MenuItem value="normal">Normal - Within 1 week</MenuItem>
+                    <MenuItem value="high">High - Within 3 days</MenuItem>
+                    <MenuItem value="urgent">Urgent - Within 24 hours</MenuItem>
+                  </Select>
+                </FormControl>
+
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={3}
+                  label="Additional Requirements"
+                  value={assessmentRequest.additionalRequirements}
+                  onChange={(e) => setAssessmentRequest(prev => ({ ...prev, additionalRequirements: e.target.value }))}
+                  placeholder="Any specific requirements or notes..."
+                />
+              </Stack>
+
+              <Stack direction="row" spacing={2} sx={{ mt: 3 }}>
+                <Button
+                  variant="outlined"
+                  onClick={() => setRequestDialogOpen(false)}
+                  fullWidth
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={handleSubmitAssessmentRequest}
+                  disabled={submittingRequest || !assessmentRequest.jobTitle || !assessmentRequest.category}
+                  fullWidth
+                >
+                  {submittingRequest ? <CircularProgress size={20} /> : 'Submit Request'}
+                </Button>
+              </Stack>
+            </DialogContent>
+          </Dialog>
+        </Container>
+      </Box>
+    </motion.div>
+  );
+};
+
+export default PsychometricTestsPage;

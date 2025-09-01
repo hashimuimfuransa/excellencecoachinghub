@@ -1,13 +1,16 @@
 import { Request, Response } from 'express';
 import { JobApplication, Job, User, PsychometricTestResult, AIInterview } from '@/models';
-import { ApplicationStatus, UserRole } from '../../../shared/types';
+import { ApplicationStatus } from '@/types/job';
+import { UserRole } from '../../../shared/types';
 import { AuthRequest } from '@/middleware/auth';
+// Removed SMTP email dependency - using frontend EmailJS instead
+import { validateProfile } from '../utils/profileValidation';
 
 // Apply for a job
 export const applyForJob = async (req: AuthRequest, res: Response) => {
   try {
     const { jobId } = req.params;
-    const { resume, coverLetter } = req.body;
+    const { resume, coverLetter, sendProfileToEmployer } = req.body;
     const userId = req.user?.id;
 
     if (!userId) {
@@ -17,8 +20,33 @@ export const applyForJob = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Get full user profile
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    // Check profile completion
+    const profileValidation = validateProfile(user);
+    
+    // If profile is not sufficiently complete and user wants to send profile to employer
+    if (sendProfileToEmployer && profileValidation.completionPercentage < 50) {
+      return res.status(400).json({
+        success: false,
+        error: 'Profile not complete enough for application',
+        details: {
+          completionPercentage: profileValidation.completionPercentage,
+          missingFields: profileValidation.missingFields,
+          suggestion: 'Please complete your profile with at least basic information, skills, and experience before applying.'
+        }
+      });
+    }
+
     // Check if job exists and is active
-    const job = await Job.findById(jobId);
+    const job = await Job.findById(jobId).populate('employer', 'firstName lastName email company');
     if (!job) {
       return res.status(404).json({
         success: false,
@@ -54,11 +82,24 @@ export const applyForJob = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Use user's resume if none provided in request
+    const finalResume = resume || user.resume;
+    
+    if (!finalResume) {
+      return res.status(400).json({
+        success: false,
+        error: 'Resume is required. Please update your profile with a resume or provide one with your application.',
+        details: {
+          suggestion: 'Go to your profile settings to add a resume, or include a resume with your application.'
+        }
+      });
+    }
+
     // Create application
     const application = new JobApplication({
       job: jobId,
       applicant: userId,
-      resume,
+      resume: finalResume,
       coverLetter,
       status: ApplicationStatus.APPLIED
     });
@@ -69,6 +110,28 @@ export const applyForJob = async (req: AuthRequest, res: Response) => {
     job.applicationsCount += 1;
     await job.save();
 
+    // Prepare email information for frontend EmailJS handling
+    let employerEmail: string | null = null;
+    let emailMessage = '';
+
+    if (sendProfileToEmployer) {
+      // Priority 1: Contact info email from job posting
+      if (job.contactInfo?.email) {
+        employerEmail = job.contactInfo.email;
+      }
+      // Priority 2: Employer's email
+      else if (job.employer?.email) {
+        employerEmail = job.employer.email;
+      }
+
+      if (employerEmail) {
+        emailMessage = 'Application submitted. Email will be sent to employer via frontend service.';
+        console.log(`Employer email available: ${employerEmail}`);
+      } else {
+        emailMessage = 'Application submitted successfully! However, no employer email was provided for this job posting. Please use alternative contact methods or look for contact information in the job description.';
+      }
+    }
+
     const populatedApplication = await JobApplication.findById(application._id)
       .populate('job', 'title company location')
       .populate('applicant', 'firstName lastName email');
@@ -76,9 +139,36 @@ export const applyForJob = async (req: AuthRequest, res: Response) => {
     res.status(201).json({
       success: true,
       data: populatedApplication,
-      message: 'Application submitted successfully'
+      message: emailMessage || 'Application submitted successfully',
+      emailData: sendProfileToEmployer && employerEmail ? {
+        shouldSendEmail: true,
+        employerEmail: employerEmail,
+        jobData: {
+          title: job.title,
+          company: job.company,
+          location: job.location
+        },
+        candidateData: {
+          name: `${user.firstName} ${user.lastName}`,
+          email: user.email,
+          phone: user.phone,
+          location: user.location,
+          jobTitle: user.jobTitle,
+          skills: user.skills || [],
+          summary: user.summary,
+          experience: user.experience || [],
+          education: user.education || [],
+          resume: user.resume,
+          cvFile: user.cvFile,
+          profileCompletion: profileValidation.completionPercentage
+        }
+      } : {
+        shouldSendEmail: false,
+        reason: employerEmail ? 'Email not requested' : 'No employer email available'
+      }
     });
   } catch (error: any) {
+    console.error('Error in applyForJob:', error);
     res.status(400).json({
       success: false,
       error: 'Failed to submit application',

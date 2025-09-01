@@ -439,9 +439,9 @@ const PsychometricTestManagementPage: React.FC = () => {
   const loadTestRequests = async () => {
     setRequestsLoading(true);
     try {
-      // Load both test purchase approvals and interviews
-      const [testApprovalsResponse, interviewsResponse] = await Promise.allSettled([
-        fetch(`${import.meta.env.VITE_API_URL}/psychometric-tests/approvals/pending`, {
+      // Load both payment requests (pending) and interviews
+      const [paymentRequestsResponse, interviewsResponse] = await Promise.allSettled([
+        fetch(`${import.meta.env.VITE_API_URL}/payment-requests?status=pending`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
             'Content-Type': 'application/json'
@@ -457,48 +457,61 @@ const PsychometricTestManagementPage: React.FC = () => {
 
       let allRequests: any[] = [];
 
-      // Process test purchase approvals
-      console.log('🔍 Test approvals response status:', testApprovalsResponse.status);
-      if (testApprovalsResponse.status === 'fulfilled') {
-        console.log('🔍 Test approvals HTTP status:', testApprovalsResponse.value.status, testApprovalsResponse.value.statusText);
+      // Process payment requests (psychometric test approvals)
+      console.log('🔍 Payment requests response status:', paymentRequestsResponse.status);
+      if (paymentRequestsResponse.status === 'fulfilled') {
+        console.log('🔍 Payment requests HTTP status:', paymentRequestsResponse.value.status, paymentRequestsResponse.value.statusText);
         
-        if (testApprovalsResponse.value.ok) {
-          const approvalsResult = await testApprovalsResponse.value.json();
-          console.log('🔍 Test approvals API response:', approvalsResult);
+        if (paymentRequestsResponse.value.ok) {
+          const paymentResult = await paymentRequestsResponse.value.json();
+          console.log('🔍 Payment requests API response:', paymentResult);
           
-          const pendingApprovals = approvalsResult.success ? approvalsResult.data : approvalsResult;
-          console.log('🔍 Processed test approvals:', pendingApprovals);
+          const pendingPayments = paymentResult.success ? paymentResult.data : paymentResult;
+          console.log('🔍 Processed payment requests:', pendingPayments);
           
-          if (Array.isArray(pendingApprovals)) {
-            const mappedApprovals = pendingApprovals.map(approval => ({
-              _id: approval._id,
-              user: approval.user,
-              displayType: 'Test Purchase Approval',
-              requestType: 'test_purchase_approval',
-              title: `${approval.test?.title || 'Test'} - Approval Request`,
-              description: `User requesting approval to take ${approval.test?.title || 'test'}${approval.job ? ` for ${approval.job.title} at ${approval.job.company}` : ''}`,
-              job: approval.job,
-              priority: 'normal',
-              requestedAt: approval.approvalRequestedAt || approval.purchasedAt,
-              status: 'pending',
-              purchaseId: approval._id,
-              test: approval.test,
+          if (Array.isArray(pendingPayments)) {
+            const mappedPayments = pendingPayments.map(payment => ({
+              _id: payment._id,
+              user: {
+                _id: payment.userId,
+                email: payment.userEmail,
+                firstName: payment.userName.split(' ')[0] || 'Unknown',
+                lastName: payment.userName.split(' ').slice(1).join(' ') || '',
+                role: 'user'
+              },
+              displayType: 'Premium Test Approval',
+              requestType: 'payment_request',
+              title: `${payment.testType} - Approval Request`,
+              description: `User requesting approval for ${payment.testType} for ${payment.jobTitle} at ${payment.company}`,
+              job: {
+                _id: payment.jobId,
+                title: payment.jobTitle,
+                company: payment.company
+              },
+              priority: 'high',
+              requestedAt: payment.requestedAt,
+              status: payment.status,
+              paymentData: {
+                testType: payment.testType,
+                questionCount: payment.questionCount,
+                estimatedDuration: payment.estimatedDuration,
+                userEmail: payment.userEmail,
+                userName: payment.userName
+              },
               specifications: {
-                testType: approval.test?.type || 'psychometric',
-                amount: approval.amount,
-                currency: approval.currency,
-                maxAttempts: approval.maxAttempts,
-                attemptsUsed: approval.attemptsUsed
+                testType: payment.testType,
+                questionCount: payment.questionCount,
+                duration: payment.estimatedDuration
               }
             }));
-            allRequests = [...allRequests, ...mappedApprovals];
-            console.log('🔍 Mapped test approvals:', mappedApprovals);
+            allRequests = [...allRequests, ...mappedPayments];
+            console.log('🔍 Mapped payment requests:', mappedPayments);
           }
         } else {
-          console.error('❌ Test approvals API error:', testApprovalsResponse.value.status, testApprovalsResponse.value.statusText);
+          console.error('❌ Payment requests API error:', paymentRequestsResponse.value.status, paymentRequestsResponse.value.statusText);
         }
       } else {
-        console.error('❌ Test approvals fetch failed:', testApprovalsResponse.reason);
+        console.error('❌ Payment requests fetch failed:', paymentRequestsResponse.reason);
       }
 
       // Process interviews
@@ -569,8 +582,8 @@ const PsychometricTestManagementPage: React.FC = () => {
   const loadApprovedTests = async () => {
     setApprovedLoading(true);
     try {
-      // Fetch approved psychometric test requests
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/psychometric-tests/approvals/approved`, {
+      // Fetch approved payment requests
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/payment-requests?status=approved`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
@@ -587,25 +600,40 @@ const PsychometricTestManagementPage: React.FC = () => {
         console.log('🔍 Processed approved tests:', approvedData);
         
         if (Array.isArray(approvedData)) {
-          const mappedApproved = approvedData.map(approval => ({
-            _id: approval._id,
-            user: approval.user,
+          const mappedApproved = approvedData.map(payment => ({
+            _id: payment._id,
+            user: {
+              _id: payment.userId,
+              email: payment.userEmail,
+              firstName: payment.userName.split(' ')[0] || 'Unknown',
+              lastName: payment.userName.split(' ').slice(1).join(' ') || '',
+              role: 'user'
+            },
             displayType: 'Approved Test',
-            requestType: 'test_purchase_approval',
-            title: `${approval.test?.title || 'Test'} - Approved`,
-            description: `User approved to take ${approval.test?.title || 'test'}${approval.job ? ` for ${approval.job.title} at ${approval.job.company}` : ''}`,
-            job: approval.job,
+            requestType: 'payment_request',
+            title: `${payment.testType} - Approved`,
+            description: `User approved to take ${payment.testType} for ${payment.jobTitle} at ${payment.company}`,
+            job: {
+              _id: payment.jobId,
+              title: payment.jobTitle,
+              company: payment.company
+            },
             priority: 'normal',
-            approvedAt: approval.approvedAt,
-            requestedAt: approval.approvalRequestedAt || approval.purchasedAt,
+            approvedAt: payment.approvedAt,
+            requestedAt: payment.requestedAt,
             status: 'approved',
-            purchaseId: approval._id,
-            test: approval.test,
-            approvedBy: approval.approvedBy,
+            approvedBy: payment.approvedBy,
+            paymentData: {
+              testType: payment.testType,
+              questionCount: payment.questionCount,
+              estimatedDuration: payment.estimatedDuration,
+              userEmail: payment.userEmail,
+              userName: payment.userName
+            },
             specifications: {
-              testType: approval.test?.type || 'psychometric',
-              amount: approval.amount,
-              attemptsRemaining: approval.attemptsRemaining || 3
+              testType: payment.testType,
+              questionCount: payment.questionCount,
+              duration: payment.estimatedDuration
             }
           }));
           
@@ -639,20 +667,17 @@ const PsychometricTestManagementPage: React.FC = () => {
 
       let response;
       
-      if (request.requestType === 'test_purchase_approval') {
-        // Handle test purchase approval/rejection
-        const endpoint = action === 'approve' 
-          ? `${import.meta.env.VITE_API_URL}/psychometric-tests/approvals/${requestId}/approve`
-          : `${import.meta.env.VITE_API_URL}/psychometric-tests/approvals/${requestId}/reject`;
-        
-        response = await fetch(endpoint, {
-          method: 'POST',
+      if (request.requestType === 'payment_request') {
+        // Handle payment request approval/rejection
+        response = await fetch(`${import.meta.env.VITE_API_URL}/payment-requests/${requestId}/status`, {
+          method: 'PUT',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            reason: notes || (action === 'reject' ? 'Request rejected by admin' : undefined)
+            status: action === 'approve' ? 'approved' : 'rejected',
+            adminNotes: notes
           })
         });
       } else {

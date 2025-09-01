@@ -120,8 +120,11 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import jobService from '../services/jobService';
+import { jobService } from '../services/jobService';
+import { userService } from '../services/userService';
+import { profileService } from '../services/profileService';
 import { JobCategory } from '../types/job';
+import { User } from '../types/user';
 
 interface Job {
   _id: string;
@@ -197,6 +200,11 @@ const ModernJobsPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'salary' | 'deadline'>('newest');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [jobTypeFilter, setJobTypeFilter] = useState<string>('');
+  
+  // Tab state for different job views
+  const [currentTab, setCurrentTab] = useState(0);
+  const [aiMatchedJobs, setAiMatchedJobs] = useState<Job[]>([]);
+  const [aiJobsLoading, setAiJobsLoading] = useState(false);
   const [experienceFilter, setExperienceFilter] = useState<string>('');
   const [companyFilter, setCompanyFilter] = useState<string>('');
   const [salaryRange, setSalaryRange] = useState<number[]>([0, 200000]);
@@ -331,40 +339,39 @@ const ModernJobsPage: React.FC = () => {
     setError(null);
     
     try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: '12',
+      // Build filter object
+      const filters: any = {
         status: 'active'
-      });
+      };
 
       // Add filters
-      if (searchTerm) params.append('search', searchTerm);
-      if (locationFilter) params.append('location', locationFilter);
-      if (selectedCategory !== 'all') params.append('category', selectedCategory as string);
-      if (jobTypeFilter) params.append('jobType', jobTypeFilter);
-      if (experienceFilter) params.append('experienceLevel', experienceFilter);
-      if (companyFilter) params.append('company', companyFilter);
+      if (searchTerm) filters.search = searchTerm;
+      if (locationFilter) filters.location = locationFilter;
+      if (selectedCategory !== 'all') filters.category = selectedCategory as string;
+      if (jobTypeFilter) filters.jobType = jobTypeFilter;
+      if (experienceFilter) filters.experienceLevel = experienceFilter;
+      if (companyFilter) filters.company = companyFilter;
       
       // Add sorting
       switch (sortBy) {
         case 'salary':
-          params.append('sortBy', 'salary.min');
-          params.append('sortOrder', 'desc');
+          filters.sortBy = 'salary.min';
+          filters.sortOrder = 'desc';
           break;
         case 'deadline':
-          params.append('sortBy', 'applicationDeadline');
-          params.append('sortOrder', 'asc');
+          filters.sortBy = 'applicationDeadline';
+          filters.sortOrder = 'asc';
           break;
         case 'oldest':
-          params.append('sortBy', 'createdAt');
-          params.append('sortOrder', 'asc');
+          filters.sortBy = 'createdAt';
+          filters.sortOrder = 'asc';
           break;
         default: // newest
-          params.append('sortBy', 'createdAt');
-          params.append('sortOrder', 'desc');
+          filters.sortBy = 'createdAt';
+          filters.sortOrder = 'desc';
       }
 
-      const response = await jobService.getJobs(params.toString());
+      const response = await jobService.getJobs(filters, page, 12);
       
       if (response.success) {
         setJobs(response.data);
@@ -386,6 +393,88 @@ const ModernJobsPage: React.FC = () => {
       setError('Failed to load jobs. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch AI-matched jobs with fresh profile data
+  const fetchAIMatchedJobs = async () => {
+    if (!user?._id) return;
+    
+    setAiJobsLoading(true);
+    setError(null);
+    
+    try {
+      console.log('🤖 Fetching enhanced AI-matched jobs for user:', user._id);
+      
+      // First, fetch fresh user data to ensure we have the most up-to-date profile
+      console.log('🔍 Fetching fresh user profile data...');
+      const freshUser = await userService.getUserProfile(user._id);
+      console.log('📋 Fresh user data received:', freshUser);
+      
+      // Validate the fresh profile data
+      const validation = await profileService.validateUserProfile(freshUser as User);
+      console.log('✅ Profile validation result:', validation);
+      
+      // Check if profile is complete enough for job matching
+      if (!validation || validation.completionPercentage < 30) {
+        console.log('⚠️ Profile not complete enough for job matching. Completion:', validation?.completionPercentage || 0, '%');
+        setSnackbarMessage('Please complete at least 30% of your profile to get better job matches. Add skills and education.');
+        setSnackbarOpen(true);
+        setAiMatchedJobs([]);
+        setAiJobsLoading(false);
+        return;
+      }
+      
+      // Get user skills for basic validation
+      const userSkills = (freshUser as User).skills || [];
+      const allSkills = [...userSkills];
+      
+      // Add experience technologies
+      const experienceSkills = ((freshUser as User).experience || [])
+        .flatMap(exp => exp.technologies || [])
+        .filter(tech => tech && tech.trim());
+      allSkills.push(...experienceSkills);
+      
+      console.log('🎯 User skills for matching:', allSkills);
+      console.log('🎓 User education:', (freshUser as User).education?.length || 0, 'entries');
+      
+      if (allSkills.length === 0 && (!freshUser.education || freshUser.education.length === 0)) {
+        console.log('⚠️ No skills or education found for job matching');
+        setSnackbarMessage('Please add skills or education to your profile to get job matches.');
+        setSnackbarOpen(true);
+        setAiMatchedJobs([]);
+        setAiJobsLoading(false);
+        return;
+      }
+      
+      // Now call the AI matching service
+      console.log('🤖 Calling AI matching service...');
+      const response = await jobService.getAIMatchedJobs();
+      console.log('✅ Enhanced AI-matched jobs response:', response);
+      console.log('📊 Matching metadata:', response.meta);
+      
+      // Ensure we have valid data
+      const matchedJobs = response.data || [];
+      console.log(`🎯 Found ${matchedJobs.length} AI-matched jobs`);
+      
+      setAiMatchedJobs(matchedJobs);
+      
+      // Show success message with match info
+      if (matchedJobs.length > 0) {
+        setSnackbarMessage(`Found ${matchedJobs.length} jobs matching your skills and education background!`);
+        setSnackbarOpen(true);
+      } else {
+        setSnackbarMessage('No jobs match your current profile. Try updating your skills or education.');
+        setSnackbarOpen(true);
+      }
+    } catch (error: any) {
+      console.error('❌ Error fetching AI-matched jobs:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to load AI-matched jobs';
+      setError(errorMessage);
+      setSnackbarMessage(`Error: ${errorMessage}`);
+      setSnackbarOpen(true);
+    } finally {
+      setAiJobsLoading(false);
     }
   };
 
@@ -474,6 +563,13 @@ const ModernJobsPage: React.FC = () => {
 
     return () => clearTimeout(timer);
   }, [searchTerm, locationFilter]);
+
+  // Fetch AI-matched jobs when AI tab is selected
+  useEffect(() => {
+    if (currentTab === 1 && user && aiMatchedJobs.length === 0) {
+      fetchAIMatchedJobs();
+    }
+  }, [currentTab, user]);
 
   // Handle page changes
   const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
@@ -628,10 +724,57 @@ const ModernJobsPage: React.FC = () => {
         </Box>
       </Container>
 
-      {/* Search and Filter Section */}
-      <Container maxWidth="xl" sx={{ mb: 4 }}>
-        <Grid container spacing={3}>
-          {/* Search Bar */}
+      {/* Job View Tabs */}
+      <Container maxWidth="xl" sx={{ mb: 3 }}>
+        <Paper sx={{ 
+          borderRadius: 3, 
+          overflow: 'hidden',
+          boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.08)}`
+        }}>
+          <Tabs 
+            value={currentTab} 
+            onChange={(e, newValue) => setCurrentTab(newValue)}
+            centered
+            sx={{
+              '& .MuiTab-root': {
+                textTransform: 'none',
+                fontWeight: 'bold',
+                minHeight: 64,
+                fontSize: '1rem'
+              }
+            }}
+          >
+            <Tab 
+              label="All Jobs" 
+              icon={<Work />} 
+              iconPosition="start"
+              sx={{ gap: 1 }}
+            />
+            <Tab 
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <SmartToy />
+                  AI-Matched Jobs
+                  {aiMatchedJobs.length > 0 && (
+                    <Chip 
+                      label={aiMatchedJobs.length} 
+                      size="small" 
+                      color="primary"
+                      sx={{ fontSize: '0.7rem', height: 20 }}
+                    />
+                  )}
+                </Box>
+              } 
+            />
+          </Tabs>
+        </Paper>
+      </Container>
+
+      {/* Search and Filter Section - Only show for All Jobs tab */}
+      {currentTab === 0 && (
+        <Container maxWidth="xl" sx={{ mb: 4 }}>
+          <Grid container spacing={3}>
+            {/* Search Bar */}
           <Grid item xs={12} md={6}>
             <TextField
               fullWidth
@@ -778,6 +921,7 @@ const ModernJobsPage: React.FC = () => {
           </Tabs>
         </Box>
       </Container>
+      )}
 
       {/* Jobs Grid/List */}
       <Container maxWidth="xl">
@@ -787,13 +931,43 @@ const ModernJobsPage: React.FC = () => {
           </Alert>
         )}
 
-        {!loading && filteredJobs.length === 0 && (
+        {currentTab === 0 && !loading && filteredJobs.length === 0 && (
           <Box sx={{ textAlign: 'center', py: 8 }}>
             <Typography variant="h6" color="text.secondary" gutterBottom>
               No jobs found
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Try adjusting your search criteria or browse different categories
+            </Typography>
+          </Box>
+        )}
+
+        {currentTab === 1 && !aiJobsLoading && aiMatchedJobs.length === 0 && (
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <Box sx={{ mb: 3 }}>
+              <SmartToy sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+            </Box>
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No Matched Jobs Found
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              We couldn't find jobs that match your current skills. Try updating your profile with more skills.
+            </Typography>
+            <Button 
+              variant="outlined" 
+              onClick={() => navigate('/app/profile')}
+              startIcon={<Person />}
+            >
+              Update Profile
+            </Button>
+          </Box>
+        )}
+
+        {currentTab === 1 && aiJobsLoading && (
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <CircularProgress size={40} />
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              🤖 AI is analyzing jobs for you...
             </Typography>
           </Box>
         )}
@@ -810,7 +984,7 @@ const ModernJobsPage: React.FC = () => {
             } : 'repeat(1, 1fr)',
           }}
         >
-          {filteredJobs.map((job, index) => (
+          {(currentTab === 0 ? filteredJobs : aiMatchedJobs).map((job, index) => (
             <Box 
               key={job._id}
               sx={{
@@ -840,7 +1014,23 @@ const ModernJobsPage: React.FC = () => {
                   onClick={() => handleViewFullDetails(job)}
                 >
                   {/* Status badges */}
-                  {job.isCurated && (
+                  {currentTab === 1 && (job as any).matchPercentage && (
+                    <Chip
+                      label={`${(job as any).matchPercentage}% Match`}
+                      size="small"
+                      color="success"
+                      icon={<SmartToy sx={{ fontSize: 14 }} />}
+                      sx={{ 
+                        position: 'absolute',
+                        top: 16,
+                        right: 16,
+                        fontWeight: 'bold',
+                        fontSize: '0.7rem',
+                        height: '24px'
+                      }}
+                    />
+                  )}
+                  {currentTab === 0 && job.isCurated && (
                     <Chip
                       label="Curated"
                       size="small"

@@ -30,6 +30,8 @@ import {
   alpha
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
+import { sendJobApplicationToEmployer } from '../services/jobApplicationEmailService';
+import { initEmailJS } from '../services/emailjsService';
 import {
   ArrowBack,
   LocationOn,
@@ -59,10 +61,13 @@ import {
   Twitter,
   Home,
   Assignment,
-  SmartToy
+  SmartToy,
+  Warning
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { jobService } from '../services/jobService';
+import { applicationService } from '../services/applicationService';
+import { profileService } from '../services/profileService';
 
 // Job types matching backend structure
 enum JobType {
@@ -157,11 +162,20 @@ const JobDetailsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
+  
+  // Application related state
+  const [applying, setApplying] = useState(false);
+  const [hasApplied, setHasApplied] = useState(false);
+  const [profileCompletion, setProfileCompletion] = useState<number>(0);
+  const [profileIncompleteDialogOpen, setProfileIncompleteDialogOpen] = useState(false);
 
   const [prepareDialogOpen, setPrepareDialogOpen] = useState(false);
   const [shareMenuAnchor, setShareMenuAnchor] = useState<null | HTMLElement>(null);
 
   useEffect(() => {
+    // Initialize EmailJS
+    initEmailJS();
+    
     if (id) {
       fetchJobDetails();
     }
@@ -173,6 +187,16 @@ const JobDetailsPage: React.FC = () => {
       setError(null);
       const jobData = await jobService.getJobById(id!);
       setJob(jobData);
+      
+      // Check if user has already applied
+      if (user) {
+        try {
+          const hasAppliedToJob = await applicationService.hasAppliedForJob(id!);
+          setHasApplied(hasAppliedToJob);
+        } catch (error) {
+          console.error('Error checking application status:', error);
+        }
+      }
     } catch (error: any) {
       console.error('Error fetching job details:', error);
       setError(error.message || 'Failed to load job details');
@@ -180,6 +204,36 @@ const JobDetailsPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Check profile completion
+  useEffect(() => {
+    const checkProfileCompletion = async () => {
+      if (!user) return;
+      
+      try {
+        const profile = await profileService.getCurrentUserProfile();
+        // Calculate profile completion percentage
+        let completion = 0;
+        const fields = [
+          'firstName', 'lastName', 'email', 'phone', 'location', 
+          'jobTitle', 'summary', 'skills', 'experience', 'education'
+        ];
+        
+        fields.forEach(field => {
+          if (profile[field] && 
+              (Array.isArray(profile[field]) ? profile[field].length > 0 : profile[field].toString().trim() !== '')) {
+            completion += 10;
+          }
+        });
+        
+        setProfileCompletion(completion);
+      } catch (error) {
+        console.error('Error checking profile completion:', error);
+      }
+    };
+    
+    checkProfileCompletion();
+  }, [user]);
 
   // Helper functions
   const formatJobType = (jobType: JobType): string => {
@@ -224,7 +278,73 @@ const JobDetailsPage: React.FC = () => {
     return daysAgo === 0 ? 'Today' : `${daysAgo} days ago`;
   };
 
-
+  // Apply for job function
+  const handleApplyForJob = async () => {
+    if (!user || !job) return;
+    
+    // Check if profile is complete enough
+    if (profileCompletion < 50) {
+      setProfileIncompleteDialogOpen(true);
+      return;
+    }
+    
+    try {
+      setApplying(true);
+      
+      const result = await applicationService.applyForJob(job._id, {
+        sendProfileToEmployer: true // Always send profile if applying through this feature
+      });
+      
+      setHasApplied(true);
+      
+      // Handle EmailJS email sending if data is available
+      let emailSent = false;
+      if (result.emailData?.shouldSendEmail) {
+        console.log('📧 Sending job application email via EmailJS...');
+        
+        emailSent = await sendJobApplicationToEmployer({
+          employerEmail: result.emailData.employerEmail,
+          jobTitle: result.emailData.jobData.title,
+          company: result.emailData.jobData.company,
+          location: result.emailData.jobData.location,
+          candidateName: result.emailData.candidateData.name,
+          candidateEmail: result.emailData.candidateData.email,
+          candidatePhone: result.emailData.candidateData.phone,
+          candidateLocation: result.emailData.candidateData.location,
+          candidateJobTitle: result.emailData.candidateData.jobTitle,
+          candidateSkills: result.emailData.candidateData.skills,
+          candidateSummary: result.emailData.candidateData.summary,
+          candidateExperience: result.emailData.candidateData.experience,
+          candidateEducation: result.emailData.candidateData.education,
+          candidateResume: result.emailData.candidateData.resume,
+          candidateCvFile: result.emailData.candidateData.cvFile,
+          profileCompletion: result.emailData.candidateData.profileCompletion
+        });
+      }
+      
+      // Show appropriate success message
+      if (result.emailData?.shouldSendEmail) {
+        if (emailSent) {
+          alert(`✅ ${result.message}\n\n📧 Your profile has been sent to: ${result.emailData.employerEmail}\n\n🎯 The employer will receive a detailed email with your profile information.`);
+        } else {
+          alert(`⚠️ Application submitted, but there was an issue sending your profile via email.\n\n💡 Please consider contacting the employer directly at: ${result.emailData.employerEmail}\n\nYour application has been saved successfully.`);
+        }
+      } else {
+        const reason = result.emailData?.reason || 'Unknown reason';
+        if (reason === 'No employer email available') {
+          alert(`✅ Application submitted successfully!\n\n⚠️ However, no employer email was provided for this job posting.\n\n💡 Please use alternative contact methods or look for contact information in the job description.`);
+        } else {
+          alert('✅ Application submitted successfully!');
+        }
+      }
+      
+    } catch (error: any) {
+      console.error('Error applying for job:', error);
+      alert(error.message || 'Failed to submit application. Please try again.');
+    } finally {
+      setApplying(false);
+    }
+  };
 
   const handlePrepare = () => {
     if (!user) {
@@ -1104,64 +1224,110 @@ const JobDetailsPage: React.FC = () => {
                 🎯 Get Position Ready
               </Button>
               
-              {/* View Job Source Button */}
-              <Button
-                variant="contained"
-                size="large"
-                startIcon={
-                  // Determine the job source URL for icon selection
-                  (job?.isExternalJob && job?.externalApplicationUrl) ||
-                  job?.contactInfo?.website ||
-                  job?.employer?.socialLinks?.website
-                    ? <Language />
-                    : <Work />
-                }
-                onClick={() => {
-                  // Determine the job source URL
-                  let sourceUrl = null;
-                  
-                  // Priority 1: External job application URL
-                  if (job?.isExternalJob && job?.externalApplicationUrl) {
-                    sourceUrl = job.externalApplicationUrl;
+              {/* Apply Button or View More Details */}
+              {(job.contactInfo?.email || job.employer?.email) && user ? (
+                <Button
+                  onClick={hasApplied ? undefined : handleApplyForJob}
+                  disabled={hasApplied || applying}
+                  variant="contained"
+                  size="large"
+                  startIcon={hasApplied ? <CheckCircle /> : applying ? <Send /> : <Send />}
+                  fullWidth
+                  sx={{ 
+                    py: 1.8,
+                    fontWeight: 700,
+                    fontSize: '1rem',
+                    borderRadius: 3,
+                    ...(hasApplied ? {
+                      background: alpha(theme.palette.success.main, 0.2),
+                      color: theme.palette.success.dark,
+                      '&:hover': {
+                        background: alpha(theme.palette.success.main, 0.3),
+                      }
+                    } : {
+                      background: `linear-gradient(45deg, ${theme.palette.success.main} 30%, ${theme.palette.primary.main} 90%)`,
+                      boxShadow: '0 6px 20px ' + alpha(theme.palette.success.main, 0.3),
+                      '&:hover': {
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 8px 25px ' + alpha(theme.palette.success.main, 0.4),
+                      },
+                      '&:disabled': {
+                        background: alpha(theme.palette.primary.main, 0.3),
+                      }
+                    })
+                  }}
+                >
+                  {hasApplied ? '✅ Application Submitted' : applying ? 'Applying...' : '🚀 Apply Now'}
+                </Button>
+              ) : (
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={
+                    !user ? <LoginIcon /> :
+                    // Determine the job source URL for icon selection
+                    (job?.isExternalJob && job?.externalApplicationUrl) ||
+                    job?.contactInfo?.website ||
+                    job?.employer?.socialLinks?.website
+                      ? <Language />
+                      : <Work />
                   }
-                  // Priority 2: Contact info website
-                  else if (job?.contactInfo?.website) {
-                    sourceUrl = job.contactInfo.website;
-                  }
-                  // Priority 3: Employer's website
-                  else if (job?.employer?.socialLinks?.website) {
-                    sourceUrl = job.employer.socialLinks.website;
-                  }
-                  
-                  if (sourceUrl) {
-                    // Ensure URL has protocol
-                    if (!sourceUrl.startsWith('http://') && !sourceUrl.startsWith('https://')) {
-                      sourceUrl = 'https://' + sourceUrl;
+                  onClick={() => {
+                    if (!user) {
+                      navigate('/login', { 
+                        state: { from: { pathname: `/jobs/${id}` } }
+                      });
+                      return;
                     }
-                    window.open(sourceUrl, '_blank', 'noopener,noreferrer');
-                  } else {
-                    // Fallback: scroll to job description
-                    document.getElementById('job-description')?.scrollIntoView({ 
-                      behavior: 'smooth' 
-                    });
-                  }
-                }}
-                fullWidth
-                sx={{ 
-                  py: 1.8,
-                  fontWeight: 700,
-                  fontSize: '1rem',
-                  borderRadius: 3,
-                  background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.info.main} 90%)`,
-                  boxShadow: '0 6px 20px ' + alpha(theme.palette.primary.main, 0.3),
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 8px 25px ' + alpha(theme.palette.primary.main, 0.4),
-                  }
-                }}
-              >
-                📋 View More Details
-              </Button>
+
+                    // Determine the job source URL
+                    let sourceUrl = null;
+                    
+                    // Priority 1: External job application URL
+                    if (job?.isExternalJob && job?.externalApplicationUrl) {
+                      sourceUrl = job.externalApplicationUrl;
+                    }
+                    // Priority 2: Contact info website
+                    else if (job?.contactInfo?.website) {
+                      sourceUrl = job.contactInfo.website;
+                    }
+                    // Priority 3: Employer's website
+                    else if (job?.employer?.socialLinks?.website) {
+                      sourceUrl = job.employer.socialLinks.website;
+                    }
+                    
+                    if (sourceUrl) {
+                      // Ensure URL has protocol
+                      if (!sourceUrl.startsWith('http://') && !sourceUrl.startsWith('https://')) {
+                        sourceUrl = 'https://' + sourceUrl;
+                      }
+                      window.open(sourceUrl, '_blank', 'noopener,noreferrer');
+                    } else {
+                      // Fallback: scroll to job description
+                      document.getElementById('job-description')?.scrollIntoView({ 
+                        behavior: 'smooth' 
+                      });
+                    }
+                  }}
+                  fullWidth
+                  sx={{ 
+                    py: 1.8,
+                    fontWeight: 700,
+                    fontSize: '1rem',
+                    borderRadius: 3,
+                    background: !user 
+                      ? `linear-gradient(45deg, ${theme.palette.secondary.main} 30%, ${theme.palette.primary.main} 90%)`
+                      : `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.info.main} 90%)`,
+                    boxShadow: '0 6px 20px ' + alpha(theme.palette.primary.main, 0.3),
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px ' + alpha(theme.palette.primary.main, 0.4),
+                    }
+                  }}
+                >
+                  {!user ? '🔐 Login to Apply' : '📋 View More Details'}
+                </Button>
+              )}
 
               <Stack direction="row" spacing={1}>
                 <Button
@@ -2037,6 +2203,73 @@ const JobDetailsPage: React.FC = () => {
           Share on LinkedIn
         </MenuItem>
       </Menu>
+
+      {/* Profile Incomplete Dialog */}
+      <Dialog 
+        open={profileIncompleteDialogOpen} 
+        onClose={() => setProfileIncompleteDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
+          <Warning sx={{ fontSize: 48, color: theme.palette.warning.main, mb: 1 }} />
+          <Typography variant="h6" fontWeight="bold" color="warning.main">
+            Complete Your Profile First
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ textAlign: 'center', pt: 2 }}>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Your profile is only <strong>{profileCompletion}%</strong> complete. 
+            To apply for this position and send your profile to the employer, 
+            you need at least 50% completion.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Complete your profile with basic information, skills, and experience to increase your chances of getting hired.
+          </Typography>
+          
+          <Box sx={{ 
+            p: 2, 
+            bgcolor: alpha(theme.palette.warning.main, 0.1),
+            borderRadius: 2,
+            mb: 2
+          }}>
+            <Typography variant="body2" fontWeight="bold" color="warning.main">
+              💼 Why complete your profile?
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              • Employers can see your full qualifications<br/>
+              • Higher chance of getting shortlisted<br/>
+              • Professional presentation of your skills<br/>
+              • Direct profile sharing with employers
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ justifyContent: 'center', pb: 3, gap: 2 }}>
+          <Button
+            onClick={() => setProfileIncompleteDialogOpen(false)}
+            variant="outlined"
+            sx={{ minWidth: 120 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              setProfileIncompleteDialogOpen(false);
+              navigate('/app/profile');
+            }}
+            variant="contained"
+            sx={{ 
+              minWidth: 140,
+              background: `linear-gradient(45deg, ${theme.palette.warning.main} 30%, ${theme.palette.primary.main} 90%)`,
+              '&:hover': {
+                background: `linear-gradient(45deg, ${theme.palette.warning.dark} 30%, ${theme.palette.primary.dark} 90%)`,
+              }
+            }}
+          >
+            ✏️ Complete Profile
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

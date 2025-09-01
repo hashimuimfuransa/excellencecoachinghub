@@ -288,23 +288,37 @@ Generate all ${questionCount} questions now:`;
               question.explanation = "This is the correct answer for this question.";
             }
 
-            // Clean up category values
+            // Clean up category values with comprehensive normalization
             let category = question.category;
             if (typeof category === 'string') {
               category = category.toLowerCase().trim();
-              // Map invalid categories to valid ones
-              if (category.includes('situational') || category.includes('judgment')) {
-                category = 'situational';
-              } else if (category.includes('problem') || category.includes('solving')) {
+              
+              // Remove common variations and normalize to valid enum values
+              if (category === 'problemsolving' || 
+                  category === 'problem_solving' || 
+                  category.includes('problem') || 
+                  category.includes('solving')) {
                 category = 'problem-solving';
-              } else if (category.includes('personality') || category.includes('behavior')) {
+              } else if (category.includes('situational') || 
+                         category.includes('judgment') || 
+                         category.includes('scenario')) {
+                category = 'situational';
+              } else if (category.includes('personality') || 
+                         category.includes('behavior') || 
+                         category.includes('trait')) {
                 category = 'personality';
-              } else if (category.includes('cognitive') || category.includes('logical') || category.includes('analytical')) {
+              } else if (category.includes('cognitive') || 
+                         category.includes('logical') || 
+                         category.includes('analytical') ||
+                         category.includes('reasoning')) {
                 category = 'cognitive';
               } else {
                 // Default fallback
+                console.warn(`⚠️ Unknown category "${question.category}" for question ${index + 1}, defaulting to cognitive`);
                 category = 'cognitive';
               }
+              
+              console.log(`🔄 Category mapping: "${question.category}" → "${category}"`);
             } else {
               category = 'cognitive';
             }
@@ -610,7 +624,7 @@ Generate all ${questionCount} questions now:`;
           explanation: "Active listening and consensus-building demonstrate strong interpersonal skills and emotional intelligence."
         }
       ],
-      problemSolving: [
+      'problem-solving': [
         {
           question: `You're facing an unexpected challenge in your ${jobTitle} role that requires creative thinking. What's your approach?`,
           options: [

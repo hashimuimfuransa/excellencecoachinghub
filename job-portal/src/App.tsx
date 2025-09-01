@@ -27,6 +27,7 @@ import CertificatesPage from './pages/CertificatesPage';
 import CoursesPage from './pages/CoursesPage';
 import AIInterviewsPage from './pages/AIInterviewsPage';
 import PsychometricTestsPage from './pages/PsychometricTestsPage';
+import TestTakingPage from './pages/TestTakingPage';
 import TestPage from './pages/TestPage';
 import FreeTestPage from './pages/FreeTestPage';
 import TestDetailsPage from './pages/TestDetailsPage';
@@ -330,6 +331,16 @@ function App() {
                 } 
               />
             </Route>
+            
+            {/* Standalone Test Taking Page - Full Screen (Outside MainLayout) */}
+            <Route 
+              path="/test-taking" 
+              element={
+                <ProtectedRoute>
+                  <TestTakingPage />
+                </ProtectedRoute>
+              } 
+            />
             
             {/* Legacy dashboard route redirect */}
             <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />

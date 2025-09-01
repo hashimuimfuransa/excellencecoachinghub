@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 
 export interface NotificationData {
   recipient: string;
-  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'event_reminder';
+  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'event_reminder' | 'payment_approved' | 'payment_rejected' | 'payment_success' | 'payment_failed';
   title: string;
   message: string;
   data?: {
@@ -14,6 +14,8 @@ export interface NotificationData {
     chatId?: string;
     jobId?: string;
     eventId?: string;
+    paymentRequestId?: string;
+    testType?: string;
     url?: string;
   };
 }
@@ -97,7 +99,10 @@ class NotificationServiceClass {
           userProfilePicture: data.data.userProfilePicture,
           chatId: data.data.chatId ? new mongoose.Types.ObjectId(data.data.chatId) : undefined,
           jobId: data.data.jobId ? new mongoose.Types.ObjectId(data.data.jobId) : undefined,
-          eventId: data.data.eventId ? new mongoose.Types.ObjectId(data.data.eventId) : undefined
+          eventId: data.data.eventId ? new mongoose.Types.ObjectId(data.data.eventId) : undefined,
+          paymentRequestId: data.data.paymentRequestId ? new mongoose.Types.ObjectId(data.data.paymentRequestId) : undefined,
+          testType: data.data.testType,
+          url: data.data.url
         } : undefined
       });
 
@@ -203,6 +208,34 @@ class NotificationServiceClass {
 
     // Also send push notification
     await pushNotificationService.sendJobMatchNotification(userId, jobTitle, company, matchScore);
+  }
+
+  /**
+   * Send payment request approval notification
+   */
+  async sendPaymentApprovalNotification(
+    userId: string, 
+    paymentRequestId: string, 
+    status: 'approved' | 'rejected',
+    jobTitle: string,
+    testType: string,
+    adminNotes?: string
+  ): Promise<void> {
+    const isApproved = status === 'approved';
+    
+    await this.sendRealTimeNotification({
+      recipient: userId,
+      type: isApproved ? 'payment_approved' : 'payment_rejected',
+      title: isApproved ? 'Premium Test Approved! 🎉' : 'Premium Test Request Update',
+      message: isApproved 
+        ? `Your request for ${testType} for ${jobTitle} has been approved! You can now take the premium psychometric test.`
+        : `Your request for ${testType} for ${jobTitle} has been rejected. ${adminNotes ? `Reason: ${adminNotes}` : 'Please contact support for more information.'}`,
+      data: {
+        paymentRequestId,
+        testType,
+        url: '/app/psychometric-tests'
+      }
+    });
   }
 
   /**

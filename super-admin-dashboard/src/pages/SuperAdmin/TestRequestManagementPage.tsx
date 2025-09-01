@@ -232,7 +232,7 @@ const TestRequestManagementPage: React.FC = () => {
   const fetchPendingPurchases = async () => {
     try {
       setPurchasesLoading(true);
-      const response = await apiService.get('/psychometric-tests/approvals/pending');
+      const response = await apiService.get('/payment-requests');
       if (response.data.success) {
         setPurchases(response.data.data);
       }

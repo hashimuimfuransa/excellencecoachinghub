@@ -137,10 +137,10 @@ const ProfileAccessGuard: React.FC<ProfileAccessGuardProps> = ({
           title: 'Smart Job Tests',
           icon: <SmartToy sx={{ fontSize: 48, color: 'info.main' }} />,
           description: 'AI-powered job-specific tests to prepare for your target positions',
-          requiredCompletion: 65,
+          requiredCompletion: 75,
           requiredFields: [
-            'firstName', 'lastName', 'email', 'phone', 'dateOfBirth',
-            'education', 'experienceLevel', 'skills', 'jobTitle'
+            'firstName', 'lastName', 'email', 'phone', 
+            'skills', 'jobTitle'
           ]
         };
       default:

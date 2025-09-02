@@ -29,6 +29,8 @@ import {
   MenuBook,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import { Education } from '../../services/cvBuilderService';
 
@@ -305,17 +307,19 @@ const CVEducationStep: React.FC<CVEducationStepProps> = ({
             </Grid>
             
             <Grid item xs={12} sm={6}>
-              <DatePicker
-                label="Graduation Date"
-                value={currentEducation.graduationDate ? dayjs(currentEducation.graduationDate) : null}
-                onChange={(date) => handleInputChange('graduationDate', date?.format('YYYY-MM-DD') || '')}
-                views={['year', 'month']}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                  }
-                }}
-              />
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <DatePicker
+                  label="Graduation Date"
+                  value={currentEducation.graduationDate ? dayjs(currentEducation.graduationDate) : null}
+                  onChange={(date) => handleInputChange('graduationDate', date?.format('YYYY-MM-DD') || '')}
+                  views={['year', 'month']}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                    }
+                  }}
+                />
+              </LocalizationProvider>
             </Grid>
             
             <Grid item xs={12} sm={6}>

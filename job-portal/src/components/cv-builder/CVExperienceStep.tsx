@@ -37,6 +37,8 @@ import {
   TrendingUp,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 import { Experience } from '../../services/cvBuilderService';
 
@@ -398,30 +400,34 @@ const CVExperienceStep: React.FC<CVExperienceStepProps> = ({
             </Grid>
             
             <Grid item xs={12} sm={6}>
-              <DatePicker
-                label="Start Date"
-                value={currentExperience.startDate ? dayjs(currentExperience.startDate) : null}
-                onChange={(date) => handleInputChange('startDate', date?.format('YYYY-MM-DD') || '')}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                  }
-                }}
-              />
-            </Grid>
-            
-            {!currentExperience.isCurrentJob && (
-              <Grid item xs={12} sm={6}>
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
                 <DatePicker
-                  label="End Date"
-                  value={currentExperience.endDate ? dayjs(currentExperience.endDate) : null}
-                  onChange={(date) => handleInputChange('endDate', date?.format('YYYY-MM-DD') || '')}
+                  label="Start Date"
+                  value={currentExperience.startDate ? dayjs(currentExperience.startDate) : null}
+                  onChange={(date) => handleInputChange('startDate', date?.format('YYYY-MM-DD') || '')}
                   slotProps={{
                     textField: {
                       fullWidth: true,
                     }
                   }}
                 />
+              </LocalizationProvider>
+            </Grid>
+            
+            {!currentExperience.isCurrentJob && (
+              <Grid item xs={12} sm={6}>
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                  <DatePicker
+                    label="End Date"
+                    value={currentExperience.endDate ? dayjs(currentExperience.endDate) : null}
+                    onChange={(date) => handleInputChange('endDate', date?.format('YYYY-MM-DD') || '')}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                      }
+                    }}
+                  />
+                </LocalizationProvider>
               </Grid>
             )}
             

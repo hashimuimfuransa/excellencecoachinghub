@@ -49,26 +49,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Temporarily disable auth initialization to test basic functionality
+    let isMounted = true; // Flag to prevent state updates if component is unmounted
+    
     const initializeAuth = async () => {
       try {
         const { default: authService } = await import('../services/authService');
         const currentUser = authService.getCurrentUser();
-        if (currentUser && authService.isAuthenticated()) {
-          // Use cached user data without API call
+        const token = authService.getToken();
+        
+        // Only set user if component is still mounted and we have valid auth data
+        if (isMounted && currentUser && token) {
           setUser(currentUser);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
         // Clear invalid auth data without redirecting
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        if (isMounted) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     initializeAuth();
+    
+    // Cleanup function to prevent memory leaks
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const login = async (email: string, password: string): Promise<void> => {

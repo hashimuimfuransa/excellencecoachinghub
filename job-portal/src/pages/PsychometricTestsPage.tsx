@@ -39,10 +39,11 @@ import {
   ContactSupport,
   Phone,
   WhatsApp,
-  Email
+  Email,
+  Lock
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import { simplePsychometricService, SimpleTestSession, SimpleTestResult } from '../services/simplePsychometricService';
+import { simplePsychometricService, SimpleTestSession, SimpleTestResult, shouldRequestNewTest, hasCompletedJobTest, hasCompletedAnyTest, migrateOldCompletions } from '../services/simplePsychometricService';
 import { jobService } from '../services/jobService';
 import { paymentRequestService } from '../services/paymentRequestService';
 
@@ -90,6 +91,7 @@ const PsychometricTestsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [jobSearchTerm, setJobSearchTerm] = useState('');
   const [paymentRequestOpen, setPaymentRequestOpen] = useState(false);
+  const [requestTestDialogOpen, setRequestTestDialogOpen] = useState(false);
   const [selectedJobForPayment, setSelectedJobForPayment] = useState<Job | null>(null);
   const [paymentRequestSent, setPaymentRequestSent] = useState(false);
   const [testType, setTestType] = useState<'free' | 'premium'>('free');
@@ -97,10 +99,14 @@ const PsychometricTestsPage: React.FC = () => {
   const [approvedRequests, setApprovedRequests] = useState<{[jobId: string]: string}>({});
   const [selectedJobInDialog, setSelectedJobInDialog] = useState<Job | null>(null);
 
+  const [hasCompletedTests, setHasCompletedTests] = useState(false);
+
   useEffect(() => {
     loadJobs();
     loadTestHistory();
     checkPaymentRequestStatus();
+    // Check if user has completed any tests
+    setHasCompletedTests(hasCompletedAnyTest());
   }, []);
 
   // Refresh payment status when user changes or when component becomes visible
@@ -109,6 +115,21 @@ const PsychometricTestsPage: React.FC = () => {
       checkPaymentRequestStatus();
     }
   }, [user]);
+
+  // Refresh completion status when page becomes visible (user returning from test)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Page became visible, check for updated test completion status
+        setHasCompletedTests(hasCompletedAnyTest());
+        // Also refresh payment status in case new tests were completed
+        checkPaymentRequestStatus();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   // Also refresh payment status every 30 seconds to catch admin approvals
   useEffect(() => {
@@ -213,18 +234,28 @@ const PsychometricTestsPage: React.FC = () => {
         if (request.status === 'pending') {
           pending[request.jobId] = request._id;
         } else if (request.status === 'approved') {
+          // Only track as approved if not completed
           approved[request.jobId] = request._id;
         }
+        // If status is 'completed', don't track it in approved/pending
+        // This allows new requests for the same job
       });
       
       console.log('✅ Processed payment requests:', {
         pending,
         approved,
-        totalRequests: requests.length
+        totalRequests: requests.length,
+        allStatuses: requests.map(r => ({ jobId: r.jobId, status: r.status, jobTitle: r.jobTitle }))
       });
       
       setPendingRequests(pending);
       setApprovedRequests(approved);
+      
+      // Migrate old test completions for approved jobs
+      const approvedJobIds = Object.keys(approved);
+      if (approvedJobIds.length > 0) {
+        migrateOldCompletions(approvedJobIds);
+      }
     } catch (error) {
       console.error('Error checking payment request status:', error);
     }
@@ -274,7 +305,18 @@ const PsychometricTestsPage: React.FC = () => {
       }
       
     } catch (error: any) {
-      setError(error.message || 'Failed to start free test');
+      console.error('❌ Error starting free test:', error);
+      
+      // Check if this is the specific "free test already used" error
+      if (error.message.includes('FREE_TEST_ALREADY_USED') || 
+          error.message.includes('already used your one-time free test')) {
+        setError('You have already used your one-time free assessment. Please request premium test approval from the administrator to take additional assessments.');
+        // Refresh the completion status to update the UI
+        setHasCompletedTests(hasCompletedAnyTest());
+      } else {
+        setError(error.message || 'Failed to start free test');
+      }
+      
       setTestInProgress(false);
     } finally {
       setLoading(false);
@@ -527,6 +569,13 @@ const PsychometricTestsPage: React.FC = () => {
         timeLimit: session.timeLimit
       });
       
+      // Mark the current approved request as used
+      const currentApprovedRequestId = approvedRequests[job._id];
+      if (currentApprovedRequestId) {
+        localStorage.setItem(`usedRequest_${currentApprovedRequestId}`, 'true');
+        console.log('✅ Marked request as used:', currentApprovedRequestId);
+      }
+      
       // Set test in progress state for this page
       setTestInProgress(true);
       setCurrentSession(session);
@@ -598,12 +647,34 @@ const PsychometricTestsPage: React.FC = () => {
     }
     
     if (approvedRequests[jobId]) {
-      return {
-        text: 'Start Premium Test',
-        disabled: false,
-        color: 'success' as const,
-        icon: <PlayArrow />
-      };
+      const currentApprovedRequestId = approvedRequests[jobId];
+      
+      // Check if user has used this specific approved request
+      const hasUsedCurrentRequest = localStorage.getItem(`usedRequest_${currentApprovedRequestId}`) !== null;
+      
+      console.log('🔍 Button state check:', {
+        jobId,
+        currentApprovedRequestId,
+        hasUsedCurrentRequest,
+        allCompletedTests: Object.keys(localStorage).filter(key => key.startsWith('testCompleted_')),
+        allUsedRequests: Object.keys(localStorage).filter(key => key.startsWith('usedRequest_'))
+      });
+      
+      if (hasUsedCurrentRequest) {
+        return {
+          text: 'Request New Premium Test',
+          disabled: false,
+          color: 'warning' as const,
+          icon: <AdminPanelSettings />
+        };
+      } else {
+        return {
+          text: 'Start Premium Test',
+          disabled: false,
+          color: 'success' as const,
+          icon: <PlayArrow />
+        };
+      }
     }
     
     return {
@@ -723,19 +794,25 @@ const PsychometricTestsPage: React.FC = () => {
 
               <Button
                 variant="contained"
-                color="success"
+                color={hasCompletedTests ? "secondary" : "success"}
                 size="large"
-                startIcon={<PlayArrow />}
-                onClick={() => { setTestType('free'); setSelectedJobInDialog(null); setJobSelectionOpen(true); }}
-                disabled={loading}
+                startIcon={hasCompletedTests ? <Lock /> : <PlayArrow />}
+                onClick={() => { 
+                  if (!hasCompletedTests) {
+                    setTestType('free'); 
+                    setSelectedJobInDialog(null); 
+                    setJobSelectionOpen(true);
+                  }
+                }}
+                disabled={loading || hasCompletedTests}
                 fullWidth
                 sx={{ mb: 2 }}
               >
-                Start Free Test
+                {hasCompletedTests ? "Free Test Used" : "Start Free Test"}
               </Button>
               
               <Typography variant="caption" color="text.secondary" display="block" textAlign="center">
-                Choose from available job positions
+                {hasCompletedTests ? "One-time free test already used. Use premium for more assessments." : "Choose from available job positions (one-time only)"}
               </Typography>
             </CardContent>
           </Card>
@@ -813,7 +890,12 @@ const PsychometricTestsPage: React.FC = () => {
                       color={buttonState.color}
                       startIcon={buttonState.icon}
                       onClick={() => { 
-                        if (buttonState.text === 'Start Premium Test') {
+                        if (buttonState.text === 'Request New Premium Test') {
+                          // Open payment request dialog for additional premium test
+                          setTestType('premium'); 
+                          setSelectedJobForPayment(null); 
+                          setPaymentRequestOpen(true); 
+                        } else if (buttonState.text === 'Start Premium Test') {
                           // If approved, open job selection with premium test option
                           setTestType('premium'); 
                           setSelectedJobInDialog(null);
@@ -833,13 +915,15 @@ const PsychometricTestsPage: React.FC = () => {
                       {buttonState.text}
                     </Button>
                     
-                    {(Object.keys(pendingRequests).length > 0 || Object.keys(approvedRequests).length > 0) && (
+                    {(Object.keys(pendingRequests).length > 0 || Object.keys(approvedRequests).length > 0 || hasCompletedTests) && (
                       <Button
                         variant="outlined"
                         size="small"
                         color="primary"
                         onClick={() => {
                           console.log('🔄 Manual refresh triggered');
+                          // Also refresh completion status
+                          setHasCompletedTests(hasCompletedAnyTest());
                           checkPaymentRequestStatus();
                         }}
                         disabled={loading}
@@ -855,6 +939,8 @@ const PsychometricTestsPage: React.FC = () => {
                         'Your request is under review' : 
                         buttonState.text === 'Start Premium Test' ?
                         'Choose from available job positions' :
+                        buttonState.text === 'Request New Premium Test' ?
+                        'Contact admin to get approval for additional premium tests' :
                         'Payment approval required from admin'
                       }
                     </Typography>
@@ -867,31 +953,39 @@ const PsychometricTestsPage: React.FC = () => {
 
         <Box sx={{ flex: 1 }}>
           <Card>
-            <CardContent>
+            <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="h6" gutterBottom>
-                Test Statistics
+                Detailed Results & Analytics
               </Typography>
-              <Stack spacing={2}>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Tests Completed
-                  </Typography>
-                  <Typography variant="h4" color="primary">
-                    {testHistory.length}
-                  </Typography>
-                </Box>
-                <Divider />
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Average Score
-                  </Typography>
-                  <Typography variant="h4" color="primary">
-                    {testHistory.length > 0 
-                      ? Math.round(testHistory.reduce((sum, test) => sum + test.score, 0) / testHistory.length)
-                      : 0}%
-                  </Typography>
-                </Box>
-              </Stack>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                View comprehensive analysis of your test performance and results
+              </Typography>
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<TrendingUp />}
+                onClick={() => {
+                  // Navigate to detailed results page
+                  window.location.href = '/app/test-results';
+                }}
+                sx={{
+                  background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                  boxShadow: '0 3px 5px 2px rgba(33, 150, 243, .3)',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  px: 3,
+                  py: 1.5,
+                  fontSize: '1rem',
+                  textTransform: 'none',
+                  borderRadius: 2,
+                  '&:hover': {
+                    background: 'linear-gradient(45deg, #1976D2 30%, #1FB5E1 90%)',
+                    boxShadow: '0 6px 10px 2px rgba(33, 150, 243, .4)',
+                  }
+                }}
+              >
+                View Detailed Results
+              </Button>
             </CardContent>
           </Card>
         </Box>
@@ -1440,6 +1534,93 @@ const PsychometricTestsPage: React.FC = () => {
               Close
             </Button>
           )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Request New Test Dialog */}
+      <Dialog 
+        open={requestTestDialogOpen} 
+        onClose={() => setRequestTestDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Stack direction="row" alignItems="center" spacing={2} sx={{ textAlign: 'center' }}>
+            <AdminPanelSettings color="warning" />
+            <Typography variant="h6">Request New Test from Admin</Typography>
+          </Stack>
+        </DialogTitle>
+        <DialogContent>
+          <Alert severity="info" sx={{ mb: 3 }}>
+            <AlertTitle>Tests Completed</AlertTitle>
+            You have already completed your available psychometric assessments. To take additional tests, please request approval from your super admin.
+          </Alert>
+          
+          <Paper sx={{ p: 3, bgcolor: '#f5f5f5', mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              📋 What happens next?
+            </Typography>
+            <Stack spacing={2}>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <ContactSupport color="primary" />
+                <Typography variant="body2">
+                  1. Click "Contact Admin" below to send a request
+                </Typography>
+              </Stack>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <AdminPanelSettings color="primary" />
+                <Typography variant="body2">
+                  2. Your super admin will review and approve your request
+                </Typography>
+              </Stack>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Psychology color="primary" />
+                <Typography variant="body2">
+                  3. Once approved, you can take new psychometric tests
+                </Typography>
+              </Stack>
+            </Stack>
+          </Paper>
+          
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <AlertTitle>Contact Information</AlertTitle>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              Please contact your super admin through one of these methods:
+            </Typography>
+            <Stack spacing={1}>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Phone color="primary" />
+                <Typography variant="body2">Phone: +1 (555) 123-4567</Typography>
+              </Stack>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <WhatsApp color="success" />
+                <Typography variant="body2">WhatsApp: +1 (555) 123-4567</Typography>
+              </Stack>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Email color="primary" />
+                <Typography variant="body2">Email: admin@excellencecoaching.com</Typography>
+              </Stack>
+            </Stack>
+          </Alert>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button 
+            variant="outlined"
+            onClick={() => setRequestTestDialogOpen(false)}
+          >
+            Close
+          </Button>
+          <Button 
+            variant="contained"
+            color="primary"
+            startIcon={<ContactSupport />}
+            onClick={() => {
+              // Open email client or contact form
+              window.location.href = 'mailto:admin@excellencecoaching.com?subject=Request for Additional Psychometric Tests&body=Dear Admin,%0D%0A%0D%0AI have completed my available psychometric assessments and would like to request permission to take additional tests.%0D%0A%0D%0APlease approve my request so I can continue with job applications.%0D%0A%0D%0AThank you!';
+            }}
+          >
+            Contact Admin
+          </Button>
         </DialogActions>
       </Dialog>
 

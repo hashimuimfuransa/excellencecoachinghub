@@ -123,6 +123,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { jobService } from '../services/jobService';
 import { userService } from '../services/userService';
 import { profileService } from '../services/profileService';
+import { shouldRequestNewTest } from '../services/simplePsychometricService';
 import { JobCategory } from '../types/job';
 import { User } from '../types/user';
 
@@ -220,6 +221,19 @@ const ModernJobsPage: React.FC = () => {
     const [palette, shade] = colorPath.split('.');
     return theme.palette[palette as keyof typeof theme.palette][shade as keyof any];
   };
+
+  // Check if user should request new test instead of accessing jobs
+  useEffect(() => {
+    const checkTestCompletion = () => {
+      if (shouldRequestNewTest()) {
+        console.log('🚫 User has completed tests, redirecting to request new test');
+        // Show a message and redirect to tests page instead of showing jobs
+        setError('You have completed your available tests. Please request a new test from your super admin to access new job opportunities.');
+      }
+    };
+
+    checkTestCompletion();
+  }, []);
 
   // Category configuration
   const categories = [

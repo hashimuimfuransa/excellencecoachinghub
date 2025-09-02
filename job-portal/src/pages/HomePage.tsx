@@ -2403,13 +2403,13 @@ const HomePage: React.FC = () => {
                   mx: 'auto'
                 }}
               >
-                Everything you need to know about finding your dream career with Excellence Coaching Hub
+                Everything you need to know about finding your dream career with ExJobNet
               </Typography>
               
               <Grid container spacing={4}>
                 {[
                   {
-                    question: "How does Excellence Coaching Hub's job matching work?",
+                    question: "How does ExJobNet's job matching work?",
                     answer: "Our AI-powered system analyzes your skills, experience, preferences, and career goals to match you with the most relevant job opportunities. We use advanced algorithms to ensure you see positions that align with your professional aspirations and have a high likelihood of success."
                   },
                   {
@@ -2421,7 +2421,7 @@ const HomePage: React.FC = () => {
                     answer: "Yes, every company on our platform goes through a rigorous verification process. We validate business licenses, check company reputation, and ensure all job postings meet our quality standards. Our dedicated team reviews each posting to protect job seekers from scams and fraudulent opportunities."
                   },
                   {
-                    question: "How much does it cost to use Excellence Coaching Hub?",
+                    question: "How much does it cost to use ExJobNet?",
                     answer: "Basic job searching is completely free. Our premium features like advanced analytics, unlimited AI coaching sessions, priority support, and exclusive job opportunities are available through affordable monthly plans starting at $29/month. Many users find jobs within the free tier."
                   },
                   {
@@ -2521,7 +2521,7 @@ const HomePage: React.FC = () => {
                     name: "Sarah Mitchell",
                     role: "Senior Data Scientist at Google",
                     company: "Google",
-                    story: "Excellence Coaching Hub transformed my career completely. Their AI interview coach helped me prepare for technical interviews, and I landed my dream role at Google with a 60% salary increase. The personalized job matching saved me months of searching.",
+                    story: "ExJobNet transformed my career completely. Their AI interview coach helped me prepare for technical interviews, and I landed my dream role at Google with a 60% salary increase. The personalized job matching saved me months of searching.",
                     rating: 5,
                     image: "S",
                     previousRole: "Junior Analyst",

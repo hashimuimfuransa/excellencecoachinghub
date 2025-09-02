@@ -25,10 +25,28 @@ const TestTakingPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
-  // Get test session ID from URL params
-  const sessionId = searchParams.get('sessionId');
+  // Debug new tab detection
+  const isNewTab = document.referrer === '' || window.opener !== null;
+  const isDirectAccess = !document.referrer;
+  
+  // Get test session ID from URL params with multiple fallbacks for new tab compatibility
+  const sessionId = searchParams.get('sessionId') || 
+                   searchParams.get('session') || 
+                   searchParams.get('id') ||
+                   searchParams.get('testSessionId');
   const jobTitle = searchParams.get('jobTitle') || 'Psychometric Test';
   const company = searchParams.get('company') || '';
+  
+  // Log tab opening context for debugging
+  console.log('🔍 Test page loaded:', {
+    isNewTab,
+    isDirectAccess,
+    hasOpener: window.opener !== null,
+    referrer: document.referrer,
+    currentUrl: window.location.href,
+    urlParams: Object.fromEntries(searchParams.entries()),
+    sessionIdFromUrl: sessionId
+  });
 
   // States
   const [currentSession, setCurrentSession] = useState<SimpleTestSession | null>(null);
@@ -38,21 +56,70 @@ const TestTakingPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [showResults, setShowResults] = useState(false);
+  const [testResult, setTestResult] = useState<any>(null);
 
   useEffect(() => {
-    if (sessionId && sessionId !== 'undefined' && sessionId.trim() !== '') {
+    console.log('🔍 Session validation in new tab:', {
+      sessionId: sessionId,
+      sessionIdType: typeof sessionId,
+      isValidString: sessionId && sessionId !== 'undefined' && sessionId !== 'null' && sessionId.trim() !== '',
+      urlSearchParams: window.location.search,
+      allUrlParams: Object.fromEntries(searchParams.entries()),
+      isNewTab,
+      isDirectAccess
+    });
+    
+    // Try to recover session ID from different sources if main attempt failed
+    let recoveredSessionId = sessionId;
+    
+    if (!recoveredSessionId || recoveredSessionId === 'undefined' || recoveredSessionId === 'null' || recoveredSessionId.trim() === '') {
+      // Try to get from URL hash (in case it's passed as #sessionId=...)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      recoveredSessionId = hashParams.get('sessionId') || hashParams.get('session');
+      
+      // Try to get from sessionStorage (if it was stored there previously)
+      if (!recoveredSessionId) {
+        recoveredSessionId = sessionStorage.getItem('currentTestSessionId');
+        console.log('🔄 Attempting to recover session ID from sessionStorage:', recoveredSessionId);
+      }
+      
+      // Try to get from localStorage as last resort
+      if (!recoveredSessionId) {
+        recoveredSessionId = localStorage.getItem('currentTestSessionId');
+        console.log('🔄 Attempting to recover session ID from localStorage:', recoveredSessionId);
+      }
+    }
+    
+    if (recoveredSessionId && recoveredSessionId !== 'undefined' && recoveredSessionId !== 'null' && recoveredSessionId.trim() !== '') {
       // Validate ObjectId format
-      if (!/^[0-9a-fA-F]{24}$/.test(sessionId)) {
-        setError('Invalid test session ID. Please start a test from the main page.');
+      if (!/^[0-9a-fA-F]{24}$/.test(recoveredSessionId)) {
+        console.error('❌ Invalid session ID format:', recoveredSessionId);
+        setError(`Invalid test session ID format. Expected 24-character ObjectId, got: "${recoveredSessionId}". Please start a test from the main page.`);
         setLoading(false);
         return;
       }
-      loadTestSession();
+      
+      // Store the recovered session ID for future use
+      if (recoveredSessionId !== sessionId) {
+        sessionStorage.setItem('currentTestSessionId', recoveredSessionId);
+        console.log('✅ Recovered session ID stored for future use:', recoveredSessionId);
+      }
+      
+      // Set the active session ID and load the session
+      setActiveSessionId(recoveredSessionId);
+      loadTestSession(recoveredSessionId);
     } else {
+      console.error('❌ No valid session ID found after recovery attempts:', { 
+        originalSessionId: sessionId, 
+        recoveredSessionId,
+        type: typeof recoveredSessionId
+      });
       setError('No test session found. Please start a test from the main page.');
       setLoading(false);
     }
-  }, [sessionId]);
+  }, [sessionId, isNewTab, isDirectAccess]);
 
   useEffect(() => {
     let interval: any;
@@ -100,20 +167,39 @@ const TestTakingPage: React.FC = () => {
     };
   }, []);
 
-  const loadTestSession = async () => {
+  const loadTestSession = async (sessionIdToLoad?: string) => {
     try {
       setLoading(true);
+      const sessionIdToUse = sessionIdToLoad || activeSessionId || sessionId;
+      
       console.log('🔍 Loading test session:', {
-        sessionId: sessionId,
-        sessionIdType: typeof sessionId
+        sessionIdToUse: sessionIdToUse,
+        sessionIdToLoad: sessionIdToLoad,
+        activeSessionId: activeSessionId,
+        originalSessionId: sessionId,
+        sessionIdType: typeof sessionIdToUse
       });
       
-      const session = await simplePsychometricService.getTestSession(sessionId!);
+      if (!sessionIdToUse) {
+        throw new Error('No valid session ID available for loading test session');
+      }
+      
+      const session = await simplePsychometricService.getTestSession(sessionIdToUse);
       console.log('✅ Test session loaded:', {
         sessionId: session.sessionId,
         questionsCount: session.questions.length,
-        timeLimit: session.timeLimit
+        timeLimit: session.timeLimit,
+        status: session.status,
+        isCompleted: session.isCompleted
       });
+      
+      // Check if test is already completed - prevent retaking
+      if (session.isCompleted || session.status === 'completed') {
+        console.log('⚠️ Test already completed, preventing retake');
+        setError('This test has already been completed. You can only take each test once. Please request a new test from your super admin if needed.');
+        setLoading(false);
+        return;
+      }
       
       setCurrentSession(session);
       setAnswers(new Array(session.questions.length).fill(-1));
@@ -147,25 +233,49 @@ const TestTakingPage: React.FC = () => {
   const handleTestSubmit = async () => {
     if (!currentSession) return;
     
+    const sessionIdToUse = activeSessionId || sessionId;
+    if (!sessionIdToUse) {
+      setError('No valid session ID found for test submission');
+      return;
+    }
+    
     setSubmitting(true);
     console.log('🚀 Submitting test:', {
-      sessionId: currentSession.sessionId,
-      sessionIdType: typeof currentSession.sessionId,
+      activeSessionId: activeSessionId,
+      urlSessionId: sessionId,
+      currentSessionId: currentSession.sessionId,
+      sessionIdToUse: sessionIdToUse,
+      sessionIdType: typeof sessionIdToUse,
       answers: answers,
       answersLength: answers.length
     });
     
     try {
+      // Get job and test type information for proper tracking
+      const jobId = currentSession?.job?._id || searchParams.get('jobId');
+      const testType = (searchParams.get('testType') as 'free' | 'premium') || 'premium'; // Default to premium for psychometric tests
+      
       const result = await simplePsychometricService.submitSimpleTest(
-        currentSession.sessionId,
-        answers
+        sessionIdToUse,
+        answers,
+        undefined, // timeSpent - will be calculated automatically
+        jobId,
+        testType
       );
       
-      // Store result in session storage for results page
+      console.log('✅ Test submitted successfully, showing results in same tab:', result);
+      
+      // Store result in session storage as backup
       sessionStorage.setItem('testResult', JSON.stringify(result));
       
-      // Navigate to results page
-      window.location.href = `/test-results?fromTest=true`;
+      // Show results in the same tab instead of redirecting
+      setTestResult(result);
+      setShowResults(true);
+      setSubmitting(false);
+      
+      // Clear the stored session ID since test is completed
+      sessionStorage.removeItem('currentTestSessionId');
+      localStorage.removeItem('currentTestSessionId');
     } catch (error: any) {
       console.error('❌ Test submission error:', error);
       setError(error.message || 'Failed to submit test');
@@ -210,6 +320,8 @@ const TestTakingPage: React.FC = () => {
   }
 
   if (error) {
+    const isAlreadyCompleted = error.includes('already been completed');
+    
     return (
       <Box
         sx={{
@@ -222,15 +334,70 @@ const TestTakingPage: React.FC = () => {
         }}
       >
         <Paper sx={{ p: 4, maxWidth: 500, textAlign: 'center' }}>
-          <Alert severity="error" sx={{ mb: 3 }}>
+          <Alert severity={isAlreadyCompleted ? 'warning' : 'error'} sx={{ mb: 3 }}>
             {error}
           </Alert>
-          <Button
-            variant="contained"
-            onClick={() => window.location.href = '/tests'}
-          >
-            Back to Tests
-          </Button>
+          
+          {isAlreadyCompleted && (
+            <Box sx={{ mb: 3, p: 2, backgroundColor: '#f5f5f5', borderRadius: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                <strong>What happens next?</strong>
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                • You can view your existing test results
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                • If you need to retake the test, contact your super admin
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                • Each test can only be taken once for fairness
+              </Typography>
+            </Box>
+          )}
+          
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {isAlreadyCompleted && (
+              <>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => {
+                    const sessionIdToUse = activeSessionId || sessionId;
+                    window.location.href = `/app/test-results${sessionIdToUse ? `?sessionId=${sessionIdToUse}` : ''}`;
+                  }}
+                  sx={{ px: 3 }}
+                >
+                  View My Results
+                </Button>
+                
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  onClick={() => {
+                    // Navigate to psychometric tests page to request new test
+                    window.location.href = '/app/tests';
+                  }}
+                  sx={{ px: 3, backgroundColor: '#ff9800' }}
+                >
+                  Request New Test
+                </Button>
+              </>
+            )}
+            
+            <Button
+              variant="outlined"
+              onClick={() => {
+                // Close tab first, fallback to tests page
+                window.close();
+                setTimeout(() => {
+                  window.location.href = '/app/tests';
+                }, 100);
+              }}
+              sx={{ px: 3 }}
+            >
+              {isAlreadyCompleted ? 'Close' : 'Back to Tests'}
+            </Button>
+          </Box>
         </Paper>
       </Box>
     );
@@ -287,7 +454,7 @@ const TestTakingPage: React.FC = () => {
               backdropFilter: 'blur(10px)'
             }}>
               <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                Excellence Coaching Hub - Assessment Center
+                ExJobNet - Assessment Center
               </Typography>
               <Button
                 variant="outlined"
@@ -565,6 +732,172 @@ const TestTakingPage: React.FC = () => {
           </Paper>
         </Paper>
       </Box>
+      
+      {/* Results Modal - Shows in same tab after test submission */}
+      {showResults && testResult && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999
+          }}
+        >
+          <Paper
+            sx={{
+              maxWidth: '500px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflow: 'auto',
+              p: 4,
+              borderRadius: 3,
+              textAlign: 'center',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              position: 'relative'
+            }}
+          >
+            <Box sx={{ mb: 3 }}>
+              <CheckCircle sx={{ fontSize: 64, color: '#4CAF50', mb: 2 }} />
+              <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
+                Test Completed!
+              </Typography>
+              <Typography variant="body1" sx={{ opacity: 0.9, mb: 3 }}>
+                Congratulations on completing the psychometric test
+              </Typography>
+            </Box>
+
+            <Box sx={{ mb: 4, textAlign: 'left' }}>
+              <Typography variant="h6" sx={{ mb: 2, textAlign: 'center' }}>
+                Your Results
+              </Typography>
+              
+              {testResult.scores && Object.keys(testResult.scores).length > 0 && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold' }}>
+                    Personality Scores:
+                  </Typography>
+                  {Object.entries(testResult.scores).map(([trait, score]: [string, any]) => (
+                    <Box key={trait} sx={{ mb: 1, display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
+                        {trait}:
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                        {typeof score === 'number' ? `${score}/5` : score}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              )}
+
+              {testResult.jobMatch && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold' }}>
+                    Job Match Score:
+                  </Typography>
+                  <Typography variant="h5" sx={{ color: '#4CAF50', fontWeight: 'bold' }}>
+                    {typeof testResult.jobMatch === 'number' 
+                      ? `${testResult.jobMatch}%`
+                      : testResult.jobMatch}
+                  </Typography>
+                </Box>
+              )}
+
+              {testResult.feedback && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 'bold' }}>
+                    Feedback:
+                  </Typography>
+                  <Typography variant="body2" sx={{ 
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    p: 2,
+                    borderRadius: 2,
+                    lineHeight: 1.6
+                  }}>
+                    {testResult.feedback}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Button
+                variant="contained"
+                color="success"
+                onClick={() => {
+                  // Navigate to detailed test results page with the session/result ID
+                  const sessionIdToUse = activeSessionId || sessionId;
+                  window.location.href = `/app/test-results?sessionId=${sessionIdToUse}&resultId=${testResult?.resultId || testResult?._id}`;
+                }}
+                sx={{
+                  px: 3,
+                  py: 1,
+                  borderRadius: 2,
+                  fontWeight: 'bold',
+                  backgroundColor: '#4CAF50',
+                  '&:hover': {
+                    backgroundColor: '#45a049'
+                  }
+                }}
+              >
+                View Detailed Results
+              </Button>
+              
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => {
+                  // Navigate to tests page to request new test - NOT to jobs
+                  window.location.href = '/app/tests';
+                }}
+                sx={{
+                  px: 3,
+                  py: 1,
+                  borderRadius: 2,
+                  fontWeight: 'bold',
+                  backgroundColor: '#2196F3',
+                  '&:hover': {
+                    backgroundColor: '#1976D2'
+                  }
+                }}
+              >
+                Request New Test
+              </Button>
+              
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  // Close the current tab
+                  window.close();
+                  // Fallback if tab can't be closed
+                  setTimeout(() => {
+                    window.location.href = '/app/tests';
+                  }, 100);
+                }}
+                sx={{
+                  px: 3,
+                  py: 1,
+                  borderRadius: 2,
+                  color: 'white',
+                  borderColor: 'white',
+                  '&:hover': {
+                    borderColor: 'white',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                  }
+                }}
+              >
+                Close Tab
+              </Button>
+            </Box>
+          </Paper>
+        </Box>
+      )}
     </Box>
   );
 };

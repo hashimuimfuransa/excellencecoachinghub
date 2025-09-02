@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PsychometricTestResult, Job, TestPurchase, TestSession } from '../models';
 import { GeneratedPsychometricTest } from '../models/GeneratedPsychometricTest';
+import PaymentRequest from '../models/PaymentRequest';
 import { AuthRequest } from '../middleware/auth';
 import { aiService } from '../services/aiService';
 import { validateObjectIdParam } from '../utils/validation';
@@ -49,6 +50,30 @@ export const generatePsychometricTest = async (req: AuthRequest, res: Response) 
 
     const features = levelFeatures[levelId as keyof typeof levelFeatures] || levelFeatures.easy;
     const { questionCount, timeLimit } = features;
+
+    // Check if user is requesting a free test (easy level) and has already completed one
+    if (levelId === 'easy') {
+      const existingResults = await PsychometricTestResult.find({ user: userId });
+      
+      if (existingResults.length > 0) {
+        console.log('❌ User already completed tests, cannot take another free test:', {
+          userId,
+          completedTestsCount: existingResults.length,
+          testDetails: existingResults.map(r => ({
+            jobId: r.job,
+            completedAt: r.completedAt,
+            score: r.overallScore
+          }))
+        });
+        
+        return res.status(403).json({
+          success: false,
+          error: 'FREE_TEST_ALREADY_USED',
+          message: 'You have already used your one-time free test. Please request premium assessment approval to take more tests.',
+          completedTestsCount: existingResults.length
+        });
+      }
+    }
 
     // Generate test using AI service with proper JSON parsing
     const testData = await aiService.generatePsychometricTest({
@@ -521,6 +546,30 @@ export const submitPsychometricTest = async (req: AuthRequest, res: Response) =>
     } else {
       // Create new result
       testResult = await PsychometricTestResult.create(resultData);
+    }
+
+    // Mark the payment request as completed when test is finished
+    try {
+      const paymentRequest = await PaymentRequest.findOneAndUpdate(
+        {
+          userId: userId,
+          jobId: jobId,
+          status: 'approved'
+        },
+        {
+          status: 'completed',
+          completedAt: new Date()
+        }
+      );
+      
+      if (paymentRequest) {
+        console.log('✅ Payment request marked as completed for user:', userId, 'job:', jobId);
+      } else {
+        console.log('ℹ️ No approved payment request found to complete for user:', userId, 'job:', jobId);
+      }
+    } catch (paymentError) {
+      console.error('❌ Error updating payment request status:', paymentError);
+      // Don't fail the test submission if payment status update fails
     }
 
     const isResubmission = testSession.status === 'completed';

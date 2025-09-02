@@ -331,22 +331,22 @@ const MainLayout: React.FC = () => {
             icon: <Psychology />,
           },
           {
-            label: 'Smart Tests',
+            label: 'Smart Exams',
             path: '/app/smart-tests',
             icon: <Assessment />,
           },
           {
-            label: 'Test Results',
+            label: 'Psychometric Test Results',
             path: '/app/test-results',
             icon: <BarChart />,
           },
           {
-            label: 'Smart Test Results',
+            label: 'Smart Exam Results',
             path: '/app/smart-test-results',
             icon: <Timeline />,
           },
           {
-            label: 'AI Interview Practice',
+            label: 'Interview Practice',
             path: '/app/interviews',
             icon: <Assessment />,
           },

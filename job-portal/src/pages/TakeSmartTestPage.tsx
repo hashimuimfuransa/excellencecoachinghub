@@ -31,7 +31,8 @@ import {
   CheckCircle,
   Warning,
   Info,
-  Close
+  Close,
+  ArrowBack
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -287,13 +288,26 @@ const TakeSmartTestPage: React.FC = () => {
       {/* Header with timer and progress */}
       <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
         <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap">
-          <Box>
-            <Typography variant="h5" fontWeight="bold" gutterBottom>
-              {test.title}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {test.jobTitle} at {test.company}
-            </Typography>
+          <Box display="flex" alignItems="center">
+            <IconButton
+              onClick={() => navigate(-1)}
+              sx={{ 
+                mr: 2,
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover
+                }
+              }}
+            >
+              <ArrowBack />
+            </IconButton>
+            <Box>
+              <Typography variant="h5" fontWeight="bold" gutterBottom>
+                {test.title}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {test.jobTitle} at {test.company}
+              </Typography>
+            </Box>
           </Box>
           
           <Box display="flex" alignItems="center" gap={2}>

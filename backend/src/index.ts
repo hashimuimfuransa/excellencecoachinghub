@@ -124,6 +124,9 @@ const io = new Server(server, {
 // Trust proxy for rate limiting
 app.set('trust proxy', 1);
 
+// Disable ETag to prevent 304 responses for AI matched jobs
+app.set('etag', false);
+
 // Security middleware
 app.use(helmet({
   crossOriginEmbedderPolicy: false, // Required for WebRTC

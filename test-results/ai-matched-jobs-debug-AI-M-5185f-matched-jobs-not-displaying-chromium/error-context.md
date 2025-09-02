@@ -1,0 +1,121 @@
+# Page snapshot
+
+```yaml
+- main [ref=e4]:
+  - generic [ref=e5]:
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - img "ExJobNet" [ref=e10]
+        - generic [ref=e11]:
+          - heading "ExJobNet" [level=1] [ref=e12]
+          - heading "Africa's Premier Career Platform" [level=6] [ref=e13]
+      - generic [ref=e14]:
+        - heading "Transform Your Career Journey" [level=2] [ref=e15]
+        - heading "Join thousands of professionals who trust ExJobNet for personalized career growth, interactive learning, and meaningful connections." [level=6] [ref=e16]
+      - generic [ref=e17]:
+        - heading "🌟 Our Complete Services" [level=5] [ref=e18]
+        - generic [ref=e19]:
+          - generic [ref=e21]:
+            - generic [ref=e22]:
+              - img [ref=e24]
+              - generic [ref=e26]:
+                - paragraph [ref=e27]: Job Portal
+                - generic [ref=e29]: Jobs & Applications
+            - paragraph [ref=e30]: Access thousands of job opportunities across Africa
+          - generic [ref=e32]:
+            - generic [ref=e33]:
+              - img [ref=e35]
+              - generic [ref=e37]:
+                - paragraph [ref=e38]: Psychometric Tests
+                - generic [ref=e40]: Testing & Assessment
+            - paragraph [ref=e41]: Advanced personality and skills assessments
+          - generic [ref=e43]:
+            - generic [ref=e44]:
+              - img [ref=e46]
+              - generic [ref=e48]:
+                - paragraph [ref=e49]: Smart Exams
+                - generic [ref=e51]: Testing & Assessment
+            - paragraph [ref=e52]: Advanced job specific exams
+          - generic [ref=e54]:
+            - generic [ref=e55]:
+              - img [ref=e57]
+              - generic [ref=e60]:
+                - paragraph [ref=e61]: Interviews
+                - generic [ref=e63]: Testing & Assessment
+            - paragraph [ref=e64]: Practice with intelligent interview simulations
+          - generic [ref=e66]:
+            - generic [ref=e67]:
+              - img [ref=e69]
+              - generic [ref=e71]:
+                - paragraph [ref=e72]: CV Builder
+                - generic [ref=e74]: Career Tools
+            - paragraph [ref=e75]: Professional resume builder with AI optimization
+          - generic [ref=e77]:
+            - generic [ref=e78]:
+              - img [ref=e80]
+              - generic [ref=e82]:
+                - paragraph [ref=e83]: Social Network
+                - generic [ref=e85]: Professional Network
+            - paragraph [ref=e86]: Professional networking and connections
+        - generic [ref=e87]:
+          - paragraph [ref=e88]: And Much More...
+          - generic [ref=e89]:
+            - generic [ref=e91]: Career Guidance
+            - generic [ref=e93]: E-Learning Courses
+            - generic [ref=e95]: Company Profiles
+            - generic [ref=e97]: Smart Matching
+            - generic [ref=e99]: Certificates
+            - generic [ref=e101]: Career Events
+            - generic [ref=e103]: Employer Dashboard
+          - paragraph [ref=e104]: Access all premium features after login
+      - generic [ref=e106]:
+        - img [ref=e107]
+        - paragraph [ref=e109]: Trusted by leading companies across Africa
+    - generic [ref=e111]:
+      - link "Back to Home" [ref=e113] [cursor=pointer]:
+        - /url: /
+        - img [ref=e115] [cursor=pointer]
+        - text: Back to Home
+      - generic [ref=e117]:
+        - img "ExJobNet" [ref=e119]
+        - heading "ExJobNet" [level=1] [ref=e120]
+        - heading "Africa's Premier Career Platform" [level=6] [ref=e121]
+        - generic [ref=e122]:
+          - heading "Welcome Back!" [level=1] [ref=e123]
+          - paragraph [ref=e124]: Sign in to continue your journey towards career excellence and unlock new opportunities.
+        - generic [ref=e126]:
+          - img [ref=e127]
+          - generic [ref=e129]: Trusted by 10,000+ professionals
+      - generic [ref=e130]:
+        - generic [ref=e131]:
+          - generic [ref=e132]:
+            - text: Email Address
+            - generic [ref=e133]: "*"
+          - generic [ref=e134]:
+            - img [ref=e136]
+            - textbox "Email Address" [ref=e138]
+            - group:
+              - generic: Email Address *
+        - generic [ref=e139]:
+          - generic [ref=e140]:
+            - text: Password
+            - generic [ref=e141]: "*"
+          - generic [ref=e142]:
+            - img [ref=e144]
+            - textbox "Password" [ref=e146]
+            - button "toggle password visibility" [ref=e148] [cursor=pointer]:
+              - img [ref=e149] [cursor=pointer]
+            - group:
+              - generic: Password *
+        - link "Forgot password?" [ref=e152] [cursor=pointer]:
+          - /url: /forgot-password
+        - button "Sign In to Continue" [ref=e153] [cursor=pointer]:
+          - img [ref=e155] [cursor=pointer]
+          - text: Sign In to Continue
+        - separator [ref=e157]:
+          - paragraph [ref=e159]: Don't have an account?
+        - link "Create New Account" [ref=e160] [cursor=pointer]:
+          - /url: /register
+          - img [ref=e162] [cursor=pointer]
+          - text: Create New Account
+```

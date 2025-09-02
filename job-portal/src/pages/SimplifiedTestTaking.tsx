@@ -46,7 +46,8 @@ import {
   ExitToApp,
   Fullscreen,
   FullscreenExit,
-  QuestionAnswer
+  QuestionAnswer,
+  ArrowBack
 } from '@mui/icons-material';
 import { simplePsychometricService } from '../services/simplePsychometricService';
 
@@ -604,6 +605,18 @@ const SimplifiedTestTaking: React.FC = () => {
         {/* Header with timer and progress */}
         <AppBar position="sticky" elevation={1} sx={{ bgcolor: 'primary.main' }}>
           <Toolbar>
+            <IconButton
+              onClick={() => navigate(-1)}
+              sx={{ 
+                color: 'white', 
+                mr: 2,
+                '&:hover': {
+                  bgcolor: alpha(theme.palette.common.white, 0.1)
+                }
+              }}
+            >
+              <ArrowBack />
+            </IconButton>
             <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
               <Box sx={{ flexGrow: 1 }}>
                 <Typography variant="h6" fontWeight="bold">

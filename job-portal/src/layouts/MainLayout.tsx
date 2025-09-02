@@ -65,7 +65,8 @@ import {
   ChevronLeft,
   ChevronRight,
   SearchOff,
-  FilterList
+  FilterList,
+  ArrowBack
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -438,6 +439,25 @@ const MainLayout: React.FC = () => {
         setMobileOpen(false);
       }
     }
+  };
+
+  // Back button handler
+  const handleBackNavigation = () => {
+    navigate(-1);
+  };
+
+  // Check if we should show the back button
+  const shouldShowBackButton = () => {
+    // Don't show back button on main pages
+    const mainPages = ['/app/network', '/app', '/app/'];
+    const currentPath = location.pathname;
+    
+    // Don't show on root app pages
+    if (mainPages.includes(currentPath)) {
+      return false;
+    }
+    
+    return true;
   };
 
 
@@ -827,6 +847,29 @@ const MainLayout: React.FC = () => {
               <MenuIcon />
             </IconButton>
 
+            {/* Mobile Back Button */}
+            {shouldShowBackButton() && (
+              <IconButton
+                onClick={handleBackNavigation}
+                sx={{ 
+                  display: { sm: 'none' },
+                  p: 1.5,
+                  borderRadius: '16px',
+                  bgcolor: alpha(muiTheme.palette.secondary.main, 0.08),
+                  border: `1px solid ${alpha(muiTheme.palette.secondary.main, 0.12)}`,
+                  color: 'secondary.main',
+                  '&:hover': {
+                    bgcolor: alpha(muiTheme.palette.secondary.main, 0.15),
+                    transform: 'scale(1.05)',
+                    boxShadow: `0 4px 15px ${alpha(muiTheme.palette.secondary.main, 0.2)}`
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+              >
+                <ArrowBack />
+              </IconButton>
+            )}
+
             {/* Desktop Sidebar Toggle */}
             {!isMobile && !desktopOpen && !hovered && (
               <IconButton
@@ -847,6 +890,30 @@ const MainLayout: React.FC = () => {
               >
                 <MenuIcon />
               </IconButton>
+            )}
+
+            {/* Back Button */}
+            {shouldShowBackButton() && (
+              <Tooltip title="Go Back">
+                <IconButton
+                  onClick={handleBackNavigation}
+                  sx={{
+                    p: 1.5,
+                    borderRadius: '16px',
+                    bgcolor: alpha(muiTheme.palette.secondary.main, 0.08),
+                    border: `1px solid ${alpha(muiTheme.palette.secondary.main, 0.12)}`,
+                    color: 'secondary.main',
+                    '&:hover': {
+                      bgcolor: alpha(muiTheme.palette.secondary.main, 0.15),
+                      transform: 'scale(1.05)',
+                      boxShadow: `0 4px 15px ${alpha(muiTheme.palette.secondary.main, 0.2)}`
+                    },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                  }}
+                >
+                  <ArrowBack />
+                </IconButton>
+              </Tooltip>
             )}
             
             {/* Modern Logo */}

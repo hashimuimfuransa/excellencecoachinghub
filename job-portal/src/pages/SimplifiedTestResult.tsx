@@ -23,7 +23,8 @@ import {
   Psychology,
   Download,
   Home,
-  Refresh
+  Refresh,
+  ArrowBack
 } from '@mui/icons-material';
 
 interface TestResult {
@@ -90,6 +91,18 @@ const SimplifiedTestResult: React.FC = () => {
 
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
+      {/* Back Button */}
+      <Box sx={{ mb: 3 }}>
+        <Button
+          startIcon={<ArrowBack />}
+          onClick={() => navigate(-1)}
+          variant="outlined"
+          sx={{ mb: 2 }}
+        >
+          Back
+        </Button>
+      </Box>
+
       {/* Header */}
       <Paper sx={{ p: 3, mb: 3, bgcolor: 'primary.main', color: 'white', textAlign: 'center' }}>
         <CheckCircle sx={{ fontSize: 60, mb: 2 }} />

@@ -9,6 +9,21 @@ import { CVDraft } from '../models/CVDraft';
 import mammoth from 'mammoth';
 import pdfParse from 'pdf-parse';
 import multer from 'multer';
+import { 
+  Document, 
+  Packer, 
+  Paragraph, 
+  TextRun, 
+  HeadingLevel, 
+  AlignmentType, 
+  UnderlineType, 
+  BorderStyle,
+  WidthType,
+  Table,
+  TableRow,
+  TableCell,
+  ShadingType
+} from 'docx';
 
 const router = express.Router();
 const aiService = new AIService();
@@ -542,8 +557,823 @@ Return a JSON object with this structure:
   }
 });
 
+// Generate Word document for CV
+const generateCVWordDocument = (cvData: any, template: any) => {
+  const primaryColor = template.color === 'blue' ? '1976d2' : 
+                      template.color === 'gray' ? '757575' :
+                      template.color === 'purple' ? '9c27b0' :
+                      template.color === 'green' ? '388e3c' :
+                      template.color === 'orange' ? 'f57c00' :
+                      template.color === 'navy' ? '1a237e' : '1976d2';
+
+  const children = [];
+
+  // Header with name
+  children.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: `${cvData.personalInfo.firstName} ${cvData.personalInfo.lastName}`,
+          bold: true,
+          size: 32,
+          color: primaryColor,
+        }),
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 240 },
+    })
+  );
+
+  // Contact information
+  const contactInfo = [];
+  if (cvData.personalInfo.email) contactInfo.push(`📧 ${cvData.personalInfo.email}`);
+  if (cvData.personalInfo.phone) contactInfo.push(`📞 ${cvData.personalInfo.phone}`);
+  if (cvData.personalInfo.location) contactInfo.push(`📍 ${cvData.personalInfo.location}`);
+  if (cvData.personalInfo.linkedin) contactInfo.push(`💼 ${cvData.personalInfo.linkedin}`);
+  if (cvData.personalInfo.website) contactInfo.push(`🌐 ${cvData.personalInfo.website}`);
+
+  if (contactInfo.length > 0) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: contactInfo.join(' • '),
+            size: 20,
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 240 },
+      })
+    );
+  }
+
+  // Divider line
+  children.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: '________________________________________________________________________________________',
+          color: primaryColor,
+        }),
+      ],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 240 },
+    })
+  );
+
+  // Professional Summary
+  if (cvData.personalInfo.professionalSummary) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'PROFESSIONAL SUMMARY',
+            bold: true,
+            size: 24,
+            color: primaryColor,
+            underline: { type: UnderlineType.SINGLE },
+          }),
+        ],
+        spacing: { after: 120 },
+      })
+    );
+
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: cvData.personalInfo.professionalSummary,
+            size: 20,
+          }),
+        ],
+        spacing: { after: 240 },
+      })
+    );
+  }
+
+  // Professional Experience
+  if (cvData.experiences && cvData.experiences.length > 0) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'PROFESSIONAL EXPERIENCE',
+            bold: true,
+            size: 24,
+            color: primaryColor,
+            underline: { type: UnderlineType.SINGLE },
+          }),
+        ],
+        spacing: { after: 120 },
+      })
+    );
+
+    cvData.experiences.forEach((exp: any) => {
+      // Job title and company
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: exp.jobTitle,
+              bold: true,
+              size: 22,
+            }),
+            new TextRun({
+              text: ` | ${exp.company}`,
+              size: 22,
+              color: primaryColor,
+              bold: true,
+            }),
+            ...(exp.location ? [new TextRun({ text: ` • ${exp.location}`, size: 20 })] : []),
+          ],
+          spacing: { after: 60 },
+        })
+      );
+
+      // Date range
+      const startDate = exp.startDate ? new Date(exp.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
+      const endDate = exp.isCurrentJob ? 'Present' : exp.endDate ? new Date(exp.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
+      
+      if (startDate || endDate) {
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `${startDate} - ${endDate}`,
+                italics: true,
+                size: 20,
+              }),
+            ],
+            spacing: { after: 120 },
+          })
+        );
+      }
+
+      // Responsibilities
+      if (exp.responsibilities && exp.responsibilities.filter((r: string) => r.trim()).length > 0) {
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: 'Key Responsibilities:',
+                bold: true,
+                size: 20,
+              }),
+            ],
+            spacing: { after: 60 },
+          })
+        );
+
+        exp.responsibilities.filter((r: string) => r.trim()).forEach((resp: string) => {
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `• ${resp}`,
+                  size: 20,
+                }),
+              ],
+              indent: { left: 720 },
+              spacing: { after: 60 },
+            })
+          );
+        });
+      }
+
+      // Achievements
+      if (exp.achievements && exp.achievements.filter((a: string) => a.trim()).length > 0) {
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: 'Key Achievements:',
+                bold: true,
+                size: 20,
+              }),
+            ],
+            spacing: { after: 60 },
+          })
+        );
+
+        exp.achievements.filter((a: string) => a.trim()).forEach((achievement: string) => {
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `• ${achievement}`,
+                  size: 20,
+                }),
+              ],
+              indent: { left: 720 },
+              spacing: { after: 60 },
+            })
+          );
+        });
+      }
+
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: '', size: 20 })],
+          spacing: { after: 240 },
+        })
+      );
+    });
+  }
+
+  // Education
+  if (cvData.education && cvData.education.length > 0) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'EDUCATION',
+            bold: true,
+            size: 24,
+            color: primaryColor,
+            underline: { type: UnderlineType.SINGLE },
+          }),
+        ],
+        spacing: { after: 120 },
+      })
+    );
+
+    cvData.education.forEach((edu: any) => {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: edu.degree,
+              bold: true,
+              size: 22,
+            }),
+            new TextRun({
+              text: ` | ${edu.institution}`,
+              size: 22,
+              color: primaryColor,
+              bold: true,
+            }),
+            ...(edu.location ? [new TextRun({ text: ` • ${edu.location}`, size: 20 })] : []),
+          ],
+          spacing: { after: 60 },
+        })
+      );
+
+      const graduationInfo = [];
+      if (edu.graduationDate) {
+        graduationInfo.push(new Date(edu.graduationDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }));
+      }
+      if (edu.gpa) {
+        graduationInfo.push(`GPA: ${edu.gpa}`);
+      }
+
+      if (graduationInfo.length > 0) {
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: graduationInfo.join(' • '),
+                italics: true,
+                size: 20,
+              }),
+            ],
+            spacing: { after: 120 },
+          })
+        );
+      }
+
+      if (edu.relevantCourses && edu.relevantCourses.filter((c: string) => c.trim()).length > 0) {
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `Relevant Courses: ${edu.relevantCourses.filter((c: string) => c.trim()).join(', ')}`,
+                size: 20,
+              }),
+            ],
+            spacing: { after: 240 },
+          })
+        );
+      }
+    });
+  }
+
+  // Skills
+  if (cvData.skills && cvData.skills.length > 0) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'CORE COMPETENCIES',
+            bold: true,
+            size: 24,
+            color: primaryColor,
+            underline: { type: UnderlineType.SINGLE },
+          }),
+        ],
+        spacing: { after: 120 },
+      })
+    );
+
+    const skillCategories = ['Technical', 'Soft', 'Language', 'Other'];
+    skillCategories.forEach(category => {
+      const categorySkills = cvData.skills.filter((skill: any) => skill.category === category);
+      if (categorySkills.length > 0) {
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `${category} Skills: `,
+                bold: true,
+                size: 20,
+              }),
+              new TextRun({
+                text: categorySkills.map((skill: any) => skill.name).join(' • '),
+                size: 20,
+              }),
+            ],
+            spacing: { after: 120 },
+          })
+        );
+      }
+    });
+  }
+
+  // Projects
+  if (cvData.projects && cvData.projects.length > 0) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'PROJECTS',
+            bold: true,
+            size: 24,
+            color: primaryColor,
+            underline: { type: UnderlineType.SINGLE },
+          }),
+        ],
+        spacing: { after: 120 },
+      })
+    );
+
+    cvData.projects.forEach((project: any) => {
+      const organizationText = project.organization ? ` | ${project.organization}` : '';
+      const dateText = (project.startDate || project.endDate) 
+        ? ` | ${project.startDate ? new Date(project.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''} - ${project.isOngoing ? 'Ongoing' : project.endDate ? new Date(project.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''}` 
+        : '';
+
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: project.title + organizationText + dateText,
+              bold: true,
+              size: 22,
+            }),
+          ],
+          spacing: { after: 60 },
+        })
+      );
+
+      if (project.description) {
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: project.description,
+                size: 20,
+              }),
+            ],
+            spacing: { after: 60 },
+          })
+        );
+      }
+
+      // Handle technologies (array or string)
+      if (project.technologies) {
+        const techText = Array.isArray(project.technologies) 
+          ? project.technologies.filter((t: string) => t.trim()).join(', ') 
+          : project.technologies;
+        
+        if (techText) {
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `Technologies: ${techText}`,
+                  size: 20,
+                  color: primaryColor,
+                }),
+              ],
+              spacing: { after: 60 },
+            })
+          );
+        }
+      }
+
+      if (project.projectUrl || project.link) {
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `🔗 ${project.projectUrl || project.link}`,
+                size: 20,
+                italics: true,
+              }),
+            ],
+            spacing: { after: 240 },
+          })
+        );
+      }
+    });
+  }
+
+  // Certifications
+  if (cvData.certifications && cvData.certifications.length > 0) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'CERTIFICATIONS',
+            bold: true,
+            size: 24,
+            color: primaryColor,
+            underline: { type: UnderlineType.SINGLE },
+          }),
+        ],
+        spacing: { after: 120 },
+      })
+    );
+
+    cvData.certifications.forEach((cert: any) => {
+      const issuer = cert.issuingOrganization || cert.issuer;
+      const issueDate = cert.issueDate || cert.date;
+      
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: cert.name,
+              bold: true,
+              size: 22,
+            }),
+            new TextRun({
+              text: ` | ${issuer}`,
+              size: 22,
+              color: primaryColor,
+              bold: true,
+            }),
+            ...(issueDate ? [new TextRun({ text: ` • ${new Date(issueDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`, size: 20 })] : []),
+          ],
+          spacing: { after: 60 },
+        })
+      );
+
+      if (cert.expiryDate) {
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `Expires: ${new Date(cert.expiryDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`,
+                size: 18,
+                color: '#666666',
+              }),
+            ],
+            spacing: { after: 60 },
+          })
+        );
+      }
+
+      if (cert.credentialId || cert.credentialUrl || cert.link) {
+        const credInfo = [];
+        if (cert.credentialId) credInfo.push(`Credential ID: ${cert.credentialId}`);
+        if (cert.credentialUrl || cert.link) credInfo.push(`🔗 ${cert.credentialUrl || cert.link}`);
+        
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: credInfo.join(' | '),
+                size: 18,
+                italics: true,
+              }),
+            ],
+            spacing: { after: 120 },
+          })
+        );
+      }
+    });
+  }
+
+  // Awards
+  if (cvData.awards && cvData.awards.length > 0) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'AWARDS & ACHIEVEMENTS',
+            bold: true,
+            size: 24,
+            color: primaryColor,
+            underline: { type: UnderlineType.SINGLE },
+          }),
+        ],
+        spacing: { after: 120 },
+      })
+    );
+
+    cvData.awards.forEach((award: any) => {
+      const awardName = award.name || award.title;
+      const issuer = award.issuingOrganization || award.issuer;
+      const awardDate = award.dateReceived || award.date;
+      
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: awardName,
+              bold: true,
+              size: 22,
+            }),
+            new TextRun({
+              text: ` | ${issuer}`,
+              size: 22,
+              color: primaryColor,
+              bold: true,
+            }),
+            ...(awardDate ? [new TextRun({ text: ` • ${new Date(awardDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`, size: 20 })] : []),
+          ],
+          spacing: { after: award.description ? 60 : 120 },
+        })
+      );
+
+      if (award.description) {
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: award.description,
+                size: 20,
+              }),
+            ],
+            spacing: { after: 120 },
+          })
+        );
+      }
+    });
+  }
+
+  // Languages
+  if (cvData.languages && cvData.languages.length > 0) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'LANGUAGES',
+            bold: true,
+            size: 24,
+            color: primaryColor,
+            underline: { type: UnderlineType.SINGLE },
+          }),
+        ],
+        spacing: { after: 120 },
+      })
+    );
+
+    cvData.languages.forEach((lang: any) => {
+      const langName = lang.language || lang.name;
+      const certificationText = lang.certification ? ` (${lang.certification})` : '';
+      
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `${langName}: `,
+              bold: true,
+              size: 20,
+            }),
+            new TextRun({
+              text: (lang.proficiency || 'Proficient') + certificationText,
+              size: 20,
+            }),
+          ],
+          spacing: { after: 60 },
+        })
+      );
+    });
+
+    children.push(
+      new Paragraph({
+        children: [new TextRun({ text: '', size: 20 })],
+        spacing: { after: 120 },
+      })
+    );
+  }
+
+  // Custom Sections
+  if (cvData.customSections && cvData.customSections.length > 0) {
+    cvData.customSections.forEach((section: any) => {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: section.title.toUpperCase(),
+              bold: true,
+              size: 24,
+              color: primaryColor,
+              underline: { type: UnderlineType.SINGLE },
+            }),
+          ],
+          spacing: { after: 120 },
+        })
+      );
+
+      if (section.content) {
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: section.content,
+                size: 20,
+              }),
+            ],
+            spacing: { after: 240 },
+          })
+        );
+      }
+
+      if (section.items && section.items.length > 0) {
+        section.items.forEach((item: string) => {
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `• ${item}`,
+                  size: 20,
+                }),
+              ],
+              indent: { left: 720 },
+              spacing: { after: 60 },
+            })
+          );
+        });
+      }
+
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: '', size: 20 })],
+          spacing: { after: 120 },
+        })
+      );
+    });
+  }
+
+  // References
+  if (cvData.references && cvData.references.length > 0) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'REFERENCES',
+            bold: true,
+            size: 24,
+            color: primaryColor,
+            underline: { type: UnderlineType.SINGLE },
+          }),
+        ],
+        spacing: { after: 120 },
+      })
+    );
+
+    cvData.references.forEach((ref: any, index: number) => {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: ref.name,
+              bold: true,
+              size: 22,
+            }),
+          ],
+          spacing: { after: 60 },
+        })
+      );
+
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `${ref.jobTitle || ref.title}`,
+              size: 20,
+              color: primaryColor,
+              bold: true,
+            }),
+          ],
+          spacing: { after: 30 },
+        })
+      );
+
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: ref.company,
+              size: 20,
+            }),
+          ],
+          spacing: { after: 60 },
+        })
+      );
+
+      const contactInfo = [];
+      if (ref.email) contactInfo.push(`📧 ${ref.email}`);
+      if (ref.phone) contactInfo.push(`📞 ${ref.phone}`);
+
+      if (contactInfo.length > 0) {
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: contactInfo.join(' • '),
+                size: 18,
+              }),
+            ],
+            spacing: { after: 60 },
+          })
+        );
+      }
+
+      if (ref.relationship) {
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `Relationship: ${ref.relationship}`,
+                size: 18,
+                italics: true,
+              }),
+            ],
+            spacing: { after: index < cvData.references.length - 1 ? 180 : 120 },
+          })
+        );
+      }
+    });
+  }
+
+  const doc = new Document({
+    sections: [{
+      properties: {},
+      children: children,
+    }],
+    styles: {
+      paragraphStyles: [
+        {
+          id: 'heading1',
+          name: 'Heading 1',
+          basedOn: 'Normal',
+          next: 'Normal',
+          quickFormat: true,
+          run: {
+            size: 28,
+            bold: true,
+            color: primaryColor,
+          },
+          paragraph: {
+            spacing: {
+              after: 240,
+            },
+          },
+        },
+      ],
+    },
+  });
+
+  return doc;
+};
+
+// Function to escape HTML
+const escapeHtml = (text: string): string => {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+};
+
+// Function to safely render HTML content
+const safeRender = (content: string): string => {
+  if (!content) return '';
+  return escapeHtml(content).replace(/\n/g, '<br>');
+};
+
 // Generate HTML for PDF export
 const generateCVHTML = (cvData: any, template: any) => {
+  // Validate input data
+  if (!cvData || !cvData.personalInfo) {
+    throw new Error('Invalid CV data: personalInfo is required');
+  }
+
   const styles = {
     primary: template.color === 'blue' ? '#1976d2' : 
              template.color === 'gray' ? '#757575' :
@@ -559,21 +1389,116 @@ const generateCVHTML = (cvData: any, template: any) => {
 <head>
     <meta charset="UTF-8">
     <style>
-        body { font-family: 'Times New Roman', serif; margin: 0; padding: 20px; line-height: 1.6; }
-        .header { border-bottom: 3px solid ${styles.primary}; padding-bottom: 10px; margin-bottom: 20px; }
-        .name { color: ${styles.primary}; font-size: 32px; font-weight: bold; margin-bottom: 10px; }
-        .contact { display: flex; gap: 20px; flex-wrap: wrap; font-size: 14px; }
-        .contact-item { display: flex; align-items: center; gap: 5px; }
-        .section-title { color: ${styles.primary}; font-size: 18px; font-weight: bold; margin: 20px 0 10px 0; }
-        .job-title { font-size: 16px; font-weight: bold; margin-bottom: 5px; }
-        .company { color: ${styles.primary}; font-weight: bold; }
-        .date { font-style: italic; float: right; }
-        .summary { margin-bottom: 20px; line-height: 1.6; }
-        ul { margin: 10px 0; padding-left: 20px; }
-        li { margin-bottom: 5px; }
-        .skills-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .skills-category { margin-bottom: 15px; }
-        .skills-title { font-weight: bold; color: ${styles.primary}; margin-bottom: 5px; }
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Times New Roman', serif; 
+            margin: 0; 
+            padding: 40px 30px; 
+            line-height: 1.6; 
+            font-size: 12px; 
+            color: #333;
+            background: white;
+        }
+        .header { 
+            border-bottom: 3px solid ${styles.primary}; 
+            padding-bottom: 15px; 
+            margin-bottom: 25px; 
+            text-align: center; 
+        }
+        .name { 
+            color: ${styles.primary}; 
+            font-size: 28px; 
+            font-weight: bold; 
+            margin-bottom: 10px; 
+            letter-spacing: 1px;
+        }
+        .contact { 
+            display: flex; 
+            gap: 15px; 
+            flex-wrap: wrap; 
+            font-size: 11px; 
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .contact-item { 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 3px; 
+            white-space: nowrap;
+        }
+        .section-title { 
+            color: ${styles.primary}; 
+            font-size: 16px; 
+            font-weight: bold; 
+            margin: 25px 0 12px 0; 
+            text-transform: uppercase;
+            border-bottom: 1px solid ${styles.primary};
+            padding-bottom: 3px;
+        }
+        .job-title { 
+            font-size: 14px; 
+            font-weight: bold; 
+            margin-bottom: 3px; 
+            display: inline-block;
+        }
+        .company { 
+            color: ${styles.primary}; 
+            font-weight: bold; 
+            display: inline-block;
+        }
+        .date { 
+            font-style: italic; 
+            float: right; 
+            font-size: 11px;
+            color: #666;
+        }
+        .summary { 
+            margin-bottom: 20px; 
+            line-height: 1.7; 
+            text-align: justify;
+        }
+        ul { 
+            margin: 8px 0; 
+            padding-left: 18px; 
+            list-style-type: disc;
+        }
+        li { 
+            margin-bottom: 4px; 
+            line-height: 1.5;
+        }
+        .skills-grid { 
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px; 
+        }
+        .skills-category { 
+            flex: 1;
+            min-width: 200px;
+            margin-bottom: 15px; 
+        }
+        .skills-title { 
+            font-weight: bold; 
+            color: ${styles.primary}; 
+            margin-bottom: 5px; 
+        }
+        .experience-item { 
+            margin-bottom: 20px; 
+            page-break-inside: avoid;
+        }
+        .education-item { 
+            margin-bottom: 15px; 
+            page-break-inside: avoid;
+        }
+        .clearfix::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        @media print {
+            body { padding: 20px; }
+            .section-title { page-break-after: avoid; }
+            .experience-item, .education-item { page-break-inside: avoid; }
+        }
     </style>
 </head>
 <body>
@@ -583,7 +1508,7 @@ const generateCVHTML = (cvData: any, template: any) => {
             ${cvData.personalInfo.email ? `<div class="contact-item">📧 ${cvData.personalInfo.email}</div>` : ''}
             ${cvData.personalInfo.phone ? `<div class="contact-item">📞 ${cvData.personalInfo.phone}</div>` : ''}
             ${cvData.personalInfo.location ? `<div class="contact-item">📍 ${cvData.personalInfo.location}</div>` : ''}
-            ${cvData.personalInfo.linkedIn ? `<div class="contact-item">💼 ${cvData.personalInfo.linkedIn}</div>` : ''}
+            ${cvData.personalInfo.linkedin ? `<div class="contact-item">💼 ${cvData.personalInfo.linkedin}</div>` : ''}
             ${cvData.personalInfo.website ? `<div class="contact-item">🌐 ${cvData.personalInfo.website}</div>` : ''}
         </div>
     </div>
@@ -596,10 +1521,10 @@ const generateCVHTML = (cvData: any, template: any) => {
     ${cvData.experiences && cvData.experiences.length > 0 ? `
     <div class="section-title">PROFESSIONAL EXPERIENCE</div>
     ${cvData.experiences.map((exp: any) => `
-        <div style="margin-bottom: 20px;">
-            <div>
+        <div class="experience-item">
+            <div class="clearfix">
                 <div class="job-title">${exp.jobTitle}</div>
-                <div class="company">${exp.company}${exp.location ? ` • ${exp.location}` : ''}</div>
+                <div class="company"> | ${exp.company}${exp.location ? ` • ${exp.location}` : ''}</div>
                 <div class="date">${exp.startDate ? new Date(exp.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''} - ${exp.isCurrentJob ? 'Present' : exp.endDate ? new Date(exp.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''}</div>
             </div>
             ${exp.responsibilities && exp.responsibilities.filter((r: string) => r.trim()).length > 0 ? `
@@ -625,10 +1550,12 @@ const generateCVHTML = (cvData: any, template: any) => {
     ${cvData.education && cvData.education.length > 0 ? `
     <div class="section-title">EDUCATION</div>
     ${cvData.education.map((edu: any) => `
-        <div style="margin-bottom: 15px;">
-            <div class="job-title">${edu.degree}</div>
-            <div class="company">${edu.institution}${edu.location ? ` • ${edu.location}` : ''}</div>
-            <div class="date">${edu.graduationDate ? new Date(edu.graduationDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''}${edu.gpa ? ` • GPA: ${edu.gpa}` : ''}</div>
+        <div class="education-item">
+            <div class="clearfix">
+                <div class="job-title">${edu.degree}</div>
+                <div class="company"> | ${edu.institution}${edu.location ? ` • ${edu.location}` : ''}</div>
+                <div class="date">${edu.graduationDate ? new Date(edu.graduationDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''}${edu.gpa ? ` • GPA: ${edu.gpa}` : ''}</div>
+            </div>
             ${edu.relevantCourses && edu.relevantCourses.filter((c: string) => c.trim()).length > 0 ? `
             <div><strong>Relevant Courses:</strong> ${edu.relevantCourses.filter((c: string) => c.trim()).join(', ')}</div>
             ` : ''}
@@ -650,6 +1577,97 @@ const generateCVHTML = (cvData: any, template: any) => {
         }).join('')}
     </div>
     ` : ''}
+
+    ${cvData.projects && cvData.projects.length > 0 ? `
+    <div class="section-title">PROJECTS</div>
+    ${cvData.projects.map((project: any) => `
+        <div class="experience-item">
+            <div class="clearfix">
+                <div class="job-title">${project.title}</div>
+                ${project.organization ? `<div class="company"> | ${project.organization}</div>` : ''}
+                ${project.startDate || project.endDate ? `<div class="date">${project.startDate ? new Date(project.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''} - ${project.isOngoing ? 'Ongoing' : project.endDate ? new Date(project.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''}</div>` : ''}
+            </div>
+            ${project.description ? `<div style="margin-top: 8px;">${project.description}</div>` : ''}
+            ${project.technologies && (Array.isArray(project.technologies) ? project.technologies.filter(t => t.trim()).length > 0 : project.technologies) ? `<div style="margin-top: 5px;"><strong>Technologies:</strong> ${Array.isArray(project.technologies) ? project.technologies.filter(t => t.trim()).join(', ') : project.technologies}</div>` : ''}
+            ${project.projectUrl || project.link ? `<div style="margin-top: 5px; font-style: italic; font-size: 11px;">🔗 ${project.projectUrl || project.link}</div>` : ''}
+        </div>
+    `).join('')}
+    ` : ''}
+
+    ${cvData.certifications && cvData.certifications.length > 0 ? `
+    <div class="section-title">CERTIFICATIONS</div>
+    ${cvData.certifications.map((cert: any) => `
+        <div class="education-item">
+            <div class="clearfix">
+                <div class="job-title">${cert.name}</div>
+                <div class="company"> | ${cert.issuingOrganization || cert.issuer}</div>
+                ${cert.issueDate || cert.date ? `<div class="date">${new Date(cert.issueDate || cert.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</div>` : ''}
+            </div>
+            ${cert.expiryDate ? `<div style="font-size: 11px; color: #666;">Expires: ${new Date(cert.expiryDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</div>` : ''}
+            ${cert.credentialId || cert.credentialUrl || cert.link ? `
+            <div style="margin-top: 5px; font-size: 11px; font-style: italic;">
+                ${cert.credentialId ? `Credential ID: ${cert.credentialId}` : ''}
+                ${cert.credentialId && (cert.credentialUrl || cert.link) ? ' | ' : ''}
+                ${cert.credentialUrl || cert.link ? `🔗 ${cert.credentialUrl || cert.link}` : ''}
+            </div>
+            ` : ''}
+        </div>
+    `).join('')}
+    ` : ''}
+
+    ${cvData.awards && cvData.awards.length > 0 ? `
+    <div class="section-title">AWARDS & ACHIEVEMENTS</div>
+    ${cvData.awards.map((award: any) => `
+        <div class="education-item">
+            <div class="clearfix">
+                <div class="job-title">${award.name || award.title}</div>
+                <div class="company"> | ${award.issuingOrganization || award.issuer}</div>
+                ${award.dateReceived || award.date ? `<div class="date">${new Date(award.dateReceived || award.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</div>` : ''}
+            </div>
+            ${award.description ? `<div style="margin-top: 8px;">${award.description}</div>` : ''}
+        </div>
+    `).join('')}
+    ` : ''}
+
+    ${cvData.languages && cvData.languages.length > 0 ? `
+    <div class="section-title">LANGUAGES</div>
+    <div style="margin-bottom: 20px;">
+        ${cvData.languages.map((lang: any) => `
+            <div style="margin-bottom: 5px;">
+                <strong>${lang.language || lang.name}:</strong> ${lang.proficiency || 'Proficient'}
+                ${lang.certification ? ` (${lang.certification})` : ''}
+            </div>
+        `).join('')}
+    </div>
+    ` : ''}
+
+    ${cvData.references && cvData.references.length > 0 ? `
+    <div class="section-title">REFERENCES</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+        ${cvData.references.map((ref: any) => `
+            <div style="flex: 1; min-width: 250px; margin-bottom: 15px;">
+                <div class="job-title">${ref.name}</div>
+                <div style="color: ${styles.primary}; font-weight: bold;">${ref.jobTitle || ref.title}</div>
+                <div>${ref.company}</div>
+                ${ref.email ? `<div style="font-size: 11px; margin-top: 3px;">📧 ${ref.email}</div>` : ''}
+                ${ref.phone ? `<div style="font-size: 11px;">📞 ${ref.phone}</div>` : ''}
+                ${ref.relationship ? `<div style="font-size: 11px; font-style: italic; color: #666; margin-top: 2px;">Relationship: ${ref.relationship}</div>` : ''}
+            </div>
+        `).join('')}
+    </div>
+    ` : ''}
+
+    ${cvData.customSections && cvData.customSections.length > 0 ? 
+      cvData.customSections.map((section: any) => `
+        <div class="section-title">${section.title.toUpperCase()}</div>
+        ${section.content ? `<div class="summary">${section.content}</div>` : ''}
+        ${section.items && section.items.length > 0 ? `
+        <ul>
+            ${section.items.map((item: string) => `<li>${item}</li>`).join('')}
+        </ul>
+        ` : ''}
+      `).join('')
+    : ''}
 </body>
 </html>`;
 };
@@ -672,30 +1690,52 @@ router.post('/export/pdf', auth, [
       return res.status(404).json({ message: 'Template not found' });
     }
 
-    const html = generateCVHTML(cvData, template);
+    // Validate CV data
+    if (!cvData.personalInfo?.firstName || !cvData.personalInfo?.lastName) {
+      return res.status(400).json({ message: 'First name and last name are required' });
+    }
 
-    // Generate PDF using Puppeteer
-    const browser = await puppeteer.launch({ headless: true });
-    const page = await browser.newPage();
-    
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    
-    const pdf = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '0.5in',
-        right: '0.5in',
-        bottom: '0.5in',
-        left: '0.5in',
-      },
+    const html = generateCVHTML(cvData, template);
+    console.log('Generated HTML length:', html.length);
+
+    // Generate PDF using Puppeteer with simplified approach
+    const browser = await puppeteer.launch({ 
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
     
-    await browser.close();
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${cvData.personalInfo.firstName}_${cvData.personalInfo.lastName}_CV.pdf"`);
-    res.send(pdf);
+    try {
+      const page = await browser.newPage();
+      
+      await page.setContent(html, { waitUntil: 'networkidle2' });
+      
+      // Wait for content to render
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const pdf = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: {
+          top: '20mm',
+          right: '15mm',
+          bottom: '20mm',
+          left: '15mm',
+        }
+      });
+      
+      console.log('PDF generated successfully, size:', pdf.length, 'bytes');
+      
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${cvData.personalInfo.firstName}_${cvData.personalInfo.lastName}_CV.pdf"`);
+      res.setHeader('Content-Length', pdf.length.toString());
+      res.setHeader('Cache-Control', 'no-cache');
+      
+      // Send as buffer to ensure binary integrity
+      res.end(pdf, 'binary');
+      
+    } finally {
+      await browser.close();
+    }
 
   } catch (error) {
     console.error('Error exporting PDF:', error);
@@ -721,11 +1761,23 @@ router.post('/export/word', auth, [
       return res.status(404).json({ message: 'Template not found' });
     }
 
-    const html = generateCVHTML(cvData, template);
+    // Validate CV data
+    if (!cvData.personalInfo?.firstName || !cvData.personalInfo?.lastName) {
+      return res.status(400).json({ message: 'First name and last name are required' });
+    }
+
+    const doc = generateCVWordDocument(cvData, template);
+    const buffer = await Packer.toBuffer(doc);
+
+    console.log('Generated Word document size:', buffer.length);
+    
+    if (buffer.length === 0) {
+      throw new Error('Generated Word document is empty');
+    }
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="${cvData.personalInfo.firstName}_${cvData.personalInfo.lastName}_CV.doc"`);
-    res.send(html);
+    res.setHeader('Content-Disposition', `attachment; filename="${cvData.personalInfo.firstName}_${cvData.personalInfo.lastName}_CV.docx"`);
+    res.send(buffer);
 
   } catch (error) {
     console.error('Error exporting Word document:', error);
@@ -766,6 +1818,61 @@ Keep it professional, concise (3-4 paragraphs), and tailored to the job.`;
   } catch (error) {
     console.error('Error generating cover letter:', error);
     res.status(500).json({ message: 'Failed to generate cover letter' });
+  }
+});
+
+// Test endpoint to debug HTML generation
+router.get('/test-html', auth, async (req, res) => {
+  try {
+    // Sample CV data for testing
+    const sampleCvData = {
+      personalInfo: {
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john.doe@email.com',
+        phone: '+1234567890',
+        location: 'New York, NY',
+        linkedin: 'linkedin.com/in/johndoe',
+        website: 'johndoe.com',
+        professionalSummary: 'Experienced software developer with 5+ years of experience.'
+      },
+      experiences: [{
+        jobTitle: 'Software Developer',
+        company: 'Tech Company',
+        location: 'New York, NY',
+        startDate: '2020-01-01',
+        endDate: '2023-12-31',
+        isCurrentJob: false,
+        responsibilities: ['Developed web applications', 'Led team of 3 developers']
+      }],
+      education: [{
+        degree: 'Bachelor of Computer Science',
+        institution: 'University of Technology',
+        location: 'New York, NY',
+        graduationDate: '2019-05-01',
+        gpa: '3.8',
+        relevantCourses: ['Data Structures', 'Algorithms', 'Web Development']
+      }],
+      skills: [{
+        name: 'JavaScript',
+        category: 'Technical'
+      }, {
+        name: 'Communication',
+        category: 'Soft'
+      }]
+    };
+
+    const sampleTemplate = {
+      name: 'Professional',
+      color: 'blue'
+    };
+
+    const html = generateCVHTML(sampleCvData, sampleTemplate);
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  } catch (error) {
+    console.error('Error generating test HTML:', error);
+    res.status(500).json({ message: error.message });
   }
 });
 

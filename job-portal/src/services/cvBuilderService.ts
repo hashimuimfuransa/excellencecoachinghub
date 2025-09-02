@@ -16,7 +16,15 @@ export interface PersonalInfo {
   location: string;
   linkedIn?: string;
   website?: string;
+  github?: string;
+  portfolio?: string;
   professionalSummary: string;
+  photo?: string; // Base64 encoded image or file path
+  title?: string; // Professional title/headline
+  nationality?: string;
+  dateOfBirth?: string;
+  maritalStatus?: string;
+  drivingLicense?: string;
 }
 
 export interface Experience {
@@ -45,7 +53,95 @@ export interface Skill {
   id: string;
   name: string;
   level: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
-  category: 'Technical' | 'Soft' | 'Language' | 'Other';
+  category: 'Technical' | 'Soft' | 'Other';
+  yearsOfExperience?: number;
+}
+
+export interface Language {
+  id: string;
+  language: string;
+  proficiency: 'Native' | 'Fluent' | 'Advanced' | 'Intermediate' | 'Beginner';
+  certification?: string;
+}
+
+export interface Project {
+  id: string;
+  title: string;
+  description: string;
+  technologies: string[];
+  startDate: string;
+  endDate?: string;
+  isOngoing?: boolean;
+  projectUrl?: string;
+  repositoryUrl?: string;
+  organization?: string;
+  role?: string;
+  achievements?: string[];
+}
+
+export interface Certification {
+  id: string;
+  name: string;
+  issuingOrganization: string;
+  issueDate: string;
+  expiryDate?: string;
+  credentialId?: string;
+  credentialUrl?: string;
+  description?: string;
+}
+
+export interface Award {
+  id: string;
+  name: string;
+  issuingOrganization: string;
+  dateReceived: string;
+  description?: string;
+}
+
+export interface VolunteerExperience {
+  id: string;
+  organization: string;
+  role: string;
+  startDate: string;
+  endDate?: string;
+  isOngoing?: boolean;
+  location?: string;
+  description: string;
+  achievements: string[];
+}
+
+export interface Publication {
+  id: string;
+  title: string;
+  authors: string[];
+  journal?: string;
+  conference?: string;
+  date: string;
+  url?: string;
+  doi?: string;
+  description?: string;
+}
+
+export interface ProfessionalMembership {
+  id: string;
+  organization: string;
+  role?: string;
+  startDate: string;
+  endDate?: string;
+  isActive?: boolean;
+  membershipId?: string;
+  description?: string;
+}
+
+export interface Reference {
+  id: string;
+  name: string;
+  jobTitle: string;
+  company: string;
+  email?: string;
+  phone?: string;
+  relationship?: string;
+  yearsKnown?: number;
 }
 
 export interface CVData {
@@ -53,10 +149,14 @@ export interface CVData {
   experiences: Experience[];
   education: Education[];
   skills: Skill[];
-  projects?: any[];
-  certifications?: any[];
-  awards?: any[];
-  languages?: any[];
+  languages: Language[];
+  projects: Project[];
+  certifications: Certification[];
+  awards: Award[];
+  volunteerExperience: VolunteerExperience[];
+  publications: Publication[];
+  professionalMemberships: ProfessionalMembership[];
+  references: Reference[];
   customSections?: CVSection[];
 }
 

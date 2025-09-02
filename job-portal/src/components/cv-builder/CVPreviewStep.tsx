@@ -38,10 +38,11 @@ import {
   CalendarToday,
   Business,
   Grade,
+  Link as LinkIcon,
+  EmojiEvents,
   MoreVert,
   Visibility,
   Print,
-  Link as LinkIcon,
 } from '@mui/icons-material';
 import { CVData, CVTemplate } from '../../services/cvBuilderService';
 import dayjs from 'dayjs';
@@ -366,6 +367,227 @@ const CVPreviewStep: React.FC<CVPreviewStepProps> = ({
                 </Grid>
               </Box>
             )}
+
+            {/* Languages Section */}
+            {cvData.languages && cvData.languages.length > 0 && (
+              <Box mb={4}>
+                <Typography variant="h5" sx={{ color: styles.primary, mb: 2, fontWeight: 'bold' }}>
+                  LANGUAGES
+                </Typography>
+                
+                <Grid container spacing={2}>
+                  {cvData.languages.map((lang, index) => (
+                    <Grid item xs={12} sm={6} key={lang.id}>
+                      <Box display="flex" justifyContent="between" alignItems="center" mb={1}>
+                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                          {lang.language}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: styles.primary, fontWeight: 'bold' }}>
+                          {lang.proficiency}
+                        </Typography>
+                      </Box>
+                      {lang.certification && (
+                        <Typography variant="body2" color="textSecondary">
+                          Certification: {lang.certification}
+                        </Typography>
+                      )}
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
+
+            {/* Projects Section */}
+            {cvData.projects && cvData.projects.length > 0 && (
+              <Box mb={4}>
+                <Typography variant="h5" sx={{ color: styles.primary, mb: 2, fontWeight: 'bold' }}>
+                  PROJECTS
+                </Typography>
+                
+                {cvData.projects.map((project, index) => (
+                  <Box key={project.id} mb={3}>
+                    <Box display="flex" justifyContent="between" alignItems="start" mb={1}>
+                      <Box>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                          {project.title}
+                        </Typography>
+                        {project.organization && (
+                          <Typography variant="body1" sx={{ color: styles.primary }}>
+                            {project.organization}
+                          </Typography>
+                        )}
+                      </Box>
+                      <Typography variant="body2" sx={{ fontStyle: 'italic', minWidth: 120, textAlign: 'right' }}>
+                        {formatDateRange(project.startDate, project.endDate || '', project.isOngoing)}
+                      </Typography>
+                    </Box>
+                    
+                    {project.description && (
+                      <Typography variant="body2" sx={{ mb: 1, lineHeight: 1.6 }}>
+                        {project.description}
+                      </Typography>
+                    )}
+                    
+                    {project.technologies && project.technologies.filter(t => t.trim()).length > 0 && (
+                      <Box mb={1}>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', display: 'inline' }}>
+                          Technologies: 
+                        </Typography>
+                        <Typography variant="body2" sx={{ display: 'inline', ml: 1 }}>
+                          {project.technologies.filter(t => t.trim()).join(', ')}
+                        </Typography>
+                      </Box>
+                    )}
+                    
+                    {project.projectUrl && (
+                      <Box display="flex" alignItems="center" gap={0.5}>
+                        <LinkIcon sx={{ fontSize: 16, color: styles.primary }} />
+                        <Typography variant="body2" sx={{ color: styles.primary }}>
+                          {project.projectUrl}
+                        </Typography>
+                      </Box>
+                    )}
+                    
+                    {index < cvData.projects.length - 1 && <Divider sx={{ mt: 2 }} />}
+                  </Box>
+                ))}
+              </Box>
+            )}
+
+            {/* Certifications Section */}
+            {cvData.certifications && cvData.certifications.length > 0 && (
+              <Box mb={4}>
+                <Typography variant="h5" sx={{ color: styles.primary, mb: 2, fontWeight: 'bold' }}>
+                  CERTIFICATIONS
+                </Typography>
+                
+                {cvData.certifications.map((cert, index) => (
+                  <Box key={cert.id} mb={2}>
+                    <Box display="flex" justifyContent="between" alignItems="start" mb={1}>
+                      <Box>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                          {cert.name}
+                        </Typography>
+                        <Typography variant="body1" sx={{ color: styles.primary }}>
+                          {cert.issuingOrganization}
+                        </Typography>
+                      </Box>
+                      <Box textAlign="right">
+                        <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+                          Issued: {dayjs(cert.issueDate).format('MMM YYYY')}
+                        </Typography>
+                        {cert.expiryDate && (
+                          <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
+                            Expires: {dayjs(cert.expiryDate).format('MMM YYYY')}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Box>
+                    
+                    {cert.credentialId && (
+                      <Typography variant="body2" color="textSecondary">
+                        Credential ID: {cert.credentialId}
+                      </Typography>
+                    )}
+                    
+                    {cert.credentialUrl && (
+                      <Box display="flex" alignItems="center" gap={0.5} mt={0.5}>
+                        <LinkIcon sx={{ fontSize: 16, color: styles.primary }} />
+                        <Typography variant="body2" sx={{ color: styles.primary }}>
+                          {cert.credentialUrl}
+                        </Typography>
+                      </Box>
+                    )}
+                    
+                    {index < cvData.certifications.length - 1 && <Divider sx={{ mt: 2 }} />}
+                  </Box>
+                ))}
+              </Box>
+            )}
+
+            {/* Awards Section */}
+            {cvData.awards && cvData.awards.length > 0 && (
+              <Box mb={4}>
+                <Typography variant="h5" sx={{ color: styles.primary, mb: 2, fontWeight: 'bold' }}>
+                  AWARDS & ACHIEVEMENTS
+                </Typography>
+                
+                {cvData.awards.map((award, index) => (
+                  <Box key={award.id} mb={2}>
+                    <Box display="flex" justifyContent="between" alignItems="start" mb={1}>
+                      <Box>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                          {award.name}
+                        </Typography>
+                        <Typography variant="body1" sx={{ color: styles.primary }}>
+                          {award.issuingOrganization}
+                        </Typography>
+                      </Box>
+                      <Typography variant="body2" sx={{ fontStyle: 'italic', minWidth: 120, textAlign: 'right' }}>
+                        {dayjs(award.dateReceived).format('MMM YYYY')}
+                      </Typography>
+                    </Box>
+                    
+                    {award.description && (
+                      <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+                        {award.description}
+                      </Typography>
+                    )}
+                    
+                    {index < cvData.awards.length - 1 && <Divider sx={{ mt: 2 }} />}
+                  </Box>
+                ))}
+              </Box>
+            )}
+
+            {/* References Section */}
+            {cvData.references && cvData.references.length > 0 && (
+              <Box mb={4}>
+                <Typography variant="h5" sx={{ color: styles.primary, mb: 2, fontWeight: 'bold' }}>
+                  REFERENCES
+                </Typography>
+                
+                <Grid container spacing={2}>
+                  {cvData.references.map((ref, index) => (
+                    <Grid item xs={12} sm={6} key={ref.id}>
+                      <Box mb={2}>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                          {ref.name}
+                        </Typography>
+                        <Typography variant="body1" sx={{ color: styles.primary }}>
+                          {ref.jobTitle}
+                        </Typography>
+                        <Typography variant="body1">
+                          {ref.company}
+                        </Typography>
+                        
+                        <Stack spacing={0.5} mt={1}>
+                          {ref.email && (
+                            <Box display="flex" alignItems="center" gap={0.5}>
+                              <Email sx={{ fontSize: 14, color: styles.primary }} />
+                              <Typography variant="body2">{ref.email}</Typography>
+                            </Box>
+                          )}
+                          
+                          {ref.phone && (
+                            <Box display="flex" alignItems="center" gap={0.5}>
+                              <Phone sx={{ fontSize: 14, color: styles.primary }} />
+                              <Typography variant="body2">{ref.phone}</Typography>
+                            </Box>
+                          )}
+                        </Stack>
+                        
+                        {ref.relationship && (
+                          <Typography variant="body2" color="textSecondary" mt={1}>
+                            Relationship: {ref.relationship}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            )}
           </Paper>
         </Grid>
 
@@ -420,10 +642,46 @@ const CVPreviewStep: React.FC<CVPreviewStepProps> = ({
                     
                     <Grid item xs={6}>
                       <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>
-                        1
+                        {cvData.languages?.length || 0}
                       </Typography>
                       <Typography variant="caption" color="textSecondary">
-                        Page Length
+                        Languages
+                      </Typography>
+                    </Grid>
+                    
+                    <Grid item xs={6}>
+                      <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>
+                        {cvData.projects?.length || 0}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        Projects
+                      </Typography>
+                    </Grid>
+                    
+                    <Grid item xs={6}>
+                      <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>
+                        {cvData.certifications?.length || 0}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        Certifications
+                      </Typography>
+                    </Grid>
+                    
+                    <Grid item xs={6}>
+                      <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>
+                        {cvData.awards?.length || 0}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        Awards
+                      </Typography>
+                    </Grid>
+                    
+                    <Grid item xs={6}>
+                      <Typography variant="h4" color="primary" sx={{ fontWeight: 'bold' }}>
+                        {cvData.references?.length || 0}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        References
                       </Typography>
                     </Grid>
                   </Grid>

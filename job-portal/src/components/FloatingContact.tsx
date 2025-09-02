@@ -60,7 +60,7 @@ const FloatingContact: React.FC = () => {
       icon: <WhatsApp sx={{ color: '#25D366' }} />,
       title: 'WhatsApp',
       description: 'Chat with us instantly',
-      action: () => window.open('https://wa.me/0788535156?text=Hello%20Excellence%20Coaching%20Hub', '_blank'),
+      action: () => window.open('https://wa.me/0788535156?text=Hello%20ExJobNet', '_blank'),
     },
   
   ];
@@ -75,7 +75,7 @@ const FloatingContact: React.FC = () => {
     {
       icon: <LinkedIn sx={{ color: '#0A66C2' }} />,
       title: 'LinkedIn',
-      profileName: 'Excellence Coaching Hub',
+      profileName: 'ExJobNet',
       action: () => window.open('https://www.linkedin.com/in/excellence-coachinghub-1b8b1a380?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app', '_blank'),
     },
     {

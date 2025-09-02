@@ -15,6 +15,7 @@ export interface IPaymentRequest extends Document {
   adminNotes?: string;
   approvedAt?: string;
   approvedBy?: string;
+  completedAt?: Date;
   paymentAmount?: number;
   paymentMethod?: string;
   createdAt: Date;
@@ -82,6 +83,9 @@ const PaymentRequestSchema: Schema = new Schema(
     approvedBy: {
       type: String,
       ref: 'User'
+    },
+    completedAt: {
+      type: Date
     },
     paymentAmount: {
       type: Number

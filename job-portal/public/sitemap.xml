@@ -8,27 +8,27 @@
 
   <!-- Homepage -->
   <url>
-    <loc>https://excellencecoachinghub.com/</loc>
+    <loc>https://exjobnet.com/</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
-      <image:loc>https://excellencecoachinghub.com/career-growth_graph_trending_chart-100747018-orig.webp</image:loc>
-      <image:title>Excellence Coaching Hub - Career Growth and Job Opportunities</image:title>
-      <image:caption>Premier job portal for career advancement and professional development</image:caption>
+      <image:loc>https://exjobnet.com/career-growth_graph_trending_chart-100747018-orig.webp</image:loc>
+      <image:title>ExJobNet - Dynamic Career Platform for Africa</image:title>
+      <image:caption>Africa's premier job portal for career advancement and professional development</image:caption>
     </image:image>
   </url>
 
   <!-- Authentication Pages -->
   <url>
-    <loc>https://excellencecoachinghub.com/login</loc>
+    <loc>https://exjobnet.com/login</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
-    <loc>https://excellencecoachinghub.com/register</loc>
+    <loc>https://exjobnet.com/register</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -36,14 +36,14 @@
 
   <!-- Main Job Portal Pages -->
   <url>
-    <loc>https://excellencecoachinghub.com/jobs</loc>
+    <loc>https://exjobnet.com/jobs</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
 
   <url>
-    <loc>https://excellencecoachinghub.com/companies</loc>
+    <loc>https://exjobnet.com/companies</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -51,28 +51,28 @@
 
   <!-- AI-Powered Features -->
   <url>
-    <loc>https://excellencecoachinghub.com/interviews</loc>
+    <loc>https://exjobnet.com/interviews</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
-    <loc>https://excellencecoachinghub.com/ai-interviews</loc>
+    <loc>https://exjobnet.com/ai-interviews</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
-    <loc>https://excellencecoachinghub.com/career-guidance</loc>
+    <loc>https://exjobnet.com/career-guidance</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
-    <loc>https://excellencecoachinghub.com/career-assessment</loc>
+    <loc>https://exjobnet.com/career-assessment</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -80,21 +80,21 @@
 
   <!-- Professional Development -->
   <url>
-    <loc>https://excellencecoachinghub.com/certificates</loc>
+    <loc>https://exjobnet.com/certificates</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
-    <loc>https://excellencecoachinghub.com/courses</loc>
+    <loc>https://exjobnet.com/courses</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
-    <loc>https://excellencecoachinghub.com/psychometric-tests</loc>
+    <loc>https://exjobnet.com/psychometric-tests</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -102,28 +102,28 @@
 
   <!-- User Dashboard Areas -->
   <url>
-    <loc>https://excellencecoachinghub.com/dashboard</loc>
+    <loc>https://exjobnet.com/dashboard</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
-    <loc>https://excellencecoachinghub.com/profile</loc>
+    <loc>https://exjobnet.com/profile</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
-    <loc>https://excellencecoachinghub.com/applications</loc>
+    <loc>https://exjobnet.com/applications</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
-    <loc>https://excellencecoachinghub.com/saved-jobs</loc>
+    <loc>https://exjobnet.com/saved-jobs</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.4</priority>
@@ -131,7 +131,7 @@
 
   <!-- Support and Information -->
   <url>
-    <loc>https://excellencecoachinghub.com/support</loc>
+    <loc>https://exjobnet.com/support</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
@@ -139,42 +139,42 @@
 
   <!-- Job Categories (High-value landing pages) -->
   <url>
-    <loc>https://excellencecoachinghub.com/jobs?category=technology</loc>
+    <loc>https://exjobnet.com/jobs?category=technology</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
-    <loc>https://excellencecoachinghub.com/jobs?category=healthcare</loc>
+    <loc>https://exjobnet.com/jobs?category=healthcare</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
-    <loc>https://excellencecoachinghub.com/jobs?category=finance</loc>
+    <loc>https://exjobnet.com/jobs?category=finance</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
-    <loc>https://excellencecoachinghub.com/jobs?category=marketing</loc>
+    <loc>https://exjobnet.com/jobs?category=marketing</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
-    <loc>https://excellencecoachinghub.com/jobs?category=education</loc>
+    <loc>https://exjobnet.com/jobs?category=education</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
-    <loc>https://excellencecoachinghub.com/jobs?category=engineering</loc>
+    <loc>https://exjobnet.com/jobs?category=engineering</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
@@ -182,35 +182,35 @@
 
   <!-- Popular Search Terms -->
   <url>
-    <loc>https://excellencecoachinghub.com/jobs?search=remote%20jobs</loc>
+    <loc>https://exjobnet.com/jobs?search=remote%20jobs</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
-    <loc>https://excellencecoachinghub.com/jobs?search=software%20engineer</loc>
+    <loc>https://exjobnet.com/jobs?search=software%20engineer</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
-    <loc>https://excellencecoachinghub.com/jobs?search=data%20scientist</loc>
+    <loc>https://exjobnet.com/jobs?search=data%20scientist</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
-    <loc>https://excellencecoachinghub.com/jobs?search=product%20manager</loc>
+    <loc>https://exjobnet.com/jobs?search=product%20manager</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
-    <loc>https://excellencecoachinghub.com/jobs?search=ux%20designer</loc>
+    <loc>https://exjobnet.com/jobs?search=ux%20designer</loc>
     <lastmod>2024-01-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>

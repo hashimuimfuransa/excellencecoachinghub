@@ -64,18 +64,41 @@ const LoginPage: React.FC = () => {
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    
+    // Check if user is already authenticated and redirect
+    const checkAuthentication = async () => {
+      try {
+        const { default: authService } = await import('../services/authService');
+        if (authService.isAuthenticated()) {
+          navigate('/app/network', { replace: true });
+        }
+      } catch (error) {
+        // Ignore errors during auth check on login page
+        console.log('Auth check skipped on login page');
+      }
+    };
+    
+    checkAuthentication();
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Prevent multiple submissions
+    if (loading) return;
+    
     setError('');
     setLoading(true);
 
     try {
       await login(email, password);
-      // Only navigate on successful login
-      navigate(from, { replace: true });
+      
+      // Small delay to ensure auth state is updated
+      setTimeout(() => {
+        navigate(from, { replace: true });
+      }, 100);
+      
     } catch (err: any) {
       // Extract detailed error message from backend
       const errorData = err.response?.data;

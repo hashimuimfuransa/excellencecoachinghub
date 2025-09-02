@@ -37,17 +37,18 @@ router.post('/', protect, validatePaymentRequest, async (req, res) => {
       estimatedDuration = 60
     } = req.body;
 
-    // Check if user already has a pending or approved request for this job
+    // Check if user already has a pending request for this job
+    // Allow new requests if previous one is completed
     const existingRequest = await PaymentRequest.findOne({
       userId: req.user._id,
       jobId,
-      status: { $in: ['pending', 'approved'] }
+      status: 'pending'
     });
 
     if (existingRequest) {
       return res.status(409).json({
         success: false,
-        message: 'You already have a pending or approved request for this job'
+        message: 'You already have a pending request for this job. Please wait for admin approval.'
       });
     }
 

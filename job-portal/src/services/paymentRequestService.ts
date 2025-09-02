@@ -16,6 +16,7 @@ export interface PaymentRequest {
   adminNotes?: string;
   approvedAt?: string;
   approvedBy?: string;
+  completedAt?: string;
   paymentAmount?: number;
   paymentMethod?: string;
   createdAt?: string;

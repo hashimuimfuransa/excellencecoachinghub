@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 
 export interface NotificationData {
   recipient: string;
-  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'event_reminder' | 'payment_approved' | 'payment_rejected' | 'payment_success' | 'payment_failed';
+  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'event_reminder' | 'payment_approved' | 'payment_rejected' | 'payment_success' | 'payment_failed' | 'test_request_created' | 'test_request_approved' | 'test_request_rejected' | 'tests_generated';
   title: string;
   message: string;
   data?: {
@@ -16,6 +16,7 @@ export interface NotificationData {
     eventId?: string;
     paymentRequestId?: string;
     testType?: string;
+    requestId?: string;
     url?: string;
   };
 }
@@ -29,6 +30,16 @@ class NotificationServiceClass {
   setSocketIO(socketIO: any) {
     this.io = socketIO;
     console.log('✅ Socket.IO instance set for notification service');
+  }
+
+  /**
+   * Send notification (wrapper for sendRealTimeNotification for backwards compatibility)
+   */
+  async sendNotification(userId: string, notificationData: Omit<NotificationData, 'recipient'>): Promise<INotification | null> {
+    return this.sendRealTimeNotification({
+      ...notificationData,
+      recipient: userId
+    });
   }
 
   /**

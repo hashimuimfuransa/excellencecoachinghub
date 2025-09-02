@@ -302,3 +302,6 @@ class JobService {
 
 export const jobService = new JobService();
 export default jobService;
+
+// Export types that might be needed by other components
+export type { Job, JobForm, JobFilters };

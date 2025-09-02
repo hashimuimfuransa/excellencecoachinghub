@@ -34,6 +34,17 @@ export interface ITestRequestDocument extends Document {
     overallPerformance?: string;
   };
   
+  // Request details
+  title?: string;
+  description?: string;
+  specifications?: {
+    interviewType?: string;
+    duration?: number;
+    questionCount?: number;
+    difficulty?: string;
+    focusAreas?: string[];
+  };
+  
   // Metadata
   requestedAt: Date;
   expiresAt?: Date;
@@ -132,6 +143,43 @@ const testRequestSchema = new Schema<ITestRequestDocument>({
       type: String,
       enum: ['Excellent', 'Very Good', 'Good', 'Average', 'Below Average']
     }
+  },
+  
+  // Request details
+  title: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Title cannot exceed 200 characters']
+  },
+  description: {
+    type: String,
+    trim: true,
+    maxlength: [1000, 'Description cannot exceed 1000 characters']
+  },
+  specifications: {
+    interviewType: {
+      type: String,
+      trim: true
+    },
+    duration: {
+      type: Number,
+      min: [5, 'Duration must be at least 5 minutes'],
+      max: [180, 'Duration cannot exceed 180 minutes']
+    },
+    questionCount: {
+      type: Number,
+      min: [1, 'Must have at least 1 question'],
+      max: [50, 'Cannot exceed 50 questions']
+    },
+    difficulty: {
+      type: String,
+      enum: ['easy', 'medium', 'hard'],
+      default: 'medium'
+    },
+    focusAreas: [{
+      type: String,
+      trim: true
+    }]
   },
   
   // Metadata

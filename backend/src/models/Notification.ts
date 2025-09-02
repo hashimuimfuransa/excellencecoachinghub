@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface INotification extends Document {
   recipient: mongoose.Types.ObjectId;
-  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'event_reminder' | 'payment_approved' | 'payment_rejected' | 'payment_success' | 'payment_failed';
+  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'event_reminder' | 'payment_approved' | 'payment_rejected' | 'payment_success' | 'payment_failed' | 'test_request_approved' | 'test_request_rejected' | 'tests_generated';
   title: string;
   message: string;
   data?: {
@@ -30,7 +30,7 @@ const NotificationSchema = new Schema<INotification>({
   },
   type: {
     type: String,
-    enum: ['connection_accepted', 'connection_request', 'message', 'job_match', 'event_reminder', 'payment_approved', 'payment_rejected', 'payment_success', 'payment_failed'],
+    enum: ['connection_accepted', 'connection_request', 'message', 'job_match', 'event_reminder', 'payment_approved', 'payment_rejected', 'payment_success', 'payment_failed', 'test_request_approved', 'test_request_rejected', 'tests_generated'],
     required: true
   },
   title: {

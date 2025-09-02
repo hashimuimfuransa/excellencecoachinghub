@@ -19,7 +19,15 @@ interface AuthenticatedRequest extends Request {
 // Create a test request
 export const createTestRequest = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { jobId, requestType, notes, priority = 'normal' } = req.body;
+    const { 
+      jobId, 
+      requestType, 
+      notes, 
+      priority = 'normal',
+      title,
+      description,
+      specifications 
+    } = req.body;
     const userId = req.user?.id;
 
     if (!jobId || !requestType) {
@@ -52,12 +60,28 @@ export const createTestRequest = async (req: AuthenticatedRequest, res: Response
       });
     }
 
+    // Set default title and description if not provided
+    const defaultTitle = title || `${requestType === 'interview' ? 'AI Interview' : requestType === 'psychometric_test' ? 'Psychometric Test' : 'AI Assessment'} Request for ${job.title}`;
+    const defaultDescription = description || `Request for ${requestType === 'interview' ? 'AI interview practice' : requestType === 'psychometric_test' ? 'psychometric testing' : 'comprehensive testing'} for the ${job.title} position at ${job.company}`;
+    
+    // Set default specifications for interviews
+    const defaultSpecifications = requestType === 'interview' || requestType === 'both' ? {
+      interviewType: specifications?.interviewType || 'Technical + Behavioral',
+      duration: specifications?.duration || 30,
+      questionCount: specifications?.questionCount || 10,
+      difficulty: specifications?.difficulty || 'medium',
+      focusAreas: specifications?.focusAreas || ['Problem Solving', 'Communication', 'Technical Skills']
+    } : specifications;
+
     const testRequest = new TestRequest({
       user: userId,
       job: jobId,
       requestType,
       notes,
-      priority
+      priority,
+      title: defaultTitle,
+      description: defaultDescription,
+      specifications: defaultSpecifications
     });
 
     await testRequest.save();
@@ -169,6 +193,51 @@ export const getTestRequestById = async (req: AuthenticatedRequest, res: Respons
     res.status(500).json({
       success: false,
       error: 'Failed to fetch test request'
+    });
+  }
+};
+
+// Get approved requests (Super Admin only)
+export const getApprovedRequests = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { page = 1, limit = 10, requestType, priority } = req.query;
+    
+    const filter: any = { status: 'approved' };
+    
+    if (requestType) {
+      filter.requestType = requestType;
+    }
+    
+    if (priority) {
+      filter.priority = priority;
+    }
+
+    const requests = await TestRequest.find(filter)
+      .populate('user', 'firstName lastName email')
+      .populate('job', 'title company')
+      .populate('approvedBy', 'firstName lastName email')
+      .sort({ approvedAt: -1 })
+      .limit(Number(limit) * Number(page))
+      .skip((Number(page) - 1) * Number(limit));
+
+    const total = await TestRequest.countDocuments(filter);
+
+    res.json({
+      success: true,
+      data: requests,
+      pagination: {
+        currentPage: Number(page),
+        totalPages: Math.ceil(total / Number(limit)),
+        totalItems: total,
+        itemsPerPage: Number(limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching approved requests:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch approved requests'
     });
   }
 };

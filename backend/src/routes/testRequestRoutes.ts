@@ -7,6 +7,7 @@ import {
   getTestRequestById,
   updateTestRequestStatus,
   getPendingRequests,
+  getApprovedRequests,
   generateRequestedTests,
   getApprovedTestsForUser,
   completeTestRequest
@@ -20,11 +21,12 @@ router.use(auth);
 // User routes
 router.post('/create', createTestRequest);
 router.get('/my-requests', getUserTestRequests);
-router.get('/approved', getApprovedTestsForUser);
+router.get('/my-approved', getApprovedTestsForUser);
 router.post('/:requestId/complete', completeTestRequest);
 
 // Super Admin routes
 router.get('/pending', authorizeRoles(['super_admin']), getPendingRequests);
+router.get('/approved', authorizeRoles(['super_admin']), getApprovedRequests);
 router.put('/:requestId/status', authorizeRoles(['super_admin']), updateTestRequestStatus);
 router.post('/:requestId/generate', authorizeRoles(['super_admin']), generateRequestedTests);
 

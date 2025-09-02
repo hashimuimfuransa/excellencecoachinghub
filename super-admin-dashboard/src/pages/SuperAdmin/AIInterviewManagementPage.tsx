@@ -115,10 +115,12 @@ interface CreateInterviewDialog {
 }
 
 const AIInterviewManagementPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState(1); // Start with Pending Requests tab
   const [interviews, setInterviews] = useState<AIInterview[]>([]);
   const [interviewRequests, setInterviewRequests] = useState<any[]>([]);
+  const [approvedRequests, setApprovedRequests] = useState<any[]>([]);
   const [requestsLoading, setRequestsLoading] = useState(false);
+  const [approvedLoading, setApprovedLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
@@ -157,12 +159,20 @@ const AIInterviewManagementPage: React.FC = () => {
   });
 
   useEffect(() => {
-    if (activeTab === 0) {
-      loadInterviews();
-      loadStats();
-    } else if (activeTab === 1) {
-      loadInterviewRequests();
-    }
+    const initializePage = async () => {
+      if (activeTab === 0) {
+        await loadInterviews();
+        await loadStats();
+      } else if (activeTab === 1) {
+        await loadInterviewRequests();
+        setLoading(false); // Set main loading to false after requests are loaded
+      } else if (activeTab === 2) {
+        await loadApprovedRequests();
+        setLoading(false); // Set main loading to false after approved requests are loaded
+      }
+    };
+    
+    initializePage();
   }, [page, rowsPerPage, filters, activeTab]);
 
   const loadInterviews = async () => {
@@ -379,84 +389,103 @@ const AIInterviewManagementPage: React.FC = () => {
   };
 
   const loadInterviewRequests = async () => {
+    console.log('🔍 Loading interview requests...');
+    console.log('🌐 API URL:', import.meta.env.VITE_API_URL);
+    console.log('🔑 Token exists:', !!localStorage.getItem('token'));
+    
     setRequestsLoading(true);
+    
+    // Now using real API calls
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
       const response = await fetch(`${import.meta.env.VITE_API_URL}/test-requests/pending`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
+        },
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('📋 Raw test-requests response:', result);
+        console.log('📊 Total requests found:', result.success ? result.data?.length || 0 : 0);
+        
+        // Log all request types for debugging
+        if (result.success && result.data) {
+          console.log('🔍 Request types breakdown:', result.data.map((req: any) => ({
+            id: req._id,
+            type: req.requestType,
+            status: req.status,
+            user: req.user?.firstName + ' ' + req.user?.lastName,
+            job: req.job?.title
+          })));
         }
+        
+        // Filter for interview requests only
+        const filteredRequests = (result.success ? result.data : []).filter((req: any) => 
+          req.requestType === 'interview' || req.requestType === 'both'
+        );
+        
+        console.log('🎯 Filtered interview requests:', filteredRequests);
+        console.log('📊 Interview requests count:', filteredRequests.length);
+        setInterviewRequests(filteredRequests);
+      } else {
+        console.log('❌ API call failed, status:', response.status);
+        const errorText = await response.text();
+        console.log('📋 Error response body:', errorText);
+        setInterviewRequests([]);
+      }
+    } catch (error) {
+      console.error('❌ Error loading interview requests:', error);
+      if (error.name === 'AbortError') {
+        console.error('⏰ Request timed out after 10 seconds');
+      }
+      // Set empty requests on error
+      setInterviewRequests([]);
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
+
+  const loadApprovedRequests = async () => {
+    setApprovedLoading(true);
+    
+    try {
+      console.log('🔄 Loading approved interview requests...');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/test-requests/approved`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        signal: AbortSignal.timeout(10000) // 10 second timeout
       });
 
       if (response.ok) {
         const result = await response.json();
+        console.log('📋 Approved requests response:', result);
+        
         // Filter for interview requests only
-        setInterviewRequests((result.success ? result.data : []).filter((req: any) => 
-          req.requestType === 'ai_interview'
-        ));
+        const filteredRequests = (result.success ? result.data : []).filter((req: any) => 
+          req.requestType === 'interview' || req.requestType === 'both'
+        );
+        
+        console.log('🎯 Approved interview requests:', filteredRequests);
+        setApprovedRequests(filteredRequests);
       } else {
-        // Mock data for development - interview requests only
-        setInterviewRequests([
-          {
-            _id: 'int_req1',
-            user: {
-              _id: 'user1',
-              firstName: 'Alex',
-              lastName: 'Johnson',
-              email: 'alex.johnson@example.com'
-            },
-            requestType: 'ai_interview',
-            title: 'Senior React Developer Interview',
-            description: 'Need AI-powered interview for evaluating React development skills',
-            job: {
-              _id: 'job1',
-              title: 'Senior React Developer',
-              company: 'TechStart Inc'
-            },
-            priority: 'high',
-            requestedAt: new Date().toISOString(),
-            status: 'pending',
-            specifications: {
-              interviewType: 'technical',
-              duration: 45,
-              questionCount: 8,
-              difficulty: 'hard',
-              focusAreas: ['React', 'JavaScript', 'State Management', 'Performance']
-            }
-          },
-          {
-            _id: 'int_req2',
-            user: {
-              _id: 'user2',
-              firstName: 'Maria',
-              lastName: 'Garcia',
-              email: 'maria.garcia@example.com'
-            },
-            requestType: 'ai_interview',
-            title: 'Product Manager Assessment',
-            description: 'Behavioral and strategic thinking interview for PM role',
-            job: {
-              _id: 'job2',
-              title: 'Senior Product Manager',
-              company: 'InnovateCorp'
-            },
-            priority: 'normal',
-            requestedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-            status: 'pending',
-            specifications: {
-              interviewType: 'behavioral',
-              duration: 60,
-              questionCount: 10,
-              difficulty: 'medium',
-              focusAreas: ['Leadership', 'Strategy', 'Communication', 'Analytics']
-            }
-          }
-        ]);
+        console.log('❌ Approved requests API call failed, status:', response.status);
+        setApprovedRequests([]);
       }
     } catch (error) {
-      console.error('Error loading interview requests:', error);
+      console.error('❌ Error loading approved requests:', error);
+      setApprovedRequests([]);
     } finally {
-      setRequestsLoading(false);
+      setApprovedLoading(false);
     }
   };
 
@@ -470,12 +499,12 @@ const AIInterviewManagementPage: React.FC = () => {
         },
         body: JSON.stringify({
           status: action === 'approve' ? 'approved' : 'rejected',
-          adminNotes: notes
+          rejectionReason: notes
         })
       });
 
       if (response.ok) {
-        // Remove the request from the list
+        // Remove the request from the pending list
         setInterviewRequests(prev => prev.filter(req => req._id !== requestId));
         
         if (action === 'approve') {
@@ -487,6 +516,9 @@ const AIInterviewManagementPage: React.FC = () => {
               'Content-Type': 'application/json'
             }
           });
+          
+          // Refresh approved requests to show the newly approved one
+          loadApprovedRequests();
         }
       }
     } catch (error) {
@@ -695,6 +727,15 @@ const AIInterviewManagementPage: React.FC = () => {
               </Badge>
             } 
             label="Pending Requests" 
+            sx={{ textTransform: 'none', fontWeight: 'bold' }}
+          />
+          <Tab 
+            icon={
+              <Badge badgeContent={approvedRequests.length} color="success" max={99}>
+                <Approval />
+              </Badge>
+            } 
+            label="Approved Requests" 
             sx={{ textTransform: 'none', fontWeight: 'bold' }}
           />
         </Tabs>
@@ -1114,6 +1155,193 @@ const AIInterviewManagementPage: React.FC = () => {
                           </Button>
                         </Stack>
                       </Box>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tab 3: Approved Requests */}
+      {activeTab === 2 && (
+        <Card>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+              <Typography variant="h6">
+                Approved Interview Requests ({approvedRequests.length})
+              </Typography>
+              <Button
+                startIcon={<Refresh />}
+                onClick={loadApprovedRequests}
+                disabled={approvedLoading}
+              >
+                Refresh
+              </Button>
+            </Box>
+
+            {approvedLoading ? (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <CircularProgress />
+                <Typography variant="body2" sx={{ mt: 2 }}>
+                  Loading approved requests...
+                </Typography>
+              </Box>
+            ) : approvedRequests.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 8 }}>
+                <CheckCircle sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
+                <Typography variant="h6" gutterBottom>
+                  No Approved Requests
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Approved interview requests will appear here.
+                </Typography>
+              </Box>
+            ) : (
+              <Grid container spacing={3}>
+                {approvedRequests.map((request) => (
+                  <Grid item xs={12} md={6} lg={4} key={request._id}>
+                    <Card 
+                      variant="outlined"
+                      sx={{ 
+                        height: '100%',
+                        position: 'relative',
+                        borderColor: 'success.main',
+                        borderWidth: 2,
+                        '&:hover': {
+                          boxShadow: 2
+                        }
+                      }}
+                    >
+                      {/* Status Badge */}
+                      <Chip
+                        label="APPROVED"
+                        color="success"
+                        size="small"
+                        sx={{
+                          position: 'absolute',
+                          top: 12,
+                          right: 12,
+                          zIndex: 1
+                        }}
+                      />
+
+                      <CardContent sx={{ pb: 1 }}>
+                        <Stack spacing={2}>
+                          {/* Header */}
+                          <Box>
+                            <Typography variant="h6" sx={{ pr: 8 }}>
+                              {request.title}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" noWrap>
+                              {request.description}
+                            </Typography>
+                          </Box>
+
+                          {/* User Info */}
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Avatar sx={{ width: 32, height: 32, mr: 1, bgcolor: 'success.main' }}>
+                              <VideoCall />
+                            </Avatar>
+                            <Box>
+                              <Typography variant="subtitle2">
+                                {request.user.firstName} {request.user.lastName}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {request.user.email}
+                              </Typography>
+                            </Box>
+                          </Box>
+
+                          {/* Job Info */}
+                          {request.job && (
+                            <Box sx={{ bgcolor: 'success.50', p: 1.5, borderRadius: 1 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                <Work sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
+                                <Typography variant="subtitle2">
+                                  {request.job.title}
+                                </Typography>
+                              </Box>
+                              <Typography variant="caption" color="text.secondary">
+                                {request.job.company}
+                              </Typography>
+                            </Box>
+                          )}
+
+                          {/* Interview Specifications */}
+                          {request.specifications && (
+                            <Box>
+                              <Typography variant="subtitle2" gutterBottom>
+                                Interview Specifications
+                              </Typography>
+                              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
+                                <Chip 
+                                  size="small" 
+                                  label={request.specifications.interviewType} 
+                                  color="info"
+                                />
+                                <Chip 
+                                  size="small" 
+                                  label={`${request.specifications.duration}min`} 
+                                  variant="outlined"
+                                />
+                                <Chip 
+                                  size="small" 
+                                  label={`${request.specifications.questionCount}Q`} 
+                                  variant="outlined"
+                                />
+                                <Chip 
+                                  size="small" 
+                                  label={request.specifications.difficulty} 
+                                  color="success"
+                                />
+                              </Stack>
+                              {request.specifications.focusAreas && (
+                                <Box>
+                                  <Typography variant="caption" color="text.secondary" display="block">
+                                    Focus Areas:
+                                  </Typography>
+                                  <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                                    {request.specifications.focusAreas.map((area: string) => (
+                                      <Chip 
+                                        key={area}
+                                        size="small" 
+                                        label={area}
+                                        variant="outlined"
+                                        sx={{ fontSize: '0.7rem', height: '20px' }}
+                                      />
+                                    ))}
+                                  </Stack>
+                                </Box>
+                              )}
+                            </Box>
+                          )}
+
+                          {/* Approval Info */}
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <CheckCircle sx={{ fontSize: 16, mr: 0.5, color: 'success.main' }} />
+                              <Typography variant="caption" color="success.main">
+                                Approved {new Date(request.approvedAt).toLocaleDateString()}
+                              </Typography>
+                            </Box>
+                            {request.approvedBy && (
+                              <Typography variant="caption" color="text.secondary">
+                                By: {request.approvedBy.firstName} {request.approvedBy.lastName}
+                              </Typography>
+                            )}
+                          </Box>
+
+                          {/* Requested Date */}
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <ScheduleIcon sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
+                            <Typography variant="caption" color="text.secondary">
+                              Originally requested {new Date(request.requestedAt).toLocaleDateString()}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </CardContent>
                     </Card>
                   </Grid>
                 ))}

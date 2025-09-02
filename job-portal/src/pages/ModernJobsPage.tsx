@@ -206,6 +206,18 @@ const ModernJobsPage: React.FC = () => {
   const [currentTab, setCurrentTab] = useState(0);
   const [aiMatchedJobs, setAiMatchedJobs] = useState<Job[]>([]);
   const [aiJobsLoading, setAiJobsLoading] = useState(false);
+  const [aiMeta, setAiMeta] = useState<{
+    totalJobsEvaluated: number;
+    matchesFound: number;
+    userSkillsCount: number;
+    averageMatchPercentage: number;
+    userProfileSummary?: {
+      skills: number;
+      education: number;
+      experience: number;
+      location: string;
+    };
+  } | null>(null);
   const [experienceFilter, setExperienceFilter] = useState<string>('');
   const [companyFilter, setCompanyFilter] = useState<string>('');
   const [salaryRange, setSalaryRange] = useState<number[]>([0, 200000]);
@@ -429,10 +441,10 @@ const ModernJobsPage: React.FC = () => {
       const validation = await profileService.validateUserProfile(freshUser as User);
       console.log('✅ Profile validation result:', validation);
       
-      // Check if profile is complete enough for job matching
-      if (!validation || validation.completionPercentage < 30) {
-        console.log('⚠️ Profile not complete enough for job matching. Completion:', validation?.completionPercentage || 0, '%');
-        setSnackbarMessage('Please complete at least 30% of your profile to get better job matches. Add skills and education.');
+      // Check if profile has minimum data for job matching
+      if (!validation || validation.completionPercentage < 20) {
+        console.log('⚠️ Profile needs basic information for job matching. Completion:', validation?.completionPercentage || 0, '%');
+        setSnackbarMessage('Please add basic information (name, email, location) to get job matches.');
         setSnackbarOpen(true);
         setAiMatchedJobs([]);
         setAiJobsLoading(false);
@@ -452,13 +464,12 @@ const ModernJobsPage: React.FC = () => {
       console.log('🎯 User skills for matching:', allSkills);
       console.log('🎓 User education:', (freshUser as User).education?.length || 0, 'entries');
       
+      // Still call the API even if no skills/education - the backend can handle basic matching
       if (allSkills.length === 0 && (!freshUser.education || freshUser.education.length === 0)) {
-        console.log('⚠️ No skills or education found for job matching');
-        setSnackbarMessage('Please add skills or education to your profile to get job matches.');
+        console.log('⚠️ No skills or education found, but will still try basic job matching');
+        setSnackbarMessage('Add skills and education to your profile for better job matches.');
         setSnackbarOpen(true);
-        setAiMatchedJobs([]);
-        setAiJobsLoading(false);
-        return;
+        // Don't return here - continue to call the API
       }
       
       // Now call the AI matching service
@@ -470,15 +481,34 @@ const ModernJobsPage: React.FC = () => {
       // Ensure we have valid data
       const matchedJobs = response.data || [];
       console.log(`🎯 Found ${matchedJobs.length} AI-matched jobs`);
+      console.log('🔍 Jobs details:', matchedJobs.map(job => ({
+        id: job._id,
+        title: job.title,
+        matchPercentage: (job as any).matchPercentage,
+        company: job.company,
+        location: job.location
+      })));
       
+      console.log('🔧 Setting AI matched jobs state with:', matchedJobs.length, 'jobs');
+      console.log('🔧 Raw response.data:', response.data);
+      console.log('🔧 matchedJobs array:', matchedJobs);
       setAiMatchedJobs(matchedJobs);
+      setAiMeta(response.meta);
+      
+      // Debug logging after state set
+      setTimeout(() => {
+        console.log('🔧 State updated - aiMatchedJobs length should be:', matchedJobs.length);
+      }, 100);
+      
+      console.log('📊 AI matched jobs state after setting:', matchedJobs.length);
+      console.log('📊 aiMatchedJobs array:', matchedJobs);
       
       // Show success message with match info
       if (matchedJobs.length > 0) {
-        setSnackbarMessage(`Found ${matchedJobs.length} jobs matching your skills and education background!`);
+        setSnackbarMessage(`Found ${matchedJobs.length} AI-matched jobs! Check the Smart Matches tab.`);
         setSnackbarOpen(true);
       } else {
-        setSnackbarMessage('No jobs match your current profile. Try updating your skills or education.');
+        setSnackbarMessage('No jobs match your current profile. The AI will try to find similar opportunities.');
         setSnackbarOpen(true);
       }
     } catch (error: any) {
@@ -487,6 +517,8 @@ const ModernJobsPage: React.FC = () => {
       setError(errorMessage);
       setSnackbarMessage(`Error: ${errorMessage}`);
       setSnackbarOpen(true);
+      setAiMatchedJobs([]);
+      setAiMeta(null);
     } finally {
       setAiJobsLoading(false);
     }
@@ -584,6 +616,12 @@ const ModernJobsPage: React.FC = () => {
       fetchAIMatchedJobs();
     }
   }, [currentTab, user]);
+
+  // Debug: Monitor AI matched jobs state changes
+  useEffect(() => {
+    console.log('🔧 aiMatchedJobs state changed:', aiMatchedJobs.length, 'jobs');
+    console.log('🔧 Current aiMatchedJobs:', aiMatchedJobs);
+  }, [aiMatchedJobs]);
 
   // Handle page changes
   const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
@@ -768,13 +806,18 @@ const ModernJobsPage: React.FC = () => {
               label={
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <SmartToy />
-                  AI-Matched Jobs
+                  Smart Job Matches
                   {aiMatchedJobs.length > 0 && (
                     <Chip 
                       label={aiMatchedJobs.length} 
                       size="small" 
-                      color="primary"
-                      sx={{ fontSize: '0.7rem', height: 20 }}
+                      color="success"
+                      variant="filled"
+                      sx={{ 
+                        fontSize: '0.7rem', 
+                        height: 20,
+                        fontWeight: 'bold'
+                      }}
                     />
                   )}
                 </Box>
@@ -945,6 +988,78 @@ const ModernJobsPage: React.FC = () => {
           </Alert>
         )}
 
+        {/* AI Matching Statistics - Show when we have AI results */}
+        {currentTab === 1 && !aiJobsLoading && aiMeta && (
+          <Paper
+            sx={{
+              p: 3,
+              mb: 3,
+              background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.05)} 0%, ${alpha(theme.palette.primary.main, 0.05)} 100%)`,
+              border: `1px solid ${alpha(theme.palette.success.main, 0.1)}`
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <SmartToy sx={{ color: 'success.main', mr: 1, fontSize: 24 }} />
+              <Typography variant="h6" sx={{ fontWeight: 600, color: 'success.dark' }}>
+                AI Matching Results
+              </Typography>
+            </Box>
+            
+            <Box sx={{ 
+              display: 'grid', 
+              gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' },
+              gap: 2
+            }}>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'success.main' }}>
+                  {aiMeta.matchesFound}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Smart Matches
+                </Typography>
+              </Box>
+              
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                  {aiMeta.averageMatchPercentage}%
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Average Match
+                </Typography>
+              </Box>
+              
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'info.main' }}>
+                  {aiMeta.totalJobsEvaluated}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Jobs Analyzed
+                </Typography>
+              </Box>
+              
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
+                  {aiMeta.userSkillsCount}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Your Skills
+                </Typography>
+              </Box>
+            </Box>
+            
+            {aiMeta.userProfileSummary && (
+              <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  <strong>Profile Summary:</strong> {aiMeta.userProfileSummary.skills} skills, {aiMeta.userProfileSummary.experience} work experiences, {aiMeta.userProfileSummary.education} education entries
+                  {aiMeta.userProfileSummary.location && aiMeta.userProfileSummary.location !== 'Not specified' && 
+                    `, located in ${aiMeta.userProfileSummary.location}`
+                  }
+                </Typography>
+              </Box>
+            )}
+          </Paper>
+        )}
+
         {currentTab === 0 && !loading && filteredJobs.length === 0 && (
           <Box sx={{ textAlign: 'center', py: 8 }}>
             <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -962,18 +1077,28 @@ const ModernJobsPage: React.FC = () => {
               <SmartToy sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
             </Box>
             <Typography variant="h6" color="text.secondary" gutterBottom>
-              No Matched Jobs Found
+              No Smart Matches Found
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              We couldn't find jobs that match your current skills. Try updating your profile with more skills.
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 400, mx: 'auto' }}>
+              Our AI couldn't find jobs that match your current profile. Complete your profile with skills, 
+              experience, and education to get better matches.
             </Typography>
-            <Button 
-              variant="outlined" 
-              onClick={() => navigate('/app/profile')}
-              startIcon={<Person />}
-            >
-              Update Profile
-            </Button>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Button 
+                variant="contained" 
+                onClick={() => navigate('/app/profile')}
+                startIcon={<Person />}
+              >
+                Complete Profile
+              </Button>
+              <Button 
+                variant="outlined" 
+                onClick={() => setCurrentTab(0)}
+                startIcon={<Work />}
+              >
+                Browse All Jobs
+              </Button>
+            </Box>
           </Box>
         )}
 
@@ -998,7 +1123,15 @@ const ModernJobsPage: React.FC = () => {
             } : 'repeat(1, 1fr)',
           }}
         >
-          {(currentTab === 0 ? filteredJobs : aiMatchedJobs).map((job, index) => (
+          {(() => {
+            const jobsToShow = currentTab === 0 ? filteredJobs : aiMatchedJobs;
+            console.log(`📊 Rendering ${jobsToShow.length} jobs for tab ${currentTab}`, {
+              currentTab,
+              filteredJobsLength: filteredJobs.length,
+              aiMatchedJobsLength: aiMatchedJobs.length,
+              jobsToShowLength: jobsToShow.length
+            });
+            return jobsToShow.map((job, index) => (
             <Box 
               key={job._id}
               sx={{
@@ -1311,7 +1444,7 @@ const ModernJobsPage: React.FC = () => {
                     minHeight: '30px',
                     alignContent: 'flex-start'
                   }}>
-                    {job.skills?.slice(0, 2).map((skill, idx) => (
+                    {currentTab === 0 && job.skills?.slice(0, 2).map((skill, idx) => (
                       <Chip 
                         key={idx} 
                         label={skill} 
@@ -1330,7 +1463,59 @@ const ModernJobsPage: React.FC = () => {
                         }} 
                       />
                     ))}
+                    {currentTab === 1 && (job as any).matchingSkills?.slice(0, 2).map((skill: string, idx: number) => (
+                      <Chip 
+                        key={idx} 
+                        label={skill} 
+                        size="small" 
+                        icon={<SmartToy sx={{ fontSize: 12 }} />}
+                        sx={{ 
+                          bgcolor: 'success.light',
+                          color: 'success.dark',
+                          fontWeight: 500,
+                          fontSize: '0.7rem',
+                          height: 22,
+                          maxWidth: '120px',
+                          '& .MuiChip-label': {
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }
+                        }} 
+                      />
+                    ))}
                   </Box>
+                  
+                  {/* AI Match Explanation - Only for AI matched jobs */}
+                  {currentTab === 1 && (job as any).aiExplanation && (
+                    <Box sx={{ 
+                      mb: 2,
+                      p: 1.5,
+                      bgcolor: alpha(theme.palette.success.main, 0.08),
+                      borderRadius: 2,
+                      border: `1px solid ${alpha(theme.palette.success.main, 0.2)}`
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                        <SmartToy sx={{ fontSize: 14, color: 'success.main', mr: 0.5 }} />
+                        <Typography variant="caption" sx={{ fontWeight: 600, color: 'success.main' }}>
+                          AI Match Insight
+                        </Typography>
+                      </Box>
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary"
+                        sx={{ 
+                          fontSize: '0.75rem',
+                          lineHeight: 1.3,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        {(job as any).aiExplanation}
+                      </Typography>
+                    </Box>
+                  )}
                   
                   {/* View Details Button */}
                   <Box sx={{ mt: 'auto', pt: 1 }}>
@@ -1362,7 +1547,8 @@ const ModernJobsPage: React.FC = () => {
                 </Paper>
               )}
             </Box>
-          ))}
+          ));
+          })()}
         </Box>
 
         {/* Pagination */}

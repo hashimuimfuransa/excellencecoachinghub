@@ -22,15 +22,17 @@ const router = express.Router();
 router.get('/', getJobs);
 router.get('/categories', getJobCategories);
 router.get('/curated', getCuratedJobs);
-router.get('/:id', getJobById);
-router.get('/:id/recommended-courses', getRecommendedCourses);
 
-// Protected routes
+// Protected routes - must come BEFORE the /:id route to avoid conflicts
 router.use(auth); // All routes below require authentication
 
 router.get('/student/available', getJobsForStudent);
 router.get('/ai-matched-test', testAIMatchedJobs);  // Test endpoint
 router.get('/ai-matched', getAIMatchedJobsSimple);  // Simple AI-powered job matching endpoint
+
+// Routes with parameters - these should come AFTER specific routes
+router.get('/:id', getJobById);
+router.get('/:id/recommended-courses', getRecommendedCourses);
 router.get('/employer/my-jobs', getJobsByEmployer);
 router.post('/', createJob);
 router.put('/:id', updateJob);

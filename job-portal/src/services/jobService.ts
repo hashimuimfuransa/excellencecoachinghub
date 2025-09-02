@@ -285,8 +285,15 @@ class JobService {
       matchesFound: number;
       userSkillsCount: number;
       averageMatchPercentage: number;
+      userProfileSummary?: {
+        skills: number;
+        education: number;
+        experience: number;
+        location: string;
+      };
     };
   }> {
+    console.log('🌐 Making API call to /jobs/ai-matched');
     const response = await apiGet<ApiResponse<{
       data: Job[];
       meta: {
@@ -294,9 +301,59 @@ class JobService {
         matchesFound: number;
         userSkillsCount: number;
         averageMatchPercentage: number;
+        userProfileSummary?: {
+          skills: number;
+          education: number;
+          experience: number;
+          location: string;
+        };
       };
     }>>('/jobs/ai-matched');
-    return handleApiResponse(response);
+    console.log('🌐 Raw API response:', response);
+    console.log('🌐 Response status:', response.status);
+    console.log('🌐 Full response object:', JSON.stringify(response, null, 2));
+    console.log('🌐 Response data structure:', {
+      hasData: !!response.data,
+      dataKeys: response.data ? Object.keys(response.data) : [],
+      successField: response.data?.success,
+      dataField: response.data?.data,
+      metaField: response.data?.meta,
+      dataLength: Array.isArray(response.data?.data) ? response.data?.data.length : 'not array',
+      responseType: typeof response.data,
+      isResponseDataObject: typeof response.data === 'object'
+    });
+    
+    // Check if response is the actual backend response (apiGet returns response.data directly)
+    if (!response?.success) {
+      console.error('❌ API Response validation failed:', {
+        fullResponse: response,
+        hasSuccess: 'success' in (response || {}),
+        successValue: response?.success,
+        errorMessage: response?.message || response?.error || 'No specific error message'
+      });
+      const error = new Error(response?.message || response?.error || 'AI job matching failed');
+      (error as any).errorData = response;
+      throw error;
+    }
+
+    // Return the full structure that includes both data and meta
+    const result = {
+      data: response.data,
+      meta: response.meta
+    };
+    
+    console.log('🌐 Final processed response:', {
+      hasData: !!result.data,
+      dataLength: Array.isArray(result.data) ? result.data.length : 'not array',
+      hasMeta: !!result.meta,
+      metaKeys: result.meta ? Object.keys(result.meta) : [],
+      firstJob: result.data?.[0] ? {
+        id: result.data[0]._id,
+        title: result.data[0].title,
+        matchPercentage: (result.data[0] as any).matchPercentage
+      } : null
+    });
+    return result;
   }
 }
 

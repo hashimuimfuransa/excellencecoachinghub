@@ -1062,7 +1062,7 @@ const SocialNetworkPage: React.FC = () => {
                           <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                             <CircularProgress />
                           </Box>
-                        ) : matchedJobs.length === 0 ? (
+                        ) : !matchedJobs || matchedJobs.length === 0 ? (
                           <Card sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
                             <Work sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                             <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
@@ -1110,7 +1110,7 @@ const SocialNetworkPage: React.FC = () => {
                                 </Typography>
                               </Box>
                               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                                Showing {matchedJobs.length} jobs intelligently matched to your profile using advanced AI analysis
+                                Showing {matchedJobs?.length || 0} jobs intelligently matched to your profile using advanced AI analysis
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
                                 Your skills: {((user as User)?.skills || []).slice(0, 3).join(', ')}

@@ -71,8 +71,8 @@ import { useNavigate, useLocation, Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { UserRole } from '../contexts/AuthContext';
-import CareerGuidancePopup from '../components/CareerGuidancePopup';
-import careerGuidanceService from '../services/careerGuidanceService';
+
+
 import SearchBar from '../components/search/SearchBar';
 import EnhancedSearchBar from '../components/search/EnhancedSearchBar';
 import { notificationService } from '../services/notificationService';
@@ -98,9 +98,7 @@ const MainLayout: React.FC = () => {
   const [hovered, setHovered] = useState(false); // Track hover state for mini drawer
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Mobile quick actions menu
   
-  // Career guidance popup state
-  const [showCareerPopup, setShowCareerPopup] = useState(false);
-  const [hasCheckedCareerTest, setHasCheckedCareerTest] = useState(false);
+
   
   // Real-time counts
   const [unreadNotifications, setUnreadNotifications] = useState(0);
@@ -121,99 +119,9 @@ const MainLayout: React.FC = () => {
     ? drawerWidth 
     : (desktopOpen || hovered) ? drawerWidth : drawerWidthClosed;
 
-  // Reset career test check when navigating to home page
-  useEffect(() => {
-    const isHomePage = location.pathname === '/app' || location.pathname === '/app/network' || location.pathname === '/app/';
-    if (isHomePage && hasCheckedCareerTest) {
-      console.log('🔄 [ExJobNet] Resetting career test check for home visit');
-      setHasCheckedCareerTest(false);
-    }
-  }, [location.pathname, hasCheckedCareerTest]);
 
-  // Check for job readiness test completion and show popup
-  useEffect(() => {
-    const checkCareerTestStatus = async () => {
-      console.log('🔍 [ExJobNet] Checking career test status...', {
-        user: user?.email,
-        role: user?.role,
-        isEmployer: hasRole(UserRole.EMPLOYER),
-        hasCheckedCareerTest,
-        pathname: location.pathname
-      });
 
-      // Only show for job seekers (students or job seekers), not employers
-      if (!user || hasRole(UserRole.EMPLOYER)) {
-        console.log('❌ [Job Portal] Skipping career popup - user not eligible (no user or is employer)');
-        return;
-      }
 
-      if (hasCheckedCareerTest) {
-        console.log('❌ [Job Portal] Skipping career popup - already checked this session');
-        return;
-      }
-      
-      // Only show popup on home page
-      const homePages = ['/app', '/app/network', '/app/'];
-      const isHome = homePages.includes(location.pathname);
-      if (!isHome) {
-        console.log('❌ [Job Portal] Skipping career popup - not on home page');
-        return;
-      }
-
-      // Skip career popup on certain pages
-      const skipPages = ['/app/career-guidance', '/login', '/register'];
-      if (skipPages.some(page => location.pathname.includes(page))) {
-        console.log('❌ [Job Portal] Skipping career popup - on excluded page');
-        setHasCheckedCareerTest(true);
-        return;
-      }
-
-      // Check if dismissed recently (within 2 hours only, not 24 hours)
-      const lastDismissed = localStorage.getItem('jobCareerPopupLastDismissed');
-      if (lastDismissed) {
-        const dismissedTime = new Date(lastDismissed).getTime();
-        const now = new Date().getTime();
-        const hoursSinceDismissed = (now - dismissedTime) / (1000 * 60 * 60);
-        
-        if (hoursSinceDismissed < 2) {
-          console.log('❌ [Job Portal] Skipping career popup - dismissed recently (within 2 hours)');
-          setHasCheckedCareerTest(true);
-          return;
-        }
-      }
-
-      try {
-        console.log('🔄 [Job Portal] Checking if user has completed career test...');
-        const hasCompletedTest = await careerGuidanceService.checkHasCompletedJobReadinessTest();
-        console.log('📊 [Job Portal] Career test completion status:', hasCompletedTest);
-        
-        if (!hasCompletedTest) {
-          console.log('✅ [Job Portal] User has not completed test - showing popup in 3 seconds');
-          setTimeout(() => {
-            console.log('🎯 [Job Portal] Showing career guidance popup!');
-            setShowCareerPopup(true);
-            setHasCheckedCareerTest(true);
-          }, 3000);
-        } else {
-          console.log('✅ [Job Portal] User has completed test - no popup needed');
-          setHasCheckedCareerTest(true);
-        }
-      } catch (error) {
-        console.error('❌ [Job Portal] Error checking job readiness test status:', error);
-        // For testing, show popup if there's an error (user likely hasn't completed test)
-        console.log('🔧 [Job Portal] Error occurred - showing popup as fallback');
-        setTimeout(() => {
-          setShowCareerPopup(true);
-          setHasCheckedCareerTest(true);
-        }, 3000);
-      }
-    };
-
-    // Only check after user is loaded and we're authenticated
-    if (user && !hasCheckedCareerTest) {
-      checkCareerTestStatus();
-    }
-  }, [user, location.pathname, hasCheckedCareerTest, hasRole]);
 
   // Load real-time notification and message counts
   useEffect(() => {
@@ -352,7 +260,7 @@ const MainLayout: React.FC = () => {
           },
           {
             label: 'Interview History',
-            path: '/app/interviews/history',
+            path: '/app/interviews/history', 
             icon: <History />,
           },
           {
@@ -522,17 +430,17 @@ const MainLayout: React.FC = () => {
     }
   };
 
-  const handleCareerPopupClose = () => {
-    setShowCareerPopup(false);
-    // Only set dismissal time, no session storage to allow showing on dashboard visits
-    localStorage.setItem('jobCareerPopupLastDismissed', new Date().toISOString());
-    console.log('🚫 [Job Portal] Career popup dismissed - will show again in 2 hours');
+  // Enhanced navigation function for Quick Actions using window.location
+  const handleQuickActionNavigation = (path: string) => {
+    if (path !== '#') {
+      window.location.href = path;
+      if (mobileOpen) {
+        setMobileOpen(false);
+      }
+    }
   };
 
-  const handleTakeJobReadinessTest = () => {
-    setShowCareerPopup(false);
-    navigate('/app/career-guidance');
-  };
+
 
   // Recursive function to render navigation items with nested submenus
   const renderNavItems = (items: NavItem[], level: number = 0) => {
@@ -1475,7 +1383,7 @@ const MainLayout: React.FC = () => {
 
         <MenuItem 
           onClick={() => {
-            handleNavigation('/app/career-guidance');
+            handleQuickActionNavigation('/app/career-guidance');
             setMobileMenuOpen(false);
           }}
           sx={{ 
@@ -1502,7 +1410,7 @@ const MainLayout: React.FC = () => {
         
         <MenuItem 
           onClick={() => {
-            handleNavigation('/app/jobs');
+            handleQuickActionNavigation('/app/jobs');
             setMobileMenuOpen(false);
           }}
           sx={{ 
@@ -1531,7 +1439,7 @@ const MainLayout: React.FC = () => {
         
         <MenuItem 
           onClick={() => {
-            handleNavigation('/app/network');
+            handleQuickActionNavigation('/app/network');
             setMobileMenuOpen(false);
           }}
           sx={{ 
@@ -1734,15 +1642,7 @@ const MainLayout: React.FC = () => {
         />
       </Box>
 
-      {/* Career Guidance Popup - Available for job seekers */}
-      {user && !hasRole(UserRole.EMPLOYER) && (
-        <CareerGuidancePopup
-          open={showCareerPopup}
-          onClose={handleCareerPopupClose}
-          onTakeJobReadinessTest={handleTakeJobReadinessTest}
-          userFirstName={user?.firstName}
-        />
-      )}
+
     </Box>
   );
 };

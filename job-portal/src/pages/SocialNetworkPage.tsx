@@ -734,7 +734,7 @@ const SocialNetworkPage: React.FC = () => {
                             transform: { xs: 'translate(15px, -15px)', sm: 'translate(20px, -20px)', md: isTablet ? 'translate(15px, -15px)' : 'translate(20px, -20px)' },
                           },
                         }}
-                        onClick={() => navigate(action.path)}
+                        onClick={() => window.location.href = action.path}
                       >
                         <CardContent sx={{ 
                           p: { xs: 1.5, sm: 2.5, md: isTablet ? 2 : 3 }, 

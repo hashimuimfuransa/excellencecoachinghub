@@ -123,7 +123,8 @@ export function validateProfileSimple(user: User): SimpleProfileValidationResult
       psychometricAccess = completionPercentage >= 40;
       aiInterviewAccess = completionPercentage >= 60 && hasFieldValue(user, 'resume');
       premiumJobAccess = completionPercentage >= 80;
-      smartTestAccess = completionPercentage >= 65 && hasFieldValue(user, 'skills') && hasFieldValue(user, 'jobTitle');
+      // Smart tests: Allow access if profile is 75% or above, OR if 65%+ with required fields
+      smartTestAccess = completionPercentage >= 75 || (completionPercentage >= 65 && hasFieldValue(user, 'skills') && hasFieldValue(user, 'jobTitle'));
     } catch (accessError) {
       console.warn('Error calculating feature access:', accessError);
     }

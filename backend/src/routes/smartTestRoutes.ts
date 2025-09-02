@@ -3,7 +3,11 @@ import { auth } from '../middleware/auth';
 import { authorizeRoles } from '../middleware/roleAuth';
 import {
   generateSmartTest,
+  generateFreeSmartTest,
+  generatePremiumSmartTest,
+  checkFreeTestStatus,
   getUserSmartTests,
+  debugUserTests,
   getSmartTestById,
   startSmartTest,
   submitSmartTest,
@@ -25,6 +29,18 @@ router.use(auth);
 
 // Generate smart test for job preparation
 router.post('/generate', generateSmartTest);
+
+// Generate free smart test (one-time only)
+router.post('/generate-free', generateFreeSmartTest);
+
+// Generate premium smart test (requires payment)
+router.post('/generate-premium', generatePremiumSmartTest);
+
+// Check free test status
+router.get('/free-test-status', checkFreeTestStatus);
+
+// Debug endpoint to check all user tests
+router.get('/debug-user-tests', debugUserTests);
 
 // Get user's smart tests
 router.get('/user', getUserSmartTests);

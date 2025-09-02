@@ -140,12 +140,15 @@ router.get('/check-status/:jobId', protect, async (req, res) => {
 // Get all payment requests (Admin only)
 router.get('/', protect, authorize(UserRole.ADMIN, UserRole.SUPER_ADMIN), async (req, res) => {
   try {
-    const { status, page = 1, limit = 20 } = req.query;
+    const { status, testType, page = 1, limit = 20 } = req.query;
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
 
-    let query = {};
+    let query: any = {};
     if (status) {
-      query = { status };
+      query.status = status;
+    }
+    if (testType) {
+      query.testType = testType;
     }
 
     const paymentRequests = await PaymentRequest.find(query)

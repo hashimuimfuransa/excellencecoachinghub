@@ -8,7 +8,7 @@ export interface PaymentRequest {
   jobId: string;
   jobTitle: string;
   company: string;
-  testType: string;
+  testType: 'psychometric' | 'smart_test';
   questionCount: number;
   estimatedDuration: number;
   requestedAt: string;
@@ -57,14 +57,14 @@ class PaymentRequestService {
     }
   }
 
-  // Check if user has approved payment for a specific job
-  async checkPaymentStatus(jobId: string): Promise<{
+  // Check if user has approved payment for a specific job and test type
+  async checkPaymentStatus(jobId: string, testType: 'psychometric' | 'smart_test' = 'psychometric'): Promise<{
     hasApprovedPayment: boolean;
     canTakeTest: boolean;
     paymentRequest?: PaymentRequest;
   }> {
     try {
-      const response = await apiGet(`/payment-requests/check-status/${jobId}`);
+      const response = await apiGet(`/payment-requests/check-status/${jobId}?testType=${testType}`);
       return handleApiResponse(response);
     } catch (error: any) {
       console.error('Error checking payment status:', error);
@@ -73,6 +73,15 @@ class PaymentRequestService {
         canTakeTest: false
       };
     }
+  }
+
+  // Check if user has approved smart test payment for a specific job
+  async checkSmartTestPaymentStatus(jobId: string): Promise<{
+    hasApprovedPayment: boolean;
+    canTakeTest: boolean;
+    paymentRequest?: PaymentRequest;
+  }> {
+    return this.checkPaymentStatus(jobId, 'smart_test');
   }
 
   // Get pending payment requests count (for admin notifications)

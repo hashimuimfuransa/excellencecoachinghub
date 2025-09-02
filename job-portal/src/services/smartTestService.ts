@@ -67,10 +67,37 @@ interface GenerateSmartTestRequest {
   jobId: string;
   difficulty: 'basic' | 'intermediate' | 'advanced';
   questionCount: number;
+  testType?: 'free' | 'premium';
 }
 
 class SmartTestService {
-  // Generate a new smart test for a specific job
+  // Generate a free smart test (one-time only)
+  async generateFreeSmartTest(request: Omit<GenerateSmartTestRequest, 'testType'>): Promise<SmartTest> {
+    const response = await apiPost<any>('/smart-tests/generate-free', { ...request, testType: 'free' });
+    return handleApiResponse(response);
+  }
+
+  // Generate a premium smart test (requires payment approval)
+  async generatePremiumSmartTest(request: Omit<GenerateSmartTestRequest, 'testType'>): Promise<SmartTest> {
+    const response = await apiPost<any>('/smart-tests/generate-premium', { ...request, testType: 'premium' });
+    return handleApiResponse(response);
+  }
+
+  // Check if user has used their free test
+  async checkFreeTestStatus(): Promise<{ 
+    hasUsedFreeTest: boolean; 
+    canUseFreeTest: boolean;
+    permanentlyLocked: boolean;
+    freeTestId: string | null;
+    usedAt: string | null;
+    permanentLockDate: string | null;
+    message: string;
+  }> {
+    const response = await apiGet<any>('/smart-tests/free-test-status');
+    return handleApiResponse(response);
+  }
+
+  // Generate a new smart test for a specific job (legacy method)
   async generateSmartTest(request: GenerateSmartTestRequest): Promise<SmartTest> {
     const response = await apiPost<any>('/smart-tests/generate', request);
     return handleApiResponse(response);

@@ -729,7 +729,7 @@ const ImprovedTestTaking: React.FC = () => {
 
                 {/* Answer options */}
                 <RadioGroup
-                  value={answers[currentQuestion]}
+                  value={answers[currentQuestion] !== undefined ? answers[currentQuestion] : ''}
                   onChange={(e) => handleAnswerSelect(parseInt(e.target.value))}
                 >
                   <Stack spacing={2}>

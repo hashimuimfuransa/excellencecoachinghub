@@ -155,7 +155,7 @@ const TakeSmartTestPage: React.FC = () => {
     return (
       <FormControl component="fieldset" fullWidth>
         <RadioGroup
-          value={answers[question.id] || ''}
+          value={answers[question.id] !== undefined ? answers[question.id] : ''}
           onChange={(e) => handleAnswerChange(question.id, parseInt(e.target.value))}
         >
           {question.options.map((option, index) => (
@@ -258,8 +258,8 @@ const TakeSmartTestPage: React.FC = () => {
     if (answer === undefined || answer === null) return false;
     // For text answers, check if it's not empty
     if (typeof answer === 'string') return answer.trim().length > 0;
-    // For multiple choice, check if it's a valid number
-    return answer !== '';
+    // For multiple choice, check if it's a valid number (including 0)
+    return typeof answer === 'number' && answer >= 0;
   };
 
   const getAnsweredQuestionsCount = () => {

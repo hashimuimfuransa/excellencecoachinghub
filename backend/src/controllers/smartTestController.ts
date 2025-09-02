@@ -61,21 +61,26 @@ export const generateSmartTest = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if user already has an active smart test for this job
+    // Check if user already has an active smart test for this job with same type
+    const testType = req.body.testType || 'free';
     const existingTest = await SmartTest.findOne({
       userId,
       jobId,
       difficulty,
+      testType,
       isActive: true
     });
 
     if (existingTest) {
+      console.log(`⚠️ Found existing ${testType} test for job ${jobId} with difficulty ${difficulty}`);
       return res.status(200).json({
         success: true,
         data: existingTest,
-        message: 'Smart test already exists for this job and difficulty level'
+        message: `Smart test already exists for this job and difficulty level (${testType})`
       });
     }
+
+    console.log(`✅ No existing ${testType} test found for job ${jobId} - proceeding with generation`);
 
     // Generate test using AI service
     const prompt = `Create a job preparation test for the role of ${job.title} at ${job.company}. The test should simulate the type of questions an applicant may encounter in real pre-employment or screening tests for this role.
@@ -174,7 +179,8 @@ Return the response in JSON format with the following structure:
       userId,
       questionsCount: testData.questions.length,
       timeLimit,
-      difficulty
+      difficulty,
+      testType
     });
 
     const smartTest = await SmartTest.create({
@@ -215,12 +221,19 @@ Return the response in JSON format with the following structure:
       industry: job.industry,
       jobRole: job.title,
       skillsRequired: job.skills || [],
+      testType, // Use the testType variable we defined earlier
       isActive: true
     });
 
-    console.log('✅ Smart test created successfully:', smartTest._id);
+    console.log('✅ Smart test created successfully:', {
+      id: smartTest._id,
+      testId: smartTest.testId,
+      testType: smartTest.testType,
+      userId: smartTest.userId,
+      jobId: smartTest.jobId
+    });
 
-    console.log(`✅ Smart test generated for ${job.title} - ${testData.questions.length} questions`);
+    console.log(`✅ Smart test generated for ${job.title} - ${testData.questions.length} questions - Type: ${smartTest.testType}`);
 
     res.status(201).json({
       success: true,
@@ -256,6 +269,305 @@ Return the response in JSON format with the following structure:
 };
 
 /**
+ * @desc Generate a free smart test (one-time only per user)
+ * @route POST /api/smart-tests/generate-free
+ * @access Private
+ */
+export const generateFreeSmartTest = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    console.log(`🔒 Checking free test eligibility for user: ${userId}`);
+
+    // Import FreeTestUsage model for permanent tracking
+    const { FreeTestUsage } = await import('../models/FreeTestUsage');
+
+    // Check if user has already used their free smart test (PERMANENT CHECK)
+    const existingFreeTestUsage = await FreeTestUsage.findOne({
+      userId,
+      testType: 'smart_test'
+    });
+
+    if (existingFreeTestUsage) {
+      console.log(`❌ User ${userId} has already used their free smart test - PERMANENTLY LOCKED`);
+      console.log(`   Used at: ${existingFreeTestUsage.usedAt}`);
+      console.log(`   Test ID: ${existingFreeTestUsage.testId}`);
+      
+      return res.status(400).json({
+        success: false,
+        error: 'You have already used your one-time free smart test. This limitation is PERMANENT and cannot be reset. Please upgrade to premium for more tests.',
+        code: 'FREE_TEST_ALREADY_USED',
+        data: { 
+          hasUsedFreeTest: true,
+          permanentlyLocked: true,
+          permanentLockDate: existingFreeTestUsage.usedAt,
+          freeTestId: existingFreeTestUsage.testId,
+          usedAt: existingFreeTestUsage.createdAt
+        }
+      });
+    }
+
+    console.log(`✅ User ${userId} is eligible for free test - generating now`);
+
+    // Add testType: 'free' to the request
+    req.body.testType = 'free';
+
+    // Store original response methods to intercept success
+    const originalJson = res.json.bind(res);
+    let testGenerated = false;
+    
+    // Override res.json to capture successful test generation
+    res.json = function(data: any) {
+      if (data?.success && data?.data?._id) {
+        testGenerated = true;
+        const testId = data.data.testId || data.data._id;
+        
+        // Record the free test usage permanently (non-blocking)
+        FreeTestUsage.create({
+          userId,
+          testType: 'smart_test',
+          testId,
+          usedAt: new Date(),
+          permanentLock: true
+        }).then(() => {
+          console.log(`🔒 PERMANENTLY LOCKED: Free smart test usage recorded for user ${userId} with testId: ${testId}`);
+        }).catch((trackingError) => {
+          console.error('Error tracking free test usage (test was generated but tracking failed):', trackingError);
+        });
+      }
+      return originalJson(data);
+    };
+
+    // Call the regular generate function with the free test flag
+    return generateSmartTest(req, res);
+  } catch (error: any) {
+    console.error('Error generating free smart test:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate free smart test'
+    });
+  }
+};
+
+/**
+ * @desc Generate a premium smart test (requires payment)
+ * @route POST /api/smart-tests/generate-premium
+ * @access Private
+ */
+export const generatePremiumSmartTest = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const { jobId } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    if (!jobId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Job ID is required'
+      });
+    }
+
+    console.log(`🔐 Checking payment approval for premium smart test - User: ${userId}, Job: ${jobId}`);
+
+    // Import PaymentRequest model at the top of the function to avoid circular dependencies
+    const PaymentRequest = (await import('../models/PaymentRequest')).default;
+
+    // Check if user has approved payment request for this job and smart test
+    const approvedPaymentRequest = await PaymentRequest.findOne({
+      userId,
+      jobId,
+      testType: 'smart_test',
+      status: 'approved'
+    });
+
+    if (!approvedPaymentRequest) {
+      console.log(`❌ No approved payment request found for user ${userId} and job ${jobId}`);
+      return res.status(402).json({
+        success: false,
+        error: 'Payment approval required for premium smart test. Please submit a payment request first.',
+        code: 'PAYMENT_APPROVAL_REQUIRED',
+        data: {
+          requiresPayment: true,
+          jobId,
+          testType: 'smart_test',
+          message: 'You need to submit and get approval for a payment request before generating a premium smart test.'
+        }
+      });
+    }
+
+    // Check if this payment request has already been used for a test
+    const existingTest = await SmartTest.findOne({
+      userId,
+      jobId,
+      testType: 'premium'
+    });
+
+    if (existingTest) {
+      console.log(`⚠️ Premium smart test already exists for this job - User: ${userId}, Job: ${jobId}`);
+      return res.status(400).json({
+        success: false,
+        error: 'You have already generated a premium smart test for this job.',
+        code: 'TEST_ALREADY_EXISTS',
+        data: {
+          existingTestId: existingTest.testId,
+          testCreatedAt: existingTest.createdAt
+        }
+      });
+    }
+
+    console.log(`✅ Payment approved - generating premium smart test for user ${userId}`);
+
+    // Add testType: 'premium' to the request
+    req.body.testType = 'premium';
+
+    // Mark the payment request as completed
+    approvedPaymentRequest.status = 'completed';
+    approvedPaymentRequest.completedAt = new Date();
+    await approvedPaymentRequest.save();
+
+    // Call the regular generate function with the premium test flag
+    return generateSmartTest(req, res);
+  } catch (error: any) {
+    console.error('Error generating premium smart test:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate premium smart test'
+    });
+  }
+};
+
+/**
+ * @desc Debug endpoint to check all user tests in database
+ * @route GET /api/smart-tests/debug-user-tests
+ * @access Private
+ */
+export const debugUserTests = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    console.log(`🐛 DEBUG: Fetching ALL tests for user: ${userId}`);
+
+    // Get all tests (including inactive)
+    const allTests = await SmartTest.find({ userId })
+      .populate('jobId', 'title company industry location')
+      .sort({ createdAt: -1 });
+
+    console.log(`🐛 DEBUG: Found ${allTests.length} total tests for user ${userId}`);
+
+    const testDetails = allTests.map(test => ({
+      id: test._id,
+      testId: test.testId,
+      testType: test.testType,
+      title: test.title,
+      isActive: test.isActive,
+      createdAt: test.createdAt,
+      jobTitle: test.jobTitle,
+      company: test.company
+    }));
+
+    console.log(`🐛 DEBUG: Test details:`, testDetails);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        allTests: testDetails,
+        totalCount: allTests.length,
+        activeCount: allTests.filter(t => t.isActive).length,
+        premiumCount: allTests.filter(t => t.testType === 'premium').length,
+        freeCount: allTests.filter(t => t.testType === 'free').length
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in debug endpoint:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Debug endpoint failed'
+    });
+  }
+};
+
+/**
+ * @desc Check if user has used their free test
+ * @route GET /api/smart-tests/free-test-status
+ * @access Private
+ */
+export const checkFreeTestStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    console.log(`🔍 Checking free test status for user: ${userId}`);
+
+    // Import FreeTestUsage model for permanent tracking
+    const { FreeTestUsage } = await import('../models/FreeTestUsage');
+
+    // Check if user has already used their free smart test (PERMANENT CHECK)
+    const existingFreeTestUsage = await FreeTestUsage.findOne({
+      userId,
+      testType: 'smart_test'
+    });
+
+    const hasUsedFreeTest = !!existingFreeTestUsage;
+    const canUseFreeTest = !hasUsedFreeTest;
+
+    console.log(`📊 Free test status for user ${userId}: hasUsed=${hasUsedFreeTest}, canUse=${canUseFreeTest}`);
+    
+    if (existingFreeTestUsage) {
+      console.log(`   🔒 PERMANENTLY LOCKED since: ${existingFreeTestUsage.usedAt}`);
+      console.log(`   🏷️ Test ID: ${existingFreeTestUsage.testId}`);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        hasUsedFreeTest,
+        canUseFreeTest,
+        permanentlyLocked: hasUsedFreeTest, // Once used, permanently locked
+        freeTestId: existingFreeTestUsage?.testId || null,
+        usedAt: existingFreeTestUsage?.usedAt || null,
+        permanentLockDate: existingFreeTestUsage?.usedAt || null,
+        message: hasUsedFreeTest 
+          ? `You have already used your one-time free smart test on ${existingFreeTestUsage?.usedAt ? new Date(existingFreeTestUsage.usedAt).toLocaleDateString() : 'a previous date'}. This limitation is PERMANENT and cannot be reset.`
+          : 'You can generate one free smart test.'
+      }
+    });
+  } catch (error: any) {
+    console.error('Error checking free test status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to check free test status'
+    });
+  }
+};
+
+/**
  * @desc Get user's smart tests
  * @route GET /api/smart-tests/user
  * @access Private
@@ -271,9 +583,28 @@ export const getUserSmartTests = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    console.log(`📋 Fetching smart tests for user: ${userId}`);
+
     const smartTests = await SmartTest.find({ userId, isActive: true })
       .populate('jobId', 'title company industry location')
       .sort({ createdAt: -1 });
+
+    console.log(`📋 Found ${smartTests.length} smart tests:`, 
+      smartTests.map(test => ({
+        id: test._id,
+        testId: test.testId,
+        testType: test.testType,
+        title: test.title,
+        createdAt: test.createdAt
+      }))
+    );
+
+    // Add cache-control headers to prevent caching issues
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
 
     res.status(200).json({
       success: true,

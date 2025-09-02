@@ -34,7 +34,8 @@ import {
   Autocomplete,
   Stack,
   Tabs,
-  Tab
+  Tab,
+  Snackbar
 } from '@mui/material';
 import {
   School,
@@ -55,12 +56,22 @@ import {
   LocationOn,
   Business,
   Star,
-  Close
+  Close,
+  Payment,
+  Lock,
+  AdminPanelSettings,
+  ContactSupport,
+  Phone,
+  WhatsApp,
+  Email,
+  CardGiftcard,
+  Settings
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { jobService } from '../services/jobService';
 import { smartTestService } from '../services/smartTestService';
+import { paymentRequestService } from '../services/paymentRequestService';
 import SimpleProfileGuard from '../components/SimpleProfileGuard';
 
 interface Job {
@@ -136,12 +147,136 @@ const SmartTestPage: React.FC = () => {
   const [generatingTest, setGeneratingTest] = useState(false);
   const [showStartTestDialog, setShowStartTestDialog] = useState(false);
   const [generatedTestId, setGeneratedTestId] = useState<string | null>(null);
+  
+  // Payment and test type state
+  const [testType, setTestType] = useState<'free' | 'premium'>('free');
+  const [hasUsedFreeTest, setHasUsedFreeTest] = useState(false);
+  const [paymentRequestOpen, setPaymentRequestOpen] = useState(false);
+  const [paymentRequestSent, setPaymentRequestSent] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState<{[jobId: string]: string}>({});
+  const [approvedRequests, setApprovedRequests] = useState<{[jobId: string]: string}>({});
+  const [selectedJobForPayment, setSelectedJobForPayment] = useState<Job | null>(null);
+  const [showRequestNewAssessment, setShowRequestNewAssessment] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  
+  // Removed payment information dialog - now integrated into request dialog
 
   useEffect(() => {
+    // Check permanent lock first from localStorage before any API calls
+    const permanentLockCheck = () => {
+      const localFreeUsed = localStorage.getItem('smartTestFreeUsed');
+      const permanentLock = localStorage.getItem('smartTestFreePermanentLock');
+      if (localFreeUsed === 'true' && permanentLock === 'true') {
+        console.log('🔒 PERMANENT LOCK detected on page load - enforcing restriction');
+        setHasUsedFreeTest(true);
+        setTestType('premium');
+      }
+    };
+
+    // Run permanent lock check immediately
+    permanentLockCheck();
+    
     fetchJobs();
     fetchUserSmartTests();
     fetchAdminSmartTests();
+    checkFreeTestStatus();
+    checkPaymentRequestStatus();
   }, []);
+
+  // Check if user has used their free test
+  const checkFreeTestStatus = async () => {
+    try {
+      const status = await smartTestService.checkFreeTestStatus();
+      console.log('🔍 Free test status:', status);
+      
+      setHasUsedFreeTest(status.hasUsedFreeTest);
+      
+      // Set default test type to premium if user has used free test
+      if (status.hasUsedFreeTest) {
+        console.log('🔒 User has PERMANENTLY used free test - forever locked, defaulting to premium');
+        console.log('📅 Lock date:', status.permanentLockDate || status.usedAt);
+        setTestType('premium');
+        
+        // Store the PERMANENT lock state in localStorage as backup
+        localStorage.setItem('smartTestFreeUsed', 'true');
+        localStorage.setItem('smartTestFreePermanentLock', 'true');
+        if (status.permanentLockDate || status.usedAt) {
+          localStorage.setItem('smartTestFreeUsedAt', status.permanentLockDate || status.usedAt);
+        }
+      } else {
+        // Double-check localStorage as backup (permanent lock check)
+        const localFreeUsed = localStorage.getItem('smartTestFreeUsed');
+        const permanentLock = localStorage.getItem('smartTestFreePermanentLock');
+        if (localFreeUsed === 'true' && permanentLock === 'true') {
+          console.log('🔒 LocalStorage indicates PERMANENT free test lock - syncing state');
+          setHasUsedFreeTest(true);
+          setTestType('premium');
+        }
+      }
+    } catch (error) {
+      console.error('Error checking free test status:', error);
+      
+      // Check localStorage as fallback (permanent lock check)
+      const localFreeUsed = localStorage.getItem('smartTestFreeUsed');
+      const permanentLock = localStorage.getItem('smartTestFreePermanentLock');
+      if (localFreeUsed === 'true' && permanentLock === 'true') {
+        console.log('📱 Using localStorage fallback - PERMANENT free test lock detected');
+        setHasUsedFreeTest(true);
+        setTestType('premium');
+      }
+    }
+  };
+
+  // Check payment request status for smart tests
+  const checkPaymentRequestStatus = async () => {
+    if (!user) return;
+    
+    try {
+      const requests = await paymentRequestService.getUserPaymentRequests();
+      
+      const pending: {[jobId: string]: string} = {};
+      const approved: {[jobId: string]: string} = {};
+      
+      requests.forEach((request: any) => {
+        if (request.testType === 'smart_test') {
+          if (request.status === 'pending') {
+            pending[request.jobId] = request._id;
+          } else if (request.status === 'approved') {
+            approved[request.jobId] = request._id;
+          }
+        }
+      });
+      
+      setPendingRequests(pending);
+      setApprovedRequests(approved);
+      
+      // If there are approved requests, notify the user
+      if (Object.keys(approved).length > 0) {
+        console.log('🎉 Found approved payment requests:', approved);
+        setSnackbarMessage(`🎉 Great news! Your payment has been verified for ${Object.keys(approved).length} premium test request(s). You can now generate premium tests!`);
+        setSnackbarOpen(true);
+      }
+    } catch (error) {
+      console.error('Error checking smart test payment status:', error);
+    }
+  };
+
+  // Refresh payment status when generate dialog opens
+  useEffect(() => {
+    if (showGenerateDialog && user) {
+      console.log('🔄 Generate dialog opened - refreshing payment status');
+      checkPaymentRequestStatus();
+    }
+  }, [showGenerateDialog, user]);
+
+  // Ensure premium tests have at least 20 questions
+  useEffect(() => {
+    if (testType === 'premium' && questionCount < 20) {
+      console.log('🔧 Premium test selected - ensuring minimum 20 questions');
+      setQuestionCount(20);
+    }
+  }, [testType, questionCount]);
 
   // Filter jobs based on search and filters
   useEffect(() => {
@@ -242,6 +377,34 @@ const SmartTestPage: React.FC = () => {
       return;
     }
 
+    console.log('🎯 handleGenerateTest called:', {
+      jobId: selectedJob._id,
+      jobTitle: selectedJob.title,
+      testType,
+      hasUsedFreeTest,
+      approvedRequests,
+      hasApprovedRequest: approvedRequests[selectedJob._id],
+      pendingRequests,
+      hasPendingRequest: pendingRequests[selectedJob._id]
+    });
+
+    if (testType === 'free') {
+      // Handle free test generation
+      await generateFreeTest();
+    } else {
+      // Handle premium test generation
+      await generatePremiumTest();
+    }
+  };
+
+  const generateFreeTest = async () => {
+    if (!selectedJob) return;
+
+    if (hasUsedFreeTest) {
+      setError('You have already used your one-time free smart test. Please request premium test approval.');
+      return;
+    }
+
     try {
       setGeneratingTest(true);
       setError(null);
@@ -249,14 +412,24 @@ const SmartTestPage: React.FC = () => {
       const testData = {
         jobId: selectedJob._id,
         difficulty: 'intermediate' as 'basic' | 'intermediate' | 'advanced',
-        questionCount
+        questionCount: 10, // Free test has 10 questions
       };
 
-      console.log('Generating smart test with data:', testData);
+      console.log('Generating free smart test with data:', testData);
       
-      const result = await smartTestService.generateSmartTest(testData);
-      console.log('Smart test generated:', result);
+      const result = await smartTestService.generateFreeSmartTest(testData);
+      console.log('✅ Free smart test generated successfully:', result);
 
+      // IMMEDIATELY set permanent lock status
+      console.log('🔒 Setting PERMANENT free test lock - cannot be reversed');
+      setHasUsedFreeTest(true);
+      setTestType('premium'); // Force switch to premium for future tests
+      
+      // Store PERMANENT lock in localStorage immediately
+      localStorage.setItem('smartTestFreeUsed', 'true');
+      localStorage.setItem('smartTestFreePermanentLock', 'true');
+      localStorage.setItem('smartTestFreeUsedAt', new Date().toISOString());
+      
       // Refresh user tests
       await fetchUserSmartTests();
 
@@ -269,10 +442,83 @@ const SmartTestPage: React.FC = () => {
       setShowStartTestDialog(true);
 
     } catch (error: any) {
-      console.error('Error generating test:', error);
-      setError(error.response?.data?.error || 'Failed to generate test');
+      console.error('❌ Error generating free test:', error);
+      
+      // Handle the permanent free test lock
+      if (error.response?.data?.code === 'FREE_TEST_ALREADY_USED' || 
+          error.response?.data?.error?.includes('already used your one-time free test') ||
+          error.message?.includes('FREE_TEST_ALREADY_USED') || 
+          error.message?.includes('already used your one-time free test')) {
+        
+        console.log('🔒 Free test PERMANENTLY locked for this user - cannot be reset');
+        setError('You have already used your one-time free smart test. This limitation is PERMANENT and cannot be reset. Please request premium test approval.');
+        setHasUsedFreeTest(true);
+        setTestType('premium'); // Force switch to premium
+        
+        // Store the PERMANENT lock state in localStorage
+        localStorage.setItem('smartTestFreeUsed', 'true');
+        localStorage.setItem('smartTestFreePermanentLock', 'true');
+        localStorage.setItem('smartTestFreeUsedAt', new Date().toISOString());
+        
+      } else {
+        setError(error.response?.data?.error || error.message || 'Failed to generate free test');
+      }
     } finally {
       setGeneratingTest(false);
+    }
+  };
+
+  const generatePremiumTest = async () => {
+    if (!selectedJob) return;
+
+    console.log('🔐 Premium test requested - checking payment approval status');
+
+    // Check if payment has been approved for this job
+    const hasApprovedPayment = approvedRequests[selectedJob._id];
+    
+    if (hasApprovedPayment) {
+      console.log('✅ Payment already approved - generating premium test directly');
+      
+      // Generate the premium test directly since payment is approved
+      try {
+        setGeneratingTest(true);
+        setError(null);
+
+        const testData = {
+          jobId: selectedJob._id,
+          difficulty: 'intermediate' as 'basic' | 'intermediate' | 'advanced',
+          questionCount: Math.max(questionCount, 20) // Ensure premium tests have at least 20 questions
+        };
+
+        console.log('Attempting to generate premium smart test with data:', testData);
+        
+        const result = await smartTestService.generatePremiumSmartTest(testData);
+        console.log('✅ Premium smart test generated successfully:', result);
+
+        // Refresh user tests
+        await fetchUserSmartTests();
+
+        // Close dialog and show success
+        setShowGenerateDialog(false);
+        clearFilters();
+        
+        // Show success message and option to start test immediately
+        setGeneratedTestId(result.testId);
+        setShowStartTestDialog(true);
+
+      } catch (error: any) {
+        console.error('❌ Error generating premium test:', error);
+        setError(error.response?.data?.error || error.message || 'Failed to generate premium test');
+      } finally {
+        setGeneratingTest(false);
+      }
+    } else {
+      console.log('❌ Payment not approved - showing payment request dialog');
+      
+      // Show payment request dialog for payment and request submission
+      setSelectedJobForPayment(selectedJob);
+      setShowGenerateDialog(false);
+      setPaymentRequestOpen(true);
     }
   };
 
@@ -306,6 +552,47 @@ const SmartTestPage: React.FC = () => {
     setShowStartTestDialog(false);
     setGeneratedTestId(null);
     // Tests are already refreshed, so user will see the new test in the list
+  };
+
+  // Payment request functions
+  const handleCreatePaymentRequest = async () => {
+    if (!selectedJobForPayment || !user) return;
+
+    try {
+      const requestData = {
+        userId: user._id,
+        userEmail: user.email,
+        userName: `${user.firstName} ${user.lastName}`,
+        jobId: selectedJobForPayment._id,
+        jobTitle: selectedJobForPayment.title,
+        company: selectedJobForPayment.company,
+        testType: 'smart_test' as const,
+        questionCount,
+        estimatedDuration: questionCount * 2, // Estimate 2 minutes per question
+        requestedAt: new Date().toISOString(),
+        status: 'pending' as const
+      };
+
+      await paymentRequestService.createPaymentRequest(requestData);
+      
+      setPaymentRequestSent(true);
+      setPaymentRequestOpen(false);
+      setSnackbarMessage('Premium test access request submitted successfully! You will be notified when approved.');
+      setSnackbarOpen(true);
+      
+      // Refresh payment status
+      setTimeout(() => {
+        checkPaymentRequestStatus();
+      }, 1000);
+
+    } catch (error: any) {
+      console.error('Error creating payment request:', error);
+      setError(error.message || 'Failed to create payment request');
+    }
+  };
+
+  const handleRequestNewAssessment = () => {
+    setShowRequestNewAssessment(true);
   };
 
   const getDifficultyColor = (level: string) => {
@@ -359,6 +646,40 @@ const SmartTestPage: React.FC = () => {
         </Alert>
       </Box>
 
+      {/* Main CTA Button */}
+      <Box textAlign="center" mb={4}>
+        <Button
+          variant="contained"
+          size="large"
+          onClick={() => setShowGenerateDialog(true)}
+          startIcon={hasUsedFreeTest ? <Payment /> : <CardGiftcard />}
+          sx={{ 
+            py: 2, 
+            px: 6, 
+            fontSize: '1.1rem',
+            fontWeight: 'bold',
+            background: hasUsedFreeTest 
+              ? `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`
+              : `linear-gradient(135deg, ${theme.palette.success.main} 0%, ${theme.palette.success.dark} 100%)`,
+            boxShadow: 3,
+            '&:hover': {
+              boxShadow: 6,
+              transform: 'translateY(-2px)'
+            },
+            transition: 'all 0.3s ease'
+          }}
+        >
+          {hasUsedFreeTest 
+            ? 'Generate Premium Test' 
+            : 'Generate Your Free Test'}
+        </Button>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          {hasUsedFreeTest 
+            ? 'Premium tests require approval - request access for unlimited testing'
+            : 'Get your one-time free 10-question smart test tailored to any job position'}
+        </Typography>
+      </Box>
+
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
           {error}
@@ -386,55 +707,153 @@ const SmartTestPage: React.FC = () => {
       {/* Tab Content */}
       {tabValue === 0 && (
         <>
-          {/* Action Buttons */}
-      <Grid container spacing={3} mb={4}>
-        <Grid item xs={12} md={6}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent sx={{ textAlign: 'center', py: 4 }}>
-              <Build sx={{ fontSize: 48, color: theme.palette.primary.main, mb: 2 }} />
-              <Typography variant="h6" gutterBottom>
-                Generate New Test
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                Create a personalized preparation test for any job position
-              </Typography>
-              <Button 
-                variant="contained" 
-                size="large" 
-                onClick={() => setShowGenerateDialog(true)}
-                disabled={jobs.length === 0}
-                startIcon={<Build />}
-                sx={{ mt: 2 }}
-              >
-                Generate Smart Test
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
+          {/* Test Status Overview */}
+          <Grid container spacing={3} mb={4}>
+            <Grid item xs={12} md={4}>
+              <Card sx={{ 
+                height: '100%',
+                background: hasUsedFreeTest 
+                  ? `linear-gradient(135deg, ${theme.palette.grey[100]} 0%, ${theme.palette.grey[200]} 100%)`
+                  : `linear-gradient(135deg, ${theme.palette.success.light} 0%, ${theme.palette.success.main} 100%)`,
+                color: hasUsedFreeTest ? theme.palette.text.primary : theme.palette.success.contrastText
+              }}>
+                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                  <CardGiftcard sx={{ fontSize: 40, mb: 2, opacity: hasUsedFreeTest ? 0.5 : 1 }} />
+                  <Typography variant="h6" gutterBottom>
+                    Free Test Status
+                  </Typography>
+                  <Typography variant="body2" paragraph>
+                    {hasUsedFreeTest ? 'Used - One-time free test completed' : 'Available - Generate your free 10-question test'}
+                  </Typography>
+                  <Chip 
+                    label={hasUsedFreeTest ? 'Used' : 'Available'}
+                    color={hasUsedFreeTest ? 'default' : 'success'}
+                    variant={hasUsedFreeTest ? 'outlined' : 'filled'}
+                    sx={{ 
+                      color: hasUsedFreeTest ? theme.palette.text.primary : theme.palette.success.contrastText,
+                      borderColor: hasUsedFreeTest ? theme.palette.text.primary : theme.palette.success.contrastText
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            </Grid>
 
-        <Grid item xs={12} md={6}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent sx={{ textAlign: 'center', py: 4 }}>
-              <Assessment sx={{ fontSize: 48, color: theme.palette.secondary.main, mb: 2 }} />
-              <Typography variant="h6" gutterBottom>
-                View Results
-              </Typography>
-              <Typography variant="body2" color="text.secondary" paragraph>
-                Review your performance and get insights
-              </Typography>
-              <Button 
-                variant="outlined" 
-                size="large" 
-                onClick={() => navigate('/app/smart-test-results')}
-                startIcon={<TrendingUp />}
-                sx={{ mt: 2 }}
-              >
-                View Results
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+            <Grid item xs={12} md={4}>
+              <Card sx={{ height: '100%' }}>
+                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                  <Payment sx={{ fontSize: 40, color: theme.palette.primary.main, mb: 2 }} />
+                  <Typography variant="h6" gutterBottom>
+                    Premium Test Requests
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    Track your premium test access requests
+                  </Typography>
+                  <Box display="flex" justifyContent="center" gap={1}>
+                    <Chip 
+                      label={`${Object.keys(pendingRequests).length} Pending`}
+                      color="warning"
+                      variant="outlined"
+                      size="small"
+                    />
+                    <Chip 
+                      label={`${Object.keys(approvedRequests).length} Approved`}
+                      color="success"
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <Card sx={{ height: '100%' }}>
+                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                  <Build sx={{ fontSize: 40, color: theme.palette.secondary.main, mb: 2 }} />
+                  <Typography variant="h6" gutterBottom>
+                    Generate New Test
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    Create personalized job preparation tests
+                  </Typography>
+                  <Button 
+                    variant="contained" 
+                    size="medium"
+                    onClick={() => setShowGenerateDialog(true)}
+                    startIcon={<Build />}
+                    fullWidth
+                    sx={{
+                      backgroundColor: jobs.length === 0 ? theme.palette.warning.main : theme.palette.primary.main,
+                      '&:hover': {
+                        backgroundColor: jobs.length === 0 ? theme.palette.warning.dark : theme.palette.primary.dark,
+                      }
+                    }}
+                  >
+                    {jobs.length === 0 ? 'Setup Required' : 'Generate Test'}
+                  </Button>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+
+          {/* Action Buttons */}
+          <Grid container spacing={3} mb={4}>
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent sx={{ textAlign: 'center', py: 4 }}>
+                  <Assessment sx={{ fontSize: 48, color: theme.palette.primary.main, mb: 2 }} />
+                  <Typography variant="h6" gutterBottom>
+                    View Test Results
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    Review your performance and get detailed insights
+                  </Typography>
+                  <Button 
+                    variant="outlined" 
+                    size="large" 
+                    onClick={() => navigate('/app/smart-test-results')}
+                    startIcon={<TrendingUp />}
+                    sx={{ mt: 2 }}
+                  >
+                    View Results
+                  </Button>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent sx={{ textAlign: 'center', py: 4 }}>
+                  <ContactSupport sx={{ fontSize: 48, color: theme.palette.info.main, mb: 2 }} />
+                  <Typography variant="h6" gutterBottom>
+                    Need Help?
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    Contact support for assistance with tests or premium access
+                  </Typography>
+                  <Stack direction="row" spacing={1} justifyContent="center" mt={2}>
+                    <Button
+                      size="small"
+                      startIcon={<WhatsApp />}
+                      href="https://wa.me/250788551906"
+                      target="_blank"
+                      color="success"
+                    >
+                      WhatsApp
+                    </Button>
+                    <Button
+                      size="small"
+                      startIcon={<Email />}
+                      href="mailto:support@excellencecoaching.rw"
+                      target="_blank"
+                    >
+                      Email
+                    </Button>
+                  </Stack>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
 
       {/* My Smart Tests */}
       <Box mb={4}>
@@ -460,15 +879,39 @@ const SmartTestPage: React.FC = () => {
                 No Smart Tests Generated Yet
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph>
-                Generate your first smart test to start preparing for job interviews
+                {hasUsedFreeTest 
+                  ? 'You have used your free test. Request premium access to generate more tests.'
+                  : 'Generate your first smart test to start preparing for job interviews'}
               </Typography>
-              <Button 
-                variant="contained" 
-                onClick={() => setShowGenerateDialog(true)}
-                disabled={jobs.length === 0}
-              >
-                Generate Your First Test
-              </Button>
+              
+              {hasUsedFreeTest ? (
+                <Box>
+                  <Button 
+                    variant="contained" 
+                    onClick={handleRequestNewAssessment}
+                    startIcon={<Payment />}
+                    sx={{ mr: 2 }}
+                  >
+                    Request Premium Access
+                  </Button>
+                  <Button 
+                    variant="outlined"
+                    onClick={() => setShowGenerateDialog(true)}
+                    startIcon={<Build />}
+                  >
+                    Try Generate Test
+                  </Button>
+                </Box>
+              ) : (
+                <Button 
+                  variant="contained" 
+                  onClick={() => setShowGenerateDialog(true)}
+                  disabled={jobs.length === 0}
+                  startIcon={<CardGiftcard />}
+                >
+                  Generate Free Test
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -803,11 +1246,41 @@ const SmartTestPage: React.FC = () => {
               </Typography>
               
               <Box sx={{ maxHeight: 300, overflow: 'auto', border: 1, borderColor: 'divider', borderRadius: 1 }}>
-                {filteredJobs.length === 0 ? (
+                {jobs.length === 0 ? (
+                  <Box p={4} textAlign="center">
+                    <Work sx={{ fontSize: 48, color: theme.palette.warning.main, mb: 2 }} />
+                    <Typography variant="h6" color="text.primary" gutterBottom>
+                      No Jobs Available
+                    </Typography>
+                    <Typography color="text.secondary" paragraph>
+                      Jobs are still loading or there may be no jobs posted yet. You can still create a custom test by providing job details manually.
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      startIcon={<Add />}
+                      onClick={() => {
+                        // For now, we'll create a placeholder job
+                        const customJob = {
+                          _id: 'custom-job',
+                          title: 'Custom Job Position',
+                          company: 'Your Target Company',
+                          location: 'Any Location',
+                          industry: 'General',
+                          experienceLevel: 'Any Level',
+                          skillsRequired: [],
+                          description: 'Custom job position for test generation'
+                        };
+                        setSelectedJob(customJob as Job);
+                      }}
+                    >
+                      Create Custom Test
+                    </Button>
+                  </Box>
+                ) : filteredJobs.length === 0 ? (
                   <Box p={4} textAlign="center">
                     <Work sx={{ fontSize: 48, color: theme.palette.grey[400], mb: 2 }} />
                     <Typography color="text.secondary">
-                      No jobs found. Try adjusting your filters.
+                      No jobs found. Try adjusting your filters or create a custom test above.
                     </Typography>
                   </Box>
                 ) : (
@@ -873,9 +1346,38 @@ const SmartTestPage: React.FC = () => {
                           </Stack>
                         </Box>
                         
-                        {selectedJob?._id === job._id && (
-                          <CheckCircle sx={{ color: theme.palette.primary.contrastText }} />
-                        )}
+                        <Box display="flex" flexDirection="column" alignItems="center" gap={1}>
+                          {/* Show payment verified badge */}
+                          {approvedRequests[job._id] && (
+                            <Chip 
+                              label="Payment Verified!" 
+                              size="small" 
+                              color="success"
+                              variant="filled"
+                              icon={<CheckCircle />}
+                              sx={{ 
+                                fontSize: '0.7rem', 
+                                fontWeight: 'bold',
+                                animation: 'pulse 2s infinite'
+                              }}
+                            />
+                          )}
+                          
+                          {/* Show payment pending verification badge */}
+                          {pendingRequests[job._id] && !approvedRequests[job._id] && (
+                            <Chip 
+                              label="Payment Verification Pending" 
+                              size="small" 
+                              color="warning"
+                              variant="outlined"
+                              sx={{ fontSize: '0.7rem' }}
+                            />
+                          )}
+                          
+                          {selectedJob?._id === job._id && (
+                            <CheckCircle sx={{ color: theme.palette.primary.contrastText }} />
+                          )}
+                        </Box>
                       </Box>
                     </Box>
                   ))
@@ -885,14 +1387,16 @@ const SmartTestPage: React.FC = () => {
 
             {/* Selected Job Details */}
             {selectedJob && (
-              <Grid item xs={12}>
+              <Box sx={{ width: '100%', mb: 2 }}>
                 <Alert 
-                  severity="success" 
+                  severity={approvedRequests[selectedJob._id] ? "success" : pendingRequests[selectedJob._id] ? "warning" : "info"} 
                   variant="filled"
                 >
                   <Box>
                     <Typography variant="body1" fontWeight="medium" gutterBottom>
                       Selected: {selectedJob.title} at {selectedJob.company}
+                      {approvedRequests[selectedJob._id] && " 🎉 Payment Verified!"}
+                      {pendingRequests[selectedJob._id] && !approvedRequests[selectedJob._id] && " ⏳ Payment Pending"}
                     </Typography>
                     <Typography variant="body2">
                       <strong>Industry:</strong> {selectedJob.industry || 'Not specified'} •{' '}
@@ -904,9 +1408,19 @@ const SmartTestPage: React.FC = () => {
                         <strong>Skills to be tested:</strong> {selectedJob.skills.join(', ')}
                       </Typography>
                     )}
+                    {approvedRequests[selectedJob._id] && (
+                      <Typography variant="body2" sx={{ mt: 1, fontWeight: 'bold' }}>
+                        ✅ Payment verified! You can now generate premium tests for this job.
+                      </Typography>
+                    )}
+                    {pendingRequests[selectedJob._id] && !approvedRequests[selectedJob._id] && (
+                      <Typography variant="body2" sx={{ mt: 1, fontWeight: 'bold' }}>
+                        ⏳ Payment verification in progress. Please wait for approval.
+                      </Typography>
+                    )}
                   </Box>
                 </Alert>
-              </Grid>
+              </Box>
             )}
 
             {/* Test Configuration */}
@@ -916,30 +1430,159 @@ const SmartTestPage: React.FC = () => {
                   Test Configuration
                 </Typography>
                 
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>Number of Questions</InputLabel>
-                      <Select
-                        value={questionCount}
-                        onChange={(e) => setQuestionCount(Number(e.target.value))}
-                        label="Number of Questions"
-                      >
-                        <MenuItem value={15}>15 Questions (~20 min)</MenuItem>
-                        <MenuItem value={20}>20 Questions (~25 min)</MenuItem>
-                        <MenuItem value={25}>25 Questions (~35 min)</MenuItem>
-                        <MenuItem value={30}>30 Questions (~45 min)</MenuItem>
-                      </Select>
-                    </FormControl>
+                <Grid container spacing={3}>
+                  {/* Test Type Selection */}
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle1" gutterBottom fontWeight="medium">
+                      Choose Test Type
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={6}>
+                        <Card 
+                          variant={testType === 'free' ? 'filled' : 'outlined'}
+                          sx={{ 
+                            cursor: hasUsedFreeTest ? 'not-allowed' : 'pointer',
+                            opacity: hasUsedFreeTest ? 0.6 : 1,
+                            border: testType === 'free' ? 2 : 1,
+                            borderColor: testType === 'free' ? 'primary.main' : 'divider',
+                            '&:hover': hasUsedFreeTest ? {} : {
+                              borderColor: 'primary.main',
+                              boxShadow: 1
+                            }
+                          }}
+                          onClick={() => !hasUsedFreeTest && setTestType('free')}
+                        >
+                          <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                            <CardGiftcard sx={{ fontSize: 40, color: hasUsedFreeTest ? 'text.disabled' : 'success.main', mb: 1 }} />
+                            <Typography variant="h6" gutterBottom>
+                              Free Test {hasUsedFreeTest && '(Used)'}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" paragraph>
+                              One-time free smart test
+                            </Typography>
+                            <Typography variant="body2" fontWeight="medium">
+                              • 10 Questions
+                            </Typography>
+                            <Typography variant="body2" fontWeight="medium">
+                              • ~15 minutes
+                            </Typography>
+                            <Typography variant="body2" fontWeight="medium">
+                              • Basic insights
+                            </Typography>
+                            {hasUsedFreeTest && (
+                              <Alert severity="warning" sx={{ mt: 2 }}>
+                                <Typography variant="caption">
+                                  You have already used your free test
+                                </Typography>
+                              </Alert>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                      
+                      <Grid item xs={12} md={6}>
+                        <Card 
+                          variant={testType === 'premium' ? 'filled' : 'outlined'}
+                          sx={{ 
+                            cursor: 'pointer',
+                            border: testType === 'premium' ? 2 : 1,
+                            borderColor: testType === 'premium' ? 'primary.main' : 'divider',
+                            '&:hover': {
+                              borderColor: 'primary.main',
+                              boxShadow: 1
+                            }
+                          }}
+                          onClick={() => setTestType('premium')}
+                        >
+                          <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                            <Payment sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
+                            <Typography variant="h6" gutterBottom>
+                              Premium Test
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" paragraph>
+                              Full-featured smart test (requires admin approval)
+                            </Typography>
+                            <Typography variant="body2" fontWeight="medium">
+                              • Customizable questions (20-30)
+                            </Typography>
+                            <Typography variant="body2" fontWeight="medium">
+                              • Detailed analysis
+                            </Typography>
+                            <Typography variant="body2" fontWeight="medium">
+                              • Performance insights
+                            </Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    </Grid>
                   </Grid>
                   
-                  <Grid item xs={12} md={6}>
-                    <Alert severity="info">
-                      <Typography variant="body2">
-                        <strong>Standard Difficulty:</strong> Test will be automatically adjusted to match the job requirements and your profile.
-                      </Typography>
-                    </Alert>
-                  </Grid>
+                  {/* Question Count (only for premium tests) */}
+                  {testType === 'premium' && (
+                    <Grid item xs={12} md={6}>
+                      <FormControl fullWidth>
+                        <InputLabel>Number of Questions</InputLabel>
+                        <Select
+                          value={questionCount}
+                          onChange={(e) => setQuestionCount(Number(e.target.value))}
+                          label="Number of Questions"
+                        >
+                          <MenuItem value={20}>20 Questions (~40 min) - Recommended</MenuItem>
+                          <MenuItem value={25}>25 Questions (~50 min)</MenuItem>
+                          <MenuItem value={30}>30 Questions (~60 min)</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  )}
+                  
+                  {testType === 'premium' ? (
+                    <Grid item xs={12} md={6}>
+                      <Alert severity="info">
+                        <Typography variant="body2">
+                          <strong>Smart Difficulty:</strong> Test difficulty will be automatically adjusted based on the job requirements and your profile.
+                        </Typography>
+                      </Alert>
+                    </Grid>
+                  ) : (
+                    <Grid item xs={12}>
+                      <Alert severity="info">
+                        <Typography variant="body2">
+                          <strong>Smart Difficulty:</strong> Test difficulty will be automatically adjusted based on the job requirements and your profile.
+                        </Typography>
+                      </Alert>
+                    </Grid>
+                  )}
+                  
+                  {testType === 'free' && (
+                    <Grid item xs={12}>
+                      <Alert severity="info" icon={<CardGiftcard />}>
+                        <Typography variant="body2">
+                          <strong>Free Test Details:</strong> This is your one-time free smart test with 10 carefully selected questions (~15 minutes). 
+                          For more comprehensive testing, you can request premium test approval.
+                        </Typography>
+                      </Alert>
+                    </Grid>
+                  )}
+                  
+                  {testType === 'premium' && (
+                    <Grid item xs={12}>
+                      {selectedJob && approvedRequests[selectedJob._id] ? (
+                        <Alert severity="success" icon={<CheckCircle />}>
+                          <Typography variant="body2">
+                            <strong>Premium Test Approved:</strong> Your payment has been verified! 
+                            You can now generate your premium smart test with 20+ personalized questions and detailed analysis.
+                          </Typography>
+                        </Alert>
+                      ) : (
+                        <Alert severity="warning" icon={<AdminPanelSettings />}>
+                          <Typography variant="body2">
+                            <strong>Premium Test:</strong> This requires payment verification. Once you submit the request with payment proof, 
+                            our admin team will review and approve it. You'll be notified when you can generate the test.
+                          </Typography>
+                        </Alert>
+                      )}
+                    </Grid>
+                  )}
                 </Grid>
               </Card>
             </Grid>
@@ -975,12 +1618,23 @@ const SmartTestPage: React.FC = () => {
           <Button 
             onClick={handleGenerateTest}
             variant="contained"
-            disabled={!selectedJob || generatingTest}
-            startIcon={generatingTest ? <CircularProgress size={16} /> : <Build />}
+            disabled={!selectedJob || generatingTest || (testType === 'free' && hasUsedFreeTest)}
+            startIcon={generatingTest ? <CircularProgress size={16} /> : (
+              testType === 'free' ? <CardGiftcard /> : (
+                selectedJob && approvedRequests[selectedJob._id] ? <CheckCircle /> : <Payment />
+              )
+            )}
             size="large"
             sx={{ px: 4 }}
+            color={
+              testType === 'premium' && selectedJob && approvedRequests[selectedJob._id] ? 'success' : 'primary'
+            }
           >
-            {generatingTest ? 'Generating...' : 'Generate Smart Test'}
+            {generatingTest ? 'Generating...' : (
+              testType === 'free' ? 'Generate Free Test' : (
+                selectedJob && approvedRequests[selectedJob._id] ? 'Generate Premium Test' : 'Request Premium Test'
+              )
+            )}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1034,6 +1688,371 @@ const SmartTestPage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Payment Request Dialog */}
+      <Dialog open={paymentRequestOpen} onClose={() => setPaymentRequestOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
+          <Payment sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+          <Typography variant="h5" component="div" gutterBottom>
+            Premium Smart Test Payment
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Pay first, then submit your request for premium test access
+          </Typography>
+        </DialogTitle>
+        
+        <DialogContent sx={{ py: 3 }}>
+          {selectedJobForPayment && (
+            <Box>
+              <Alert severity="info" sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  <strong>Job Position:</strong> {selectedJobForPayment.title}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Company:</strong> {selectedJobForPayment.company}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Location:</strong> {selectedJobForPayment.location}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Experience Level:</strong> {selectedJobForPayment.experienceLevel}
+                </Typography>
+              </Alert>
+
+              <Paper variant="outlined" sx={{ p: 3, mb: 3, backgroundColor: 'grey.50' }}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  Premium Test Features:
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <CheckCircle sx={{ fontSize: 16, color: 'success.main', mr: 1 }} />
+                      {questionCount} personalized questions
+                    </Typography>
+                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <CheckCircle sx={{ fontSize: 16, color: 'success.main', mr: 1 }} />
+                      ~{questionCount * 2} minutes duration
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <CheckCircle sx={{ fontSize: 16, color: 'success.main', mr: 1 }} />
+                      Detailed performance analysis
+                    </Typography>
+                    <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <CheckCircle sx={{ fontSize: 16, color: 'success.main', mr: 1 }} />
+                      Skills improvement recommendations
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+
+              {/* Payment Information */}
+              <Paper variant="outlined" sx={{ p: 3, mb: 3, backgroundColor: 'success.50' }}>
+                <Typography variant="h6" gutterBottom color="primary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Payment />
+                  Payment Information
+                </Typography>
+                
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Cost:</strong> 5,000 RWF for premium smart test generation
+                  </Typography>
+                </Alert>
+
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2" color="primary" gutterBottom>
+                      💳 Bank Transfer
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Bank:</strong> Bank of Kigali<br />
+                      <strong>Account:</strong> 123456789<br />
+                      <strong>Name:</strong> Excellence Coaching Hub Ltd
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle2" color="primary" gutterBottom>
+                      📱 Mobile Money
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>MTN:</strong> *182*8*1*788551906*5000#<br />
+                      <strong>Airtel:</strong> *185*9*788551906*5000#<br />
+                      <strong>Name:</strong> Excellence Coaching
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
+
+              <Alert severity="warning" icon={<AdminPanelSettings />}>
+                <Typography variant="body2">
+                  <strong>Payment Process:</strong> After making payment, submit your request below. 
+                  Our team will verify payment and approve your premium test access. 
+                  This usually takes 1-2 business days.
+                </Typography>
+              </Alert>
+
+              <Box sx={{ mt: 3, p: 3, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                <Typography variant="subtitle2" gutterBottom color="primary">
+                  Payment Support & Verification
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  Contact us immediately after payment for quick verification:
+                </Typography>
+                <Stack direction="row" spacing={2} flexWrap="wrap">
+                  <Button
+                    size="small"
+                    startIcon={<WhatsApp />}
+                    href="https://wa.me/250788551906?text=Hi, I just paid 5000 RWF for premium smart test. Job: {selectedJobForPayment?.title}"
+                    target="_blank"
+                    color="success"
+                    variant="contained"
+                  >
+                    WhatsApp Payment Proof
+                  </Button>
+                  <Button
+                    size="small"
+                    startIcon={<Email />}
+                    href="mailto:support@excellencecoaching.rw?subject=Premium Test Payment Confirmation&body=I have paid 5000 RWF for premium smart test access for: {selectedJobForPayment?.title}"
+                    target="_blank"
+                  >
+                    Email Payment Proof
+                  </Button>
+                  <Button
+                    size="small"
+                    startIcon={<Phone />}
+                    href="tel:+250788551906"
+                    target="_blank"
+                  >
+                    Call: +250 788 551 906
+                  </Button>
+                </Stack>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        
+        <DialogActions sx={{ p: 3, pt: 0, flexWrap: 'wrap', gap: 1 }}>
+          <Button onClick={() => setPaymentRequestOpen(false)} size="large">
+            Cancel
+          </Button>
+          
+          <Button 
+            onClick={handleCreatePaymentRequest}
+            variant="contained"
+            startIcon={<CheckCircle />}
+            size="large"
+            sx={{ px: 4 }}
+            color="success"
+          >
+            I Have Made Payment - Submit Request
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Request New Assessment Dialog */}
+      <Dialog 
+        open={showRequestNewAssessment} 
+        onClose={() => setShowRequestNewAssessment(false)} 
+        maxWidth="sm" 
+        fullWidth
+      >
+        <DialogTitle sx={{ textAlign: 'center' }}>
+          <Assessment sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+          <Typography variant="h5" component="div">
+            Request New Assessment
+          </Typography>
+        </DialogTitle>
+        
+        <DialogContent sx={{ textAlign: 'center', py: 3 }}>
+          <Typography variant="body1" paragraph>
+            You have completed your assessments. To generate additional smart tests, 
+            please request premium access approval from the administrator.
+          </Typography>
+          
+          <Alert severity="info" sx={{ mt: 2 }}>
+            <Typography variant="body2">
+              Premium access allows you to generate unlimited smart tests for different job positions 
+              with detailed performance analysis and personalized recommendations.
+            </Typography>
+          </Alert>
+        </DialogContent>
+        
+        <DialogActions sx={{ justifyContent: 'center', p: 3, pt: 0 }}>
+          <Button onClick={() => setShowRequestNewAssessment(false)}>
+            Maybe Later
+          </Button>
+          <Button 
+            onClick={() => {
+              setShowRequestNewAssessment(false);
+              setShowGenerateDialog(true);
+              setTestType('premium');
+            }}
+            variant="contained"
+            startIcon={<Payment />}
+          >
+            Request Premium Access
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Payment Information Dialog removed - functionality integrated into payment request dialog */}
+      {/* <Dialog 
+        open={showPaymentInfo} 
+        onClose={() => setShowPaymentInfo(false)} 
+        maxWidth="md" 
+        fullWidth
+      >
+        <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
+          <Payment sx={{ fontSize: 48, color: 'success.main', mb: 2 }} />
+          <Typography variant="h5" component="div" gutterBottom>
+            Premium Test Approved! 🎉
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Your premium test request has been approved. Please complete payment to proceed.
+          </Typography>
+        </DialogTitle>
+        
+        <DialogContent sx={{ py: 3 }}>
+          {selectedJobForPaymentInfo && (
+            <Box>
+              <Alert severity="success" sx={{ mb: 3 }}>
+                <Typography variant="subtitle1" gutterBottom>
+                  <strong>Approved for:</strong> {selectedJobForPaymentInfo.title}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Company:</strong> {selectedJobForPaymentInfo.company}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Location:</strong> {selectedJobForPaymentInfo.location}
+                </Typography>
+              </Alert>
+
+              <Paper variant="outlined" sx={{ p: 3, mb: 3, backgroundColor: 'primary.50' }}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  💳 Payment Information
+                </Typography>
+                <Typography variant="body1" paragraph>
+                  <strong>Amount:</strong> $15 USD (one-time payment per premium test)
+                </Typography>
+                
+                <Divider sx={{ my: 2 }} />
+                
+                <Typography variant="subtitle1" gutterBottom color="primary">
+                  Payment Methods:
+                </Typography>
+                
+                <Stack spacing={2}>
+                  <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      🏦 Bank Transfer (Recommended)
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>Account Name:</strong> Excellence Coaching Hub Ltd<br/>
+                      <strong>Bank:</strong> Bank of Kigali<br/>
+                      <strong>Account Number:</strong> 00200101681200<br/>
+                      <strong>Reference:</strong> SmartTest-{selectedJobForPaymentInfo.title.replace(/\s+/g, '')}-{user?.firstName || 'User'}
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      📱 Mobile Money (MTN/Airtel)
+                    </Typography>
+                    <Typography variant="body2">
+                      <strong>MTN Number:</strong> 0788-551-906<br/>
+                      <strong>Airtel Number:</strong> 0732-551-906<br/>
+                      <strong>Name:</strong> MUREKATETE Claudine<br/>
+                      <strong>Reference:</strong> SmartTest-{user?.firstName || 'User'}
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      💳 International Payment
+                    </Typography>
+                    <Typography variant="body2">
+                      PayPal: payments@excellencecoaching.rw<br/>
+                      Western Union: Contact support for details
+                    </Typography>
+                  </Box>
+                </Stack>
+              </Paper>
+
+              <Alert severity="info" icon={<Info />}>
+                <Typography variant="body2">
+                  <strong>Next Steps:</strong>
+                  <br/>1. Make payment using any method above
+                  <br/>2. Send payment confirmation (receipt/screenshot) to: 
+                  <strong> payments@excellencecoaching.rw</strong>
+                  <br/>3. Include your name and the reference number
+                  <br/>4. Your test will be activated within 2-4 hours after payment confirmation
+                </Typography>
+              </Alert>
+
+              <Box sx={{ mt: 3, p: 3, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+                <Typography variant="subtitle2" gutterBottom color="primary">
+                  Need help with payment?
+                </Typography>
+                <Stack direction="row" spacing={2}>
+                  <Button
+                    size="small"
+                    startIcon={<Email />}
+                    href="mailto:payments@excellencecoaching.rw?subject=Smart Test Payment Help"
+                    target="_blank"
+                  >
+                    Email Support
+                  </Button>
+                  <Button
+                    size="small"
+                    startIcon={<WhatsApp />}
+                    href="https://wa.me/250788551906?text=Hi, I need help with smart test payment"
+                    target="_blank"
+                    color="success"
+                  >
+                    WhatsApp
+                  </Button>
+                  <Button
+                    size="small"
+                    startIcon={<Phone />}
+                    href="tel:+250788551906"
+                    target="_blank"
+                  >
+                    Call Support
+                  </Button>
+                </Stack>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button onClick={() => setShowPaymentInfo(false)}>
+            I'll Pay Later
+          </Button>
+          <Button 
+            onClick={() => {
+              setShowPaymentInfo(false);
+              // Open generate dialog to generate the test after payment
+              setShowGenerateDialog(true);
+            }}
+            variant="contained"
+            color="success"
+            startIcon={<Payment />}
+          >
+            I've Made Payment
+          </Button>
+        </DialogActions>
+      </Dialog> */}
+
+      {/* Success Snackbar */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+        message={snackbarMessage}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
     </Container>
     </SimpleProfileGuard>
   );

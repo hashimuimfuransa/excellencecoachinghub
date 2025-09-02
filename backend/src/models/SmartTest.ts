@@ -27,6 +27,7 @@ interface ISmartTest extends Document {
   jobRole: string;
   skillsRequired: string[];
   isActive: boolean;
+  testType?: 'free' | 'premium';
   isAdminUploaded?: boolean;
   uploadedBy?: string;
   testTakers?: number;
@@ -74,6 +75,11 @@ const smartTestSchema = new Schema<ISmartTest>({
   jobRole: { type: String, required: true },
   skillsRequired: [{ type: String }],
   isActive: { type: Boolean, default: true },
+  testType: { 
+    type: String, 
+    enum: ['free', 'premium'],
+    default: 'free'
+  },
   isPublished: { type: Boolean, default: false },
   isAdminUploaded: { type: Boolean, default: false },
   uploadedBy: { type: String },
@@ -88,6 +94,7 @@ smartTestSchema.index({ userId: 1, createdAt: -1 });
 smartTestSchema.index({ jobId: 1, userId: 1 });
 smartTestSchema.index({ testId: 1 });
 smartTestSchema.index({ isActive: 1 });
+smartTestSchema.index({ userId: 1, testType: 1 }); // For free test checking
 
 export const SmartTest = mongoose.model<ISmartTest>('SmartTest', smartTestSchema);
 export type { ISmartTest, ISmartTestQuestion };

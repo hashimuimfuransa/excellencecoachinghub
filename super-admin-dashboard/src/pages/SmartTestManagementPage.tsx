@@ -51,10 +51,41 @@ import {
   CloudUpload as CloudUploadIcon,
   Publish as PublishIcon,
   VisibilityOff as UnpublishedIcon,
-  FileUpload as FileUploadIcon
+  FileUpload as FileUploadIcon,
+  Payment as PaymentIcon,
+  RequestPage as RequestIcon,
+  Notifications as NotificationsIcon,
+  Pending as PendingIcon,
+  Done as DoneIcon,
+  Close as CloseIcon,
+  Refresh
 } from '@mui/icons-material';
 import smartTestService from '../services/smartTestService';
 import type { SmartTest, SmartTestFormData, SmartTestStats } from '../services/smartTestService';
+
+// Payment Request Interface
+interface PaymentRequest {
+  _id: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  jobId: string;
+  jobTitle: string;
+  company: string;
+  testType: 'psychometric' | 'smart_test';
+  questionCount: number;
+  estimatedDuration: number;
+  requestedAt: string;
+  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  adminNotes?: string;
+  approvedAt?: string;
+  approvedBy?: string;
+  completedAt?: string;
+  paymentAmount?: number;
+  paymentMethod?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 const SmartTestManagementPage: React.FC = () => {
   // State
@@ -67,6 +98,15 @@ const SmartTestManagementPage: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const [selectedTest, setSelectedTest] = useState<SmartTest | null>(null);
+  
+  // Payment Request State
+  const [paymentRequests, setPaymentRequests] = useState<PaymentRequest[]>([]);
+  const [pendingPaymentCount, setPendingPaymentCount] = useState(0);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+  const [paymentRequestsDialog, setPaymentRequestsDialog] = useState(false);
+  const [selectedPaymentRequest, setSelectedPaymentRequest] = useState<PaymentRequest | null>(null);
+  const [paymentActionDialog, setPaymentActionDialog] = useState(false);
+  const [adminNotes, setAdminNotes] = useState('');
   
   // Dialog states
   const [createDialog, setCreateDialog] = useState(false);
@@ -118,7 +158,37 @@ const SmartTestManagementPage: React.FC = () => {
 
   useEffect(() => {
     fetchTests();
+    fetchPaymentRequests();
   }, [fetchTests]);
+
+  // Fetch smart test payment requests
+  const fetchPaymentRequests = useCallback(async () => {
+    try {
+      setLoadingPayments(true);
+      
+      // Fetch payment requests specifically for smart tests
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/payment-requests?testType=smart_test`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const smartTestRequests = data.data || data || [];
+        setPaymentRequests(smartTestRequests);
+        
+        // Count pending requests
+        const pendingCount = smartTestRequests.filter((req: PaymentRequest) => req.status === 'pending').length;
+        setPendingPaymentCount(pendingCount);
+      }
+    } catch (error) {
+      console.error('Failed to fetch smart test payment requests:', error);
+    } finally {
+      setLoadingPayments(false);
+    }
+  }, []);
 
   // Utility functions
   const showSnackbar = (message: string, severity: 'success' | 'error' | 'info' | 'warning' = 'info') => {
@@ -335,6 +405,53 @@ const SmartTestManagementPage: React.FC = () => {
     setUploadTestContentDialog(true);
   };
 
+  // Payment Request Functions
+  const handlePaymentAction = async (action: 'approve' | 'reject') => {
+    if (!selectedPaymentRequest) return;
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/payment-requests/${selectedPaymentRequest._id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: action === 'approve' ? 'approved' : 'rejected',
+          adminNotes: adminNotes || undefined
+        })
+      });
+
+      if (response.ok) {
+        showSnackbar(`Smart test payment request ${action}d successfully`, 'success');
+        setPaymentActionDialog(false);
+        setSelectedPaymentRequest(null);
+        setAdminNotes('');
+        fetchPaymentRequests(); // Refresh the list
+      } else {
+        throw new Error(`Failed to ${action} payment request`);
+      }
+    } catch (error: any) {
+      showSnackbar(`Failed to ${action} payment request: ${error.message}`, 'error');
+    }
+  };
+
+  const openPaymentActionDialog = (request: PaymentRequest, action: 'approve' | 'reject') => {
+    setSelectedPaymentRequest(request);
+    setAdminNotes('');
+    setPaymentActionDialog(true);
+  };
+
+  const getPaymentStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'warning';
+      case 'approved': return 'success';
+      case 'rejected': return 'error';
+      case 'completed': return 'info';
+      default: return 'default';
+    }
+  };
+
   return (
     <Box p={3}>
       {/* Header */}
@@ -447,6 +564,20 @@ const SmartTestManagementPage: React.FC = () => {
           size="large"
         >
           Upload Test File
+        </Button>
+        <Button
+          variant="outlined"
+          startIcon={<PaymentIcon />}
+          onClick={() => setPaymentRequestsDialog(true)}
+          size="large"
+          color="warning"
+        >
+          Payment Requests 
+          {pendingPaymentCount > 0 && (
+            <Badge badgeContent={pendingPaymentCount} color="error" sx={{ ml: 1 }}>
+              <NotificationsIcon />
+            </Badge>
+          )}
         </Button>
       </Stack>
 
@@ -966,6 +1097,193 @@ const SmartTestManagementPage: React.FC = () => {
             disabled={!testContentFile || !validateFile(testContentFile).isValid}
           >
             Upload Content
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Payment Requests Dialog */}
+      <Dialog open={paymentRequestsDialog} onClose={() => setPaymentRequestsDialog(false)} maxWidth="lg" fullWidth>
+        <DialogTitle>
+          <Stack direction="row" alignItems="center" spacing={2}>
+            <PaymentIcon />
+            <Typography variant="h6">Smart Test Payment Requests</Typography>
+            {pendingPaymentCount > 0 && (
+              <Chip
+                label={`${pendingPaymentCount} Pending`}
+                color="warning"
+                size="small"
+              />
+            )}
+          </Stack>
+        </DialogTitle>
+        <DialogContent>
+          {loadingPayments ? (
+            <Box display="flex" justifyContent="center" p={4}>
+              <CircularProgress />
+            </Box>
+          ) : paymentRequests.length === 0 ? (
+            <Box textAlign="center" py={4}>
+              <RequestIcon sx={{ fontSize: 64, color: 'grey.400', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                No Payment Requests
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                No smart test payment requests have been submitted yet.
+              </Typography>
+            </Box>
+          ) : (
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Student</TableCell>
+                    <TableCell>Job Details</TableCell>
+                    <TableCell>Test Details</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Requested</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {paymentRequests.map((request) => (
+                    <TableRow key={request._id} hover>
+                      <TableCell>
+                        <Box>
+                          <Typography variant="subtitle2" fontWeight="bold">
+                            {request.userName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {request.userEmail}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box>
+                          <Typography variant="body2" fontWeight="medium">
+                            {request.jobTitle}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {request.company}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box>
+                          <Typography variant="body2">
+                            {request.questionCount} Questions
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            ~{request.estimatedDuration} minutes
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={request.status.toUpperCase()}
+                          color={getPaymentStatusColor(request.status) as any}
+                          size="small"
+                          variant={request.status === 'pending' ? 'filled' : 'outlined'}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {new Date(request.requestedAt).toLocaleDateString()}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {new Date(request.requestedAt).toLocaleTimeString()}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        {request.status === 'pending' && (
+                          <Stack direction="row" spacing={1}>
+                            <Tooltip title="Approve Request">
+                              <IconButton
+                                size="small"
+                                color="success"
+                                onClick={() => openPaymentActionDialog(request, 'approve')}
+                              >
+                                <CheckCircleIcon />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Reject Request">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => openPaymentActionDialog(request, 'reject')}
+                              >
+                                <CancelIcon />
+                              </IconButton>
+                            </Tooltip>
+                          </Stack>
+                        )}
+                        {request.status !== 'pending' && (
+                          <Typography variant="caption" color="text.secondary">
+                            {request.approvedAt && `Processed: ${new Date(request.approvedAt).toLocaleDateString()}`}
+                          </Typography>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPaymentRequestsDialog(false)}>Close</Button>
+          <Button onClick={fetchPaymentRequests} startIcon={<Refresh />}>
+            Refresh
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Payment Action Dialog */}
+      <Dialog open={paymentActionDialog} onClose={() => setPaymentActionDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          {selectedPaymentRequest?.status === 'pending' ? 'Process Payment Request' : 'Payment Request Details'}
+        </DialogTitle>
+        <DialogContent>
+          {selectedPaymentRequest && (
+            <Box sx={{ mt: 2 }}>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <Alert severity="info">
+                    <Typography variant="subtitle2">Student: {selectedPaymentRequest.userName}</Typography>
+                    <Typography variant="body2">Job: {selectedPaymentRequest.jobTitle} at {selectedPaymentRequest.company}</Typography>
+                    <Typography variant="body2">Smart Test: {selectedPaymentRequest.questionCount} questions, ~{selectedPaymentRequest.estimatedDuration} minutes</Typography>
+                  </Alert>
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Admin Notes (Optional)"
+                    multiline
+                    rows={3}
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    placeholder="Add any notes about this request..."
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPaymentActionDialog(false)}>Cancel</Button>
+          <Button
+            onClick={() => handlePaymentAction('reject')}
+            color="error"
+            startIcon={<CloseIcon />}
+          >
+            Reject
+          </Button>
+          <Button
+            onClick={() => handlePaymentAction('approve')}
+            color="success"
+            variant="contained"
+            startIcon={<DoneIcon />}
+          >
+            Approve
           </Button>
         </DialogActions>
       </Dialog>

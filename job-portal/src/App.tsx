@@ -50,6 +50,7 @@ import EmployerHiredPage from './pages/EmployerHiredPage';
 import EmployerInterviewsPage from './pages/EmployerInterviewsPage';
 import EmployerAnalyticsPage from './pages/EmployerAnalyticsPage';
 import EmployerCompanyProfilePage from './pages/EmployerCompanyProfilePage';
+import EmployerProfilePage from './pages/EmployerProfilePage';
 import CompaniesPage from './pages/CompaniesPage';
 import SupportPage from './pages/SupportPage';
 import CareerGuidancePage from './pages/CareerGuidancePage';
@@ -329,6 +330,14 @@ function App() {
                 element={
                   <ProtectedRoute roles={[UserRole.EMPLOYER]}>
                     <EmployerCompanyProfilePage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="employer/profile" 
+                element={
+                  <ProtectedRoute roles={[UserRole.EMPLOYER]}>
+                    <EmployerProfilePage />
                   </ProtectedRoute>
                 } 
               />

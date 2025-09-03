@@ -940,7 +940,7 @@ const SocialNetworkPage: React.FC = () => {
                         <Button
                           fullWidth
                           variant="outlined"
-                          onClick={() => navigate('/app/profile')}
+                          onClick={() => navigate(hasRole(UserRole.EMPLOYER) ? '/app/employer/profile' : '/app/profile')}
                           sx={{ borderRadius: 2, fontSize: isTablet ? '0.75rem' : '0.875rem' }}
                           size={isTablet ? "small" : "medium"}
                         >
@@ -1110,7 +1110,7 @@ const SocialNetworkPage: React.FC = () => {
                             <Button 
                               variant="contained" 
                               startIcon={<PersonAdd />}
-                              onClick={() => navigate('/app/profile')}
+                              onClick={() => navigate(hasRole(UserRole.EMPLOYER) ? '/app/employer/profile' : '/app/profile')}
                               sx={{
                                 borderRadius: 3,
                                 px: 4,
@@ -1145,7 +1145,7 @@ const SocialNetworkPage: React.FC = () => {
                               <Button 
                                 variant="outlined" 
                                 startIcon={<PersonAdd />}
-                                onClick={() => navigate('/app/profile')}
+                                onClick={() => navigate(hasRole(UserRole.EMPLOYER) ? '/app/employer/profile' : '/app/profile')}
                                 sx={{ borderRadius: 2, textTransform: 'none' }}
                               >
                                 Update Profile

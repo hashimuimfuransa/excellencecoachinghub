@@ -119,7 +119,7 @@ import {
   Description
 } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, UserRole } from '../contexts/AuthContext';
 import { jobService } from '../services/jobService';
 import { userService } from '../services/userService';
 import { profileService } from '../services/profileService';
@@ -177,7 +177,7 @@ interface Job {
 const ModernJobsPage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
   const [searchParams] = useSearchParams();
   
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -1086,7 +1086,7 @@ const ModernJobsPage: React.FC = () => {
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
               <Button 
                 variant="contained" 
-                onClick={() => navigate('/app/profile')}
+                onClick={() => navigate(hasRole(UserRole.EMPLOYER) ? '/app/employer/profile' : '/app/profile')}
                 startIcon={<Person />}
               >
                 Complete Profile

@@ -191,12 +191,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   };
 
   const handleViewProfile = () => {
-    // Navigate to summary profile page for other users, full profile for own posts
-    if (post.author._id === user?._id) {
-      navigate('/app/profile');
-    } else {
-      navigate(`/app/profile/view/${post.author._id}`);
-    }
+    // Always navigate to summary profile page to maintain consistency
+    navigate(`/app/profile/view/${post.author._id}`);
   };
 
   const handleConnect = async () => {

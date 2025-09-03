@@ -871,8 +871,8 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-// Ensure server binds to all interfaces on Render
-const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+// Always bind to 0.0.0.0 for cloud deployment compatibility (Render, Heroku, etc.)
+const HOST = '0.0.0.0';
 
 // Start server
 const startServer = async () => {
@@ -893,17 +893,24 @@ const startServer = async () => {
 
     server.listen(PORT, HOST, () => {
       console.log(`🚀 Server running on ${HOST}:${PORT}`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔗 API URL: http://${HOST}:${PORT}/api`);
       console.log(`💾 Database: ${process.env.MONGODB_URI ? 'Connected' : 'Not configured'}`);
       console.log(`☁️ Cloudinary: ${cloudinaryConfigured ? 'Configured' : 'Not configured (avatar upload disabled)'}`);
       console.log(`⏱️ Server timeouts: Disabled for slow networks`);
+      console.log(`🌐 Binding to all interfaces (0.0.0.0) for cloud deployment`);
 
       // Start the live session scheduler
       liveSessionScheduler.start();
       
       // Start the job scraping scheduler
       JobScrapingScheduler.start();
+    }).on('error', (error: Error) => {
+      console.error('❌ Failed to bind to port:', error);
+      if (error.message.includes('EADDRINUSE')) {
+        console.error(`Port ${PORT} is already in use. Please use a different port.`);
+      }
+      process.exit(1);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);

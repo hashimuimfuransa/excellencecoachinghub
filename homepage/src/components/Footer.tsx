@@ -10,8 +10,7 @@ import {
   Paper,
   List,
   ListItem,
-  ListItemText,
-  useTheme
+  ListItemText
 } from '@mui/material';
 import {
   Facebook,
@@ -34,7 +33,6 @@ import { useNavigate } from 'react-router-dom';
 
 const Footer: React.FC = () => {
   const navigate = useNavigate();
-  const theme = useTheme();
 
   const footerSections = [
     {

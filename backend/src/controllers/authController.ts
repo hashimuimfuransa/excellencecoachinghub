@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { User, IUserDocument } from '../models/User';
 import { UserRole } from '../types';
-import { sendEmail, sendWelcomeEmail } from '../services/emailService';
+import { sendEmail, sendWelcomeEmail, sendEmployerWelcomeEmail } from '../services/emailService';
 import * as simpleEmailService from '../services/simpleEmailService';
 
 // Generate JWT token
@@ -145,14 +145,24 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     try {
       const detectedPlatform = detectPlatform();
       
-      // Send enhanced HTML welcome email
-      await sendWelcomeEmail({
-        email: user.email,
-        firstName: user.firstName,
-        platform: detectedPlatform
-      });
-      
-      console.log(`✅ Enhanced welcome email sent to ${user.email} for ${detectedPlatform} platform`);
+      // Send role-specific welcome email
+      if (userRole === UserRole.EMPLOYER) {
+        // Send employer-specific welcome email using template_o0k3j0q
+        await sendEmployerWelcomeEmail({
+          email: user.email,
+          firstName: user.firstName,
+          platform: detectedPlatform
+        });
+        console.log(`✅ Employer welcome email sent to ${user.email} for ${detectedPlatform} platform using template_o0k3j0q`);
+      } else {
+        // Send regular welcome email for other roles
+        await sendWelcomeEmail({
+          email: user.email,
+          firstName: user.firstName,
+          platform: detectedPlatform
+        });
+        console.log(`✅ Standard welcome email sent to ${user.email} for ${detectedPlatform} platform`);
+      }
       
       // Also send console welcome email as fallback
       await simpleEmailService.sendWelcomeEmail(
@@ -638,14 +648,24 @@ export const googleCompleteRegistration = async (req: Request, res: Response, ne
     try {
       const detectedPlatform = detectPlatform();
       
-      // Send enhanced HTML welcome email
-      await sendWelcomeEmail({
-        email: user.email,
-        firstName: user.firstName,
-        platform: detectedPlatform
-      });
-      
-      console.log(`✅ Enhanced welcome email sent to ${user.email} for ${detectedPlatform} platform (Google OAuth)`);
+      // Send role-specific welcome email
+      if (role === UserRole.EMPLOYER) {
+        // Send employer-specific welcome email using template_o0k3j0q
+        await sendEmployerWelcomeEmail({
+          email: user.email,
+          firstName: user.firstName,
+          platform: detectedPlatform
+        });
+        console.log(`✅ Employer welcome email sent to ${user.email} for ${detectedPlatform} platform (Google OAuth) using template_o0k3j0q`);
+      } else {
+        // Send regular welcome email for other roles
+        await sendWelcomeEmail({
+          email: user.email,
+          firstName: user.firstName,
+          platform: detectedPlatform
+        });
+        console.log(`✅ Standard welcome email sent to ${user.email} for ${detectedPlatform} platform (Google OAuth)`);
+      }
       
       // Also send console welcome email as fallback
       await simpleEmailService.sendWelcomeEmail(

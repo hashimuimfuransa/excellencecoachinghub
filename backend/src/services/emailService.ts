@@ -282,6 +282,108 @@ const emailTemplates = {
         </p>
       </div>
     </div>
+  `,
+
+  employerWelcome: (data: any) => `
+    <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; background-color: #f8fafe; padding: 30px;">
+      <div style="background-color: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h2 style="color: #1976d2; margin: 0; font-size: 28px;">🎉 Welcome to Excellence Coaching Hub!</h2>
+          <p style="color: #666; margin: 10px 0; font-size: 16px;">Your Employer Account is Ready</p>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%); padding: 25px; border-radius: 10px; margin: 25px 0; color: white; text-align: center;">
+          <h3 style="margin: 0; font-size: 20px;">🏢 Welcome, ${data.firstName}!</h3>
+          <p style="margin: 10px 0 0 0; opacity: 0.9;">You're now part of a platform connecting you with top talent across various industries.</p>
+        </div>
+
+        <div style="background-color: #e8f5e8; padding: 25px; border-radius: 10px; margin: 25px 0;">
+          <h3 style="color: #2e7d32; margin-top: 0; display: flex; align-items: center;">
+            🚀 Get Started with These Key Features:
+          </h3>
+          <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
+            <div style="background-color: white; padding: 15px; border-radius: 8px; border-left: 4px solid #4caf50;">
+              <strong style="color: #2e7d32;">📝 Post Job Openings:</strong>
+              <p style="margin: 5px 0 0 0; color: #555;">Create detailed job listings to attract qualified candidates from our diverse talent pool.</p>
+            </div>
+            <div style="background-color: white; padding: 15px; border-radius: 8px; border-left: 4px solid #ff9800;">
+              <strong style="color: #f57c00;">🔍 Browse Talent Pool:</strong>
+              <p style="margin: 5px 0 0 0; color: #555;">Search through verified profiles of job seekers with skills that match your requirements.</p>
+            </div>
+            <div style="background-color: white; padding: 15px; border-radius: 8px; border-left: 4px solid #e91e63;">
+              <strong style="color: #c2185b;">📊 Manage Applications:</strong>
+              <p style="margin: 5px 0 0 0; color: #555;">Review applications, schedule interviews, and track your hiring pipeline efficiently.</p>
+            </div>
+            <div style="background-color: white; padding: 15px; border-radius: 8px; border-left: 4px solid #9c27b0;">
+              <strong style="color: #7b1fa2;">📈 Access Analytics:</strong>
+              <p style="margin: 5px 0 0 0; color: #555;">Get insights on your job postings' performance and hiring metrics.</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="background-color: #fff3e0; padding: 25px; border-radius: 10px; margin: 25px 0; border: 2px solid #ffb74d;">
+          <h3 style="color: #ef6c00; margin-top: 0;">💡 Pro Tips for Success:</h3>
+          <ul style="color: #bf360c; line-height: 1.8; padding-left: 20px;">
+            <li><strong>Complete Your Company Profile:</strong> Add company details, logo, and description to attract top candidates</li>
+            <li><strong>Write Compelling Job Descriptions:</strong> Clear requirements and attractive benefits get better applicants</li>
+            <li><strong>Use Our Matching System:</strong> Our AI helps match your job postings with suitable candidates</li>
+            <li><strong>Respond Promptly:</strong> Quick responses to applications improve your employer brand</li>
+          </ul>
+        </div>
+
+        <div style="text-align: center; margin: 35px 0;">
+          <h3 style="color: #1976d2; margin-bottom: 20px;">🎯 Quick Actions</h3>
+          <div style="display: inline-block; margin: 0 10px;">
+            <a href="${data.platformUrl}/app/jobs/create" 
+               style="background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; display: inline-block; margin: 5px; font-weight: bold; box-shadow: 0 3px 10px rgba(25, 118, 210, 0.3);">
+              📝 Post Your First Job
+            </a>
+          </div>
+          <div style="display: inline-block; margin: 0 10px;">
+            <a href="${data.platformUrl}/app/employer/company-profile" 
+               style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; display: inline-block; margin: 5px; font-weight: bold; box-shadow: 0 3px 10px rgba(40, 167, 69, 0.3);">
+              🏢 Setup Company Profile
+            </a>
+          </div>
+          <div style="display: inline-block; margin: 0 10px;">
+            <a href="${data.platformUrl}/app/employer/talent-pool" 
+               style="background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; display: inline-block; margin: 5px; font-weight: bold; box-shadow: 0 3px 10px rgba(220, 53, 69, 0.3);">
+              🔍 Browse Talent Pool
+            </a>
+          </div>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%); padding: 25px; border-radius: 10px; margin: 25px 0; color: white; text-align: center;">
+          <h3 style="margin: 0 0 10px 0;">📞 Need Help Getting Started?</h3>
+          <p style="margin: 0; opacity: 0.9;">Our support team is ready to help you maximize your hiring success. Contact us anytime!</p>
+          <div style="margin-top: 15px;">
+            <a href="mailto:support@excellencecoachinghub.com" 
+               style="background-color: rgba(255,255,255,0.2); color: white; padding: 8px 20px; text-decoration: none; border-radius: 20px; display: inline-block; margin: 0 5px; border: 1px solid rgba(255,255,255,0.3);">
+              📧 Email Support
+            </a>
+            <a href="${data.platformUrl}/app/support" 
+               style="background-color: rgba(255,255,255,0.2); color: white; padding: 8px 20px; text-decoration: none; border-radius: 20px; display: inline-block; margin: 0 5px; border: 1px solid rgba(255,255,255,0.3);">
+              💬 Live Chat
+            </a>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0; padding: 20px; background-color: #f1f8ff; border-radius: 8px;">
+          <p style="margin: 0; color: #1565c0; font-size: 14px; font-weight: 500;">
+            🌟 <strong>Tip:</strong> Complete your profile within 48 hours to get featured in our recommended employers list and attract premium candidates!
+          </p>
+        </div>
+
+        <hr style="margin: 30px 0; border: none; border-top: 2px solid #e3f2fd;">
+        <div style="text-align: center;">
+          <p style="color: #666; font-size: 14px; margin: 0;">
+            <strong>Excellence Coaching Hub Team</strong><br>
+            🚀 Connecting exceptional talent with outstanding opportunities<br>
+            <em>This is an automated email, please do not reply.</em>
+          </p>
+        </div>
+      </div>
+    </div>
   `
 };
 
@@ -471,6 +573,37 @@ export const sendWelcomeEmail = async (userData: {
     console.log(`Welcome email sent to ${userData.email} for ${userData.platform} platform`);
   } catch (error) {
     console.error('Error sending welcome email:', error);
+    // Don't throw error - welcome email failure shouldn't break registration
+  }
+};
+
+// Send employer-specific welcome email
+export const sendEmployerWelcomeEmail = async (userData: {
+  email: string;
+  firstName: string;
+  platform: 'homepage' | 'job-portal' | 'elearning';
+}): Promise<void> => {
+  try {
+    const platformUrls = {
+      homepage: process.env.HOMEPAGE_URL || 'http://localhost:3000',
+      'job-portal': process.env.JOB_PORTAL_URL || 'http://localhost:3001',
+      elearning: process.env.ELEARNING_URL || 'http://localhost:3002'
+    };
+
+    await sendEmail({
+      to: userData.email,
+      subject: 'Welcome to Excellence Coaching Hub - Employer Account Created! 🏢',
+      template: 'employerWelcome',
+      data: {
+        firstName: userData.firstName,
+        platform: userData.platform,
+        platformUrl: platformUrls[userData.platform]
+      }
+    });
+
+    console.log(`Employer welcome email sent to ${userData.email} for ${userData.platform} platform`);
+  } catch (error) {
+    console.error('Error sending employer welcome email:', error);
     // Don't throw error - welcome email failure shouldn't break registration
   }
 };

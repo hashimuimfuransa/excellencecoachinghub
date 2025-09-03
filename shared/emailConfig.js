@@ -6,6 +6,7 @@ const SHARED_EMAILJS_CONFIG = {
   VERIFICATION_TEMPLATE_ID: 'template_sikm5se', // Your EmailJS template ID for email verification
   PASSWORD_RESET_TEMPLATE_ID: 'template_9apzq9s', // Your EmailJS template ID for password reset
   WELCOME_TEMPLATE_ID: 'template_9apzq9s', // Your EmailJS template ID for welcome email (same as password reset)
+  EMPLOYER_WELCOME_TEMPLATE_ID: 'template_o0k3j0q', // Your EmailJS template ID for employer welcome email
   PUBLIC_KEY: 'VLY7_POWX21gRHMof' // Your EmailJS public key
 };
 

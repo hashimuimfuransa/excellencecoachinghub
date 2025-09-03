@@ -45,6 +45,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import FloatingContact from '../components/FloatingContact';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -920,6 +921,9 @@ const LoginPage: React.FC = () => {
           </Box>
         </Box>
       </Container>
+      
+      {/* Floating Contact Button */}
+      <FloatingContact />
     </Box>
   );
 };

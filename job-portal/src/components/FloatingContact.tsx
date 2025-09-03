@@ -104,7 +104,7 @@ const FloatingContact: React.FC = () => {
       <Box
         sx={{
           position: 'fixed',
-          bottom: { xs: 90, md: 100 },
+          bottom: { xs: 160, md: 170 },
           right: 24,
           zIndex: 1300,
           display: 'flex',

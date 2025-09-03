@@ -24,6 +24,7 @@ import SystemSettingsPage from './pages/SuperAdmin/SystemSettingsPage';
 import SystemHealthPage from './pages/SuperAdmin/SystemHealthPage';
 import PerformanceReportsPage from './pages/SuperAdmin/PerformanceReportsPage';
 import UsageStatisticsPage from './pages/SuperAdmin/UsageStatisticsPage';
+import CompanyProfileApprovalPage from './pages/SuperAdmin/CompanyProfileApprovalPage';
 
 function App() {
   // Initialize EmailJS on app start
@@ -52,6 +53,7 @@ function App() {
               {/* Content Management */}
               <Route path="jobs" element={<JobsManagementPage />} />
               <Route path="applications" element={<ApplicationsManagementPage />} />
+              <Route path="company-profiles" element={<CompanyProfileApprovalPage />} />
               <Route path="courses" element={<CoursesManagementPage />} />
               <Route path="psychometric-tests" element={<PsychometricTestManagementPage />} />
               <Route path="smart-tests" element={<SmartTestManagementPage />} />

@@ -22,6 +22,26 @@ export interface Company {
     website?: string;
   };
   isVerified: boolean;
+  
+  // Company Profile Approval System
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  submittedBy?: string;
+  submittedAt?: string;
+  reviewedBy?: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+  };
+  reviewedAt?: string;
+  rejectionReason?: string;
+  approvalNotes?: string;
+  documents?: Array<{
+    type: string;
+    url: string;
+    name: string;
+    uploadedAt: string;
+  }>;
+  
   recentJobs?: Array<{
     _id: string;
     title: string;
@@ -57,6 +77,11 @@ export interface CreateCompanyData {
     facebook?: string;
     website?: string;
   };
+  documents?: Array<{
+    type: string;
+    url: string;
+    name: string;
+  }>;
 }
 
 class CompanyService {
@@ -102,6 +127,22 @@ class CompanyService {
 
   async getFollowedCompanies() {
     const response = await api.get('/companies/following');
+    return response.data;
+  }
+
+  // Company Profile Approval Methods
+  async submitCompanyProfileForApproval(companyData: CreateCompanyData) {
+    const response = await api.post('/companies/submit-for-approval', companyData);
+    return response.data;
+  }
+
+  async getMyCompanyProfileStatus() {
+    const response = await api.get('/companies/my-profile-status');
+    return response.data;
+  }
+
+  async updateMyCompanyProfile(companyData: Partial<CreateCompanyData>) {
+    const response = await api.put('/companies/my-profile', companyData);
     return response.data;
   }
 }

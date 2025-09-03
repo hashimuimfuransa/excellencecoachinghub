@@ -59,6 +59,191 @@ router.post('/:id/follow', protect, asyncHandler(async (req: Request, res: Respo
   });
 }));
 
+// @desc    Get companies followed by user
+// @route   GET /api/companies/following
+// @access  Private
+router.get('/following', protect, asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user!._id.toString();
+
+  const companies = await Company.find({
+    followers: userId
+  })
+  .select('name description industry location followersCount jobsCount logo isVerified')
+  .sort({ followersCount: -1 });
+
+  res.status(200).json({
+    success: true,
+    data: companies
+  });
+}));
+
+// @desc    Submit company profile for approval
+// @route   POST /api/companies/submit-for-approval
+// @access  Private (Employer)
+router.post('/submit-for-approval', protect, asyncHandler(async (req: Request, res: Response) => {
+  // Check if user is employer
+  if (req.user!.role !== 'employer') {
+    res.status(403).json({
+      success: false,
+      error: 'Only employers can submit company profiles for approval'
+    });
+    return;
+  }
+
+  const {
+    name,
+    description,
+    industry,
+    website,
+    location,
+    size,
+    founded,
+    logo,
+    socialLinks,
+    documents
+  } = req.body;
+
+  // Check if employer already has a company profile
+  const existingCompany = await Company.findOne({ submittedBy: req.user!._id });
+  if (existingCompany) {
+    res.status(400).json({
+      success: false,
+      error: 'You have already submitted a company profile'
+    });
+    return;
+  }
+
+  // Check if company already exists
+  const existingCompanyByName = await Company.findOne({ name });
+  if (existingCompanyByName) {
+    res.status(400).json({
+      success: false,
+      error: 'Company with this name already exists'
+    });
+    return;
+  }
+
+  const company = await Company.create({
+    name,
+    description,
+    industry,
+    website,
+    location,
+    size,
+    founded,
+    logo,
+    socialLinks,
+    documents: documents || [],
+    submittedBy: req.user!._id,
+    submittedAt: new Date(),
+    approvalStatus: 'pending'
+  });
+
+  res.status(201).json({
+    success: true,
+    data: company,
+    message: 'Company profile submitted for approval successfully'
+  });
+}));
+
+// @desc    Get current user's company profile status
+// @route   GET /api/companies/my-profile-status
+// @access  Private (Employer)
+router.get('/my-profile-status', protect, asyncHandler(async (req: Request, res: Response) => {
+  // Check if user is employer
+  if (req.user!.role !== 'employer') {
+    res.status(403).json({
+      success: false,
+      error: 'Only employers can access this endpoint'
+    });
+    return;
+  }
+
+  const company = await Company.findOne({ submittedBy: req.user!._id })
+    .populate('reviewedBy', 'firstName lastName')
+    .populate('submittedBy', 'firstName lastName email');
+
+  if (!company) {
+    res.status(404).json({
+      success: false,
+      error: 'No company profile found. Please submit one for approval.'
+    });
+    return;
+  }
+
+  res.status(200).json({
+    success: true,
+    data: company
+  });
+}));
+
+// @desc    Update company profile (only if pending or rejected)
+// @route   PUT /api/companies/my-profile
+// @access  Private (Employer)
+router.put('/my-profile', protect, asyncHandler(async (req: Request, res: Response) => {
+  // Check if user is employer
+  if (req.user!.role !== 'employer') {
+    res.status(403).json({
+      success: false,
+      error: 'Only employers can update company profiles'
+    });
+    return;
+  }
+
+  const company = await Company.findOne({ submittedBy: req.user!._id });
+
+  if (!company) {
+    res.status(404).json({
+      success: false,
+      error: 'No company profile found'
+    });
+    return;
+  }
+
+  // Only allow updates if status is pending or rejected
+  if (company.approvalStatus === 'approved') {
+    res.status(400).json({
+      success: false,
+      error: 'Cannot update approved company profile. Contact support for changes.'
+    });
+    return;
+  }
+
+  // Reset status to pending if it was rejected
+  const updateData = {
+    ...req.body,
+    approvalStatus: 'pending',
+    submittedAt: new Date(),
+    reviewedBy: undefined,
+    reviewedAt: undefined,
+    rejectionReason: undefined
+  };
+
+  const updatedCompany = await Company.findByIdAndUpdate(
+    company._id,
+    updateData,
+    { new: true, runValidators: true }
+  );
+
+  res.status(200).json({
+    success: true,
+    data: updatedCompany,
+    message: 'Company profile updated successfully'
+  });
+}));
+
+// @desc    Get companies by industry
+// @route   GET /api/companies/industry/:industry
+// @access  Private
+router.get('/industry/:industry', protect, asyncHandler(async (req: Request, res: Response) => {
+  const companies = await Company.findByIndustry(req.params.industry);
+
+  res.status(200).json({
+    success: true,
+    data: companies
+  });
+}));
+
 // @desc    Get all companies with pagination
 // @route   GET /api/companies
 // @access  Private
@@ -225,36 +410,6 @@ router.put('/:id', protect, asyncHandler(async (req: Request, res: Response) => 
     success: true,
     data: updatedCompany,
     message: 'Company updated successfully'
-  });
-}));
-
-// @desc    Get companies by industry
-// @route   GET /api/companies/industry/:industry
-// @access  Private
-router.get('/industry/:industry', protect, asyncHandler(async (req: Request, res: Response) => {
-  const companies = await Company.findByIndustry(req.params.industry);
-
-  res.status(200).json({
-    success: true,
-    data: companies
-  });
-}));
-
-// @desc    Get companies followed by user
-// @route   GET /api/companies/following
-// @access  Private
-router.get('/following', protect, asyncHandler(async (req: Request, res: Response) => {
-  const userId = req.user!._id.toString();
-
-  const companies = await Company.find({
-    followers: userId
-  })
-  .select('name description industry location followersCount jobsCount logo isVerified')
-  .sort({ followersCount: -1 });
-
-  res.status(200).json({
-    success: true,
-    data: companies
   });
 }));
 

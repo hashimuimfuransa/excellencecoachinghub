@@ -834,18 +834,7 @@ class EmployerService {
     return response.json();
   }
 
-  // CV Download
-  async downloadCandidateCV(candidateId: string) {
-    const response = await fetch(`${API_BASE_URL}/employer/candidates/${candidateId}/cv`, {
-      headers: this.getAuthHeaders(),
-    });
 
-    if (!response.ok) {
-      throw new Error('Failed to download candidate CV');
-    }
-
-    return response;
-  }
 }
 
 export const employerService = new EmployerService();

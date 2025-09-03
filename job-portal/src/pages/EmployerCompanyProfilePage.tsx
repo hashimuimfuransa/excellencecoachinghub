@@ -62,6 +62,7 @@ import {
   Visibility
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { companyService } from '../services/companyService';
 
 interface CompanyProfile {
   _id?: string;
@@ -262,7 +263,7 @@ const EmployerCompanyProfilePage: React.FC = () => {
     'Company Information',
     'Contact Details',
     'Company Culture',
-    'Locations & Documents',
+    'Locations & Documents (Optional)',
     'Review & Submit'
   ];
 
@@ -273,10 +274,45 @@ const EmployerCompanyProfilePage: React.FC = () => {
   const fetchCompanyProfile = async () => {
     try {
       setLoading(true);
-      // Using mock data for now
-      setProfile(mockProfile);
-    } catch (error) {
+      const response = await companyService.getMyCompanyProfileStatus();
+      if (response.success && response.data) {
+        const companyData = response.data;
+        setProfile({
+          _id: companyData._id,
+          companyName: companyData.name || '',
+          companyDescription: companyData.description || '',
+          industry: companyData.industry || '',
+          companySize: companyData.size || '',
+          foundedYear: companyData.founded || new Date().getFullYear(),
+          headquarters: companyData.location || '',
+          website: companyData.website || '',
+          phone: companyData.socialLinks?.phone || '',
+          email: user?.email || '',
+          socialLinks: companyData.socialLinks || {},
+          benefits: [],
+          culture: {
+            values: [],
+            workEnvironment: '',
+            diversity: ''
+          },
+          locations: [],
+          documents: companyData.documents || [],
+          approvalStatus: companyData.approvalStatus || 'draft',
+          approvalNotes: companyData.approvalNotes,
+          completionPercentage: 0,
+          submittedAt: companyData.submittedAt,
+          approvedAt: companyData.reviewedAt,
+          rejectedAt: companyData.approvalStatus === 'rejected' ? companyData.reviewedAt : undefined,
+          lastUpdated: companyData.updatedAt || new Date().toISOString()
+        });
+      }
+    } catch (error: any) {
       console.error('Error fetching company profile:', error);
+      // If no profile exists, keep the default empty profile
+      if (error.response?.status !== 404) {
+        // Show error for non-404 errors
+        console.error('Unexpected error:', error);
+      }
     } finally {
       setLoading(false);
     }
@@ -284,37 +320,93 @@ const EmployerCompanyProfilePage: React.FC = () => {
 
   const calculateCompletionPercentage = (profileData: CompanyProfile): number => {
     let completed = 0;
-    const total = 15;
+    const total = 12; // Reduced from 15 to make some fields optional
 
-    if (profileData.companyName) completed++;
-    if (profileData.companyDescription) completed++;
+    // Required fields (8)
+    if (profileData.companyName?.trim()) completed++;
+    if (profileData.companyDescription?.trim()) completed++;
     if (profileData.industry) completed++;
     if (profileData.companySize) completed++;
-    if (profileData.foundedYear) completed++;
-    if (profileData.headquarters) completed++;
-    if (profileData.website) completed++;
-    if (profileData.phone) completed++;
-    if (profileData.email) completed++;
+    if (profileData.headquarters?.trim()) completed++;
+    if (profileData.website?.trim()) completed++;
+    if (profileData.phone?.trim()) completed++;
+    if (profileData.email?.trim()) completed++;
+    
+    // Important but optional fields (4)
+    if (profileData.foundedYear && profileData.foundedYear > 1800) completed++;
     if (profileData.benefits.length > 0) completed++;
     if (profileData.culture.values.length > 0) completed++;
-    if (profileData.culture.workEnvironment) completed++;
-    if (profileData.culture.diversity) completed++;
     if (profileData.locations.length > 0) completed++;
-    if (profileData.documents.length > 0) completed++;
+
+    // Optional fields (not counted): 
+    // - culture.workEnvironment
+    // - culture.diversity  
+    // - documents
+    // - social links
 
     return Math.round((completed / total) * 100);
   };
 
+  // Update completion percentage whenever profile changes
+  useEffect(() => {
+    const newPercentage = calculateCompletionPercentage(profile);
+    if (profile.completionPercentage !== newPercentage) {
+      setProfile(prev => ({
+        ...prev,
+        completionPercentage: newPercentage
+      }));
+    }
+  }, [
+    profile.companyName,
+    profile.companyDescription,
+    profile.industry,
+    profile.companySize,
+    profile.foundedYear,
+    profile.headquarters,
+    profile.website,
+    profile.phone,
+    profile.email,
+    profile.benefits,
+    profile.culture.values,
+    profile.locations
+  ]);
+
   const handleSaveProfile = async () => {
     try {
       setSaving(true);
+      
+      const companyData = {
+        name: profile.companyName,
+        description: profile.companyDescription,
+        industry: profile.industry,
+        size: profile.companySize,
+        founded: profile.foundedYear,
+        location: profile.headquarters,
+        website: profile.website,
+        socialLinks: {
+          ...profile.socialLinks,
+          phone: profile.phone
+        },
+        documents: profile.documents.map(doc => ({
+          type: doc.type,
+          url: doc.url,
+          name: doc.name
+        }))
+      };
+
+      if (profile._id) {
+        // Update existing profile
+        await companyService.updateMyCompanyProfile(companyData);
+      }
+      
       const updatedProfile = {
         ...profile,
-        completionPercentage: calculateCompletionPercentage(profile),
         lastUpdated: new Date().toISOString()
       };
       setProfile(updatedProfile);
-      // API call would go here
+      
+      // Refresh data from server
+      await fetchCompanyProfile();
     } catch (error) {
       console.error('Error saving profile:', error);
     } finally {
@@ -325,15 +417,36 @@ const EmployerCompanyProfilePage: React.FC = () => {
   const handleSubmitForApproval = async () => {
     try {
       setSubmitting(true);
-      const updatedProfile = {
-        ...profile,
-        approvalStatus: 'pending' as const,
-        submittedAt: new Date().toISOString(),
-        completionPercentage: calculateCompletionPercentage(profile),
-        lastUpdated: new Date().toISOString()
+      
+      const companyData = {
+        name: profile.companyName,
+        description: profile.companyDescription,
+        industry: profile.industry,
+        size: profile.companySize,
+        founded: profile.foundedYear,
+        location: profile.headquarters,
+        website: profile.website,
+        socialLinks: {
+          ...profile.socialLinks,
+          phone: profile.phone
+        },
+        documents: profile.documents.map(doc => ({
+          type: doc.type,
+          url: doc.url,
+          name: doc.name
+        }))
       };
-      setProfile(updatedProfile);
-      // API call would go here
+
+      if (profile._id) {
+        // Update existing profile
+        await companyService.updateMyCompanyProfile(companyData);
+      } else {
+        // Submit new profile
+        await companyService.submitCompanyProfileForApproval(companyData);
+      }
+      
+      // Refresh data from server
+      await fetchCompanyProfile();
     } catch (error) {
       console.error('Error submitting for approval:', error);
     } finally {
@@ -428,7 +541,7 @@ const EmployerCompanyProfilePage: React.FC = () => {
     }
   };
 
-  const isSubmittable = profile.completionPercentage >= 80;
+  const isSubmittable = profile.completionPercentage >= 70;
 
   if (loading) {
     return (
@@ -477,11 +590,11 @@ const EmployerCompanyProfilePage: React.FC = () => {
             variant="determinate"
             value={profile.completionPercentage}
             sx={{ height: 8, borderRadius: 4 }}
-            color={profile.completionPercentage >= 80 ? 'success' : 'primary'}
+            color={profile.completionPercentage >= 70 ? 'success' : 'primary'}
           />
-          {profile.completionPercentage < 80 && (
+          {profile.completionPercentage < 70 && (
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-              Complete at least 80% to submit for approval
+              Complete at least 70% to submit for approval
             </Typography>
           )}
         </Box>
@@ -591,11 +704,12 @@ const EmployerCompanyProfilePage: React.FC = () => {
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <TextField
                         fullWidth
-                        label="Founded Year"
+                        label="Founded Year (Optional)"
                         type="number"
-                        value={profile.foundedYear}
-                        onChange={(e) => setProfile(prev => ({ ...prev, foundedYear: parseInt(e.target.value) }))}
+                        value={profile.foundedYear || ''}
+                        onChange={(e) => setProfile(prev => ({ ...prev, foundedYear: parseInt(e.target.value) || 0 }))}
                         inputProps={{ min: 1800, max: new Date().getFullYear() }}
+                        placeholder="e.g., 2010"
                       />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
@@ -754,7 +868,7 @@ const EmployerCompanyProfilePage: React.FC = () => {
                     <Grid size={{ xs: 12 }}>
                       <TextField
                         fullWidth
-                        label="Work Environment"
+                        label="Work Environment (Optional)"
                         multiline
                         rows={3}
                         value={profile.culture.workEnvironment}
@@ -769,7 +883,7 @@ const EmployerCompanyProfilePage: React.FC = () => {
                     <Grid size={{ xs: 12 }}>
                       <TextField
                         fullWidth
-                        label="Diversity & Inclusion"
+                        label="Diversity & Inclusion (Optional)"
                         multiline
                         rows={3}
                         value={profile.culture.diversity}
@@ -795,7 +909,7 @@ const EmployerCompanyProfilePage: React.FC = () => {
 
               {/* Step 4: Locations & Documents */}
               <Step>
-                <StepLabel>Locations & Documents</StepLabel>
+                <StepLabel>Locations & Documents (Optional)</StepLabel>
                 <StepContent>
                   <Grid container spacing={3}>
                     <Grid size={{ xs: 12 }}>

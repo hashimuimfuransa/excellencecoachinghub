@@ -9,6 +9,7 @@ import { AIInterview } from '../models/AIInterview';
 import { JobCertificate } from '../models/JobCertificate';
 import { PsychometricTest } from '../models/PsychometricTest';
 import { Course } from '../models/Course';
+import { Company } from '../models/Company';
 import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = express.Router();
@@ -1964,6 +1965,290 @@ router.get('/tests/stats', asyncHandler(async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch test statistics'
+    });
+  }
+}));
+
+// Company Profile Approval Management
+// @desc    Get pending company profiles for approval
+// @route   GET /api/super-admin/company-profiles/pending
+// @access  Private (Super Admin)
+router.get('/company-profiles/pending', asyncHandler(async (req, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    const pendingProfiles = await Company.find({ approvalStatus: 'pending' })
+      .populate('submittedBy', 'firstName lastName email company jobTitle')
+      .sort({ submittedAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Company.countDocuments({ approvalStatus: 'pending' });
+
+    res.json({
+      success: true,
+      data: {
+        profiles: pendingProfiles,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching pending company profiles:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch pending company profiles'
+    });
+  }
+}));
+
+// @desc    Get all company profiles with filtering
+// @route   GET /api/super-admin/company-profiles
+// @access  Private (Super Admin)
+router.get('/company-profiles', asyncHandler(async (req, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+    const status = req.query.status as string;
+    const search = req.query.search as string;
+
+    let query: any = {};
+    
+    if (status && ['pending', 'approved', 'rejected'].includes(status)) {
+      query.approvalStatus = status;
+    }
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { industry: { $regex: search, $options: 'i' } },
+        { location: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const profiles = await Company.find(query)
+      .populate('submittedBy', 'firstName lastName email company jobTitle')
+      .populate('reviewedBy', 'firstName lastName')
+      .sort({ submittedAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Company.countDocuments(query);
+
+    res.json({
+      success: true,
+      data: {
+        profiles,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching company profiles:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch company profiles'
+    });
+  }
+}));
+
+// @desc    Get single company profile details
+// @route   GET /api/super-admin/company-profiles/:id
+// @access  Private (Super Admin)
+router.get('/company-profiles/:id', asyncHandler(async (req, res) => {
+  try {
+    const profile = await Company.findById(req.params.id)
+      .populate('submittedBy', 'firstName lastName email phone company jobTitle')
+      .populate('reviewedBy', 'firstName lastName');
+
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        error: 'Company profile not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: profile
+    });
+  } catch (error) {
+    console.error('Error fetching company profile:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch company profile'
+    });
+  }
+}));
+
+// @desc    Approve company profile
+// @route   POST /api/super-admin/company-profiles/:id/approve
+// @access  Private (Super Admin)
+router.post('/company-profiles/:id/approve', asyncHandler(async (req, res) => {
+  try {
+    const { approvalNotes } = req.body;
+
+    const profile = await Company.findById(req.params.id);
+    
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        error: 'Company profile not found'
+      });
+    }
+
+    if (profile.approvalStatus !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        error: 'Only pending profiles can be approved'
+      });
+    }
+
+    profile.approvalStatus = 'approved';
+    profile.reviewedBy = req.user!._id;
+    profile.reviewedAt = new Date();
+    profile.approvalNotes = approvalNotes;
+    profile.isVerified = true; // Auto-verify approved companies
+    profile.rejectionReason = undefined;
+
+    await profile.save();
+
+    // Populate the updated profile for response
+    const updatedProfile = await Company.findById(profile._id)
+      .populate('submittedBy', 'firstName lastName email')
+      .populate('reviewedBy', 'firstName lastName');
+
+    res.json({
+      success: true,
+      data: updatedProfile,
+      message: 'Company profile approved successfully'
+    });
+  } catch (error) {
+    console.error('Error approving company profile:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to approve company profile'
+    });
+  }
+}));
+
+// @desc    Reject company profile
+// @route   POST /api/super-admin/company-profiles/:id/reject
+// @access  Private (Super Admin)
+router.post('/company-profiles/:id/reject', asyncHandler(async (req, res) => {
+  try {
+    const { rejectionReason } = req.body;
+
+    if (!rejectionReason || rejectionReason.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Rejection reason is required'
+      });
+    }
+
+    const profile = await Company.findById(req.params.id);
+    
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        error: 'Company profile not found'
+      });
+    }
+
+    if (profile.approvalStatus !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        error: 'Only pending profiles can be rejected'
+      });
+    }
+
+    profile.approvalStatus = 'rejected';
+    profile.reviewedBy = req.user!._id;
+    profile.reviewedAt = new Date();
+    profile.rejectionReason = rejectionReason;
+    profile.approvalNotes = undefined;
+
+    await profile.save();
+
+    // Populate the updated profile for response
+    const updatedProfile = await Company.findById(profile._id)
+      .populate('submittedBy', 'firstName lastName email')
+      .populate('reviewedBy', 'firstName lastName');
+
+    res.json({
+      success: true,
+      data: updatedProfile,
+      message: 'Company profile rejected'
+    });
+  } catch (error) {
+    console.error('Error rejecting company profile:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to reject company profile'
+    });
+  }
+}));
+
+// @desc    Get company profile approval statistics
+// @route   GET /api/super-admin/company-profiles/stats
+// @access  Private (Super Admin)
+router.get('/company-profiles/stats', asyncHandler(async (req, res) => {
+  try {
+    const totalProfiles = await Company.countDocuments();
+    const pendingProfiles = await Company.countDocuments({ approvalStatus: 'pending' });
+    const approvedProfiles = await Company.countDocuments({ approvalStatus: 'approved' });
+    const rejectedProfiles = await Company.countDocuments({ approvalStatus: 'rejected' });
+    
+    // Get submissions by month for the last 6 months
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    
+    const monthlySubmissions = await Company.aggregate([
+      {
+        $match: {
+          submittedAt: { $gte: sixMonthsAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$submittedAt' },
+            month: { $month: '$submittedAt' }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { '_id.year': 1, '_id.month': 1 }
+      }
+    ]);
+
+    // Get approval rate
+    const approvalRate = totalProfiles > 0 ? (approvedProfiles / totalProfiles) * 100 : 0;
+
+    const stats = {
+      totalProfiles,
+      pendingProfiles,
+      approvedProfiles,
+      rejectedProfiles,
+      approvalRate: Math.round(approvalRate * 100) / 100,
+      monthlySubmissions
+    };
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('Error fetching company profile stats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch company profile statistics'
     });
   }
 }));

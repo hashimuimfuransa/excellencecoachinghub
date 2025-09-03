@@ -69,9 +69,9 @@ interface Application {
     email: string;
     phone?: string;
     location?: string;
-    skills: string[];
-    experience: any[];
-    education: any[];
+    skills?: string[];
+    experience?: any[];
+    education?: any[];
     summary?: string;
     currentPosition?: string;
     avatar?: string;
@@ -81,13 +81,15 @@ interface Application {
     _id: string;
     title: string;
     company: string;
-    location: string;
+    location?: string;
   };
   status: string;
   appliedAt: string;
   notes?: string;
-  resumeFile?: string;
+  resume?: string;
   coverLetter?: string;
+  psychometricTestResults?: any[];
+  interviewResults?: any[];
   testScore?: number;
 }
 
@@ -164,7 +166,8 @@ const EmployerCandidatesPage: React.FC = () => {
   const loadJobs = async () => {
     try {
       const response = await employerService.getJobs();
-      setJobs(response.data.jobs || []);
+      console.log('Jobs response:', response); // Debug log
+      setJobs(response.data || []);
     } catch (error) {
       console.error('Error loading jobs:', error);
     }
@@ -176,7 +179,8 @@ const EmployerCandidatesPage: React.FC = () => {
     setLoading(true);
     try {
       const response = await employerService.getJobApplications(selectedJob);
-      setApplications(response.data.applications || []);
+      console.log('Applications response:', response); // Debug log
+      setApplications(response.data || []);
     } catch (error) {
       console.error('Error loading applications:', error);
     } finally {
@@ -204,18 +208,18 @@ const EmployerCandidatesPage: React.FC = () => {
       loadApplications(); // Reload to get updated data
     } catch (error) {
       console.error('Error updating application status:', error);
+      // You could add a toast notification here
     }
   };
 
   const handleDownloadCV = async (candidateId: string) => {
     try {
-      const response = await employerService.downloadCandidateCV(candidateId);
+      const { blob, filename, contentType } = await employerService.downloadCandidateCV(candidateId);
       // Handle file download
-      const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `candidate_${candidateId}_cv.pdf`);
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -228,16 +232,29 @@ const EmployerCandidatesPage: React.FC = () => {
   const handleAIShortlist = async () => {
     if (!selectedJob) return;
     
+    // Check if there are applications to analyze
+    const applicationsToAnalyze = applications.filter(app => app.status === 'applied');
+    if (applicationsToAnalyze.length === 0) {
+      alert('No new applications to analyze. Please ensure there are candidates with "applied" status.');
+      return;
+    }
+    
     setAiLoading(true);
     try {
       const response = await employerService.aiShortlistCandidates({
         jobId: selectedJob,
         maxCandidates
       });
-      setAiResults(response.data);
-      setAiDialogOpen(true);
-    } catch (error) {
+      
+      if (response.success && response.data) {
+        setAiResults(response.data);
+        setAiDialogOpen(true);
+      } else {
+        throw new Error(response.error || 'AI shortlisting failed');
+      }
+    } catch (error: any) {
       console.error('Error performing AI shortlisting:', error);
+      alert(`AI shortlisting failed: ${error.message || 'Unknown error'}`);
     } finally {
       setAiLoading(false);
     }
@@ -247,7 +264,7 @@ const EmployerCandidatesPage: React.FC = () => {
     if (!selectedForShortlisting.length) return;
     
     try {
-      await employerAPI.applyAIShortlisting({
+      await employerService.applyAIShortlisting({
         applicationIds: selectedForShortlisting,
         notes: 'Shortlisted by AI recommendation'
       });
@@ -297,7 +314,7 @@ const EmployerCandidatesPage: React.FC = () => {
       filtered = filtered.filter(app => 
         `${app.applicant.firstName} ${app.applicant.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
         app.applicant.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        app.applicant.skills.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase()))
+        (app.applicant.skills || []).some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
 
@@ -392,6 +409,15 @@ const EmployerCandidatesPage: React.FC = () => {
 
           <Grid item xs={12} md={3}>
             <Stack direction="row" spacing={1}>
+              <TextField
+                size="small"
+                type="number"
+                label="Max Candidates"
+                value={maxCandidates}
+                onChange={(e) => setMaxCandidates(Math.max(1, Math.min(20, parseInt(e.target.value) || 10)))}
+                sx={{ width: 120 }}
+                inputProps={{ min: 1, max: 20 }}
+              />
               <Button
                 variant="contained"
                 startIcon={aiLoading ? <CircularProgress size={20} /> : <AutoAwesome />}
@@ -474,11 +500,14 @@ const EmployerCandidatesPage: React.FC = () => {
 
                     <Grid item xs={12} sm={6} md={3}>
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        {application.applicant.skills.slice(0, 3).map((skill) => (
+                        {(application.applicant.skills || []).slice(0, 3).map((skill) => (
                           <Chip key={skill} label={skill} size="small" />
                         ))}
-                        {application.applicant.skills.length > 3 && (
-                          <Chip label={`+${application.applicant.skills.length - 3}`} size="small" />
+                        {(application.applicant.skills || []).length > 3 && (
+                          <Chip label={`+${(application.applicant.skills || []).length - 3}`} size="small" />
+                        )}
+                        {(!application.applicant.skills || application.applicant.skills.length === 0) && (
+                          <Typography variant="caption" color="text.secondary">No skills listed</Typography>
                         )}
                       </Box>
                       {application.applicant.profileCompletion && (
@@ -571,7 +600,14 @@ const EmployerCandidatesPage: React.FC = () => {
                 Recommended Candidates ({aiResults.shortlistedCandidates.length})
               </Typography>
 
-              <List>
+              {aiResults.shortlistedCandidates.length === 0 ? (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  <Typography variant="body2">
+                    No candidates met the minimum score threshold of 60. Consider lowering your requirements or reviewing applications manually.
+                  </Typography>
+                </Alert>
+              ) : (
+                <List>
                 {aiResults.shortlistedCandidates.map((result, index) => {
                   const application = applications.find(app => app._id === result.applicationId);
                   if (!application) return null;
@@ -622,7 +658,8 @@ const EmployerCandidatesPage: React.FC = () => {
                     </React.Fragment>
                   );
                 })}
-              </List>
+                </List>
+              )}
             </>
           )}
         </DialogContent>
@@ -693,9 +730,13 @@ const EmployerCandidatesPage: React.FC = () => {
                 <Grid item xs={12}>
                   <Typography variant="h6" gutterBottom>Skills</Typography>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {selectedApplication.applicant.skills.map((skill) => (
-                      <Chip key={skill} label={skill} />
-                    ))}
+                    {(selectedApplication.applicant.skills || []).length > 0 ? (
+                      selectedApplication.applicant.skills!.map((skill) => (
+                        <Chip key={skill} label={skill} />
+                      ))
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">No skills listed</Typography>
+                    )}
                   </Box>
                 </Grid>
 

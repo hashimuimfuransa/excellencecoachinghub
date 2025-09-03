@@ -1497,6 +1497,90 @@ class SuperAdminService {
       return 0;
     }
   }
+
+  // Company Profile Approval Management
+  async getCompanyProfiles(endpoint: string): Promise<{
+    success: boolean;
+    data: {
+      profiles: any[];
+      total: number;
+      page: number;
+      totalPages: number;
+    };
+  }> {
+    try {
+      const response = await apiGet<any>(`/admin${endpoint}`);
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch company profiles:', error);
+      throw error;
+    }
+  }
+
+  async getCompanyProfile(profileId: string): Promise<{
+    success: boolean;
+    data: any;
+  }> {
+    try {
+      const response = await apiGet<any>(`/admin/company-profiles/${profileId}`);
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch company profile:', error);
+      throw error;
+    }
+  }
+
+  async approveCompanyProfile(profileId: string, approvalNotes?: string): Promise<{
+    success: boolean;
+    data: any;
+    message: string;
+  }> {
+    try {
+      const response = await apiPost<any>(`/admin/company-profiles/${profileId}/approve`, {
+        approvalNotes
+      });
+      return response;
+    } catch (error) {
+      console.error('Failed to approve company profile:', error);
+      throw error;
+    }
+  }
+
+  async rejectCompanyProfile(profileId: string, rejectionReason: string): Promise<{
+    success: boolean;
+    data: any;
+    message: string;
+  }> {
+    try {
+      const response = await apiPost<any>(`/admin/company-profiles/${profileId}/reject`, {
+        rejectionReason
+      });
+      return response;
+    } catch (error) {
+      console.error('Failed to reject company profile:', error);
+      throw error;
+    }
+  }
+
+  async getCompanyProfileStats(): Promise<{
+    success: boolean;
+    data: {
+      totalProfiles: number;
+      pendingProfiles: number;
+      approvedProfiles: number;
+      rejectedProfiles: number;
+      approvalRate: number;
+      monthlySubmissions: any[];
+    };
+  }> {
+    try {
+      const response = await apiGet<any>('/admin/company-profiles/stats');
+      return response;
+    } catch (error) {
+      console.error('Failed to fetch company profile stats:', error);
+      throw error;
+    }
+  }
 }
 
 export const superAdminService = new SuperAdminService();

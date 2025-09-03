@@ -60,6 +60,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { employerService } from '../services/employerService';
+import { companyService } from '../services/companyService';
 import { LoadingButton } from '@mui/lab';
 
 interface JobFormData {
@@ -103,11 +104,15 @@ const CreateJobPage: React.FC = () => {
   const { user } = useAuth();
   
   const [activeStep, setActiveStep] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [psychometricTests, setPsychometricTests] = useState<PsychometricTest[]>([]);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  
+  // Company profile approval state
+  const [companyProfileStatus, setCompanyProfileStatus] = useState<'loading' | 'approved' | 'pending' | 'rejected' | 'not-submitted'>('loading');
+  const [companyProfile, setCompanyProfile] = useState<any>(null);
   
   const [formData, setFormData] = useState<JobFormData>({
     title: '',
@@ -212,8 +217,30 @@ const CreateJobPage: React.FC = () => {
   ];
 
   useEffect(() => {
+    checkCompanyProfileStatus();
     fetchPsychometricTests();
   }, []);
+
+  const checkCompanyProfileStatus = async () => {
+    try {
+      setLoading(true);
+      const response = await companyService.getMyCompanyProfileStatus();
+      
+      if (response.success && response.data) {
+        setCompanyProfile(response.data);
+        setCompanyProfileStatus(response.data.approvalStatus);
+      }
+    } catch (error: any) {
+      console.error('Error checking company profile status:', error);
+      if (error.response?.status === 404) {
+        setCompanyProfileStatus('not-submitted');
+      } else {
+        console.error('Unexpected error:', error);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchPsychometricTests = async () => {
     try {
@@ -982,6 +1009,109 @@ const CreateJobPage: React.FC = () => {
         return null;
     }
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 3 }}>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress size={40} />
+          <Typography variant="h6" sx={{ ml: 2 }}>
+            Checking company profile status...
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
+
+  // Show locked state if company profile is not approved
+  if (companyProfileStatus !== 'approved') {
+    const getStatusMessage = () => {
+      switch (companyProfileStatus) {
+        case 'not-submitted':
+          return {
+            title: 'Company Profile Required',
+            message: 'You need to submit your company profile for approval before posting jobs.',
+            action: 'Submit Company Profile',
+            actionPath: '/app/employer/company-profile',
+            color: 'info'
+          };
+        case 'pending':
+          return {
+            title: 'Company Profile Under Review',
+            message: 'Your company profile is currently being reviewed by our team. You\'ll be able to post jobs once it\'s approved.',
+            action: 'View Profile Status',
+            actionPath: '/app/employer/company-profile',
+            color: 'warning'
+          };
+        case 'rejected':
+          return {
+            title: 'Company Profile Needs Attention',
+            message: companyProfile?.rejectionReason || 'Your company profile was rejected. Please review the feedback and resubmit.',
+            action: 'Update Profile',
+            actionPath: '/app/employer/company-profile',
+            color: 'error'
+          };
+        default:
+          return {
+            title: 'Access Restricted',
+            message: 'Unable to verify company profile status.',
+            action: 'Go Back',
+            actionPath: '/app/employer/jobs',
+            color: 'error'
+          };
+      }
+    };
+
+    const statusInfo = getStatusMessage();
+
+    return (
+      <Container maxWidth="lg" sx={{ py: 3 }}>
+        <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 2 }}>
+          <Box sx={{ mb: 3 }}>
+            <Warning sx={{ fontSize: 80, color: `${statusInfo.color}.main`, mb: 2 }} />
+            <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
+              {statusInfo.title}
+            </Typography>
+            <Typography variant="h6" color="text.secondary" sx={{ mb: 3, maxWidth: 600, mx: 'auto' }}>
+              {statusInfo.message}
+            </Typography>
+            
+            {companyProfileStatus === 'pending' && companyProfile?.submittedAt && (
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Submitted on: {new Date(companyProfile.submittedAt).toLocaleDateString()}
+              </Typography>
+            )}
+            
+            {companyProfileStatus === 'rejected' && companyProfile?.reviewedAt && (
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Reviewed on: {new Date(companyProfile.reviewedAt).toLocaleDateString()}
+              </Typography>
+            )}
+          </Box>
+
+          <Box display="flex" gap={2} justifyContent="center">
+            <Button
+              variant="contained"
+              color={statusInfo.color as any}
+              startIcon={<Business />}
+              onClick={() => navigate(statusInfo.actionPath)}
+              size="large"
+            >
+              {statusInfo.action}
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => navigate('/app/employer/jobs')}
+              size="large"
+            >
+              Back to Jobs
+            </Button>
+          </Box>
+        </Paper>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="lg" sx={{ py: 3 }}>

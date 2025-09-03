@@ -47,7 +47,8 @@ import {
   RecordVoiceOver,
   Assignment,
   ManageAccounts,
-  QuestionAnswer
+  QuestionAnswer,
+  Business
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme as useCustomTheme } from '../contexts/ThemeContext';
@@ -73,6 +74,7 @@ const navigationItems: NavigationItem[] = [
   // Content Management
   { text: 'Jobs Management', icon: <Work />, path: '/jobs', category: 'Content Management', badge: 5 },
   { text: 'Applications', icon: <Assignment />, path: '/applications', category: 'Content Management' },
+  { text: 'Company Profiles', icon: <Business />, path: '/company-profiles', category: 'Content Management' },
   { text: 'Courses Management', icon: <School />, path: '/courses', category: 'Content Management' },
   { text: 'Psychometric Tests', icon: <Psychology />, path: '/psychometric-tests', category: 'Content Management' },
   { text: 'Smart Tests', icon: <QuestionAnswer />, path: '/smart-tests', category: 'Content Management' },

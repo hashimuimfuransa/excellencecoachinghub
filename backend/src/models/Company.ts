@@ -21,6 +21,22 @@ export interface ICompanyDocument extends Document {
     website?: string;
   };
   isVerified: boolean;
+  
+  // Company Profile Approval System
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  submittedBy?: string; // User ID of who submitted the profile
+  submittedAt?: Date;
+  reviewedBy?: string; // User ID of super admin who reviewed
+  reviewedAt?: Date;
+  rejectionReason?: string;
+  approvalNotes?: string;
+  documents?: Array<{
+    type: string;
+    url: string;
+    name: string;
+    uploadedAt: Date;
+  }>;
+  
   createdAt: Date;
   updatedAt: Date;
 }
@@ -105,7 +121,60 @@ const companySchema = new Schema<ICompanyDocument>({
   isVerified: {
     type: Boolean,
     default: false
-  }
+  },
+  
+  // Company Profile Approval System
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
+  },
+  submittedBy: {
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  submittedAt: {
+    type: Date,
+    default: Date.now
+  },
+  reviewedBy: {
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  reviewedAt: {
+    type: Date
+  },
+  rejectionReason: {
+    type: String,
+    trim: true,
+    maxlength: [1000, 'Rejection reason cannot exceed 1000 characters']
+  },
+  approvalNotes: {
+    type: String,
+    trim: true,
+    maxlength: [1000, 'Approval notes cannot exceed 1000 characters']
+  },
+  documents: [{
+    type: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    url: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    uploadedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }]
 }, {
   timestamps: true,
   toJSON: {
@@ -122,6 +191,9 @@ companySchema.index({ industry: 1 });
 companySchema.index({ location: 1 });
 companySchema.index({ followersCount: -1 });
 companySchema.index({ isVerified: 1, followersCount: -1 });
+companySchema.index({ approvalStatus: 1 });
+companySchema.index({ submittedAt: -1 });
+companySchema.index({ submittedBy: 1 });
 
 // Text search index
 companySchema.index({ 

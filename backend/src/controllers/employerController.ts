@@ -205,9 +205,31 @@ export const createEmployerJob = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Check if employer has an approved company profile
+    const Company = require('../models/Company').Company;
+    const companyProfile = await Company.findOne({ submittedBy: employerId });
+    
+    if (!companyProfile) {
+      return res.status(403).json({
+        success: false,
+        error: 'Company profile required. Please submit your company profile for approval before posting jobs.',
+        code: 'COMPANY_PROFILE_REQUIRED'
+      });
+    }
+
+    if (companyProfile.approvalStatus !== 'approved') {
+      return res.status(403).json({
+        success: false,
+        error: `Company profile must be approved before posting jobs. Current status: ${companyProfile.approvalStatus}`,
+        code: 'COMPANY_PROFILE_NOT_APPROVED',
+        profileStatus: companyProfile.approvalStatus
+      });
+    }
+
     const jobData = {
       ...req.body,
       employer: employerId,
+      company: companyProfile.name, // Use approved company name
       isExternalJob: false, // Employer-created jobs are always internal
       externalApplicationUrl: undefined, // Clear any external fields
       externalJobSource: undefined,
@@ -480,7 +502,8 @@ export const getJobApplications = async (req: AuthRequest, res: Response) => {
     const skip = (pageNum - 1) * limitNum;
 
     let applications = await JobApplication.find(query)
-      .populate('applicant', 'firstName lastName email avatar phone location')
+      .populate('applicant', 'firstName lastName email avatar phone location skills experience education summary currentPosition profileCompletion')
+      .populate('job', 'title company location')
       .populate('psychometricTestResults')
       .populate('interviewResults')
       .populate('certificates')
@@ -2110,7 +2133,7 @@ export const aiShortlistCandidates = async (req: AuthRequest, res: Response) => 
       status: { $in: [ApplicationStatus.APPLIED] }
     })
     .populate('applicant', 'firstName lastName email skills experience education summary jobTitle currentPosition')
-    .populate('job', 'title description requirements skillsRequired experienceLevel company location');
+    .populate('job', 'title description requirements skills experienceLevel company location');
 
     if (applications.length === 0) {
       return res.status(404).json({
@@ -2120,28 +2143,32 @@ export const aiShortlistCandidates = async (req: AuthRequest, res: Response) => 
     }
 
     // Prepare job requirements and candidate data for AI analysis
+    const jobData = job as any;
     const jobRequirements = {
-      title: job.title,
-      description: job.description,
-      requirements: job.requirements || [],
-      skillsRequired: job.skillsRequired || [],
-      experienceLevel: job.experienceLevel,
-      location: job.location,
-      company: job.company
+      title: jobData.title,
+      description: jobData.description,
+      requirements: jobData.requirements || [],
+      skillsRequired: jobData.skills || jobData.skillsRequired || [],
+      experienceLevel: jobData.experienceLevel,
+      location: jobData.location,
+      company: jobData.company
     };
 
-    const candidatesData = applications.map(app => ({
-      applicationId: app._id,
-      candidate: {
-        name: `${app.applicant.firstName} ${app.applicant.lastName}`,
-        email: app.applicant.email,
-        skills: app.applicant.skills || [],
-        experience: app.applicant.experience || [],
-        education: app.applicant.education || [],
-        summary: app.applicant.summary || '',
-        currentPosition: app.applicant.currentPosition || app.applicant.jobTitle || '',
-      }
-    }));
+    const candidatesData = applications.map((app: any) => {
+      const applicant = app.applicant;
+      return {
+        applicationId: app._id.toString(),
+        candidate: {
+          name: `${applicant.firstName} ${applicant.lastName}`,
+          email: applicant.email,
+          skills: applicant.skills || [],
+          experience: applicant.experience || [],
+          education: applicant.education || [],
+          summary: applicant.summary || '',
+          currentPosition: applicant.currentPosition || applicant.jobTitle || '',
+        }
+      };
+    });
 
     // Use AI service to analyze and rank candidates
     const analysisPrompt = `
@@ -2159,30 +2186,49 @@ Please evaluate each candidate on:
 3. Education alignment (15%)
 4. Overall profile quality (10%)
 
-Provide your response in the following JSON format only:
+IMPORTANT: Return ONLY valid JSON without any markdown formatting, code blocks, or additional text. Use this exact format:
+
 {
   "shortlistedCandidates": [
     {
-      "applicationId": "application_id",
+      "applicationId": "application_id_here",
       "score": 85,
-      "reasoning": "Strong technical skills match, relevant experience in similar role...",
-      "strengths": ["React expertise", "3 years experience", "Computer Science degree"],
-      "concerns": ["Limited experience with Node.js"]
+      "reasoning": "Brief explanation of why this candidate is recommended",
+      "strengths": ["strength1", "strength2", "strength3"],
+      "concerns": ["concern1", "concern2"]
     }
   ],
-  "summary": "Analysis summary and recommendations"
+  "summary": "Brief analysis summary and overall recommendations"
 }
 
-Limit to top ${maxCandidates} candidates with scores 60+ only. Sort by score descending.
+Rules:
+- Only include candidates with scores 60 or higher
+- Limit to top ${maxCandidates} candidates maximum
+- Sort by score in descending order
+- Each applicationId must exactly match one from the provided candidates list
+- Keep reasoning under 100 words
+- Provide 2-4 strengths and 0-2 concerns per candidate
 `;
 
     const aiResponse = await aiService.generateContent(analysisPrompt);
     
     let aiResults;
     try {
-      aiResults = JSON.parse(aiResponse);
+      // Clean the AI response - remove markdown formatting if present
+      let cleanedResponse = aiResponse.trim();
+      
+      // Remove markdown code block formatting
+      if (cleanedResponse.startsWith('```json')) {
+        cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanedResponse.startsWith('```')) {
+        cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      console.log('Cleaned AI response:', cleanedResponse);
+      aiResults = JSON.parse(cleanedResponse);
     } catch (parseError) {
       console.error('AI response parsing error:', parseError);
+      console.error('Raw AI response:', aiResponse);
       return res.status(500).json({
         success: false,
         error: 'Failed to parse AI analysis results'
@@ -2190,12 +2236,42 @@ Limit to top ${maxCandidates} candidates with scores 60+ only. Sort by score des
     }
 
     // Validate AI results
+    if (!aiResults || typeof aiResults !== 'object') {
+      return res.status(500).json({
+        success: false,
+        error: 'Invalid AI response format'
+      });
+    }
+
     if (!aiResults.shortlistedCandidates || !Array.isArray(aiResults.shortlistedCandidates)) {
       return res.status(500).json({
         success: false,
-        error: 'Invalid AI analysis results'
+        error: 'AI did not return shortlisted candidates array'
       });
     }
+
+    // Validate each shortlisted candidate
+    for (const candidate of aiResults.shortlistedCandidates) {
+      if (!candidate.applicationId || !candidate.score || !candidate.reasoning) {
+        console.error('Invalid candidate data:', candidate);
+        continue; // Skip invalid candidates instead of failing completely
+      }
+      
+      // Ensure the applicationId exists in our applications
+      const validApp = applications.find((app: any) => app._id.toString() === candidate.applicationId);
+      if (!validApp) {
+        console.error('AI returned invalid applicationId:', candidate.applicationId);
+        continue;
+      }
+    }
+
+    // Filter out any invalid candidates
+    aiResults.shortlistedCandidates = aiResults.shortlistedCandidates.filter((candidate: any) => 
+      candidate.applicationId && 
+      candidate.score && 
+      candidate.reasoning &&
+      applications.find((app: any) => app._id.toString() === candidate.applicationId)
+    );
 
     res.status(200).json({
       success: true,

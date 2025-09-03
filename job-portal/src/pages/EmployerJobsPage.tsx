@@ -52,6 +52,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { companyService } from '../services/companyService';
 
 interface Job {
   _id: string;
@@ -98,6 +99,9 @@ const EmployerJobsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  
+  // Company profile status
+  const [companyProfileStatus, setCompanyProfileStatus] = useState<'approved' | 'pending' | 'rejected' | 'not-submitted' | null>(null);
   const [totalJobs, setTotalJobs] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -112,8 +116,22 @@ const EmployerJobsPage: React.FC = () => {
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
 
   useEffect(() => {
+    checkCompanyProfileStatus();
     fetchJobs();
   }, [page, rowsPerPage, searchQuery, statusFilter]);
+
+  const checkCompanyProfileStatus = async () => {
+    try {
+      const response = await companyService.getMyCompanyProfileStatus();
+      if (response.success && response.data) {
+        setCompanyProfileStatus(response.data.approvalStatus);
+      }
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        setCompanyProfileStatus('not-submitted');
+      }
+    }
+  };
 
   const fetchJobs = async () => {
     try {
@@ -438,6 +456,7 @@ const EmployerJobsPage: React.FC = () => {
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => navigate('/app/jobs/create')}
+          disabled={companyProfileStatus !== 'approved'}
         >
           Post New Job
         </Button>
@@ -446,6 +465,35 @@ const EmployerJobsPage: React.FC = () => {
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
           {error}
+        </Alert>
+      )}
+
+      {/* Company Profile Warning Banner */}
+      {companyProfileStatus && companyProfileStatus !== 'approved' && (
+        <Alert 
+          severity={companyProfileStatus === 'not-submitted' ? 'info' : companyProfileStatus === 'pending' ? 'warning' : 'error'} 
+          sx={{ mb: 3 }}
+          action={
+            <Button 
+              color="inherit" 
+              size="small" 
+              onClick={() => navigate('/app/employer/company-profile')}
+            >
+              {companyProfileStatus === 'not-submitted' ? 'Submit Profile' : 
+               companyProfileStatus === 'pending' ? 'View Status' : 'Update Profile'}
+            </Button>
+          }
+        >
+          <strong>
+            {companyProfileStatus === 'not-submitted' ? 'Company Profile Required' :
+             companyProfileStatus === 'pending' ? 'Company Profile Under Review' : 'Company Profile Needs Attention'}
+          </strong>
+          <br />
+          {companyProfileStatus === 'not-submitted' ? 
+            'You need to submit your company profile for approval before posting new jobs.' :
+           companyProfileStatus === 'pending' ? 
+            'Your company profile is under review. You cannot post new jobs until it\'s approved.' :
+            'Your company profile was rejected. Please review and update it to continue posting jobs.'}
         </Alert>
       )}
 

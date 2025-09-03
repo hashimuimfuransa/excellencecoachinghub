@@ -503,9 +503,10 @@ class EmployerService {
   }
 
   async saveCandidate(candidateId: string) {
-    const response = await fetch(`${API_BASE_URL}/employer/candidates/${candidateId}/save`, {
+    const response = await fetch(`${API_BASE_URL}/employer/saved-candidates`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
+      body: JSON.stringify({ candidateId }),
     });
 
     if (!response.ok) {
@@ -516,7 +517,7 @@ class EmployerService {
   }
 
   async unsaveCandidate(candidateId: string) {
-    const response = await fetch(`${API_BASE_URL}/employer/candidates/${candidateId}/unsave`, {
+    const response = await fetch(`${API_BASE_URL}/employer/saved-candidates/${candidateId}`, {
       method: 'DELETE',
       headers: this.getAuthHeaders(),
     });
@@ -545,6 +546,49 @@ class EmployerService {
     }
 
     return response.json();
+  }
+
+  async downloadCandidateCV(candidateId: string): Promise<{ blob: Blob; filename: string; contentType: string }> {
+    const response = await fetch(`${API_BASE_URL}/employer/candidates/${candidateId}/cv`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to download CV');
+    }
+
+    const blob = await response.blob();
+    const contentType = response.headers.get('content-type') || 'application/pdf';
+    
+    // Determine file extension based on content type
+    let fileExtension = 'pdf'; // default
+    if (contentType.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
+      fileExtension = 'docx';
+    } else if (contentType.includes('application/msword')) {
+      fileExtension = 'doc';
+    } else if (contentType.includes('application/pdf')) {
+      fileExtension = 'pdf';
+    } else if (contentType.includes('text/plain')) {
+      fileExtension = 'txt';
+    } else if (contentType.includes('application/rtf')) {
+      fileExtension = 'rtf';
+    }
+
+    // Try to get filename from Content-Disposition header
+    const contentDisposition = response.headers.get('content-disposition');
+    let filename = `CV.${fileExtension}`;
+    
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      if (filenameMatch && filenameMatch[1]) {
+        filename = filenameMatch[1].replace(/['"]/g, '');
+      }
+    }
+
+    return { blob, filename, contentType };
   }
 
   async updateCandidateNotes(candidateId: string, notes: string) {
@@ -759,6 +803,48 @@ class EmployerService {
     }
 
     return response.json();
+  }
+
+  // AI Shortlisting
+  async aiShortlistCandidates(data: { jobId: string; maxCandidates?: number }) {
+    const response = await fetch(`${API_BASE_URL}/employer/ai-shortlist`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to perform AI shortlisting');
+    }
+
+    return response.json();
+  }
+
+  async applyAIShortlisting(data: { applicationIds: string[]; notes?: string }) {
+    const response = await fetch(`${API_BASE_URL}/employer/ai-shortlist/apply`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to apply AI shortlisting');
+    }
+
+    return response.json();
+  }
+
+  // CV Download
+  async downloadCandidateCV(candidateId: string) {
+    const response = await fetch(`${API_BASE_URL}/employer/candidates/${candidateId}/cv`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to download candidate CV');
+    }
+
+    return response;
   }
 }
 

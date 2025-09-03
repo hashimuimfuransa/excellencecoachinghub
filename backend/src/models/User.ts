@@ -142,6 +142,14 @@ export interface IUserDocument extends Document {
   isOnline?: boolean;
   lastSeen?: Date;
   
+  // Employer-specific fields
+  savedCandidates?: Array<{
+    candidateId: mongoose.Types.ObjectId;
+    savedAt: Date;
+    notes?: string;
+    tags?: string[];
+  }>;
+  
   createdAt: Date;
   updatedAt: Date;
   
@@ -473,7 +481,15 @@ const userSchema = new Schema<IUserDocument>({
   
   // Chat system fields
   isOnline: { type: Boolean, default: false },
-  lastSeen: { type: Date, default: Date.now }
+  lastSeen: { type: Date, default: Date.now },
+  
+  // Employer-specific fields
+  savedCandidates: [{
+    candidateId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    savedAt: { type: Date, default: Date.now },
+    notes: { type: String, maxlength: 1000 },
+    tags: [{ type: String, maxlength: 50 }]
+  }]
 }, {
   timestamps: true,
   toJSON: {

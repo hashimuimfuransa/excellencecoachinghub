@@ -439,21 +439,30 @@ const CreateJobPage: React.FC = () => {
         />
       </Grid>
 
-      <Grid item xs={12} sm={4}>
-        <FormControl fullWidth error={!!errors.workArrangement}>
-          <InputLabel>Work Arrangement *</InputLabel>
-          <Select
-            value={formData.workArrangement}
-            onChange={(e) => handleInputChange('workArrangement', e.target.value)}
-            label="Work Arrangement *"
-          >
-            {workArrangements.map((arrangement) => (
-              <MenuItem key={arrangement.value} value={arrangement.value}>
-                {arrangement.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+      <Grid size={{ xs: 12, sm: 4 }}>
+        <Autocomplete
+          fullWidth
+          freeSolo
+          options={workArrangements.map(arrangement => arrangement.label)}
+          value={workArrangements.find(arrangement => arrangement.value === formData.workArrangement)?.label || formData.workArrangement || ''}
+          onChange={(_, newValue) => {
+            const selectedArrangement = workArrangements.find(arrangement => arrangement.label === newValue);
+            handleInputChange('workArrangement', selectedArrangement ? selectedArrangement.value : newValue || '');
+          }}
+          onInputChange={(_, newValue) => {
+            const selectedArrangement = workArrangements.find(arrangement => arrangement.label === newValue);
+            handleInputChange('workArrangement', selectedArrangement ? selectedArrangement.value : newValue);
+          }}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Work Arrangement *"
+              error={!!errors.workArrangement}
+              helperText={errors.workArrangement}
+              placeholder="Select or type work arrangement"
+            />
+          )}
+        />
       </Grid>
 
       <Grid item xs={12}>
@@ -474,55 +483,82 @@ const CreateJobPage: React.FC = () => {
 
   const renderJobDetails = () => (
     <Grid container spacing={3}>
-      <Grid item xs={12} sm={4}>
-        <FormControl fullWidth error={!!errors.jobType}>
-          <InputLabel>Job Type *</InputLabel>
-          <Select
-            value={formData.jobType}
-            onChange={(e) => handleInputChange('jobType', e.target.value)}
-            label="Job Type *"
-          >
-            {jobTypes.map((type) => (
-              <MenuItem key={type.value} value={type.value}>
-                {type.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+      <Grid size={{ xs: 12, sm: 4 }}>
+        <Autocomplete
+          fullWidth
+          freeSolo
+          options={jobTypes.map(type => type.label)}
+          value={jobTypes.find(type => type.value === formData.jobType)?.label || formData.jobType || ''}
+          onChange={(_, newValue) => {
+            const selectedType = jobTypes.find(type => type.label === newValue);
+            handleInputChange('jobType', selectedType ? selectedType.value : newValue || '');
+          }}
+          onInputChange={(_, newValue) => {
+            const selectedType = jobTypes.find(type => type.label === newValue);
+            handleInputChange('jobType', selectedType ? selectedType.value : newValue);
+          }}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Job Type *"
+              error={!!errors.jobType}
+              helperText={errors.jobType}
+              placeholder="Select or type job type"
+            />
+          )}
+        />
       </Grid>
 
-      <Grid item xs={12} sm={4}>
-        <FormControl fullWidth error={!!errors.experienceLevel}>
-          <InputLabel>Experience Level *</InputLabel>
-          <Select
-            value={formData.experienceLevel}
-            onChange={(e) => handleInputChange('experienceLevel', e.target.value)}
-            label="Experience Level *"
-          >
-            {experienceLevels.map((level) => (
-              <MenuItem key={level.value} value={level.value}>
-                {level.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+      <Grid size={{ xs: 12, sm: 4 }}>
+        <Autocomplete
+          fullWidth
+          freeSolo
+          options={experienceLevels.map(level => level.label)}
+          value={experienceLevels.find(level => level.value === formData.experienceLevel)?.label || formData.experienceLevel || ''}
+          onChange={(_, newValue) => {
+            const selectedLevel = experienceLevels.find(level => level.label === newValue);
+            handleInputChange('experienceLevel', selectedLevel ? selectedLevel.value : newValue || '');
+          }}
+          onInputChange={(_, newValue) => {
+            const selectedLevel = experienceLevels.find(level => level.label === newValue);
+            handleInputChange('experienceLevel', selectedLevel ? selectedLevel.value : newValue);
+          }}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Experience Level *"
+              error={!!errors.experienceLevel}
+              helperText={errors.experienceLevel}
+              placeholder="Select or type experience level"
+            />
+          )}
+        />
       </Grid>
 
-      <Grid item xs={12} sm={4}>
-        <FormControl fullWidth error={!!errors.educationLevel}>
-          <InputLabel>Education Level *</InputLabel>
-          <Select
-            value={formData.educationLevel}
-            onChange={(e) => handleInputChange('educationLevel', e.target.value)}
-            label="Education Level *"
-          >
-            {educationLevels.map((level) => (
-              <MenuItem key={level.value} value={level.value}>
-                {level.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+      <Grid size={{ xs: 12, sm: 4 }}>
+        <Autocomplete
+          fullWidth
+          freeSolo
+          options={educationLevels.map(level => level.label)}
+          value={educationLevels.find(level => level.value === formData.educationLevel)?.label || formData.educationLevel || ''}
+          onChange={(_, newValue) => {
+            const selectedLevel = educationLevels.find(level => level.label === newValue);
+            handleInputChange('educationLevel', selectedLevel ? selectedLevel.value : newValue || '');
+          }}
+          onInputChange={(_, newValue) => {
+            const selectedLevel = educationLevels.find(level => level.label === newValue);
+            handleInputChange('educationLevel', selectedLevel ? selectedLevel.value : newValue);
+          }}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Education Level *"
+              error={!!errors.educationLevel}
+              helperText={errors.educationLevel}
+              placeholder="Select or type education level"
+            />
+          )}
+        />
       </Grid>
 
       <Grid item xs={12}>
@@ -728,21 +764,28 @@ const CreateJobPage: React.FC = () => {
         />
       </Grid>
 
-      <Grid item xs={12} sm={4}>
-        <FormControl fullWidth>
-          <InputLabel>Currency</InputLabel>
-          <Select
-            value={formData.salary.currency}
-            onChange={(e) => handleSalaryChange('currency', e.target.value)}
-            label="Currency"
-          >
-            {currencies.map((currency) => (
-              <MenuItem key={currency.value} value={currency.value}>
-                {currency.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+      <Grid size={{ xs: 12, sm: 4 }}>
+        <Autocomplete
+          fullWidth
+          freeSolo
+          options={currencies.map(currency => currency.label)}
+          value={currencies.find(currency => currency.value === formData.salary.currency)?.label || formData.salary.currency || ''}
+          onChange={(_, newValue) => {
+            const selectedCurrency = currencies.find(currency => currency.label === newValue);
+            handleSalaryChange('currency', selectedCurrency ? selectedCurrency.value : newValue || '');
+          }}
+          onInputChange={(_, newValue) => {
+            const selectedCurrency = currencies.find(currency => currency.label === newValue);
+            handleSalaryChange('currency', selectedCurrency ? selectedCurrency.value : newValue);
+          }}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Currency"
+              placeholder="Select or type currency"
+            />
+          )}
+        />
       </Grid>
 
       <Grid size={{ xs: 12 }}>

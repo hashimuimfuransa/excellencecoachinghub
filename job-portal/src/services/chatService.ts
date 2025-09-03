@@ -180,14 +180,32 @@ class ChatService {
   // Create new chat or get existing one
   async createOrGetChat(participantIds: string[], initialMessage?: string): Promise<ChatRoom> {
     try {
-      const response = await apiPost<{ success: boolean; data: ChatRoom }>('/chat/create', {
+      console.log('Creating chat with participants:', participantIds);
+      console.log('Initial message:', initialMessage);
+      
+      const payload = {
         participantIds,
         initialMessage,
-      });
+      };
+      console.log('Chat creation payload:', payload);
+      
+      const response = await apiPost<{ success: boolean; data: ChatRoom }>('/chat/create', payload);
+      console.log('Chat creation response:', response);
+      
+      if (!response.data) {
+        throw new Error('No chat data returned from server');
+      }
+      
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating chat:', error);
-      throw error;
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
+      throw new Error(error.response?.data?.message || error.message || 'Failed to create conversation');
     }
   }
 
@@ -309,6 +327,11 @@ class ChatService {
   // Get socket connection status
   isConnected(): boolean {
     return this.socket?.connected || false;
+  }
+
+  // Alias method for backward compatibility
+  async createConversation(participantIds: string[], initialMessage?: string): Promise<ChatRoom> {
+    return this.createOrGetChat(participantIds, initialMessage);
   }
 }
 

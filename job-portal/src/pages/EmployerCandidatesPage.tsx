@@ -1,103 +1,64 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
+  Container,
   Typography,
-  Button,
+  Paper,
+  Tabs,
+  Tab,
   Card,
   CardContent,
-  Grid,
-  Chip,
   Avatar,
-  IconButton,
-  Menu,
-  MenuItem,
+  Chip,
+  Button,
+  Grid,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
-  InputAdornment,
-  Tabs,
-  Tab,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
-  Paper,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
-  ListItemSecondaryAction,
-  Divider,
-  Alert,
-  Skeleton,
   FormControl,
   InputLabel,
   Select,
+  MenuItem,
+  IconButton,
+  Tooltip,
+  Alert,
+  CircularProgress,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemAvatar,
+  ListItemSecondaryAction,
+  Divider,
   Badge,
+  Stack,
   LinearProgress
 } from '@mui/material';
 import {
-  Search as SearchIcon,
-  FilterList as FilterIcon,
-  MoreVert as MoreVertIcon,
-  Person as PersonIcon,
-  Email as EmailIcon,
-  Phone as PhoneIcon,
-  LocationOn as LocationIcon,
-  Work as WorkIcon,
-  School as SchoolIcon,
-  Star as StarIcon,
-  CheckCircle as CheckCircleIcon,
-  Schedule as ScheduleIcon,
-  Assessment as AssessmentIcon,
-  VideoCall as InterviewIcon,
-  Download as DownloadIcon,
-  Visibility as ViewIcon,
-  Message as MessageIcon,
-  ThumbUp as ThumbUpIcon,
-  ThumbDown as ThumbDownIcon
+  Person,
+  Email,
+  Phone,
+  LocationOn,
+  Work,
+  School,
+  Star,
+  StarBorder,
+  Download,
+  Visibility,
+  CheckCircle,
+  Cancel,
+  Schedule,
+  Psychology,
+  AutoAwesome,
+  TrendingUp,
+  FilterList,
+  Search,
+  Refresh
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-
-interface Candidate {
-  _id: string;
-  candidate: {
-    _id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone?: string;
-    location?: string;
-    avatar?: string;
-    bio?: string;
-    skills?: string[];
-    experience?: Array<{
-      company: string;
-      position: string;
-      startDate: string;
-      endDate?: string;
-    }>;
-  };
-  applications: Array<{
-    _id: string;
-    job: {
-      _id: string;
-      title: string;
-    };
-    status: string;
-    appliedAt: string;
-    psychometricTestResults: any[];
-    interviewResults: any[];
-  }>;
-  totalApplications: number;
-  latestApplication: string;
-}
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { employerService } from '../services/employerService';
+import { formatDistanceToNow } from 'date-fns';
 
 interface Application {
   _id: string;
@@ -106,705 +67,682 @@ interface Application {
     firstName: string;
     lastName: string;
     email: string;
-    avatar?: string;
     phone?: string;
     location?: string;
+    skills: string[];
+    experience: any[];
+    education: any[];
+    summary?: string;
+    currentPosition?: string;
+    avatar?: string;
+    profileCompletion?: { percentage: number };
   };
   job: {
     _id: string;
     title: string;
     company: string;
+    location: string;
   };
   status: string;
   appliedAt: string;
-  psychometricTestResults: any[];
-  interviewResults: any[];
-  resume?: string;
-  coverLetter?: string;
   notes?: string;
+  resumeFile?: string;
+  coverLetter?: string;
+  testScore?: number;
 }
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
+interface Job {
+  _id: string;
+  title: string;
+  company: string;
+  location: string;
+  description: string;
+  requirements: string[];
+  skillsRequired: string[];
+  experienceLevel: string;
+  applicationsCount?: number;
 }
 
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
+interface AIShortlistResult {
+  applicationId: string;
+  score: number;
+  reasoning: string;
+  strengths: string[];
+  concerns: string[];
+}
 
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`candidates-tabpanel-${index}`}
-      aria-labelledby={`candidates-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
-    </div>
-  );
+interface AIAnalysisData {
+  jobTitle: string;
+  totalApplications: number;
+  shortlistedCandidates: AIShortlistResult[];
+  summary: string;
+  analysisDate: string;
 }
 
 const EmployerCandidatesPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalCandidates, setTotalCandidates] = useState(0);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [jobFilter, setJobFilter] = useState('all');
   const [tabValue, setTabValue] = useState(0);
-  const [viewMode, setViewMode] = useState<'candidates' | 'applications'>('applications');
-  
-  // Menu state
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [selectedJob, setSelectedJob] = useState<string>('');
+  const [loading, setLoading] = useState(true);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   
-  // Dialog states
-  const [candidateDetailsOpen, setCandidateDetailsOpen] = useState(false);
-  const [notesDialogOpen, setNotesDialogOpen] = useState(false);
-  const [scheduleInterviewOpen, setScheduleInterviewOpen] = useState(false);
-  const [notes, setNotes] = useState('');
+  // AI Shortlisting states
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResults, setAiResults] = useState<AIAnalysisData | null>(null);
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [selectedForShortlisting, setSelectedForShortlisting] = useState<string[]>([]);
+  const [maxCandidates, setMaxCandidates] = useState(10);
 
+  // Load jobs on mount
   useEffect(() => {
-    if (viewMode === 'candidates') {
-      fetchCandidates();
-    } else {
-      fetchApplications();
+    loadJobs();
+  }, []);
+
+  // Load applications when job is selected
+  useEffect(() => {
+    if (selectedJob) {
+      loadApplications();
     }
-  }, [viewMode, page, rowsPerPage, searchQuery, statusFilter, jobFilter]);
+  }, [selectedJob, statusFilter]);
 
-  const fetchCandidates = async () => {
+  // Set initial job from URL params
+  useEffect(() => {
+    const jobId = searchParams.get('jobId');
+    if (jobId && jobs.length > 0) {
+      setSelectedJob(jobId);
+    } else if (jobs.length > 0) {
+      setSelectedJob(jobs[0]._id);
+    }
+  }, [jobs, searchParams]);
+
+  const loadJobs = async () => {
     try {
-      setLoading(true);
-      const params = new URLSearchParams({
-        page: (page + 1).toString(),
-        limit: rowsPerPage.toString(),
-      });
+      const response = await employerService.getJobs();
+      setJobs(response.data.jobs || []);
+    } catch (error) {
+      console.error('Error loading jobs:', error);
+    }
+  };
 
-      if (searchQuery) params.append('q', searchQuery);
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/employer/candidates?${params}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch candidates');
-      }
-
-      const data = await response.json();
-      setCandidates(data.data);
-      setTotalCandidates(data.pagination.total);
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+  const loadApplications = async () => {
+    if (!selectedJob) return;
+    
+    setLoading(true);
+    try {
+      const response = await employerService.getJobApplications(selectedJob);
+      setApplications(response.data.applications || []);
+    } catch (error) {
+      console.error('Error loading applications:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchApplications = async () => {
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue);
+  };
+
+  const handleJobChange = (jobId: string) => {
+    setSelectedJob(jobId);
+    setAiResults(null); // Clear AI results when changing jobs
+  };
+
+  const handleViewDetails = (application: Application) => {
+    setSelectedApplication(application);
+    setDetailsOpen(true);
+  };
+
+  const handleStatusUpdate = async (applicationId: string, newStatus: string) => {
     try {
-      setLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/employer/jobs`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
+      await employerService.updateApplicationStatus(applicationId, newStatus);
+      loadApplications(); // Reload to get updated data
+    } catch (error) {
+      console.error('Error updating application status:', error);
+    }
+  };
+
+  const handleDownloadCV = async (candidateId: string) => {
+    try {
+      const response = await employerService.downloadCandidateCV(candidateId);
+      // Handle file download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `candidate_${candidateId}_cv.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Error downloading CV:', error);
+    }
+  };
+
+  // AI Shortlisting Functions
+  const handleAIShortlist = async () => {
+    if (!selectedJob) return;
+    
+    setAiLoading(true);
+    try {
+      const response = await employerService.aiShortlistCandidates({
+        jobId: selectedJob,
+        maxCandidates
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch applications');
-      }
-
-      const data = await response.json();
-      // Get all jobs and their applications
-      const allApplications: Application[] = [];
-      
-      // This is a simplified version - in reality, you'd fetch applications from multiple jobs
-      for (const job of data.data) {
-        const applicationsResponse = await fetch(
-          `${import.meta.env.VITE_API_URL}/employer/jobs/${job._id}/applications`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem('token')}`,
-            },
-          }
-        );
-
-        if (applicationsResponse.ok) {
-          const applicationsData = await applicationsResponse.json();
-          allApplications.push(...applicationsData.data);
-        }
-      }
-
-      setApplications(allApplications);
-      setTotalCandidates(allApplications.length);
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      setAiResults(response.data);
+      setAiDialogOpen(true);
+    } catch (error) {
+      console.error('Error performing AI shortlisting:', error);
     } finally {
-      setLoading(false);
+      setAiLoading(false);
     }
   };
 
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, item: Candidate | Application) => {
-    event.stopPropagation();
-    setAnchorEl(event.currentTarget);
-    if (viewMode === 'candidates') {
-      setSelectedCandidate(item as Candidate);
-    } else {
-      setSelectedApplication(item as Application);
-    }
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setSelectedCandidate(null);
-    setSelectedApplication(null);
-  };
-
-  const handleUpdateApplicationStatus = async (applicationId: string, status: string) => {
+  const handleApplyAIShortlisting = async () => {
+    if (!selectedForShortlisting.length) return;
+    
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/employer/applications/${applicationId}/status`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-          body: JSON.stringify({ status }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to update application status');
-      }
-
-      // Refresh data
-      if (viewMode === 'applications') {
-        fetchApplications();
-      }
-      handleMenuClose();
-    } catch (err: any) {
-      setError(err.message || 'Failed to update application status');
+      await employerAPI.applyAIShortlisting({
+        applicationIds: selectedForShortlisting,
+        notes: 'Shortlisted by AI recommendation'
+      });
+      setAiDialogOpen(false);
+      setSelectedForShortlisting([]);
+      loadApplications(); // Reload to show updated statuses
+    } catch (error) {
+      console.error('Error applying AI shortlisting:', error);
     }
   };
 
-  const handleAddNotes = async (applicationId: string, notes: string) => {
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/employer/applications/${applicationId}/notes`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-          body: JSON.stringify({ notes }),
+  const toggleCandidateSelection = (applicationId: string) => {
+    setSelectedForShortlisting(prev => 
+      prev.includes(applicationId) 
+        ? prev.filter(id => id !== applicationId)
+        : [...prev, applicationId]
+    );
+  };
+
+  // Filter applications based on current tab and filters
+  const getFilteredApplications = () => {
+    let filtered = applications;
+
+    // Filter by status based on tab
+    switch (tabValue) {
+      case 0: // All Applications
+        if (statusFilter !== 'all') {
+          filtered = filtered.filter(app => app.status === statusFilter);
         }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to add notes');
-      }
-
-      // Refresh data
-      if (viewMode === 'applications') {
-        fetchApplications();
-      }
-      setNotesDialogOpen(false);
-      setNotes('');
-    } catch (err: any) {
-      setError(err.message || 'Failed to add notes');
+        break;
+      case 1: // New Applications
+        filtered = filtered.filter(app => app.status === 'applied');
+        break;
+      case 2: // Shortlisted
+        filtered = filtered.filter(app => app.status === 'shortlisted');
+        break;
+      case 3: // Interviewed
+        filtered = filtered.filter(app => app.status === 'interviewed');
+        break;
+      case 4: // Hired
+        filtered = filtered.filter(app => app.status === 'hired');
+        break;
     }
+
+    // Filter by search query
+    if (searchQuery) {
+      filtered = filtered.filter(app => 
+        `${app.applicant.firstName} ${app.applicant.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        app.applicant.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        app.applicant.skills.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+
+    return filtered;
   };
 
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'applied':
-        return 'info';
-      case 'shortlisted':
-        return 'success';
-      case 'interview_scheduled':
-        return 'warning';
-      case 'interviewed':
-        return 'primary';
-      case 'offered':
-        return 'success';
-      case 'rejected':
-        return 'error';
-      default:
-        return 'default';
+    switch (status) {
+      case 'applied': return 'default';
+      case 'shortlisted': return 'primary';
+      case 'interviewed': return 'info';
+      case 'hired': return 'success';
+      case 'rejected': return 'error';
+      default: return 'default';
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'applied': return <Schedule />;
+      case 'shortlisted': return <Star />;
+      case 'interviewed': return <Person />;
+      case 'hired': return <CheckCircle />;
+      case 'rejected': return <Cancel />;
+      default: return <Schedule />;
+    }
   };
 
-  const getExperienceYears = (experience: any[]) => {
-    if (!experience || experience.length === 0) return 0;
-    
-    const totalMonths = experience.reduce((total, exp) => {
-      const start = new Date(exp.startDate);
-      const end = exp.endDate ? new Date(exp.endDate) : new Date();
-      const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
-      return total + months;
-    }, 0);
-    
-    return Math.round(totalMonths / 12);
-  };
+  const selectedJobData = jobs.find(job => job._id === selectedJob);
+  const filteredApplications = getFilteredApplications();
 
-  const CandidateCard = ({ candidate }: { candidate: Candidate }) => (
-    <Card sx={{ mb: 2 }}>
-      <CardContent>
-        <Box display="flex" alignItems="flex-start" gap={2}>
-          <Avatar
-            src={candidate.candidate.avatar}
-            sx={{ width: 60, height: 60 }}
-          >
-            {candidate.candidate.firstName[0]}{candidate.candidate.lastName[0]}
-          </Avatar>
-          
-          <Box flex={1}>
-            <Typography variant="h6" gutterBottom>
-              {candidate.candidate.firstName} {candidate.candidate.lastName}
-            </Typography>
-            
-            <Box display="flex" alignItems="center" gap={2} mb={1}>
-              {candidate.candidate.email && (
-                <Box display="flex" alignItems="center" gap={0.5}>
-                  <EmailIcon fontSize="small" color="action" />
-                  <Typography variant="body2" color="textSecondary">
-                    {candidate.candidate.email}
-                  </Typography>
-                </Box>
-              )}
-              
-              {candidate.candidate.location && (
-                <Box display="flex" alignItems="center" gap={0.5}>
-                  <LocationIcon fontSize="small" color="action" />
-                  <Typography variant="body2" color="textSecondary">
-                    {candidate.candidate.location}
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-
-            {candidate.candidate.bio && (
-              <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                {candidate.candidate.bio}
-              </Typography>
-            )}
-
-            <Box display="flex" gap={1} mb={2}>
-              {candidate.candidate.skills?.slice(0, 3).map((skill, index) => (
-                <Chip key={index} label={skill} size="small" variant="outlined" />
-              ))}
-              {(candidate.candidate.skills?.length || 0) > 3 && (
-                <Chip 
-                  label={`+${(candidate.candidate.skills?.length || 0) - 3} more`} 
-                  size="small" 
-                  variant="outlined" 
-                />
-              )}
-            </Box>
-
-            <Box display="flex" gap={3}>
-              <Typography variant="body2" color="textSecondary">
-                {candidate.totalApplications} applications
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                {getExperienceYears(candidate.candidate.experience || [])} years experience
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                Latest: {formatDate(candidate.latestApplication)}
-              </Typography>
-            </Box>
-          </Box>
-
-          <IconButton onClick={(e) => handleMenuClick(e, candidate)}>
-            <MoreVertIcon />
-          </IconButton>
-        </Box>
-      </CardContent>
-    </Card>
-  );
-
-  const ApplicationCard = ({ application }: { application: Application }) => (
-    <Card sx={{ mb: 2 }}>
-      <CardContent>
-        <Box display="flex" alignItems="flex-start" gap={2}>
-          <Avatar
-            src={application.applicant.avatar}
-            sx={{ width: 50, height: 50 }}
-          >
-            {application.applicant.firstName[0]}{application.applicant.lastName[0]}
-          </Avatar>
-          
-          <Box flex={1}>
-            <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
-              <Box>
-                <Typography variant="h6">
-                  {application.applicant.firstName} {application.applicant.lastName}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Applied for: {application.job.title}
-                </Typography>
-              </Box>
-              <Box display="flex" gap={1}>
-                <Chip 
-                  label={application.status} 
-                  size="small" 
-                  color={getStatusColor(application.status) as any}
-                />
-                {application.psychometricTestResults.length > 0 && (
-                  <Badge badgeContent={application.psychometricTestResults.length} color="primary">
-                    <AssessmentIcon fontSize="small" color="action" />
-                  </Badge>
-                )}
-                {application.interviewResults.length > 0 && (
-                  <Badge badgeContent={application.interviewResults.length} color="secondary">
-                    <InterviewIcon fontSize="small" color="action" />
-                  </Badge>
-                )}
-              </Box>
-            </Box>
-
-            <Box display="flex" alignItems="center" gap={2} mb={1}>
-              <Box display="flex" alignItems="center" gap={0.5}>
-                <EmailIcon fontSize="small" color="action" />
-                <Typography variant="body2" color="textSecondary">
-                  {application.applicant.email}
-                </Typography>
-              </Box>
-              
-              {application.applicant.location && (
-                <Box display="flex" alignItems="center" gap={0.5}>
-                  <LocationIcon fontSize="small" color="action" />
-                  <Typography variant="body2" color="textSecondary">
-                    {application.applicant.location}
-                  </Typography>
-                </Box>
-              )}
-            </Box>
-
-            <Typography variant="body2" color="textSecondary">
-              Applied on {formatDate(application.appliedAt)}
-            </Typography>
-          </Box>
-
-          <IconButton onClick={(e) => handleMenuClick(e, application)}>
-            <MoreVertIcon />
-          </IconButton>
-        </Box>
-      </CardContent>
-    </Card>
-  );
-
-  if (loading && (candidates.length === 0 && applications.length === 0)) {
-    return (
-      <Box>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Candidates & Applications
+  return (
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" gutterBottom>
+          Candidate Management
         </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Manage applications and shortlist candidates using AI
+        </Typography>
+      </Box>
+
+      {/* Job Selection */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={4}>
+            <FormControl fullWidth>
+              <InputLabel>Select Job</InputLabel>
+              <Select
+                value={selectedJob}
+                onChange={(e) => handleJobChange(e.target.value)}
+                label="Select Job"
+              >
+                {jobs.map((job) => (
+                  <MenuItem key={job._id} value={job._id}>
+                    {job.title} - {job.company}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Grid>
+          
+          <Grid item xs={12} md={3}>
+            <TextField
+              fullWidth
+              placeholder="Search candidates..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{
+                startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} />
+              }}
+            />
+          </Grid>
+
+          <Grid item xs={12} md={2}>
+            <FormControl fullWidth>
+              <InputLabel>Status Filter</InputLabel>
+              <Select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                label="Status Filter"
+              >
+                <MenuItem value="all">All Statuses</MenuItem>
+                <MenuItem value="applied">Applied</MenuItem>
+                <MenuItem value="shortlisted">Shortlisted</MenuItem>
+                <MenuItem value="interviewed">Interviewed</MenuItem>
+                <MenuItem value="hired">Hired</MenuItem>
+                <MenuItem value="rejected">Rejected</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} md={3}>
+            <Stack direction="row" spacing={1}>
+              <Button
+                variant="contained"
+                startIcon={aiLoading ? <CircularProgress size={20} /> : <AutoAwesome />}
+                onClick={handleAIShortlist}
+                disabled={!selectedJob || aiLoading || !applications.some(app => app.status === 'applied')}
+                sx={{ flexGrow: 1 }}
+              >
+                {aiLoading ? 'Analyzing...' : 'AI Shortlist'}
+              </Button>
+              <IconButton onClick={loadApplications} disabled={loading}>
+                <Refresh />
+              </IconButton>
+            </Stack>
+          </Grid>
+        </Grid>
+
+        {selectedJobData && (
+          <Box sx={{ mt: 2, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+            <Typography variant="h6">{selectedJobData.title}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {selectedJobData.company} • {selectedJobData.location} • {applications.length} applications
+            </Typography>
+          </Box>
+        )}
+      </Paper>
+
+      {/* Tabs for different application views */}
+      <Paper sx={{ mb: 3 }}>
+        <Tabs value={tabValue} onChange={handleTabChange}>
+          <Tab label={`All Applications (${applications.length})`} />
+          <Tab label={`New (${applications.filter(app => app.status === 'applied').length})`} />
+          <Tab label={`Shortlisted (${applications.filter(app => app.status === 'shortlisted').length})`} />
+          <Tab label={`Interviewed (${applications.filter(app => app.status === 'interviewed').length})`} />
+          <Tab label={`Hired (${applications.filter(app => app.status === 'hired').length})`} />
+        </Tabs>
+      </Paper>
+
+      {/* Applications List */}
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : filteredApplications.length === 0 ? (
+        <Paper sx={{ p: 4, textAlign: 'center' }}>
+          <Typography variant="h6" color="text.secondary">
+            No applications found
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {selectedJob ? 'No applications match your current filters.' : 'Please select a job to view applications.'}
+          </Typography>
+        </Paper>
+      ) : (
         <Grid container spacing={2}>
-          {[1, 2, 3].map((i) => (
-            <Grid item xs={12} key={i}>
+          {filteredApplications.map((application) => (
+            <Grid item xs={12} key={application._id}>
               <Card>
                 <CardContent>
-                  <Box display="flex" gap={2}>
-                    <Skeleton variant="circular" width={60} height={60} />
-                    <Box flex={1}>
-                      <Skeleton variant="text" width="60%" height={32} />
-                      <Skeleton variant="text" width="40%" />
-                      <Skeleton variant="text" width="80%" />
-                    </Box>
-                  </Box>
+                  <Grid container spacing={2} alignItems="center">
+                    <Grid item xs={12} sm={6} md={4}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Avatar
+                          src={application.applicant.avatar}
+                          sx={{ width: 50, height: 50 }}
+                        >
+                          {application.applicant.firstName[0]}{application.applicant.lastName[0]}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="h6">
+                            {application.applicant.firstName} {application.applicant.lastName}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {application.applicant.currentPosition || 'Job Seeker'}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Applied {formatDistanceToNow(new Date(application.appliedAt))} ago
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {application.applicant.skills.slice(0, 3).map((skill) => (
+                          <Chip key={skill} label={skill} size="small" />
+                        ))}
+                        {application.applicant.skills.length > 3 && (
+                          <Chip label={`+${application.applicant.skills.length - 3}`} size="small" />
+                        )}
+                      </Box>
+                      {application.applicant.profileCompletion && (
+                        <Box sx={{ mt: 1 }}>
+                          <Typography variant="caption" color="text.secondary">
+                            Profile: {application.applicant.profileCompletion.percentage}%
+                          </Typography>
+                          <LinearProgress 
+                            variant="determinate" 
+                            value={application.applicant.profileCompletion.percentage} 
+                            sx={{ height: 4, borderRadius: 2 }}
+                          />
+                        </Box>
+                      )}
+                    </Grid>
+
+                    <Grid item xs={12} sm={6} md={2}>
+                      <Chip
+                        label={application.status.toUpperCase()}
+                        color={getStatusColor(application.status) as any}
+                        icon={getStatusIcon(application.status)}
+                        sx={{ minWidth: 100 }}
+                      />
+                      {application.testScore && (
+                        <Box sx={{ mt: 1 }}>
+                          <Typography variant="caption" color="text.secondary">
+                            Test Score: {application.testScore}%
+                          </Typography>
+                        </Box>
+                      )}
+                    </Grid>
+
+                    <Grid item xs={12} sm={6} md={3}>
+                      <Stack direction="row" spacing={1}>
+                        <Button
+                          size="small"
+                          startIcon={<Visibility />}
+                          onClick={() => handleViewDetails(application)}
+                        >
+                          View
+                        </Button>
+                        <Button
+                          size="small"
+                          startIcon={<Download />}
+                          onClick={() => handleDownloadCV(application.applicant._id)}
+                        >
+                          CV
+                        </Button>
+                        {application.status === 'applied' && (
+                          <Button
+                            size="small"
+                            variant="contained"
+                            startIcon={<Star />}
+                            onClick={() => handleStatusUpdate(application._id, 'shortlisted')}
+                          >
+                            Shortlist
+                          </Button>
+                        )}
+                      </Stack>
+                    </Grid>
+                  </Grid>
                 </CardContent>
               </Card>
             </Grid>
           ))}
         </Grid>
-      </Box>
-    );
-  }
-
-  return (
-    <Box>
-      {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1">
-          Candidates & Applications
-        </Typography>
-        <Box display="flex" gap={2}>
-          <Button
-            variant={viewMode === 'applications' ? 'contained' : 'outlined'}
-            onClick={() => setViewMode('applications')}
-          >
-            Applications
-          </Button>
-          <Button
-            variant={viewMode === 'candidates' ? 'contained' : 'outlined'}
-            onClick={() => setViewMode('candidates')}
-          >
-            Candidates
-          </Button>
-        </Box>
-      </Box>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
       )}
 
-      {/* Search and Filters */}
-      <Grid container spacing={2} mb={3}>
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
-            placeholder={`Search ${viewMode}...`}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <FormControl fullWidth>
-            <InputLabel>Status Filter</InputLabel>
-            <Select
-              value={statusFilter}
-              label="Status Filter"
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <MenuItem value="all">All Statuses</MenuItem>
-              <MenuItem value="applied">Applied</MenuItem>
-              <MenuItem value="shortlisted">Shortlisted</MenuItem>
-              <MenuItem value="interview_scheduled">Interview Scheduled</MenuItem>
-              <MenuItem value="interviewed">Interviewed</MenuItem>
-              <MenuItem value="offered">Offered</MenuItem>
-              <MenuItem value="rejected">Rejected</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Button
-            fullWidth
-            variant="outlined"
-            startIcon={<DownloadIcon />}
-            sx={{ height: '56px' }}
-          >
-            Export Data
-          </Button>
-        </Grid>
-      </Grid>
-
-      {/* Content */}
-      {viewMode === 'candidates' ? (
-        candidates.length === 0 ? (
-          <Card>
-            <CardContent>
-              <Box textAlign="center" py={6}>
-                <PersonIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                <Typography variant="h6" gutterBottom>
-                  No candidates found
-                </Typography>
-                <Typography color="textSecondary">
-                  Candidates will appear here once people apply to your jobs.
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            {candidates.map((candidate) => (
-              <CandidateCard key={candidate._id} candidate={candidate} />
-            ))}
-            <TablePagination
-              component="div"
-              count={totalCandidates}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={(_, newPage) => setPage(newPage)}
-              onRowsPerPageChange={(e) => {
-                setRowsPerPage(parseInt(e.target.value, 10));
-                setPage(0);
-              }}
-            />
-          </>
-        )
-      ) : (
-        applications.length === 0 ? (
-          <Card>
-            <CardContent>
-              <Box textAlign="center" py={6}>
-                <WorkIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                <Typography variant="h6" gutterBottom>
-                  No applications found
-                </Typography>
-                <Typography color="textSecondary">
-                  Applications will appear here once people apply to your jobs.
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            {applications.map((application) => (
-              <ApplicationCard key={application._id} application={application} />
-            ))}
-            <TablePagination
-              component="div"
-              count={totalCandidates}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={(_, newPage) => setPage(newPage)}
-              onRowsPerPageChange={(e) => {
-                setRowsPerPage(parseInt(e.target.value, 10));
-                setPage(0);
-              }}
-            />
-          </>
-        )
-      )}
-
-      {/* Context Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-      >
-        {viewMode === 'candidates' && selectedCandidate ? (
-          <>
-            <MenuItem onClick={() => {
-              navigate(`/app/employer/candidates/${selectedCandidate.candidate._id}`);
-              handleMenuClose();
-            }}>
-              <ViewIcon fontSize="small" sx={{ mr: 1 }} />
-              View Full Profile
-            </MenuItem>
-            <MenuItem onClick={() => {
-              // TODO: Implement message candidate
-              handleMenuClose();
-            }}>
-              <MessageIcon fontSize="small" sx={{ mr: 1 }} />
-              Send Message
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={() => {
-              // TODO: Implement view all applications
-              handleMenuClose();
-            }}>
-              <WorkIcon fontSize="small" sx={{ mr: 1 }} />
-              View All Applications
-            </MenuItem>
-          </>
-        ) : selectedApplication ? (
-          <>
-            <MenuItem onClick={() => {
-              navigate(`/app/applications/${selectedApplication._id}`);
-              handleMenuClose();
-            }}>
-              <ViewIcon fontSize="small" sx={{ mr: 1 }} />
-              View Details
-            </MenuItem>
-            <MenuItem onClick={() => {
-              handleUpdateApplicationStatus(selectedApplication._id, 'shortlisted');
-            }}>
-              <ThumbUpIcon fontSize="small" sx={{ mr: 1 }} />
-              Shortlist
-            </MenuItem>
-            <MenuItem onClick={() => {
-              setScheduleInterviewOpen(true);
-              handleMenuClose();
-            }}>
-              <ScheduleIcon fontSize="small" sx={{ mr: 1 }} />
-              Schedule Interview
-            </MenuItem>
-            <MenuItem onClick={() => {
-              setNotesDialogOpen(true);
-              handleMenuClose();
-            }}>
-              <MessageIcon fontSize="small" sx={{ mr: 1 }} />
-              Add Notes
-            </MenuItem>
-            <Divider />
-            <MenuItem 
-              onClick={() => {
-                handleUpdateApplicationStatus(selectedApplication._id, 'rejected');
-              }}
-              sx={{ color: 'error.main' }}
-            >
-              <ThumbDownIcon fontSize="small" sx={{ mr: 1 }} />
-              Reject
-            </MenuItem>
-          </>
-        ) : null}
-      </Menu>
-
-      {/* Notes Dialog */}
-      <Dialog open={notesDialogOpen} onClose={() => setNotesDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Notes</DialogTitle>
+      {/* AI Results Dialog */}
+      <Dialog open={aiDialogOpen} onClose={() => setAiDialogOpen(false)} maxWidth="lg" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <AutoAwesome color="primary" />
+            AI Shortlisting Results
+          </Box>
+        </DialogTitle>
         <DialogContent>
-          <TextField
-            fullWidth
-            multiline
-            rows={4}
-            placeholder="Add your notes about this candidate..."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            sx={{ mt: 1 }}
-          />
+          {aiResults && (
+            <>
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="h6">Analysis Summary</Typography>
+                <Typography variant="body2">{aiResults.summary}</Typography>
+                <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                  Job: {aiResults.jobTitle} • Total Applications: {aiResults.totalApplications} • 
+                  Recommended: {aiResults.shortlistedCandidates.length} candidates
+                </Typography>
+              </Alert>
+
+              <Typography variant="h6" gutterBottom>
+                Recommended Candidates ({aiResults.shortlistedCandidates.length})
+              </Typography>
+
+              <List>
+                {aiResults.shortlistedCandidates.map((result, index) => {
+                  const application = applications.find(app => app._id === result.applicationId);
+                  if (!application) return null;
+
+                  return (
+                    <React.Fragment key={result.applicationId}>
+                      <ListItem>
+                        <ListItemAvatar>
+                          <Badge badgeContent={result.score} color="primary">
+                            <Avatar src={application.applicant.avatar}>
+                              {application.applicant.firstName[0]}{application.applicant.lastName[0]}
+                            </Avatar>
+                          </Badge>
+                        </ListItemAvatar>
+                        <ListItemText
+                          primary={`${application.applicant.firstName} ${application.applicant.lastName}`}
+                          secondary={
+                            <Box>
+                              <Typography variant="body2" sx={{ mb: 1 }}>
+                                {result.reasoning}
+                              </Typography>
+                              <Box sx={{ mb: 1 }}>
+                                <Typography variant="caption" color="success.main">
+                                  Strengths: {result.strengths.join(', ')}
+                                </Typography>
+                              </Box>
+                              {result.concerns.length > 0 && (
+                                <Box>
+                                  <Typography variant="caption" color="warning.main">
+                                    Concerns: {result.concerns.join(', ')}
+                                  </Typography>
+                                </Box>
+                              )}
+                            </Box>
+                          }
+                        />
+                        <ListItemSecondaryAction>
+                          <Button
+                            variant={selectedForShortlisting.includes(result.applicationId) ? "contained" : "outlined"}
+                            onClick={() => toggleCandidateSelection(result.applicationId)}
+                            startIcon={selectedForShortlisting.includes(result.applicationId) ? <CheckCircle /> : <StarBorder />}
+                          >
+                            {selectedForShortlisting.includes(result.applicationId) ? 'Selected' : 'Select'}
+                          </Button>
+                        </ListItemSecondaryAction>
+                      </ListItem>
+                      {index < aiResults.shortlistedCandidates.length - 1 && <Divider />}
+                    </React.Fragment>
+                  );
+                })}
+              </List>
+            </>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setNotesDialogOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={() => selectedApplication && handleAddNotes(selectedApplication._id, notes)}
+          <Button onClick={() => setAiDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button
             variant="contained"
-            disabled={!notes.trim()}
+            onClick={handleApplyAIShortlisting}
+            disabled={selectedForShortlisting.length === 0}
+            startIcon={<CheckCircle />}
           >
-            Add Notes
+            Shortlist Selected ({selectedForShortlisting.length})
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Schedule Interview Dialog */}
-      <Dialog open={scheduleInterviewOpen} onClose={() => setScheduleInterviewOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Schedule Interview</DialogTitle>
+      {/* Application Details Dialog */}
+      <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          Application Details
+        </DialogTitle>
         <DialogContent>
-          <Typography color="textSecondary" gutterBottom>
-            Schedule an interview with {selectedApplication?.applicant.firstName} {selectedApplication?.applicant.lastName}
-          </Typography>
-          {/* TODO: Add interview scheduling form */}
-          <Typography variant="body2" color="textSecondary" sx={{ mt: 2 }}>
-            Interview scheduling functionality will be implemented here.
-          </Typography>
+          {selectedApplication && (
+            <Box>
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={4}>
+                  <Box sx={{ textAlign: 'center', mb: 2 }}>
+                    <Avatar
+                      src={selectedApplication.applicant.avatar}
+                      sx={{ width: 80, height: 80, mx: 'auto', mb: 2 }}
+                    >
+                      {selectedApplication.applicant.firstName[0]}{selectedApplication.applicant.lastName[0]}
+                    </Avatar>
+                    <Typography variant="h6">
+                      {selectedApplication.applicant.firstName} {selectedApplication.applicant.lastName}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {selectedApplication.applicant.currentPosition || 'Job Seeker'}
+                    </Typography>
+                  </Box>
+                </Grid>
+                
+                <Grid item xs={12} sm={8}>
+                  <Stack spacing={2}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Email fontSize="small" />
+                      <Typography>{selectedApplication.applicant.email}</Typography>
+                    </Box>
+                    
+                    {selectedApplication.applicant.phone && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Phone fontSize="small" />
+                        <Typography>{selectedApplication.applicant.phone}</Typography>
+                      </Box>
+                    )}
+                    
+                    {selectedApplication.applicant.location && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <LocationOn fontSize="small" />
+                        <Typography>{selectedApplication.applicant.location}</Typography>
+                      </Box>
+                    )}
+                  </Stack>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <Typography variant="h6" gutterBottom>Skills</Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {selectedApplication.applicant.skills.map((skill) => (
+                      <Chip key={skill} label={skill} />
+                    ))}
+                  </Box>
+                </Grid>
+
+                {selectedApplication.applicant.summary && (
+                  <Grid item xs={12}>
+                    <Typography variant="h6" gutterBottom>Summary</Typography>
+                    <Typography variant="body2">{selectedApplication.applicant.summary}</Typography>
+                  </Grid>
+                )}
+
+                {selectedApplication.coverLetter && (
+                  <Grid item xs={12}>
+                    <Typography variant="h6" gutterBottom>Cover Letter</Typography>
+                    <Typography variant="body2">{selectedApplication.coverLetter}</Typography>
+                  </Grid>
+                )}
+              </Grid>
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setScheduleInterviewOpen(false)}>Cancel</Button>
-          <Button variant="contained">Schedule</Button>
+          <Button onClick={() => setDetailsOpen(false)}>Close</Button>
+          {selectedApplication && (
+            <>
+              <Button
+                startIcon={<Download />}
+                onClick={() => handleDownloadCV(selectedApplication.applicant._id)}
+              >
+                Download CV
+              </Button>
+              {selectedApplication.status === 'applied' && (
+                <Button
+                  variant="contained"
+                  startIcon={<Star />}
+                  onClick={() => {
+                    handleStatusUpdate(selectedApplication._id, 'shortlisted');
+                    setDetailsOpen(false);
+                  }}
+                >
+                  Shortlist
+                </Button>
+              )}
+            </>
+          )}
         </DialogActions>
       </Dialog>
-    </Box>
+    </Container>
   );
 };
 

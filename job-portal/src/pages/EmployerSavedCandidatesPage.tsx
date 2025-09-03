@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { savedCandidatesService, SavedCandidate } from '../services/savedCandidatesService';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
+import { chatService } from '../services/chatService';
 import {
   Box,
   Container,
@@ -48,44 +52,16 @@ import {
   Edit
 } from '@mui/icons-material';
 
-interface SavedCandidate {
-  _id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone?: string;
-  location?: string;
-  currentPosition?: string;
-  currentCompany?: string;
-  experience?: string;
-  skills: string[];
-  education?: {
-    degree: string;
-    school: string;
-    year: string;
-  }[];
-  avatar?: string;
-  rating?: number;
-  testScores?: {
-    overall: number;
-    technical: number;
-    soft: number;
-  };
-  savedAt: string;
-  notes?: string;
-  lastContacted?: string;
-  profileCompletion?: number;
-  isAvailable?: boolean;
-  matchScore?: number;
-}
+// SavedCandidate interface is now imported from service
 
 const EmployerSavedCandidatesPage: React.FC = () => {
   const theme = useTheme();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [savedCandidates, setSavedCandidates] = useState<SavedCandidate[]>([]);
   const [selectedCandidate, setSelectedCandidate] = useState<SavedCandidate | null>(null);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
-  const [contactDialogOpen, setContactDialogOpen] = useState(false);
+
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [anchorEls, setAnchorEls] = useState<Record<string, HTMLElement | null>>({});
   const [candidateNotes, setCandidateNotes] = useState('');
@@ -94,93 +70,7 @@ const EmployerSavedCandidatesPage: React.FC = () => {
 
   const candidatesPerPage = 9;
 
-  // Mock data for demonstration
-  const mockSavedCandidates: SavedCandidate[] = [
-    {
-      _id: '1',
-      firstName: 'Alice',
-      lastName: 'Johnson',
-      email: 'alice.johnson@email.com',
-      phone: '+1 (555) 123-4567',
-      location: 'New York, NY',
-      currentPosition: 'Frontend Developer',
-      currentCompany: 'Tech Innovations',
-      experience: '3-5 years',
-      skills: ['React', 'TypeScript', 'JavaScript', 'CSS', 'Node.js'],
-      education: [
-        { degree: 'BS Computer Science', school: 'NYU', year: '2020' }
-      ],
-      rating: 4.8,
-      testScores: { overall: 85, technical: 88, soft: 82 },
-      savedAt: '2023-11-15T10:30:00Z',
-      notes: 'Excellent React skills, would be perfect for our frontend team.',
-      lastContacted: '2023-11-10T14:20:00Z',
-      profileCompletion: 95,
-      isAvailable: true,
-      matchScore: 92
-    },
-    {
-      _id: '2',
-      firstName: 'Michael',
-      lastName: 'Chen',
-      email: 'michael.chen@email.com',
-      location: 'San Francisco, CA',
-      currentPosition: 'Full Stack Developer',
-      currentCompany: 'StartupX',
-      experience: '2-3 years',
-      skills: ['Python', 'Django', 'React', 'PostgreSQL', 'AWS'],
-      education: [
-        { degree: 'MS Software Engineering', school: 'Stanford', year: '2021' }
-      ],
-      rating: 4.6,
-      testScores: { overall: 78, technical: 82, soft: 74 },
-      savedAt: '2023-11-12T16:45:00Z',
-      notes: 'Strong full-stack developer with good Django experience.',
-      profileCompletion: 88,
-      isAvailable: true,
-      matchScore: 87
-    },
-    {
-      _id: '3',
-      firstName: 'Sarah',
-      lastName: 'Williams',
-      email: 'sarah.williams@email.com',
-      location: 'Chicago, IL',
-      currentPosition: 'Data Analyst',
-      currentCompany: 'Analytics Pro',
-      experience: '1-2 years',
-      skills: ['Python', 'SQL', 'Tableau', 'Excel', 'Statistics'],
-      education: [
-        { degree: 'BS Data Science', school: 'University of Chicago', year: '2022' }
-      ],
-      rating: 4.4,
-      testScores: { overall: 72, technical: 75, soft: 69 },
-      savedAt: '2023-11-08T09:15:00Z',
-      notes: 'Great analytical skills, considering for data team.',
-      profileCompletion: 92,
-      isAvailable: false,
-      matchScore: 78
-    },
-    {
-      _id: '4',
-      firstName: 'David',
-      lastName: 'Rodriguez',
-      email: 'david.rodriguez@email.com',
-      location: 'Austin, TX',
-      currentPosition: 'DevOps Engineer',
-      currentCompany: 'CloudTech',
-      experience: '5+ years',
-      skills: ['AWS', 'Docker', 'Kubernetes', 'Terraform', 'Python'],
-      rating: 4.7,
-      testScores: { overall: 90, technical: 93, soft: 87 },
-      savedAt: '2023-11-05T11:30:00Z',
-      notes: 'Experienced DevOps engineer, perfect for our infrastructure needs.',
-      lastContacted: '2023-11-07T15:45:00Z',
-      profileCompletion: 90,
-      isAvailable: true,
-      matchScore: 95
-    }
-  ];
+
 
   useEffect(() => {
     fetchSavedCandidates();
@@ -189,11 +79,14 @@ const EmployerSavedCandidatesPage: React.FC = () => {
   const fetchSavedCandidates = async () => {
     try {
       setLoading(true);
-      // Using mock data for now
-      setSavedCandidates(mockSavedCandidates);
-      setTotalPages(Math.ceil(mockSavedCandidates.length / candidatesPerPage));
+      const response = await savedCandidatesService.getSavedCandidates(currentPage, candidatesPerPage);
+      setSavedCandidates(response.data || []);
+      setTotalPages(response.pagination?.pages || 1);
     } catch (error) {
       console.error('Error fetching saved candidates:', error);
+      toast.error('Failed to load saved candidates');
+      setSavedCandidates([]);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -201,9 +94,12 @@ const EmployerSavedCandidatesPage: React.FC = () => {
 
   const handleRemoveCandidate = async (candidateId: string) => {
     try {
+      await savedCandidatesService.removeSavedCandidate(candidateId);
       setSavedCandidates(prev => prev.filter(candidate => candidate._id !== candidateId));
+      toast.success('Candidate removed from saved list successfully!');
     } catch (error) {
       console.error('Error removing candidate:', error);
+      toast.error('Failed to remove candidate from saved list. Please try again.');
     }
   };
 
@@ -212,9 +108,36 @@ const EmployerSavedCandidatesPage: React.FC = () => {
     setProfileDialogOpen(true);
   };
 
-  const handleContactCandidate = (candidate: SavedCandidate) => {
-    setSelectedCandidate(candidate);
-    setContactDialogOpen(true);
+  const handleContactCandidate = async (candidate: SavedCandidate) => {
+    try {
+      console.log('Attempting to contact candidate:', {
+        candidateId: candidate._id,
+        candidateName: `${candidate.firstName} ${candidate.lastName}`
+      });
+      
+      // Create or get existing conversation with this candidate
+      const conversation = await chatService.createConversation(
+        [candidate._id], 
+        `Hello ${candidate.firstName}, I'm interested in discussing potential opportunities with you.`
+      );
+      
+      console.log('Conversation created/retrieved:', conversation);
+      
+      if (conversation && conversation._id) {
+        console.log('Navigating to messages with conversation ID:', conversation._id);
+        // Navigate to messages page with the conversation
+        navigate(`/app/messages?conversation=${conversation._id}`);
+        
+        // Show success message
+        toast.success(`Successfully started conversation with ${candidate.firstName}!`);
+      } else {
+        throw new Error('Failed to create conversation - no conversation ID returned');
+      }
+    } catch (error: any) {
+      console.error('Error starting conversation:', error);
+      const errorMessage = error.message || 'Please try again.';
+      toast.error(`Failed to start conversation: ${errorMessage}`);
+    }
   };
 
   const handleEditNotes = (candidate: SavedCandidate) => {
@@ -225,12 +148,31 @@ const EmployerSavedCandidatesPage: React.FC = () => {
 
   const handleSaveNotes = async () => {
     if (selectedCandidate) {
-      setSavedCandidates(prev => prev.map(candidate =>
-        candidate._id === selectedCandidate._id
-          ? { ...candidate, notes: candidateNotes }
-          : candidate
-      ));
-      setNotesDialogOpen(false);
+      try {
+        await savedCandidatesService.updateSavedCandidateNotes(selectedCandidate._id, candidateNotes);
+        setSavedCandidates(prev => prev.map(candidate =>
+          candidate._id === selectedCandidate._id
+            ? { ...candidate, notes: candidateNotes }
+            : candidate
+        ));
+        setNotesDialogOpen(false);
+      } catch (error) {
+        console.error('Error updating notes:', error);
+      }
+    }
+  };
+
+  const handleDownloadCV = async (candidate: SavedCandidate) => {
+    try {
+      await savedCandidatesService.downloadCandidateCV(
+        candidate._id, 
+        candidate.firstName, 
+        candidate.lastName
+      );
+      toast.success('CV downloaded successfully!');
+    } catch (error) {
+      console.error('Error downloading CV:', error);
+      toast.error('Error downloading CV. Please check your connection and try again.');
     }
   };
 
@@ -298,7 +240,7 @@ const EmployerSavedCandidatesPage: React.FC = () => {
                   <Edit sx={{ mr: 1 }} />
                   Edit Notes
                 </MenuItem>
-                <MenuItem>
+                <MenuItem onClick={() => handleDownloadCV(candidate)}>
                   <Download sx={{ mr: 1 }} />
                   Download CV
                 </MenuItem>
@@ -360,7 +302,12 @@ const EmployerSavedCandidatesPage: React.FC = () => {
               <Box display="flex" alignItems="center">
                 <Work fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />
                 <Typography variant="body2" color="text.secondary">
-                  {candidate.experience} experience
+                  {candidate.experience && candidate.experience.length > 0 
+                    ? `${candidate.experience.length} ${candidate.experience.length === 1 ? 'role' : 'roles'}` 
+                    : candidate.yearsOfExperience 
+                      ? `${candidate.yearsOfExperience} ${candidate.yearsOfExperience === 1 ? 'year' : 'years'} experience`
+                      : 'No experience listed'
+                  }
                 </Typography>
               </Box>
             </Box>
@@ -595,7 +542,12 @@ const EmployerSavedCandidatesPage: React.FC = () => {
                       <strong>Company:</strong> {selectedCandidate.currentCompany}
                     </Typography>
                     <Typography variant="body2">
-                      <strong>Experience:</strong> {selectedCandidate.experience}
+                      <strong>Experience:</strong> {selectedCandidate.experience && selectedCandidate.experience.length > 0 
+                        ? `${selectedCandidate.experience.length} ${selectedCandidate.experience.length === 1 ? 'role' : 'roles'}` 
+                        : selectedCandidate.yearsOfExperience 
+                          ? `${selectedCandidate.yearsOfExperience} ${selectedCandidate.yearsOfExperience === 1 ? 'year' : 'years'}`
+                          : 'No experience listed'
+                      }
                     </Typography>
                   </Stack>
                 </Grid>
@@ -607,6 +559,39 @@ const EmployerSavedCandidatesPage: React.FC = () => {
                     ))}
                   </Box>
                 </Grid>
+                
+                {/* Experience Section */}
+                {selectedCandidate.experience && Array.isArray(selectedCandidate.experience) && selectedCandidate.experience.length > 0 && (
+                  <Grid size={{ xs: 12 }}>
+                    <Typography variant="subtitle2" gutterBottom>Work Experience</Typography>
+                    <Stack spacing={2}>
+                      {selectedCandidate.experience.map((exp, index) => (
+                        <Paper key={exp._id || index} sx={{ p: 2, bgcolor: 'grey.50' }}>
+                          <Typography variant="subtitle2" fontWeight="medium">
+                            {exp.position} at {exp.company}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {exp.startDate} - {exp.current ? 'Present' : (exp.endDate || 'Not specified')}
+                            {exp.location && ` • ${exp.location}`}
+                          </Typography>
+                          {exp.description && (
+                            <Typography variant="body2" sx={{ mt: 1 }}>
+                              {exp.description}
+                            </Typography>
+                          )}
+                          {exp.technologies && exp.technologies.length > 0 && (
+                            <Box sx={{ mt: 1 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                Technologies: {exp.technologies.join(', ')}
+                              </Typography>
+                            </Box>
+                          )}
+                        </Paper>
+                      ))}
+                    </Stack>
+                  </Grid>
+                )}
+                
                 {selectedCandidate.notes && (
                   <Grid size={{ xs: 12 }}>
                     <Typography variant="subtitle2" gutterBottom>Notes</Typography>
@@ -639,47 +624,7 @@ const EmployerSavedCandidatesPage: React.FC = () => {
         )}
       </Dialog>
 
-      {/* Contact Dialog */}
-      <Dialog
-        open={contactDialogOpen}
-        onClose={() => setContactDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          Contact {selectedCandidate?.firstName} {selectedCandidate?.lastName}
-        </DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              fullWidth
-              label="Subject"
-              defaultValue="Job Opportunity at Your Company"
-            />
-            <TextField
-              fullWidth
-              label="Message"
-              multiline
-              rows={4}
-              defaultValue={`Hi ${selectedCandidate?.firstName},
 
-I came across your profile on Excellence Coaching Hub and I'm impressed with your background in ${selectedCandidate?.currentPosition}.
-
-We have an exciting opportunity that might interest you. Would you be open to discussing this further?
-
-Best regards`}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setContactDialogOpen(false)}>
-            Cancel
-          </Button>
-          <Button variant="contained" startIcon={<Send />}>
-            Send Message
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Notes Dialog */}
       <Dialog

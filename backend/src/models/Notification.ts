@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface INotification extends Document {
   recipient: mongoose.Types.ObjectId;
-  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'event_reminder' | 'payment_approved' | 'payment_rejected' | 'payment_success' | 'payment_failed' | 'test_request_approved' | 'test_request_rejected' | 'tests_generated';
+  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'event_reminder' | 'payment_approved' | 'payment_rejected' | 'payment_success' | 'payment_failed' | 'test_request_approved' | 'test_request_rejected' | 'tests_generated' | 'application_received' | 'application_status_update';
   title: string;
   message: string;
   data?: {
@@ -15,6 +15,11 @@ export interface INotification extends Document {
     paymentRequestId?: mongoose.Types.ObjectId;
     testType?: string;
     url?: string;
+    applicationId?: mongoose.Types.ObjectId;
+    jobTitle?: string;
+    applicantName?: string;
+    applicantEmail?: string;
+    status?: string;
   };
   isRead: boolean;
   createdAt: Date;
@@ -30,7 +35,7 @@ const NotificationSchema = new Schema<INotification>({
   },
   type: {
     type: String,
-    enum: ['connection_accepted', 'connection_request', 'message', 'job_match', 'event_reminder', 'payment_approved', 'payment_rejected', 'payment_success', 'payment_failed', 'test_request_approved', 'test_request_rejected', 'tests_generated'],
+    enum: ['connection_accepted', 'connection_request', 'message', 'job_match', 'event_reminder', 'payment_approved', 'payment_rejected', 'payment_success', 'payment_failed', 'test_request_approved', 'test_request_rejected', 'tests_generated', 'application_received', 'application_status_update'],
     required: true
   },
   title: {
@@ -52,7 +57,12 @@ const NotificationSchema = new Schema<INotification>({
     eventId: { type: Schema.Types.ObjectId },
     paymentRequestId: { type: Schema.Types.ObjectId },
     testType: { type: String },
-    url: { type: String }
+    url: { type: String },
+    applicationId: { type: Schema.Types.ObjectId },
+    jobTitle: { type: String },
+    applicantName: { type: String },
+    applicantEmail: { type: String },
+    status: { type: String }
   },
   isRead: {
     type: Boolean,

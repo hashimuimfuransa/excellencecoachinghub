@@ -72,7 +72,7 @@ import CreatePost from '../components/social/CreatePost';
 import FeedSidebar from '../components/social/FeedSidebar';
 import { SocialPost } from '../types/social';
 import { socialNetworkService, FeedOptions } from '../services/socialNetworkService';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, UserRole } from '../contexts/AuthContext';
 import { jobService } from '../services/jobService';
 import { profileService } from '../services/profileService';
 import { userService } from '../services/userService';
@@ -93,7 +93,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
 const SocialNetworkPage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, hasRole } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
   const [currentTab, setCurrentTab] = useState(0);
@@ -120,12 +120,14 @@ const SocialNetworkPage: React.FC = () => {
 
   // Load posts on component mount and when filter changes
   useEffect(() => {
-    if (currentTab === 1) { // Job Posts tab
+    // For non-employers: Job Posts tab is at index 1
+    // For employers: Job Posts tab doesn't exist
+    if (!hasRole(UserRole.EMPLOYER) && currentTab === 1) { 
       loadMatchedJobs();
     } else {
       loadPosts(true);
     }
-  }, [currentTab]);
+  }, [currentTab, hasRole]);
 
   // Load profile completion and validation on mount
   useEffect(() => {
@@ -362,8 +364,12 @@ const SocialNetworkPage: React.FC = () => {
     }
   };
 
-  const feedFilters: FeedOptions['filter'][] = ['all', 'jobs', 'people', 'training'];
-  const tabLabels = ['All Posts', 'Job Posts', 'People', 'Training', 'Suggestions'];
+  const feedFilters: FeedOptions['filter'][] = hasRole(UserRole.EMPLOYER) 
+    ? ['all', 'people', 'training'] 
+    : ['all', 'jobs', 'people', 'training'];
+  const tabLabels = hasRole(UserRole.EMPLOYER) 
+    ? ['All Posts', 'People', 'Training', 'Suggestions']
+    : ['All Posts', 'Job Posts', 'People', 'Training', 'Suggestions'];
 
   // Quick Action Buttons Data
   const quickActions = [
@@ -677,28 +683,91 @@ const SocialNetworkPage: React.FC = () => {
                       🚀 Connect • 💡 Share • 🌱 Grow Together
                     </Typography>
                   </motion.div>
+                  
+                  {/* Action Buttons for Employers */}
+                  {hasRole(UserRole.EMPLOYER) && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.8, delay: 0.8 }}
+                      style={{ marginTop: '16px' }}
+                    >
+                      <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: 2 }}>
+                        <Button
+                          variant="contained"
+                          size="large"
+                          startIcon={<Add />}
+                          onClick={() => navigate('/app/jobs/create')}
+                          sx={{
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            borderRadius: 2,
+                            px: 3,
+                            py: 1.5,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            fontSize: '1.1rem',
+                            boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                              boxShadow: '0 12px 35px rgba(102, 126, 234, 0.4)',
+                              transform: 'translateY(-2px)',
+                            },
+                          }}
+                        >
+                          Create Job Post
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="large"
+                          startIcon={<People />}
+                          onClick={() => navigate('/app/employer/candidates')}
+                          sx={{
+                            borderColor: '#667eea',
+                            color: '#667eea',
+                            borderWidth: 2,
+                            borderRadius: 2,
+                            px: 3,
+                            py: 1.5,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            fontSize: '1.1rem',
+                            '&:hover': {
+                              borderColor: '#5a6fd8',
+                              color: '#5a6fd8',
+                              backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                              transform: 'translateY(-2px)',
+                              boxShadow: '0 8px 25px rgba(102, 126, 234, 0.2)',
+                            },
+                          }}
+                        >
+                          View Applicants
+                        </Button>
+                      </Stack>
+                    </motion.div>
+                  )}
                 </Box>
               </Box>
             </motion.div>
           </Box>
         </motion.div>
 
-        {/* Quick Actions Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-        >
-          <Box sx={{ mb: 8 }}>
-            <Typography 
-              variant="h6" 
-              fontWeight="700" 
-              sx={{ mb: 4, color: 'text.primary' }}
-            >
-              Quick Actions
-            </Typography>
-            <Grid container spacing={{ xs: 2, sm: 3, md: 2, lg: 3, xl: 4 }}>
-                {quickActions.map((action, index) => (
+        {/* Quick Actions Section - Hidden for Employers */}
+        {!hasRole(UserRole.EMPLOYER) && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+          >
+            <Box sx={{ mb: 8 }}>
+              <Typography 
+                variant="h6" 
+                fontWeight="700" 
+                sx={{ mb: 4, color: 'text.primary' }}
+              >
+                Quick Actions
+              </Typography>
+              <Grid container spacing={{ xs: 2, sm: 3, md: 2, lg: 3, xl: 4 }}>
+                  {quickActions.map((action, index) => (
                   <Grid size={{ xs: 6, sm: 4, md: 3, lg: 3, xl: 3 }} key={action.title}>
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
@@ -833,8 +902,9 @@ const SocialNetworkPage: React.FC = () => {
               </Grid>
             </Box>
           </motion.div>
+        )}
 
-          {/* Main Content Grid - Balanced Layout */}
+        {/* Main Content Grid - Balanced Layout */}
           <Grid container spacing={{ xs: 2, sm: 3, md: 2, lg: 3, xl: 4 }}>
             {/* Left Sidebar - Hide only on mobile */}
             {!isMobile && (
@@ -1007,8 +1077,8 @@ const SocialNetworkPage: React.FC = () => {
                       </Alert>
                     )}
 
-                    {index === 1 ? (
-                      // Job Posts Tab - Show matched jobs
+                    {(!hasRole(UserRole.EMPLOYER) && index === 1) ? (
+                      // Job Posts Tab - Show matched jobs (only for non-employers)
                       <>
                         {!profileValidation || profileValidation.completionPercentage < 30 ? (
                           <Card sx={{ 

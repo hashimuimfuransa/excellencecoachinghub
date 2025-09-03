@@ -77,6 +77,7 @@ import ComprehensiveProfileForm from '../components/ComprehensiveProfileForm';
 import { validateProfile } from '../utils/profileValidation';
 import { validateProfileSimple } from '../utils/simpleProfileValidation';
 import { socialNetworkService } from '../services/socialNetworkService';
+import { validateImageFile, processImage, blobToFile, createImagePreview } from '../utils/imageUtils';
 
 interface TabPanelProps {
   children?: React.ReactNode;

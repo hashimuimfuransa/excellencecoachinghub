@@ -52,6 +52,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { userService } from '../services/userService';
 import type { User } from '../types/user';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { validateImageFile, processImage, blobToFile, createImagePreview } from '../utils/imageUtils';
 
 const ImprovedProfilePage: React.FC = () => {
   const theme = useTheme();
@@ -64,6 +65,8 @@ const ImprovedProfilePage: React.FC = () => {
   const [editedProfile, setEditedProfile] = useState<Partial<User>>({});
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   // Calculate profile completion
   const calculateProfileCompletion = () => {
@@ -182,22 +185,75 @@ const ImprovedProfilePage: React.FC = () => {
     const file = event.target.files?.[0];
     if (!file || !profile?._id) return;
 
-    setLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('profilePicture', file);
+      // Validate the image file
+      const validation = validateImageFile(file);
+      if (!validation.valid) {
+        setErrorMessage(validation.error || 'Invalid image file');
+        setTimeout(() => setErrorMessage(''), 5000);
+        // Clear the file input
+        event.target.value = '';
+        return;
+      }
+
+      setUploadingImage(true);
+      setErrorMessage('');
       
+      // Create preview for immediate UI feedback
+      const preview = await createImagePreview(file);
+      setImagePreview(preview);
+
+      // Process the image (resize and compress)
+      const processedBlob = await processImage(file, {
+        maxWidth: 400,
+        maxHeight: 400,
+        quality: 0.8,
+        format: 'image/jpeg'
+      });
+
+      // Convert blob back to file
+      const processedFile = blobToFile(processedBlob, `profile-${profile._id}.jpg`);
+      
+      // Create form data for upload
+      const formData = new FormData();
+      formData.append('profilePicture', processedFile);
+      
+      // Upload to server
       const updatedProfile = await userService.uploadProfilePicture(profile._id, formData);
-      setProfile(updatedProfile);
+      
+      // Update local state with the response
+      setProfile(prevProfile => ({
+        ...prevProfile,
+        ...updatedProfile,
+        profilePicture: updatedProfile.profilePicture || preview
+      }));
+      
+      // Update auth context
       setUserData(updatedProfile);
+      
       setSuccessMessage('Profile picture updated successfully!');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setTimeout(() => {
+        setSuccessMessage('');
+        setImagePreview(null);
+      }, 3000);
+
     } catch (error) {
       console.error('Error uploading profile picture:', error);
-      setErrorMessage('Failed to upload profile picture');
-      setTimeout(() => setErrorMessage(''), 3000);
+      
+      let errorMsg = 'Failed to upload profile picture. Please try again.';
+      if (error instanceof Error) {
+        errorMsg = error.message;
+      }
+      
+      setErrorMessage(errorMsg);
+      setTimeout(() => setErrorMessage(''), 5000);
+      
+      // Reset preview on error
+      setImagePreview(null);
     } finally {
-      setLoading(false);
+      setUploadingImage(false);
+      // Clear the file input
+      event.target.value = '';
     }
   };
 
@@ -349,11 +405,13 @@ const ImprovedProfilePage: React.FC = () => {
                     mx: 'auto',
                     fontSize: '3rem',
                     border: `4px solid ${theme.palette.primary.main}`,
-                    boxShadow: theme.shadows[3]
+                    boxShadow: theme.shadows[3],
+                    opacity: uploadingImage ? 0.6 : 1,
+                    transition: 'opacity 0.3s ease'
                   }}
-                  src={profile.profilePicture}
+                  src={imagePreview || profile.profilePicture}
                 >
-                  {profile.firstName?.[0]}{profile.lastName?.[0]}
+                  {!imagePreview && !profile.profilePicture && `${profile.firstName?.[0] || ''}${profile.lastName?.[0] || ''}`}
                 </Avatar>
                 <input
                   accept="image/*"

@@ -103,15 +103,8 @@ export class UserService {
       }
     } catch (error) {
       console.error('❌ Error getting user profile from API:', error);
-      console.warn('Using fallback user data from localStorage');
       
-      // Fallback to current auth user data
-      const authUserString = localStorage.getItem('user');
-      if (authUserString) {
-        const authUser = JSON.parse(authUserString);
-        console.log('📋 Fallback user data:', authUser);
-        return authUser;
-      }
+      // Don't use fallback for other users - only throw error
       throw error;
     }
   }

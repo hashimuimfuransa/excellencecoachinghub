@@ -807,7 +807,7 @@ export const getTeacherDetails = async (req: Request, res: Response, next: NextF
 
 // Profile-specific controllers
 
-// Get current user profile
+// Get current user profile (for own profile access)
 export const getCurrentProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     if (!req.user) {
@@ -818,18 +818,8 @@ export const getCurrentProfile = async (req: Request, res: Response, next: NextF
       return;
     }
 
-    // Use user ID from params if provided, otherwise use authenticated user ID
-    const userId = req.params.id || req.user._id;
-    
-    // If a specific user ID is requested, ensure it matches the authenticated user
-    // (users can only access their own profile)
-    if (req.params.id && req.params.id !== req.user._id.toString()) {
-      res.status(403).json({
-        success: false,
-        message: 'Access denied. You can only access your own profile.'
-      });
-      return;
-    }
+    // Only allow access to own profile for this endpoint
+    const userId = req.user._id;
 
     const user = await User.findById(userId)
       .select('-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil');
@@ -849,6 +839,70 @@ export const getCurrentProfile = async (req: Request, res: Response, next: NextF
       success: true,
       data: { 
         user,
+        profileCompletion
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get any user profile (for viewing other users in social network)
+export const getUserProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+      return;
+    }
+
+    const userId = req.params.id;
+    
+    if (!userId) {
+      res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+      return;
+    }
+
+    const user = await User.findById(userId)
+      .select('-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil -email');
+
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+      return;
+    }
+
+    // For privacy, limit what information is shown for other users
+    const publicUserData = {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      profilePicture: user.profilePicture,
+      jobTitle: user.jobTitle,
+      company: user.company,
+      location: user.location,
+      bio: user.bio,
+      skills: user.skills,
+      role: user.role,
+      userType: user.userType,
+      createdAt: user.createdAt,
+      isActive: user.isActive
+    };
+
+    // Calculate profile completion
+    const profileCompletion = simpleProfileCompletionService.calculateCompletion(user);
+
+    res.status(200).json({
+      success: true,
+      data: { 
+        user: publicUserData,
         profileCompletion
       }
     });

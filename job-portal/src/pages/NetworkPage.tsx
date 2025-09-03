@@ -54,6 +54,7 @@ import { SocialConnection, ConnectionRequest, SentRequest } from '../types/socia
 import { socialNetworkService } from '../services/socialNetworkService';
 import { chatService } from '../services/chatService';
 import { useNavigate } from 'react-router-dom';
+import { useAuth, UserRole } from '../contexts/AuthContext';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -70,6 +71,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
 const NetworkPage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
+  const { hasRole } = useAuth();
   const [currentTab, setCurrentTab] = useState(0);
   const [connections, setConnections] = useState<SocialConnection[]>([]);
   const [pendingRequests, setPendingRequests] = useState<ConnectionRequest[]>([]);
@@ -367,6 +369,16 @@ const NetworkPage: React.FC = () => {
     }
   };
 
+  const handleViewProfile = (user: any) => {
+    // Navigate to appropriate profile based on user role
+    if (user.role === UserRole.EMPLOYER || user.userType === UserRole.EMPLOYER || 
+        user.role === 'employer' || user.userType === 'employer') {
+      navigate(`/app/employer/profile`, { state: { userId: user._id } });
+    } else {
+      navigate(`/app/profile/view/${user._id}`);
+    }
+  };
+
   const filteredConnections = connections.filter(conn =>
     `${conn.user.firstName} ${conn.user.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
     conn.user.company?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -493,7 +505,17 @@ const NetworkPage: React.FC = () => {
                 <Card
                   component={motion.div}
                   whileHover={{ y: -4 }}
-                  sx={{ borderRadius: 2, height: '100%' }}
+                  sx={{ 
+                    borderRadius: 2, 
+                    height: '100%',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      boxShadow: 4
+                    }
+                  }}
+                  onClick={() => {
+                    handleViewProfile(connection.user);
+                  }}
                 >
                   <CardContent sx={{ textAlign: 'center' }}>
                     <Avatar
@@ -561,7 +583,11 @@ const NetworkPage: React.FC = () => {
                         variant="outlined"
                         size="small"
                         color="error"
-                        onClick={() => handleRemoveConnection(connection.user._id)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleRemoveConnection(connection.user._id);
+                        }}
                       >
                         Remove
                       </Button>
@@ -606,6 +632,13 @@ const NetworkPage: React.FC = () => {
                       border: '1px solid',
                       borderColor: 'success.main',
                       backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.05)' : 'rgba(76, 175, 80, 0.02)',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        boxShadow: 4
+                      }
+                    }}
+                    onClick={() => {
+                      handleViewProfile(request.requester);
                     }}
                   >
                     <CardContent sx={{ textAlign: 'center' }}>
@@ -664,7 +697,11 @@ const NetworkPage: React.FC = () => {
                           color="success"
                           size="small"
                           startIcon={<Check />}
-                          onClick={() => handleAcceptRequest(request.requester._id)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleAcceptRequest(request.requester._id);
+                          }}
                           sx={{ textTransform: 'none', fontWeight: 600 }}
                         >
                           Accept
@@ -674,7 +711,11 @@ const NetworkPage: React.FC = () => {
                           color="error"
                           size="small"
                           startIcon={<Close />}
-                          onClick={() => handleRejectRequest(request.requester._id)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleRejectRequest(request.requester._id);
+                          }}
                           sx={{ textTransform: 'none', fontWeight: 600 }}
                         >
                           Decline
@@ -718,6 +759,13 @@ const NetworkPage: React.FC = () => {
                       border: '1px solid',
                       borderColor: 'warning.main',
                       backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.05)' : 'rgba(255, 152, 0, 0.02)',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        boxShadow: 4
+                      }
+                    }}
+                    onClick={() => {
+                      handleViewProfile(request.recipient);
                     }}
                   >
                     <CardContent sx={{ textAlign: 'center' }}>
@@ -776,7 +824,11 @@ const NetworkPage: React.FC = () => {
                           color="warning"
                           size="small"
                           startIcon={<Close />}
-                          onClick={() => handleCancelRequest(request.recipient._id)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleCancelRequest(request.recipient._id);
+                          }}
                           sx={{ textTransform: 'none', fontWeight: 600 }}
                         >
                           Cancel Request
@@ -1048,7 +1100,16 @@ const NetworkPage: React.FC = () => {
                   <Card
                     component={motion.div}
                     whileHover={{ y: -4 }}
-                    sx={{ borderRadius: 2 }}
+                    sx={{ 
+                      borderRadius: 2,
+                      cursor: 'pointer',
+                      '&:hover': {
+                        boxShadow: 4
+                      }
+                    }}
+                    onClick={() => {
+                      handleViewProfile(user);
+                    }}
                   >
                     <CardContent sx={{ textAlign: 'center' }}>
                       <Avatar
@@ -1107,42 +1168,69 @@ const NetworkPage: React.FC = () => {
                         </Typography>
                       )}
 
-                      <Stack direction="row" spacing={1} justifyContent="center">
-                        <Button
-                          variant="contained"
-                          size="small"
-                          startIcon={requestingUsers.has(user._id) ? <CircularProgress size={16} color="inherit" /> : <PersonAdd />}
-                          onClick={() => handleSendRequest(user._id)}
-                          disabled={requestingUsers.has(user._id)}
-                          sx={{
-                            background: requestingUsers.has(user._id) 
-                              ? 'linear-gradient(45deg, #ccc 30%, #ddd 90%)'
-                              : 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-                            textTransform: 'none',
-                            fontWeight: 600,
-                            flex: 1,
-                          }}
-                        >
-                          {requestingUsers.has(user._id) ? 'Sending...' : 'Connect'}
-                        </Button>
+                      <Stack direction="column" spacing={1} justifyContent="center">
                         <Button
                           variant="outlined"
                           size="small"
-                          startIcon={<Message />}
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            const userId = user._id;
-                            const userName = `${user.firstName} ${user.lastName}`;
-                            handleStartChat(userId, userName);
+                            handleViewProfile(user);
                           }}
                           sx={{
                             textTransform: 'none',
                             fontWeight: 600,
+                            borderColor: theme.palette.primary.main,
+                            color: theme.palette.primary.main,
+                            '&:hover': {
+                              backgroundColor: theme.palette.primary.main,
+                              color: 'white',
+                            }
                           }}
                         >
-                          Message
+                          View Profile
                         </Button>
+                        <Stack direction="row" spacing={1} justifyContent="center">
+                          <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={requestingUsers.has(user._id) ? <CircularProgress size={16} color="inherit" /> : <PersonAdd />}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleSendRequest(user._id);
+                            }}
+                            disabled={requestingUsers.has(user._id)}
+                            sx={{
+                              background: requestingUsers.has(user._id) 
+                                ? 'linear-gradient(45deg, #ccc 30%, #ddd 90%)'
+                                : 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                              textTransform: 'none',
+                              fontWeight: 600,
+                              flex: 1,
+                            }}
+                          >
+                            {requestingUsers.has(user._id) ? 'Sending...' : 'Connect'}
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<Message />}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const userId = user._id;
+                              const userName = `${user.firstName} ${user.lastName}`;
+                              handleStartChat(userId, userName);
+                            }}
+                            sx={{
+                              textTransform: 'none',
+                              fontWeight: 600,
+                            }}
+                          >
+                            Message
+                          </Button>
+                        </Stack>
                       </Stack>
                     </CardContent>
                   </Card>

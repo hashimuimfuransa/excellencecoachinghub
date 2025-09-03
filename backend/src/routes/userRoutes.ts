@@ -14,6 +14,7 @@ import {
   getAllTeachers,
   getTeacherDetails,
   getCurrentProfile,
+  getUserProfile,
   updateProfile,
   changePassword,
   uploadAvatar
@@ -162,8 +163,8 @@ router.put('/profile', updateProfileValidation, validateRequest, updateProfile);
 router.put('/change-password', changePasswordValidation, validateRequest, changePassword);
 router.post('/upload-avatar', multerUpload.single('avatar'), uploadAvatar);
 
-// Profile routes with user ID parameter (for frontend compatibility)
-router.get('/:id/profile', getCurrentProfile);
+// Profile routes with user ID parameter (for viewing other users in social network)
+router.get('/:id/profile', getUserProfile);
 router.put('/:id/profile', updateProfileValidation, validateRequest, updateProfile);
 router.post('/:id/profile-picture', multerUpload.single('profilePicture'), uploadAvatar);
 

@@ -1376,7 +1376,7 @@ const MainLayout: React.FC = () => {
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
-        <MenuItem onClick={() => navigate('/app/profile')}>
+        <MenuItem onClick={() => navigate(hasRole(UserRole.EMPLOYER) ? '/app/employer/profile' : '/app/profile')}>
           <ListItemIcon>
             <Person fontSize="small" />
           </ListItemIcon>

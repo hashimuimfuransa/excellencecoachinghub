@@ -85,6 +85,29 @@ const MessagesPage: React.FC = () => {
     }
   }, [user]);
 
+  // Handle navigation state to start chat with specific user
+  useEffect(() => {
+    const state = location.state as { startChatWithUser?: string };
+    if (state?.startChatWithUser && chatRooms.length > 0) {
+      const targetUserId = state.startChatWithUser;
+      
+      // Find existing chat room with this user
+      const existingRoom = chatRooms.find(room => 
+        room.participants.some(p => p._id === targetUserId)
+      );
+      
+      if (existingRoom) {
+        setSelectedRoom(existingRoom);
+        if (existingRoom._id) {
+          loadMessages(existingRoom._id);
+        }
+      } else {
+        // Create new chat room with this user
+        createChatWithUser(targetUserId);
+      }
+    }
+  }, [location.state, chatRooms]);
+
   const handleNewMessage = (data: { chatId: string; message: ChatMessage }) => {
     const { chatId, message } = data;
     
@@ -284,6 +307,32 @@ const MessagesPage: React.FC = () => {
       console.error('Error loading messages:', error);
     } finally {
       setMessagesLoading(false);
+    }
+  };
+
+  const createChatWithUser = async (targetUserId: string) => {
+    try {
+      setLoading(true);
+      
+      // Create or get existing chat with the target user
+      const newChat = await chatService.createOrGetChat([targetUserId]);
+      
+      // Reload chat rooms to include the new/existing chat
+      const updatedRooms = await chatService.getChats();
+      setChatRooms(updatedRooms);
+      
+      // Find and select the chat room
+      const targetRoom = updatedRooms.find(room => room._id === newChat._id);
+      if (targetRoom) {
+        setSelectedRoom(targetRoom);
+        if (targetRoom._id) {
+          loadMessages(targetRoom._id);
+        }
+      }
+    } catch (error) {
+      console.error('Error creating chat with user:', error);
+    } finally {
+      setLoading(false);
     }
   };
 

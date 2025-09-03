@@ -416,10 +416,17 @@ const MainLayout: React.FC = () => {
     setAnchorEl(null);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     handleProfileMenuClose();
-    logout();
-    window.location.href = '/login';
+    try {
+      await logout();
+      // Use navigate instead of window.location.href to avoid refresh loops
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Force logout even if there's an error
+      navigate('/login', { replace: true });
+    }
   };
 
   const handleNavigation = (path: string) => {

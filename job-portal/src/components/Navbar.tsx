@@ -68,10 +68,16 @@ const Navbar: React.FC = () => {
     setAnchorEl(null);
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
     handleClose();
-    navigate('/');
+    try {
+      await logout();
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Force logout even if there's an error
+      navigate('/login', { replace: true });
+    }
   };
 
   const handleDrawerToggle = () => {
@@ -80,18 +86,18 @@ const Navbar: React.FC = () => {
 
   const handleSearch = (e: React.KeyboardEvent | React.MouseEvent) => {
     if (searchTerm.trim()) {
-      navigate(`/jobs?search=${encodeURIComponent(searchTerm.trim())}`);
+      navigate(`/?search=${encodeURIComponent(searchTerm.trim())}`);
     }
   };
 
   const menuItems = [
-    { text: 'Home', icon: <Home />, path: '/home' },
-    { text: 'All Jobs', icon: <Work />, path: '/jobs' },
+    { text: 'All Jobs', icon: <Work />, path: '/' },
+    { text: 'Companies', icon: <Business />, path: '/companies' },
+    { text: 'Support', icon: <Support />, path: '/support' },
+    // Protected items - only show if user is logged in
     { text: 'Network', icon: <Public />, path: '/app/network', protected: true },
     { text: 'Connections', icon: <Group />, path: '/app/connections', protected: true },
     { text: 'Career Insights', icon: <Psychology />, path: '/app/career-insights', protected: true },
-    { text: 'Companies', icon: <Business />, path: '/companies' },
-    { text: 'Support', icon: <Support />, path: '/support' },
   ];
 
   const drawer = (
@@ -266,7 +272,7 @@ const Navbar: React.FC = () => {
             </Box>
           )}
 
-          {!isMobile && (location.pathname === '/jobs' || location.pathname === '/') && (
+          {!isMobile && (location.pathname === '/jobs' || location.pathname === '/' || location.pathname === '/app') && (
             <Box sx={{ mx: 2 }}>
               <TextField
                 size="small"

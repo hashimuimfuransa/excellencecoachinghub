@@ -83,7 +83,14 @@ api.interceptors.response.use(
       const isAuthRequest = error.config?.url?.includes('/auth/login') || 
                            error.config?.url?.includes('/auth/register');
       
-      if (!isAuthRequest) {
+      // Check if this is a public endpoint that should not redirect
+      const isPublicEndpoint = error.config?.url?.includes('/jobs') && !error.config?.url?.includes('/employer/') && !error.config?.url?.includes('/applications');
+      
+      // Check if we're on a public page
+      const isPublicPage = ['/', '/jobs', '/companies', '/support', '/home'].includes(window.location.pathname) ||
+                          window.location.pathname.startsWith('/jobs/');
+      
+      if (!isAuthRequest && !isPublicEndpoint && !isPublicPage) {
         // Token expired or invalid for protected routes
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -96,9 +103,11 @@ api.interceptors.response.use(
           }, 100);
         }
       } else {
-        // For auth requests, just clear any existing invalid tokens but don't redirect
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        // For auth requests, public endpoints, or public pages - just clear any existing invalid tokens but don't redirect
+        if (!isPublicEndpoint && !isPublicPage) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
       }
     }
     return Promise.reject(error);

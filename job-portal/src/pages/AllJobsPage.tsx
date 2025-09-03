@@ -262,12 +262,8 @@ const AllJobsPage: React.FC = () => {
     fetchCategories();
   }, []);
 
-  // Redirect logged-in users to their dashboard
-  useEffect(() => {
-    if (user) {
-      navigate('/app/network', { replace: true });
-    }
-  }, [user, navigate]);
+  // Note: We no longer redirect logged-in users automatically
+  // This allows logged-in users to browse all jobs if they want to
 
   // Filter jobs based on search criteria
   useEffect(() => {
@@ -870,7 +866,7 @@ const AllJobsPage: React.FC = () => {
                             borderColor: 'primary.main'
                           }
                         }}
-                        onClick={() => navigate('/login', { state: { from: { pathname: `/jobs/${job._id}` } } })}
+                        onClick={() => user ? navigate(`/app/jobs/${job._id}`) : navigate('/login', { state: { from: { pathname: `/jobs/${job._id}` } } })}
                       >
                         {/* Status badges */}
                         {job.featured && (
@@ -1201,7 +1197,7 @@ const AllJobsPage: React.FC = () => {
                             borderColor: 'primary.main'
                           }
                         }}
-                        onClick={() => navigate('/login', { state: { from: { pathname: `/jobs/${job._id}` } } })}
+                        onClick={() => user ? navigate(`/app/jobs/${job._id}`) : navigate('/login', { state: { from: { pathname: `/jobs/${job._id}` } } })}
                       >
                         {/* Company logo */}
                         <Avatar 

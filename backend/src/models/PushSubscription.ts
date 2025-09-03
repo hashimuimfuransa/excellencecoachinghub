@@ -17,13 +17,11 @@ const pushSubscriptionSchema = new Schema<IPushSubscription>({
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
   endpoint: {
     type: String,
-    required: true,
-    unique: true
+    required: true
   },
   expirationTime: {
     type: Number,

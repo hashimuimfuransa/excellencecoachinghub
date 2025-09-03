@@ -871,6 +871,9 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
+// Ensure server binds to all interfaces on Render
+const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+
 // Start server
 const startServer = async () => {
   try {
@@ -888,10 +891,10 @@ const startServer = async () => {
     server.keepAliveTimeout = 0; // Disable keep-alive timeout
     server.headersTimeout = 0; // Disable headers timeout
 
-    server.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
+    server.listen(PORT, HOST, () => {
+      console.log(`🚀 Server running on ${HOST}:${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV}`);
-      console.log(`🔗 API URL: http://localhost:${PORT}/api`);
+      console.log(`🔗 API URL: http://${HOST}:${PORT}/api`);
       console.log(`💾 Database: ${process.env.MONGODB_URI ? 'Connected' : 'Not configured'}`);
       console.log(`☁️ Cloudinary: ${cloudinaryConfigured ? 'Configured' : 'Not configured (avatar upload disabled)'}`);
       console.log(`⏱️ Server timeouts: Disabled for slow networks`);

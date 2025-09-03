@@ -31,12 +31,18 @@ class PushNotificationServiceClass {
     this.vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || 'your-private-key-here';
     this.vapidSubject = process.env.VAPID_SUBJECT || 'mailto:admin@excellencecoachinghub.com';
 
-    // Configure web-push
-    webpush.setVapidDetails(
-      this.vapidSubject,
-      this.vapidPublicKey,
-      this.vapidPrivateKey
-    );
+    // Configure web-push only if we have proper keys
+    try {
+      if (this.vapidPrivateKey && this.vapidPrivateKey !== 'your-private-key-here') {
+        webpush.setVapidDetails(
+          this.vapidSubject,
+          this.vapidPublicKey,
+          this.vapidPrivateKey
+        );
+      }
+    } catch (error) {
+      console.warn('Warning: Invalid VAPID keys, push notifications disabled:', error.message);
+    }
   }
 
   /**

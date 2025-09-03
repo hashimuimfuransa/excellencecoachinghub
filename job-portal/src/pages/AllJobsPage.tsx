@@ -70,6 +70,7 @@ import {
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import FloatingChatButton from '../components/chat/FloatingChatButton';
+import FloatingContact from '../components/FloatingContact';
 import Navbar from '../components/Navbar';
 import jobService from '../services/jobService';
 
@@ -1294,6 +1295,9 @@ const AllJobsPage: React.FC = () => {
 
         {/* Chat Button */}
         <FloatingChatButton />
+
+        {/* Contact Us Button */}
+        <FloatingContact />
 
         {/* Application Dialog */}
         <ApplicationDialog />

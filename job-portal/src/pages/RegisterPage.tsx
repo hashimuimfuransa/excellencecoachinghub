@@ -46,6 +46,7 @@ import {
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../contexts/AuthContext';
+import FloatingContact from '../components/FloatingContact';
 
 const RegisterPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -1128,6 +1129,9 @@ const RegisterPage: React.FC = () => {
           </Paper>
         </Slide>
       </Container>
+      
+      {/* Floating Contact Button */}
+      <FloatingContact />
     </Box>
   );
 };

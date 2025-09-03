@@ -173,6 +173,49 @@ export const apiPut = async <T>(url: string, data?: any): Promise<T> => {
   return response.data;
 };
 
+export const apiPatch = async <T>(url: string, data?: any): Promise<T> => {
+  try {
+    console.log(`🌐 Making PATCH request to ${url}`);
+    console.log(`🌐 Request data:`, data);
+    
+    const response = await api.patch<T>(url, data);
+    console.log(`✅ PATCH request successful for ${url}:`, response.status);
+    
+    // Additional validation to ensure we received valid data
+    if (response.data === null || response.data === undefined) {
+      console.error('❌ Received null/undefined response data');
+      throw new Error('Server returned invalid response format');
+    }
+    
+    return response.data;
+  } catch (error: any) {
+    console.error(`❌ API PATCH Error for ${url}:`, {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      headers: error.response?.headers,
+      config: error.config
+    });
+    
+    // Enhanced error handling for specific cases
+    if (error.code === 'NETWORK_ERROR' || !error.response) {
+      throw new Error('Network connection failed. Please check your internet connection and try again.');
+    }
+    
+    if (error.response?.status === 502 || error.response?.status === 503 || error.response?.status === 504) {
+      throw new Error('Server is temporarily unavailable. Please try again in a few moments.');
+    }
+    
+    // Handle cases where response data is not valid JSON or is empty
+    if (error.response?.status === 200 && (!error.response.data || error.response.data === '')) {
+      throw new Error('Server returned empty response');
+    }
+    
+    throw error;
+  }
+};
+
 export const apiDelete = async <T>(url: string): Promise<T> => {
   const response = await api.delete<T>(url);
   return response.data;

@@ -56,6 +56,9 @@ import {
   Psychology
 } from '@mui/icons-material';
 import { employerService } from '../services/employerService';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
+import { chatService } from '../services/chatService';
 
 interface Candidate {
   _id: string;
@@ -66,7 +69,21 @@ interface Candidate {
   location?: string;
   currentPosition?: string;
   currentCompany?: string;
-  experience?: string;
+  experience?: Array<{
+    _id?: string;
+    company: string;
+    position: string;
+    startDate: string;
+    endDate?: string;
+    current: boolean;
+    description?: string;
+    location?: string;
+    achievements?: string[];
+    employmentType?: string;
+    industry?: string;
+    responsibilities?: string[];
+    technologies?: string[];
+  }>;
   skills: string[];
   education?: {
     degree: string;
@@ -88,9 +105,9 @@ interface Candidate {
 
 const EmployerTalentPoolPage: React.FC = () => {
   const theme = useTheme();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [filteredCandidates, setFilteredCandidates] = useState<Candidate[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     skills: '',
@@ -104,10 +121,73 @@ const EmployerTalentPoolPage: React.FC = () => {
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [anchorEls, setAnchorEls] = useState<Record<string, HTMLElement | null>>({});
+  const [error, setError] = useState<string>('');
 
   const candidatesPerPage = 12;
 
-  // Mock data for demonstration
+  // Load candidates from API
+  useEffect(() => {
+    loadCandidates();
+  }, [currentPage, searchTerm, filters]);
+
+  const loadCandidates = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      const params: any = {
+        page: currentPage,
+        limit: candidatesPerPage,
+      };
+
+      let response;
+
+      // Add search term if provided
+      if (searchTerm.trim()) {
+        console.log('Searching candidates with term:', searchTerm.trim());
+        response = await employerService.searchCandidates({
+          q: searchTerm.trim(),
+          skills: filters.skills || undefined,
+          location: filters.location || undefined,
+          experience: filters.experience || undefined,
+        });
+      } else {
+        // Add filters if provided
+        if (filters.skills) params.skills = filters.skills;
+        if (filters.location) params.location = filters.location;
+        if (filters.experience) params.experience = filters.experience;
+        
+        console.log('Fetching candidates with params:', params);
+        response = await employerService.getCandidates(params);
+      }
+
+      console.log('API Response:', response);
+
+      if (response && response.data && response.data.length > 0) {
+        setCandidates(response.data);
+        setTotalPages(Math.ceil((response.total || 0) / candidatesPerPage));
+        console.log(`Loaded ${response.data.length} candidates from API`);
+      } else {
+        console.log('No candidates returned from API, using mock data');
+        // Fallback to mock data if no candidates found
+        setCandidates(mockCandidates);
+        setTotalPages(1);
+        setError('Using demo data - No candidates found in database. Make sure job seekers have completed their profiles.');
+      }
+    } catch (error: any) {
+      console.error('Error loading candidates:', error);
+      console.log('API call failed, using mock data as fallback');
+      
+      // Use mock data as fallback when API fails
+      setCandidates(mockCandidates);
+      setTotalPages(1);
+      setError(`API Error: ${error.message || 'Failed to load candidates'}. Showing demo data instead.`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Mock data for demonstration (fallback)
   const mockCandidates: Candidate[] = [
     {
       _id: '1',
@@ -172,105 +252,191 @@ const EmployerTalentPoolPage: React.FC = () => {
     }
   ];
 
-  useEffect(() => {
-    fetchCandidates();
-  }, [currentPage, filters]);
 
-  useEffect(() => {
-    applyFilters();
-  }, [searchTerm, candidates]);
 
-  const fetchCandidates = async () => {
-    try {
-      setLoading(true);
-      // Using mock data for now
-      setCandidates(mockCandidates);
-      setTotalPages(Math.ceil(mockCandidates.length / candidatesPerPage));
-    } catch (error) {
-      console.error('Error fetching candidates:', error);
-    } finally {
-      setLoading(false);
-    }
+  // Debounced search function
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value);
+    setCurrentPage(1); // Reset to first page when searching
   };
 
-  const applyFilters = () => {
-    let filtered = candidates;
-
-    if (searchTerm) {
-      filtered = filtered.filter(candidate =>
-        `${candidate.firstName} ${candidate.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        candidate.skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        candidate.currentPosition?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        candidate.currentCompany?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (filters.skills) {
-      filtered = filtered.filter(candidate =>
-        candidate.skills.some(skill => skill.toLowerCase().includes(filters.skills.toLowerCase()))
-      );
-    }
-
-    if (filters.location) {
-      filtered = filtered.filter(candidate =>
-        candidate.location?.toLowerCase().includes(filters.location.toLowerCase())
-      );
-    }
-
-    if (filters.experience !== '') {
-      filtered = filtered.filter(candidate =>
-        candidate.experience === filters.experience
-      );
-    }
-
-    if (filters.availability !== 'all') {
-      filtered = filtered.filter(candidate =>
-        filters.availability === 'available' ? candidate.isAvailable : !candidate.isAvailable
-      );
-    }
-
-    setFilteredCandidates(filtered);
-  };
-
-  const handleSaveCandidate = async (candidateId: string) => {
-    try {
-      // Toggle saved status
-      setCandidates(prev => prev.map(candidate =>
-        candidate._id === candidateId
-          ? { ...candidate, savedBy: !candidate.savedBy }
-          : candidate
-      ));
-    } catch (error) {
-      console.error('Error saving candidate:', error);
-    }
-  };
-
-  const handleViewProfile = (candidate: Candidate) => {
-    setSelectedCandidate(candidate);
-    setProfileDialogOpen(true);
-  };
-
-  const handleContactCandidate = (candidate: Candidate) => {
-    setSelectedCandidate(candidate);
-    setContactDialogOpen(true);
-  };
-
-  const handleMenuOpen = (candidateId: string, event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEls(prev => ({ ...prev, [candidateId]: event.currentTarget }));
-  };
-
-  const handleMenuClose = (candidateId: string) => {
-    setAnchorEls(prev => ({ ...prev, [candidateId]: null }));
+  const handleFilterChange = (filterName: string, value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterName]: value
+    }));
+    setCurrentPage(1); // Reset to first page when filtering
   };
 
   const resetFilters = () => {
+    setSearchTerm('');
     setFilters({
       skills: '',
       location: '',
       experience: '',
       availability: 'all'
     });
-    setSearchTerm('');
+    setCurrentPage(1);
+  };
+
+  const handleContactCandidate = async (candidate: Candidate) => {
+    try {
+      console.log('Attempting to contact candidate:', {
+        candidateId: candidate._id,
+        candidateName: `${candidate.firstName} ${candidate.lastName}`
+      });
+      
+      // Create or get existing conversation with this candidate
+      const conversation = await chatService.createConversation(
+        [candidate._id], 
+        `Hello ${candidate.firstName}, I'm interested in discussing potential opportunities with you.`
+      );
+      
+      console.log('Conversation created/retrieved:', conversation);
+      
+      if (conversation && conversation._id) {
+        console.log('Navigating to messages with conversation ID:', conversation._id);
+        // Navigate to messages page with the conversation
+        navigate(`/app/messages?conversation=${conversation._id}`);
+        
+        // Show success message
+        setError(`Successfully started conversation with ${candidate.firstName}!`);
+        
+        // Close the contact dialog if it's open
+        setContactDialogOpen(false);
+      } else {
+        throw new Error('Failed to create conversation - no conversation ID returned');
+      }
+    } catch (error: any) {
+      console.error('Error starting conversation:', error);
+      const errorMessage = error.message || 'Please try again.';
+      setError(`Failed to start conversation: ${errorMessage}`);
+      // Also show an alert for immediate user feedback
+      alert(`Failed to start conversation: ${errorMessage}`);
+    }
+  };
+
+  const handleViewProfile = (candidate: Candidate) => {
+    setSelectedCandidate(candidate);
+    setProfileDialogOpen(true);
+    handleMenuClose(candidate._id);
+  };
+
+  const handleMenuOpen = (candidateId: string, event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEls(prev => ({
+      ...prev,
+      [candidateId]: event.currentTarget
+    }));
+  };
+
+  const handleMenuClose = (candidateId: string) => {
+    setAnchorEls(prev => ({
+      ...prev,
+      [candidateId]: null
+    }));
+  };
+
+  const handleSaveCandidate = async (candidateId: string) => {
+    try {
+      const candidate = candidates.find(c => c._id === candidateId);
+      if (!candidate) return;
+
+      if (candidate.savedBy) {
+        // Unsave candidate
+        await employerService.unsaveCandidate(candidateId);
+        setCandidates(prev => prev.map(c =>
+          c._id === candidateId
+            ? { ...c, savedBy: false }
+            : c
+        ));
+        setError('');
+        toast.success('Candidate removed from saved list successfully!');
+      } else {
+        // Save candidate
+        await employerService.saveCandidate(candidateId);
+        setCandidates(prev => prev.map(c =>
+          c._id === candidateId
+            ? { ...c, savedBy: true }
+            : c
+        ));
+        setError('');
+        toast.success('Candidate saved successfully!');
+      }
+      
+      // Reload candidates to get updated data
+      loadCandidates();
+      
+      // Close menu after action
+      handleMenuClose(candidateId);
+    } catch (error: any) {
+      console.error('Error saving/unsaving candidate:', error);
+      const currentCandidate = candidates.find(c => c._id === candidateId);
+      const action = currentCandidate?.savedBy ? 'unsave' : 'save';
+      const errorMessage = `Failed to ${action} candidate: ${error.message || 'Please try again'}`;
+      setError(errorMessage);
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleDownloadCV = async (candidate: Candidate) => {
+    try {
+      const response = await fetch(`/api/employer/candidates/${candidate._id}/cv`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        
+        // Get the content type to determine the file extension
+        const contentType = response.headers.get('content-type') || '';
+        let fileExtension = 'pdf'; // default
+        
+        if (contentType.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
+          fileExtension = 'docx';
+        } else if (contentType.includes('application/msword')) {
+          fileExtension = 'doc';
+        } else if (contentType.includes('application/pdf')) {
+          fileExtension = 'pdf';
+        } else if (contentType.includes('text/plain')) {
+          fileExtension = 'txt';
+        } else if (contentType.includes('application/rtf')) {
+          fileExtension = 'rtf';
+        }
+        
+        // Try to get filename from Content-Disposition header
+        const contentDisposition = response.headers.get('content-disposition');
+        let filename = `${candidate.firstName}_${candidate.lastName}_CV.${fileExtension}`;
+        
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (filenameMatch && filenameMatch[1]) {
+            filename = filenameMatch[1].replace(/['"]/g, '');
+          }
+        }
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        // Close menu after successful download
+        handleMenuClose(candidate._id);
+        toast.success('CV downloaded successfully!');
+      } else {
+        console.error('Failed to download CV');
+        toast.error('Failed to download CV. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error downloading CV:', error);
+      toast.error('Error downloading CV. Please check your connection and try again.');
+    }
   };
 
   const CandidateCard = ({ candidate }: { candidate: Candidate }) => (
@@ -317,7 +483,7 @@ const EmployerTalentPoolPage: React.FC = () => {
                   <Send sx={{ mr: 1 }} />
                   Contact
                 </MenuItem>
-                <MenuItem>
+                <MenuItem onClick={() => handleDownloadCV(candidate)}>
                   <Download sx={{ mr: 1 }} />
                   Download CV
                 </MenuItem>
@@ -363,7 +529,10 @@ const EmployerTalentPoolPage: React.FC = () => {
               <Box display="flex" alignItems="center">
                 <Work fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />
                 <Typography variant="body2" color="text.secondary">
-                  {candidate.experience} experience
+                  {candidate.experience && candidate.experience.length > 0 
+                    ? `${candidate.experience.length} ${candidate.experience.length === 1 ? 'role' : 'roles'}`
+                    : 'No experience listed'
+                  }
                 </Typography>
               </Box>
             </Box>
@@ -483,7 +652,8 @@ const EmployerTalentPoolPage: React.FC = () => {
               fullWidth
               label="Search candidates"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
+              placeholder="Search by name, skills, position, or company"
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -498,7 +668,7 @@ const EmployerTalentPoolPage: React.FC = () => {
               fullWidth
               label="Skills"
               value={filters.skills}
-              onChange={(e) => setFilters(prev => ({ ...prev, skills: e.target.value }))}
+              onChange={(e) => handleFilterChange('skills', e.target.value)}
               placeholder="e.g. React, Python"
             />
           </Grid>
@@ -507,7 +677,7 @@ const EmployerTalentPoolPage: React.FC = () => {
               fullWidth
               label="Location"
               value={filters.location}
-              onChange={(e) => setFilters(prev => ({ ...prev, location: e.target.value }))}
+              onChange={(e) => handleFilterChange('location', e.target.value)}
               placeholder="e.g. New York"
             />
           </Grid>
@@ -516,7 +686,7 @@ const EmployerTalentPoolPage: React.FC = () => {
               <InputLabel>Experience</InputLabel>
               <Select
                 value={filters.experience}
-                onChange={(e) => setFilters(prev => ({ ...prev, experience: e.target.value }))}
+                onChange={(e) => handleFilterChange('experience', e.target.value as string)}
                 label="Experience"
               >
                 <MenuItem value="">All</MenuItem>
@@ -533,7 +703,7 @@ const EmployerTalentPoolPage: React.FC = () => {
               <InputLabel>Availability</InputLabel>
               <Select
                 value={filters.availability}
-                onChange={(e) => setFilters(prev => ({ ...prev, availability: e.target.value }))}
+                onChange={(e) => handleFilterChange('availability', e.target.value as string)}
                 label="Availability"
               >
                 <MenuItem value="all">All</MenuItem>
@@ -552,7 +722,7 @@ const EmployerTalentPoolPage: React.FC = () => {
                 Clear Filters
               </Button>
               <Typography variant="body2" sx={{ alignSelf: 'center', ml: 2 }}>
-                {filteredCandidates.length} candidates found
+                {candidates.length} candidates found
               </Typography>
             </Box>
           </Grid>
@@ -560,14 +730,24 @@ const EmployerTalentPoolPage: React.FC = () => {
       </Paper>
 
       {/* Results */}
-      {loading ? (
+      {error ? (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          <AlertTitle>Error Loading Candidates</AlertTitle>
+          {error}
+          <Box mt={1}>
+            <Button variant="outlined" size="small" onClick={loadCandidates}>
+              Try Again
+            </Button>
+          </Box>
+        </Alert>
+      ) : loading ? (
         <Box display="flex" justifyContent="center" py={4}>
           <CircularProgress />
         </Box>
-      ) : filteredCandidates.length > 0 ? (
+      ) : candidates.length > 0 ? (
         <>
           <Grid container spacing={3}>
-            {filteredCandidates.map((candidate) => (
+            {candidates.map((candidate) => (
               <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={candidate._id}>
                 <CandidateCard candidate={candidate} />
               </Grid>
@@ -653,8 +833,41 @@ const EmployerTalentPoolPage: React.FC = () => {
                       <strong>Company:</strong> {selectedCandidate.currentCompany}
                     </Typography>
                     <Typography variant="body2">
-                      <strong>Experience:</strong> {selectedCandidate.experience}
+                      <strong>Experience:</strong> {selectedCandidate.experience && selectedCandidate.experience.length > 0 
+                        ? `${selectedCandidate.experience.length} ${selectedCandidate.experience.length === 1 ? 'role' : 'roles'}`
+                        : 'No experience listed'
+                      }
                     </Typography>
+                    
+                    {/* Experience Details */}
+                    {selectedCandidate.experience && selectedCandidate.experience.length > 0 && (
+                      <Box mt={2}>
+                        <Typography variant="subtitle2" gutterBottom>
+                          <strong>Work Experience:</strong>
+                        </Typography>
+                        {selectedCandidate.experience.map((exp, index) => (
+                          <Box key={exp._id || index} mb={2} p={1} border={1} borderColor="divider" borderRadius={1}>
+                            <Typography variant="body2">
+                              <strong>{exp.position}</strong> at <strong>{exp.company}</strong>
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {exp.startDate} - {exp.current ? 'Present' : (exp.endDate || 'Not specified')}
+                              {exp.location && ` • ${exp.location}`}
+                            </Typography>
+                            {exp.description && (
+                              <Typography variant="body2" mt={0.5}>
+                                {exp.description}
+                              </Typography>
+                            )}
+                            {exp.technologies && exp.technologies.length > 0 && (
+                              <Typography variant="caption" color="text.secondary">
+                                Technologies: {exp.technologies.join(', ')}
+                              </Typography>
+                            )}
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
                   </Stack>
                 </Grid>
                 <Grid size={{ xs: 12 }}>

@@ -142,7 +142,242 @@ export const seedDatabase = async (): Promise<void> => {
       isActive: true
     });
 
-    console.log('👥 Created users');
+    // Create job seekers with completed profiles for talent pool
+    const jobSeeker1 = await User.create({
+      email: 'alice.jobseeker@example.com',
+      password: 'JobSeeker123!',
+      firstName: 'Alice',
+      lastName: 'Johnson',
+      role: UserRole.JOB_SEEKER,
+      isEmailVerified: true,
+      isActive: true,
+      phone: '+1 (555) 123-4567',
+      location: 'New York, NY',
+      summary: 'Experienced frontend developer with 3+ years of experience in React and modern web technologies.',
+      skills: ['React', 'TypeScript', 'JavaScript', 'CSS', 'Node.js', 'HTML5', 'Git'],
+      experience: [
+        {
+          company: 'Tech Innovations Inc.',
+          position: 'Frontend Developer',
+          startDate: '2021-01',
+          endDate: '2024-01',
+          current: false,
+          description: 'Developed responsive web applications using React and TypeScript.',
+          location: 'New York, NY',
+          responsibilities: ['Built user interfaces', 'Optimized performance', 'Collaborated with design team'],
+          technologies: ['React', 'TypeScript', 'Redux']
+        }
+      ],
+      education: [
+        {
+          institution: 'New York University',
+          degree: 'Bachelor of Computer Science',
+          fieldOfStudy: 'Computer Science',
+          startDate: '2017-09',
+          endDate: '2021-05',
+          current: false,
+          gpa: 3.8
+        }
+      ],
+      profileCompletion: {
+        percentage: 95,
+        status: 'complete',
+        missingFields: [],
+        lastUpdated: new Date().toISOString()
+      },
+      employmentStatus: 'actively_looking',
+      experienceLevel: '3-5 years',
+      yearsOfExperience: 3,
+      expectedSalary: 85000,
+      jobPreferences: {
+        jobTypes: ['Full-time'],
+        locations: ['New York', 'Remote'],
+        remoteWork: true,
+        industries: ['Technology', 'Software']
+      }
+    });
+
+    const professional1 = await User.create({
+      email: 'michael.professional@example.com',
+      password: 'Professional123!',
+      firstName: 'Michael',
+      lastName: 'Chen',
+      role: UserRole.PROFESSIONAL,
+      isEmailVerified: true,
+      isActive: true,
+      phone: '+1 (555) 234-5678',
+      location: 'San Francisco, CA',
+      summary: 'Full-stack developer with expertise in Python, Django, and modern JavaScript frameworks.',
+      skills: ['Python', 'Django', 'React', 'PostgreSQL', 'AWS', 'Docker', 'REST APIs'],
+      experience: [
+        {
+          company: 'StartupX',
+          position: 'Full Stack Developer',
+          startDate: '2020-03',
+          current: true,
+          description: 'Built scalable web applications using Django and React.',
+          location: 'San Francisco, CA',
+          responsibilities: ['Full-stack development', 'API design', 'Database optimization'],
+          technologies: ['Python', 'Django', 'React', 'PostgreSQL']
+        }
+      ],
+      education: [
+        {
+          institution: 'Stanford University',
+          degree: 'Master of Software Engineering',
+          fieldOfStudy: 'Software Engineering',
+          startDate: '2019-09',
+          endDate: '2021-05',
+          current: false,
+          gpa: 3.9
+        }
+      ],
+      profileCompletion: {
+        percentage: 88,
+        status: 'complete',
+        missingFields: ['certifications'],
+        lastUpdated: new Date().toISOString()
+      },
+      employmentStatus: 'open_to_opportunities',
+      experienceLevel: '2-3 years',
+      yearsOfExperience: 4,
+      expectedSalary: 120000,
+      jobPreferences: {
+        jobTypes: ['Full-time', 'Contract'],
+        locations: ['San Francisco', 'Remote'],
+        remoteWork: true,
+        industries: ['Technology', 'Fintech', 'Startup']
+      }
+    });
+
+    const student4 = await User.create({
+      email: 'sarah.student@example.com',
+      password: 'Student123!',
+      firstName: 'Sarah',
+      lastName: 'Williams',
+      role: UserRole.STUDENT,
+      isEmailVerified: true,
+      isActive: true,
+      phone: '+1 (555) 345-6789',
+      location: 'Chicago, IL',
+      summary: 'Computer Science student passionate about data analysis and machine learning.',
+      skills: ['Python', 'SQL', 'Tableau', 'Excel', 'Statistics', 'Machine Learning'],
+      education: [
+        {
+          institution: 'University of Chicago',
+          degree: 'Bachelor of Data Science',
+          fieldOfStudy: 'Data Science',
+          startDate: '2021-09',
+          endDate: '2025-05',
+          current: true,
+          gpa: 3.7
+        }
+      ],
+      profileCompletion: {
+        percentage: 75,
+        status: 'good',
+        missingFields: ['experience'],
+        lastUpdated: new Date().toISOString()
+      },
+      employmentStatus: 'student',
+      experienceLevel: 'Entry level',
+      yearsOfExperience: 0,
+      jobPreferences: {
+        jobTypes: ['Full-time', 'Internship'],
+        locations: ['Chicago', 'Remote'],
+        remoteWork: true,
+        industries: ['Technology', 'Data Science', 'Analytics']
+      }
+    });
+
+    const jobSeeker2 = await User.create({
+      email: 'david.jobseeker@example.com',
+      password: 'JobSeeker123!',
+      firstName: 'David',
+      lastName: 'Rodriguez',
+      role: UserRole.JOB_SEEKER,
+      isEmailVerified: true,
+      isActive: true,
+      phone: '+1 (555) 456-7890',
+      location: 'Austin, TX',
+      summary: 'DevOps engineer with strong background in cloud infrastructure and automation.',
+      skills: ['AWS', 'Docker', 'Kubernetes', 'Terraform', 'Python', 'Linux', 'CI/CD'],
+      experience: [
+        {
+          company: 'CloudTech Solutions',
+          position: 'DevOps Engineer',
+          startDate: '2019-06',
+          endDate: '2023-12',
+          current: false,
+          description: 'Managed cloud infrastructure and automated deployment pipelines.',
+          location: 'Austin, TX',
+          responsibilities: ['Infrastructure automation', 'CI/CD pipelines', 'Monitoring and alerting'],
+          technologies: ['AWS', 'Terraform', 'Docker', 'Jenkins']
+        }
+      ],
+      education: [
+        {
+          institution: 'University of Texas at Austin',
+          degree: 'Bachelor of Computer Engineering',
+          fieldOfStudy: 'Computer Engineering',
+          startDate: '2015-09',
+          endDate: '2019-05',
+          current: false,
+          gpa: 3.6
+        }
+      ],
+      certifications: [
+        {
+          name: 'AWS Solutions Architect',
+          issuer: 'Amazon Web Services',
+          issueDate: '2022-03-15',
+          credentialId: 'AWS-SA-2022-456'
+        }
+      ],
+      profileCompletion: {
+        percentage: 92,
+        status: 'complete',
+        missingFields: ['languages'],
+        lastUpdated: new Date().toISOString()
+      },
+      employmentStatus: 'actively_looking',
+      experienceLevel: '3-5 years',
+      yearsOfExperience: 4,
+      expectedSalary: 110000,
+      jobPreferences: {
+        jobTypes: ['Full-time'],
+        locations: ['Austin', 'Dallas', 'Remote'],
+        remoteWork: true,
+        industries: ['Technology', 'Cloud Computing', 'Fintech']
+      }
+    });
+
+    // Create employer users
+    const employer1 = await User.create({
+      email: 'hr@techcompany.com',
+      password: 'Employer123!',
+      firstName: 'Jane',
+      lastName: 'Smith',
+      role: UserRole.EMPLOYER,
+      isEmailVerified: true,
+      isActive: true,
+      company: 'TechCompany Inc.',
+      jobTitle: 'HR Manager'
+    });
+
+    const employer2 = await User.create({
+      email: 'recruiter@startupx.com',
+      password: 'Employer123!',
+      firstName: 'Robert',
+      lastName: 'Johnson',
+      role: UserRole.EMPLOYER,
+      isEmailVerified: true,
+      isActive: true,
+      company: 'StartupX',
+      jobTitle: 'Senior Recruiter'
+    });
+
+    console.log('👥 Created users with job seekers, professionals, and employers');
 
     // Create sample courses
     const course1 = await Course.create({

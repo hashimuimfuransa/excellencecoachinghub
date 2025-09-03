@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { JobApplication, Job, User, PsychometricTestResult, AIInterview } from '@/models';
+import { JobApplication, Job, User, PsychometricTestResult, AIInterview, Notification } from '@/models';
 import { ApplicationStatus } from '@/types/job';
 import { UserRole } from '../../../shared/types';
 import { AuthRequest } from '@/middleware/auth';
@@ -110,11 +110,41 @@ export const applyForJob = async (req: AuthRequest, res: Response) => {
     job.applicationsCount += 1;
     await job.save();
 
+    // Create notification for employer (only for internal jobs)
+    if (!job.isExternalJob && job.employer) {
+      try {
+        await Notification.create({
+          recipient: job.employer._id,
+          type: 'application_received',
+          title: 'New Job Application',
+          message: `${user.firstName} ${user.lastName} has applied for your job "${job.title}"`,
+          data: {
+            applicationId: application._id,
+            jobId: job._id,
+            jobTitle: job.title,
+            applicantName: `${user.firstName} ${user.lastName}`,
+            applicantEmail: user.email,
+            userId: user._id,
+            url: `/app/employer/candidates`
+          }
+        });
+        console.log(`Notification created for employer ${job.employer._id} about application from ${user.firstName} ${user.lastName}`);
+      } catch (notificationError) {
+        console.error('Failed to create notification:', notificationError);
+        // Don't fail the application process if notification fails
+      }
+    }
+
     // Prepare email information for frontend EmailJS handling
     let employerEmail: string | null = null;
     let emailMessage = '';
 
-    if (sendProfileToEmployer) {
+    // For internal jobs (created by employers), don't send emails - the application goes directly to employer's dashboard
+    if (!job.isExternalJob) {
+      emailMessage = 'Application submitted successfully! The employer will see your application in their dashboard.';
+      console.log(`Internal job application created for job: ${job.title}`);
+    } else if (sendProfileToEmployer) {
+      // External jobs - handle email sending
       // Priority 1: Contact info email from job posting
       if (job.contactInfo?.email) {
         employerEmail = job.contactInfo.email;
@@ -126,7 +156,7 @@ export const applyForJob = async (req: AuthRequest, res: Response) => {
 
       if (employerEmail) {
         emailMessage = 'Application submitted. Email will be sent to employer via frontend service.';
-        console.log(`Employer email available: ${employerEmail}`);
+        console.log(`External job - Employer email available: ${employerEmail}`);
       } else {
         emailMessage = 'Application submitted successfully! However, no employer email was provided for this job posting. Please use alternative contact methods or look for contact information in the job description.';
       }
@@ -140,7 +170,12 @@ export const applyForJob = async (req: AuthRequest, res: Response) => {
       success: true,
       data: populatedApplication,
       message: emailMessage || 'Application submitted successfully',
-      emailData: sendProfileToEmployer && employerEmail ? {
+      emailData: !job.isExternalJob ? {
+        // Internal job - no email needed
+        shouldSendEmail: false,
+        reason: 'Internal job - application sent to employer dashboard'
+      } : (sendProfileToEmployer && employerEmail ? {
+        // External job with email
         shouldSendEmail: true,
         employerEmail: employerEmail,
         jobData: {
@@ -163,9 +198,10 @@ export const applyForJob = async (req: AuthRequest, res: Response) => {
           profileCompletion: profileValidation.completionPercentage
         }
       } : {
+        // External job without email
         shouldSendEmail: false,
         reason: employerEmail ? 'Email not requested' : 'No employer email available'
-      }
+      })
     });
   } catch (error: any) {
     console.error('Error in applyForJob:', error);
@@ -338,6 +374,50 @@ export const updateApplicationStatus = async (req: AuthRequest, res: Response) =
     application.status = status;
     if (notes) application.notes = notes;
     await application.save();
+
+    // Create notification for applicant about status update
+    try {
+      const applicant = await User.findById(application.applicant);
+      if (applicant) {
+        let notificationMessage = '';
+        switch (status) {
+          case ApplicationStatus.SHORTLISTED:
+            notificationMessage = `Great news! You've been shortlisted for "${application.job.title}" at ${application.job.company}`;
+            break;
+          case ApplicationStatus.INTERVIEW_SCHEDULED:
+            notificationMessage = `Interview scheduled for "${application.job.title}" at ${application.job.company}`;
+            break;
+          case ApplicationStatus.INTERVIEWED:
+            notificationMessage = `Thank you for interviewing for "${application.job.title}" at ${application.job.company}`;
+            break;
+          case ApplicationStatus.OFFERED:
+            notificationMessage = `Congratulations! You have an offer for "${application.job.title}" at ${application.job.company}`;
+            break;
+          case ApplicationStatus.REJECTED:
+            notificationMessage = `Update on your application for "${application.job.title}" at ${application.job.company}`;
+            break;
+          default:
+            notificationMessage = `Your application status for "${application.job.title}" has been updated`;
+        }
+
+        await Notification.create({
+          recipient: application.applicant,
+          type: 'application_status_update',
+          title: 'Application Status Update',
+          message: notificationMessage,
+          data: {
+            applicationId: application._id,
+            jobId: application.job._id,
+            jobTitle: application.job.title,
+            status: status,
+            url: `/app/applications`
+          }
+        });
+      }
+    } catch (notificationError) {
+      console.error('Failed to create status update notification:', notificationError);
+      // Don't fail the update process if notification fails
+    }
 
     const updatedApplication = await JobApplication.findById(applicationId)
       .populate('job', 'title company location')

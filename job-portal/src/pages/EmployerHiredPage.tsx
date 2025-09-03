@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { hiredCandidatesService, HiredCandidate } from '../services/hiredCandidatesService';
 import {
   Box,
   Container,
@@ -50,35 +51,7 @@ import {
   Badge as BadgeIcon
 } from '@mui/icons-material';
 
-interface HiredCandidate {
-  _id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone?: string;
-  location?: string;
-  position: string;
-  department: string;
-  startDate: string;
-  hiredDate: string;
-  salary?: string;
-  jobTitle: string;
-  skills: string[];
-  avatar?: string;
-  rating?: number;
-  testScores?: {
-    overall: number;
-    technical: number;
-    soft: number;
-  };
-  interviewScore?: number;
-  hiringManager: string;
-  employeeId?: string;
-  status: 'hired' | 'started' | 'probation' | 'confirmed';
-  notes?: string;
-  originalJobId: string;
-  originalJobTitle: string;
-}
+// HiredCandidate interface is now imported from service
 
 const EmployerHiredPage: React.FC = () => {
   const theme = useTheme();
@@ -197,15 +170,18 @@ const EmployerHiredPage: React.FC = () => {
   const fetchHiredCandidates = async () => {
     try {
       setLoading(true);
-      // Using mock data for now
+      const response = await hiredCandidatesService.getHiredCandidates(currentPage, candidatesPerPage, filterStatus);
+      setHiredCandidates(response.data);
+      setTotalPages(response.pagination.pages);
+    } catch (error) {
+      console.error('Error fetching hired candidates:', error);
+      // Fallback to mock data if API fails
       let filtered = mockHiredCandidates;
       if (filterStatus !== 'all') {
         filtered = mockHiredCandidates.filter(candidate => candidate.status === filterStatus);
       }
       setHiredCandidates(filtered);
       setTotalPages(Math.ceil(filtered.length / candidatesPerPage));
-    } catch (error) {
-      console.error('Error fetching hired candidates:', error);
     } finally {
       setLoading(false);
     }
@@ -214,6 +190,33 @@ const EmployerHiredPage: React.FC = () => {
   const handleViewProfile = (candidate: HiredCandidate) => {
     setSelectedCandidate(candidate);
     setProfileDialogOpen(true);
+  };
+
+  const handleDownloadCV = async (candidate: HiredCandidate) => {
+    try {
+      const response = await fetch(`/api/employer/candidates/${candidate._id}/cv`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${candidate.firstName}_${candidate.lastName}_CV.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error('Failed to download CV');
+      }
+    } catch (error) {
+      console.error('Error downloading CV:', error);
+    }
   };
 
   const handleMenuOpen = (candidateId: string, event: React.MouseEvent<HTMLElement>) => {
@@ -295,6 +298,10 @@ const EmployerHiredPage: React.FC = () => {
                 <MenuItem>
                   <Message sx={{ mr: 1 }} />
                   Send Message
+                </MenuItem>
+                <MenuItem onClick={() => handleDownloadCV(candidate)}>
+                  <Download sx={{ mr: 1 }} />
+                  Download CV
                 </MenuItem>
                 <MenuItem>
                   <Download sx={{ mr: 1 }} />

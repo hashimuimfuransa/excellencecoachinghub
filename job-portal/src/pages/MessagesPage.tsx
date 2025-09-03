@@ -40,6 +40,7 @@ import {
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
+import { useLocation } from 'react-router-dom';
 import { ChatRoom, ChatMessage } from '../types/chat';
 import { chatService } from '../services/chatService';
 import { realTimeNotificationService } from '../services/realTimeNotificationService';
@@ -49,6 +50,7 @@ const MessagesPage: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user } = useAuth();
+  const location = useLocation();
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -154,11 +156,48 @@ const MessagesPage: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Handle URL parameter changes
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const conversationId = urlParams.get('conversation');
+    
+    if (conversationId && chatRooms.length > 0) {
+      console.log('URL changed, looking for conversation:', conversationId);
+      const targetRoom = chatRooms.find(room => room._id === conversationId);
+      
+      if (targetRoom) {
+        console.log('Found and selecting room from URL:', targetRoom);
+        setSelectedRoom(targetRoom);
+        // Clear URL parameter
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, [location.search, chatRooms]);
+
   const loadChatRooms = async () => {
     try {
       setLoading(true);
       const rooms = await chatService.getChats();
       setChatRooms(rooms);
+      
+      // Check for conversation ID in URL parameters first
+      const urlParams = new URLSearchParams(location.search);
+      const conversationId = urlParams.get('conversation');
+      
+      if (conversationId) {
+        console.log('Found conversation ID in URL:', conversationId);
+        const targetRoom = rooms.find(room => room._id === conversationId);
+        
+        if (targetRoom) {
+          console.log('Found target room:', targetRoom);
+          setSelectedRoom(targetRoom);
+          // Clear URL parameter by replacing the current history entry
+          window.history.replaceState({}, document.title, window.location.pathname);
+          return; // Exit early since we found and selected the room
+        } else {
+          console.log('Conversation not found in existing rooms, it may be new');
+        }
+      }
       
       // Check if there's a pre-selected chat from navigation
       const selectedChatDataStr = sessionStorage.getItem('selectedChatData');

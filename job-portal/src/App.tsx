@@ -6,6 +6,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './layouts/MainLayout';
 import { initEmailJS } from './services/emailjsService';
 import { pushNotificationService } from './services/pushNotificationService';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Import all pages
 import HomePage from './pages/HomePage';
@@ -351,6 +353,20 @@ function App() {
           
           {/* Floating Chat Button */}
           <FloatingChatButton />
+          
+          {/* Toast Notifications */}
+          <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="light"
+          />
         </Router>
       </AuthProvider>
     </ThemeProvider>

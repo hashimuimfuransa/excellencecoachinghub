@@ -18,6 +18,27 @@ import { validateRequest } from '../middleware/validateRequest';
 const router = Router();
 
 // Validation rules
+// Custom password validator with detailed missing requirements
+const passwordValidator = (value: string) => {
+  const missing = [];
+  
+  if (!/(?=.*[a-z])/.test(value)) {
+    missing.push('lowercase letter');
+  }
+  if (!/(?=.*[A-Z])/.test(value)) {
+    missing.push('uppercase letter');
+  }
+  if (!/(?=.*\d)/.test(value)) {
+    missing.push('number');
+  }
+  
+  if (missing.length > 0) {
+    throw new Error(`Password is missing: ${missing.join(', ')}`);
+  }
+  
+  return true;
+};
+
 const registerValidation = [
   body('email')
     .isEmail()
@@ -26,8 +47,7 @@ const registerValidation = [
   body('password')
     .isLength({ min: 8 })
     .withMessage('Password must be at least 8 characters long')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number'),
+    .custom(passwordValidator),
   body('firstName')
     .trim()
     .isLength({ min: 2, max: 50 })
@@ -70,8 +90,7 @@ const resetPasswordValidation = [
   body('password')
     .isLength({ min: 8 })
     .withMessage('Password must be at least 8 characters long')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number')
+    .custom(passwordValidator)
 ];
 
 const googleRegistrationValidation = [

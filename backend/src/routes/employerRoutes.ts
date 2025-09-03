@@ -34,12 +34,29 @@ import {
   // Candidate management
   getCandidatesOverview,
   getCandidateDetails,
+  getCandidates,
   searchCandidates,
   
   // Job posting management
   getJobPostingSettings,
   updateJobPostingSettings,
-  bulkUpdateJobStatuses
+  bulkUpdateJobStatuses,
+  
+  // Saved candidates management
+  saveCandidate,
+  removeSavedCandidate,
+  getSavedCandidates,
+  updateSavedCandidateNotes,
+  
+  // Hired candidates
+  getHiredCandidates,
+  
+  // CV download
+  downloadCandidateCV,
+  
+  // AI Shortlisting
+  aiShortlistCandidates,
+  applyAIShortlisting
 } from '@/controllers/employerController';
 
 // Import psychometric test controller for employer access
@@ -82,10 +99,11 @@ router.patch('/applications/:applicationId/interview-feedback', updateInterviewF
 // Data export
 router.get('/applications/export/:jobId', exportApplicationData);
 
-// Candidate management
-router.get('/candidates', getCandidatesOverview);
+// Candidate management  
+router.get('/candidates', getCandidates); // Talent pool - all candidates with completed profiles
+router.get('/candidates/overview', getCandidatesOverview); // Overview of candidates who applied
+router.get('/candidates/search', searchCandidates); // Search talent pool
 router.get('/candidates/:candidateId', getCandidateDetails);
-router.get('/candidates/search', searchCandidates);
 
 // Settings
 router.get('/settings/job-posting', getJobPostingSettings);
@@ -93,5 +111,21 @@ router.put('/settings/job-posting', updateJobPostingSettings);
 
 // Psychometric tests access for employers
 router.get('/psychometric-tests', getPsychometricTests);
+
+// Saved candidates management
+router.get('/saved-candidates', getSavedCandidates);
+router.post('/saved-candidates', saveCandidate);
+router.delete('/saved-candidates/:candidateId', removeSavedCandidate);
+router.patch('/saved-candidates/:candidateId', updateSavedCandidateNotes);
+
+// Hired candidates
+router.get('/hired-candidates', getHiredCandidates);
+
+// CV download
+router.get('/candidates/:candidateId/cv', downloadCandidateCV);
+
+// AI Shortlisting routes
+router.post('/ai-shortlist', aiShortlistCandidates);
+router.post('/ai-shortlist/apply', applyAIShortlisting);
 
 export default router;

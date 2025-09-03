@@ -292,52 +292,58 @@ const JobDetailsPage: React.FC = () => {
       setApplying(true);
       
       const result = await applicationService.applyForJob(job._id, {
-        sendProfileToEmployer: true // Always send profile if applying through this feature
+        sendProfileToEmployer: !job.isExternalJob // For internal jobs, don't send email, create application record
       });
       
       setHasApplied(true);
       
-      // Handle EmailJS email sending if data is available
-      let emailSent = false;
-      if (result.emailData?.shouldSendEmail) {
-        console.log('📧 Sending job application email via EmailJS...');
-        
-        emailSent = await sendJobApplicationToEmployer({
-          employerEmail: result.emailData.employerEmail,
-          jobTitle: result.emailData.jobData.title,
-          company: result.emailData.jobData.company,
-          location: result.emailData.jobData.location,
-          candidateName: result.emailData.candidateData.name,
-          candidateEmail: result.emailData.candidateData.email,
-          candidatePhone: result.emailData.candidateData.phone,
-          candidateLocation: result.emailData.candidateData.location,
-          candidateJobTitle: result.emailData.candidateData.jobTitle,
-          candidateSkills: result.emailData.candidateData.skills,
-          candidateSummary: result.emailData.candidateData.summary,
-          candidateExperience: result.emailData.candidateData.experience,
-          candidateEducation: result.emailData.candidateData.education,
-          candidateResume: result.emailData.candidateData.resume,
-          candidateCvFile: result.emailData.candidateData.cvFile,
-          profileCompletion: result.emailData.candidateData.profileCompletion
-        });
-      }
-      
-      // Show appropriate success message
-      if (result.emailData?.shouldSendEmail) {
-        if (emailSent) {
-          alert(`✅ ${result.message}\n\n📧 Your profile has been sent to: ${result.emailData.employerEmail}\n\n🎯 The employer will receive a detailed email with your profile information.`);
-        } else {
-          alert(`⚠️ Application submitted, but there was an issue sending your profile via email.\n\n💡 Please consider contacting the employer directly at: ${result.emailData.employerEmail}\n\nYour application has been saved successfully.`);
-        }
+      // Handle different flows for internal vs external jobs
+      if (!job.isExternalJob) {
+        // Internal job - application is saved to database and employer will see it in their dashboard
+        console.log('✅ Internal job application submitted successfully');
+        alert(`✅ Application submitted successfully!\n\n🎯 Your application has been sent to ${job.company} and will appear in the employer's dashboard.\n\n📧 The employer can contact you directly through the platform or via your provided contact information.`);
       } else {
-        const reason = result.emailData?.reason || 'Unknown reason';
-        if (reason === 'No employer email available') {
-          alert(`✅ Application submitted successfully!\n\n⚠️ However, no employer email was provided for this job posting.\n\n💡 Please use alternative contact methods or look for contact information in the job description.`);
+        // External job - handle EmailJS email sending if data is available
+        let emailSent = false;
+        if (result.emailData?.shouldSendEmail) {
+          console.log('📧 Sending job application email via EmailJS...');
+          
+          emailSent = await sendJobApplicationToEmployer({
+            employerEmail: result.emailData.employerEmail,
+            jobTitle: result.emailData.jobData.title,
+            company: result.emailData.jobData.company,
+            location: result.emailData.jobData.location,
+            candidateName: result.emailData.candidateData.name,
+            candidateEmail: result.emailData.candidateData.email,
+            candidatePhone: result.emailData.candidateData.phone,
+            candidateLocation: result.emailData.candidateData.location,
+            candidateJobTitle: result.emailData.candidateData.jobTitle,
+            candidateSkills: result.emailData.candidateData.skills,
+            candidateSummary: result.emailData.candidateData.summary,
+            candidateExperience: result.emailData.candidateData.experience,
+            candidateEducation: result.emailData.candidateData.education,
+            candidateResume: result.emailData.candidateData.resume,
+            candidateCvFile: result.emailData.candidateData.cvFile,
+            profileCompletion: result.emailData.candidateData.profileCompletion
+          });
+        }
+        
+        // Show appropriate success message for external jobs
+        if (result.emailData?.shouldSendEmail) {
+          if (emailSent) {
+            alert(`✅ ${result.message}\n\n📧 Your profile has been sent to: ${result.emailData.employerEmail}\n\n🎯 The employer will receive a detailed email with your profile information.`);
+          } else {
+            alert(`⚠️ Application submitted, but there was an issue sending your profile via email.\n\n💡 Please consider contacting the employer directly at: ${result.emailData.employerEmail}\n\nYour application has been saved successfully.`);
+          }
         } else {
-          alert('✅ Application submitted successfully!');
+          const reason = result.emailData?.reason || 'Unknown reason';
+          if (reason === 'No employer email available') {
+            alert(`✅ Application submitted successfully!\n\n⚠️ However, no employer email was provided for this job posting.\n\n💡 Please use alternative contact methods or look for contact information in the job description.`);
+          } else {
+            alert('✅ Application submitted successfully!');
+          }
         }
       }
-      
     } catch (error: any) {
       console.error('Error applying for job:', error);
       alert(error.message || 'Failed to submit application. Please try again.');

@@ -87,7 +87,14 @@ api.interceptors.response.use(
         // Token expired or invalid for protected routes
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        
+        // Use a more controlled redirect that won't cause loops
+        if (window.location.pathname !== '/login') {
+          // Delay the redirect slightly to avoid race conditions
+          setTimeout(() => {
+            window.location.replace('/login');
+          }, 100);
+        }
       } else {
         // For auth requests, just clear any existing invalid tokens but don't redirect
         localStorage.removeItem('token');

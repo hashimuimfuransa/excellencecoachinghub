@@ -91,7 +91,8 @@ class AuthService {
   logout(): void {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    window.location.href = '/';
+    // Don't force redirect here - let the component handle navigation
+    // This prevents refresh loops and gives better control to the calling component
   }
 
   // Get current user from localStorage

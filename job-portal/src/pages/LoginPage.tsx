@@ -54,7 +54,7 @@ const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [mounted, setMounted] = useState(false);
   
-  const { login } = useAuth();
+  const { login, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
@@ -65,21 +65,29 @@ const LoginPage: React.FC = () => {
   useEffect(() => {
     setMounted(true);
     
-    // Check if user is already authenticated and redirect
-    const checkAuthentication = async () => {
-      try {
-        const { default: authService } = await import('../services/authService');
-        if (authService.isAuthenticated()) {
+    // Check if user is already authenticated and redirect using context
+    const checkAuthentication = () => {
+      // Only redirect if we're authenticated and not currently loading
+      if (!isLoading && isAuthenticated && location.pathname === '/login') {
+        // Use setTimeout to prevent immediate navigation loops
+        setTimeout(() => {
           navigate('/app/network', { replace: true });
-        }
-      } catch (error) {
-        // Ignore errors during auth check on login page
-        console.log('Auth check skipped on login page');
+        }, 100);
       }
     };
     
-    checkAuthentication();
-  }, [navigate]);
+    // Only check auth once when component mounts and auth context is ready
+    if (mounted && !isLoading) {
+      checkAuthentication();
+    }
+  }, [mounted]); // Removed navigate dependency to prevent loops
+
+  // Handle authentication state changes
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && location.pathname === '/login') {
+      navigate('/app/network', { replace: true });
+    }
+  }, [isAuthenticated, isLoading, location.pathname, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

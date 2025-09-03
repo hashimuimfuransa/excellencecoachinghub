@@ -262,6 +262,13 @@ const AllJobsPage: React.FC = () => {
     fetchCategories();
   }, []);
 
+  // Redirect logged-in users to their dashboard
+  useEffect(() => {
+    if (user) {
+      navigate('/app/network', { replace: true });
+    }
+  }, [user, navigate]);
+
   // Filter jobs based on search criteria
   useEffect(() => {
     let filtered = jobs;
@@ -331,8 +338,8 @@ const AllJobsPage: React.FC = () => {
 
   return (
     <>
-      {/* Navigation Bar */}
-      <Navbar />
+      {/* Navigation Bar - Only show for non-authenticated users */}
+      {!user && <Navbar />}
       
       <Box sx={{ 
         minHeight: '100vh', 
@@ -863,7 +870,7 @@ const AllJobsPage: React.FC = () => {
                             borderColor: 'primary.main'
                           }
                         }}
-                        onClick={() => navigate('/login')}
+                        onClick={() => navigate('/login', { state: { from: { pathname: `/jobs/${job._id}` } } })}
                       >
                         {/* Status badges */}
                         {job.featured && (
@@ -1194,7 +1201,7 @@ const AllJobsPage: React.FC = () => {
                             borderColor: 'primary.main'
                           }
                         }}
-                        onClick={() => navigate('/login')}
+                        onClick={() => navigate('/login', { state: { from: { pathname: `/jobs/${job._id}` } } })}
                       >
                         {/* Company logo */}
                         <Avatar 

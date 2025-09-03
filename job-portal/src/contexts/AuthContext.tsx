@@ -112,9 +112,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async (): Promise<void> => {
-    const { default: authService } = await import('../services/authService');
-    authService.logout();
-    setUser(null);
+    try {
+      const { default: authService } = await import('../services/authService');
+      authService.logout();
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Clear localStorage directly if service fails
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    } finally {
+      // Always clear the user state
+      setUser(null);
+    }
   };
 
   const updateUser = async (userData: Partial<User>): Promise<void> => {

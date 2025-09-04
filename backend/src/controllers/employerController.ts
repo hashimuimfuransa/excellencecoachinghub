@@ -669,7 +669,10 @@ export const shortlistApplication = async (req: AuthRequest, res: Response) => {
     const { applicationId } = req.params;
     const employerId = req.user?.id;
 
-    const application = await JobApplication.findById(applicationId).populate('job');
+    const application = await JobApplication.findById(applicationId)
+      .populate('job')
+      .populate('applicant', 'firstName lastName email');
+      
     if (!application) {
       return res.status(404).json({
         success: false,
@@ -685,8 +688,24 @@ export const shortlistApplication = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Update application status
     application.status = ApplicationStatus.SHORTLISTED;
     await application.save();
+
+    // Send notification to the applicant
+    try {
+      const { notificationService } = require('../services/notificationService');
+      await notificationService.sendApplicationStatusNotification(
+        application.applicant._id.toString(),
+        application._id.toString(),
+        application.job.title,
+        application.job.company,
+        'shortlisted'
+      );
+    } catch (notificationError) {
+      console.error('Error sending shortlist notification:', notificationError);
+      // Don't fail the request if notification fails
+    }
 
     res.status(200).json({
       success: true,
@@ -709,7 +728,10 @@ export const rejectApplication = async (req: AuthRequest, res: Response) => {
     const { reason } = req.body;
     const employerId = req.user?.id;
 
-    const application = await JobApplication.findById(applicationId).populate('job');
+    const application = await JobApplication.findById(applicationId)
+      .populate('job')
+      .populate('applicant', 'firstName lastName email');
+      
     if (!application) {
       return res.status(404).json({
         success: false,
@@ -732,6 +754,22 @@ export const rejectApplication = async (req: AuthRequest, res: Response) => {
         `Rejection reason: ${reason}`;
     }
     await application.save();
+
+    // Send notification to the applicant
+    try {
+      const { notificationService } = require('../services/notificationService');
+      await notificationService.sendApplicationStatusNotification(
+        application.applicant._id.toString(),
+        application._id.toString(),
+        application.job.title,
+        application.job.company,
+        'rejected',
+        reason
+      );
+    } catch (notificationError) {
+      console.error('Error sending rejection notification:', notificationError);
+      // Don't fail the request if notification fails
+    }
 
     res.status(200).json({
       success: true,

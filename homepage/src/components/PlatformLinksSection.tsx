@@ -96,7 +96,7 @@ const PlatformLinksSection: React.FC = () => {
       ],
       buttonText: 'Launch Your Career',
       buttonColor: 'secondary',
-      link: 'https://jobs.excellencecoachinghub.com',
+      link: 'https://exjobnet.com',
       coachingDetails: 'Our career coaches work with you through live video sessions to build confidence, improve interview skills, optimize your professional profile, and provide ongoing support throughout your job search and career advancement journey.',
     },
   ];

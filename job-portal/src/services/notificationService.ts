@@ -3,7 +3,7 @@ import { api } from './api';
 export interface Notification {
   _id: string;
   recipient: string;
-  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'event_reminder';
+  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'event_reminder' | 'application_update';
   title: string;
   message: string;
   data?: {
@@ -13,6 +13,7 @@ export interface Notification {
     chatId?: string;
     jobId?: string;
     eventId?: string;
+    applicationId?: string;
   };
   isRead: boolean;
   createdAt: string;

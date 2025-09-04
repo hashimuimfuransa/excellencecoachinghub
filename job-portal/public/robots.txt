@@ -1,5 +1,5 @@
-# Robots.txt for Excellence Coaching Hub Job Portal
-# https://excellencecoachinghub.com/
+# Robots.txt for ExJobNet - Excellence Coaching Hub Job Portal
+# https://exjobnet.com/
 
 User-agent: *
 Allow: /
@@ -43,7 +43,7 @@ Disallow: /*?debug*
 Disallow: /test-*
 
 # Important files
-Sitemap: https://excellencecoachinghub.com/sitemap.xml
+Sitemap: https://exjobnet.com/sitemap.xml
 
 # Crawl-delay for respectful crawling
 Crawl-delay: 1

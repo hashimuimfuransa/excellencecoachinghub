@@ -479,7 +479,7 @@ const ApplicationsPage: React.FC = () => {
                   <Box display="flex" alignItems="center">
                     <Chip
                       icon={getStatusIcon(selectedApplication.status)}
-                      label={selectedApplication.status.charAt(0).toUpperCase() + selectedApplication.status.slice(1)}
+                      label={selectedApplication.status ? selectedApplication.status.charAt(0).toUpperCase() + selectedApplication.status.slice(1) : 'Unknown'}
                       color={getStatusColor(selectedApplication.status)}
                     />
                   </Box>
@@ -495,18 +495,20 @@ const ApplicationsPage: React.FC = () => {
                       {new Date(selectedApplication.lastUpdated).toLocaleDateString()}
                     </Typography>
                   </Box>
-                  <Box display="flex" justifyContent="space-between">
-                    <Typography variant="body2">Priority:</Typography>
-                    <Chip
-                      label={selectedApplication.priority.charAt(0).toUpperCase() + selectedApplication.priority.priority}
-                      color={getPriorityColor(selectedApplication.priority)}
-                      size="small"
-                    />
-                  </Box>
+                  {selectedApplication.priority && (
+                    <Box display="flex" justifyContent="space-between">
+                      <Typography variant="body2">Priority:</Typography>
+                      <Chip
+                        label={selectedApplication.priority.charAt(0).toUpperCase() + selectedApplication.priority.slice(1)}
+                        color={getPriorityColor(selectedApplication.priority)}
+                        size="small"
+                      />
+                    </Box>
+                  )}
                   <Box display="flex" justifyContent="space-between">
                     <Typography variant="body2">Source:</Typography>
                     <Typography variant="body2" fontWeight="medium">
-                      {selectedApplication.source.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      {selectedApplication.source ? selectedApplication.source.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Direct Application'}
                     </Typography>
                   </Box>
                 </Stack>

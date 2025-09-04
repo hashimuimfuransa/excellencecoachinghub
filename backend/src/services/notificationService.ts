@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 
 export interface NotificationData {
   recipient: string;
-  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'event_reminder' | 'payment_approved' | 'payment_rejected' | 'payment_success' | 'payment_failed' | 'test_request_created' | 'test_request_approved' | 'test_request_rejected' | 'tests_generated';
+  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'event_reminder' | 'payment_approved' | 'payment_rejected' | 'payment_success' | 'payment_failed' | 'test_request_created' | 'test_request_approved' | 'test_request_rejected' | 'tests_generated' | 'application_update';
   title: string;
   message: string;
   data?: {
@@ -17,6 +17,7 @@ export interface NotificationData {
     paymentRequestId?: string;
     testType?: string;
     requestId?: string;
+    applicationId?: string;
     url?: string;
   };
 }
@@ -245,6 +246,60 @@ class NotificationServiceClass {
         paymentRequestId,
         testType,
         url: '/app/psychometric-tests'
+      }
+    });
+  }
+
+  /**
+   * Send application status update notification
+   */
+  async sendApplicationStatusNotification(
+    userId: string,
+    applicationId: string,
+    jobTitle: string,
+    company: string,
+    status: 'shortlisted' | 'rejected' | 'interview_scheduled' | 'offered',
+    additionalInfo?: string
+  ): Promise<void> {
+    let title: string;
+    let message: string;
+    let icon: string;
+
+    switch (status) {
+      case 'shortlisted':
+        title = 'Application Shortlisted! 🎉';
+        message = `Great news! You have been shortlisted for ${jobTitle} at ${company}`;
+        icon = '🎉';
+        break;
+      case 'rejected':
+        title = 'Application Update';
+        message = `Thank you for your interest in ${jobTitle} at ${company}. Unfortunately, we have decided to move forward with other candidates.`;
+        icon = '📧';
+        break;
+      case 'interview_scheduled':
+        title = 'Interview Scheduled! 📅';
+        message = `Your interview for ${jobTitle} at ${company} has been scheduled. ${additionalInfo || ''}`;
+        icon = '📅';
+        break;
+      case 'offered':
+        title = 'Job Offer Received! 🎊';
+        message = `Congratulations! You have received a job offer for ${jobTitle} at ${company}`;
+        icon = '🎊';
+        break;
+      default:
+        title = 'Application Update';
+        message = `Your application for ${jobTitle} at ${company} has been updated`;
+        icon = '📧';
+    }
+
+    await this.sendRealTimeNotification({
+      recipient: userId,
+      type: 'application_update',
+      title,
+      message,
+      data: {
+        applicationId,
+        url: '/app/applications'
       }
     });
   }

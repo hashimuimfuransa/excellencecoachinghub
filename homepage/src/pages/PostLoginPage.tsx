@@ -34,7 +34,7 @@ const PostLoginPage: React.FC = () => {
 
   const handleJobPrepChoice = () => {
     // Redirect to job preparation platform
-    window.location.href = 'https://jobs.excellencecoachinghub.com';
+    window.location.href = 'https://exjobnet.com';
   };
 
   const handleBackToHome = () => {

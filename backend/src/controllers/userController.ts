@@ -871,9 +871,24 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
     // Check if user is viewing their own profile
     const isOwnProfile = req.user?._id?.toString() === userId;
 
+    // First get the user to check their role
+    const userToCheck = await User.findById(userId).select('role');
+    
+    if (!userToCheck) {
+      res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+      return;
+    }
+
     // Select fields based on whether it's own profile or not
+    // For employers, always show contact info (email, phone) for hiring purposes
+    const isEmployer = userToCheck.role === 'employer';
     const selectFields = isOwnProfile 
       ? '-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil'
+      : isEmployer 
+      ? '-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil' // Include email and phone for employers
       : '-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil -email';
 
     const user = await User.findById(userId).select(selectFields);
@@ -891,6 +906,35 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
     if (isOwnProfile) {
       // Return full profile data for own profile
       responseUserData = user.toObject();
+    } else if (isEmployer) {
+      // For employers, include contact information for hiring purposes
+      responseUserData = {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profilePicture: user.profilePicture,
+        jobTitle: user.jobTitle,
+        company: user.company,
+        location: user.location,
+        bio: user.bio,
+        skills: user.skills,
+        role: user.role,
+        userType: user.userType,
+        createdAt: user.createdAt,
+        isActive: user.isActive,
+        // Include contact information for employers
+        email: user.email,
+        phone: user.phone,
+        socialLinks: user.socialLinks,
+        // Include additional employer-relevant fields
+        experience: user.experience,
+        education: user.education,
+        certifications: user.certifications,
+        languages: user.languages,
+        summary: user.summary,
+        industry: user.industry,
+        department: user.department
+      };
     } else {
       // For privacy, limit what information is shown for other users
       responseUserData = {

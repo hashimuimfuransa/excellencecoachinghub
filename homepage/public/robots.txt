@@ -10,7 +10,7 @@ Allow: /
 Sitemap: https://excellencecoachinghub.com/sitemap-index.xml
 Sitemap: https://excellencecoachinghub.com/sitemap.xml
 Sitemap: https://elearning.excellencecoachinghub.com/sitemap.xml
-Sitemap: https://jobs.excellencecoachinghub.com/sitemap.xml
+Sitemap: https://exjobnet.com/sitemap.xml
 
 # SEARCH ENGINE SPECIFIC CONFIGURATIONS
 

@@ -4,6 +4,7 @@ import {
   Badge,
   Tooltip,
   useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import { Chat } from '@mui/icons-material';
 import { motion } from 'framer-motion';
@@ -16,6 +17,7 @@ const FloatingChatButton: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   useEffect(() => {
     if (user) {
@@ -57,9 +59,9 @@ const FloatingChatButton: React.FC = () => {
       transition={{ duration: 0.3, delay: 0.5 }}
       style={{
         position: 'fixed',
-        bottom: 90,
+        bottom: isMobile ? 100 : 90, // Position above mobile footer navbar (adjusted for new footer height)
         right: 24,
-        zIndex: 1200,
+        zIndex: 1200, // Ensure it's above the mobile footer
       }}
     >
       <Tooltip title="Open Messages" placement="left">

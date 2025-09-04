@@ -78,6 +78,7 @@ import SearchBar from '../components/search/SearchBar';
 import EnhancedSearchBar from '../components/search/EnhancedSearchBar';
 import { notificationService } from '../services/notificationService';
 import { chatService } from '../services/chatService';
+import MobileCreatePost from '../components/social/MobileCreatePost';
 
 const drawerWidth = 260;
 const drawerWidthClosed = 72;
@@ -98,6 +99,7 @@ const MainLayout: React.FC = () => {
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({});
   const [hovered, setHovered] = useState(false); // Track hover state for mini drawer
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Mobile quick actions menu
+  const [showMobileCreatePost, setShowMobileCreatePost] = useState(false); // Mobile create post popup
   
 
   
@@ -130,29 +132,46 @@ const MainLayout: React.FC = () => {
       if (!user) return;
       
       try {
-        // Load unread notifications
-        const notificationResponse = await notificationService.getUnreadCount();
-        setUnreadNotifications(notificationResponse.data?.count || 0);
+        // Load unread notifications with error handling
+        try {
+          const notificationResponse = await notificationService.getUnreadCount();
+          setUnreadNotifications(notificationResponse.data?.count || 0);
+        } catch (notificationError) {
+          console.warn('Could not load notifications, setting to 0:', notificationError);
+          setUnreadNotifications(0);
+        }
 
-        // Load unread messages from chat conversations
-        const totalUnreadMessages = await chatService.getTotalUnreadCount();
-        setUnreadMessages(totalUnreadMessages);
+        // Load unread messages from chat conversations with error handling
+        try {
+          const totalUnreadMessages = await chatService.getTotalUnreadCount();
+          setUnreadMessages(totalUnreadMessages);
+        } catch (chatError) {
+          console.warn('Could not load chat messages, setting to 0:', chatError);
+          setUnreadMessages(0);
+        }
 
         // Initialize chat service for real-time updates
-        chatService.initializeSocket(user._id);
+        try {
+          chatService.initializeSocket(user._id);
 
-        // Listen for new messages
-        chatService.on('new-message', () => {
-          setUnreadMessages(prev => prev + 1);
-        });
+          // Listen for new messages
+          chatService.on('new-message', () => {
+            setUnreadMessages(prev => prev + 1);
+          });
 
-        // Listen for messages read
-        chatService.on('messages-read', () => {
-          loadCounts(); // Reload counts when messages are read
-        });
+          // Listen for messages read
+          chatService.on('messages-read', () => {
+            loadCounts(); // Reload counts when messages are read
+          });
+        } catch (socketError) {
+          console.warn('Could not initialize chat socket:', socketError);
+        }
 
       } catch (error) {
-        console.error('Error loading counts:', error);
+        console.error('General error in loadCounts:', error);
+        // Set defaults in case of complete failure
+        setUnreadNotifications(0);
+        setUnreadMessages(0);
       }
     };
 
@@ -330,16 +349,7 @@ const MainLayout: React.FC = () => {
           }
         ]
       },
-      {
-        label: 'Interviews',
-        path: '/app/employer/interviews',
-        icon: <Assessment />,
-      },
-      {
-        label: 'Analytics',
-        path: '/app/employer/analytics',
-        icon: <BarChart />,
-      },
+ 
       {
         label: 'Company Profile',
         path: '/app/employer/company-profile',
@@ -1625,6 +1635,7 @@ const MainLayout: React.FC = () => {
           sx={{
             px: { xs: 0, sm: 1, md: 2 },
             py: { xs: 0, sm: 1, md: 2 },
+            pb: { xs: '100px', sm: 2, md: 2 }, // Add bottom padding for mobile footer
             maxWidth: '100%',
             mx: 'auto',
             position: 'relative',
@@ -1644,6 +1655,7 @@ const MainLayout: React.FC = () => {
               animation: 'slideInUp 0.4s ease-out forwards',
               width: '100%',
               height: '100%',
+              mb: { xs: '80px', sm: 0 }, // Add bottom margin for mobile footer space
               // Global mobile responsive overrides
               '& .MuiContainer-root': {
                 px: { xs: 0.5, sm: 1, md: 2 },
@@ -1716,6 +1728,325 @@ const MainLayout: React.FC = () => {
         />
       </Box>
 
+      {/* Sticky Mobile Bottom Navigation - Instagram Style */}
+      <Paper
+        elevation={8}
+        sx={{
+          display: { xs: 'flex', sm: 'none' }, // Only show on mobile
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: (theme) => theme.zIndex.drawer + 2,
+          backgroundColor: alpha(muiTheme.palette.background.paper, 0.98),
+          backdropFilter: 'blur(20px)',
+          borderTop: `1px solid ${alpha(muiTheme.palette.divider, 0.12)}`,
+          borderRadius: 0,
+          py: 1,
+          px: 1,
+          boxShadow: `0 -2px 20px ${alpha(muiTheme.palette.common.black, 0.1)}`,
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-around',
+            alignItems: 'center',
+            width: '100%',
+            maxWidth: '100%',
+          }}
+        >
+          {/* Home/Network */}
+          <IconButton
+            onClick={() => handleNavigation('/app/network')}
+            sx={{
+              flexDirection: 'column',
+              borderRadius: '12px',
+              py: 1,
+              px: 1.5,
+              color: location.pathname === '/app/network' ? 'primary.main' : 'text.secondary',
+              backgroundColor: location.pathname === '/app/network' 
+                ? alpha(muiTheme.palette.primary.main, 0.1) 
+                : 'transparent',
+              '&:hover': {
+                backgroundColor: alpha(muiTheme.palette.primary.main, 0.08),
+                transform: 'translateY(-2px)',
+              },
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <Dashboard 
+              sx={{ 
+                fontSize: '1.3rem',
+                mb: 0.5,
+                color: location.pathname === '/app/network' ? 'primary.main' : 'text.secondary',
+              }} 
+            />
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                fontSize: '0.65rem',
+                fontWeight: location.pathname === '/app/network' ? 600 : 400,
+                color: location.pathname === '/app/network' ? 'primary.main' : 'text.secondary',
+              }}
+            >
+              Home
+            </Typography>
+          </IconButton>
+
+          {/* Jobs */}
+          <IconButton
+            onClick={() => handleNavigation('/app/jobs')}
+            sx={{
+              flexDirection: 'column',
+              borderRadius: '12px',
+              py: 1,
+              px: 1.5,
+              color: location.pathname === '/app/jobs' ? 'primary.main' : 'text.secondary',
+              backgroundColor: location.pathname === '/app/jobs' 
+                ? alpha(muiTheme.palette.primary.main, 0.1) 
+                : 'transparent',
+              '&:hover': {
+                backgroundColor: alpha(muiTheme.palette.primary.main, 0.08),
+                transform: 'translateY(-2px)',
+              },
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <Work 
+              sx={{ 
+                fontSize: '1.3rem',
+                mb: 0.5,
+                color: location.pathname === '/app/jobs' ? 'primary.main' : 'text.secondary',
+              }} 
+            />
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                fontSize: '0.65rem',
+                fontWeight: location.pathname === '/app/jobs' ? 600 : 400,
+                color: location.pathname === '/app/jobs' ? 'primary.main' : 'text.secondary',
+              }}
+            >
+              Jobs
+            </Typography>
+          </IconButton>
+
+          {/* Create Post - Instagram Style Center Button */}
+          <IconButton
+            onClick={() => setShowMobileCreatePost(true)}
+            sx={{
+              flexDirection: 'column',
+              borderRadius: '18px',
+              py: 1,
+              px: 1.5,
+              position: 'relative',
+              background: `linear-gradient(135deg, ${muiTheme.palette.primary.main}, ${muiTheme.palette.secondary.main})`,
+              color: 'white',
+              minHeight: '56px',
+              minWidth: '56px',
+              boxShadow: `0 4px 20px ${alpha(muiTheme.palette.primary.main, 0.4)}`,
+              border: `3px solid ${muiTheme.palette.background.paper}`,
+              '&:hover': {
+                background: `linear-gradient(135deg, ${muiTheme.palette.primary.dark}, ${muiTheme.palette.secondary.dark})`,
+                transform: 'translateY(-3px) scale(1.05)',
+                boxShadow: `0 6px 25px ${alpha(muiTheme.palette.primary.main, 0.5)}`,
+              },
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                inset: -2,
+                borderRadius: '20px',
+                background: `linear-gradient(135deg, ${alpha(muiTheme.palette.primary.main, 0.3)}, ${alpha(muiTheme.palette.secondary.main, 0.3)})`,
+                zIndex: -1,
+                opacity: 0,
+                transition: 'opacity 0.3s ease',
+              },
+              '&:hover::before': {
+                opacity: 1,
+              },
+            }}
+          >
+            <Add 
+              sx={{ 
+                fontSize: '1.8rem',
+                fontWeight: 'bold',
+                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
+              }} 
+            />
+          </IconButton>
+
+          {/* Applications */}
+          {(hasRole(UserRole.STUDENT) || hasRole(UserRole.PROFESSIONAL) || hasRole(UserRole.JOB_SEEKER)) && (
+            <IconButton
+              onClick={() => handleNavigation('/app/applications')}
+              sx={{
+                flexDirection: 'column',
+                borderRadius: '12px',
+                py: 1,
+                px: 1.5,
+                position: 'relative',
+                color: location.pathname === '/app/applications' ? 'primary.main' : 'text.secondary',
+                backgroundColor: location.pathname === '/app/applications' 
+                  ? alpha(muiTheme.palette.primary.main, 0.1) 
+                  : 'transparent',
+                '&:hover': {
+                  backgroundColor: alpha(muiTheme.palette.primary.main, 0.08),
+                  transform: 'translateY(-2px)',
+                },
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <Badge 
+                badgeContent={2} 
+                color="error"
+                sx={{
+                  '& .MuiBadge-badge': {
+                    fontSize: '0.6rem',
+                    height: '14px',
+                    minWidth: '14px',
+                    borderRadius: '7px',
+                    fontWeight: '600',
+                    top: -2,
+                    right: -2,
+                  }
+                }}
+              >
+                <Person 
+                  sx={{ 
+                    fontSize: '1.3rem',
+                    mb: 0.5,
+                    color: location.pathname === '/app/applications' ? 'primary.main' : 'text.secondary',
+                  }} 
+                />
+              </Badge>
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  fontSize: '0.65rem',
+                  fontWeight: location.pathname === '/app/applications' ? 600 : 400,
+                  color: location.pathname === '/app/applications' ? 'primary.main' : 'text.secondary',
+                }}
+              >
+                Apps
+              </Typography>
+            </IconButton>
+          )}
+
+          {/* Messages */}
+          <IconButton
+            onClick={() => handleNavigation('/app/messages')}
+            sx={{
+              flexDirection: 'column',
+              borderRadius: '12px',
+              py: 1,
+              px: 1.5,
+              position: 'relative',
+              color: location.pathname === '/app/messages' ? 'primary.main' : 'text.secondary',
+              backgroundColor: location.pathname === '/app/messages' 
+                ? alpha(muiTheme.palette.primary.main, 0.1) 
+                : 'transparent',
+              '&:hover': {
+                backgroundColor: alpha(muiTheme.palette.primary.main, 0.08),
+                transform: 'translateY(-2px)',
+              },
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <Badge 
+              badgeContent={unreadMessages} 
+              color="error"
+              sx={{
+                '& .MuiBadge-badge': {
+                  fontSize: '0.6rem',
+                  height: '14px',
+                  minWidth: '14px',
+                  borderRadius: '7px',
+                  fontWeight: '600',
+                  top: -2,
+                  right: -2,
+                }
+              }}
+            >
+              <Mail 
+                sx={{ 
+                  fontSize: '1.3rem',
+                  mb: 0.5,
+                  color: location.pathname === '/app/messages' ? 'primary.main' : 'text.secondary',
+                }} 
+              />
+            </Badge>
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                fontSize: '0.65rem',
+                fontWeight: location.pathname === '/app/messages' ? 600 : 400,
+                color: location.pathname === '/app/messages' ? 'primary.main' : 'text.secondary',
+              }}
+            >
+              Messages
+            </Typography>
+          </IconButton>
+
+          {/* Profile */}
+          <IconButton
+            onClick={handleProfileMenuOpen}
+            sx={{
+              flexDirection: 'column',
+              borderRadius: '12px',
+              py: 1,
+              px: 1.5,
+              color: location.pathname.includes('/app/profile') ? 'primary.main' : 'text.secondary',
+              backgroundColor: location.pathname.includes('/app/profile') 
+                ? alpha(muiTheme.palette.primary.main, 0.1) 
+                : 'transparent',
+              '&:hover': {
+                backgroundColor: alpha(muiTheme.palette.primary.main, 0.08),
+                transform: 'translateY(-2px)',
+              },
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <Avatar
+              alt={user?.firstName}
+              src={user?.avatar}
+              sx={{ 
+                width: 22, 
+                height: 22,
+                mb: 0.5,
+                fontSize: '0.75rem',
+                border: location.pathname.includes('/app/profile') 
+                  ? `2px solid ${muiTheme.palette.primary.main}`
+                  : `1px solid ${alpha(muiTheme.palette.divider, 0.3)}`,
+              }}
+            >
+              {user?.firstName?.charAt(0)}
+            </Avatar>
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                fontSize: '0.65rem',
+                fontWeight: location.pathname.includes('/app/profile') ? 600 : 400,
+                color: location.pathname.includes('/app/profile') ? 'primary.main' : 'text.secondary',
+              }}
+            >
+              Profile
+            </Typography>
+          </IconButton>
+        </Box>
+      </Paper>
+
+      {/* Mobile Create Post Dialog */}
+      <MobileCreatePost 
+        open={showMobileCreatePost}
+        onClose={() => setShowMobileCreatePost(false)}
+        onPostCreated={(post) => {
+          // Handle post created - could navigate to network or refresh feed
+          console.log('Post created:', post);
+          setShowMobileCreatePost(false);
+        }}
+      />
 
     </Box>
   );

@@ -76,7 +76,11 @@ import { useAuth, UserRole } from '../contexts/AuthContext';
 import { jobService } from '../services/jobService';
 import { profileService } from '../services/profileService';
 import { userService } from '../services/userService';
+import { notificationService } from '../services/notificationService';
+import { chatService } from '../services/chatService';
 import { User } from '../types/user';
+import MobileFooterNavbar from '../components/MobileFooterNavbar';
+import FloatingContact from '../components/FloatingContact';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -106,6 +110,10 @@ const SocialNetworkPage: React.FC = () => {
   const [showWelcomeHeader, setShowWelcomeHeader] = useState(true);
   const [showMobileConnections, setShowMobileConnections] = useState(false);
   
+  // Notification state
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  
   // Suggested connections state
   const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
   const [connectingUsers, setConnectingUsers] = useState<string[]>([]);
@@ -132,6 +140,34 @@ const SocialNetworkPage: React.FC = () => {
   // Load profile completion and validation on mount
   useEffect(() => {
     loadProfileData();
+  }, [user]);
+
+  // Load notifications and messages
+  useEffect(() => {
+    const loadCounts = async () => {
+      if (!user) return;
+      
+      try {
+        // Load notifications
+        const notificationResponse = await notificationService.getUnreadCount();
+        setUnreadNotifications(notificationResponse.data?.count || 0);
+        
+        // Load unread messages
+        const unreadMessagesCount = await chatService.getTotalUnreadCount();
+        setUnreadMessages(unreadMessagesCount);
+      } catch (error) {
+        console.error('Error loading counts:', error);
+        setUnreadNotifications(0);
+        setUnreadMessages(0);
+      }
+    };
+
+    loadCounts();
+    
+    // Set up periodic refresh
+    const interval = setInterval(loadCounts, 30000);
+    
+    return () => clearInterval(interval);
   }, [user]);
 
   const loadPosts = async (reset = false) => {
@@ -472,6 +508,7 @@ const SocialNetworkPage: React.FC = () => {
           ? 'linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%)'
           : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%)',
         position: 'relative',
+        overflowX: 'hidden',
         '&::before': {
           content: '""',
           position: 'absolute',
@@ -491,6 +528,7 @@ const SocialNetworkPage: React.FC = () => {
         sx={{ 
           py: { xs: 2, sm: 3, md: 3, lg: 4 },
           px: { xs: 1, sm: 2, md: 2, lg: 3, xl: 4 },
+          pb: { xs: 2, sm: 3, md: 3, lg: 4 },
           maxWidth: { 
             xs: '100%', 
             sm: '100%', 
@@ -499,7 +537,7 @@ const SocialNetworkPage: React.FC = () => {
             xl: '1700px' 
           },
           mx: 'auto',
-          position: 'relative',
+          position: 'relative', // This is important for absolute positioning of child components
           zIndex: 1,
         }}
       >
@@ -1583,78 +1621,17 @@ const SocialNetworkPage: React.FC = () => {
             )}
           </Grid>
 
-          {/* Enhanced Floating Action Buttons for Mobile */}
+          {/* Floating Contact Button - Positioned relative to content */}
+          <FloatingContact />
+
+          {/* Mobile Footer Navbar */}
           {isMobile && (
-            <Box
-              sx={{
-                position: 'fixed',
-                bottom: 100,
-                right: 24,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 3,
-                zIndex: 1000,
-              }}
-            >
-              {!showCreatePost && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <Fab
-                    color="primary"
-                    sx={{
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)',
-                      width: 64,
-                      height: 64,
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
-                        boxShadow: '0 12px 35px rgba(102, 126, 234, 0.5)',
-                        transform: 'translateY(-2px)',
-                      },
-                      '& .MuiSvgIcon-root': {
-                        fontSize: 28,
-                      }
-                    }}
-                    onClick={() => setShowCreatePost(true)}
-                  >
-                    <Add />
-                  </Fab>
-                </motion.div>
-              )}
-              
-              {/* Suggested Connections Button for Mobile */}
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2 }}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <Fab
-                  color="success"
-                  size="medium"
-                  sx={{
-                    background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
-                    boxShadow: '0 6px 20px rgba(76, 175, 80, 0.4)',
-                    '&:hover': {
-                      background: 'linear-gradient(135deg, #45a049 0%, #4CAF50 100%)',
-                      boxShadow: '0 8px 25px rgba(76, 175, 80, 0.5)',
-                      transform: 'translateY(-2px)',
-                    },
-                    '& .MuiSvgIcon-root': {
-                      fontSize: 22,
-                    }
-                  }}
-                  onClick={() => setShowMobileConnections(true)}
-                >
-                  <People />
-                </Fab>
-              </motion.div>
-            </Box>
+            <MobileFooterNavbar
+              unreadNotifications={unreadNotifications}
+              unreadMessages={unreadMessages}
+              onCreatePost={() => setShowCreatePost(true)}
+              onShowConnections={() => setShowMobileConnections(true)}
+            />
           )}
 
           {/* Mobile Suggested Connections Modal */}

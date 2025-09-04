@@ -18,6 +18,7 @@ import {
   Zoom,
   Slide,
   useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import {
   ContactSupport,
@@ -39,6 +40,7 @@ import { motion } from 'framer-motion';
 const FloatingContact: React.FC = () => {
   const [open, setOpen] = useState(false);
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
@@ -104,29 +106,32 @@ const FloatingContact: React.FC = () => {
       <Box
         sx={{
           position: 'fixed',
-          bottom: { xs: 160, md: 170 },
-          right: 24,
-          zIndex: 1300,
+          bottom: isMobile ? 95 : 24, // Position above mobile footer navbar with proper spacing
+          right: isMobile ? 12 : 16, // Slightly less padding on mobile for better fit
+          zIndex: (theme) => theme.zIndex.speedDial, // Use Material-UI's speedDial z-index (1050)
           display: 'flex',
           alignItems: 'center',
-          gap: 2,
+          gap: isMobile ? 1 : 2, // Smaller gap on mobile
+          pointerEvents: 'auto',
+          transition: 'all 0.3s ease', // Smooth transitions
         }}
       >
-        {/* Animated Text Label */}
-        <motion.div
-          initial={{ opacity: 0, x: 20, scale: 0.8 }}
-          animate={{ 
-            opacity: [0, 1, 1, 0],
-            x: [20, 0, 0, 20],
-            scale: [0.8, 1, 1, 0.8],
-          }}
-          transition={{
-            duration: 3,
-            repeat: Infinity,
-            repeatDelay: 2,
-            ease: "easeInOut",
-          }}
-        >
+        {/* Animated Text Label - Hide on mobile if screen is very small */}
+        {(!isMobile || window.innerWidth > 350) && (
+          <motion.div
+            initial={{ opacity: 0, x: 20, scale: 0.8 }}
+            animate={{ 
+              opacity: [0, 1, 1, 0],
+              x: [20, 0, 0, 20],
+              scale: [0.8, 1, 1, 0.8],
+            }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+              repeatDelay: isMobile ? 4 : 2, // Longer delay on mobile
+              ease: "easeInOut",
+            }}
+          >
           <Box
             sx={{
               background: theme.palette.mode === 'dark' 
@@ -154,7 +159,8 @@ const FloatingContact: React.FC = () => {
               Contact Us!
             </Typography>
           </Box>
-        </motion.div>
+          </motion.div>
+        )}
 
         {/* Floating Action Button */}
         <Tooltip title="Contact Us" arrow placement="left">
@@ -165,12 +171,17 @@ const FloatingContact: React.FC = () => {
               whileTap={{ scale: 0.95 }}
               color="secondary"
               onClick={handleOpen}
+              size={isMobile ? 'medium' : 'large'} // Smaller FAB on mobile
               sx={{
                 background: 'linear-gradient(45deg, #ff6b6b, #ff8e53)',
-                boxShadow: '0 8px 25px rgba(255, 107, 107, 0.4)',
+                boxShadow: isMobile 
+                  ? '0 4px 15px rgba(255, 107, 107, 0.3)' // Smaller shadow on mobile
+                  : '0 8px 25px rgba(255, 107, 107, 0.4)',
                 '&:hover': {
                   background: 'linear-gradient(45deg, #ff5252, #ff7043)',
-                  boxShadow: '0 12px 35px rgba(255, 107, 107, 0.6)',
+                  boxShadow: isMobile 
+                    ? '0 6px 20px rgba(255, 107, 107, 0.4)'
+                    : '0 12px 35px rgba(255, 107, 107, 0.6)',
                 },
               }}
             >

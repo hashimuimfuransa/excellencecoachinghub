@@ -182,7 +182,7 @@ npm run build
 ```env
 REACT_APP_API_URL=https://api.excellencecoachinghub.com/api
 REACT_APP_ELEARNING_URL=https://learn.excellencecoachinghub.com
-REACT_APP_JOBS_URL=https://jobs.excellencecoachinghub.com
+REACT_APP_JOBS_URL=https://exjobnet.com
 ```
 
 ### Deployment Options

@@ -109,7 +109,7 @@ const io = new Server(server, {
       'https://jobsexcellencecoachinghub.onrender.com',
       'https://adminexcellencecoachinghub.onrender.com',
       'https://ech-w16g.onrender.com',
-      'https://jobs.excellencecoachinghub.com', // Add the missing domain
+      'https://exjobnet.com', // Updated job portal domain
       'https://excellencecoachinghub.com',
       'https://elearning.excellencecoachinghub.com',
        'https://exjobnet.excellencecoachinghub.com'
@@ -175,7 +175,7 @@ const corsOptions = {
       'https://jobsexcellencecoachinghub.onrender.com',
       'https://adminexcellencecoachinghub.onrender.com',
       'https://ech-w16g.onrender.com',
-      'https://jobs.excellencecoachinghub.com', // Add the missing domain
+      'https://exjobnet.com', // Updated job portal domain
       'https://excellencecoachinghub.com',       // Add root domain too
       process.env['FRONTEND_URL'] || 'http://localhost:3000'
     ];

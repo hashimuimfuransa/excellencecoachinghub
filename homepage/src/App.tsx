@@ -52,7 +52,7 @@ const AppContent: React.FC = () => {
             />
             <Route 
               path="/jobs" 
-              element={<RedirectComponent url="https://jobs.excellencecoachinghub.com" />} 
+              element={<RedirectComponent url="https://exjobnet.com" />} 
             />
             
             {/* Catch all route - redirect to home */}

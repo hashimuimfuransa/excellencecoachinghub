@@ -292,20 +292,36 @@ const ProfilePage: React.FC = () => {
       const updatedProfile = await userService.uploadProfilePicture(profile._id, formData);
       console.log('✅ ProfilePage profile picture uploaded:', updatedProfile);
       
-      // Update local state with the response
-      setProfile(updatedProfile);
-      setUserData(updatedProfile);
+      // Update local state with the response - preserve existing profile data
+      setProfile(prevProfile => ({
+        ...prevProfile,
+        ...updatedProfile,
+        profilePicture: updatedProfile.profilePicture
+      }));
       
-      // Fetch fresh data from the server to ensure we have the latest profile completion
-      console.log('🔄 ProfilePage fetching fresh data after picture upload');
-      await loadUserProfile();
+      // Update auth context with merged data to prevent losing other profile information
+      setUserData({
+        ...profile,
+        ...updatedProfile,
+        profilePicture: updatedProfile.profilePicture
+      });
+      
+      // Remove unnecessary data refetch that was causing reload issues
+      // The profile picture update response should contain all needed data
       
       setSuccessMessage('Profile picture updated successfully');
       setTimeout(() => setSuccessMessage(''), 3000);
+      
+      // Clear the file input to allow re-upload of the same file if needed
+      event.target.value = '';
+      
     } catch (error) {
       console.error('❌ Error uploading profile picture:', error);
       setErrorMessage('Failed to upload profile picture');
       setTimeout(() => setErrorMessage(''), 3000);
+      
+      // Clear the file input on error as well
+      event.target.value = '';
     } finally {
       setLoading(false);
     }

@@ -20,6 +20,7 @@ import {
   Select,
   MenuItem,
   Dialog,
+  Divider,
   alpha,
   useTheme,
   AppBar,
@@ -65,7 +66,9 @@ import {
   BookmarkBorder,
   AccessTime,
   Event,
-  ArrowForward
+  ArrowForward,
+  PostAdd,
+  PersonAdd
 } from '@mui/icons-material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -556,6 +559,72 @@ const AllJobsPage: React.FC = () => {
                   </Button>
                 </Grid>
               </Grid>
+
+              {/* Employer Actions Section */}
+              <Box sx={{ mb: 3, py: 2 }}>
+                <Stack 
+                  direction={{ xs: 'column', sm: 'row' }} 
+                  spacing={2} 
+                  justifyContent="center"
+                  alignItems="center"
+                >
+                  <Typography 
+                    variant="subtitle1" 
+                    color="text.secondary" 
+                    sx={{ fontWeight: 600 }}
+                  >
+                    Are you an employer?
+                  </Typography>
+                  <Stack direction="row" spacing={2}>
+                    <Button
+                      variant="contained"
+                      startIcon={<PostAdd />}
+                      onClick={() => navigate('/create-job')}
+                      sx={{
+                        borderRadius: 3,
+                        px: 3,
+                        py: 1.2,
+                        background: `linear-gradient(45deg, ${theme.palette.success.main} 30%, ${theme.palette.success.dark} 90%)`,
+                        boxShadow: `0 4px 16px ${alpha(theme.palette.success.main, 0.3)}`,
+                        '&:hover': {
+                          background: `linear-gradient(45deg, ${theme.palette.success.dark} 30%, ${theme.palette.success.main} 90%)`,
+                          boxShadow: `0 6px 20px ${alpha(theme.palette.success.main, 0.4)}`,
+                          transform: 'translateY(-2px)',
+                        },
+                        transition: 'all 0.3s ease',
+                        fontWeight: 600
+                      }}
+                    >
+                      Post a Job
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      startIcon={<PersonAdd />}
+                      onClick={() => navigate('/register')}
+                      sx={{
+                        borderRadius: 3,
+                        px: 3,
+                        py: 1.2,
+                        borderColor: theme.palette.primary.main,
+                        color: theme.palette.primary.main,
+                        borderWidth: 2,
+                        '&:hover': {
+                          borderWidth: 2,
+                          backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                          borderColor: theme.palette.primary.dark,
+                          color: theme.palette.primary.dark,
+                          transform: 'translateY(-2px)',
+                        },
+                        transition: 'all 0.3s ease',
+                        fontWeight: 600
+                      }}
+                    >
+                      Register as Employer
+                    </Button>
+                  </Stack>
+                </Stack>
+                <Divider sx={{ mt: 2, opacity: 0.6 }} />
+              </Box>
 
               {/* Real Categories from API */}
               <Box sx={{ mb: 2 }}>

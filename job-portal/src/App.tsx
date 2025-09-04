@@ -52,7 +52,7 @@ import EmployerInterviewsPage from './pages/EmployerInterviewsPage';
 import EmployerAnalyticsPage from './pages/EmployerAnalyticsPage';
 import EmployerCompanyProfilePage from './pages/EmployerCompanyProfilePage';
 import EmployerProfilePage from './pages/EmployerProfilePage';
-import CompaniesPage from './pages/CompaniesPage';
+// import CompaniesPage from './pages/CompaniesPage';  // Removed - Companies page no longer available
 import SupportPage from './pages/SupportPage';
 import CareerGuidancePage from './pages/CareerGuidancePage';
 import JobPreparationPage from './pages/JobPreparationPage';
@@ -102,7 +102,7 @@ function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/companies" element={<CompaniesPage />} />
+            {/* <Route path="/companies" element={<CompaniesPage />} /> */}  {/* Removed - Companies page no longer available */}
             <Route path="/support" element={<SupportPage />} />
             <Route path="/home" element={<HomePage />} />
             

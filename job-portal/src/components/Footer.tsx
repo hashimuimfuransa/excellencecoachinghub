@@ -42,7 +42,7 @@ const Footer: React.FC = () => {
       links: [
         { text: 'Find Jobs', icon: <Work />, path: '/app/jobs' },
         { text: 'Get Certified', icon: <School />, path: '/app/certificates' },
-        { text: 'Companies', icon: <Business />, path: '/companies' },
+        // { text: 'Companies', icon: <Business />, path: '/companies' },  // Removed - Companies page no longer available
         { text: 'AI Interview Coach', icon: <Support />, path: '/app/interviews' }
       ]
     },

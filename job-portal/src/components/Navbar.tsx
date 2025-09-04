@@ -60,7 +60,8 @@ import {
   YouTube,
   VideoLibrary,
   Schedule,
-  LocationOn
+  LocationOn,
+  Twitter
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -121,7 +122,7 @@ const Navbar: React.FC = () => {
 
   const menuItems = [
     { text: 'All Jobs', icon: <Work />, path: '/' },
-    { text: 'Companies', icon: <Business />, path: '/companies' },
+    // { text: 'Companies', icon: <Business />, path: '/companies' },  // Removed - Companies page no longer available
     { text: 'Support', icon: <Support />, path: '/support' },
     { text: 'Contact Us', icon: <ContactSupport />, action: handleContactOpen, isContactDialog: true },
     // Protected items - only show if user is logged in
@@ -131,16 +132,31 @@ const Navbar: React.FC = () => {
   ];
 
   const drawer = (
-    <Box sx={{ width: 250 }}>
-      <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    <Box sx={{ width: 280 }}>
+      <Box sx={{ 
+        p: 3, 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        background: 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)',
+        color: 'white'
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <img 
             src="/exjobnetlogo.png" 
             alt="ExJobNet" 
-            style={{ height: 30, width: 'auto' }}
+            style={{ height: 40, width: 'auto' }}
           />
-         
+          <Typography variant="h6" fontWeight="bold">
+            ExJobNet
+          </Typography>
         </Box>
+        <IconButton 
+          onClick={handleDrawerToggle}
+          sx={{ color: 'white' }}
+        >
+          <Close />
+        </IconButton>
       </Box>
       <Divider />
       <List>
@@ -229,20 +245,20 @@ const Navbar: React.FC = () => {
     {
       icon: <Phone sx={{ color: '#4caf50' }} />,
       title: 'Call Us',
-      description: '+250 728 123 456',
-      action: () => window.open('tel:+250728123456', '_self'),
+      description: '+250 0788535156',
+      action: () => window.open('tel:+0788535156', '_self'),
     },
     {
       icon: <WhatsApp sx={{ color: '#25d366' }} />,
       title: 'WhatsApp',
       description: 'Chat with us instantly',
-      action: () => window.open('https://wa.me/250728123456', '_blank'),
+      action: () => window.open('https://wa.me/0788535156?text=Hello%20ExJobNet', '_blank'),
     },
     {
       icon: <Email sx={{ color: '#1976d2' }} />,
       title: 'Email',
-      description: 'support@excellencecoaching.rw',
-      action: () => window.open('mailto:support@excellencecoaching.rw', '_self'),
+      description: 'info@excellencecoachinghub.com',
+      action: () => window.open('mailto:info@excellencecoachinghub.com', '_self'),
     },
   ];
 
@@ -250,26 +266,26 @@ const Navbar: React.FC = () => {
     {
       icon: <Facebook sx={{ color: '#1877f2' }} />,
       title: 'Facebook',
-      profileName: '@excellencecoach4',
-      action: () => window.open('https://www.facebook.com/excellencecoach4?mibextid=LQQJ4d', '_blank'),
+      profileName: '@excellencecoachinghub',
+      action: () => window.open('https://facebook.com/excellencecoachinghub', '_blank'),
     },
     {
       icon: <Instagram sx={{ color: '#e4405f' }} />,
       title: 'Instagram',
-      profileName: '@excellence.coachi4',
-      action: () => window.open('https://www.instagram.com/excellence.coachi4?igsh=MTU5dHI2czF2ZWU1dg%3D%3D&utm_source=qr', '_blank'),
+      profileName: '@excellencecoachinghub',
+      action: () => window.open('https://www.instagram.com/excellencecoachinghub/?utm_source=qr&igsh=Ym5xMXh5aXZmNHVi#', '_blank'),
     },
     {
       icon: <LinkedIn sx={{ color: '#0077b5' }} />,
       title: 'LinkedIn',
-      profileName: '@excellence-coaching-hub',
-      action: () => window.open('https://www.linkedin.com/company/excellence-coaching-hub/', '_blank'),
+      profileName: 'ExJobNet',
+      action: () => window.open('https://www.linkedin.com/in/excellence-coachinghub-1b8b1a380?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app', '_blank'),
     },
     {
-      icon: <YouTube sx={{ color: '#ff0000' }} />,
-      title: 'YouTube',
-      profileName: '@ExcellenceCoachingHub',
-      action: () => window.open('https://www.youtube.com/@ExcellenceCoachingHub', '_blank'),
+      icon: <Twitter sx={{ color: '#1DA1F2' }} />,
+      title: 'Twitter',
+      profileName: '@ECH_coachinghub',
+      action: () => window.open('https://x.com/ECH_coachinghub?t=Awf4GVPp9eCkSZhDlHkFew&s=08', '_blank'),
     },
     {
       icon: <VideoLibrary sx={{ color: '#ff0050' }} />,
@@ -291,14 +307,24 @@ const Navbar: React.FC = () => {
           color: 'text.primary'
         }}
       >
-        <Toolbar sx={{ px: { xs: 2, md: 4 } }}>
+        <Toolbar sx={{ px: { xs: 1, sm: 2, md: 4 }, minHeight: { xs: 60, sm: 64 } }}>
           {isMobile && (
             <IconButton
               color="inherit"
               aria-label="open drawer"
               edge="start"
               onClick={handleDrawerToggle}
-              sx={{ mr: 2 }}
+              sx={{ 
+                mr: { xs: 1, sm: 2 },
+                p: { xs: 1, sm: 1.5 },
+                borderRadius: '12px',
+                backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                '&:hover': {
+                  backgroundColor: alpha(theme.palette.primary.main, 0.15),
+                  transform: 'scale(1.05)',
+                },
+                transition: 'all 0.3s ease'
+              }}
             >
               <MenuIcon />
             </IconButton>
@@ -316,7 +342,11 @@ const Navbar: React.FC = () => {
             <img 
               src="/exjobnetlogo.png" 
               alt="ExJobNet" 
-              style={{ height: 80, width: 'auto' }}
+              style={{ 
+                height: isMobile ? 50 : 80, 
+                width: 'auto',
+                transition: 'height 0.3s ease'
+              }}
             />
             <Typography 
               variant="h6" 
@@ -519,8 +549,12 @@ const Navbar: React.FC = () => {
           display: { xs: 'block', md: 'none' },
           '& .MuiDrawer-paper': { 
             boxSizing: 'border-box', 
-            width: 250,
-            borderRadius: '0 16px 16px 0'
+            width: 280,
+            borderRadius: '0 20px 20px 0',
+            background: theme.palette.mode === 'dark' 
+              ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
+              : 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
           },
         }}
       >

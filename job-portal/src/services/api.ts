@@ -87,7 +87,7 @@ api.interceptors.response.use(
       const isPublicEndpoint = error.config?.url?.includes('/jobs') && !error.config?.url?.includes('/employer/') && !error.config?.url?.includes('/applications');
       
       // Check if we're on a public page
-      const isPublicPage = ['/', '/jobs', '/companies', '/support', '/home'].includes(window.location.pathname) ||
+      const isPublicPage = ['/', '/jobs', '/support', '/home'].includes(window.location.pathname) ||
                           window.location.pathname.startsWith('/jobs/');
       
       if (!isAuthRequest && !isPublicEndpoint && !isPublicPage) {

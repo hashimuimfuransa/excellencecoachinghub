@@ -304,6 +304,50 @@ export const createOrUpdateStudentProfile = async (req: AuthRequest, res: Respon
   }
 };
 
+// Get simple user profile (basic info including email)
+export const getSimpleProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    const user = await User.findById(userId).select('firstName lastName email avatar phone role userType');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        avatar: user.avatar,
+        phone: user.phone,
+        role: user.role,
+        userType: user.userType,
+        fullName: `${user.firstName} ${user.lastName}`
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch user profile',
+      message: error.message
+    });
+  }
+};
+
 // Get user's job seeker profile
 export const getJobSeekerProfile = async (req: AuthRequest, res: Response) => {
   try {
@@ -317,7 +361,7 @@ export const getJobSeekerProfile = async (req: AuthRequest, res: Response) => {
     }
 
     const profile = await JobSeekerProfile.findOne({ user: userId })
-      .populate('user', 'firstName lastName email avatar')
+      .populate('user', 'firstName lastName email avatar phone location bio')
       .populate('certifications');
 
     if (!profile) {
@@ -327,9 +371,23 @@ export const getJobSeekerProfile = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Ensure email is included from either profile or user
+    const profileData = profile.toObject();
+    if (profileData.user && profileData.user.email) {
+      profileData.email = profileData.user.email;
+    }
+    // Also include other user fields if not present in profile
+    if (profileData.user) {
+      profileData.userFirstName = profileData.user.firstName;
+      profileData.userLastName = profileData.user.lastName;
+      profileData.userEmail = profileData.user.email;
+      profileData.userAvatar = profileData.user.avatar;
+      profileData.userPhone = profileData.user.phone;
+    }
+
     res.status(200).json({
       success: true,
-      data: profile
+      data: profileData
     });
   } catch (error: any) {
     res.status(500).json({
@@ -353,7 +411,7 @@ export const getStudentProfile = async (req: AuthRequest, res: Response) => {
     }
 
     const profile = await StudentProfile.findOne({ user: userId })
-      .populate('user', 'firstName lastName email avatar')
+      .populate('user', 'firstName lastName email avatar phone location bio')
       .populate('completedCourses', 'title description category')
       .populate('certificates');
 
@@ -364,9 +422,21 @@ export const getStudentProfile = async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Ensure email and other user data is included
+    const profileData = profile.toObject();
+    if (profileData.user) {
+      profileData.email = profileData.user.email;
+      profileData.userFirstName = profileData.user.firstName;
+      profileData.userLastName = profileData.user.lastName;
+      profileData.userEmail = profileData.user.email;
+      profileData.userAvatar = profileData.user.avatar;
+      profileData.userPhone = profileData.user.phone;
+      profileData.fullName = `${profileData.user.firstName} ${profileData.user.lastName}`;
+    }
+
     res.status(200).json({
       success: true,
-      data: profile
+      data: profileData
     });
   } catch (error: any) {
     res.status(500).json({

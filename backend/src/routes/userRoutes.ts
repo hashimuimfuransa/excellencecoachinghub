@@ -168,6 +168,63 @@ router.get('/:id/profile', getUserProfile);
 router.put('/:id/profile', updateProfileValidation, validateRequest, updateProfile);
 router.post('/:id/profile-picture', multerUpload.single('profilePicture'), uploadAvatar);
 
+// Debug route to check user data in database (remove in production)
+router.get('/debug/user-data', async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const { User } = await import('../models/User');
+    
+    // Get user with all fields except sensitive ones
+    const userWithAllFields = await User.findById(req.user._id)
+      .select('-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil');
+    
+    // Get user with explicit email selection
+    const userWithExplicitEmail = await User.findById(req.user._id)
+      .select('firstName lastName email phone location');
+    
+    // Get raw user data
+    const rawUser = await User.findById(req.user._id);
+
+    res.json({
+      debug: 'User data from database',
+      userId: req.user._id,
+      userWithAllFields: {
+        id: userWithAllFields?._id,
+        firstName: userWithAllFields?.firstName,
+        lastName: userWithAllFields?.lastName,
+        email: userWithAllFields?.email,
+        phone: userWithAllFields?.phone,
+        hasEmail: !!userWithAllFields?.email,
+        emailLength: userWithAllFields?.email ? userWithAllFields.email.length : 0
+      },
+      userWithExplicitEmail: {
+        id: userWithExplicitEmail?._id,
+        firstName: userWithExplicitEmail?.firstName,
+        lastName: userWithExplicitEmail?.lastName,
+        email: userWithExplicitEmail?.email,
+        phone: userWithExplicitEmail?.phone,
+        hasEmail: !!userWithExplicitEmail?.email,
+        emailLength: userWithExplicitEmail?.email ? userWithExplicitEmail.email.length : 0
+      },
+      rawUser: {
+        id: rawUser?._id,
+        firstName: rawUser?.firstName,
+        lastName: rawUser?.lastName,
+        email: rawUser?.email,
+        phone: rawUser?.phone,
+        hasEmail: !!rawUser?.email,
+        emailLength: rawUser?.email ? rawUser.email.length : 0,
+        isEmailVerified: rawUser?.isEmailVerified
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Database query failed', details: error.message });
+  }
+});
+
 // Debug route to check environment variables (remove in production)
 router.get('/debug/env', (req, res) => {
   res.json({

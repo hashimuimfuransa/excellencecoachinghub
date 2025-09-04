@@ -5,6 +5,7 @@ import {
   createOrUpdateStudentProfile,
   getJobSeekerProfile,
   getStudentProfile,
+  getSimpleProfile,
   searchJobSeekers,
   getStudentsByEducationLevel,
   getEligibleStudents
@@ -14,6 +15,9 @@ const router = express.Router();
 
 // All routes require authentication
 router.use(auth);
+
+// Simple profile route for basic user info
+router.get('/simple', getSimpleProfile);
 
 // Job seeker profile routes
 router.post('/job-seeker', createOrUpdateJobSeekerProfile);

@@ -212,38 +212,40 @@ router.post(
       const userId = req.user._id;
       const { subscription } = req.body;
 
-      // Check if subscription already exists
-      const existingSubscription = await PushSubscription.findOne({
-        userId,
-        endpoint: subscription.endpoint
-      });
-
-      if (existingSubscription) {
-        return res.json({
-          success: true,
-          message: 'Push subscription already exists'
-        });
-      }
-
-      // Create new subscription
-      const pushSubscription = new PushSubscription({
-        userId,
-        endpoint: subscription.endpoint,
-        keys: {
-          p256dh: subscription.keys.p256dh,
-          auth: subscription.keys.auth
+      // Use upsert to avoid duplicate key errors
+      const pushSubscription = await PushSubscription.findOneAndUpdate(
+        { endpoint: subscription.endpoint },
+        {
+          userId,
+          endpoint: subscription.endpoint,
+          keys: {
+            p256dh: subscription.keys.p256dh,
+            auth: subscription.keys.auth
+          },
+          expirationTime: subscription.expirationTime
         },
-        expirationTime: subscription.expirationTime
-      });
-
-      await pushSubscription.save();
+        { 
+          upsert: true, 
+          new: true,
+          runValidators: true
+        }
+      );
 
       res.status(201).json({
         success: true,
         message: 'Push subscription saved successfully'
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving push subscription:', error);
+      
+      // Handle duplicate key error specifically
+      if (error.code === 11000) {
+        return res.json({
+          success: true,
+          message: 'Push subscription already exists'
+        });
+      }
+      
       res.status(500).json({
         success: false,
         message: 'Failed to save push subscription'

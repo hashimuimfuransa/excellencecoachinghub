@@ -235,7 +235,7 @@ const SummaryProfilePage: React.FC = () => {
                 
                 {profile.company && (
                   <Typography variant="body1" sx={{ opacity: 0.8, mb: 1 }}>
-                    at {profile.company}
+                    {profile.role === 'employer' ? '🏢 ' : 'at '}{profile.company}
                   </Typography>
                 )}
 
@@ -245,9 +245,16 @@ const SummaryProfilePage: React.FC = () => {
                   </Typography>
                 )}
 
-                {profile.experienceLevel && (
+                {profile.experienceLevel && profile.role !== 'employer' && (
                   <Typography variant="body2" sx={{ opacity: 0.8, mb: 2 }}>
                     🎯 {profile.experienceLevel.replace('_', ' ').toUpperCase()} Level
+                  </Typography>
+                )}
+
+                {/* Show additional info for employers */}
+                {profile.role === 'employer' && (
+                  <Typography variant="body2" sx={{ opacity: 0.8, mb: 2 }}>
+                    👤 Employer • Hiring Manager
                   </Typography>
                 )}
 
@@ -344,23 +351,92 @@ const SummaryProfilePage: React.FC = () => {
                 >
                   <CardContent>
                     <Typography variant="h6" fontWeight="bold" gutterBottom>
-                      Contact Information
+                      {profile.role === 'employer' ? '📞 Contact Information' : 'Contact Information'}
                     </Typography>
+                    {profile.role === 'employer' && (
+                      <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mb: 2 }}>
+                        💼 Get in touch for hiring opportunities and partnerships
+                      </Typography>
+                    )}
                     <List dense>
                       {profile.email && (
-                        <ListItem>
+                        <ListItem 
+                          sx={{ 
+                            ...(profile.role === 'employer' && {
+                              bgcolor: 'action.hover',
+                              borderRadius: 1,
+                              mb: 1
+                            })
+                          }}
+                        >
                           <ListItemIcon>
                             <Email color="primary" />
                           </ListItemIcon>
-                          <ListItemText primary={profile.email} />
+                          <ListItemText 
+                            primary={profile.role === 'employer' ? '📧 Business Email' : 'Email'}
+                            secondary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <a 
+                                  href={`mailto:${profile.email}`} 
+                                  style={{ 
+                                    color: profile.role === 'employer' ? '#1976d2' : 'inherit', 
+                                    textDecoration: 'underline',
+                                    fontWeight: profile.role === 'employer' ? 'bold' : 'normal'
+                                  }}
+                                >
+                                  {profile.email}
+                                </a>
+                                {profile.role === 'employer' && (
+                                  <Chip 
+                                    label="Always Available" 
+                                    size="small" 
+                                    color="success" 
+                                    variant="outlined"
+                                  />
+                                )}
+                              </Box>
+                            }
+                          />
                         </ListItem>
                       )}
                       {profile.phone && (
-                        <ListItem>
+                        <ListItem 
+                          sx={{ 
+                            ...(profile.role === 'employer' && {
+                              bgcolor: 'action.hover',
+                              borderRadius: 1,
+                              mb: 1
+                            })
+                          }}
+                        >
                           <ListItemIcon>
                             <Phone color="primary" />
                           </ListItemIcon>
-                          <ListItemText primary={profile.phone} />
+                          <ListItemText 
+                            primary={profile.role === 'employer' ? '☎️ Business Phone' : 'Phone'}
+                            secondary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <a 
+                                  href={`tel:${profile.phone}`} 
+                                  style={{ 
+                                    color: profile.role === 'employer' ? '#1976d2' : 'inherit', 
+                                    textDecoration: 'underline',
+                                    fontWeight: profile.role === 'employer' ? 'bold' : 'normal'
+                                  }}
+                                >
+                                  {profile.phone}
+                                </a>
+                                {profile.role === 'employer' && (
+                                  <Chip 
+                                    label="Direct Line" 
+                                    size="small" 
+                                    color="primary" 
+                                    variant="outlined"
+                                  />
+                                )}
+                              </Box>
+                            }
+                          />
                         </ListItem>
                       )}
                       {profile.location && (
@@ -368,7 +444,10 @@ const SummaryProfilePage: React.FC = () => {
                           <ListItemIcon>
                             <LocationOn color="primary" />
                           </ListItemIcon>
-                          <ListItemText primary={profile.location} />
+                          <ListItemText 
+                            primary={profile.role === 'employer' ? '🏢 Office Location' : 'Location'}
+                            secondary={profile.location}
+                          />
                         </ListItem>
                       )}
                     </List>
@@ -386,16 +465,16 @@ const SummaryProfilePage: React.FC = () => {
                 >
                   <CardContent>
                     <Typography variant="h6" fontWeight="bold" gutterBottom>
-                      Professional Information
+                      {profile.role === 'employer' ? 'Company Information' : 'Professional Information'}
                     </Typography>
                     <List dense>
                       {profile.jobTitle && (
                         <ListItem>
                           <ListItemIcon>
-                            <Business color="primary" />
+                            <Badge color="primary" />
                           </ListItemIcon>
                           <ListItemText 
-                            primary="Position" 
+                            primary={profile.role === 'employer' ? 'Role' : 'Position'} 
                             secondary={profile.jobTitle}
                           />
                         </ListItem>
@@ -406,19 +485,59 @@ const SummaryProfilePage: React.FC = () => {
                             <Business color="primary" />
                           </ListItemIcon>
                           <ListItemText 
-                            primary="Company" 
+                            primary={profile.role === 'employer' ? 'Company' : 'Company'} 
                             secondary={profile.company}
                           />
                         </ListItem>
                       )}
-                      {profile.education && (
+                      {profile.role === 'employer' && profile.socialLinks?.website && (
+                        <ListItem>
+                          <ListItemIcon>
+                            <Language color="primary" />
+                          </ListItemIcon>
+                          <ListItemText 
+                            primary="Website" 
+                            secondary={
+                              <a 
+                                href={profile.socialLinks.website} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                style={{ color: 'inherit', textDecoration: 'underline' }}
+                              >
+                                {profile.socialLinks.website}
+                              </a>
+                            }
+                          />
+                        </ListItem>
+                      )}
+                      {profile.role === 'employer' && profile.socialLinks?.linkedin && (
+                        <ListItem>
+                          <ListItemIcon>
+                            <LinkedIn color="primary" />
+                          </ListItemIcon>
+                          <ListItemText 
+                            primary="LinkedIn" 
+                            secondary={
+                              <a 
+                                href={profile.socialLinks.linkedin} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                style={{ color: 'inherit', textDecoration: 'underline' }}
+                              >
+                                Company LinkedIn
+                              </a>
+                            }
+                          />
+                        </ListItem>
+                      )}
+                      {profile.role !== 'employer' && profile.education && profile.education.length > 0 && (
                         <ListItem>
                           <ListItemIcon>
                             <School color="primary" />
                           </ListItemIcon>
                           <ListItemText 
                             primary="Education" 
-                            secondary={profile.education}
+                            secondary={`${profile.education.length} qualification${profile.education.length !== 1 ? 's' : ''}`}
                           />
                         </ListItem>
                       )}
@@ -438,7 +557,7 @@ const SummaryProfilePage: React.FC = () => {
                   >
                     <CardContent>
                       <Typography variant="h6" fontWeight="bold" gutterBottom>
-                        About
+                        {profile.role === 'employer' ? 'Company Overview' : 'About'}
                       </Typography>
                       <Typography variant="body1" sx={{ lineHeight: 1.7 }}>
                         {profile.bio}
@@ -448,8 +567,84 @@ const SummaryProfilePage: React.FC = () => {
                 </Grid>
               )}
 
-              {/* Skills */}
-              {profile.skills && profile.skills.length > 0 && (
+              {/* Employer-specific section */}
+              {profile.role === 'employer' && (
+                <Grid item xs={12}>
+                  <Card
+                    component={motion.div}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.45 }}
+                    sx={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white'
+                    }}
+                  >
+                    <CardContent>
+                      <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ color: 'white' }}>
+                        🚀 We're Hiring!
+                      </Typography>
+                      <Typography variant="body1" sx={{ opacity: 0.9, mb: 2 }}>
+                        Looking for talented professionals to join our team. Connect with us to explore opportunities.
+                      </Typography>
+                      
+                      {/* Contact buttons for employers */}
+                      <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+                        {profile.email && (
+                          <Button
+                            variant="contained"
+                            startIcon={<Email />}
+                            href={`mailto:${profile.email}`}
+                            sx={{
+                              bgcolor: 'rgba(255,255,255,0.2)',
+                              color: 'white',
+                              '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+                              backdropFilter: 'blur(10px)'
+                            }}
+                          >
+                            Email Us
+                          </Button>
+                        )}
+                        {profile.phone && (
+                          <Button
+                            variant="outlined"
+                            startIcon={<Phone />}
+                            href={`tel:${profile.phone}`}
+                            sx={{
+                              borderColor: 'rgba(255,255,255,0.5)',
+                              color: 'white',
+                              '&:hover': { 
+                                borderColor: 'white',
+                                bgcolor: 'rgba(255,255,255,0.1)'
+                              }
+                            }}
+                          >
+                            Call Now
+                          </Button>
+                        )}
+                      </Box>
+
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        <Chip
+                          label="💼 Open Positions"
+                          sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }}
+                        />
+                        <Chip
+                          label="🤝 Partnerships Welcome"
+                          sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }}
+                        />
+                        <Chip
+                          label="📧 Quick Response"
+                          sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }}
+                        />
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              )}
+
+              {/* Skills - Only show for non-employers */}
+              {profile.skills && profile.skills.length > 0 && profile.role !== 'employer' && (
                 <Grid item xs={12}>
                   <Card
                     component={motion.div}
@@ -477,8 +672,8 @@ const SummaryProfilePage: React.FC = () => {
                 </Grid>
               )}
 
-              {/* Technical Skills */}
-              {profile.technicalSkills && profile.technicalSkills.length > 0 && (
+              {/* Technical Skills - Only show for non-employers */}
+              {profile.technicalSkills && profile.technicalSkills.length > 0 && profile.role !== 'employer' && (
                 <Grid item xs={12}>
                   <Card
                     component={motion.div}
@@ -552,8 +747,8 @@ const SummaryProfilePage: React.FC = () => {
                 </Grid>
               )}
 
-              {/* Experience */}
-              {profile.experience && profile.experience.length > 0 && (
+              {/* Experience - Only show for non-employers */}
+              {profile.experience && profile.experience.length > 0 && profile.role !== 'employer' && (
                 <Grid item xs={12}>
                   <Card
                     component={motion.div}
@@ -1050,14 +1245,14 @@ const SummaryProfilePage: React.FC = () => {
                           />
                         </ListItem>
                       )}
-                      {profile.expectedSalary && (
+                      {profile.expectedSalary && profile.expectedSalary.min && profile.expectedSalary.max && (
                         <ListItem>
                           <ListItemIcon>
                             <MonetizationOn color="primary" />
                           </ListItemIcon>
                           <ListItemText 
                             primary="Expected Salary" 
-                            secondary={`${profile.expectedSalary.currency} ${profile.expectedSalary.min.toLocaleString()} - ${profile.expectedSalary.max.toLocaleString()}`}
+                            secondary={`${profile.expectedSalary.currency || ''} ${profile.expectedSalary.min.toLocaleString()} - ${profile.expectedSalary.max.toLocaleString()}`}
                           />
                         </ListItem>
                       )}
@@ -1072,7 +1267,7 @@ const SummaryProfilePage: React.FC = () => {
                           />
                         </ListItem>
                       )}
-                      {profile.profileViews && (
+                      {profile.profileViews && typeof profile.profileViews === 'number' && (
                         <ListItem>
                           <ListItemIcon>
                             <Visibility color="primary" />

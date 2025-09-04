@@ -821,8 +821,9 @@ export const getCurrentProfile = async (req: Request, res: Response, next: NextF
     // Only allow access to own profile for this endpoint
     const userId = req.user._id;
 
+    // Explicitly include email and other important fields
     const user = await User.findById(userId)
-      .select('-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil');
+      .select('firstName lastName email phone location avatar bio jobTitle company industry skills experience education resume cvFile jobPreferences expectedSalary role userType isActive isEmailVerified createdAt updatedAt');
 
     if (!user) {
       res.status(404).json({
@@ -831,6 +832,16 @@ export const getCurrentProfile = async (req: Request, res: Response, next: NextF
       });
       return;
     }
+
+    // Debug: Log user data to see if email is included
+    console.log('🔍 Debug - User data before profile completion:', {
+      id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      hasEmail: !!user.email,
+      emailLength: user.email ? user.email.length : 0
+    });
 
     // Calculate current profile completion
     const profileCompletion = simpleProfileCompletionService.calculateCompletion(user);

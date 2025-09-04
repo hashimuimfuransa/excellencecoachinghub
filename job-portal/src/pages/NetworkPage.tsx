@@ -55,6 +55,7 @@ import { socialNetworkService } from '../services/socialNetworkService';
 import { chatService } from '../services/chatService';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, UserRole } from '../contexts/AuthContext';
+import FloatingContact from '../components/FloatingContact';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -396,7 +397,8 @@ const NetworkPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 3 }}>
+    <>
+      <Container maxWidth="lg" sx={{ py: 3 }}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1277,7 +1279,12 @@ const NetworkPage: React.FC = () => {
           )}
         </TabPanel>
       </motion.div>
-    </Container>
+
+      </Container>
+
+      {/* Floating Contact - Fixed position, always visible like the message icon */}
+      <FloatingContact />
+    </>
   );
 };
 

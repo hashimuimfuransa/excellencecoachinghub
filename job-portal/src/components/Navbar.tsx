@@ -21,7 +21,15 @@ import {
   FormControlLabel,
   TextField,
   InputAdornment,
-  alpha
+  alpha,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Slide,
+  ListItemIcon as ListItemIconMui,
+  ListItemText as ListItemTextMui,
+  Tooltip
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -41,7 +49,18 @@ import {
   Group,
   Public,
   Psychology,
-  Search
+  Search,
+  ContactSupport,
+  Phone,
+  Email,
+  WhatsApp,
+  Facebook,
+  Instagram,
+  LinkedIn,
+  YouTube,
+  VideoLibrary,
+  Schedule,
+  LocationOn
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -59,6 +78,7 @@ const Navbar: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -90,10 +110,20 @@ const Navbar: React.FC = () => {
     }
   };
 
+  const handleContactOpen = () => {
+    setContactDialogOpen(true);
+    setMobileOpen(false); // Close mobile drawer if open
+  };
+
+  const handleContactClose = () => {
+    setContactDialogOpen(false);
+  };
+
   const menuItems = [
     { text: 'All Jobs', icon: <Work />, path: '/' },
     { text: 'Companies', icon: <Business />, path: '/companies' },
     { text: 'Support', icon: <Support />, path: '/support' },
+    { text: 'Contact Us', icon: <ContactSupport />, action: handleContactOpen, isContactDialog: true },
     // Protected items - only show if user is logged in
     { text: 'Network', icon: <Public />, path: '/app/network', protected: true },
     { text: 'Connections', icon: <Group />, path: '/app/connections', protected: true },
@@ -119,8 +149,12 @@ const Navbar: React.FC = () => {
             component="button"
             key={item.text}
             onClick={() => {
-              navigate(item.path);
-              setMobileOpen(false);
+              if (item.isContactDialog) {
+                item.action();
+              } else {
+                navigate(item.path);
+                setMobileOpen(false);
+              }
             }}
             sx={{
               backgroundColor: location.pathname === item.path ? 'primary.light' : 'transparent',
@@ -190,6 +224,61 @@ const Navbar: React.FC = () => {
     </Box>
   );
 
+  // Contact methods data
+  const contactMethods = [
+    {
+      icon: <Phone sx={{ color: '#4caf50' }} />,
+      title: 'Call Us',
+      description: '+250 728 123 456',
+      action: () => window.open('tel:+250728123456', '_self'),
+    },
+    {
+      icon: <WhatsApp sx={{ color: '#25d366' }} />,
+      title: 'WhatsApp',
+      description: 'Chat with us instantly',
+      action: () => window.open('https://wa.me/250728123456', '_blank'),
+    },
+    {
+      icon: <Email sx={{ color: '#1976d2' }} />,
+      title: 'Email',
+      description: 'support@excellencecoaching.rw',
+      action: () => window.open('mailto:support@excellencecoaching.rw', '_self'),
+    },
+  ];
+
+  const socialMedia = [
+    {
+      icon: <Facebook sx={{ color: '#1877f2' }} />,
+      title: 'Facebook',
+      profileName: '@excellencecoach4',
+      action: () => window.open('https://www.facebook.com/excellencecoach4?mibextid=LQQJ4d', '_blank'),
+    },
+    {
+      icon: <Instagram sx={{ color: '#e4405f' }} />,
+      title: 'Instagram',
+      profileName: '@excellence.coachi4',
+      action: () => window.open('https://www.instagram.com/excellence.coachi4?igsh=MTU5dHI2czF2ZWU1dg%3D%3D&utm_source=qr', '_blank'),
+    },
+    {
+      icon: <LinkedIn sx={{ color: '#0077b5' }} />,
+      title: 'LinkedIn',
+      profileName: '@excellence-coaching-hub',
+      action: () => window.open('https://www.linkedin.com/company/excellence-coaching-hub/', '_blank'),
+    },
+    {
+      icon: <YouTube sx={{ color: '#ff0000' }} />,
+      title: 'YouTube',
+      profileName: '@ExcellenceCoachingHub',
+      action: () => window.open('https://www.youtube.com/@ExcellenceCoachingHub', '_blank'),
+    },
+    {
+      icon: <VideoLibrary sx={{ color: '#ff0050' }} />,
+      title: 'TikTok',
+      profileName: '@excellence.coachi4',
+      action: () => window.open('https://www.tiktok.com/@excellence.coachi4?_t=ZM-8zCgEouFb8w&_r=1', '_blank'),
+    },
+  ];
+
   return (
     <>
       <AppBar 
@@ -254,7 +343,13 @@ const Navbar: React.FC = () => {
                   key={item.text}
                   color="inherit"
                   startIcon={item.icon}
-                  onClick={() => navigate(item.path)}
+                  onClick={() => {
+                    if (item.isContactDialog) {
+                      item.action();
+                    } else {
+                      navigate(item.path);
+                    }
+                  }}
                   sx={{
                     fontWeight: location.pathname === item.path ? 'bold' : 'normal',
                     color: location.pathname === item.path ? 'primary.main' : 'text.primary',
@@ -431,6 +526,226 @@ const Navbar: React.FC = () => {
       >
         {drawer}
       </Drawer>
+
+      {/* Contact Dialog */}
+      <Dialog
+        open={contactDialogOpen}
+        onClose={handleContactClose}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '20px',
+            background: theme.palette.mode === 'dark' 
+              ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
+              : 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 20px 60px rgba(0, 0, 0, 0.5)'
+              : '0 20px 60px rgba(0, 0, 0, 0.15)',
+          },
+        }}
+        TransitionComponent={Slide}
+        slotProps={{
+          backdrop: {
+            timeout: 500,
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            background: 'linear-gradient(45deg, #22c55e, #4ade80)',
+            color: 'white',
+            textAlign: 'center',
+            position: 'relative',
+            py: 3,
+          }}
+        >
+          <IconButton
+            onClick={handleContactClose}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: 'white',
+            }}
+          >
+            <Close />
+          </IconButton>
+          <Typography variant="h5" fontWeight={700}>
+            Get in Touch
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
+            We're here to help you succeed!
+          </Typography>
+        </DialogTitle>
+
+        <DialogContent sx={{ p: 0 }}>
+          {/* Contact Methods */}
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'primary.main' }}>
+              Contact Methods
+            </Typography>
+            <List>
+              {contactMethods.map((method, index) => (
+                <ListItem
+                  key={index}
+                  onClick={method.action}
+                  sx={{
+                    borderRadius: '12px',
+                    mb: 1,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(34,197,94,0.05)',
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 40 }}>
+                    {method.icon}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={method.title}
+                    secondary={method.description}
+                    primaryTypographyProps={{ fontWeight: 600 }}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Box>
+
+          <Divider />
+
+          {/* Business Hours */}
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'primary.main' }}>
+              Business Hours
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <Schedule color="primary" sx={{ mr: 2 }} />
+              <Box>
+                <Typography variant="body2" fontWeight={600}>
+                  Monday - Friday: 8:00 AM - 6:00 PM (CAT)
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Saturday: 9:00 AM - 4:00 PM (CAT)
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Sunday: Closed
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+
+          <Divider />
+
+          {/* Location */}
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'primary.main' }}>
+              Location
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <LocationOn color="primary" sx={{ mr: 2 }} />
+              <Box>
+                <Typography variant="body2" fontWeight={600}>
+                  Kigali, Rwanda
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Serving clients across East Africa and globally
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+
+          <Divider />
+
+          {/* Social Media */}
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'primary.main' }}>
+              Follow Us
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+              {socialMedia.map((social, index) => (
+                <Tooltip 
+                  key={index} 
+                  title={
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>
+                        {social.title}
+                      </Typography>
+                      <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                        {social.profileName}
+                      </Typography>
+                    </Box>
+                  } 
+                  arrow
+                >
+                  <Box
+                    onClick={social.action}
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      cursor: 'pointer',
+                      p: 1,
+                      borderRadius: '12px',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                        transform: 'scale(1.05)',
+                      },
+                    }}
+                  >
+                    <IconButton
+                      sx={{
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                        '&:hover': {
+                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                        },
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      {social.icon}
+                    </IconButton>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        fontSize: '0.65rem',
+                        textAlign: 'center',
+                        color: 'text.secondary',
+                        maxWidth: '80px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {social.profileName}
+                    </Typography>
+                  </Box>
+                </Tooltip>
+              ))}
+            </Box>
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button
+            onClick={handleContactClose}
+            variant="contained"
+            fullWidth
+            sx={{
+              background: 'linear-gradient(45deg, #22c55e, #4ade80)',
+              boxShadow: '0 4px 15px rgba(34, 197, 94, 0.3)',
+              '&:hover': {
+                background: 'linear-gradient(45deg, #16a34a, #22c55e)',
+                boxShadow: '0 6px 20px rgba(34, 197, 94, 0.4)',
+              },
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };

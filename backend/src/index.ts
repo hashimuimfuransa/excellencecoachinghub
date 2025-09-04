@@ -27,6 +27,7 @@ import { validateCloudinaryConfig } from '@/config/cloudinary';
 import videoProviderService from '@/services/videoProviderService';
 import { JobScrapingScheduler } from '@/services/jobScrapingScheduler';
 import { JobRecommendationEmailService } from '@/services/jobRecommendationEmailService';
+import { jobCleanupScheduler } from '@/services/jobCleanupScheduler';
 
 // Import routes
 import authRoutes from '@/routes/authRoutes';
@@ -85,6 +86,7 @@ import smartTestRoutes from '@/routes/smartTestRoutes';
 import cvBuilderRoutes from '@/routes/cvBuilderRoutes';
 import jobRecommendationRoutes from '@/routes/jobRecommendationRoutes';
 import jobEmailRoutes from '@/routes/jobEmailRoutes';
+import jobCleanupRoutes from '@/routes/jobCleanupRoutes';
 
 // Social Network routes
 import postRoutes from '@/routes/postRoutes';
@@ -720,6 +722,7 @@ app.use('/api/job-scraping', jobScrapingRoutes);
 app.use('/api/smart-tests', smartTestRoutes);
 app.use('/api/job-recommendations', jobRecommendationRoutes);
 app.use('/api/job-emails', jobEmailRoutes);
+app.use('/api/admin/job-cleanup', jobCleanupRoutes);
 
 // Test Request routes
 app.use('/api/test-requests', testRequestRoutes);
@@ -913,6 +916,9 @@ const startServer = async () => {
       
       // Start the job recommendation email scheduler
       JobRecommendationEmailService.start();
+      
+      // Start the job cleanup scheduler
+      jobCleanupScheduler.start();
     }).on('error', (error: Error) => {
       console.error('❌ Failed to bind to port:', error);
       if (error.message.includes('EADDRINUSE')) {

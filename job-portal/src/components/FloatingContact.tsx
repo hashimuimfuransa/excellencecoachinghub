@@ -103,17 +103,21 @@ const FloatingContact: React.FC = () => {
   return (
     <>
       {/* Floating Action Button with Animated Text */}
-      <Box
-        sx={{
+      <motion.div
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.3, delay: 0.5 }}
+        style={{
           position: 'fixed',
-          bottom: isMobile ? 95 : 24, // Position above mobile footer navbar with proper spacing
-          right: isMobile ? 12 : 16, // Slightly less padding on mobile for better fit
-          zIndex: (theme) => theme.zIndex.speedDial, // Use Material-UI's speedDial z-index (1050)
+          bottom: isMobile ? 180 : 170, // Position above the message icon (which is at 100/90)
+          right: 24, // Same right position as message icon for alignment
+          zIndex: 1300, // Higher z-index than message icon to ensure it's always on top
           display: 'flex',
           alignItems: 'center',
-          gap: isMobile ? 1 : 2, // Smaller gap on mobile
+          gap: isMobile ? 8 : 16, // Convert to pixels like the motion.div expects
           pointerEvents: 'auto',
-          transition: 'all 0.3s ease', // Smooth transitions
+          transform: 'translateZ(0)', // Force hardware acceleration for better performance
+          willChange: 'auto', // Optimize for animations
         }}
       >
         {/* Animated Text Label - Hide on mobile if screen is very small */}
@@ -201,7 +205,7 @@ const FloatingContact: React.FC = () => {
             </Fab>
           </Zoom>
         </Tooltip>
-      </Box>
+      </motion.div>
 
       {/* Contact Dialog */}
       <Dialog

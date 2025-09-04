@@ -1621,9 +1621,6 @@ const SocialNetworkPage: React.FC = () => {
             )}
           </Grid>
 
-          {/* Floating Contact Button - Positioned relative to content */}
-          <FloatingContact />
-
           {/* Mobile Footer Navbar */}
           {isMobile && (
             <MobileFooterNavbar
@@ -1756,6 +1753,9 @@ const SocialNetworkPage: React.FC = () => {
             </DialogActions>
           </Dialog>
       </Container>
+
+      {/* Floating Contact - Fixed position, always visible like the message icon */}
+      <FloatingContact />
     </Box>
   );
 };

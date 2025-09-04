@@ -143,14 +143,15 @@ const LoginPage: React.FC = () => {
   };
 
   const services = [
-    {
-      icon: <WorkOutline sx={{ fontSize: 28, color: '#ffffff' }} />,
-      title: 'Job Portal',
-      description: 'Access thousands of job opportunities across Africa',
-      category: 'Jobs & Applications',
-      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      bgColor: 'rgba(102, 126, 234, 0.1)'
+      {
+      icon: <PersonAdd sx={{ fontSize: 28, color: '#ffffff' }} />,
+      title: 'CV Builder',
+      description: 'Professional resume builder with AI optimization',
+      category: 'Career Tools',
+      gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+      bgColor: 'rgba(250, 112, 154, 0.1)'
     },
+
     {
       icon: <Assessment sx={{ fontSize: 28, color: '#ffffff' }} />,
       title: 'Psychometric Tests',
@@ -175,14 +176,7 @@ const LoginPage: React.FC = () => {
       gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
       bgColor: 'rgba(67, 233, 123, 0.1)'
     },
-    {
-      icon: <PersonAdd sx={{ fontSize: 28, color: '#ffffff' }} />,
-      title: 'CV Builder',
-      description: 'Professional resume builder with AI optimization',
-      category: 'Career Tools',
-      gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-      bgColor: 'rgba(250, 112, 154, 0.1)'
-    },
+  
     {
       icon: <Security sx={{ fontSize: 28, color: '#ffffff' }} />,
       title: 'Social Network',
@@ -190,6 +184,14 @@ const LoginPage: React.FC = () => {
       category: 'Professional Network',
       gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
       bgColor: 'rgba(168, 237, 234, 0.1)'
+    },
+        {
+      icon: <School sx={{ fontSize: 28, color: '#ffffff' }} />,
+      title: 'E-Learning Courses',
+      description: 'Professional development with learning materials and live sessions',
+      category: 'Learning & Growth',
+      gradient: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
+      bgColor: 'rgba(161, 140, 209, 0.1)'
     },
     {
       icon: <TrendingUp sx={{ fontSize: 28, color: '#ffffff' }} />,
@@ -199,14 +201,7 @@ const LoginPage: React.FC = () => {
       gradient: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
       bgColor: 'rgba(255, 236, 210, 0.1)'
     },
-    {
-      icon: <School sx={{ fontSize: 28, color: '#ffffff' }} />,
-      title: 'E-Learning Courses',
-      description: 'Professional development courses and certifications',
-      category: 'Learning & Growth',
-      gradient: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
-      bgColor: 'rgba(161, 140, 209, 0.1)'
-    },
+
     {
       icon: <Business sx={{ fontSize: 28, color: '#ffffff' }} />,
       title: 'Company Profiles',
@@ -361,7 +356,7 @@ const LoginPage: React.FC = () => {
                           textAlign: 'center'
                         }}
                       >
-                        Join thousands of professionals transforming their careers with our comprehensive services.
+                        Master your job preparation journey and build meaningful professional networks with thousands of career-focused professionals.
                       </Typography>
                     </Box>
                   </Grow>

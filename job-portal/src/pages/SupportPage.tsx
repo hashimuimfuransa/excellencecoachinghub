@@ -46,6 +46,7 @@ import {
   Send
 } from '@mui/icons-material';
 import PublicLayout from '../layouts/PublicLayout';
+import JobEmailTester from '../components/JobEmailTester';
 
 const SupportPage: React.FC = () => {
   const theme = useTheme();
@@ -475,6 +476,11 @@ const SupportPage: React.FC = () => {
               </Paper>
             </Grid>
           </Grid>
+
+          {/* Job Email Tester Section - Development/Testing Tool */}
+          <Container maxWidth="lg" sx={{ mt: 4 }}>
+            <JobEmailTester />
+          </Container>
         </Container>
       </Box>
     </PublicLayout>

@@ -384,6 +384,312 @@ const emailTemplates = {
         </div>
       </div>
     </div>
+  `,
+
+  jobRecommendation: (data: any) => `
+    <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; background-color: #f8f9fa; padding: 20px;">
+      <div style="background-color: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+        
+        <!-- Header -->
+        <div style="text-align: center; margin-bottom: 30px; padding: 25px; background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%); border-radius: 10px; color: white;">
+          <h1 style="margin: 0 0 10px 0; font-size: 28px; font-weight: bold;">🎯 New Job Recommendations</h1>
+          <p style="margin: 0; font-size: 18px; opacity: 0.9;">We found ${data.totalJobs} job${data.totalJobs > 1 ? 's' : ''} that match your skills!</p>
+        </div>
+
+        <!-- Greeting -->
+        <div style="margin-bottom: 25px;">
+          <p style="font-size: 16px; color: #333; margin: 0;">Hi ${data.firstName},</p>
+          <p style="font-size: 16px; color: #555; line-height: 1.6; margin: 10px 0 0 0;">
+            Great news! Our AI matching system has found ${data.totalJobs} new job opportunity${data.totalJobs > 1 ? 'ies' : ''} that match your profile and skills. These positions were just posted and could be perfect for your next career move.
+          </p>
+        </div>
+
+        <!-- Job Recommendations -->
+        <div style="margin: 30px 0;">
+          <h2 style="color: #1976d2; margin: 0 0 20px 0; font-size: 22px;">📋 Your Personalized Job Matches</h2>
+          
+          ${data.recommendations.map((job: any, index: number) => `
+            <div style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); border: 2px solid #e3f2fd; border-radius: 12px; padding: 25px; margin: 20px 0; position: relative; overflow: hidden;">
+              
+              <!-- Match Badge -->
+              <div style="position: absolute; top: 15px; right: 15px; background: ${job.matchPercentage >= 80 ? 'linear-gradient(135deg, #4caf50, #66bb6a)' : job.matchPercentage >= 60 ? 'linear-gradient(135deg, #ff9800, #ffb74d)' : 'linear-gradient(135deg, #2196f3, #42a5f5)'}; color: white; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+                ${job.matchPercentage}% Match
+              </div>
+
+              <!-- Job Title and Company -->
+              <div style="margin-bottom: 15px; padding-right: 120px;">
+                <h3 style="color: #1976d2; margin: 0 0 8px 0; font-size: 20px; font-weight: bold; line-height: 1.3;">
+                  ${job.title}
+                </h3>
+                <p style="color: #666; margin: 0; font-size: 16px; font-weight: 600;">
+                  🏢 ${job.company}
+                </p>
+              </div>
+
+              <!-- Job Details Grid -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0;">
+                <div>
+                  <div style="margin-bottom: 12px;">
+                    <span style="color: #666; font-size: 14px; font-weight: 600;">📍 Location:</span>
+                    <p style="margin: 2px 0 0 0; color: #333; font-size: 15px;">${job.location || 'Not specified'}</p>
+                  </div>
+                  <div style="margin-bottom: 12px;">
+                    <span style="color: #666; font-size: 14px; font-weight: 600;">💼 Job Type:</span>
+                    <p style="margin: 2px 0 0 0; color: #333; font-size: 15px;">${job.jobType || 'Not specified'}</p>
+                  </div>
+                </div>
+                <div>
+                  ${job.salary && job.salary.min ? `
+                  <div style="margin-bottom: 12px;">
+                    <span style="color: #666; font-size: 14px; font-weight: 600;">💰 Salary:</span>
+                    <p style="margin: 2px 0 0 0; color: #333; font-size: 15px; font-weight: 600; color: #2e7d32;">
+                      ${job.salary.currency || '$'} ${job.salary.min.toLocaleString()}${job.salary.max ? ' - ' + job.salary.max.toLocaleString() : '+'}
+                    </p>
+                  </div>
+                  ` : ''}
+                </div>
+              </div>
+
+              <!-- Skills Match -->
+              ${job.skills && job.skills.length > 0 ? `
+              <div style="margin: 20px 0;">
+                <span style="color: #666; font-size: 14px; font-weight: 600; margin-bottom: 8px; display: block;">🛠️ Required Skills:</span>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                  ${job.skills.slice(0, 8).map((skill: string) => `
+                    <span style="background: linear-gradient(135deg, #e3f2fd, #bbdefb); color: #1565c0; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 500; border: 1px solid #90caf9;">
+                      ${skill}
+                    </span>
+                  `).join('')}
+                  ${job.skills.length > 8 ? `<span style="color: #666; font-size: 13px; align-self: center;">+${job.skills.length - 8} more</span>` : ''}
+                </div>
+              </div>
+              ` : ''}
+
+              <!-- Action Button -->
+              <div style="text-align: center; margin: 25px 0 10px 0;">
+                <a href="${data.jobPortalUrl}/jobs/${job.jobId}" 
+                   style="background: linear-gradient(135deg, #1976d2, #42a5f5); color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 15px; display: inline-block; box-shadow: 0 3px 15px rgba(25, 118, 210, 0.3); transition: all 0.3s ease;">
+                  📝 View Job & Apply
+                </a>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- Call to Action -->
+        <div style="background: linear-gradient(135deg, #e8f5e8, #f1f8f1); padding: 25px; border-radius: 12px; margin: 30px 0; text-align: center; border-left: 5px solid #4caf50;">
+          <h3 style="color: #2e7d32; margin: 0 0 15px 0;">⚡ Don't Miss Out!</h3>
+          <p style="color: #1b5e20; margin: 0 0 20px 0; font-size: 16px; line-height: 1.5;">
+            These are fresh job postings from the last 24 hours. The early bird gets the worm - apply soon to increase your chances!
+          </p>
+          <a href="${data.jobPortalUrl}/jobs?recommended=true" 
+             style="background: linear-gradient(135deg, #4caf50, #66bb6a); color: white; padding: 15px 35px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);">
+            🔍 Browse All New Jobs
+          </a>
+        </div>
+
+        <!-- Tips Section -->
+        <div style="background-color: #fff3e0; padding: 25px; border-radius: 12px; margin: 25px 0; border-left: 5px solid #ff9800;">
+          <h3 style="color: #ef6c00; margin: 0 0 15px 0;">💡 Tips to Improve Your Job Matches</h3>
+          <ul style="color: #bf360c; line-height: 1.8; padding-left: 20px; margin: 0;">
+            <li><strong>Update Your Skills:</strong> Add new technologies and tools you've learned</li>
+            <li><strong>Complete Your Profile:</strong> A complete profile gets better job matches</li>
+            <li><strong>Add Recent Experience:</strong> Keep your work history up to date</li>
+            <li><strong>Set Job Preferences:</strong> Specify your preferred job types and locations</li>
+          </ul>
+        </div>
+
+        <!-- Additional Actions -->
+        <div style="text-align: center; margin: 30px 0; padding: 25px; background-color: #f5f5f5; border-radius: 10px;">
+          <h3 style="color: #333; margin: 0 0 20px 0;">🚀 More Ways to Advance Your Career</h3>
+          <div style="display: inline-block; margin: 0 10px;">
+            <a href="${data.jobPortalUrl}/profile" 
+               style="background-color: #28a745; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block; margin: 5px;">
+              👤 Update Profile
+            </a>
+          </div>
+          <div style="display: inline-block; margin: 0 10px;">
+            <a href="${data.jobPortalUrl}/ai-interviews" 
+               style="background-color: #dc3545; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block; margin: 5px;">
+              🤖 Practice Interviews
+            </a>
+          </div>
+          <div style="display: inline-block; margin: 0 10px;">
+            <a href="${data.jobPortalUrl}/courses" 
+               style="background-color: #6f42c1; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block; margin: 5px;">
+              📚 Take Courses
+            </a>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <hr style="margin: 30px 0; border: none; border-top: 2px solid #e3f2fd;">
+        <div style="text-align: center;">
+          <p style="color: #666; font-size: 14px; margin: 0 0 15px 0; line-height: 1.6;">
+            <strong>ExJobNet - Excellence Coaching Hub</strong><br>
+            🌟 Connecting exceptional talent with outstanding opportunities across Africa<br>
+            <em>You're receiving this because you have email notifications enabled.</em>
+          </p>
+          
+          <div style="margin: 15px 0;">
+            <a href="${data.unsubscribeUrl}" 
+               style="color: #999; font-size: 12px; text-decoration: underline;">
+              Unsubscribe from job recommendation emails
+            </a>
+          </div>
+          
+          <p style="color: #999; font-size: 12px; margin: 10px 0 0 0;">
+            This is an automated email, please do not reply directly.<br>
+            For support, visit our help center or contact us through the platform.
+          </p>
+        </div>
+      </div>
+    </div>
+  `,
+
+  jobRecommendations: (data: any) => `
+    <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; background-color: #f8f9fa;">
+      <div style="background-color: white; padding: 0; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden;">
+        
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%); padding: 30px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 300;">
+            🎯 New Job Matches Found!
+          </h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">
+            Hi ${data.firstName}, we found ${data.totalJobs} job${data.totalJobs > 1 ? 's' : ''} that match your profile
+          </p>
+        </div>
+
+        <!-- Content -->
+        <div style="padding: 30px;">
+          
+          <!-- Stats Section -->
+          <div style="background: linear-gradient(135deg, #e3f2fd 0%, #f1f8e9 100%); padding: 25px; border-radius: 12px; margin-bottom: 30px; text-align: center;">
+            <div style="display: inline-block; margin: 0 20px;">
+              <div style="font-size: 32px; font-weight: bold; color: #1976d2;">${data.totalJobs}</div>
+              <div style="color: #666; font-size: 14px;">New Match${data.totalJobs > 1 ? 'es' : ''}</div>
+            </div>
+            <div style="display: inline-block; margin: 0 20px;">
+              <div style="font-size: 24px; color: #4caf50;">📊</div>
+              <div style="color: #666; font-size: 14px;">AI-Matched</div>
+            </div>
+            <div style="display: inline-block; margin: 0 20px;">
+              <div style="font-size: 24px; color: #ff9800;">⚡</div>
+              <div style="color: #666; font-size: 14px;">Fresh Jobs</div>
+            </div>
+          </div>
+
+          <!-- Job Recommendations -->
+          ${data.jobs ? data.jobs.map((job: any, index: number) => `
+            <div style="border: 2px solid #e3f2fd; border-radius: 12px; padding: 20px; margin-bottom: 20px; background: white; position: relative; transition: all 0.3s ease;">
+              
+              <!-- Match Badge -->
+              <div style="position: absolute; top: -1px; right: 15px; background: ${job.matchColor || '#4caf50'}; color: white; padding: 5px 12px; border-radius: 0 0 8px 8px; font-size: 12px; font-weight: bold;">
+                ${job.matchPercentage}% Match
+              </div>
+
+              <!-- Job Header -->
+              <div style="margin-bottom: 15px; padding-top: 10px;">
+                <h3 style="margin: 0 0 8px 0; color: #1976d2; font-size: 20px; font-weight: 600;">
+                  ${job.title}
+                </h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 15px; color: #666; font-size: 14px; align-items: center;">
+                  <span style="font-weight: 600; color: #333;">🏢 ${job.company}</span>
+                  <span>📍 ${job.location}</span>
+                  <span>💼 ${job.jobType}</span>
+                  ${job.salary && job.salary !== 'Not specified' ? `<span>💰 ${job.salary}</span>` : ''}
+                </div>
+              </div>
+
+              <!-- Skills -->
+              ${job.skills && job.skills.length > 0 ? `
+                <div style="margin: 15px 0;">
+                  <div style="font-size: 13px; color: #666; margin-bottom: 8px; font-weight: 600;">🛠️ Required Skills:</div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                    ${job.skills.slice(0, 5).map((skill: string) => `
+                      <span style="background: linear-gradient(135deg, #e3f2fd, #f3e5f5); color: #1976d2; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500;">
+                        ${skill}
+                      </span>
+                    `).join('')}
+                    ${job.skills.length > 5 ? `<span style="color: #999; font-size: 12px; padding: 4px 8px;">+${job.skills.length - 5} more</span>` : ''}
+                  </div>
+                </div>
+              ` : ''}
+
+              <!-- Apply Button -->
+              <div style="margin-top: 20px; text-align: center;">
+                <a href="${job.jobUrl}" 
+                   style="background: linear-gradient(135deg, #1976d2, #42a5f5); color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600; font-size: 14px; transition: all 0.3s ease;">
+                  🚀 Apply Now
+                </a>
+              </div>
+
+            </div>
+          `).join('') : ''}
+
+          <!-- Browse More Jobs -->
+          <div style="text-align: center; margin: 40px 0; padding: 30px; background: linear-gradient(135deg, #f8f9fa, #e8f5e8); border-radius: 12px;">
+            <h3 style="color: #333; margin: 0 0 15px 0;">Ready to Explore More Opportunities? 🚀</h3>
+            <p style="color: #666; margin: 0 0 20px 0; line-height: 1.6;">
+              Don't miss out on other great opportunities! Browse our complete job listings and discover your next career move.
+            </p>
+            <div style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
+              <a href="${data.jobPortalUrl}/jobs" 
+                 style="background: linear-gradient(135deg, #4caf50, #66bb6a); color: white; padding: 14px 25px; text-decoration: none; border-radius: 25px; font-weight: 600; display: inline-block;">
+                🔍 Browse All Jobs
+              </a>
+              <a href="${data.jobPortalUrl}/profile" 
+                 style="background: white; color: #1976d2; padding: 14px 25px; text-decoration: none; border-radius: 25px; font-weight: 600; border: 2px solid #1976d2; display: inline-block;">
+                ⚙️ Update Profile
+              </a>
+            </div>
+          </div>
+
+          <!-- Tips Section -->
+          <div style="background: linear-gradient(135deg, #fff3e0, #f1f8e9); padding: 25px; border-radius: 12px; margin: 30px 0;">
+            <h4 style="color: #ef6c00; margin: 0 0 15px 0; display: flex; align-items: center;">
+              💡 Tips to Improve Your Job Matches
+            </h4>
+            <ul style="color: #666; margin: 0; padding: 0; list-style: none;">
+              <li style="margin: 8px 0; padding: 5px 0; border-bottom: 1px solid rgba(0,0,0,0.1);">
+                ✅ Keep your skills and experience up to date
+              </li>
+              <li style="margin: 8px 0; padding: 5px 0; border-bottom: 1px solid rgba(0,0,0,0.1);">
+                ✅ Add a professional summary to your profile
+              </li>
+              <li style="margin: 8px 0; padding: 5px 0; border-bottom: 1px solid rgba(0,0,0,0.1);">
+                ✅ Upload your latest CV or resume
+              </li>
+              <li style="margin: 8px 0; padding: 5px 0;">
+                ✅ Set your job preferences and location accurately
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #f8f9fa; padding: 25px; text-align: center; border-top: 3px solid #e3f2fd;">
+          <p style="color: #666; font-size: 14px; margin: 0 0 15px 0; line-height: 1.6;">
+            <strong>ExJobNet - Excellence Coaching Hub</strong><br>
+            🌟 AI-powered job matching for exceptional careers<br>
+            <em>You're receiving this because you have job recommendation emails enabled.</em>
+          </p>
+          
+          <div style="margin: 15px 0;">
+            <a href="${data.unsubscribeUrl}" 
+               style="color: #999; font-size: 12px; text-decoration: underline;">
+              Unsubscribe from job recommendation emails
+            </a>
+          </div>
+          
+          <p style="color: #999; font-size: 12px; margin: 10px 0 0 0;">
+            This is an automated email, please do not reply directly.<br>
+            For support, contact us through the platform.
+          </p>
+        </div>
+      </div>
+    </div>
   `
 };
 

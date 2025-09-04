@@ -62,7 +62,8 @@ import {
   Home,
   Assignment,
   SmartToy,
-  Warning
+  Warning,
+  Login
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { jobService } from '../services/jobService';
@@ -461,14 +462,12 @@ const JobDetailsPage: React.FC = () => {
                 sx={{ 
                   width: 80, 
                   height: 80,
-                  bgcolor: job.isExternalJob 
-                    ? alpha(theme.palette.secondary.main, 0.1)
-                    : alpha(theme.palette.primary.main, 0.1),
-                  border: `2px solid ${job.isExternalJob ? theme.palette.secondary.main : theme.palette.primary.main}`,
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  border: `2px solid ${theme.palette.primary.main}`,
                   boxShadow: 2
                 }}
               >
-                <Business sx={{ fontSize: 40 }} color={job.isExternalJob ? "secondary" : "primary"} />
+                <Business sx={{ fontSize: 40 }} color="primary" />
               </Avatar>
             </Grid>
             <Grid item xs>
@@ -479,23 +478,6 @@ const JobDetailsPage: React.FC = () => {
                 <Typography variant="h6" color="primary.main" gutterBottom sx={{ fontWeight: 600 }}>
                   {job.company || 'Company not specified'}
                 </Typography>
-                
-                {/* External Job Source */}
-                {job.isExternalJob && job.externalJobSource && (
-                  <Box sx={{ mb: 1 }}>
-                    <Chip
-                      icon={<Language />}
-                      label={`Source: ${job.externalJobSource}`}
-                      size="small"
-                      sx={{
-                        bgcolor: alpha(theme.palette.secondary.main, 0.1),
-                        color: theme.palette.secondary.main,
-                        border: `1px solid ${alpha(theme.palette.secondary.main, 0.3)}`,
-                        fontWeight: 'bold'
-                      }}
-                    />
-                  </Box>
-                )}
               </Box>
               <Stack direction="row" spacing={2} flexWrap="wrap" sx={{ mb: 2 }}>
                 <Box display="flex" alignItems="center" sx={{ 
@@ -534,14 +516,6 @@ const JobDetailsPage: React.FC = () => {
             </Grid>
             <Grid item>
               <Stack direction="row" spacing={1}>
-                {job.isExternalJob && (
-                  <Chip 
-                    label="External Job" 
-                    color="secondary" 
-                    size="small"
-                    sx={{ fontWeight: 600 }}
-                  />
-                )}
                 {job.isCurated && (
                   <Chip 
                     label="Featured" 
@@ -1230,6 +1204,32 @@ const JobDetailsPage: React.FC = () => {
                 🎯 Get Position Ready
               </Button>
               
+              {/* Profile Completion Warning */}
+              {user && profileCompletion < 50 && (
+                <Alert 
+                  severity="warning" 
+                  sx={{ 
+                    borderRadius: 2,
+                    '& .MuiAlert-message': {
+                      width: '100%'
+                    }
+                  }}
+                  action={
+                    <Button 
+                      size="small" 
+                      onClick={() => navigate('/app/profile')}
+                      sx={{ fontWeight: 600 }}
+                    >
+                      Complete
+                    </Button>
+                  }
+                >
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    Complete your profile ({profileCompletion}%) to apply for jobs
+                  </Typography>
+                </Alert>
+              )}
+              
               {/* Apply Button or View More Details */}
               {(job.contactInfo?.email || job.employer?.email) && user ? (
                 <Button
@@ -1270,7 +1270,7 @@ const JobDetailsPage: React.FC = () => {
                   variant="contained"
                   size="large"
                   startIcon={
-                    !user ? <LoginIcon /> :
+                    !user ? <Login /> :
                     // Determine the job source URL for icon selection
                     (job?.isExternalJob && job?.externalApplicationUrl) ||
                     job?.contactInfo?.website ||
@@ -2214,49 +2214,31 @@ const JobDetailsPage: React.FC = () => {
       <Dialog 
         open={profileIncompleteDialogOpen} 
         onClose={() => setProfileIncompleteDialogOpen(false)}
-        maxWidth="sm"
+        maxWidth="xs"
         fullWidth
       >
         <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
-          <Warning sx={{ fontSize: 48, color: theme.palette.warning.main, mb: 1 }} />
+          <Warning sx={{ fontSize: 40, color: theme.palette.warning.main, mb: 1 }} />
           <Typography variant="h6" fontWeight="bold" color="warning.main">
-            Complete Your Profile First
+            Profile Incomplete
           </Typography>
         </DialogTitle>
-        <DialogContent sx={{ textAlign: 'center', pt: 2 }}>
+        <DialogContent sx={{ textAlign: 'center', pt: 1, pb: 2 }}>
           <Typography variant="body1" sx={{ mb: 2 }}>
-            Your profile is only <strong>{profileCompletion}%</strong> complete. 
-            To apply for this position and send your profile to the employer, 
-            you need at least 50% completion.
+            You need to complete your profile before applying for jobs.
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Complete your profile with basic information, skills, and experience to increase your chances of getting hired.
+          <Typography variant="body2" color="text.secondary">
+            Your profile is <strong>{profileCompletion}%</strong> complete. 
+            Complete at least 50% to start applying.
           </Typography>
-          
-          <Box sx={{ 
-            p: 2, 
-            bgcolor: alpha(theme.palette.warning.main, 0.1),
-            borderRadius: 2,
-            mb: 2
-          }}>
-            <Typography variant="body2" fontWeight="bold" color="warning.main">
-              💼 Why complete your profile?
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              • Employers can see your full qualifications<br/>
-              • Higher chance of getting shortlisted<br/>
-              • Professional presentation of your skills<br/>
-              • Direct profile sharing with employers
-            </Typography>
-          </Box>
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'center', pb: 3, gap: 2 }}>
           <Button
             onClick={() => setProfileIncompleteDialogOpen(false)}
             variant="outlined"
-            sx={{ minWidth: 120 }}
+            size="small"
           >
-            Cancel
+            Later
           </Button>
           <Button
             onClick={() => {
@@ -2264,15 +2246,10 @@ const JobDetailsPage: React.FC = () => {
               navigate('/app/profile');
             }}
             variant="contained"
-            sx={{ 
-              minWidth: 140,
-              background: `linear-gradient(45deg, ${theme.palette.warning.main} 30%, ${theme.palette.primary.main} 90%)`,
-              '&:hover': {
-                background: `linear-gradient(45deg, ${theme.palette.warning.dark} 30%, ${theme.palette.primary.dark} 90%)`,
-              }
-            }}
+            size="small"
+            startIcon={<Person />}
           >
-            ✏️ Complete Profile
+            Complete Profile
           </Button>
         </DialogActions>
       </Dialog>

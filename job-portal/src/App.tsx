@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './layouts/MainLayout';
 import { initEmailJS } from './services/emailjsService';
 import { pushNotificationService } from './services/pushNotificationService';
+import EmailApiHandler from './components/EmailApiHandler';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -90,6 +91,7 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <EmailApiHandler isActive={true} />
         <Router>
           <Routes>
             {/* Public Routes */}

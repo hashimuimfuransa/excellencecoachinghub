@@ -1,13 +1,14 @@
 import emailjs from '@emailjs/browser';
 
-// EmailJS configuration - Uses same config as homepage for consistency
+// EmailJS configuration - Match with backend .env configuration
 const EMAILJS_CONFIG = {
-  SERVICE_ID: 'service_vtor3y8', // Your EmailJS service ID
+  SERVICE_ID: 'service_vtor3y8', // Your EmailJS service ID from .env
   VERIFICATION_TEMPLATE_ID: 'template_sikm5se', // Your EmailJS template ID for email verification
   PASSWORD_RESET_TEMPLATE_ID: 'template_9apzq9s', // Your EmailJS template ID for password reset
   WELCOME_TEMPLATE_ID: 'template_sikm5se', // Your EmailJS template ID for welcome email
   JOB_APPLICATION_TEMPLATE_ID: 'template_btwevvq', // Your EmailJS template ID for job applications
-  PUBLIC_KEY: 'VLY7_POWX21gRHMof' // Your EmailJS public key
+  JOB_RECOMMENDATION_TEMPLATE_ID: 'template_f0oaoz8', // Your EmailJS template ID for job recommendations - THIS IS THE IMPORTANT ONE!
+  PUBLIC_KEY: 'VLY7_POWX21gRHMof' // Your EmailJS public key from .env
 };
 
 // Initialize EmailJS
@@ -375,11 +376,207 @@ export const sendJobApplicationEmail = async (
   }
 };
 
+// Send job recommendation emails (batch sending)
+export const sendJobRecommendationEmails = async (
+  emailRequests: Array<{
+    user: {
+      id: string;
+      email: string;
+      firstName: string;
+      name?: string;
+    };
+    recommendations: Array<{
+      id: string;
+      title: string;
+      company: string;
+      location: string;
+      jobType: string;
+      matchPercentage: number;
+      salary: string;
+      skills: string[];
+      jobUrl: string;
+      matchColor: string;
+    }>;
+  }>
+): Promise<{
+  success: boolean;
+  sent: number;
+  failed: number;
+  errors: Array<{ email: string; error: string }>;
+}> => {
+  const results = {
+    success: true,
+    sent: 0,
+    failed: 0,
+    errors: [] as Array<{ email: string; error: string }>
+  };
+
+  console.log(`📬 Processing ${emailRequests.length} job recommendation emails...`);
+
+  for (const emailRequest of emailRequests) {
+    try {
+      const { user, recommendations } = emailRequest;
+
+      // Template parameters that match your EmailJS template exactly
+      const templateParams = {
+        // Required by your template
+        to_email: user.email,
+        to_name: user.firstName || user.name || 'Job Seeker',
+        firstName: user.firstName || user.name || 'there',
+        totalJobs: recommendations.length.toString(),
+        if_plural_jobs: recommendations.length > 1 ? 's' : '',
+        
+        // Email meta
+        from_name: 'ExJobNet Job Portal',
+        reply_to: 'noreply@exjobnet.com',
+        subject: `${recommendations.length} New Job Match${recommendations.length > 1 ? 'es' : ''} Found`
+      };
+
+      // Add job parameters to match your EmailJS template exactly (up to 5 jobs)
+      recommendations.slice(0, 5).forEach((job, index) => {
+        const num = index + 1;
+        
+        // Match your template variables exactly
+        templateParams[`job${num}_title`] = job.title || '';
+        templateParams[`job${num}_matchPercentage`] = job.matchPercentage || 0;
+        templateParams[`job${num}_company`] = job.company || '';
+        templateParams[`job${num}_location`] = job.location || '';
+        templateParams[`job${num}_jobType`] = job.jobType || '';
+        templateParams[`job${num}_salary`] = job.salary || ''; // Optional in your template
+        templateParams[`job${num}_skills`] = job.skills ? job.skills.join(', ') : ''; // Optional in your template
+      });
+
+      // Send email using EmailJS with your template_f0oaoz8
+      console.log(`📧 Sending job recommendations to ${user.email} (${recommendations.length} jobs)`);
+      console.log(`📧 Using EmailJS Template ID: ${EMAILJS_CONFIG.JOB_RECOMMENDATION_TEMPLATE_ID}`);
+      console.log(`📧 Using EmailJS Service ID: ${EMAILJS_CONFIG.SERVICE_ID}`);
+      // Ensure all parameters are clean strings
+      const cleanParams = {};
+      for (const [key, value] of Object.entries(templateParams)) {
+        cleanParams[key] = String(value || '').trim();
+      }
+
+      console.log(`📧 Clean template parameters:`, {
+        to_email: cleanParams.to_email,
+        firstName: cleanParams.firstName,
+        totalJobs: cleanParams.totalJobs,
+        if_plural_jobs: cleanParams.if_plural_jobs,
+        job1_title: cleanParams.job1_title || 'No job1',
+        job1_matchPercentage: cleanParams.job1_matchPercentage || 'No match%',
+        parameterCount: Object.keys(cleanParams).length
+      });
+
+      const result = await emailjs.send(
+        EMAILJS_CONFIG.SERVICE_ID,
+        EMAILJS_CONFIG.JOB_RECOMMENDATION_TEMPLATE_ID,
+        cleanParams,
+        EMAILJS_CONFIG.PUBLIC_KEY
+      );
+
+      if (result.status === 200) {
+        console.log(`✅ Job recommendation email sent successfully to ${user.email}`);
+        results.sent++;
+      } else {
+        throw new Error(`EmailJS returned status ${result.status}`);
+      }
+
+      // Add small delay between emails to avoid rate limits
+      if (emailRequests.length > 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+      }
+
+    } catch (error: any) {
+      console.error(`❌ Failed to send job recommendations to ${emailRequest.user.email}:`, error);
+      results.failed++;
+      results.success = false;
+      results.errors.push({
+        email: emailRequest.user.email,
+        error: error?.message || 'Unknown error'
+      });
+    }
+  }
+
+  console.log(`📊 Job recommendation email results: ${results.sent} sent, ${results.failed} failed`);
+  
+  if (results.errors.length > 0) {
+    console.error('❌ Email sending errors:', results.errors);
+  }
+
+  return results;
+};
+
+/**
+ * Test function to verify EmailJS job recommendations with your template_f0oaoz8
+ * Uses parameters that match your template exactly
+ */
+export const testJobRecommendationEmail = async (testEmail: string): Promise<boolean> => {
+  try {
+    console.log(`🧪 Testing Job Recommendation Email with template_f0oaoz8 to: ${testEmail}`);
+    
+    // Parameters that match your EmailJS template exactly
+    const testParams = {
+      // Required by your template
+      to_email: testEmail,
+      to_name: 'Test User',
+      firstName: 'Test User',
+      totalJobs: '2',
+      if_plural_jobs: 's',
+      
+      // Email meta
+      from_name: 'ExJobNet Job Portal',
+      reply_to: 'noreply@exjobnet.com',
+      subject: '2 New Job Matches Found',
+      
+      // Job 1 - matches your template variables exactly
+      job1_title: 'Senior Software Developer',
+      job1_matchPercentage: 85,
+      job1_company: 'TechCorp Rwanda',
+      job1_location: 'Kigali, Rwanda',
+      job1_jobType: 'Full-time',
+      job1_salary: '$60,000 - $80,000',
+      job1_skills: 'JavaScript, React, Node.js',
+      
+      // Job 2 - matches your template variables exactly
+      job2_title: 'Frontend Engineer',
+      job2_matchPercentage: 72,
+      job2_company: 'Innovation Hub',
+      job2_location: 'Remote',
+      job2_jobType: 'Contract',
+      job2_salary: '$45,000',
+      job2_skills: 'Vue.js, CSS, HTML'
+    };
+
+    console.log(`🧪 Sending with template-matched parameters:`, testParams);
+
+    const result = await emailjs.send(
+      EMAILJS_CONFIG.SERVICE_ID,
+      EMAILJS_CONFIG.JOB_RECOMMENDATION_TEMPLATE_ID,
+      testParams,
+      EMAILJS_CONFIG.PUBLIC_KEY
+    );
+
+    if (result.status === 200) {
+      console.log('✅ Test email sent successfully!');
+      return true;
+    } else {
+      console.error('❌ Test email failed, status:', result.status);
+      return false;
+    }
+    
+  } catch (error: any) {
+    console.error('🧪 Test job recommendation email failed:', error);
+    console.error('🧪 Error details:', error.text || error.message || error);
+    return false;
+  }
+};
+
 const jobPortalEmailjsService = {
   initEmailJS,
   sendPasswordResetEmail,
   sendWelcomeEmail,
   sendJobApplicationEmail,
+  sendJobRecommendationEmails,
+  testJobRecommendationEmail,
   isValidEmail,
   generateVerificationCode,
   testEmailJSConnection

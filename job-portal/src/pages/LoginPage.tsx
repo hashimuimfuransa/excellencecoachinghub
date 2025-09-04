@@ -170,7 +170,7 @@ const LoginPage: React.FC = () => {
     },
     {
       icon: <Psychology sx={{ fontSize: 28, color: '#ffffff' }} />,
-      title: 'AI Interviews',
+      title: 'Interviews',
       description: 'Practice with intelligent interview simulations',
       category: 'AI Technology',
       gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',

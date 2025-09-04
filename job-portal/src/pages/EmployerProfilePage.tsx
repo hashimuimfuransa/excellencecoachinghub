@@ -302,9 +302,13 @@ const EmployerProfilePage: React.FC = () => {
         profilePicture: updatedProfile.profilePicture || preview
       }));
       
-      // Update auth context if it's current user's profile
+      // Update auth context if it's current user's profile - preserve existing data
       if (isOwnProfile) {
-        setUserData(updatedProfile);
+        setUserData({
+          ...profile,
+          ...updatedProfile,
+          profilePicture: updatedProfile.profilePicture || preview
+        });
       }
       
       setSuccessMessage('Profile picture updated successfully');
@@ -312,6 +316,9 @@ const EmployerProfilePage: React.FC = () => {
         setSuccessMessage('');
         setImagePreview(null);
       }, 3000);
+      
+      // Clear the file input to allow re-upload of the same file if needed
+      event.target.value = '';
 
     } catch (error) {
       console.error('Error uploading profile picture:', error);
@@ -326,6 +333,9 @@ const EmployerProfilePage: React.FC = () => {
       
       // Reset preview on error
       setImagePreview(null);
+      
+      // Clear the file input on error as well
+      event.target.value = '';
     } finally {
       setUploadingImage(false);
       // Clear the file input

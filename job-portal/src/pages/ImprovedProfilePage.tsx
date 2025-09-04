@@ -138,13 +138,35 @@ const ImprovedProfilePage: React.FC = () => {
 
   useEffect(() => {
     if (user) {
-      setProfile(user);
-      setEditedProfile({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        phone: user.phone || '',
-        location: user.location || '',
-        bio: user.bio || ''
+      // Only update profile state if user data has significantly changed
+      // This prevents unnecessary re-renders during profile picture uploads
+      setProfile(prevProfile => {
+        if (!prevProfile || prevProfile._id !== user._id || 
+            prevProfile.firstName !== user.firstName ||
+            prevProfile.lastName !== user.lastName ||
+            prevProfile.email !== user.email) {
+          return user as User;
+        }
+        // For minor updates like profile picture, merge with existing data
+        return {
+          ...prevProfile,
+          ...user,
+          profilePicture: (user as any).profilePicture || prevProfile.profilePicture
+        } as User;
+      });
+      
+      setEditedProfile(prevEdited => {
+        // Only update edited profile if it's empty or user has changed
+        if (!prevEdited.firstName && !prevEdited.lastName) {
+          return {
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            phone: (user as any).phone || '',
+            location: (user as any).location || '',
+            bio: (user as any).bio || ''
+          };
+        }
+        return prevEdited;
       });
     }
   }, [user]);
@@ -221,21 +243,28 @@ const ImprovedProfilePage: React.FC = () => {
       // Upload to server
       const updatedProfile = await userService.uploadProfilePicture(profile._id, formData);
       
-      // Update local state with the response
+      // Update local state with the response - preserve existing profile data
       setProfile(prevProfile => ({
         ...prevProfile,
         ...updatedProfile,
         profilePicture: updatedProfile.profilePicture || preview
       }));
       
-      // Update auth context
-      setUserData(updatedProfile);
+      // Update auth context with merged data to prevent losing other profile information
+      setUserData({
+        ...profile,
+        ...updatedProfile,
+        profilePicture: updatedProfile.profilePicture || preview
+      });
       
       setSuccessMessage('Profile picture updated successfully!');
       setTimeout(() => {
         setSuccessMessage('');
         setImagePreview(null);
       }, 3000);
+      
+      // Clear the file input to allow re-upload of the same file if needed
+      event.target.value = '';
 
     } catch (error) {
       console.error('Error uploading profile picture:', error);
@@ -247,6 +276,9 @@ const ImprovedProfilePage: React.FC = () => {
       
       setErrorMessage(errorMsg);
       setTimeout(() => setErrorMessage(''), 5000);
+      
+      // Clear the file input on error as well
+      event.target.value = '';
       
       // Reset preview on error
       setImagePreview(null);

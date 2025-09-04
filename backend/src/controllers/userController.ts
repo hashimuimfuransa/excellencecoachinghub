@@ -868,8 +868,15 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
       return;
     }
 
-    const user = await User.findById(userId)
-      .select('-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil -email');
+    // Check if user is viewing their own profile
+    const isOwnProfile = req.user?._id?.toString() === userId;
+
+    // Select fields based on whether it's own profile or not
+    const selectFields = isOwnProfile 
+      ? '-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil'
+      : '-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil -email';
+
+    const user = await User.findById(userId).select(selectFields);
 
     if (!user) {
       res.status(404).json({
@@ -879,22 +886,29 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
       return;
     }
 
-    // For privacy, limit what information is shown for other users
-    const publicUserData = {
-      _id: user._id,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      profilePicture: user.profilePicture,
-      jobTitle: user.jobTitle,
-      company: user.company,
-      location: user.location,
-      bio: user.bio,
-      skills: user.skills,
-      role: user.role,
-      userType: user.userType,
-      createdAt: user.createdAt,
-      isActive: user.isActive
-    };
+    let responseUserData;
+
+    if (isOwnProfile) {
+      // Return full profile data for own profile
+      responseUserData = user.toObject();
+    } else {
+      // For privacy, limit what information is shown for other users
+      responseUserData = {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profilePicture: user.profilePicture,
+        jobTitle: user.jobTitle,
+        company: user.company,
+        location: user.location,
+        bio: user.bio,
+        skills: user.skills,
+        role: user.role,
+        userType: user.userType,
+        createdAt: user.createdAt,
+        isActive: user.isActive
+      };
+    }
 
     // Calculate profile completion
     const profileCompletion = simpleProfileCompletionService.calculateCompletion(user);
@@ -902,7 +916,7 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
     res.status(200).json({
       success: true,
       data: { 
-        user: publicUserData,
+        user: responseUserData,
         profileCompletion
       }
     });

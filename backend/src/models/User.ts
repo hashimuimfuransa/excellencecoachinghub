@@ -9,6 +9,7 @@ export interface IUserDocument extends Document {
   firstName: string;
   lastName: string;
   role: UserRole;
+  userType?: 'student' | 'job_seeker' | 'employer';
   avatar?: string;
   isEmailVerified: boolean;
   emailVerificationToken?: string;
@@ -207,6 +208,11 @@ const userSchema = new Schema<IUserDocument>({
     enum: UserRole ? Object.values(UserRole) : ['admin', 'super_admin', 'teacher', 'student', 'professional', 'employer'],
     required: [true, 'User role is required'],
     default: UserRole.STUDENT
+  },
+  userType: {
+    type: String,
+    enum: ['student', 'job_seeker', 'employer'],
+    required: false
   },
   avatar: {
     type: String,

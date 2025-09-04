@@ -25,6 +25,12 @@ import {
   useMediaQuery,
   InputBase,
   Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Slide,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -66,7 +72,18 @@ import {
   ChevronRight,
   SearchOff,
   FilterList,
-  ArrowBack
+  ArrowBack,
+  ContactSupport,
+  Phone,
+  Email as EmailIcon,
+  WhatsApp,
+  Facebook,
+  Instagram,
+  LinkedIn,
+  YouTube,
+  VideoLibrary,
+  LocationOn,
+  Close
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Outlet, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -100,6 +117,7 @@ const MainLayout: React.FC = () => {
   const [hovered, setHovered] = useState(false); // Track hover state for mini drawer
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Mobile quick actions menu
   const [showMobileCreatePost, setShowMobileCreatePost] = useState(false); // Mobile create post popup
+  const [contactDialogOpen, setContactDialogOpen] = useState(false); // Contact dialog
   
 
   
@@ -437,6 +455,14 @@ const MainLayout: React.FC = () => {
       // Force logout even if there's an error
       navigate('/login', { replace: true });
     }
+  };
+
+  const handleContactOpen = () => {
+    setContactDialogOpen(true);
+  };
+
+  const handleContactClose = () => {
+    setContactDialogOpen(false);
   };
 
   const handleNavigation = (path: string) => {
@@ -1211,6 +1237,27 @@ const MainLayout: React.FC = () => {
                 >
                   <Mail fontSize="small" />
                 </Badge>
+              </IconButton>
+            </Tooltip>
+
+            {/* Contact Us */}
+            <Tooltip title="Contact Us">
+              <IconButton
+                onClick={handleContactOpen}
+                size="small"
+                sx={{
+                  color: 'text.secondary',
+                  position: 'relative',
+                  borderRadius: '12px',
+                  '&:hover': {
+                    color: 'success.main',
+                    bgcolor: alpha(muiTheme.palette.success.main, 0.08),
+                    transform: 'scale(1.05)',
+                  },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <ContactSupport fontSize="small" />
               </IconButton>
             </Tooltip>
 
@@ -2047,6 +2094,490 @@ const MainLayout: React.FC = () => {
           setShowMobileCreatePost(false);
         }}
       />
+
+      {/* Contact Dialog */}
+      <Dialog
+        open={contactDialogOpen}
+        onClose={handleContactClose}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '20px',
+            background: mode === 'dark' 
+              ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
+              : 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+            boxShadow: mode === 'dark'
+              ? '0 20px 60px rgba(0, 0, 0, 0.5)'
+              : '0 20px 60px rgba(0, 0, 0, 0.15)',
+          },
+        }}
+        TransitionComponent={Slide}
+        slotProps={{
+          backdrop: {
+            timeout: 500,
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            background: 'linear-gradient(45deg, #22c55e, #4ade80)',
+            color: 'white',
+            textAlign: 'center',
+            position: 'relative',
+            py: 3,
+          }}
+        >
+          <IconButton
+            onClick={handleContactClose}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: 'white',
+            }}
+          >
+            <Close />
+          </IconButton>
+          <Typography variant="h5" fontWeight={700}>
+            Get in Touch
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
+            We're here to help you succeed!
+          </Typography>
+        </DialogTitle>
+
+        <DialogContent sx={{ p: 0 }}>
+          {/* Contact Methods */}
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'primary.main' }}>
+              Contact Methods
+            </Typography>
+            <List>
+              <ListItem
+                onClick={() => window.open('tel:+250728123456', '_self')}
+                sx={{
+                  borderRadius: '12px',
+                  mb: 1,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(34,197,94,0.05)',
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  <Phone sx={{ color: '#4caf50' }} />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Call Us"
+                  secondary="+250 728 123 456"
+                  primaryTypographyProps={{ fontWeight: 600 }}
+                />
+              </ListItem>
+              <ListItem
+                onClick={() => window.open('https://wa.me/250728123456', '_blank')}
+                sx={{
+                  borderRadius: '12px',
+                  mb: 1,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(34,197,94,0.05)',
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  <WhatsApp sx={{ color: '#25d366' }} />
+                </ListItemIcon>
+                <ListItemText
+                  primary="WhatsApp"
+                  secondary="Chat with us instantly"
+                  primaryTypographyProps={{ fontWeight: 600 }}
+                />
+              </ListItem>
+              <ListItem
+                onClick={() => window.open('mailto:support@excellencecoaching.rw', '_self')}
+                sx={{
+                  borderRadius: '12px',
+                  mb: 1,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(34,197,94,0.05)',
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  <EmailIcon sx={{ color: '#1976d2' }} />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Email"
+                  secondary="support@excellencecoaching.rw"
+                  primaryTypographyProps={{ fontWeight: 600 }}
+                />
+              </ListItem>
+            </List>
+          </Box>
+
+          <Divider />
+
+          {/* Business Hours */}
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'primary.main' }}>
+              Business Hours
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <Schedule color="primary" sx={{ mr: 2 }} />
+              <Box>
+                <Typography variant="body2" fontWeight={600}>
+                  Monday - Friday: 8:00 AM - 6:00 PM (CAT)
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Saturday: 9:00 AM - 4:00 PM (CAT)
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Sunday: Closed
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+
+          <Divider />
+
+          {/* Location */}
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'primary.main' }}>
+              Location
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <LocationOn color="primary" sx={{ mr: 2 }} />
+              <Box>
+                <Typography variant="body2" fontWeight={600}>
+                  Kigali, Rwanda
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Serving clients across East Africa and globally
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+
+          <Divider />
+
+          {/* Social Media */}
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'primary.main' }}>
+              Follow Us
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Tooltip 
+                title={
+                  <Box>
+                    <Typography variant="body2" fontWeight={600}>
+                      Facebook
+                    </Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                      @excellencecoach4
+                    </Typography>
+                  </Box>
+                } 
+                arrow
+              >
+                <Box
+                  onClick={() => window.open('https://www.facebook.com/excellencecoach4?mibextid=LQQJ4d', '_blank')}
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    cursor: 'pointer',
+                    p: 1,
+                    borderRadius: '12px',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                      transform: 'scale(1.05)',
+                    },
+                  }}
+                >
+                  <IconButton
+                    sx={{
+                      bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                      '&:hover': {
+                        bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                      },
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <Facebook sx={{ color: '#1877f2' }} />
+                  </IconButton>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      fontSize: '0.65rem',
+                      textAlign: 'center',
+                      color: 'text.secondary',
+                      maxWidth: '80px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    @excellencecoach4
+                  </Typography>
+                </Box>
+              </Tooltip>
+              <Tooltip 
+                title={
+                  <Box>
+                    <Typography variant="body2" fontWeight={600}>
+                      Instagram
+                    </Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                      @excellence.coachi4
+                    </Typography>
+                  </Box>
+                } 
+                arrow
+              >
+                <Box
+                  onClick={() => window.open('https://www.instagram.com/excellence.coachi4?igsh=MTU5dHI2czF2ZWU1dg%3D%3D&utm_source=qr', '_blank')}
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    cursor: 'pointer',
+                    p: 1,
+                    borderRadius: '12px',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                      transform: 'scale(1.05)',
+                    },
+                  }}
+                >
+                  <IconButton
+                    sx={{
+                      bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                      '&:hover': {
+                        bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                      },
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <Instagram sx={{ color: '#e4405f' }} />
+                  </IconButton>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      fontSize: '0.65rem',
+                      textAlign: 'center',
+                      color: 'text.secondary',
+                      maxWidth: '80px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    @excellence.coachi4
+                  </Typography>
+                </Box>
+              </Tooltip>
+              <Tooltip 
+                title={
+                  <Box>
+                    <Typography variant="body2" fontWeight={600}>
+                      LinkedIn
+                    </Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                      @excellence-coaching-hub
+                    </Typography>
+                  </Box>
+                } 
+                arrow
+              >
+                <Box
+                  onClick={() => window.open('https://www.linkedin.com/company/excellence-coaching-hub/', '_blank')}
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    cursor: 'pointer',
+                    p: 1,
+                    borderRadius: '12px',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                      transform: 'scale(1.05)',
+                    },
+                  }}
+                >
+                  <IconButton
+                    sx={{
+                      bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                      '&:hover': {
+                        bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                      },
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <LinkedIn sx={{ color: '#0077b5' }} />
+                  </IconButton>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      fontSize: '0.65rem',
+                      textAlign: 'center',
+                      color: 'text.secondary',
+                      maxWidth: '80px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    @excellence-coaching-hub
+                  </Typography>
+                </Box>
+              </Tooltip>
+              <Tooltip 
+                title={
+                  <Box>
+                    <Typography variant="body2" fontWeight={600}>
+                      YouTube
+                    </Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                      @ExcellenceCoachingHub
+                    </Typography>
+                  </Box>
+                } 
+                arrow
+              >
+                <Box
+                  onClick={() => window.open('https://www.youtube.com/@ExcellenceCoachingHub', '_blank')}
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    cursor: 'pointer',
+                    p: 1,
+                    borderRadius: '12px',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                      transform: 'scale(1.05)',
+                    },
+                  }}
+                >
+                  <IconButton
+                    sx={{
+                      bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                      '&:hover': {
+                        bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                      },
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <YouTube sx={{ color: '#ff0000' }} />
+                  </IconButton>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      fontSize: '0.65rem',
+                      textAlign: 'center',
+                      color: 'text.secondary',
+                      maxWidth: '80px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    @ExcellenceCoachingHub
+                  </Typography>
+                </Box>
+              </Tooltip>
+              <Tooltip 
+                title={
+                  <Box>
+                    <Typography variant="body2" fontWeight={600}>
+                      TikTok
+                    </Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                      @excellence.coachi4
+                    </Typography>
+                  </Box>
+                } 
+                arrow
+              >
+                <Box
+                  onClick={() => window.open('https://www.tiktok.com/@excellence.coachi4?_t=ZM-8zCgEouFb8w&_r=1', '_blank')}
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    cursor: 'pointer',
+                    p: 1,
+                    borderRadius: '12px',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                      transform: 'scale(1.05)',
+                    },
+                  }}
+                >
+                  <IconButton
+                    sx={{
+                      bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                      '&:hover': {
+                        bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                      },
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <VideoLibrary sx={{ color: '#ff0050' }} />
+                  </IconButton>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      fontSize: '0.65rem',
+                      textAlign: 'center',
+                      color: 'text.secondary',
+                      maxWidth: '80px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    @excellence.coachi4
+                  </Typography>
+                </Box>
+              </Tooltip>
+            </Box>
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button
+            onClick={handleContactClose}
+            variant="contained"
+            fullWidth
+            sx={{
+              background: 'linear-gradient(45deg, #22c55e, #4ade80)',
+              boxShadow: '0 4px 15px rgba(34, 197, 94, 0.3)',
+              '&:hover': {
+                background: 'linear-gradient(45deg, #16a34a, #22c55e)',
+                boxShadow: '0 6px 20px rgba(34, 197, 94, 0.4)',
+              },
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
 
     </Box>
   );

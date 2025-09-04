@@ -7,8 +7,62 @@ const EMAILJS_CONFIG = {
   PASSWORD_RESET_TEMPLATE_ID: 'template_9apzq9s', // Your EmailJS template ID for password reset
   WELCOME_TEMPLATE_ID: 'template_sikm5se', // Your EmailJS template ID for welcome email
   JOB_APPLICATION_TEMPLATE_ID: 'template_btwevvq', // Your EmailJS template ID for job applications
-  JOB_RECOMMENDATION_TEMPLATE_ID: 'template_f0oaoz8', // Your EmailJS template ID for job recommendations - THIS IS THE IMPORTANT ONE!
+  JOB_RECOMMENDATION_TEMPLATE_ID: 'template_f0oaoz8', // NEW SIMPLE template for job recommendations
+  JOB_RECOMMENDATION_TEMPLATE_ID_OLD: 'template_f0oaoz8', // OLD complex template (backup)
   PUBLIC_KEY: 'VLY7_POWX21gRHMof' // Your EmailJS public key from .env
+};
+
+// Daily email tracking with persistent storage
+const DAILY_EMAIL_STORAGE_KEY = 'exjobnet_daily_email_tracker';
+
+// Helper functions for persistent daily email tracking
+const loadDailyEmailTracker = (): Map<string, string> => {
+  try {
+    const stored = localStorage.getItem(DAILY_EMAIL_STORAGE_KEY);
+    if (stored) {
+      const data = JSON.parse(stored);
+      return new Map(Object.entries(data));
+    }
+  } catch (error) {
+    console.warn('Failed to load daily email tracker from localStorage:', error);
+  }
+  return new Map<string, string>();
+};
+
+const saveDailyEmailTracker = (tracker: Map<string, string>): void => {
+  try {
+    const data = Object.fromEntries(tracker);
+    localStorage.setItem(DAILY_EMAIL_STORAGE_KEY, JSON.stringify(data));
+  } catch (error) {
+    console.warn('Failed to save daily email tracker to localStorage:', error);
+  }
+};
+
+// Clean up old entries (older than 7 days) to prevent storage bloat
+const cleanupOldEntries = (tracker: Map<string, string>): void => {
+  const today = new Date();
+  const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const cutoffDate = sevenDaysAgo.toISOString().split('T')[0];
+  
+  let cleaned = false;
+  for (const [email, dateStr] of tracker.entries()) {
+    if (dateStr < cutoffDate) {
+      tracker.delete(email);
+      cleaned = true;
+    }
+  }
+  
+  if (cleaned) {
+    saveDailyEmailTracker(tracker);
+    console.log('🧹 Cleaned up old daily email tracker entries');
+  }
+};
+
+// Initialize tracker with persistent storage
+const getDailyEmailTracker = (): Map<string, string> => {
+  const tracker = loadDailyEmailTracker();
+  cleanupOldEntries(tracker);
+  return tracker;
 };
 
 // Initialize EmailJS
@@ -187,6 +241,125 @@ export const sendWelcomeEmail = async (
 export const isValidEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
+};
+
+// Daily email limit checking
+export const canSendDailyEmail = (email: string): boolean => {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const tracker = getDailyEmailTracker();
+  const lastSent = tracker.get(email);
+  
+  // If never sent before or last sent was not today, allow sending
+  if (!lastSent || lastSent !== today) {
+    return true;
+  }
+  
+  console.log(`📧 Daily email limit reached for ${email}. Last sent: ${lastSent}`);
+  return false;
+};
+
+// Mark email as sent today
+export const markEmailSentToday = (email: string): void => {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const tracker = getDailyEmailTracker();
+  tracker.set(email, today);
+  saveDailyEmailTracker(tracker);
+  console.log(`📧 Marked email sent today for ${email}: ${today}`);
+};
+
+// Get daily email status
+export const getDailyEmailStatus = (email: string): { canSend: boolean; lastSent?: string } => {
+  const tracker = getDailyEmailTracker();
+  const lastSent = tracker.get(email);
+  
+  return {
+    canSend: canSendDailyEmail(email),
+    lastSent: lastSent
+  };
+};
+
+// Clear daily email tracker (useful for testing or manual reset)
+export const clearDailyEmailTracker = (): void => {
+  try {
+    localStorage.removeItem(DAILY_EMAIL_STORAGE_KEY);
+    console.log('🧹 Daily email tracker cleared from localStorage');
+  } catch (error) {
+    console.warn('Failed to clear daily email tracker:', error);
+  }
+};
+
+// Get all tracked emails and their last sent dates (for debugging)
+export const getAllTrackedEmails = (): Record<string, string> => {
+  const tracker = getDailyEmailTracker();
+  return Object.fromEntries(tracker);
+};
+
+// Force reset email tracking for a specific email (useful for testing)
+export const resetEmailTracking = (email: string): void => {
+  const tracker = getDailyEmailTracker();
+  tracker.delete(email);
+  saveDailyEmailTracker(tracker);
+  console.log(`🔄 Reset email tracking for ${email}`);
+};
+
+// Validate EmailJS configuration
+export const validateEmailJSConfig = (): { isValid: boolean; errors: string[] } => {
+  const errors: string[] = [];
+  
+  if (!EMAILJS_CONFIG.SERVICE_ID || EMAILJS_CONFIG.SERVICE_ID === 'YOUR_SERVICE_ID') {
+    errors.push('SERVICE_ID is not configured');
+  }
+  
+  if (!EMAILJS_CONFIG.PUBLIC_KEY || EMAILJS_CONFIG.PUBLIC_KEY === 'YOUR_EMAILJS_PUBLIC_KEY') {
+    errors.push('PUBLIC_KEY is not configured');
+  }
+  
+  if (!EMAILJS_CONFIG.JOB_RECOMMENDATION_TEMPLATE_ID || EMAILJS_CONFIG.JOB_RECOMMENDATION_TEMPLATE_ID === 'YOUR_TEMPLATE_ID') {
+    errors.push('JOB_RECOMMENDATION_TEMPLATE_ID is not configured');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+// Retry function for EmailJS sends
+const retryEmailSend = async (
+  serviceId: string,
+  templateId: string,
+  templateParams: any,
+  publicKey: string,
+  maxRetries: number = 3,
+  delayMs: number = 2000
+): Promise<any> => {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`📧 Attempt ${attempt}/${maxRetries} to send email...`);
+      const result = await emailjs.send(serviceId, templateId, templateParams, publicKey);
+      return result;
+    } catch (error: any) {
+      lastError = error;
+      console.warn(`⚠️ Attempt ${attempt}/${maxRetries} failed:`, error.text || error.message);
+      
+      // Don't retry on certain errors
+      if (error.status === 400 || error.status === 401 || error.status === 403) {
+        console.error(`❌ Non-retryable error (${error.status}), aborting retries`);
+        throw error;
+      }
+      
+      // Wait before retrying (except on last attempt)
+      if (attempt < maxRetries) {
+        console.log(`⏳ Waiting ${delayMs}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        delayMs *= 1.5; // Exponential backoff
+      }
+    }
+  }
+  
+  throw lastError;
 };
 
 // Generate a simple verification code
@@ -413,85 +586,162 @@ export const sendJobRecommendationEmails = async (
 
   console.log(`📬 Processing ${emailRequests.length} job recommendation emails...`);
 
+  // Validate EmailJS configuration first
+  const configValidation = validateEmailJSConfig();
+  if (!configValidation.isValid) {
+    console.error('❌ EmailJS configuration is incomplete:', configValidation.errors);
+    results.success = false;
+    results.failed = emailRequests.length;
+    emailRequests.forEach(request => {
+      results.errors.push({
+        email: request.user.email,
+        error: `EmailJS configuration errors: ${configValidation.errors.join(', ')}`
+      });
+    });
+    return results;
+  }
+
+  // Validate email addresses and check daily limits
   for (const emailRequest of emailRequests) {
-    try {
-      const { user, recommendations } = emailRequest;
-
-      // Template parameters that match your EmailJS template exactly
-      const templateParams = {
-        // Required by your template
-        to_email: user.email,
-        to_name: user.firstName || user.name || 'Job Seeker',
-        firstName: user.firstName || user.name || 'there',
-        totalJobs: recommendations.length.toString(),
-        if_plural_jobs: recommendations.length > 1 ? 's' : '',
-        
-        // Email meta
-        from_name: 'ExJobNet Job Portal',
-        reply_to: 'noreply@exjobnet.com',
-        subject: `${recommendations.length} New Job Match${recommendations.length > 1 ? 'es' : ''} Found`
-      };
-
-      // Add job parameters to match your EmailJS template exactly (up to 5 jobs)
-      recommendations.slice(0, 5).forEach((job, index) => {
-        const num = index + 1;
-        
-        // Match your template variables exactly
-        templateParams[`job${num}_title`] = job.title || '';
-        templateParams[`job${num}_matchPercentage`] = job.matchPercentage || 0;
-        templateParams[`job${num}_company`] = job.company || '';
-        templateParams[`job${num}_location`] = job.location || '';
-        templateParams[`job${num}_jobType`] = job.jobType || '';
-        templateParams[`job${num}_salary`] = job.salary || ''; // Optional in your template
-        templateParams[`job${num}_skills`] = job.skills ? job.skills.join(', ') : ''; // Optional in your template
-      });
-
-      // Send email using EmailJS with your template_f0oaoz8
-      console.log(`📧 Sending job recommendations to ${user.email} (${recommendations.length} jobs)`);
-      console.log(`📧 Using EmailJS Template ID: ${EMAILJS_CONFIG.JOB_RECOMMENDATION_TEMPLATE_ID}`);
-      console.log(`📧 Using EmailJS Service ID: ${EMAILJS_CONFIG.SERVICE_ID}`);
-      // Ensure all parameters are clean strings
-      const cleanParams = {};
-      for (const [key, value] of Object.entries(templateParams)) {
-        cleanParams[key] = String(value || '').trim();
-      }
-
-      console.log(`📧 Clean template parameters:`, {
-        to_email: cleanParams.to_email,
-        firstName: cleanParams.firstName,
-        totalJobs: cleanParams.totalJobs,
-        if_plural_jobs: cleanParams.if_plural_jobs,
-        job1_title: cleanParams.job1_title || 'No job1',
-        job1_matchPercentage: cleanParams.job1_matchPercentage || 'No match%',
-        parameterCount: Object.keys(cleanParams).length
-      });
-
-      const result = await emailjs.send(
-        EMAILJS_CONFIG.SERVICE_ID,
-        EMAILJS_CONFIG.JOB_RECOMMENDATION_TEMPLATE_ID,
-        cleanParams,
-        EMAILJS_CONFIG.PUBLIC_KEY
-      );
-
-      if (result.status === 200) {
-        console.log(`✅ Job recommendation email sent successfully to ${user.email}`);
-        results.sent++;
-      } else {
-        throw new Error(`EmailJS returned status ${result.status}`);
-      }
-
-      // Add small delay between emails to avoid rate limits
-      if (emailRequests.length > 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
-      }
-
-    } catch (error: any) {
-      console.error(`❌ Failed to send job recommendations to ${emailRequest.user.email}:`, error);
+    if (!isValidEmail(emailRequest.user.email)) {
+      console.error(`❌ Invalid email address: ${emailRequest.user.email}`);
       results.failed++;
       results.success = false;
       results.errors.push({
         email: emailRequest.user.email,
-        error: error?.message || 'Unknown error'
+        error: 'Invalid email address format'
+      });
+      continue;
+    }
+
+    // Check daily email limit
+    if (!canSendDailyEmail(emailRequest.user.email)) {
+      console.log(`📧 Skipping ${emailRequest.user.email} - daily email already sent`);
+      results.failed++;
+      results.success = false;
+      results.errors.push({
+        email: emailRequest.user.email,
+        error: 'Daily email limit reached - one email per day allowed'
+      });
+      continue;
+    }
+
+    try {
+      const { user, recommendations } = emailRequest;
+
+      // Validate we have recommendations
+      if (!recommendations || recommendations.length === 0) {
+        throw new Error('No job recommendations provided');
+      }
+
+      // SIMPLE Template parameters - using minimal, safe variables
+      // Create a simple job list string
+      let jobsText = '';
+      const topJobs = recommendations.slice(0, 3); // Only show top 3 jobs
+      
+      topJobs.forEach((job, index) => {
+        jobsText += `${index + 1}. ${job.title} at ${job.company}\n`;
+        jobsText += `   Location: ${job.location}\n`;
+        jobsText += `   Match: ${Math.round(job.matchPercentage || 0)}%\n\n`;
+      });
+      
+      const templateParams = {
+        // Recipient email - MUST match EmailJS template "To Email" field
+        to_email: user.email,
+        
+        // Simple template variables (NO complex conditionals or loops)
+        user_name: user.firstName || user.name || 'Job Seeker',
+        job_count: recommendations.length.toString(),
+        jobs_list: jobsText.trim(),
+        platform_name: 'ExJobNet',
+        
+        // Email metadata
+        from_name: 'ExJobNet Job Recommendations',
+        message: `Hi ${user.firstName || 'there'}! We found ${recommendations.length} new job opportunities that match your profile. Check them out below:`,
+        subject: `${recommendations.length} New Job Matches for You!`
+      };
+
+      // Ensure all parameters are clean strings and remove undefined/null values
+      const cleanParams: Record<string, string> = {};
+      for (const [key, value] of Object.entries(templateParams)) {
+        if (value !== undefined && value !== null) {
+          cleanParams[key] = String(value).trim().replace(/[\r\n\t]/g, ' ');
+        } else {
+          cleanParams[key] = '';
+        }
+      }
+
+      // Log clean parameters for debugging
+      console.log(`📧 Sending job recommendations to ${user.email} (${recommendations.length} jobs)`);
+      console.log(`📧 Using EmailJS Template ID: ${EMAILJS_CONFIG.JOB_RECOMMENDATION_TEMPLATE_ID}`);
+      console.log(`📧 Using EmailJS Service ID: ${EMAILJS_CONFIG.SERVICE_ID}`);
+      console.log(`📧 Recipient email validation:`, {
+        originalEmail: user.email,
+        isValidEmail: isValidEmail(user.email),
+        emailLength: user.email?.length || 0
+      });
+      console.log(`📧 Simple email parameters being sent:`, {
+        to_email: cleanParams.to_email,
+        user_name: cleanParams.user_name,
+        job_count: cleanParams.job_count,
+        platform_name: cleanParams.platform_name,
+        parameterCount: Object.keys(cleanParams).length
+      });
+
+      // Send email with retry mechanism
+      const result = await retryEmailSend(
+        EMAILJS_CONFIG.SERVICE_ID,
+        EMAILJS_CONFIG.JOB_RECOMMENDATION_TEMPLATE_ID,
+        cleanParams,
+        EMAILJS_CONFIG.PUBLIC_KEY,
+        3, // max retries
+        1000 // initial delay
+      );
+
+      // Check result status
+      if (result.status === 200) {
+        console.log(`✅ Job recommendation email sent successfully to ${user.email}`);
+        
+        // Mark as sent today to prevent duplicate emails
+        markEmailSentToday(user.email);
+        
+        results.sent++;
+      } else {
+        throw new Error(`EmailJS returned status ${result.status}: ${result.text || 'Unknown error'}`);
+      }
+
+      // Add delay between emails to avoid rate limits (minimum 500ms)
+      if (emailRequests.length > 1) {
+        await new Promise(resolve => setTimeout(resolve, 1500)); // 1.5 second delay
+      }
+
+    } catch (error: any) {
+      console.error(`❌ Failed to send job recommendations to ${emailRequest.user.email}:`, error);
+      
+      // Extract more detailed error information
+      let errorMessage = 'Unknown error';
+      if (error.text) {
+        errorMessage = error.text;
+      } else if (error.message) {
+        errorMessage = error.message;
+      } else if (error.status) {
+        errorMessage = `EmailJS status ${error.status}`;
+      }
+
+      // Log full error details for debugging
+      console.error(`❌ Full error details:`, {
+        message: error.message,
+        text: error.text,
+        status: error.status,
+        name: error.name,
+        stack: error.stack
+      });
+
+      results.failed++;
+      results.success = false;
+      results.errors.push({
+        email: emailRequest.user.email,
+        error: errorMessage
       });
     }
   }
@@ -506,44 +756,40 @@ export const sendJobRecommendationEmails = async (
 };
 
 /**
- * Test function to verify EmailJS job recommendations with your template_f0oaoz8
- * Uses parameters that match your template exactly
+ * Test function to verify EmailJS job recommendations with SIMPLE template
+ * Uses minimal parameters to avoid template variable corruption
  */
 export const testJobRecommendationEmail = async (testEmail: string): Promise<boolean> => {
   try {
-    console.log(`🧪 Testing Job Recommendation Email with template_f0oaoz8 to: ${testEmail}`);
+    console.log(`🧪 Testing Simple Job Recommendation Email to: ${testEmail}`);
     
-    // Parameters that match your EmailJS template exactly
+    // SIMPLE template parameters that won't cause corruption
     const testParams = {
-      // Required by your template
+      // Recipient email - MUST match EmailJS template "To Email" field
       to_email: testEmail,
-      to_name: 'Test User',
-      firstName: 'Test User',
-      totalJobs: '2',
-      if_plural_jobs: 's',
       
-      // Email meta
-      from_name: 'ExJobNet Job Portal',
-      reply_to: 'noreply@exjobnet.com',
-      subject: '2 New Job Matches Found',
+      // Simple variables (no loops or conditionals)
+      user_name: 'Test User',
+      job_count: '3',
+      platform_name: 'ExJobNet',
       
-      // Job 1 - matches your template variables exactly
-      job1_title: 'Senior Software Developer',
-      job1_matchPercentage: 85,
-      job1_company: 'TechCorp Rwanda',
-      job1_location: 'Kigali, Rwanda',
-      job1_jobType: 'Full-time',
-      job1_salary: '$60,000 - $80,000',
-      job1_skills: 'JavaScript, React, Node.js',
+      // Simple job list as plain text
+      jobs_list: `1. Senior Software Developer at TechCorp Rwanda
+   Location: Kigali, Rwanda  
+   Match: 85%
+
+2. Frontend Engineer at Innovation Hub
+   Location: Remote
+   Match: 72%
+
+3. Full Stack Developer at StartupXYZ
+   Location: Nairobi, Kenya
+   Match: 68%`,
       
-      // Job 2 - matches your template variables exactly
-      job2_title: 'Frontend Engineer',
-      job2_matchPercentage: 72,
-      job2_company: 'Innovation Hub',
-      job2_location: 'Remote',
-      job2_jobType: 'Contract',
-      job2_salary: '$45,000',
-      job2_skills: 'Vue.js, CSS, HTML'
+      // Email content
+      message: 'Hi Test User! We found 3 new job opportunities that match your profile. Check them out below:',
+      from_name: 'ExJobNet Job Recommendations',
+      subject: '3 New Job Matches for You!'
     };
 
     console.log(`🧪 Sending with template-matched parameters:`, testParams);
@@ -570,6 +816,88 @@ export const testJobRecommendationEmail = async (testEmail: string): Promise<boo
   }
 };
 
+/**
+ * Simple test function to verify the basic email sending works
+ * This will help identify if the issue is with the recipient email parameter
+ */
+export const testBasicEmailSend = async (testEmail: string): Promise<{ success: boolean; error?: string }> => {
+  try {
+    console.log('🧪 Testing basic email send...');
+    
+    const basicParams = {
+      to_email: testEmail,
+      email: testEmail, // backup
+      firstName: 'Test User',
+      totalJobs: '1',
+      if_plural_jobs: '',
+      job1_title: 'Test Job',
+      job1_matchPercentage: '75',
+      job1_company: 'Test Company',
+      job1_location: 'Test Location',
+      job1_jobType: 'Full-time',
+      from_name: 'ExJobNet Test'
+    };
+    
+    console.log('📧 Test parameters:', basicParams);
+    
+    const result = await emailjs.send(
+      EMAILJS_CONFIG.SERVICE_ID,
+      EMAILJS_CONFIG.JOB_RECOMMENDATION_TEMPLATE_ID,
+      basicParams,
+      EMAILJS_CONFIG.PUBLIC_KEY
+    );
+    
+    if (result.status === 200) {
+      console.log('✅ Basic email test SUCCESS!');
+      return { success: true };
+    } else {
+      return { success: false, error: `Status: ${result.status}` };
+    }
+    
+  } catch (error: any) {
+    console.error('❌ Basic email test failed:', error);
+    return { 
+      success: false, 
+      error: error.text || error.message || 'Unknown error' 
+    };
+  }
+};
+
+/**
+ * Instructions for fixing EmailJS template configuration
+ */
+export const getEmailJSConfigInstructions = (): string => {
+  return `
+🔧 SIMPLE EmailJS Template Setup Instructions:
+
+1. Go to your EmailJS dashboard: https://dashboard.emailjs.com/
+2. Create a NEW template with ID: template_simple_jobs
+3. Configure the template:
+   - To Email: {{to_email}}
+   - From Name: {{from_name}}
+   - Subject: {{subject}}
+
+4. Template Content (SIMPLE HTML - no complex loops):
+   <h2>🎯 Job Recommendations from {{platform_name}}</h2>
+   <p>{{message}}</p>
+   
+   <h3>📋 Your Job Matches ({{job_count}} total):</h3>
+   <pre>{{jobs_list}}</pre>
+   
+   <p>Visit <a href="https://exjobnet.com">ExJobNet</a> to apply!</p>
+   <p>Best regards,<br>The ExJobNet Team</p>
+
+5. Save the template and test.
+
+✅ This simple template avoids variable corruption by:
+- Using plain text variables (no conditionals like {{#if}})
+- No loops ({{#each}})
+- Simple string substitution only
+
+Current template ID: ${EMAILJS_CONFIG.JOB_RECOMMENDATION_TEMPLATE_ID}
+  `;
+};
+
 const jobPortalEmailjsService = {
   initEmailJS,
   sendPasswordResetEmail,
@@ -577,9 +905,16 @@ const jobPortalEmailjsService = {
   sendJobApplicationEmail,
   sendJobRecommendationEmails,
   testJobRecommendationEmail,
+  testBasicEmailSend,
+  getEmailJSConfigInstructions,
   isValidEmail,
+  validateEmailJSConfig,
   generateVerificationCode,
-  testEmailJSConnection
+  testEmailJSConnection,
+  // Daily email limit functions
+  canSendDailyEmail,
+  markEmailSentToday,
+  getDailyEmailStatus
 };
 
 export default jobPortalEmailjsService;

@@ -26,6 +26,7 @@ import { proctoringService } from '@/services/proctoringService';
 import { validateCloudinaryConfig } from '@/config/cloudinary';
 import videoProviderService from '@/services/videoProviderService';
 import { JobScrapingScheduler } from '@/services/jobScrapingScheduler';
+import { JobRecommendationEmailService } from '@/services/jobRecommendationEmailService';
 
 // Import routes
 import authRoutes from '@/routes/authRoutes';
@@ -82,6 +83,8 @@ import paymentRequestRoutes from '@/routes/paymentRequestRoutes';
 import jobScrapingRoutes from '@/routes/jobScrapingRoutes';
 import smartTestRoutes from '@/routes/smartTestRoutes';
 import cvBuilderRoutes from '@/routes/cvBuilderRoutes';
+import jobRecommendationRoutes from '@/routes/jobRecommendationRoutes';
+import jobEmailRoutes from '@/routes/jobEmailRoutes';
 
 // Social Network routes
 import postRoutes from '@/routes/postRoutes';
@@ -715,6 +718,8 @@ app.use('/api/profiles', profileRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/job-scraping', jobScrapingRoutes);
 app.use('/api/smart-tests', smartTestRoutes);
+app.use('/api/job-recommendations', jobRecommendationRoutes);
+app.use('/api/job-emails', jobEmailRoutes);
 
 // Test Request routes
 app.use('/api/test-requests', testRequestRoutes);
@@ -905,6 +910,9 @@ const startServer = async () => {
       
       // Start the job scraping scheduler
       JobScrapingScheduler.start();
+      
+      // Start the job recommendation email scheduler
+      JobRecommendationEmailService.start();
     }).on('error', (error: Error) => {
       console.error('❌ Failed to bind to port:', error);
       if (error.message.includes('EADDRINUSE')) {

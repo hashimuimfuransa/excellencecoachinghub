@@ -23,10 +23,67 @@ import { protect } from '../middleware/auth';
 import { requireAdmin } from '../middleware/roleAuth';
 import { validateRequest } from '../middleware/validateRequest';
 import { uploadAvatar as multerUpload } from '../config/cloudinary';
+import { User } from '../models/User';
 
 const router = Router();
 
-// All routes require authentication
+// Public routes (no authentication required)
+router.get('/unsubscribe-job-emails/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Update user to disable email notifications
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { emailNotifications: false },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Send a simple HTML response
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Unsubscribed - ExJobNet</title>
+        <style>
+          body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; text-align: center; }
+          .container { background-color: #f8f9fa; padding: 40px; border-radius: 10px; }
+          .success { color: #28a745; font-size: 24px; margin-bottom: 20px; }
+          .message { color: #666; font-size: 16px; line-height: 1.6; }
+          .button { display: inline-block; background-color: #1976d2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="success">✅ Successfully Unsubscribed</div>
+          <div class="message">
+            <p>You have been unsubscribed from job recommendation emails.</p>
+            <p>You can re-enable email notifications anytime by logging into your account and updating your preferences.</p>
+          </div>
+          <a href="${process.env.JOB_PORTAL_URL || 'http://localhost:3000'}" class="button">Return to ExJobNet</a>
+        </div>
+      </body>
+      </html>
+    `;
+
+    res.send(html);
+  } catch (error) {
+    console.error('Error unsubscribing user from job emails:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// All routes below require authentication
 router.use(protect);
 
 // Validation schemas

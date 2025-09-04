@@ -174,21 +174,21 @@ const FeedSidebar: React.FC = () => {
               <ListItem key={connection._id} sx={{ px: 0, py: isTablet ? 0.75 : 1 }}>
                 <ListItemAvatar>
                   <Avatar
-                    src={connection.user.profilePicture}
+                    src={connection.user?.profilePicture}
                     sx={{ width: isTablet ? 28 : 32, height: isTablet ? 28 : 32 }}
                   >
-                    {connection.user.firstName[0]}{connection.user.lastName[0]}
+                    {connection.user?.firstName?.[0]}{connection.user?.lastName?.[0]}
                   </Avatar>
                 </ListItemAvatar>
                 <ListItemText
                   primary={
                     <Typography variant="body2" sx={{ fontWeight: 500, fontSize: isTablet ? '0.8rem' : '0.875rem' }}>
-                      {connection.user.firstName} {connection.user.lastName}
+                      {connection.user?.firstName} {connection.user?.lastName}
                     </Typography>
                   }
                   secondary={
                     <Typography variant="caption" color="text.secondary" sx={{ fontSize: isTablet ? '0.7rem' : '0.75rem' }}>
-                      {connection.user.jobTitle || 'Professional'}
+                      {connection.user?.jobTitle || 'Professional'}
                     </Typography>
                   }
                 />

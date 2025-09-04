@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface INotification extends Document {
   recipient: mongoose.Types.ObjectId;
-  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'event_reminder' | 'payment_approved' | 'payment_rejected' | 'payment_success' | 'payment_failed' | 'test_request_approved' | 'test_request_rejected' | 'tests_generated' | 'application_received' | 'application_status_update';
+  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'job_recommendations' | 'event_reminder' | 'payment_approved' | 'payment_rejected' | 'payment_success' | 'payment_failed' | 'test_request_approved' | 'test_request_rejected' | 'tests_generated' | 'application_received' | 'application_status_update';
   title: string;
   message: string;
   data?: {
@@ -35,7 +35,7 @@ const NotificationSchema = new Schema<INotification>({
   },
   type: {
     type: String,
-    enum: ['connection_accepted', 'connection_request', 'message', 'job_match', 'event_reminder', 'payment_approved', 'payment_rejected', 'payment_success', 'payment_failed', 'test_request_approved', 'test_request_rejected', 'tests_generated', 'application_received', 'application_status_update'],
+    enum: ['connection_accepted', 'connection_request', 'message', 'job_match', 'job_recommendations', 'event_reminder', 'payment_approved', 'payment_rejected', 'payment_success', 'payment_failed', 'test_request_approved', 'test_request_rejected', 'tests_generated', 'application_received', 'application_status_update'],
     required: true
   },
   title: {

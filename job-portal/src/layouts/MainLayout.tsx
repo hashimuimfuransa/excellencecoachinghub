@@ -890,27 +890,29 @@ const MainLayout: React.FC = () => {
               <MenuIcon />
             </IconButton>
 
-            {/* Mobile Back Button */}
+            {/* Back Button */}
             {shouldShowBackButton() && (
-              <IconButton
-                onClick={handleBackNavigation}
-                sx={{ 
-                  display: { sm: 'none' },
-                  p: 1.5,
-                  borderRadius: '16px',
-                  bgcolor: alpha(muiTheme.palette.secondary.main, 0.08),
-                  border: `1px solid ${alpha(muiTheme.palette.secondary.main, 0.12)}`,
-                  color: 'secondary.main',
-                  '&:hover': {
-                    bgcolor: alpha(muiTheme.palette.secondary.main, 0.15),
-                    transform: 'scale(1.05)',
-                    boxShadow: `0 4px 15px ${alpha(muiTheme.palette.secondary.main, 0.2)}`
-                  },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                }}
-              >
-                <ArrowBack />
-              </IconButton>
+              <Tooltip title="Go Back">
+                <IconButton
+                  onClick={handleBackNavigation}
+                  sx={{ 
+                    mr: 1,
+                    p: 1.5,
+                    borderRadius: '16px',
+                    bgcolor: alpha(muiTheme.palette.secondary.main, 0.08),
+                    border: `1px solid ${alpha(muiTheme.palette.secondary.main, 0.12)}`,
+                    color: 'secondary.main',
+                    '&:hover': {
+                      bgcolor: alpha(muiTheme.palette.secondary.main, 0.15),
+                      transform: 'scale(1.05)',
+                      boxShadow: `0 4px 15px ${alpha(muiTheme.palette.secondary.main, 0.2)}`
+                    },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                  }}
+                >
+                  <ArrowBack />
+                </IconButton>
+              </Tooltip>
             )}
 
             {/* Desktop Sidebar Toggle */}
@@ -935,29 +937,7 @@ const MainLayout: React.FC = () => {
               </IconButton>
             )}
 
-            {/* Back Button */}
-            {shouldShowBackButton() && (
-              <Tooltip title="Go Back">
-                <IconButton
-                  onClick={handleBackNavigation}
-                  sx={{
-                    p: 1.5,
-                    borderRadius: '16px',
-                    bgcolor: alpha(muiTheme.palette.secondary.main, 0.08),
-                    border: `1px solid ${alpha(muiTheme.palette.secondary.main, 0.12)}`,
-                    color: 'secondary.main',
-                    '&:hover': {
-                      bgcolor: alpha(muiTheme.palette.secondary.main, 0.15),
-                      transform: 'scale(1.05)',
-                      boxShadow: `0 4px 15px ${alpha(muiTheme.palette.secondary.main, 0.2)}`
-                    },
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                  }}
-                >
-                  <ArrowBack />
-                </IconButton>
-              </Tooltip>
-            )}
+
             
             {/* Modern Logo */}
             <Box 
@@ -2155,7 +2135,7 @@ const MainLayout: React.FC = () => {
             </Typography>
             <List>
               <ListItem
-                onClick={() => window.open('tel:+250728123456', '_self')}
+                onClick={() => window.open('tel:+250788535156', '_self')}
                 sx={{
                   borderRadius: '12px',
                   mb: 1,
@@ -2171,12 +2151,12 @@ const MainLayout: React.FC = () => {
                 </ListItemIcon>
                 <ListItemText
                   primary="Call Us"
-                  secondary="+250 728 123 456"
+                  secondary="+250 0788535156"
                   primaryTypographyProps={{ fontWeight: 600 }}
                 />
               </ListItem>
               <ListItem
-                onClick={() => window.open('https://wa.me/250728123456', '_blank')}
+                onClick={() => window.open('https://wa.me/250788535156?text=Hello%20ExJobNet', '_blank')}
                 sx={{
                   borderRadius: '12px',
                   mb: 1,
@@ -2197,7 +2177,7 @@ const MainLayout: React.FC = () => {
                 />
               </ListItem>
               <ListItem
-                onClick={() => window.open('mailto:support@excellencecoaching.rw', '_self')}
+                onClick={() => window.open('mailto:info@excellencecoachinghub.com', '_self')}
                 sx={{
                   borderRadius: '12px',
                   mb: 1,
@@ -2213,7 +2193,7 @@ const MainLayout: React.FC = () => {
                 </ListItemIcon>
                 <ListItemText
                   primary="Email"
-                  secondary="support@excellencecoaching.rw"
+                  secondary="info@excellencecoachinghub.com"
                   primaryTypographyProps={{ fontWeight: 600 }}
                 />
               </ListItem>

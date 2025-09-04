@@ -144,85 +144,108 @@ const LoginPage: React.FC = () => {
 
   const services = [
     {
-      icon: <WorkOutline sx={{ fontSize: 24, color: '#4caf50' }} />,
+      icon: <WorkOutline sx={{ fontSize: 28, color: '#ffffff' }} />,
       title: 'Job Portal',
       description: 'Access thousands of job opportunities across Africa',
-      category: 'Jobs & Applications'
+      category: 'Jobs & Applications',
+      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      bgColor: 'rgba(102, 126, 234, 0.1)'
     },
     {
-      icon: <Assessment sx={{ fontSize: 24, color: '#2196f3' }} />,
+      icon: <Assessment sx={{ fontSize: 28, color: '#ffffff' }} />,
       title: 'Psychometric Tests',
       description: 'Advanced personality and skills assessments',
-      category: 'Testing & Assessment'
+      category: 'Testing & Assessment',
+      gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      bgColor: 'rgba(240, 147, 251, 0.1)'
     },
-       {
-      icon: <Assessment sx={{ fontSize: 24, color: '#2196f3' }} />,
+    {
+      icon: <Assessment sx={{ fontSize: 28, color: '#ffffff' }} />,
       title: 'Smart Exams',
       description: 'Advanced job specific exams',
-      category: 'Testing & Assessment'
+      category: 'Testing & Assessment',
+      gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+      bgColor: 'rgba(79, 172, 254, 0.1)'
     },
     {
-      icon: <Psychology sx={{ fontSize: 24, color: '#9c27b0' }} />,
-      title: 'Interviews',
+      icon: <Psychology sx={{ fontSize: 28, color: '#ffffff' }} />,
+      title: 'AI Interviews',
       description: 'Practice with intelligent interview simulations',
-      category: 'Testing & Assessment'
+      category: 'AI Technology',
+      gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+      bgColor: 'rgba(67, 233, 123, 0.1)'
     },
-     {
-      icon: <PersonAdd sx={{ fontSize: 24, color: '#00bcd4' }} />,
+    {
+      icon: <PersonAdd sx={{ fontSize: 28, color: '#ffffff' }} />,
       title: 'CV Builder',
       description: 'Professional resume builder with AI optimization',
-      category: 'Career Tools'
+      category: 'Career Tools',
+      gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+      bgColor: 'rgba(250, 112, 154, 0.1)'
     },
-
-   {
-      icon: <Security sx={{ fontSize: 24, color: '#607d8b' }} />,
+    {
+      icon: <Security sx={{ fontSize: 28, color: '#ffffff' }} />,
       title: 'Social Network',
       description: 'Professional networking and connections',
-      category: 'Professional Network'
+      category: 'Professional Network',
+      gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+      bgColor: 'rgba(168, 237, 234, 0.1)'
     },
     {
-      icon: <TrendingUp sx={{ fontSize: 24, color: '#ff9800' }} />,
+      icon: <TrendingUp sx={{ fontSize: 28, color: '#ffffff' }} />,
       title: 'Career Guidance',
       description: 'Personalized career development and insights',
-      category: 'Career Development'
+      category: 'Career Development',
+      gradient: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
+      bgColor: 'rgba(255, 236, 210, 0.1)'
     },
     {
-      icon: <School sx={{ fontSize: 24, color: '#673ab7' }} />,
+      icon: <School sx={{ fontSize: 28, color: '#ffffff' }} />,
       title: 'E-Learning Courses',
       description: 'Professional development courses and certifications',
-      category: 'Learning & Growth'
+      category: 'Learning & Growth',
+      gradient: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
+      bgColor: 'rgba(161, 140, 209, 0.1)'
     },
- 
     {
-      icon: <Business sx={{ fontSize: 24, color: '#795548' }} />,
+      icon: <Business sx={{ fontSize: 28, color: '#ffffff' }} />,
       title: 'Company Profiles',
       description: 'Discover top companies and their culture',
-      category: 'Company Discovery'
+      category: 'Company Discovery',
+      gradient: 'linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%)',
+      bgColor: 'rgba(250, 208, 196, 0.1)'
     },
-  
     {
-      icon: <Speed sx={{ fontSize: 24, color: '#ff5722' }} />,
+      icon: <Speed sx={{ fontSize: 28, color: '#ffffff' }} />,
       title: 'Smart Matching',
       description: 'AI-powered job and candidate matching',
-      category: 'AI Technology'
+      category: 'AI Technology',
+      gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
+      bgColor: 'rgba(255, 154, 158, 0.1)'
     },
     {
-      icon: <CheckCircle sx={{ fontSize: 24, color: '#4caf50' }} />,
+      icon: <CheckCircle sx={{ fontSize: 28, color: '#ffffff' }} />,
       title: 'Certificates',
       description: 'Professional certifications and achievements',
-      category: 'Credentials'
+      category: 'Credentials',
+      gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)',
+      bgColor: 'rgba(161, 196, 253, 0.1)'
     },
     {
-      icon: <Star sx={{ fontSize: 24, color: '#ffc107' }} />,
+      icon: <Star sx={{ fontSize: 28, color: '#ffffff' }} />,
       title: 'Career Events',
       description: 'Job fairs, webinars, and networking events',
-      category: 'Events & Networking'
+      category: 'Events & Networking',
+      gradient: 'linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%)',
+      bgColor: 'rgba(255, 234, 167, 0.1)'
     },
     {
-      icon: <Home sx={{ fontSize: 24, color: '#3f51b5' }} />,
+      icon: <Home sx={{ fontSize: 28, color: '#ffffff' }} />,
       title: 'Employer Dashboard',
       description: 'Complete hiring and talent management solution',
-      category: 'For Employers'
+      category: 'For Employers',
+      gradient: 'linear-gradient(135deg, #81ecec 0%, #6c5ce7 100%)',
+      bgColor: 'rgba(129, 236, 236, 0.1)'
     }
   ];
 
@@ -327,29 +350,18 @@ const LoginPage: React.FC = () => {
                   <Grow in={mounted} timeout={1200}>
                     <Box sx={{ mb: 6 }}>
                       <Typography 
-                        variant="h4" 
-                        component="h2" 
-                        fontWeight="bold" 
-                        sx={{ 
-                          mb: 3, 
-                          color: 'white',
-                          textShadow: '0 2px 4px rgba(0,0,0,0.3)'
-                        }}
-                      >
-                        Transform Your Career Journey
-                      </Typography>
-                      
-                      <Typography 
                         variant="h6" 
                         sx={{ 
                           mb: 4, 
                           maxWidth: '90%',
-                          color: 'rgba(255, 255, 255, 0.9)',
-                          lineHeight: 1.6
+                          color: 'rgba(255, 255, 255, 0.95)',
+                          lineHeight: 1.7,
+                          fontSize: { xs: '1.1rem', md: '1.3rem' },
+                          fontWeight: 500,
+                          textAlign: 'center'
                         }}
                       >
-                        Join thousands of professionals who trust ExJobNet for personalized career growth, 
-                        interactive learning, and meaningful connections.
+                        Join thousands of professionals transforming their careers with our comprehensive services.
                       </Typography>
                     </Box>
                   </Grow>
@@ -357,16 +369,24 @@ const LoginPage: React.FC = () => {
                   {/* Our Complete Services */}
                   <Box sx={{ maxWidth: '100%' }}>
                     <Typography 
-                      variant="h5" 
+                      variant="h4" 
                       fontWeight="bold" 
                       color="white" 
-                      sx={{ mb: 3, textAlign: 'center' }}
+                      sx={{ 
+                        mb: 4, 
+                        textAlign: 'center',
+                        textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                        background: 'linear-gradient(45deg, #fff 30%, #e8eaf6 90%)',
+                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent'
+                      }}
                     >
-                      🌟 Our Complete Services
+                      🚀 Our Complete Services
                     </Typography>
                     
                     {/* Services Grid - Show first 6 most important services */}
-                    <Grid container spacing={2} sx={{ mb: 4 }}>
+                    <Grid container spacing={3} sx={{ mb: 4 }}>
                       {services.slice(0, 6).map((service, index) => (
                         <Grid item xs={12} sm={6} key={service.title}>
                           <Slide 
@@ -376,57 +396,95 @@ const LoginPage: React.FC = () => {
                           >
                             <Box 
                               sx={{ 
-                                p: 2,
-                                borderRadius: 2,
-                                background: 'rgba(255, 255, 255, 0.08)',
-                                backdropFilter: 'blur(10px)',
-                                border: '1px solid rgba(255, 255, 255, 0.12)',
-                                transition: 'all 0.3s ease',
+                                p: 3,
+                                borderRadius: 4,
+                                background: service.gradient,
+                                transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
                                 height: '100%',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                border: '2px solid rgba(255, 255, 255, 0.1)',
+                                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
+                                cursor: 'pointer',
                                 '&:hover': {
-                                  transform: 'translateY(-4px)',
-                                  background: 'rgba(255, 255, 255, 0.12)',
-                                  boxShadow: '0 8px 32px rgba(255, 255, 255, 0.1)',
+                                  transform: 'translateY(-8px) scale(1.02)',
+                                  boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
+                                  '&::before': {
+                                    transform: 'scale(1.1)',
+                                  }
+                                },
+                                '&::before': {
+                                  content: '""',
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 0,
+                                  background: 'rgba(255, 255, 255, 0.05)',
+                                  transition: 'transform 0.4s ease',
+                                  zIndex: 0
                                 }
                               }}
                             >
-                              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                <Box
-                                  sx={{
-                                    background: 'rgba(255, 255, 255, 0.15)',
-                                    borderRadius: 1.5,
-                                    p: 1,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    mr: 1.5,
-                                    minWidth: 36,
-                                    height: 36
+                              <Box sx={{ position: 'relative', zIndex: 1 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                  <Box
+                                    sx={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      mr: 2,
+                                      width: 50,
+                                      height: 50,
+                                      borderRadius: '50%',
+                                      background: 'rgba(255, 255, 255, 0.15)',
+                                      backdropFilter: 'blur(10px)',
+                                      border: '2px solid rgba(255, 255, 255, 0.2)'
+                                    }}
+                                  >
+                                    {service.icon}
+                                  </Box>
+                                  <Box sx={{ flex: 1 }}>
+                                    <Typography 
+                                      variant="h6" 
+                                      fontWeight="700" 
+                                      color="white" 
+                                      sx={{ 
+                                        fontSize: '1.1rem',
+                                        mb: 0.5,
+                                        textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+                                      }}
+                                    >
+                                      {service.title}
+                                    </Typography>
+                                    <Chip 
+                                      label={service.category} 
+                                      size="small" 
+                                      sx={{ 
+                                        fontSize: '0.75rem', 
+                                        height: 22,
+                                        color: 'rgba(255, 255, 255, 0.95)',
+                                        background: 'rgba(255, 255, 255, 0.15)',
+                                        backdropFilter: 'blur(10px)',
+                                        border: '1px solid rgba(255, 255, 255, 0.25)',
+                                        fontWeight: 600,
+                                        '& .MuiChip-label': { px: 1.5 }
+                                      }} 
+                                    />
+                                  </Box>
+                                </Box>
+                                <Typography 
+                                  variant="body2" 
+                                  color="rgba(255, 255, 255, 0.9)" 
+                                  sx={{ 
+                                    fontSize: '0.9rem', 
+                                    lineHeight: 1.5,
+                                    textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)'
                                   }}
                                 >
-                                  {service.icon}
-                                </Box>
-                                <Box>
-                                  <Typography variant="body1" fontWeight="600" color="white" sx={{ fontSize: '0.95rem' }}>
-                                    {service.title}
-                                  </Typography>
-                                  <Chip 
-                                    label={service.category} 
-                                    size="small" 
-                                    sx={{ 
-                                      fontSize: '0.7rem', 
-                                      height: 16,
-                                      color: 'rgba(255, 255, 255, 0.8)',
-                                      background: 'rgba(255, 255, 255, 0.1)',
-                                      border: '1px solid rgba(255, 255, 255, 0.15)',
-                                      '& .MuiChip-label': { px: 1 }
-                                    }} 
-                                  />
-                                </Box>
+                                  {service.description}
+                                </Typography>
                               </Box>
-                              <Typography variant="body2" color="rgba(255, 255, 255, 0.75)" sx={{ fontSize: '0.85rem', lineHeight: 1.4 }}>
-                                {service.description}
-                              </Typography>
                             </Box>
                           </Slide>
                         </Grid>
@@ -449,17 +507,28 @@ const LoginPage: React.FC = () => {
                           And Much More...
                         </Typography>
                         <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap" sx={{ gap: 1 }}>
-                          {services.slice(6).map((service) => (
+                          {services.slice(6).map((service, index) => (
                             <Chip 
                               key={service.title}
                               label={service.title} 
                               size="small" 
                               sx={{ 
-                                color: 'rgba(255, 255, 255, 0.9)',
-                                background: 'rgba(255, 255, 255, 0.12)',
-                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                color: '#ffffff',
+                                background: service.gradient,
+                                border: '2px solid rgba(255, 255, 255, 0.2)',
+                                fontWeight: 600,
+                                fontSize: '0.8rem',
+                                height: 28,
+                                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+                                transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
                                 '&:hover': {
-                                  background: 'rgba(255, 255, 255, 0.18)',
+                                  transform: 'translateY(-2px) scale(1.05)',
+                                  boxShadow: '0 8px 25px rgba(0, 0, 0, 0.2)',
+                                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                                },
+                                '& .MuiChip-label': { 
+                                  px: 2,
+                                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'
                                 }
                               }} 
                             />

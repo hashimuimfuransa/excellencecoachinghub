@@ -1447,7 +1447,7 @@ const AllJobsPage: React.FC = () => {
                               border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
                             }
                           }}
-                          onClick={() => user ? navigate(`/app/jobs/${job._id}`) : navigate('/login')}
+                          onClick={() => user ? navigate(`/app/jobs/${job._id}`) : navigate(`/login?redirect=job&jobId=${job._id}`)}
                         >
                           <CardContent sx={{ 
                             p: { xs: 1.2, sm: 2, md: 3 }, 
@@ -1678,7 +1678,7 @@ const AllJobsPage: React.FC = () => {
                                 }}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  user ? navigate(`/app/jobs/${job._id}`) : navigate('/login');
+                                  user ? navigate(`/app/jobs/${job._id}`) : navigate(`/login?redirect=job&jobId=${job._id}`);
                                 }}
                               >
                                 Apply

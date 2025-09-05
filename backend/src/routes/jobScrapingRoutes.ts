@@ -18,6 +18,18 @@ router.post(
 );
 
 /**
+ * @route   GET /api/job-scraping/ai-usage
+ * @desc    Get AI usage statistics
+ * @access  Private - Admin
+ */
+router.get(
+  '/ai-usage',
+  auth,
+  authorizeRoles(['super_admin', 'admin']),
+  JobScrapingController.getAIUsageStats
+);
+
+/**
  * @route   GET /api/job-scraping/stats
  * @desc    Get job scraping statistics
  * @access  Private - Admin
@@ -63,6 +75,30 @@ router.patch(
   auth,
   authorizeRoles(['super_admin', 'admin']),
   JobScrapingController.updateExternalJobStatus
+);
+
+/**
+ * @route   POST /api/job-scraping/force-quota
+ * @desc    Force scraping to meet minimum daily quota
+ * @access  Private - Super Admin
+ */
+router.post(
+  '/force-quota',
+  auth,
+  authorizeRoles(['super_admin']),
+  JobScrapingController.forceScrapingToMeetQuota
+);
+
+/**
+ * @route   GET /api/job-scraping/test-website/:website
+ * @desc    Test scraping from specific website
+ * @access  Private - Admin
+ */
+router.get(
+  '/test-website/:website',
+  auth,
+  authorizeRoles(['super_admin', 'admin']),
+  JobScrapingController.testWebsiteScraping
 );
 
 /**

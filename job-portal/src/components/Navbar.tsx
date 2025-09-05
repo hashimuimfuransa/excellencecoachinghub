@@ -133,6 +133,21 @@ const Navbar: React.FC = () => {
     { text: 'Career Insights', icon: <Psychology />, path: '/app/career-insights', protected: true },
   ];
 
+  // Separate menu items for logged-in employers
+  const employerMenuItems = [
+    { text: 'All Jobs', icon: <Work />, path: '/' },
+    { text: 'Post Job', icon: <PostAdd />, path: '/app/jobs/create', highlight: true },
+    { text: 'Support', icon: <Support />, path: '/support' },
+    { text: 'Contact Us', icon: <ContactSupport />, action: handleContactOpen, isContactDialog: true },
+    // Protected items - only show if user is logged in
+    { text: 'Network', icon: <Public />, path: '/app/network', protected: true },
+    { text: 'Connections', icon: <Group />, path: '/app/connections', protected: true },
+    { text: 'Career Insights', icon: <Psychology />, path: '/app/career-insights', protected: true },
+  ];
+
+  // Choose which menu to show based on user role
+  const currentMenuItems = (user && user.role === UserRole.EMPLOYER) ? employerMenuItems : menuItems;
+
   const drawer = (
     <Box sx={{ width: 280 }}>
       <Box sx={{ 
@@ -162,7 +177,7 @@ const Navbar: React.FC = () => {
       </Box>
       <Divider />
       <List>
-        {menuItems.filter(item => !item.protected || user).map((item) => (
+        {currentMenuItems.filter(item => !item.protected || user).map((item) => (
           <ListItem
             component="button"
             key={item.text}
@@ -385,7 +400,7 @@ const Navbar: React.FC = () => {
 
           {!isMobile && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 3 }}>
-              {menuItems.filter(item => !item.protected || user).map((item) => (
+              {currentMenuItems.filter(item => !item.protected || user).map((item) => (
                 <Button
                   key={item.text}
                   color="inherit"
@@ -462,6 +477,32 @@ const Navbar: React.FC = () => {
             </IconButton>
           )}
 
+          {/* Post Job Button for Employers */}
+          {user && user.role === UserRole.EMPLOYER && !isMobile && (
+            <Button
+              variant="contained"
+              startIcon={<PostAdd />}
+              onClick={() => navigate('/app/jobs/create')}
+              sx={{
+                mr: 2,
+                fontWeight: 'bold',
+                background: 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)',
+                boxShadow: '0 3px 10px rgba(76, 175, 80, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(45deg, #2e7d32 30%, #1b5e20 90%)',
+                  boxShadow: '0 5px 15px rgba(76, 175, 80, 0.4)',
+                  transform: 'translateY(-1px)',
+                },
+                borderRadius: 2,
+                px: 3,
+                py: 1,
+                transition: 'all 0.3s ease',
+              }}
+            >
+              Post Job
+            </Button>
+          )}
+
           {user ? (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <IconButton
@@ -522,19 +563,21 @@ const Navbar: React.FC = () => {
                   <Work sx={{ mr: 1 }} />
                   Dashboard
                 </MenuItem>
-                <MenuItem 
-                  onClick={() => { navigate('/app/jobs/create'); handleClose(); }}
-                  sx={{ 
-                    color: 'primary.main', 
-                    fontWeight: 'bold',
-                    '&:hover': {
-                      backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                    }
-                  }}
-                >
-                  <PostAdd sx={{ mr: 1 }} />
-                  Post a Job
-                </MenuItem>
+                {user?.role === UserRole.EMPLOYER && (
+                  <MenuItem 
+                    onClick={() => { navigate('/app/jobs/create'); handleClose(); }}
+                    sx={{ 
+                      color: 'primary.main', 
+                      fontWeight: 'bold',
+                      '&:hover': {
+                        backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                      }
+                    }}
+                  >
+                    <PostAdd sx={{ mr: 1 }} />
+                    Post a Job
+                  </MenuItem>
+                )}
                 <Divider />
                 <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
                   <Login sx={{ mr: 1 }} />

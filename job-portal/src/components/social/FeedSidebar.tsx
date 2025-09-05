@@ -60,9 +60,14 @@ const FeedSidebar: React.FC = () => {
         companyService.getCompanySuggestions(3),
       ]);
 
-      setConnections(connectionsRes.data.slice(0, 5));
-      setUpcomingEvents(eventsRes.data);
-      setSuggestedCompanies(companiesRes.data);
+      // Handle direct array responses from services
+      const connectionsData = Array.isArray(connectionsRes) ? connectionsRes : (connectionsRes?.data || []);
+      const eventsData = Array.isArray(eventsRes) ? eventsRes : (eventsRes?.data || []);
+      const companiesData = Array.isArray(companiesRes) ? companiesRes : (companiesRes?.data || []);
+
+      setConnections(connectionsData.slice(0, 5));
+      setUpcomingEvents(eventsData);
+      setSuggestedCompanies(companiesData);
     } catch (error) {
       console.error('Error loading sidebar data:', error);
     } finally {

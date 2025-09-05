@@ -69,6 +69,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { jobService } from '../services/jobService';
 import { applicationService } from '../services/applicationService';
 import { profileService } from '../services/profileService';
+import { validateProfile } from '../utils/profileValidation';
 
 // Job types matching backend structure
 enum JobType {
@@ -169,6 +170,8 @@ const JobDetailsPage: React.FC = () => {
   const [hasApplied, setHasApplied] = useState(false);
   const [profileCompletion, setProfileCompletion] = useState<number>(0);
   const [profileIncompleteDialogOpen, setProfileIncompleteDialogOpen] = useState(false);
+  const [hasShownProfileDialog, setHasShownProfileDialog] = useState(false);
+  const [profileValidationResult, setProfileValidationResult] = useState<any>(null);
 
   const [prepareDialogOpen, setPrepareDialogOpen] = useState(false);
   const [shareMenuAnchor, setShareMenuAnchor] = useState<null | HTMLElement>(null);
@@ -213,21 +216,30 @@ const JobDetailsPage: React.FC = () => {
       
       try {
         const profile = await profileService.getCurrentUserProfile();
-        // Calculate profile completion percentage
-        let completion = 0;
-        const fields = [
-          'firstName', 'lastName', 'email', 'phone', 'location', 
-          'jobTitle', 'summary', 'skills', 'experience', 'education'
-        ];
-        
-        fields.forEach(field => {
-          if (profile[field] && 
-              (Array.isArray(profile[field]) ? profile[field].length > 0 : profile[field].toString().trim() !== '')) {
-            completion += 10;
-          }
-        });
+        // Use comprehensive profile validation
+        const validationResult = validateProfile(profile);
+        const completion = validationResult.completionPercentage;
         
         setProfileCompletion(completion);
+        setProfileValidationResult(validationResult);
+        
+        console.log(`🔍 Profile completion: ${completion}% (Threshold: 60%)`, {
+          status: validationResult.status,
+          willShowDialog: completion < 60 && !hasShownProfileDialog,
+          canAccessFeatures: validationResult.canAccessFeatures,
+          missingFields: validationResult.missingFields.slice(0, 5), // Show first 5 missing fields
+          completedSections: validationResult.completedSections
+        });
+        
+        // Show profile incomplete dialog if completion is less than 60% and hasn't been shown yet
+        // This allows users to access psychometric tests and basic job applications
+        if (completion < 60 && !hasShownProfileDialog) {
+          // Add a small delay to let the page load first
+          setTimeout(() => {
+            setProfileIncompleteDialogOpen(true);
+            setHasShownProfileDialog(true);
+          }, 1500);
+        }
       } catch (error) {
         console.error('Error checking profile completion:', error);
       }
@@ -270,8 +282,8 @@ const JobDetailsPage: React.FC = () => {
   };
 
   const formatSalary = (salary?: SalaryExpectation): string => {
-    if (!salary) return 'Salary not specified';
-    return `${salary.currency} ${salary.min.toLocaleString()} - ${salary.max.toLocaleString()}`;
+    if (!salary || salary.min == null || salary.max == null) return 'Salary not specified';
+    return `${salary.currency || '$'} ${salary.min.toLocaleString()} - ${salary.max.toLocaleString()}`;
   };
 
   const getDaysAgo = (dateString: string): string => {
@@ -284,7 +296,7 @@ const JobDetailsPage: React.FC = () => {
     if (!user || !job) return;
     
     // Check if profile is complete enough
-    if (profileCompletion < 50) {
+    if (profileCompletion < 60) {
       setProfileIncompleteDialogOpen(true);
       return;
     }
@@ -1280,9 +1292,7 @@ const JobDetailsPage: React.FC = () => {
                   }
                   onClick={() => {
                     if (!user) {
-                      navigate('/login', { 
-                        state: { from: { pathname: `/jobs/${id}` } }
-                      });
+                      navigate(`/login?redirect=job&jobId=${id}`);
                       return;
                     }
 
@@ -2220,25 +2230,58 @@ const JobDetailsPage: React.FC = () => {
         <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
           <Warning sx={{ fontSize: 40, color: theme.palette.warning.main, mb: 1 }} />
           <Typography variant="h6" fontWeight="bold" color="warning.main">
-            Profile Incomplete
+            Complete Your Profile ({profileCompletion}%)
           </Typography>
         </DialogTitle>
         <DialogContent sx={{ textAlign: 'center', pt: 1, pb: 2 }}>
           <Typography variant="body1" sx={{ mb: 2 }}>
             You need to complete your profile before applying for jobs.
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Your profile is <strong>{profileCompletion}%</strong> complete. 
-            Complete at least 50% to start applying.
+            Complete at least 60% to access all features and improve job matching.
           </Typography>
+          {profileValidationResult && (
+            <>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
+                Complete these sections to unlock job applications:
+              </Typography>
+              <Typography variant="body2" color="text.secondary" component="div" sx={{ textAlign: 'left', mb: 1 }}>
+                {!profileValidationResult.completedSections?.personal && "• Personal Information (Name, Phone, Date of Birth)\n"}
+                {!profileValidationResult.completedSections?.contact && "• Contact Details (Email, Phone)\n"}
+                {!profileValidationResult.completedSections?.professional && "• Professional Info (Job Title, Experience Level)\n"}
+                {!profileValidationResult.completedSections?.education && "• Education Background\n"}
+                {!profileValidationResult.completedSections?.experience && "• Work Experience\n"}
+                {!profileValidationResult.completedSections?.skills && "• Skills & Competencies\n"}
+                {!profileValidationResult.completedSections?.documents && "• Resume Upload\n"}
+                {!profileValidationResult.completedSections?.preferences && "• Job Preferences\n"}
+              </Typography>
+              {profileValidationResult.canAccessFeatures && (
+                <Typography variant="body2" sx={{ 
+                  color: 'info.main', 
+                  fontWeight: 600,
+                  bgcolor: 'rgba(25, 118, 210, 0.08)',
+                  p: 1,
+                  borderRadius: 1,
+                  mt: 1
+                }}>
+                  💡 Complete more sections to unlock:
+                  {!profileValidationResult.canAccessFeatures.psychometricTests && " Psychometric Tests,"}
+                  {!profileValidationResult.canAccessFeatures.aiInterviews && " AI Interviews,"}
+                  {!profileValidationResult.canAccessFeatures.premiumJobs && " Premium Jobs"}
+                </Typography>
+              )}
+            </>
+          )}
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'center', pb: 3, gap: 2 }}>
           <Button
             onClick={() => setProfileIncompleteDialogOpen(false)}
             variant="outlined"
-            size="small"
+            size="medium"
+            sx={{ px: 3, py: 1 }}
           >
-            Later
+            Remind Me Later
           </Button>
           <Button
             onClick={() => {
@@ -2246,10 +2289,21 @@ const JobDetailsPage: React.FC = () => {
               navigate('/app/profile');
             }}
             variant="contained"
-            size="small"
+            size="medium"
             startIcon={<Person />}
+            sx={{ 
+              px: 3, 
+              py: 1,
+              fontWeight: 600,
+              background: 'linear-gradient(45deg, #4CAF50 30%, #66BB6A 90%)',
+              '&:hover': {
+                background: 'linear-gradient(45deg, #45A049 30%, #5CB85C 90%)',
+                transform: 'translateY(-1px)',
+                boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)'
+              }
+            }}
           >
-            Complete Profile
+            Complete My Profile
           </Button>
         </DialogActions>
       </Dialog>

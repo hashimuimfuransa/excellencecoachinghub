@@ -653,8 +653,8 @@ const AllJobsPage: React.FC = () => {
 
   return (
     <>
-      {/* Navigation Bar - Only show for non-authenticated users */}
-      {!user && <Navbar />}
+      {/* Navigation Bar - Always show for all users */}
+      <Navbar />
       
       {/* Mobile Filter Drawer */}
       <Drawer
@@ -691,6 +691,39 @@ const AllJobsPage: React.FC = () => {
               <Clear fontSize="small" />
             </IconButton>
           </Box>
+          
+          {/* Post Job Section in Sidebar */}
+          <Card 
+            sx={{ 
+              mb: 3, 
+              background: 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)',
+              color: 'white',
+              cursor: 'pointer',
+              transition: 'transform 0.2s ease',
+              '&:hover': {
+                transform: 'scale(1.02)',
+              }
+            }}
+            onClick={() => {
+              setSidebarOpen(false);
+              user ? navigate('/app/jobs/create') : navigate('/register?role=employer');
+            }}
+          >
+            <CardContent sx={{ py: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <PostAdd sx={{ fontSize: 28 }} />
+                <Box>
+                  <Typography variant="subtitle1" fontWeight="bold">
+                    Post a Job
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    {user ? "Find the perfect candidates" : "Register as employer"}
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+          
           <FilterSidebar />
         </Box>
       </Drawer>
@@ -751,7 +784,7 @@ const AllJobsPage: React.FC = () => {
                   textAlign: 'center'
                 }}
               >
-                Find Your Dream Career
+                Find Your Dream Jobs
               </Typography>
               <Typography
                 variant={isMobile ? 'body1' : 'h6'}
@@ -1662,6 +1695,44 @@ const AllJobsPage: React.FC = () => {
           </Box>
         </Container>
         
+        {/* Floating Post Job Button */}
+        <Tooltip title={user ? "Post a Job" : "Register as Employer to Post Jobs"} placement="left">
+          <Fab
+            color="success"
+            size={isMobile ? 'medium' : 'large'}
+            onClick={() => user ? navigate('/app/jobs/create') : navigate('/register?role=employer')}
+            sx={{
+              position: 'fixed',
+              bottom: { xs: showScrollTop ? 90 : 20, md: showScrollTop ? 100 : 24 },
+              right: { xs: 16, md: 24 },
+              zIndex: 1000,
+              backgroundColor: 'success.main',
+              color: 'white',
+              boxShadow: '0 8px 32px rgba(76, 175, 80, 0.3)',
+              '&:hover': {
+                transform: 'scale(1.1)',
+                backgroundColor: 'success.dark',
+                boxShadow: '0 12px 48px rgba(76, 175, 80, 0.4)',
+              },
+              transition: 'all 0.3s ease',
+              animation: 'pulse 2s infinite',
+              '@keyframes pulse': {
+                '0%': {
+                  boxShadow: '0 8px 32px rgba(76, 175, 80, 0.3)',
+                },
+                '50%': {
+                  boxShadow: '0 8px 32px rgba(76, 175, 80, 0.6)',
+                },
+                '100%': {
+                  boxShadow: '0 8px 32px rgba(76, 175, 80, 0.3)',
+                },
+              },
+            }}
+          >
+            <PostAdd fontSize={isMobile ? 'medium' : 'large'} />
+          </Fab>
+        </Tooltip>
+
         {/* Scroll to Top Button */}
         {showScrollTop && (
           <Fab
@@ -1670,7 +1741,7 @@ const AllJobsPage: React.FC = () => {
             onClick={handleScrollTop}
             sx={{
               position: 'fixed',
-              bottom: { xs: 20, md: 24 },
+              bottom: { xs: 160, md: 180 },
               right: { xs: 16, md: 24 },
               zIndex: 1000,
               boxShadow: theme.shadows[8],

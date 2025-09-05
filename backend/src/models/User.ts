@@ -143,6 +143,19 @@ export interface IUserDocument extends Document {
   isOnline?: boolean;
   lastSeen?: Date;
   
+  // Privacy settings
+  privacySettings?: {
+    profileVisibility?: string; // 'public', 'connections', 'private'
+    contactInfoVisibility?: string; // 'public', 'connections', 'private'
+    experienceVisibility?: string; // 'public', 'connections', 'private'
+    educationVisibility?: string; // 'public', 'connections', 'private'
+    skillsVisibility?: string; // 'public', 'connections', 'private'
+    allowMessagesFrom?: string; // 'everyone', 'connections', 'nobody'
+    showOnlineStatus?: boolean;
+    pushNotifications?: boolean;
+    profileIndexing?: boolean; // Allow search engines to index profile
+  };
+  
   // Employer-specific fields
   savedCandidates?: Array<{
     candidateId: mongoose.Types.ObjectId;
@@ -488,6 +501,43 @@ const userSchema = new Schema<IUserDocument>({
   // Chat system fields
   isOnline: { type: Boolean, default: false },
   lastSeen: { type: Date, default: Date.now },
+  
+  // Privacy settings
+  privacySettings: {
+    profileVisibility: { 
+      type: String, 
+      enum: ['public', 'connections', 'private'], 
+      default: 'public' 
+    },
+    contactInfoVisibility: { 
+      type: String, 
+      enum: ['public', 'connections', 'private'], 
+      default: 'connections' 
+    },
+    experienceVisibility: { 
+      type: String, 
+      enum: ['public', 'connections', 'private'], 
+      default: 'public' 
+    },
+    educationVisibility: { 
+      type: String, 
+      enum: ['public', 'connections', 'private'], 
+      default: 'public' 
+    },
+    skillsVisibility: { 
+      type: String, 
+      enum: ['public', 'connections', 'private'], 
+      default: 'public' 
+    },
+    allowMessagesFrom: { 
+      type: String, 
+      enum: ['everyone', 'connections', 'nobody'], 
+      default: 'everyone' 
+    },
+    showOnlineStatus: { type: Boolean, default: true },
+    pushNotifications: { type: Boolean, default: true },
+    profileIndexing: { type: Boolean, default: true }
+  },
   
   // Employer-specific fields
   savedCandidates: [{

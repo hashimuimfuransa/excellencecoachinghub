@@ -247,16 +247,16 @@ const LoginPage: React.FC = () => {
   return (
     <Box
       sx={{
-        minHeight: '100vh',
+        minHeight: { xs: '100vh', sm: 'auto' },
         display: 'flex',
         background: 'linear-gradient(135deg, #4ade80 0%, #16a34a 50%, #14532d 100%)',
         position: 'relative',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        overflow: 'auto',
+        py: { xs: 2, sm: 4 },
         '&::before': {
           content: '""',
-          position: 'fixed',
+          position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
@@ -270,7 +270,7 @@ const LoginPage: React.FC = () => {
         },
         '&::after': {
           content: '""',
-          position: 'fixed',
+          position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
@@ -284,8 +284,8 @@ const LoginPage: React.FC = () => {
         }
       }}
     >
-      <Container component="main" maxWidth="lg" sx={{ py: { xs: 4, md: 6 }, position: 'relative', zIndex: 1 }}>
-        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, minHeight: { xs: 'auto', md: '100vh' }, gap: 3 }}>
+      <Container component="main" maxWidth="lg" sx={{ py: { xs: 1, md: 2 }, position: 'relative', zIndex: 1, width: '100%' }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, minHeight: { xs: 'auto', md: 'auto' }, gap: { xs: 1, md: 3 }, alignItems: { xs: 'center', md: 'flex-start' } }}>
           {/* Left side - Branding and info */}
           {!isMobile && (
             <Box 
@@ -293,35 +293,37 @@ const LoginPage: React.FC = () => {
                 flex: 1,
                 display: 'flex', 
                 flexDirection: 'column',
-                justifyContent: 'center',
-                p: { xs: 3, md: 5 },
-                position: 'relative'
+                justifyContent: 'flex-start',
+                p: { xs: 2, md: 3 },
+                position: 'relative',
+                maxHeight: { sm: '90vh', md: 'auto' },
+                overflow: 'auto'
               }}
             >
               <Fade in={mounted} timeout={1000}>
                 <Box>
                   {/* Logo and Brand */}
                   <Slide direction="right" in={mounted} timeout={800}>
-                    <Box sx={{ mb: 6, display: 'flex', alignItems: 'center' }}>
+                    <Box sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
                       <Box
                         sx={{
                           background: 'rgba(255, 255, 255, 0.15)',
                           backdropFilter: 'blur(10px)',
                           borderRadius: 3,
-                          p: 2,
-                          mr: 3,
+                          p: 1.5,
+                          mr: 2,
                           border: '1px solid rgba(255, 255, 255, 0.2)',
                         }}
                       >
                         <img 
                           src="/exjobnetlogo.png" 
                           alt="ExJobNet" 
-                          style={{ height: 80, width: 80, objectFit: 'contain' }}
+                          style={{ height: 50, width: 50, objectFit: 'contain' }}
                         />
                       </Box>
                       <Box>
                         <Typography 
-                          variant="h3" 
+                          variant="h4" 
                           component="h1" 
                           sx={{ 
                             fontWeight: 800,
@@ -329,12 +331,13 @@ const LoginPage: React.FC = () => {
                             backgroundClip: 'text',
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
-                            textShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                            textShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                            fontSize: { xs: '1.5rem', md: '2rem' }
                           }}
                         >
                           ExJobNet
                         </Typography>
-                        <Typography variant="subtitle1" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                        <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.9rem' }}>
                           Africa's Premier Career Platform
                         </Typography>
                       </Box>
@@ -343,20 +346,20 @@ const LoginPage: React.FC = () => {
                   
                   {/* Welcome Message */}
                   <Grow in={mounted} timeout={1200}>
-                    <Box sx={{ mb: 6 }}>
+                    <Box sx={{ mb: 3 }}>
                       <Typography 
-                        variant="h6" 
+                        variant="body1" 
                         sx={{ 
-                          mb: 4, 
-                          maxWidth: '90%',
+                          mb: 2, 
+                          maxWidth: '95%',
                           color: 'rgba(255, 255, 255, 0.95)',
-                          lineHeight: 1.7,
-                          fontSize: { xs: '1.1rem', md: '1.3rem' },
+                          lineHeight: 1.5,
+                          fontSize: { xs: '0.95rem', md: '1.1rem' },
                           fontWeight: 500,
-                          textAlign: 'center'
+                          textAlign: 'left'
                         }}
                       >
-                        Master your job preparation journey and build meaningful professional networks with thousands of career-focused professionals.
+                        Master your job preparation journey and build meaningful professional networks.
                       </Typography>
                     </Box>
                   </Grow>
@@ -364,26 +367,27 @@ const LoginPage: React.FC = () => {
                   {/* Our Complete Services */}
                   <Box sx={{ maxWidth: '100%' }}>
                     <Typography 
-                      variant="h4" 
+                      variant="h6" 
                       fontWeight="bold" 
                       color="white" 
                       sx={{ 
-                        mb: 4, 
-                        textAlign: 'center',
+                        mb: 2, 
+                        textAlign: 'left',
                         textShadow: '0 2px 4px rgba(0,0,0,0.3)',
                         background: 'linear-gradient(45deg, #fff 30%, #e8eaf6 90%)',
                         backgroundClip: 'text',
                         WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent'
+                        WebkitTextFillColor: 'transparent',
+                        fontSize: { xs: '1.1rem', md: '1.3rem' }
                       }}
                     >
-                      🚀 Our Complete Services
+                      🚀 Our Services
                     </Typography>
                     
-                    {/* Services Grid - Show first 6 most important services */}
-                    <Grid container spacing={3} sx={{ mb: 4 }}>
-                      {services.slice(0, 6).map((service, index) => (
-                        <Grid item xs={12} sm={6} key={service.title}>
+                    {/* Compact Services Grid - Show only top 4 services */}
+                    <Grid container spacing={2} sx={{ mb: 3 }}>
+                      {services.slice(0, 4).map((service, index) => (
+                        <Grid item xs={6} sm={6} key={service.title}>
                           <Slide 
                             direction="right" 
                             in={mounted} 
@@ -558,24 +562,24 @@ const LoginPage: React.FC = () => {
               flex: 1,
               display: 'flex', 
               justifyContent: 'center', 
-              alignItems: { xs: 'flex-start', md: 'center' },
-              p: { xs: 2, sm: 3 },
-              mt: { xs: 2, md: 0 }
+              alignItems: { xs: 'flex-start', md: 'flex-start' },
+              p: { xs: 1, sm: 2 },
+              mt: { xs: 1, md: 0 }
             }}
           >
             <Slide direction="left" in={mounted} timeout={1000}>
               <Paper
-                elevation={isMobile ? 8 : 24}
+                elevation={isMobile ? 4 : 12}
                 sx={{
-                  p: { xs: 4, sm: 6 },
+                  p: { xs: 3, sm: 4 },
                   width: '100%',
-                  maxWidth: 520,
-                  borderRadius: 6,
-                  backdropFilter: 'blur(20px)',
+                  maxWidth: 420,
+                  borderRadius: 4,
+                  backdropFilter: 'blur(15px)',
                   background: 'rgba(255, 255, 255, 0.98)',
-                  boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.3)',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
                   border: '1px solid rgba(255, 255, 255, 0.2)',
-                  transition: 'all 0.4s ease-in-out',
+                  transition: 'all 0.3s ease-in-out',
                   position: 'relative',
                   overflow: 'hidden',
                   '&::before': {
@@ -584,55 +588,52 @@ const LoginPage: React.FC = () => {
                     top: 0,
                     left: 0,
                     right: 0,
-                    height: 4,
+                    height: 3,
                     background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
                   },
                   '&:hover': {
-                    transform: 'translateY(-8px)',
-                    boxShadow: '0 30px 80px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.3)',
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)',
                   }
                 }}
               >
                 {/* Back to Home Button */}
-                <Box sx={{ position: 'absolute', top: 20, left: 20, zIndex: 10 }}>
+                <Box sx={{ position: 'absolute', top: 15, left: 15, zIndex: 10 }}>
                   <Button
                     component={RouterLink}
                     to="/"
                     startIcon={<HomeIcon />}
-                    variant="outlined"
+                    variant="text"
                     size="small"
                     sx={{
-                      borderRadius: 3,
+                      borderRadius: 2,
                       textTransform: 'none',
-                      fontWeight: 600,
-                      border: '2px solid rgba(102, 126, 234, 0.2)',
+                      fontWeight: 500,
                       color: 'primary.main',
-                      backdropFilter: 'blur(10px)',
-                      background: 'rgba(255, 255, 255, 0.8)',
+                      fontSize: '0.8rem',
+                      minWidth: 'auto',
+                      p: 1,
                       '&:hover': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 6px 20px rgba(102, 126, 234, 0.3)',
-                        border: '2px solid rgba(102, 126, 234, 0.4)',
-                        background: 'rgba(255, 255, 255, 0.9)',
+                        background: 'rgba(102, 126, 234, 0.08)',
                       },
-                      transition: 'all 0.3s ease'
+                      transition: 'all 0.2s ease'
                     }}
                   >
-                    Back to Home
+                    Home
                   </Button>
                 </Box>
                 
                 {/* Header with Logo and Brand */}
                 <Fade in={mounted} timeout={1200}>
-                  <Box sx={{ textAlign: 'center', mb: 5, pt: 3 }}>
+                  <Box sx={{ textAlign: 'center', mb: 3, pt: 2 }}>
                     <Box
                       sx={{
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        mb: 3,
-                        p: 2,
-                        borderRadius: 4,
+                        mb: 2,
+                        p: 1.5,
+                        borderRadius: 3,
                         background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
                         border: '1px solid rgba(102, 126, 234, 0.1)',
                       }}
@@ -640,12 +641,12 @@ const LoginPage: React.FC = () => {
                       <img 
                         src="/exjobnetlogo.png" 
                         alt="ExJobNet" 
-                        style={{ height: 60, width: 60, objectFit: 'contain' }}
+                        style={{ height: 45, width: 45, objectFit: 'contain' }}
                       />
                     </Box>
                     
                     <Typography 
-                      variant="h4" 
+                      variant="h5" 
                       component="h1" 
                       sx={{ 
                         fontWeight: 800,
@@ -653,64 +654,33 @@ const LoginPage: React.FC = () => {
                         backgroundClip: 'text',
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent',
-                        mb: 1
+                        mb: 0.5,
+                        fontSize: { xs: '1.3rem', md: '1.5rem' }
                       }}
                     >
                       ExJobNet
                     </Typography>
                     
-                    <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 3 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '0.9rem' }}>
                       Africa's Premier Career Platform
                     </Typography>
                     
                     {/* Welcome Message */}
-                    <Box sx={{ mb: 4 }}>
-                      <Typography 
-                        variant="h4" 
-                        component={isMobile ? "h2" : "h1"} 
-                        fontWeight="bold"
-                        sx={{ 
-                          background: 'linear-gradient(45deg, #333 30%, #666 90%)',
-                          backgroundClip: 'text',
-                          WebkitBackgroundClip: 'text',
-                          WebkitTextFillColor: 'transparent',
-                          position: 'relative',
-                          display: 'inline-block',
-                          mb: 2,
-                          '&::after': {
-                            content: '""',
-                            position: 'absolute',
-                            bottom: -8,
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            width: 80,
-                            height: 4,
-                            borderRadius: 2,
-                            background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-                          }
-                        }}
-                      >
-                        Welcome Back!
-                      </Typography>
-                      
-                      <Typography variant="body1" color="text.secondary" sx={{ mt: 3, maxWidth: 400, mx: 'auto' }}>
-                        Sign in to continue your journey towards career excellence and unlock new opportunities.
-                      </Typography>
-                    </Box>
+                    <Typography 
+                      variant="h6" 
+                      fontWeight="600"
+                      sx={{ 
+                        color: 'text.primary',
+                        mb: 1,
+                        fontSize: { xs: '1.1rem', md: '1.2rem' }
+                      }}
+                    >
+                      Welcome Back!
+                    </Typography>
                     
-                    {/* Trust Badge */}
-                    <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
-                      <Chip
-                        icon={<Star sx={{ color: '#ffd700' }} />}
-                        label="Trusted by 10,000+ professionals"
-                        variant="outlined"
-                        sx={{
-                          borderColor: 'rgba(102, 126, 234, 0.3)',
-                          color: 'text.secondary',
-                          '& .MuiChip-icon': { color: '#ffd700' }
-                        }}
-                      />
-                    </Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '0.85rem' }}>
+                      Sign in to continue your career journey
+                    </Typography>
                   </Box>
                 </Fade>
 
@@ -755,13 +725,13 @@ const LoginPage: React.FC = () => {
                         ),
                       }}
                       sx={{ 
-                        mb: 3,
+                        mb: 2,
                         '& .MuiOutlinedInput-root': {
-                          borderRadius: 3,
+                          borderRadius: 2,
                           backgroundColor: 'rgba(102, 126, 234, 0.05)',
                           '& fieldset': {
                             borderColor: 'rgba(102, 126, 234, 0.2)',
-                            borderWidth: 2,
+                            borderWidth: 1,
                           },
                           '&:hover fieldset': {
                             borderColor: 'rgba(102, 126, 234, 0.4)',
@@ -769,11 +739,12 @@ const LoginPage: React.FC = () => {
                           '&.Mui-focused fieldset': {
                             borderColor: '#667eea',
                           },
-                          transition: 'all 0.3s ease'
+                          transition: 'all 0.2s ease'
                         },
                         '& .MuiInputLabel-root': {
                           color: '#667eea',
-                          fontWeight: 600,
+                          fontWeight: 500,
+                          fontSize: '0.9rem',
                           '&.Mui-focused': {
                             color: '#667eea',
                           }
@@ -819,13 +790,13 @@ const LoginPage: React.FC = () => {
                         )
                       }}
                       sx={{ 
-                        mb: 2,
+                        mb: 1.5,
                         '& .MuiOutlinedInput-root': {
-                          borderRadius: 3,
+                          borderRadius: 2,
                           backgroundColor: 'rgba(102, 126, 234, 0.05)',
                           '& fieldset': {
                             borderColor: 'rgba(102, 126, 234, 0.2)',
-                            borderWidth: 2,
+                            borderWidth: 1,
                           },
                           '&:hover fieldset': {
                             borderColor: 'rgba(102, 126, 234, 0.4)',
@@ -833,11 +804,12 @@ const LoginPage: React.FC = () => {
                           '&.Mui-focused fieldset': {
                             borderColor: '#667eea',
                           },
-                          transition: 'all 0.3s ease'
+                          transition: 'all 0.2s ease'
                         },
                         '& .MuiInputLabel-root': {
                           color: '#667eea',
-                          fontWeight: 600,
+                          fontWeight: 500,
+                          fontSize: '0.9rem',
                           '&.Mui-focused': {
                             color: '#667eea',
                           }
@@ -846,7 +818,7 @@ const LoginPage: React.FC = () => {
                     />
                     
                     {/* Forgot Password Link */}
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
                       <Link 
                         component={RouterLink} 
                         to="/forgot-password" 
@@ -888,25 +860,25 @@ const LoginPage: React.FC = () => {
                       startIcon={loading ? null : <LoginIcon />}
                       sx={{
                         mt: 1,
-                        mb: 4,
-                        py: 2,
-                        borderRadius: 4,
-                        fontSize: '1.1rem',
-                        fontWeight: 'bold',
+                        mb: 2,
+                        py: 1.5,
+                        borderRadius: 3,
+                        fontSize: '1rem',
+                        fontWeight: 600,
                         background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-                        boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)',
+                        boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
                         textTransform: 'none',
                         '&:hover': {
                           background: 'linear-gradient(45deg, #5a6fd8 30%, #694a9e 90%)',
-                          transform: 'translateY(-3px)',
-                          boxShadow: '0 12px 35px rgba(102, 126, 234, 0.5)',
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
                         },
                         '&:disabled': {
                           background: 'linear-gradient(45deg, #ccc 30%, #999 90%)',
                           transform: 'none',
-                          boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
                         },
-                        transition: 'all 0.3s ease'
+                        transition: 'all 0.2s ease'
                       }}
                     >
                       {loading ? (
@@ -931,17 +903,17 @@ const LoginPage: React.FC = () => {
                     </Button>
                     
                     {/* Divider */}
-                    <Divider sx={{ my: 4 }}>
+                    <Divider sx={{ my: 2 }}>
                       <Typography 
                         variant="body2" 
                         sx={{
                           color: 'text.secondary',
-                          fontWeight: 600,
-                          px: 3,
+                          fontWeight: 500,
+                          px: 2,
                           background: 'rgba(255, 255, 255, 0.8)',
-                          backdropFilter: 'blur(10px)',
-                          borderRadius: 3,
-                          py: 1
+                          borderRadius: 2,
+                          py: 0.5,
+                          fontSize: '0.85rem'
                         }}
                       >
                         Don't have an account?

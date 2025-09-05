@@ -43,7 +43,7 @@ import {
   PersonAdd,
   Home as HomeIcon
 } from '@mui/icons-material';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useNavigate, Link as RouterLink, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../contexts/AuthContext';
 import FloatingContact from '../components/FloatingContact';
@@ -70,12 +70,24 @@ const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [searchParams] = useSearchParams();
 
   const steps = ['Account Type', 'Personal Information', 'Security'];
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    
+    // Check if role parameter is provided (e.g., /register?role=employer)
+    const roleParam = searchParams.get('role');
+    if (roleParam === 'employer') {
+      setFormData(prev => ({
+        ...prev,
+        role: UserRole.EMPLOYER
+      }));
+      // Skip to step 1 (Personal Information) since role is already selected
+      setActiveStep(1);
+    }
+  }, [searchParams]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | any) => {
     const { name, value } = e.target;
@@ -239,19 +251,19 @@ const RegisterPage: React.FC = () => {
         }
       }}
     >
-      <Container component="main" maxWidth="lg" sx={{ py: { xs: 4, md: 6 }, position: 'relative', zIndex: 1 }}>
+      <Container component="main" maxWidth="md" sx={{ py: { xs: 2, md: 3 }, position: 'relative', zIndex: 1 }}>
         <Slide direction="up" in={mounted} timeout={1000}>
           <Paper
-            elevation={isMobile ? 8 : 24}
+            elevation={isMobile ? 4 : 12}
             sx={{
-              p: { xs: 4, sm: 6 },
+              p: { xs: 3, sm: 4 },
               width: '100%',
-              borderRadius: 6,
-              backdropFilter: 'blur(20px)',
+              borderRadius: 4,
+              backdropFilter: 'blur(15px)',
               background: 'rgba(255, 255, 255, 0.98)',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
               border: '1px solid rgba(255, 255, 255, 0.2)',
-              transition: 'all 0.4s ease-in-out',
+              transition: 'all 0.3s ease-in-out',
               position: 'relative',
               overflow: 'hidden',
               '&::before': {
@@ -260,55 +272,52 @@ const RegisterPage: React.FC = () => {
                 top: 0,
                 left: 0,
                 right: 0,
-                height: 4,
+                height: 3,
                 background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
               },
               '&:hover': {
-                transform: 'translateY(-8px)',
+                transform: 'translateY(-4px)',
                 boxShadow: '0 30px 80px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.3)',
               }
             }}
           >
             {/* Back to Home Button */}
-            <Box sx={{ position: 'absolute', top: 20, left: 20, zIndex: 10 }}>
+            <Box sx={{ position: 'absolute', top: 15, left: 15, zIndex: 10 }}>
               <Button
                 component={RouterLink}
                 to="/"
                 startIcon={<HomeIcon />}
-                variant="outlined"
+                variant="text"
                 size="small"
                 sx={{
-                  borderRadius: 3,
+                  borderRadius: 2,
                   textTransform: 'none',
-                  fontWeight: 600,
-                  border: '2px solid rgba(102, 126, 234, 0.2)',
+                  fontWeight: 500,
                   color: 'primary.main',
-                  backdropFilter: 'blur(10px)',
-                  background: 'rgba(255, 255, 255, 0.8)',
+                  fontSize: '0.8rem',
+                  minWidth: 'auto',
+                  p: 1,
                   '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 6px 20px rgba(102, 126, 234, 0.3)',
-                    border: '2px solid rgba(102, 126, 234, 0.4)',
-                    background: 'rgba(255, 255, 255, 0.9)',
+                    background: 'rgba(102, 126, 234, 0.08)',
                   },
-                  transition: 'all 0.3s ease'
+                  transition: 'all 0.2s ease'
                 }}
               >
-                Back to Home
+                Home
               </Button>
             </Box>
             
             {/* Header with Logo and Brand */}
             <Fade in={mounted} timeout={1200}>
-              <Box sx={{ textAlign: 'center', mb: 5, pt: 3 }}>
+              <Box sx={{ textAlign: 'center', mb: 3, pt: 2 }}>
                 <Box
                   sx={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    mb: 3,
-                    p: 2,
-                    borderRadius: 4,
+                    mb: 2,
+                    p: 1.5,
+                    borderRadius: 3,
                     background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
                     border: '1px solid rgba(102, 126, 234, 0.1)',
                   }}
@@ -316,12 +325,12 @@ const RegisterPage: React.FC = () => {
                   <img 
                     src="/exjobnetlogo.png" 
                     alt="ExJobNet" 
-                    style={{ height: 60, width: 60, objectFit: 'contain' }}
+                    style={{ height: 40, width: 40, objectFit: 'contain' }}
                   />
                 </Box>
                 
                 <Typography 
-                  variant="h4" 
+                  variant="h5" 
                   component="h1" 
                   sx={{ 
                     fontWeight: 800,
@@ -329,85 +338,33 @@ const RegisterPage: React.FC = () => {
                     backgroundClip: 'text',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
-                    mb: 1
+                    mb: 0.5,
+                    fontSize: { xs: '1.3rem', md: '1.5rem' }
                   }}
                 >
                   ExJobNet
                 </Typography>
                 
-                <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 3 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '0.9rem' }}>
                   Africa's Premier Career Platform
                 </Typography>
                 
                 {/* Welcome Message */}
-                <Box sx={{ mb: 4 }}>
-                  <Typography 
-                    variant="h4" 
-                    component="h2" 
-                    fontWeight="bold"
-                    sx={{ 
-                      background: 'linear-gradient(45deg, #333 30%, #666 90%)',
-                      backgroundClip: 'text',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      position: 'relative',
-                      display: 'inline-block',
-                      mb: 2,
-                      '&::after': {
-                        content: '""',
-                        position: 'absolute',
-                        bottom: -8,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        width: 120,
-                        height: 4,
-                        borderRadius: 2,
-                        background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-                      }
-                    }}
-                  >
-                    Join Our Community!
-                  </Typography>
-                  
-                  <Typography variant="body1" color="text.secondary" sx={{ mt: 3, maxWidth: 600, mx: 'auto' }}>
-                    Create your account to unlock personalized career opportunities, connect with top employers,
-                    and accelerate your professional growth across Africa's dynamic job ecosystem.
-                  </Typography>
-                </Box>
+                <Typography 
+                  variant="h6" 
+                  fontWeight="600"
+                  sx={{ 
+                    color: 'text.primary',
+                    mb: 1,
+                    fontSize: { xs: '1.1rem', md: '1.2rem' }
+                  }}
+                >
+                  Join Our Community!
+                </Typography>
                 
-                {/* Benefits Chips */}
-                <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap" sx={{ mb: 4 }}>
-                  <Chip
-                    label="Free to Join"
-                    size="small"
-                    sx={{
-                      background: 'linear-gradient(45deg, rgba(76, 175, 80, 0.1) 30%, rgba(46, 125, 50, 0.1) 90%)',
-                      color: '#4caf50',
-                      border: '1px solid rgba(76, 175, 80, 0.2)',
-                      fontWeight: 600
-                    }}
-                  />
-                  <Chip
-                    label="Instant Access"
-                    size="small"
-                    sx={{
-                      background: 'linear-gradient(45deg, rgba(33, 150, 243, 0.1) 30%, rgba(21, 101, 192, 0.1) 90%)',
-                      color: '#2196f3',
-                      border: '1px solid rgba(33, 150, 243, 0.2)',
-                      fontWeight: 600
-                    }}
-                  />
-                  <Chip
-                    label="10,000+ Jobs"
-                    size="small"
-                    sx={{
-                      background: 'linear-gradient(45deg, rgba(102, 126, 234, 0.1) 30%, rgba(118, 75, 162, 0.1) 90%)',
-                      color: '#667eea',
-                      border: '1px solid rgba(102, 126, 234, 0.2)',
-                      fontWeight: 600
-                    }}
-                  />
-                </Stack>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '0.85rem', maxWidth: 400, mx: 'auto' }}>
+                  Create your account to unlock career opportunities and connect with employers
+                </Typography>
               </Box>
             </Fade>
             
@@ -416,7 +373,7 @@ const RegisterPage: React.FC = () => {
                 activeStep={activeStep} 
                 alternativeLabel 
                 sx={{ 
-                  mb: 5,
+                  mb: 3,
                   '& .MuiStepConnector-root': {
                     top: 22,
                     '&.Mui-completed .MuiStepConnector-line': {
@@ -495,19 +452,19 @@ const RegisterPage: React.FC = () => {
                       Choose Your Path to Success
                     </Typography>
                     
-                    <Grid container spacing={4}>
+                    <Grid container spacing={2}>
                       {roleOptions.map((option, index) => (
                         <Grid item xs={12} md={4} key={option.value}>
                           <Slide direction="up" in={mounted} timeout={1000 + index * 200}>
                             <Paper
-                              elevation={formData.role === option.value ? 12 : 3}
+                              elevation={formData.role === option.value ? 8 : 2}
                               sx={{
-                                p: 4,
-                                borderRadius: 4,
+                                p: 2.5,
+                                borderRadius: 3,
                                 cursor: 'pointer',
-                                border: formData.role === option.value ? 3 : 2,
+                                border: formData.role === option.value ? 2 : 1,
                                 borderColor: formData.role === option.value ? '#667eea' : 'rgba(102, 126, 234, 0.2)',
-                                transition: 'all 0.4s ease',
+                                transition: 'all 0.3s ease',
                                 height: '100%',
                                 display: 'flex',
                                 flexDirection: 'column',
@@ -516,20 +473,20 @@ const RegisterPage: React.FC = () => {
                                 position: 'relative',
                                 overflow: 'hidden',
                                 background: formData.role === option.value 
-                                  ? 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)'
-                                  : 'rgba(255, 255, 255, 0.9)',
+                                  ? 'linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%)'
+                                  : 'rgba(255, 255, 255, 0.95)',
                                 '&::before': formData.role === option.value ? {
                                   content: '""',
                                   position: 'absolute',
                                   top: 0,
                                   left: 0,
                                   right: 0,
-                                  height: 4,
+                                  height: 2,
                                   background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
                                 } : {},
                                 '&:hover': {
-                                  transform: 'translateY(-8px)',
-                                  boxShadow: '0 15px 40px rgba(102, 126, 234, 0.3)',
+                                  transform: 'translateY(-4px)',
+                                  boxShadow: '0 8px 25px rgba(102, 126, 234, 0.2)',
                                   borderColor: '#667eea',
                                 }
                               }}
@@ -538,12 +495,12 @@ const RegisterPage: React.FC = () => {
                               <Avatar
                                 sx={{
                                   bgcolor: formData.role === option.value ? '#667eea' : 'rgba(102, 126, 234, 0.1)',
-                                  width: 80,
-                                  height: 80,
-                                  mb: 3,
+                                  width: 50,
+                                  height: 50,
+                                  mb: 1.5,
                                   transition: 'all 0.3s ease',
                                   '& .MuiSvgIcon-root': {
-                                    fontSize: '2rem',
+                                    fontSize: '1.4rem',
                                     color: formData.role === option.value ? 'white' : '#667eea'
                                   }
                                 }}
@@ -551,22 +508,23 @@ const RegisterPage: React.FC = () => {
                                 {option.icon}
                               </Avatar>
                               <Typography 
-                                variant="h5" 
+                                variant="h6" 
                                 gutterBottom 
-                                fontWeight="bold"
+                                fontWeight="600"
                                 sx={{
                                   color: formData.role === option.value ? '#667eea' : 'text.primary',
-                                  mb: 2
+                                  mb: 1,
+                                  fontSize: '1rem'
                                 }}
                               >
                                 {option.label}
                               </Typography>
                               <Typography 
-                                variant="body1" 
+                                variant="body2" 
                                 color="text.secondary"
                                 sx={{
-                                  lineHeight: 1.6,
-                                  fontSize: '0.95rem'
+                                  lineHeight: 1.4,
+                                  fontSize: '0.8rem'
                                 }}
                               >
                                 {option.description}

@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Card,
-  CardContent,
   TextField,
   Button,
   Typography,
@@ -10,15 +8,12 @@ import {
   Alert,
   Container,
   Paper,
-  Divider,
   InputAdornment,
   IconButton,
   useTheme,
   useMediaQuery,
-  Avatar,
   Fade,
   Slide,
-  Grow,
   Chip,
   Stack,
   Grid
@@ -29,19 +24,12 @@ import {
   Visibility, 
   VisibilityOff, 
   Login as LoginIcon,
-  PersonAdd,
   Home as HomeIcon,
-  WorkOutline,
-  TrendingUp,
-  Security,
-  Speed,
-  Star,
-  CheckCircle,
-  Assessment,
-  Psychology,
+  Work,
   School,
-  Business,
-  Home
+  Psychology,
+  TrendingUp,
+  CheckCircle
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -143,443 +131,77 @@ const LoginPage: React.FC = () => {
   };
 
   const services = [
-      {
-      icon: <PersonAdd sx={{ fontSize: 28, color: '#ffffff' }} />,
-      title: 'CV Builder',
-      description: 'Professional resume builder with AI optimization',
-      category: 'Career Tools',
-      gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-      bgColor: 'rgba(250, 112, 154, 0.1)'
-    },
-
     {
-      icon: <Assessment sx={{ fontSize: 28, color: '#ffffff' }} />,
-      title: 'Psychometric Tests',
-      description: 'Advanced personality and skills assessments',
-      category: 'Testing & Assessment',
-      gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-      bgColor: 'rgba(240, 147, 251, 0.1)'
+      icon: <Work sx={{ fontSize: 20, color: '#ffffff' }} />,
+      title: 'Premium Jobs',
+      description: 'Access thousands of curated job opportunities from top employers across Africa and beyond.',
+      gradient: 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)'
     },
     {
-      icon: <Assessment sx={{ fontSize: 28, color: '#ffffff' }} />,
-      title: 'Smart Exams',
-      description: 'Advanced job specific exams',
-      category: 'Testing & Assessment',
-      gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-      bgColor: 'rgba(79, 172, 254, 0.1)'
+      icon: <School sx={{ fontSize: 20, color: '#ffffff' }} />,
+      title: 'E-Learning Platform',
+      description: 'Enhance your skills with our comprehensive courses designed by industry experts.',
+      gradient: 'linear-gradient(135deg, #388E3C 0%, #66BB6A 100%)'
     },
     {
-      icon: <Psychology sx={{ fontSize: 28, color: '#ffffff' }} />,
-      title: 'Interviews',
-      description: 'Practice with intelligent interview simulations',
-      category: 'AI Technology',
-      gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-      bgColor: 'rgba(67, 233, 123, 0.1)'
-    },
-  
-    {
-      icon: <Security sx={{ fontSize: 28, color: '#ffffff' }} />,
-      title: 'Social Network',
-      description: 'Professional networking and connections',
-      category: 'Professional Network',
-      gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-      bgColor: 'rgba(168, 237, 234, 0.1)'
-    },
-        {
-      icon: <School sx={{ fontSize: 28, color: '#ffffff' }} />,
-      title: 'E-Learning Courses',
-      description: 'Professional development with learning materials and live sessions',
-      category: 'Learning & Growth',
-      gradient: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
-      bgColor: 'rgba(161, 140, 209, 0.1)'
+      icon: <Psychology sx={{ fontSize: 20, color: '#ffffff' }} />,
+      title: 'Career Coach',
+      description: 'Get personalized career guidance and smart job recommendations powered by AI.',
+      gradient: 'linear-gradient(135deg, #1B5E20 0%, #43A047 100%)'
     },
     {
-      icon: <TrendingUp sx={{ fontSize: 28, color: '#ffffff' }} />,
-      title: 'Career Guidance',
-      description: 'Personalized career development and insights',
-      category: 'Career Development',
-      gradient: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
-      bgColor: 'rgba(255, 236, 210, 0.1)'
-    },
-
-    {
-      icon: <Business sx={{ fontSize: 28, color: '#ffffff' }} />,
-      title: 'Company Profiles',
-      description: 'Discover top companies and their culture',
-      category: 'Company Discovery',
-      gradient: 'linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%)',
-      bgColor: 'rgba(250, 208, 196, 0.1)'
+      icon: <TrendingUp sx={{ fontSize: 20, color: '#ffffff' }} />,
+      title: 'Career Analytics',
+      description: 'Track your career progress with detailed insights and performance metrics.',
+      gradient: 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)'
     },
     {
-      icon: <Speed sx={{ fontSize: 28, color: '#ffffff' }} />,
-      title: 'Smart Matching',
-      description: 'AI-powered job and candidate matching',
-      category: 'AI Technology',
-      gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
-      bgColor: 'rgba(255, 154, 158, 0.1)'
+      icon: <CheckCircle sx={{ fontSize: 20, color: '#ffffff' }} />,
+      title: 'Professional Network',
+      description: 'Connect with industry professionals and expand your career network.',
+      gradient: 'linear-gradient(135deg, #388E3C 0%, #66BB6A 100%)'
     },
     {
-      icon: <CheckCircle sx={{ fontSize: 28, color: '#ffffff' }} />,
-      title: 'Certificates',
-      description: 'Professional certifications and achievements',
-      category: 'Credentials',
-      gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)',
-      bgColor: 'rgba(161, 196, 253, 0.1)'
-    },
-    {
-      icon: <Star sx={{ fontSize: 28, color: '#ffffff' }} />,
-      title: 'Career Events',
-      description: 'Job fairs, webinars, and networking events',
-      category: 'Events & Networking',
-      gradient: 'linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%)',
-      bgColor: 'rgba(255, 234, 167, 0.1)'
-    },
-    {
-      icon: <Home sx={{ fontSize: 28, color: '#ffffff' }} />,
-      title: 'Employer Dashboard',
-      description: 'Complete hiring and talent management solution',
-      category: 'For Employers',
-      gradient: 'linear-gradient(135deg, #81ecec 0%, #6c5ce7 100%)',
-      bgColor: 'rgba(129, 236, 236, 0.1)'
+      icon: <Work sx={{ fontSize: 20, color: '#ffffff' }} />,
+      title: 'Skills Assessment',
+      description: 'Evaluate and certify your skills with our comprehensive testing platform.',
+      gradient: 'linear-gradient(135deg, #1B5E20 0%, #43A047 100%)'
     }
   ];
 
   return (
     <Box
       sx={{
-        minHeight: { xs: '100vh', sm: 'auto' },
+        minHeight: '100vh',
         display: 'flex',
-        background: 'linear-gradient(135deg, #4ade80 0%, #16a34a 50%, #14532d 100%)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)',
         position: 'relative',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        py: { xs: 2, sm: 4 },
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: `
-            radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
-            radial-gradient(circle at 40% 80%, rgba(120, 219, 226, 0.3) 0%, transparent 50%)
-          `,
-          zIndex: 0,
-        },
-        '&::after': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'url("/find job.jpg")',
-          backgroundRepeat: 'no-repeat',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          opacity: 0.1,
-          zIndex: 0,
-        }
+        py: 2
       }}
     >
-      <Container component="main" maxWidth="lg" sx={{ py: { xs: 1, md: 2 }, position: 'relative', zIndex: 1, width: '100%' }}>
-        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, minHeight: { xs: 'auto', md: 'auto' }, gap: { xs: 1, md: 3 }, alignItems: { xs: 'center', md: 'flex-start' } }}>
-          {/* Left side - Branding and info */}
-          {!isMobile && (
-            <Box 
-              sx={{ 
-                flex: 1,
-                display: 'flex', 
-                flexDirection: 'column',
-                justifyContent: 'flex-start',
-                p: { xs: 2, md: 3 },
-                position: 'relative',
-                maxHeight: { sm: '90vh', md: 'auto' },
-                overflow: 'auto'
-              }}
-            >
-              <Fade in={mounted} timeout={1000}>
-                <Box>
-                  {/* Logo and Brand */}
-                  <Slide direction="right" in={mounted} timeout={800}>
-                    <Box sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
-                      <Box
-                        sx={{
-                          background: 'rgba(255, 255, 255, 0.15)',
-                          backdropFilter: 'blur(10px)',
-                          borderRadius: 3,
-                          p: 1.5,
-                          mr: 2,
-                          border: '1px solid rgba(255, 255, 255, 0.2)',
-                        }}
-                      >
-                        <img 
-                          src="/exjobnetlogo.png" 
-                          alt="ExJobNet" 
-                          style={{ height: 50, width: 50, objectFit: 'contain' }}
-                        />
-                      </Box>
-                      <Box>
-                        <Typography 
-                          variant="h4" 
-                          component="h1" 
-                          sx={{ 
-                            fontWeight: 800,
-                            background: 'linear-gradient(45deg, #fff 30%, #e8eaf6 90%)',
-                            backgroundClip: 'text',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                            fontSize: { xs: '1.5rem', md: '2rem' }
-                          }}
-                        >
-                          ExJobNet
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.9rem' }}>
-                          Africa's Premier Career Platform
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Slide>
-                  
-                  {/* Welcome Message */}
-                  <Grow in={mounted} timeout={1200}>
-                    <Box sx={{ mb: 3 }}>
-                      <Typography 
-                        variant="body1" 
-                        sx={{ 
-                          mb: 2, 
-                          maxWidth: '95%',
-                          color: 'rgba(255, 255, 255, 0.95)',
-                          lineHeight: 1.5,
-                          fontSize: { xs: '0.95rem', md: '1.1rem' },
-                          fontWeight: 500,
-                          textAlign: 'left'
-                        }}
-                      >
-                        Master your job preparation journey and build meaningful professional networks.
-                      </Typography>
-                    </Box>
-                  </Grow>
-                  
-                  {/* Our Complete Services */}
-                  <Box sx={{ maxWidth: '100%' }}>
-                    <Typography 
-                      variant="h6" 
-                      fontWeight="bold" 
-                      color="white" 
-                      sx={{ 
-                        mb: 2, 
-                        textAlign: 'left',
-                        textShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                        background: 'linear-gradient(45deg, #fff 30%, #e8eaf6 90%)',
-                        backgroundClip: 'text',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        fontSize: { xs: '1.1rem', md: '1.3rem' }
-                      }}
-                    >
-                      🚀 Our Services
-                    </Typography>
-                    
-                    {/* Compact Services Grid - Show only top 4 services */}
-                    <Grid container spacing={2} sx={{ mb: 3 }}>
-                      {services.slice(0, 4).map((service, index) => (
-                        <Grid item xs={6} sm={6} key={service.title}>
-                          <Slide 
-                            direction="right" 
-                            in={mounted} 
-                            timeout={1000 + index * 100}
-                          >
-                            <Box 
-                              sx={{ 
-                                p: 3,
-                                borderRadius: 4,
-                                background: service.gradient,
-                                transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                                height: '100%',
-                                position: 'relative',
-                                overflow: 'hidden',
-                                border: '2px solid rgba(255, 255, 255, 0.1)',
-                                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
-                                cursor: 'pointer',
-                                '&:hover': {
-                                  transform: 'translateY(-8px) scale(1.02)',
-                                  boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
-                                  '&::before': {
-                                    transform: 'scale(1.1)',
-                                  }
-                                },
-                                '&::before': {
-                                  content: '""',
-                                  position: 'absolute',
-                                  top: 0,
-                                  left: 0,
-                                  right: 0,
-                                  bottom: 0,
-                                  background: 'rgba(255, 255, 255, 0.05)',
-                                  transition: 'transform 0.4s ease',
-                                  zIndex: 0
-                                }
-                              }}
-                            >
-                              <Box sx={{ position: 'relative', zIndex: 1 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                  <Box
-                                    sx={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      mr: 2,
-                                      width: 50,
-                                      height: 50,
-                                      borderRadius: '50%',
-                                      background: 'rgba(255, 255, 255, 0.15)',
-                                      backdropFilter: 'blur(10px)',
-                                      border: '2px solid rgba(255, 255, 255, 0.2)'
-                                    }}
-                                  >
-                                    {service.icon}
-                                  </Box>
-                                  <Box sx={{ flex: 1 }}>
-                                    <Typography 
-                                      variant="h6" 
-                                      fontWeight="700" 
-                                      color="white" 
-                                      sx={{ 
-                                        fontSize: '1.1rem',
-                                        mb: 0.5,
-                                        textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
-                                      }}
-                                    >
-                                      {service.title}
-                                    </Typography>
-                                    <Chip 
-                                      label={service.category} 
-                                      size="small" 
-                                      sx={{ 
-                                        fontSize: '0.75rem', 
-                                        height: 22,
-                                        color: 'rgba(255, 255, 255, 0.95)',
-                                        background: 'rgba(255, 255, 255, 0.15)',
-                                        backdropFilter: 'blur(10px)',
-                                        border: '1px solid rgba(255, 255, 255, 0.25)',
-                                        fontWeight: 600,
-                                        '& .MuiChip-label': { px: 1.5 }
-                                      }} 
-                                    />
-                                  </Box>
-                                </Box>
-                                <Typography 
-                                  variant="body2" 
-                                  color="rgba(255, 255, 255, 0.9)" 
-                                  sx={{ 
-                                    fontSize: '0.9rem', 
-                                    lineHeight: 1.5,
-                                    textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)'
-                                  }}
-                                >
-                                  {service.description}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          </Slide>
-                        </Grid>
-                      ))}
-                    </Grid>
-
-                    {/* Additional Services Summary */}
-                    <Fade in={mounted} timeout={2000}>
-                      <Box 
-                        sx={{ 
-                          textAlign: 'center',
-                          p: 2.5,
-                          borderRadius: 3,
-                          background: 'rgba(255, 255, 255, 0.08)',
-                          backdropFilter: 'blur(10px)',
-                          border: '1px solid rgba(255, 255, 255, 0.12)',
-                        }}
-                      >
-                        <Typography variant="body1" fontWeight="600" color="white" sx={{ mb: 1 }}>
-                          And Much More...
-                        </Typography>
-                        <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap" sx={{ gap: 1 }}>
-                          {services.slice(6).map((service, index) => (
-                            <Chip 
-                              key={service.title}
-                              label={service.title} 
-                              size="small" 
-                              sx={{ 
-                                color: '#ffffff',
-                                background: service.gradient,
-                                border: '2px solid rgba(255, 255, 255, 0.2)',
-                                fontWeight: 600,
-                                fontSize: '0.8rem',
-                                height: 28,
-                                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
-                                transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                                '&:hover': {
-                                  transform: 'translateY(-2px) scale(1.05)',
-                                  boxShadow: '0 8px 25px rgba(0, 0, 0, 0.2)',
-                                  border: '2px solid rgba(255, 255, 255, 0.3)',
-                                },
-                                '& .MuiChip-label': { 
-                                  px: 2,
-                                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)'
-                                }
-                              }} 
-                            />
-                          ))}
-                        </Stack>
-                        <Typography variant="body2" color="rgba(255, 255, 255, 0.7)" sx={{ mt: 2 }}>
-                          Access all premium features after login
-                        </Typography>
-                      </Box>
-                    </Fade>
-                  </Box>
-                  
-                  {/* Trust Indicators */}
-                  <Fade in={mounted} timeout={2000}>
-                    <Box sx={{ mt: 4 }}>
-                      <Stack direction="row" spacing={2} alignItems="center">
-                        <CheckCircle sx={{ color: '#4caf50' }} />
-                        <Typography variant="body2" color="rgba(255, 255, 255, 0.8)">
-                          Trusted by leading companies across Africa
-                        </Typography>
-                      </Stack>
-                    </Box>
-                  </Fade>
-                </Box>
-              </Fade>
-            </Box>
-          )}
-          
-          {/* Right side - Login form */}
-          <Box 
-            sx={{ 
-              flex: 1,
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: { xs: 'flex-start', md: 'flex-start' },
-              p: { xs: 1, sm: 2 },
-              mt: { xs: 1, md: 0 }
-            }}
-          >
+      <Container component="main" maxWidth="lg" sx={{ position: 'relative', zIndex: 1, py: { xs: 4, md: 6 } }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', md: 'row' }, 
+          alignItems: { xs: 'center', md: 'stretch' },
+          gap: { xs: 4, md: 6 },
+          minHeight: { xs: 'auto', md: '80vh' }
+        }}>
+          {/* Login form */}
+          <Box sx={{ flex: { xs: 1, md: '0 0 45%' }, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Slide direction="left" in={mounted} timeout={1000}>
               <Paper
-                elevation={isMobile ? 4 : 12}
+                elevation={6}
                 sx={{
-                  p: { xs: 3, sm: 4 },
+                  p: { xs: 2.5, sm: 3 },
                   width: '100%',
-                  maxWidth: 420,
-                  borderRadius: 4,
-                  backdropFilter: 'blur(15px)',
-                  background: 'rgba(255, 255, 255, 0.98)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+                  maxWidth: 380,
+                  borderRadius: 3,
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
                   border: '1px solid rgba(255, 255, 255, 0.2)',
-                  transition: 'all 0.3s ease-in-out',
                   position: 'relative',
                   overflow: 'hidden',
                   '&::before': {
@@ -589,16 +211,12 @@ const LoginPage: React.FC = () => {
                     left: 0,
                     right: 0,
                     height: 3,
-                    background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
-                  },
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15)',
+                    background: 'linear-gradient(45deg, #2E7D32 0%, #4CAF50 100%)',
                   }
                 }}
               >
                 {/* Back to Home Button */}
-                <Box sx={{ position: 'absolute', top: 15, left: 15, zIndex: 10 }}>
+                <Box sx={{ position: 'absolute', top: 10, right: 10, zIndex: 10 }}>
                   <Button
                     component={RouterLink}
                     to="/"
@@ -609,77 +227,41 @@ const LoginPage: React.FC = () => {
                       borderRadius: 2,
                       textTransform: 'none',
                       fontWeight: 500,
-                      color: 'primary.main',
-                      fontSize: '0.8rem',
+                      color: '#4CAF50',
+                      fontSize: '0.7rem',
                       minWidth: 'auto',
-                      p: 1,
-                      '&:hover': {
-                        background: 'rgba(102, 126, 234, 0.08)',
-                      },
-                      transition: 'all 0.2s ease'
+                      p: 0.5
                     }}
                   >
                     Home
                   </Button>
                 </Box>
                 
-                {/* Header with Logo and Brand */}
-                <Fade in={mounted} timeout={1200}>
-                  <Box sx={{ textAlign: 'center', mb: 3, pt: 2 }}>
-                    <Box
-                      sx={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        mb: 2,
-                        p: 1.5,
-                        borderRadius: 3,
-                        background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
-                        border: '1px solid rgba(102, 126, 234, 0.1)',
-                      }}
-                    >
-                      <img 
-                        src="/exjobnetlogo.png" 
-                        alt="ExJobNet" 
-                        style={{ height: 45, width: 45, objectFit: 'contain' }}
-                      />
-                    </Box>
-                    
+                {/* Compact Header */}
+                <Fade in={mounted} timeout={800}>
+                  <Box sx={{ textAlign: 'center', mb: 2, pt: 1 }}>
+                    <img 
+                      src="/exjobnetlogo.png" 
+                      alt="ExJobNet" 
+                      style={{ height: 35, width: 35, objectFit: 'contain', marginBottom: 8 }}
+                    />
                     <Typography 
-                      variant="h5" 
+                      variant="h6" 
                       component="h1" 
                       sx={{ 
-                        fontWeight: 800,
-                        background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                        fontWeight: 700,
+                        background: 'linear-gradient(45deg, #2E7D32 30%, #4CAF50 90%)',
                         backgroundClip: 'text',
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent',
-                        mb: 0.5,
-                        fontSize: { xs: '1.3rem', md: '1.5rem' }
-                      }}
-                    >
-                      ExJobNet
-                    </Typography>
-                    
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '0.9rem' }}>
-                      Africa's Premier Career Platform
-                    </Typography>
-                    
-                    {/* Welcome Message */}
-                    <Typography 
-                      variant="h6" 
-                      fontWeight="600"
-                      sx={{ 
-                        color: 'text.primary',
                         mb: 1,
-                        fontSize: { xs: '1.1rem', md: '1.2rem' }
+                        fontSize: '1.2rem'
                       }}
                     >
-                      Welcome Back!
+                      Welcome to ExJobNet
                     </Typography>
-                    
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '0.85rem' }}>
-                      Sign in to continue your career journey
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem' }}>
+                      Sign in to continue
                     </Typography>
                   </Box>
                 </Fade>
@@ -702,150 +284,89 @@ const LoginPage: React.FC = () => {
                   </Alert>
                 )}
 
-                <Grow in={mounted} timeout={1500}>
-                  <Box component="form" onSubmit={handleSubmit} noValidate>
-                    {/* Email Field */}
-                    <TextField
-                      margin="normal"
-                      required
-                      fullWidth
-                      id="email"
-                      label="Email Address"
-                      name="email"
-                      autoComplete="email"
-                      autoFocus
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      disabled={loading}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <Email sx={{ color: '#667eea' }} />
-                          </InputAdornment>
-                        ),
-                      }}
-                      sx={{ 
-                        mb: 2,
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 2,
-                          backgroundColor: 'rgba(102, 126, 234, 0.05)',
-                          '& fieldset': {
-                            borderColor: 'rgba(102, 126, 234, 0.2)',
-                            borderWidth: 1,
-                          },
-                          '&:hover fieldset': {
-                            borderColor: 'rgba(102, 126, 234, 0.4)',
-                          },
-                          '&.Mui-focused fieldset': {
-                            borderColor: '#667eea',
-                          },
-                          transition: 'all 0.2s ease'
-                        },
-                        '& .MuiInputLabel-root': {
-                          color: '#667eea',
-                          fontWeight: 500,
-                          fontSize: '0.9rem',
-                          '&.Mui-focused': {
-                            color: '#667eea',
-                          }
+                <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
+                  {/* Email Field */}
+                  <TextField
+                    required
+                    fullWidth
+                    id="email"
+                    label="Email"
+                    name="email"
+                    autoComplete="email"
+                    autoFocus
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={loading}
+                    size="small"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Email sx={{ color: '#4CAF50', fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{ 
+                      mb: 1.5,
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#4CAF50',
                         }
-                      }}
-                    />
-                    
-                    {/* Password Field */}
-                    <TextField
-                      margin="normal"
-                      required
-                      fullWidth
-                      name="password"
-                      label="Password"
-                      type={showPassword ? 'text' : 'password'}
-                      id="password"
-                      autoComplete="current-password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      disabled={loading}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <Lock sx={{ color: '#667eea' }} />
-                          </InputAdornment>
-                        ),
-                        endAdornment: (
-                          <InputAdornment position="end">
-                            <IconButton
-                              aria-label="toggle password visibility"
-                              onClick={handleTogglePasswordVisibility}
-                              edge="end"
-                              sx={{
-                                color: '#667eea',
-                                '&:hover': {
-                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                                }
-                              }}
-                            >
-                              {showPassword ? <VisibilityOff /> : <Visibility />}
-                            </IconButton>
-                          </InputAdornment>
-                        )
-                      }}
-                      sx={{ 
-                        mb: 1.5,
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 2,
-                          backgroundColor: 'rgba(102, 126, 234, 0.05)',
-                          '& fieldset': {
-                            borderColor: 'rgba(102, 126, 234, 0.2)',
-                            borderWidth: 1,
-                          },
-                          '&:hover fieldset': {
-                            borderColor: 'rgba(102, 126, 234, 0.4)',
-                          },
-                          '&.Mui-focused fieldset': {
-                            borderColor: '#667eea',
-                          },
-                          transition: 'all 0.2s ease'
-                        },
-                        '& .MuiInputLabel-root': {
-                          color: '#667eea',
-                          fontWeight: 500,
-                          fontSize: '0.9rem',
-                          '&.Mui-focused': {
-                            color: '#667eea',
-                          }
+                      }
+                    }}
+                  />
+                  
+                  {/* Password Field */}
+                  <TextField
+                    required
+                    fullWidth
+                    name="password"
+                    label="Password"
+                    type={showPassword ? 'text' : 'password'}
+                    id="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={loading}
+                    size="small"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Lock sx={{ color: '#4CAF50', fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            aria-label="toggle password visibility"
+                            onClick={handleTogglePasswordVisibility}
+                            edge="end"
+                            size="small"
+                            sx={{ color: '#4CAF50' }}
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      )
+                    }}
+                    sx={{ 
+                      mb: 1.5,
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#4CAF50',
                         }
-                      }}
+                      }
+                    }}
                     />
                     
                     {/* Forgot Password Link */}
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                    <Box sx={{ textAlign: 'right', mb: 1.5 }}>
                       <Link 
                         component={RouterLink} 
                         to="/forgot-password" 
                         variant="body2" 
-                        sx={{
-                          color: '#667eea',
-                          textDecoration: 'none',
-                          fontWeight: 600,
-                          position: 'relative',
-                          '&:hover': {
-                            '&::after': {
-                              transform: 'scaleX(1)',
-                            }
-                          },
-                          '&::after': {
-                            content: '""',
-                            position: 'absolute',
-                            width: '100%',
-                            transform: 'scaleX(0)',
-                            height: 2,
-                            bottom: -2,
-                            left: 0,
-                            backgroundColor: '#667eea',
-                            transformOrigin: 'bottom right',
-                            transition: 'transform 0.25s ease-out',
-                          }
-                        }}
+                        sx={{ color: '#4CAF50', textDecoration: 'none', fontSize: '0.8rem' }}
                       >
                         Forgot password?
                       </Link>
@@ -857,104 +378,207 @@ const LoginPage: React.FC = () => {
                       fullWidth
                       variant="contained"
                       disabled={loading}
-                      startIcon={loading ? null : <LoginIcon />}
                       sx={{
-                        mt: 1,
                         mb: 2,
-                        py: 1.5,
-                        borderRadius: 3,
-                        fontSize: '1rem',
-                        fontWeight: 600,
-                        background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-                        boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+                        py: 1,
+                        borderRadius: 2,
+                        background: 'linear-gradient(45deg, #2E7D32 30%, #4CAF50 90%)',
                         textTransform: 'none',
+                        fontWeight: 600,
                         '&:hover': {
-                          background: 'linear-gradient(45deg, #5a6fd8 30%, #694a9e 90%)',
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
-                        },
-                        '&:disabled': {
-                          background: 'linear-gradient(45deg, #ccc 30%, #999 90%)',
-                          transform: 'none',
-                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                        },
-                        transition: 'all 0.2s ease'
+                          background: 'linear-gradient(45deg, #1B5E20 30%, #388E3C 90%)',
+                        }
                       }}
                     >
-                      {loading ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Box
-                            sx={{
-                              width: 20,
-                              height: 20,
-                              border: '2px solid transparent',
-                              borderTop: '2px solid #ffffff',
-                              borderRadius: '50%',
-                              animation: 'spin 1s linear infinite',
-                              '@keyframes spin': {
-                                '0%': { transform: 'rotate(0deg)' },
-                                '100%': { transform: 'rotate(360deg)' },
-                              }
-                            }}
-                          />
-                          Signing In...
-                        </Box>
-                      ) : 'Sign In to Continue'}
+                      {loading ? 'Signing In...' : 'Sign In'}
                     </Button>
                     
-                    {/* Divider */}
-                    <Divider sx={{ my: 2 }}>
-                      <Typography 
-                        variant="body2" 
-                        sx={{
-                          color: 'text.secondary',
-                          fontWeight: 500,
-                          px: 2,
-                          background: 'rgba(255, 255, 255, 0.8)',
-                          borderRadius: 2,
-                          py: 0.5,
-                          fontSize: '0.85rem'
-                        }}
-                      >
+                    {/* Register Link */}
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontSize: '0.85rem' }}>
                         Don't have an account?
                       </Typography>
-                    </Divider>
-                    
-                    {/* Create Account Button */}
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      component={RouterLink}
-                      to="/register"
-                      startIcon={<PersonAdd />}
-                      sx={{
-                        py: 2,
-                        borderRadius: 4,
-                        borderWidth: 2,
-                        fontSize: '1.1rem',
-                        fontWeight: 'bold',
-                        textTransform: 'none',
-                        borderColor: '#667eea',
-                        color: '#667eea',
-                        background: 'rgba(102, 126, 234, 0.05)',
-                        '&:hover': {
-                          borderWidth: 2,
-                          borderColor: '#5a6fd8',
-                          color: '#5a6fd8',
-                          background: 'rgba(102, 126, 234, 0.1)',
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 8px 25px rgba(102, 126, 234, 0.2)'
-                        },
-                        transition: 'all 0.3s ease'
-                      }}
-                    >
-                      Create New Account
-                    </Button>
+                      <Link 
+                        component={RouterLink} 
+                        to="/register" 
+                        sx={{ 
+                          color: '#4CAF50', 
+                          textDecoration: 'none',
+                          fontWeight: 600,
+                          fontSize: '0.9rem'
+                        }}
+                      >
+                        Create Account
+                      </Link>
+                    </Box>
                   </Box>
-                </Grow>
               </Paper>
             </Slide>
           </Box>
+
+          {/* Services Section - Only show on desktop */}
+          {!isMobile && (
+            <Slide direction="right" in={mounted} timeout={1200}>
+              <Box sx={{ 
+                flex: { xs: 1, md: '0 0 55%' }, 
+                display: 'flex', 
+                flexDirection: 'column',
+                justifyContent: 'center',
+                p: { xs: 2, md: 4 }
+              }}>
+                <Box sx={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: 3,
+                  p: 4,
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  height: 'fit-content',
+                  maxHeight: '600px',
+                  overflow: 'auto'
+                }}>
+                  {/* Header */}
+                  <Box sx={{ textAlign: 'center', mb: 4 }}>
+                    <Typography 
+                      variant="h4" 
+                      component="h2" 
+                      sx={{ 
+                        fontWeight: 700,
+                        background: 'linear-gradient(45deg, #ffffff 30%, #e8f5e8 90%)',
+                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                        mb: 1
+                      }}
+                    >
+                      🚀 ExJobNet Services
+                    </Typography>
+                    <Typography 
+                      variant="subtitle1" 
+                      sx={{ 
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        fontWeight: 500
+                      }}
+                    >
+                      Your Complete Career Platform
+                    </Typography>
+                  </Box>
+
+                  {/* Services Grid */}
+                  <Box sx={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, 
+                    gap: 2,
+                    mb: 3
+                  }}>
+                    {services.map((service, index) => (
+                      <Box
+                        key={service.title}
+                        sx={{
+                          background: 'rgba(255, 255, 255, 0.15)',
+                          backdropFilter: 'blur(5px)',
+                          borderRadius: 2,
+                          p: 2.5,
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            transform: 'translateY(-5px)',
+                            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
+                            background: 'rgba(255, 255, 255, 0.2)',
+                          }
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                          <Box sx={{ 
+                            background: service.gradient,
+                            borderRadius: '50%',
+                            p: 1,
+                            mr: 1.5,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            {service.icon}
+                          </Box>
+                          <Typography 
+                            variant="h6" 
+                            sx={{ 
+                              fontWeight: 600, 
+                              color: 'white',
+                              fontSize: '1rem'
+                            }}
+                          >
+                            {service.title}
+                          </Typography>
+                        </Box>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: 'rgba(255, 255, 255, 0.8)',
+                            lineHeight: 1.4,
+                            fontSize: '0.85rem'
+                          }}
+                        >
+                          {service.description}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+
+                  {/* Call to Action */}
+                  <Box sx={{ textAlign: 'center', mt: 3 }}>
+                    <Typography 
+                      variant="body1" 
+                      sx={{ 
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        fontWeight: 500,
+                        mb: 2
+                      }}
+                    >
+                      ✨ Join thousands of professionals who trust ExJobNet
+                    </Typography>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'center', 
+                      flexWrap: 'wrap',
+                      gap: 1
+                    }}>
+                      <Chip
+                        label="10k+ Jobs"
+                        size="small"
+                        sx={{
+                          background: 'rgba(76, 175, 80, 0.2)',
+                          color: 'white',
+                          fontWeight: 600,
+                          border: '1px solid rgba(76, 175, 80, 0.3)'
+                        }}
+                      />
+                      <Chip
+                        label="5k+ Companies"
+                        size="small"
+                        sx={{
+                          background: 'rgba(33, 150, 243, 0.2)',
+                          color: 'white',
+                          fontWeight: 600,
+                          border: '1px solid rgba(33, 150, 243, 0.3)'
+                        }}
+                      />
+                      <Chip
+                        label="100+ Courses"
+                        size="small"
+                        sx={{
+                          background: 'rgba(255, 152, 0, 0.2)',
+                          color: 'white',
+                          fontWeight: 600,
+                          border: '1px solid rgba(255, 152, 0, 0.3)'
+                        }}
+                      />
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
+            </Slide>
+          )}
         </Box>
       </Container>
       

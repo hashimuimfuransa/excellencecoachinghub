@@ -8,6 +8,7 @@ import {
   updateUser,
   deleteUser,
   getUserStats,
+  getUserStatsById,
   bulkUpdateUsers,
   resetUserPassword,
   getTeacherStats,
@@ -17,7 +18,9 @@ import {
   getUserProfile,
   updateProfile,
   changePassword,
-  uploadAvatar
+  uploadAvatar,
+  getPrivacySettings,
+  updatePrivacySettings
 } from '../controllers/userController';
 import { protect } from '../middleware/auth';
 import { requireAdmin } from '../middleware/roleAuth';
@@ -224,6 +227,11 @@ router.post('/upload-avatar', multerUpload.single('avatar'), uploadAvatar);
 router.get('/:id/profile', getUserProfile);
 router.put('/:id/profile', updateProfileValidation, validateRequest, updateProfile);
 router.post('/:id/profile-picture', multerUpload.single('profilePicture'), uploadAvatar);
+
+// Individual user stats and privacy settings routes
+router.get('/:id/stats', getUserStatsById);
+router.get('/:id/privacy-settings', getPrivacySettings);
+router.put('/:id/privacy-settings', updatePrivacySettings);
 
 // Debug route to check user data in database (remove in production)
 router.get('/debug/user-data', async (req, res) => {

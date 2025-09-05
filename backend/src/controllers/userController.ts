@@ -1266,3 +1266,252 @@ export const uploadAvatar = async (req: Request, res: Response, next: NextFuncti
     next(error);
   }
 };
+
+// Get individual user statistics
+export const getUserStatsById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    // Check if user exists
+    const user = await User.findById(id)
+      .select('-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil');
+
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+      return;
+    }
+
+    // For privacy, limit what information is shown for other users
+    const isOwnProfile = req.user?.id === id;
+    const isAdmin = req.user?.role === 'admin';
+
+    if (!isOwnProfile && !isAdmin) {
+      // Return limited public stats for other users
+      res.status(200).json({
+        success: true,
+        data: {
+          profileCompletion: {
+            percentage: user.profileCompletion?.percentage || 0,
+            status: user.profileCompletion?.status || 'incomplete'
+          },
+          memberSince: user.createdAt,
+          isActive: user.isActive,
+          publicStats: {
+            connectionsCount: 0, // Will be populated when connections feature is implemented
+            postsCount: 0, // Will be populated when posts feature is implemented
+            skillsCount: user.skills?.length || 0
+          }
+        }
+      });
+      return;
+    }
+
+    // Return detailed stats for own profile or admin view
+    const profileCompletion = simpleProfileCompletionService.calculateCompletion(user);
+
+    // Get additional stats (mock data for now - replace with real data when available)
+    const detailedStats = {
+      profileCompletion,
+      account: {
+        memberSince: user.createdAt,
+        lastLogin: user.lastLogin,
+        isEmailVerified: user.isEmailVerified,
+        isActive: user.isActive
+      },
+      activity: {
+        profileViews: Math.floor(Math.random() * 100), // Mock data
+        connectionsCount: 0, // Will be populated when connections feature is implemented
+        postsCount: 0, // Will be populated when posts feature is implemented
+        commentsCount: 0, // Will be populated when comments feature is implemented
+        likesReceived: 0 // Will be populated when likes feature is implemented
+      },
+      skills: {
+        totalSkills: user.skills?.length || 0,
+        endorsements: 0 // Will be populated when endorsements feature is implemented
+      },
+      education: {
+        totalEducation: user.education?.length || 0,
+        certificates: user.certifications?.length || 0
+      },
+      experience: {
+        totalExperience: user.experience?.length || 0,
+        currentPosition: user.jobTitle || 'Not specified'
+      }
+    };
+
+    res.status(200).json({
+      success: true,
+      data: detailedStats
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get user privacy settings
+export const getPrivacySettings = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    // Check if user exists
+    const user = await User.findById(id);
+
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+      return;
+    }
+
+    // Only allow users to access their own privacy settings or admin access
+    const isOwnProfile = req.user?.id === id;
+    const isAdmin = req.user?.role === 'admin';
+
+    if (!isOwnProfile && !isAdmin) {
+      res.status(403).json({
+        success: false,
+        error: 'Access denied. You can only view your own privacy settings.'
+      });
+      return;
+    }
+
+    // Return privacy settings with default values if not set
+    const privacySettings = {
+      profileVisibility: user.privacySettings?.profileVisibility || 'public',
+      contactInfoVisibility: user.privacySettings?.contactInfoVisibility || 'connections',
+      experienceVisibility: user.privacySettings?.experienceVisibility || 'public',
+      educationVisibility: user.privacySettings?.educationVisibility || 'public',
+      skillsVisibility: user.privacySettings?.skillsVisibility || 'public',
+      allowMessagesFrom: user.privacySettings?.allowMessagesFrom || 'everyone',
+      showOnlineStatus: user.privacySettings?.showOnlineStatus !== false, // Default to true
+      emailNotifications: user.emailNotifications !== false, // Default to true
+      pushNotifications: user.privacySettings?.pushNotifications !== false, // Default to true
+      profileIndexing: user.privacySettings?.profileIndexing !== false // Default to true
+    };
+
+    res.status(200).json({
+      success: true,
+      data: { privacySettings }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Update user privacy settings
+export const updatePrivacySettings = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const settings = req.body;
+
+    // Check if user exists
+    const user = await User.findById(id);
+
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+      return;
+    }
+
+    // Only allow users to update their own privacy settings or admin access
+    const isOwnProfile = req.user?.id === id;
+    const isAdmin = req.user?.role === 'admin';
+
+    if (!isOwnProfile && !isAdmin) {
+      res.status(403).json({
+        success: false,
+        error: 'Access denied. You can only update your own privacy settings.'
+      });
+      return;
+    }
+
+    // Validate privacy settings
+    const validVisibilityOptions = ['public', 'connections', 'private'];
+    const validMessageOptions = ['everyone', 'connections', 'nobody'];
+
+    const validatedSettings: any = {};
+
+    if (settings.profileVisibility && validVisibilityOptions.includes(settings.profileVisibility)) {
+      validatedSettings['privacySettings.profileVisibility'] = settings.profileVisibility;
+    }
+
+    if (settings.contactInfoVisibility && validVisibilityOptions.includes(settings.contactInfoVisibility)) {
+      validatedSettings['privacySettings.contactInfoVisibility'] = settings.contactInfoVisibility;
+    }
+
+    if (settings.experienceVisibility && validVisibilityOptions.includes(settings.experienceVisibility)) {
+      validatedSettings['privacySettings.experienceVisibility'] = settings.experienceVisibility;
+    }
+
+    if (settings.educationVisibility && validVisibilityOptions.includes(settings.educationVisibility)) {
+      validatedSettings['privacySettings.educationVisibility'] = settings.educationVisibility;
+    }
+
+    if (settings.skillsVisibility && validVisibilityOptions.includes(settings.skillsVisibility)) {
+      validatedSettings['privacySettings.skillsVisibility'] = settings.skillsVisibility;
+    }
+
+    if (settings.allowMessagesFrom && validMessageOptions.includes(settings.allowMessagesFrom)) {
+      validatedSettings['privacySettings.allowMessagesFrom'] = settings.allowMessagesFrom;
+    }
+
+    if (typeof settings.showOnlineStatus === 'boolean') {
+      validatedSettings['privacySettings.showOnlineStatus'] = settings.showOnlineStatus;
+    }
+
+    if (typeof settings.emailNotifications === 'boolean') {
+      validatedSettings.emailNotifications = settings.emailNotifications;
+    }
+
+    if (typeof settings.pushNotifications === 'boolean') {
+      validatedSettings['privacySettings.pushNotifications'] = settings.pushNotifications;
+    }
+
+    if (typeof settings.profileIndexing === 'boolean') {
+      validatedSettings['privacySettings.profileIndexing'] = settings.profileIndexing;
+    }
+
+    // Update user with new privacy settings
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { $set: validatedSettings },
+      { new: true, runValidators: true }
+    ).select('-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil');
+
+    if (!updatedUser) {
+      res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+      return;
+    }
+
+    // Return updated privacy settings
+    const privacySettings = {
+      profileVisibility: updatedUser.privacySettings?.profileVisibility || 'public',
+      contactInfoVisibility: updatedUser.privacySettings?.contactInfoVisibility || 'connections',
+      experienceVisibility: updatedUser.privacySettings?.experienceVisibility || 'public',
+      educationVisibility: updatedUser.privacySettings?.educationVisibility || 'public',
+      skillsVisibility: updatedUser.privacySettings?.skillsVisibility || 'public',
+      allowMessagesFrom: updatedUser.privacySettings?.allowMessagesFrom || 'everyone',
+      showOnlineStatus: updatedUser.privacySettings?.showOnlineStatus !== false,
+      emailNotifications: updatedUser.emailNotifications !== false,
+      pushNotifications: updatedUser.privacySettings?.pushNotifications !== false,
+      profileIndexing: updatedUser.privacySettings?.profileIndexing !== false
+    };
+
+    res.status(200).json({
+      success: true,
+      data: { privacySettings },
+      message: 'Privacy settings updated successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};

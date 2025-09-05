@@ -180,6 +180,11 @@ const ModernJobsPage: React.FC = () => {
   const { user, hasRole } = useAuth();
   const [searchParams] = useSearchParams();
   
+  // Responsive breakpoints
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  
   const [jobs, setJobs] = useState<Job[]>([]);
   const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
@@ -683,11 +688,11 @@ const ModernJobsPage: React.FC = () => {
 
   if (loading && jobs.length === 0) {
     return (
-      <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 2, md: 4 }, px: { xs: 2, md: 3 } }}>
         <Box
           sx={{
             display: 'grid',
-            gap: 2,
+            gap: { xs: 1.5, sm: 2 },
             gridTemplateColumns: {
               xs: '1fr',
               sm: 'repeat(2, 1fr)',
@@ -721,15 +726,16 @@ const ModernJobsPage: React.FC = () => {
       background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
     }}>
       {/* Header Section */}
-      <Container maxWidth="xl">
-        <Box sx={{ py: 4 }}>
-          <Grid container spacing={3} alignItems="center">
+      <Container maxWidth="xl" sx={{ px: { xs: 2, md: 3 } }}>
+        <Box sx={{ py: { xs: 3, md: 4 } }}>
+          <Grid container spacing={{ xs: 2, md: 3 }} alignItems="center">
             <Grid item xs={12} md={6}>
               <Typography 
-                variant="h3" 
+                variant={{ xs: 'h4', sm: 'h3' }}
                 fontWeight="bold"
                 sx={{ 
                   mb: 1,
+                  fontSize: { xs: '1.75rem', sm: '2.25rem', md: '3rem' },
                   background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
                   backgroundClip: 'text',
                   WebkitBackgroundClip: 'text',
@@ -738,18 +744,32 @@ const ModernJobsPage: React.FC = () => {
               >
                 Find Your Dream Job
               </Typography>
-              <Typography variant="h6" color="text.secondary" sx={{ mb: 3 }}>
+              <Typography 
+                variant={{ xs: 'body1', md: 'h6' }} 
+                color="text.secondary" 
+                sx={{ 
+                  mb: { xs: 2, md: 3 },
+                  fontSize: { xs: '1rem', md: '1.25rem' }
+                }}
+              >
                 Discover {totalJobs} opportunities from top companies
               </Typography>
             </Grid>
             <Grid item xs={12} md={6}>
-              <Stack direction="row" spacing={2} justifyContent={{ xs: 'flex-start', md: 'flex-end' }}>
+              <Stack 
+                direction={{ xs: 'column', sm: 'row' }} 
+                spacing={2} 
+                justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
+                alignItems={{ xs: 'stretch', sm: 'center' }}
+              >
                 <Tooltip title="Refresh Jobs">
                   <IconButton 
                     onClick={handleRefresh}
                     disabled={refreshing}
+                    size={isMobile ? 'small' : 'medium'}
                     sx={{ 
                       bgcolor: alpha(theme.palette.primary.main, 0.1),
+                      alignSelf: { xs: 'center', sm: 'auto' },
                       '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) }
                     }}
                   >
@@ -761,7 +781,8 @@ const ModernJobsPage: React.FC = () => {
                   value={viewMode}
                   exclusive
                   onChange={(e, newView) => newView && setViewMode(newView)}
-                  size="small"
+                  size={isMobile ? 'small' : 'medium'}
+                  sx={{ alignSelf: { xs: 'center', sm: 'auto' } }}
                 >
                   <ToggleButton value="grid" aria-label="grid view">
                     <GridView fontSize="small" />
@@ -773,11 +794,135 @@ const ModernJobsPage: React.FC = () => {
               </Stack>
             </Grid>
           </Grid>
+          
+          {/* Quick Action Buttons */}
+          <Grid container spacing={{ xs: 1, md: 2 }} sx={{ justifyContent: 'center', mt: { xs: 1, md: 2 }, mb: { xs: 1, md: 2 } }}>
+            <Grid item xs={12} sm={6} md={3}>
+              <Button
+                fullWidth
+                variant="contained"
+                size={isMobile ? 'medium' : 'large'}
+                onClick={() => setCurrentTab(1)}
+                sx={{
+                  py: { xs: 1.5, md: 2 },
+                  borderRadius: 4,
+                  fontSize: { xs: '0.875rem', md: '1rem' },
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)',
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+                startIcon={<SmartToy />}
+              >
+                <Box>
+                  <Typography variant="button" fontWeight="bold">
+                    AI Job Match
+                  </Typography>
+                  <Typography variant="caption" display="block" sx={{ opacity: 0.9 }}>
+                    Personalized matches
+                  </Typography>
+                </Box>
+              </Button>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={3}>
+              <Button
+                fullWidth
+                variant="contained"
+                size="large"
+                onClick={() => window.location.href = '/cv-builder'}
+                sx={{
+                  py: 2,
+                  borderRadius: 4,
+                  background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                  boxShadow: '0 8px 32px rgba(245, 87, 108, 0.3)',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 12px 40px rgba(245, 87, 108, 0.4)',
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+                startIcon={<Assignment />}
+              >
+                <Box>
+                  <Typography variant="button" fontWeight="bold">
+                    CV Builder
+                  </Typography>
+                  <Typography variant="caption" display="block" sx={{ opacity: 0.9 }}>
+                    Create perfect resume
+                  </Typography>
+                </Box>
+              </Button>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Button
+                fullWidth
+                variant="contained"
+                size="large"
+                onClick={() => window.location.href = '/career-guidance'}
+                sx={{
+                  py: 2,
+                  borderRadius: 4,
+                  background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                  boxShadow: '0 8px 32px rgba(79, 172, 254, 0.3)',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 12px 40px rgba(79, 172, 254, 0.4)',
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+                startIcon={<Quiz />}
+              >
+                <Box>
+                  <Typography variant="button" fontWeight="bold">
+                    Career Guide
+                  </Typography>
+                  <Typography variant="caption" display="block" sx={{ opacity: 0.9 }}>
+                    Expert guidance
+                  </Typography>
+                </Box>
+              </Button>
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={3}>
+              <Button
+                fullWidth
+                variant="contained"
+                size="large"
+                onClick={() => window.location.href = '/ai-interviews'}
+                sx={{
+                  py: 2,
+                  borderRadius: 4,
+                  background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+                  boxShadow: '0 8px 32px rgba(250, 112, 154, 0.3)',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 12px 40px rgba(250, 112, 154, 0.4)',
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+                startIcon={<Psychology />}
+              >
+                <Box>
+                  <Typography variant="button" fontWeight="bold">
+                    Interview Coach
+                  </Typography>
+                  <Typography variant="caption" display="block" sx={{ opacity: 0.9 }}>
+                    Practice interviews
+                  </Typography>
+                </Box>
+              </Button>
+            </Grid>
+          </Grid>
         </Box>
       </Container>
 
       {/* Job View Tabs */}
-      <Container maxWidth="xl" sx={{ mb: 3 }}>
+      <Container maxWidth="xl" sx={{ mb: { xs: 2, md: 3 }, px: { xs: 2, md: 3 } }}>
         <Paper sx={{ 
           borderRadius: 3, 
           overflow: 'hidden',
@@ -786,13 +931,19 @@ const ModernJobsPage: React.FC = () => {
           <Tabs 
             value={currentTab} 
             onChange={(e, newValue) => setCurrentTab(newValue)}
-            centered
+            centered={isDesktop}
+            variant={isMobile ? 'scrollable' : 'standard'}
+            scrollButtons="auto"
             sx={{
               '& .MuiTab-root': {
                 textTransform: 'none',
                 fontWeight: 'bold',
-                minHeight: 64,
-                fontSize: '1rem'
+                minHeight: { xs: 48, md: 64 },
+                fontSize: { xs: '0.875rem', md: '1rem' },
+                px: { xs: 1, md: 2 }
+              },
+              '& .MuiTabs-flexContainer': {
+                justifyContent: isMobile ? 'flex-start' : 'center'
               }
             }}
           >
@@ -829,8 +980,8 @@ const ModernJobsPage: React.FC = () => {
 
       {/* Search and Filter Section - Only show for All Jobs tab */}
       {currentTab === 0 && (
-        <Container maxWidth="xl" sx={{ mb: 4 }}>
-          <Grid container spacing={3}>
+        <Container maxWidth="xl" sx={{ mb: { xs: 3, md: 4 }, px: { xs: 2, md: 3 } }}>
+          <Grid container spacing={{ xs: 2, md: 3 }}>
             {/* Search Bar */}
           <Grid item xs={12} md={6}>
             <TextField
@@ -838,33 +989,36 @@ const ModernJobsPage: React.FC = () => {
               placeholder="Search jobs, companies, or skills..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              size={isMobile ? 'small' : 'medium'}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Search color="action" />
+                    <Search color="action" fontSize={isMobile ? 'small' : 'medium'} />
                   </InputAdornment>
                 ),
                 sx: {
                   borderRadius: 2,
                   bgcolor: 'background.paper',
                   '& fieldset': { border: 'none' },
-                  boxShadow: `0 2px 10px ${alpha(theme.palette.common.black, 0.1)}`
+                  boxShadow: `0 2px 10px ${alpha(theme.palette.common.black, 0.1)}`,
+                  fontSize: { xs: '0.875rem', md: '1rem' }
                 }
               }}
             />
           </Grid>
 
           {/* Location Filter */}
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} sm={6} md={3}>
             <TextField
               fullWidth
               placeholder="Location"
               value={locationFilter}
               onChange={(e) => setLocationFilter(e.target.value)}
+              size={isMobile ? 'small' : 'medium'}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <LocationOn color="action" />
+                    <LocationOn color="action" fontSize={isMobile ? 'small' : 'medium'} />
                   </InputAdornment>
                 ),
                 sx: {
@@ -878,9 +1032,9 @@ const ModernJobsPage: React.FC = () => {
           </Grid>
 
           {/* Sort and Filter Controls */}
-          <Grid item xs={12} md={3}>
-            <Stack direction="row" spacing={1}>
-              <FormControl fullWidth size="small">
+          <Grid item xs={12} sm={6} md={3}>
+            <Stack direction="row" spacing={1} sx={{ width: '100%' }}>
+              <FormControl fullWidth size={isMobile ? 'small' : 'medium'}>
                 <Select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
@@ -888,7 +1042,8 @@ const ModernJobsPage: React.FC = () => {
                     borderRadius: 2,
                     bgcolor: 'background.paper',
                     '& fieldset': { border: 'none' },
-                    boxShadow: `0 2px 10px ${alpha(theme.palette.common.black, 0.1)}`
+                    boxShadow: `0 2px 10px ${alpha(theme.palette.common.black, 0.1)}`,
+                    fontSize: { xs: '0.875rem', md: '1rem' }
                   }}
                 >
                   <MenuItem value="newest">Latest Jobs</MenuItem>
@@ -900,6 +1055,7 @@ const ModernJobsPage: React.FC = () => {
               
               <IconButton
                 onClick={() => setShowFilters(!showFilters)}
+                size={isMobile ? 'small' : 'medium'}
                 sx={{ 
                   bgcolor: showFilters ? 'primary.main' : 'background.paper',
                   color: showFilters ? 'primary.contrastText' : 'action.active',
@@ -909,28 +1065,31 @@ const ModernJobsPage: React.FC = () => {
                   }
                 }}
               >
-                <TuneRounded />
+                <TuneRounded fontSize={isMobile ? 'small' : 'medium'} />
               </IconButton>
             </Stack>
           </Grid>
         </Grid>
 
         {/* Category Tabs */}
-        <Box sx={{ mt: 3, mb: 2 }}>
+        <Box sx={{ mt: { xs: 2, md: 3 }, mb: { xs: 1, md: 2 } }}>
           <Tabs
             value={selectedCategory}
             onChange={handleCategoryChange}
             variant="scrollable"
             scrollButtons="auto"
+            allowScrollButtonsMobile
             sx={{
               '& .MuiTabs-flexContainer': {
-                gap: 1
+                gap: { xs: 0.5, md: 1 }
               },
               '& .MuiTab-root': {
-                minHeight: 48,
+                minHeight: { xs: 40, md: 48 },
                 borderRadius: 3,
                 textTransform: 'none',
                 fontWeight: 500,
+                fontSize: { xs: '0.75rem', md: '0.875rem' },
+                px: { xs: 1, md: 2 },
                 border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
                 bgcolor: 'background.paper',
                 color: 'text.secondary',
@@ -939,6 +1098,9 @@ const ModernJobsPage: React.FC = () => {
                   color: 'primary.contrastText',
                   borderColor: 'primary.main'
                 }
+              },
+              '& .MuiTabs-scrollButtons': {
+                color: 'action.active'
               }
             }}
           >

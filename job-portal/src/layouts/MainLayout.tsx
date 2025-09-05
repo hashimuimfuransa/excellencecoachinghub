@@ -1425,7 +1425,7 @@ const MainLayout: React.FC = () => {
           </ListItemIcon>
           My Applications
         </MenuItem>
-        <MenuItem onClick={() => navigate('/app/profile/settings')}>
+        <MenuItem onClick={() => navigate(hasRole(UserRole.EMPLOYER) ? '/app/employer/profile' : '/app/profile')}>
           <ListItemIcon>
             <Settings fontSize="small" />
           </ListItemIcon>

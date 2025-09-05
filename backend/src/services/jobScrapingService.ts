@@ -45,8 +45,154 @@ export interface ScrapedJobData {
 
 export class JobScrapingService {
   private static readonly MAX_JOBS_PER_DAY = 24;
-  private static readonly JOB_IN_RWANDA_BASE_URL = 'https://www.jobinrwanda.com';
   private static readonly DEFAULT_EMPLOYER_EMAIL = 'info@excellencecoachinghub.com';
+  
+  // Job sources configuration
+  private static readonly JOB_SOURCES = [
+    {
+      name: 'jobinrwanda',
+      baseUrl: 'https://www.jobinrwanda.com',
+      paths: ['/jobs', '/job', '/vacancies', '/opportunities', ''],
+      selectors: [
+        'a[href*="/job/"]',
+        'a[href*="/jobs/"]', 
+        'a[href*="/node/"]',
+        '.views-row a[href*="/node/"]',
+        '.job-item a',
+        '.job-listing a',
+        '.job-card a',
+        '.view-content a[href*="/node/"]',
+        'h2 a[href*="/node/"]',
+        'h3 a[href*="/node/"]',
+        '.field-content a[href*="/node/"]',
+        '.view-jobs a',
+        '.job-title a',
+        '.node-title a'
+      ]
+    },
+    {
+      name: 'workingnomads',
+      baseUrl: 'https://www.workingnomads.com',
+      paths: ['/jobs', '', '/remote-jobs', '/latest-jobs'],
+      selectors: [
+        '.job-item a',
+        '.job-listing a',
+        '.job-title a',
+        'a[href*="/job/"]',
+        'a[href*="/jobs/"]',
+        '.post-title a',
+        'h2 a',
+        'h3 a',
+        '.job-card a'
+      ]
+    },
+    {
+      name: 'mucuruzi',
+      baseUrl: 'https://mucuruzi.com',
+      paths: ['/all-jobs/', '/jobs', '/vacancies', ''],
+      selectors: [
+        '.job-item a',
+        '.job-listing a',
+        '.job-title a',
+        'a[href*="/job"]',
+        'a[href*="/vacancy"]',
+        'a[href*="/opportunity"]',
+        '.post-title a',
+        'h2 a',
+        'h3 a',
+        '.entry-title a'
+      ]
+    },
+    {
+      name: 'unjobs',
+      baseUrl: 'https://unjobs.org',
+      paths: ['/duty_stations/kgl', '/duty_stations/kigali', '/jobs', ''],
+      selectors: [
+        '.job-item a',
+        '.job-listing a',
+        '.job-title a',
+        'a[href*="/vacancy"]',
+        'a[href*="/job"]',
+        '.views-row a',
+        'h2 a',
+        'h3 a',
+        '.field-content a'
+      ]
+    },
+    {
+      name: 'rwandajob',
+      baseUrl: 'https://www.rwandajob.com',
+      paths: ['/', '/jobs', '/vacancies', '/opportunities'],
+      selectors: [
+        '.job-item a',
+        '.job-listing a',
+        '.job-title a',
+        'a[href*="/job"]',
+        'a[href*="/vacancy"]',
+        'a[href*="/opportunity"]',
+        '.post-title a',
+        'h2 a',
+        'h3 a',
+        '.entry-title a'
+      ]
+    },
+    {
+      name: 'mifotra',
+      baseUrl: 'https://recruitment.mifotra.gov.rw',
+      paths: ['/', '/jobs', '/vacancies', '/opportunities'],
+      selectors: [
+        '.views-row a[href*="/node/"]',
+        '.view-content a[href*="/node/"]',
+        '.field-content a[href*="/node/"]',
+        'h2 a[href*="/node/"]',
+        'h3 a[href*="/node/"]',
+        '.node-title a',
+        'a[href*="/job"]',
+        'a[href*="/vacancy"]',
+        'a[href*="/opportunity"]',
+        '.job-item a',
+        '.job-listing a',
+        '.job-title a',
+        '.post-title a',
+        '.entry-title a'
+      ]
+    },
+    {
+      name: 'newtimes',
+      baseUrl: 'https://jobs.newtimes.co.rw',
+      paths: ['/', '/jobs', '/vacancies', '/opportunities'],
+      selectors: [
+        '.job-item a',
+        '.job-listing a',
+        '.job-title a',
+        'a[href*="/job"]',
+        'a[href*="/vacancy"]',
+        'a[href*="/opportunity"]',
+        '.post-title a',
+        'h2 a',
+        'h3 a',
+        '.entry-title a'
+      ]
+    },
+    {
+      name: 'unjobnet',
+      baseUrl: 'https://www.unjobnet.org',
+      paths: ['/vacancies', '/jobs', '/'],
+      selectors: [
+        'a[href*="/vacancy/"]',
+        'a[href*="/job/"]',
+        '.views-row a[href*="/vacancy/"]',
+        '.field-content a[href*="/vacancy/"]',
+        'h2 a[href*="/vacancy/"]',
+        'h3 a[href*="/vacancy/"]',
+        '.job-item a[href*="/vacancy/"]',
+        '.job-listing a[href*="/vacancy/"]',
+        '.job-title a[href*="/vacancy/"]',
+        '.post-title a[href*="/vacancy/"]',
+        '.entry-title a[href*="/vacancy/"]'
+      ]
+    }
+  ];
 
   /**
    * Helper function to extract JSON from AI responses that might be wrapped in markdown
@@ -104,7 +250,6 @@ export class JobScrapingService {
 
       const todayJobsCount = await Job.countDocuments({
         isExternalJob: true,
-        externalJobSource: 'jobinrwanda',
         createdAt: { $gte: today, $lt: tomorrow }
       });
 
@@ -122,49 +267,69 @@ export class JobScrapingService {
         systemUser = await this.createSystemUser();
       }
 
-      // Scrape jobs from jobinrwanda.com
-      const jobUrls = await this.scrapeJobUrls(remainingQuota);
-      console.log(`Found ${jobUrls.length} job URLs to process`);
+      // Calculate jobs per source (distribute evenly)
+      const jobsPerSource = Math.max(1, Math.floor(remainingQuota / this.JOB_SOURCES.length));
+      console.log(`Will try to process up to ${jobsPerSource} jobs from each of ${this.JOB_SOURCES.length} sources`);
 
-      // Process each job URL one by one with proper delays
-      for (let i = 0; i < jobUrls.length; i++) {
-        const jobUrl = jobUrls[i];
+      // Scrape jobs from all configured sources
+      for (const source of this.JOB_SOURCES) {
         try {
-          console.log(`Processing job ${i + 1}/${jobUrls.length}: ${jobUrl}`);
+          console.log(`\n🔍 Scraping jobs from ${source.name} (${source.baseUrl})`);
           
-          // Check if job already exists
-          const existingJob = await Job.findOne({
-            externalJobSource: 'jobinrwanda',
-            externalJobId: this.extractJobId(jobUrl)
-          });
+          const sourceJobUrls = await this.scrapeJobUrlsFromSource(source, jobsPerSource);
+          console.log(`Found ${sourceJobUrls.length} job URLs from ${source.name}`);
 
-          if (existingJob) {
-            console.log(`Job already exists, skipping: ${jobUrl}`);
-            continue;
-          }
+          // Process each job URL from this source
+          for (let i = 0; i < sourceJobUrls.length; i++) {
+            const jobUrl = sourceJobUrls[i];
+            if (!jobUrl) {
+              console.log(`Skipping empty job URL at index ${i}`);
+              continue;
+            }
 
-          // Add delay before scraping to be respectful to the source
-          console.log('Waiting before scraping to be respectful...');
-          await this.delay(3000);
+            try {
+              console.log(`Processing job ${i + 1}/${sourceJobUrls.length} from ${source.name}: ${jobUrl}`);
+              
+              // Check if job already exists
+              const jobId = this.extractJobId(jobUrl);
+              const existingJob = await Job.findOne({
+                externalJobSource: source.name,
+                externalJobId: jobId
+              });
 
-          const jobData = await this.scrapeAndParseJob(jobUrl);
-          if (jobData) {
-            await this.saveJobToDatabase(jobData, systemUser._id, jobUrl);
-            results.processedJobs++;
-            console.log(`✅ Successfully processed job ${i + 1}/${jobUrls.length}: ${jobData.title} at ${jobData.company}`);
-            
-            // Additional delay after successful processing
-            await this.delay(2000);
-          } else {
-            console.log(`❌ Failed to extract job data from: ${jobUrl}`);
+              if (existingJob) {
+                console.log(`Job already exists, skipping: ${jobUrl}`);
+                continue;
+              }
+
+              // Add delay before scraping to be respectful to the source
+              console.log('Waiting before scraping to be respectful...');
+              await this.delay(3000);
+
+              const jobData = await this.scrapeAndParseJob(jobUrl, source.name);
+              if (jobData && systemUser) {
+                await this.saveJobToDatabase(jobData, String(systemUser._id), jobUrl, source.name);
+                results.processedJobs++;
+                console.log(`✅ Successfully processed job ${i + 1}/${sourceJobUrls.length} from ${source.name}: ${jobData.title} at ${jobData.company}`);
+                
+                // Additional delay after successful processing
+                await this.delay(2000);
+              } else {
+                console.log(`❌ Failed to extract job data from: ${jobUrl}`);
+              }
+            } catch (error) {
+              const errorMsg = `Error processing job ${jobUrl} from ${source.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+              console.error(`❌ ${errorMsg}`);
+              results.errors.push(errorMsg);
+              
+              // Delay even after errors to prevent overwhelming the server
+              await this.delay(1000);
+            }
           }
         } catch (error) {
-          const errorMsg = `Error processing job ${jobUrl}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          const errorMsg = `Error scraping from ${source.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
           console.error(`❌ ${errorMsg}`);
           results.errors.push(errorMsg);
-          
-          // Delay even after errors to prevent overwhelming the server
-          await this.delay(1000);
         }
       }
 
@@ -179,42 +344,59 @@ export class JobScrapingService {
   }
 
   /**
-   * Scrape job URLs from the main job listings page
+   * Scrape job URLs from a specific source
    */
-  private static async scrapeJobUrls(limit: number): Promise<string[]> {
-    // Try different possible URLs for job listings
-    const urlsToTry = [
-      `${this.JOB_IN_RWANDA_BASE_URL}/jobs`,
-      `${this.JOB_IN_RWANDA_BASE_URL}/job`,
-      `${this.JOB_IN_RWANDA_BASE_URL}/vacancies`,
-      `${this.JOB_IN_RWANDA_BASE_URL}/opportunities`,
-      `${this.JOB_IN_RWANDA_BASE_URL}`,  // Try the homepage
-    ];
+  private static async scrapeJobUrlsFromSource(source: typeof JobScrapingService.JOB_SOURCES[0], limit: number): Promise<string[]> {
+    const urlsToTry = source.paths.map(path => `${source.baseUrl}${path}`);
 
     for (const url of urlsToTry) {
       try {
-        console.log(`Attempting to fetch job listings from: ${url}`);
+        console.log(`Attempting to fetch job listings from ${source.name}: ${url}`);
         
         const response = await axios.get(url, {
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
             'Accept-Language': 'en-US,en;q=0.9',
             'Accept-Encoding': 'gzip, deflate, br',
             'DNT': '1',
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Cache-Control': 'max-age=0',
+            'sec-ch-ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"'
           },
           timeout: 30000,
-          maxRedirects: 5
+          maxRedirects: 5,
+          validateStatus: function (status) {
+            return status < 500; // Resolve only if the status code is less than 500
+          }
         });
 
-        console.log(`✅ Successfully fetched from: ${url}`);
+        // Handle different HTTP status codes
+        if (response.status === 403) {
+          console.log(`❌ Access forbidden (403) from ${source.name}: ${url}`);
+          continue; // Try next URL
+        }
+        
+        if (response.status === 404) {
+          console.log(`❌ Page not found (404) from ${source.name}: ${url}`);
+          continue; // Try next URL
+        }
+        
+        if (response.status >= 400) {
+          console.log(`❌ HTTP error ${response.status} from ${source.name}: ${url}`);
+          continue; // Try next URL
+        }
+
+        console.log(`✅ Successfully fetched from ${source.name}: ${url}`);
         console.log(`Response status: ${response.status}`);
         console.log(`Response content length: ${response.data.length}`);
-        console.log(`Response content type: ${response.headers['content-type']}`);
 
         // Add error handling for cheerio.load
         let $: cheerio.CheerioAPI;
@@ -223,51 +405,38 @@ export class JobScrapingService {
             throw new Error('Response data is empty');
           }
           
-          if (typeof response.data !== 'string') {
-            console.log('Response data type:', typeof response.data);
-            console.log('Converting response data to string...');
-          }
-          
           $ = cheerio.load(response.data);
-          console.log('✅ Successfully loaded HTML with cheerio');
+          console.log(`✅ Successfully loaded HTML with cheerio for ${source.name}`);
         } catch (cheerioError) {
-          console.error(`❌ Error loading HTML with cheerio:`, cheerioError);
+          console.error(`❌ Error loading HTML with cheerio for ${source.name}:`, cheerioError);
           console.log('Response data sample:', String(response.data).substring(0, 200));
           continue; // Try next URL
         }
         
         const jobUrls: string[] = [];
 
-        // Try multiple selectors for different possible job link structures
-        const selectors = [
-          'a[href*="/job/"]',
-          'a[href*="/jobs/"]', 
-          'a[href*="/node/"]',
-          '.views-row a[href*="/node/"]',
-          '.job-item a',
-          '.job-listing a',
-          '.job-card a',
-          '.view-content a[href*="/node/"]',
-          'h2 a[href*="/node/"]',
-          'h3 a[href*="/node/"]',
-          '.field-content a[href*="/node/"]',
-          '.view-jobs a',
-          '.job-title a',
-          '.node-title a'
-        ];
-
-        for (const selector of selectors) {
+        // Use source-specific selectors
+        for (const selector of source.selectors) {
           $(selector).each((index, element) => {
             if (jobUrls.length >= limit) return false;
 
             const href = $(element).attr('href');
-            if (href && (href.includes('/job/') || href.includes('/node/') || href.includes('/vacancy'))) {
-              const fullUrl = href.startsWith('http') ? href : `${this.JOB_IN_RWANDA_BASE_URL}${href}`;
+            if (href && (href.includes('/job') || href.includes('/node/') || href.includes('/vacancy') || href.includes('/opportunity'))) {
+              const fullUrl = href.startsWith('http') ? href : `${source.baseUrl}${href}`;
               
-              // Avoid duplicates and ensure it's a job-related URL
-              if (!jobUrls.includes(fullUrl) && !fullUrl.includes('#')) {
+              // Avoid duplicates, search pages, and generic URLs
+              const isValidJobUrl = !jobUrls.includes(fullUrl) && 
+                                   !fullUrl.includes('#') && 
+                                   !fullUrl.endsWith('/jobs') && 
+                                   !fullUrl.endsWith('/vacancies') && 
+                                   !fullUrl.endsWith('/opportunities') && 
+                                   !fullUrl.includes('search') && 
+                                   !fullUrl.includes('filter') &&
+                                   (href.includes('/job/') || href.includes('/node/') || href.includes('/vacancy/') || href.includes('/opportunity/'));
+              
+              if (isValidJobUrl) {
                 jobUrls.push(fullUrl);
-                console.log(`Found job URL: ${fullUrl}`);
+                console.log(`Found job URL from ${source.name}: ${fullUrl}`);
               }
             }
           });
@@ -277,7 +446,7 @@ export class JobScrapingService {
 
         // If no jobs found with standard selectors, try to find any content links
         if (jobUrls.length === 0) {
-          console.log('No job URLs found with standard selectors, trying alternative approach...');
+          console.log(`No job URLs found with standard selectors from ${source.name}, trying alternative approach...`);
           
           $('a').each((index, element) => {
             if (jobUrls.length >= limit) return false;
@@ -295,43 +464,75 @@ export class JobScrapingService {
               href.includes('/node/') ||
               href.includes('/job')
             )) {
-              const fullUrl = href.startsWith('http') ? href : `${this.JOB_IN_RWANDA_BASE_URL}${href}`;
-              if (!jobUrls.includes(fullUrl) && fullUrl.includes(this.JOB_IN_RWANDA_BASE_URL)) {
+              const fullUrl = href.startsWith('http') ? href : `${source.baseUrl}${href}`;
+              if (!jobUrls.includes(fullUrl) && fullUrl.includes(source.baseUrl)) {
                 jobUrls.push(fullUrl);
-                console.log(`Found job URL (by content): ${fullUrl} - "${linkText}"`);
+                console.log(`Found job URL from ${source.name} (by content): ${fullUrl} - "${linkText}"`);
               }
             }
           });
         }
 
-        console.log(`Total job URLs found: ${jobUrls.length}`);
+        console.log(`Total job URLs found from ${source.name}: ${jobUrls.length}`);
         if (jobUrls.length > 0) {
           return jobUrls.slice(0, limit);
         }
 
       } catch (error) {
-        console.log(`❌ Failed to fetch from: ${url}`);
+        console.log(`❌ Failed to fetch from ${source.name}: ${url}`);
         console.log(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
         continue; // Try next URL
       }
     }
 
-    // If we get here, all URLs failed
-    console.error('❌ All job listing URLs failed to load');
+    // If we get here, all URLs failed for this source
+    console.error(`❌ All job listing URLs failed to load for ${source.name}`);
     return [];
+  }
+
+  /**
+   * Legacy method - now redirects to scrape from first source
+   * @deprecated Use scrapeJobUrlsFromSource instead
+   */
+  private static async scrapeJobUrls(limit: number): Promise<string[]> {
+    // Legacy method - use first source for backward compatibility
+    const firstSource = this.JOB_SOURCES[0];
+    return this.scrapeJobUrlsFromSource(firstSource, limit);
   }
 
   /**
    * Scrape individual job page and use AI to parse the content
    */
-  private static async scrapeAndParseJob(jobUrl: string): Promise<ScrapedJobData | null> {
+  private static async scrapeAndParseJob(jobUrl: string, sourceName: string = 'unknown'): Promise<ScrapedJobData | null> {
     try {
       const response = await axios.get(jobUrl, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Cache-Control': 'max-age=0',
+          'sec-ch-ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
+          'sec-ch-ua-mobile': '?0',
+          'sec-ch-ua-platform': '"Windows"'
         },
-        timeout: 30000
+        timeout: 30000,
+        validateStatus: function (status) {
+          return status < 500; // Resolve only if the status code is less than 500
+        }
       });
+
+      // Handle different HTTP status codes
+      if (response.status >= 400) {
+        throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+      }
 
       if (!response.data) {
         throw new Error('Empty response data from job URL');
@@ -533,7 +734,7 @@ export class JobScrapingService {
   /**
    * Save job to database
    */
-  private static async saveJobToDatabase(jobData: ScrapedJobData, employerId: string, originalUrl: string): Promise<IJobDocument> {
+  private static async saveJobToDatabase(jobData: ScrapedJobData, employerId: string, originalUrl: string, sourceName: string = 'jobinrwanda'): Promise<IJobDocument> {
     const job = new Job({
       title: jobData.title,
       description: jobData.description,
@@ -556,7 +757,7 @@ export class JobScrapingService {
       curatedBy: employerId,
       isExternalJob: true,
       externalApplicationUrl: originalUrl,
-      externalJobSource: 'jobinrwanda',
+      externalJobSource: sourceName,
       externalJobId: jobData.externalJobId,
       contactInfo: jobData.contactInfo, // Include extracted contact information
       psychometricTestRequired: false,
@@ -670,7 +871,7 @@ export class JobScrapingService {
   }
 
   /**
-   * Test connection and find working URLs for job scraping
+   * Test connection and find working URLs for job scraping from all sources
    */
   static async testScrapingConnection(): Promise<{
     success: boolean;
@@ -678,13 +879,14 @@ export class JobScrapingService {
     failedUrls: string[];
     details: any[];
   }> {
-    const urlsToTest = [
-      `${this.JOB_IN_RWANDA_BASE_URL}`,
-      `${this.JOB_IN_RWANDA_BASE_URL}/jobs`,
-      `${this.JOB_IN_RWANDA_BASE_URL}/job`,
-      `${this.JOB_IN_RWANDA_BASE_URL}/vacancies`,
-      `${this.JOB_IN_RWANDA_BASE_URL}/opportunities`,
-    ];
+    // Generate URLs to test from all job sources
+    const urlsToTest: string[] = [];
+    
+    for (const source of this.JOB_SOURCES) {
+      for (const path of source.paths.slice(0, 2)) { // Test first 2 paths per source to avoid too many requests
+        urlsToTest.push(`${source.baseUrl}${path}`);
+      }
+    }
 
     const workingUrls: string[] = [];
     const failedUrls: string[] = [];

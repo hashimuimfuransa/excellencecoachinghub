@@ -320,9 +320,23 @@ const SmartTestPage: React.FC = () => {
   const fetchJobs = async () => {
     try {
       setLoadingJobs(true);
-      const response = await jobService.getJobsForStudent(1, 100); // Fetch more jobs for better filtering
-      setJobs(response.data);
-      setFilteredJobs(response.data);
+      // First, get a small batch to determine total count
+      const initialResponse = await jobService.getJobsForStudent(1, 10);
+      const totalJobs = initialResponse.pagination?.total || 0;
+      
+      // Set a reasonable limit for fetching jobs to avoid performance issues
+      const MAX_JOBS_TO_FETCH = 1000;
+      const jobsToFetch = Math.min(totalJobs, MAX_JOBS_TO_FETCH);
+      
+      // Fetch all available jobs up to the limit
+      if (totalJobs > 10) {
+        const allJobsResponse = await jobService.getJobsForStudent(1, jobsToFetch);
+        setJobs(allJobsResponse.data);
+        setFilteredJobs(allJobsResponse.data);
+      } else {
+        setJobs(initialResponse.data);
+        setFilteredJobs(initialResponse.data);
+      }
     } catch (error) {
       console.error('Error fetching jobs:', error);
       setError('Failed to load jobs');

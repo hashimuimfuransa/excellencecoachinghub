@@ -239,10 +239,29 @@ const AllJobsPage: React.FC = () => {
     setLoading(true);
     
     try {
-      // Use getJobs method with pagination - get all jobs without strict filters
-      const response = await jobService.getJobs({}, 1, 100); // Get first 100 jobs
-      setJobs(response.data || []);
-      setFilteredJobs(response.data || []);
+      // First, get a small batch to determine total count
+      const initialResponse = await jobService.getJobs({}, 1, 10);
+      const totalJobs = initialResponse.pagination?.total || 0;
+      
+      // Set a reasonable limit for fetching jobs to avoid performance issues
+      const MAX_JOBS_TO_FETCH = 1000; // Reasonable limit to prevent UI lag
+      const jobsToFetch = Math.min(totalJobs, MAX_JOBS_TO_FETCH);
+      
+      // If there are jobs and we have more than 10, fetch all jobs up to the limit
+      if (totalJobs > 10) {
+        const allJobsResponse = await jobService.getJobs({}, 1, jobsToFetch);
+        setJobs(allJobsResponse.data || []);
+        setFilteredJobs(allJobsResponse.data || []);
+        
+        // If we hit the limit, log a message
+        if (totalJobs > MAX_JOBS_TO_FETCH) {
+          console.log(`Showing first ${MAX_JOBS_TO_FETCH} out of ${totalJobs} total jobs for performance reasons`);
+        }
+      } else {
+        // If 10 or fewer jobs, use the initial response
+        setJobs(initialResponse.data || []);
+        setFilteredJobs(initialResponse.data || []);
+      }
     } catch (err) {
       console.error('Error fetching jobs:', err);
       setError('Failed to load jobs. Please try again.');

@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { asyncHandler } from '../middleware/asyncHandler';
 import * as mammoth from 'mammoth';
 import * as pdfParse from 'pdf-parse';
+import { centralAIManager, AIGenerationOptions } from './centralAIManager';
 
 export interface ExtractedQuestion {
   question: string;
@@ -30,17 +31,20 @@ export interface GradingResult {
 }
 
 export class AIDocumentService {
-  private genAI: GoogleGenerativeAI;
-  private model: any;
+  private aiManager = centralAIManager;
 
   constructor() {
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || '';
     if (!apiKey) {
       throw new Error('GEMINI_API_KEY is required but not found in environment variables');
     }
-    this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    console.log('✅ AI Document Service initialized with gemini-1.5-flash model');
+    
+    console.log('📄 AI Document Service initialized with Central AI Manager');
+    
+    // Listen to AI manager events for monitoring
+    this.aiManager.on('modelUpgraded', (data) => {
+      console.log(`📄 Document Service: Model upgraded from ${data.from} to ${data.to}`);
+    });
   }
 
   // Extract questions from uploaded document
@@ -108,10 +112,13 @@ export class AIDocumentService {
         - Even if options are on separate lines, group them with their question
       `;
 
-      console.log('🤖 Sending request to Gemini AI...');
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+      console.log('📄 Sending request to Enhanced AI Manager...');
+      const text = await this.aiManager.generateContent(prompt, {
+        retries: 3,
+        timeout: 60000, // Longer timeout for document processing
+        priority: 'high',
+        temperature: 0.2 // Lower temperature for more accurate extraction
+      });
       
       console.log('📝 Received AI response, parsing...');
 
@@ -325,9 +332,12 @@ export class AIDocumentService {
         }
       `;
 
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+      const text = await this.aiManager.generateContent(prompt, {
+        retries: 2,
+        timeout: 30000,
+        priority: 'normal',
+        temperature: 0.3
+      });
 
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
@@ -372,9 +382,12 @@ export class AIDocumentService {
         }
       `;
 
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+      const text = await this.aiManager.generateContent(prompt, {
+        retries: 2,
+        timeout: 30000,
+        priority: 'normal',
+        temperature: 0.3
+      });
 
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {

@@ -20,8 +20,9 @@ import JobsPage from './pages/ModernJobsPage';
 import JobDetailsPage from './pages/JobDetailsPage';
 import ApplicationsPage from './pages/ApplicationsPage';
 import ApplicationDetailsPage from './pages/ApplicationDetailsPage';
-import ProfilePage from './pages/ProfilePage';
 import ImprovedProfilePage from './pages/ImprovedProfilePage';
+import MinimizedProfilePage from './pages/MinimizedProfilePage';
+import ProfileEditPage from './pages/ProfileEditPage';
 import SummaryProfilePage from './pages/SummaryProfilePage';
 import ProfessionalProfilePage from './pages/ProfessionalProfilePage';
 import SavedJobsPage from './pages/SavedJobsPage';
@@ -194,7 +195,8 @@ function App() {
               <Route path="applications/:id" element={<ApplicationDetailsPage />} />
               
               {/* Profile */}
-              <Route path="profile" element={<ProfilePage />} />
+              <Route path="profile" element={<MinimizedProfilePage />} />
+              <Route path="profile/edit" element={<ProfileEditPage />} />
               <Route path="profile/view/:userId" element={<SummaryProfilePage />} />
               <Route path="profile/simple" element={<ImprovedProfilePage />} />
               <Route 

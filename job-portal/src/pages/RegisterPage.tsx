@@ -42,7 +42,7 @@ import {
   PersonAdd,
   Home as HomeIcon
 } from '@mui/icons-material';
-import { useNavigate, Link as RouterLink, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link as RouterLink, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../contexts/AuthContext';
 import FloatingContact from '../components/FloatingContact';
@@ -67,9 +67,22 @@ const RegisterPage: React.FC = () => {
   
   const { register } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [searchParams] = useSearchParams();
+  
+  // Check for job redirect parameters
+  const redirectType = searchParams.get('redirect');
+  const jobId = searchParams.get('jobId');
+  
+  // Determine redirect destination
+  const getRedirectPath = () => {
+    if (redirectType === 'job' && jobId) {
+      return `/app/jobs/${jobId}`;
+    }
+    return '/app/network';
+  };
 
   const steps = ['Account Type', 'Personal Information', 'Security'];
 
@@ -152,7 +165,7 @@ const RegisterPage: React.FC = () => {
       const { confirmPassword, ...registerData } = formData;
       await register(registerData);
       // Only navigate on successful registration
-      navigate('/app/network');
+      navigate(getRedirectPath());
     } catch (err: any) {
       // Extract detailed error message from backend
       const errorData = err.response?.data;
@@ -1071,7 +1084,7 @@ const RegisterPage: React.FC = () => {
                   </Typography>
                   <Button
                     component={RouterLink}
-                    to="/login"
+                    to={redirectType === 'job' && jobId ? `/login?redirect=job&jobId=${jobId}` : "/login"}
                     variant="text"
                     sx={{
                       fontWeight: 600,
@@ -1217,7 +1230,7 @@ const RegisterPage: React.FC = () => {
                 <Box sx={{ textAlign: 'center' }}>
                   <Button
                     component={RouterLink}
-                    to="/login"
+                    to={redirectType === 'job' && jobId ? `/login?redirect=job&jobId=${jobId}` : "/login"}
                     variant="outlined"
                     sx={{
                       px: 4,

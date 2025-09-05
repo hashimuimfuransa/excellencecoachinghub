@@ -31,7 +31,7 @@ import {
   TrendingUp,
   CheckCircle
 } from '@mui/icons-material';
-import { useNavigate, useLocation, Link as RouterLink } from 'react-router-dom';
+import { useNavigate, useLocation, Link as RouterLink, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import FloatingContact from '../components/FloatingContact';
 
@@ -48,8 +48,20 @@ const LoginPage: React.FC = () => {
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [searchParams] = useSearchParams();
   
+  // Check for job redirect parameters
+  const redirectType = searchParams.get('redirect');
+  const jobId = searchParams.get('jobId');
   const from = location.state?.from?.pathname || '/app/network';
+  
+  // Determine redirect destination
+  const getRedirectPath = () => {
+    if (redirectType === 'job' && jobId) {
+      return `/app/jobs/${jobId}`;
+    }
+    return from;
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -60,7 +72,7 @@ const LoginPage: React.FC = () => {
       if (!isLoading && isAuthenticated && location.pathname === '/login') {
         // Use setTimeout to prevent immediate navigation loops
         setTimeout(() => {
-          navigate('/app/network', { replace: true });
+          navigate(getRedirectPath(), { replace: true });
         }, 100);
       }
     };
@@ -74,7 +86,7 @@ const LoginPage: React.FC = () => {
   // Handle authentication state changes
   useEffect(() => {
     if (!isLoading && isAuthenticated && location.pathname === '/login') {
-      navigate('/app/network', { replace: true });
+      navigate(getRedirectPath(), { replace: true });
     }
   }, [isAuthenticated, isLoading, location.pathname, navigate]);
 
@@ -93,7 +105,7 @@ const LoginPage: React.FC = () => {
       
       // Small delay to ensure auth state is updated
       setTimeout(() => {
-        navigate(from, { replace: true });
+        navigate(getRedirectPath(), { replace: true });
       }, 100);
       
     } catch (err: any) {
@@ -400,7 +412,7 @@ const LoginPage: React.FC = () => {
                       </Typography>
                       <Link 
                         component={RouterLink} 
-                        to="/register" 
+                        to={redirectType === 'job' && jobId ? `/register?redirect=job&jobId=${jobId}` : "/register"} 
                         sx={{ 
                           color: '#4CAF50', 
                           textDecoration: 'none',

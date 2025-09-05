@@ -682,6 +682,14 @@ const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
       <DialogContent>
         {!paymentRequestSent ? (
           <Box>
+            <Alert severity="info" sx={{ mb: 3 }}>
+              <AlertTitle>Premium Interview Details</AlertTitle>
+              <Typography variant="body1" sx={{ fontWeight: 'bold', fontSize: '1.1rem', mb: 1 }}>
+                💰 Price: 3,000 RWF
+              </Typography>
+              This is a paid premium AI interview service designed to help you prepare for job-specific interviews with personalized feedback and analysis.
+            </Alert>
+
             <Alert severity="warning" sx={{ mb: 3 }}>
               <AlertTitle>Premium Interview Approval Process</AlertTitle>
               <Typography variant="body2">
@@ -715,8 +723,17 @@ const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
                   <WhatsApp color="success" />
                   <Box>
                     <Typography variant="subtitle2">WhatsApp</Typography>
-                    <Typography variant="body2">0737299309</Typography>
-                    <Typography variant="body2">0788535156</Typography>
+                    <Button
+                      size="small"
+                      startIcon={<WhatsApp />}
+                      href="https://wa.me/250788551906?text=Hi, I want Premium Interview Practice"
+                      target="_blank"
+                      color="success"
+                      variant="outlined"
+                      sx={{ mt: 0.5 }}
+                    >
+                      Send Message
+                    </Button>
                   </Box>
                 </Box>
                 
@@ -724,8 +741,17 @@ const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
                   <Phone color="info" />
                   <Box>
                     <Typography variant="subtitle2">Phone</Typography>
-                    <Typography variant="body2">0737299309</Typography>
-                    <Typography variant="body2">0788535156</Typography>
+                    <Button
+                      size="small"
+                      startIcon={<Phone />}
+                      href="tel:+250788551906"
+                      target="_blank"
+                      color="info"
+                      variant="outlined"
+                      sx={{ mt: 0.5 }}
+                    >
+                      +250 788 551 906
+                    </Button>
                   </Box>
                 </Box>
               </Stack>
@@ -738,7 +764,7 @@ const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
                 <strong>• Contact us immediately</strong> using any of the contact methods above<br />
                 <strong>• Mention:</strong> "I want Premium Interview Practice for {selectedJob?.title}"<br />
                 <strong>• Reference:</strong> Your name ({user?.firstName} {user?.lastName}) and email ({user?.email})<br />
-                <strong>• Our team will:</strong> Provide payment details and process your request<br />
+                <strong>• Payment:</strong> 3,000 RWF - Our team will provide payment instructions<br />
                 <strong>• After payment:</strong> Our Super Admin will approve your interview access<br />
                 <strong>• You'll receive:</strong> Email confirmation when your interview is ready to take
               </Typography>
@@ -767,7 +793,8 @@ const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
             
             <Typography variant="body2" color="text.secondary">
               <strong>Email:</strong> info@excellencecoachinghub.com<br />
-              <strong>WhatsApp/Phone:</strong> 0737299309 or 0788535156
+              <strong>WhatsApp/Phone:</strong> +250 788 551 906<br />
+              <strong>Cost:</strong> 3,000 RWF
             </Typography>
           </Box>
         )}

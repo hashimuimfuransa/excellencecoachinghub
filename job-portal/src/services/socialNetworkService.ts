@@ -16,8 +16,9 @@ export interface Post {
     url: string;
     thumbnail?: string;
   }>;
+  mediaUrl?: string; // For single media posts
   tags: string[];
-  postType: 'text' | 'job_post' | 'event' | 'training' | 'company_update';
+  postType: 'text' | 'image' | 'video' | 'document' | 'job_post' | 'event' | 'training' | 'company_update';
   relatedJob?: {
     _id: string;
     title: string;
@@ -125,43 +126,53 @@ class SocialNetworkService {
     const response = await api.get('/posts/feed', {
       params: { page, limit, filter }
     });
-    return response.data;
+    return response.data.data || response.data;
   }
 
   async createPost(postData: CreatePostData) {
     const response = await api.post('/posts/create', postData);
-    return response.data;
+    return response.data.data || response.data;
+  }
+
+  async createPostWithMedia(formData: FormData) {
+    const response = await api.post('/posts/create-with-media', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data.data || response.data;
   }
 
   async getPost(postId: string) {
     const response = await api.get(`/posts/${postId}`);
-    return response.data;
+    return response.data.data || response.data;
   }
 
   async likePost(postId: string) {
     const response = await api.post(`/posts/${postId}/like`);
-    return response.data;
+    return response.data.data || response.data;
   }
 
   async sharePost(postId: string) {
     const response = await api.post(`/posts/${postId}/share`);
-    return response.data;
+    return response.data.data || response.data;
   }
 
   async deletePost(postId: string) {
     const response = await api.delete(`/posts/${postId}`);
-    return response.data;
+    return response.data.data || response.data;
   }
 
   async getUserPosts(userId: string) {
     const response = await api.get(`/posts/user/${userId}`);
-    return response.data;
+    // Backend returns {success: true, data: posts}, so we need response.data.data
+    return response.data.data || response.data;
   }
 
   // Comments API
   async getPostComments(postId: string) {
     const response = await api.get(`/posts/${postId}/comments`);
-    return response.data;
+    return response.data.data || response.data;
   }
 
   async addComment(postId: string, content: string, parentComment?: string) {
@@ -169,62 +180,62 @@ class SocialNetworkService {
       content,
       parentComment
     });
-    return response.data;
+    return response.data.data || response.data;
   }
 
   // Connections API
   async getConnections() {
     const response = await api.get('/connections');
-    return response.data;
+    return response.data.data || response.data;
   }
 
   async sendConnectionRequest(userId: string, connectionType: 'follow' | 'connect' = 'connect') {
     const response = await api.post(`/connections/request/${userId}`, {
       connectionType
     });
-    return response.data;
+    return response.data.data || response.data;
   }
 
   async acceptConnectionRequest(userId: string) {
     const response = await api.post(`/connections/accept/${userId}`);
-    return response.data;
+    return response.data.data || response.data;
   }
 
   async rejectConnectionRequest(userId: string) {
     const response = await api.post(`/connections/reject/${userId}`);
-    return response.data;
+    return response.data.data || response.data;
   }
 
   async removeConnection(userId: string) {
     const response = await api.delete(`/connections/${userId}`);
-    return response.data;
+    return response.data.data || response.data;
   }
 
   async getPendingRequests() {
     const response = await api.get('/connections/pending');
-    return response.data;
+    return response.data.data || response.data;
   }
 
   async getSentRequests() {
     const response = await api.get('/connections/sent');
-    return response.data;
+    return response.data.data || response.data;
   }
 
   async cancelConnectionRequest(userId: string) {
     const response = await api.post(`/connections/cancel/${userId}`);
-    return response.data;
+    return response.data.data || response.data;
   }
 
   async getConnectionSuggestions(limit = 10) {
     const response = await api.get('/connections/suggestions', {
       params: { limit }
     });
-    return response.data;
+    return response.data.data || response.data;
   }
 
   async getConnectionStatus(userId: string) {
     const response = await api.get(`/connections/status/${userId}`);
-    return response.data;
+    return response.data.data || response.data;
   }
 }
 

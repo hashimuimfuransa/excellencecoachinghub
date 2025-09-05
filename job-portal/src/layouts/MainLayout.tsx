@@ -1297,6 +1297,52 @@ const MainLayout: React.FC = () => {
                 </IconButton>
               </Tooltip>
             </Box>
+
+            {/* Post Job Button for Employers */}
+            {hasRole(UserRole.EMPLOYER) && (
+              <Tooltip title="Post a New Job">
+                <Button
+                  variant="contained"
+                  startIcon={<Add />}
+                  onClick={() => navigate('/app/jobs/create')}
+                  sx={{
+                    ml: { xs: 1, md: 2 },
+                    mr: { xs: 0.5, md: 1 },
+                    px: { xs: 2, md: 3 },
+                    py: { xs: 1, md: 1.2 },
+                    borderRadius: '16px',
+                    fontWeight: '700',
+                    fontSize: { xs: '0.8rem', md: '0.9rem' },
+                    textTransform: 'none',
+                    background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)',
+                    boxShadow: '0 6px 20px rgba(76, 175, 80, 0.25)',
+                    border: `1px solid ${alpha('#4caf50', 0.3)}`,
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)',
+                      transform: 'translateY(-2px) scale(1.02)',
+                      boxShadow: '0 8px 25px rgba(76, 175, 80, 0.35)',
+                      borderColor: alpha('#4caf50', 0.5),
+                    },
+                    '&:active': {
+                      transform: 'translateY(-1px) scale(1.01)',
+                    },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    whiteSpace: 'nowrap',
+                    minWidth: 'auto',
+                    '& .MuiButton-startIcon': {
+                      transition: 'transform 0.3s ease',
+                    },
+                    '&:hover .MuiButton-startIcon': {
+                      transform: 'rotate(180deg)',
+                    }
+                  }}
+                >
+                  <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                    Post Job
+                  </Box>
+                </Button>
+              </Tooltip>
+            )}
             
             {/* Enhanced Profile */}
             <Tooltip 
@@ -1821,16 +1867,20 @@ const MainLayout: React.FC = () => {
             </Typography>
           </IconButton>
 
-          {/* Jobs */}
+          {/* Jobs / My Jobs */}
           <IconButton
-            onClick={() => handleNavigation('/app/jobs')}
+            onClick={() => hasRole(UserRole.EMPLOYER) ? handleNavigation('/app/employer/jobs') : handleNavigation('/app/jobs')}
             sx={{
               flexDirection: 'column',
               borderRadius: '12px',
               py: 1,
               px: 1.5,
-              color: location.pathname === '/app/jobs' ? 'primary.main' : 'text.secondary',
-              backgroundColor: location.pathname === '/app/jobs' 
+              color: (hasRole(UserRole.EMPLOYER) 
+                ? (location.pathname.includes('/app/employer/jobs') || location.pathname === '/app/jobs')
+                : location.pathname === '/app/jobs') ? 'primary.main' : 'text.secondary',
+              backgroundColor: (hasRole(UserRole.EMPLOYER) 
+                ? (location.pathname.includes('/app/employer/jobs') || location.pathname === '/app/jobs')
+                : location.pathname === '/app/jobs')
                 ? alpha(muiTheme.palette.primary.main, 0.1) 
                 : 'transparent',
               '&:hover': {
@@ -1840,22 +1890,36 @@ const MainLayout: React.FC = () => {
               transition: 'all 0.2s ease',
             }}
           >
-            <Work 
-              sx={{ 
-                fontSize: '1.3rem',
-                mb: 0.5,
-                color: location.pathname === '/app/jobs' ? 'primary.main' : 'text.secondary',
-              }} 
-            />
+            {hasRole(UserRole.EMPLOYER) ? (
+              <Business 
+                sx={{ 
+                  fontSize: '1.3rem',
+                  mb: 0.5,
+                  color: (location.pathname.includes('/app/employer/jobs') || location.pathname === '/app/jobs') ? 'primary.main' : 'text.secondary',
+                }} 
+              />
+            ) : (
+              <Work 
+                sx={{ 
+                  fontSize: '1.3rem',
+                  mb: 0.5,
+                  color: location.pathname === '/app/jobs' ? 'primary.main' : 'text.secondary',
+                }} 
+              />
+            )}
             <Typography 
               variant="caption" 
               sx={{ 
                 fontSize: '0.65rem',
-                fontWeight: location.pathname === '/app/jobs' ? 600 : 400,
-                color: location.pathname === '/app/jobs' ? 'primary.main' : 'text.secondary',
+                fontWeight: (hasRole(UserRole.EMPLOYER) 
+                  ? (location.pathname.includes('/app/employer/jobs') || location.pathname === '/app/jobs')
+                  : location.pathname === '/app/jobs') ? 600 : 400,
+                color: (hasRole(UserRole.EMPLOYER) 
+                  ? (location.pathname.includes('/app/employer/jobs') || location.pathname === '/app/jobs')
+                  : location.pathname === '/app/jobs') ? 'primary.main' : 'text.secondary',
               }}
             >
-              Jobs
+              {hasRole(UserRole.EMPLOYER) ? 'My Jobs' : 'Jobs'}
             </Typography>
           </IconButton>
 

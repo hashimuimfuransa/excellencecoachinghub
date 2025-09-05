@@ -101,7 +101,7 @@ const NetworkPage: React.FC = () => {
   }, []);
 
   // Filter and sort suggestions
-  const filteredSuggestions = suggestions.filter(user => {
+  const filteredSuggestions = (suggestions || []).filter(user => {
     // Search query filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -233,10 +233,16 @@ const NetworkPage: React.FC = () => {
         socialNetworkService.getConnectionSuggestions(20),
       ]);
 
-      setConnections(connectionsRes.data);
-      setPendingRequests(requestsRes.data);
-      setSentRequests(sentRequestsRes.data);
-      setSuggestions(suggestionsRes.data);
+      // Handle direct array responses from services
+      const connectionsData = Array.isArray(connectionsRes) ? connectionsRes : (connectionsRes?.data || []);
+      const requestsData = Array.isArray(requestsRes) ? requestsRes : (requestsRes?.data || []);
+      const sentRequestsData = Array.isArray(sentRequestsRes) ? sentRequestsRes : (sentRequestsRes?.data || []);
+      const suggestionsData = Array.isArray(suggestionsRes) ? suggestionsRes : (suggestionsRes?.data || []);
+
+      setConnections(connectionsData);
+      setPendingRequests(requestsData);
+      setSentRequests(sentRequestsData);
+      setSuggestions(suggestionsData);
     } catch (err) {
       setError('Failed to load network data. Please try again.');
       console.error('Error loading network data:', err);

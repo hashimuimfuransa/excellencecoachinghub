@@ -335,24 +335,54 @@ const ProfileCompletion: React.FC<ProfileCompletionProps> = ({
 
         {/* Action Button */}
         {onEditProfile && (
-          <Box sx={{ mt: 2 }}>
+          <Box sx={{ mt: 3 }}>
             <Button
               variant="contained"
               fullWidth
+              size="large"
               startIcon={<Edit />}
               onClick={onEditProfile}
               sx={{ 
-                bgcolor: statusColor,
+                py: 2,
+                px: 4,
+                fontSize: '1.1rem',
+                fontWeight: 'bold',
+                textTransform: 'none',
+                borderRadius: 3,
+                bgcolor: completionPercentage < 80 ? 'primary.main' : statusColor,
+                background: completionPercentage < 80 
+                  ? `linear-gradient(135deg, #1976d2 0%, #1565c0 100%)`
+                  : statusColor,
+                boxShadow: 3,
                 '&:hover': {
-                  bgcolor: statusColor,
-                  opacity: 0.9
+                  bgcolor: completionPercentage < 80 ? 'primary.dark' : statusColor,
+                  background: completionPercentage < 80 
+                    ? `linear-gradient(135deg, #1565c0 0%, #0d47a1 100%)`
+                    : statusColor,
+                  transform: 'translateY(-2px)',
+                  boxShadow: 6
+                },
+                transition: 'all 0.3s ease',
+                animation: completionPercentage < 50 
+                  ? 'pulse 2s infinite'
+                  : 'none',
+                '@keyframes pulse': {
+                  '0%': {
+                    boxShadow: '0 0 0 0 rgba(25, 118, 210, 0.7)'
+                  },
+                  '70%': {
+                    boxShadow: '0 0 0 10px rgba(25, 118, 210, 0)'
+                  },
+                  '100%': {
+                    boxShadow: '0 0 0 0 rgba(25, 118, 210, 0)'
+                  }
                 }
               }}
             >
-              {completionPercentage < 40 ? 'Complete Basic Profile' : 
-               completionPercentage < 70 ? 'Improve Profile' : 
-               completionPercentage < 80 ? 'Perfect Your Profile' : 
-               'Update Profile'}
+              {completionPercentage < 40 ? '🚀 Complete Your Profile Now' : 
+               completionPercentage < 70 ? '⭐ Improve Your Profile' : 
+               completionPercentage < 80 ? '✨ Perfect Your Profile' : 
+               '🎯 Update Profile'}
             </Button>
           </Box>
         )}

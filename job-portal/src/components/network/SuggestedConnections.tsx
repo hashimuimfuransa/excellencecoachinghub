@@ -73,9 +73,10 @@ const SuggestedConnections: React.FC = () => {
       const response = await socialNetworkService.getConnectionSuggestions(limit);
       console.log('Connection suggestions response:', response);
       
-      if (response.success && response.data) {
+      // The service returns the array directly, not wrapped in {success, data}
+      if (Array.isArray(response)) {
         // Filter out dismissed users
-        const filtered = response.data
+        const filtered = response
           .filter((u: SuggestedUser) => !dismissedUsers.includes(u._id));
 
         console.log('Filtered suggestions:', filtered);

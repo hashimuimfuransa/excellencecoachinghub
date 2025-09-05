@@ -29,6 +29,20 @@ export class JobScrapingScheduler {
       timezone: 'Africa/Kigali' // Rwanda timezone
     });
 
+    // Also schedule a backup run at 8:00 AM if minimum jobs not met
+    const backupJob = cron.schedule('0 0 8 * * *', async () => {
+      const stats = await JobScrapingService.getScrapingStats();
+      if (stats.todayJobs < 20) {
+        console.log(`🔄 Backup scraping triggered - only ${stats.todayJobs} jobs today`);
+        await this.runScrapingTask();
+      } else {
+        console.log(`✅ Backup scraping skipped - ${stats.todayJobs} jobs already processed today`);
+      }
+    }, {
+      scheduled: true,
+      timezone: 'Africa/Kigali'
+    });
+
     console.log('✅ Job scraping scheduler started - will run daily at 2:00 AM (Rwanda time)');
     
     // Also run immediately if it's the first time (for testing)

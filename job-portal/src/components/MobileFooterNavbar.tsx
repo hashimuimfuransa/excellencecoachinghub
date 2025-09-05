@@ -17,64 +17,127 @@ import {
   Work,
   Psychology,
   Assignment,
-  Message
+  Message,
+  Business,
+  Person
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { UserRole } from '../contexts/AuthContext';
 
 interface MobileFooterNavbarProps {
   unreadNotifications?: number;
   unreadMessages?: number;
+  userRole?: UserRole | string;
   onCreatePost?: () => void;
   onShowConnections?: () => void;
+  onShowCandidates?: () => void;
+  candidateCount?: number;
 }
 
 const MobileFooterNavbar: React.FC<MobileFooterNavbarProps> = ({
   unreadNotifications = 0,
   unreadMessages = 0,
+  userRole,
   onCreatePost,
-  onShowConnections
+  onShowConnections,
+  onShowCandidates,
+  candidateCount = 0
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
 
+  // Check if user is an employer
+  const isEmployer = userRole === UserRole.EMPLOYER;
+
   // Determine current tab based on pathname
   const getCurrentTab = () => {
     const path = location.pathname;
     if (path === '/app/network') return 0;
-    if (path === '/app/jobs') return 1;
-    if (path.includes('/app/messages')) return 2;
-    if (path.includes('/app/notifications')) return 3;
-    if (path.includes('/app/connections')) return 4;
+    
+    if (isEmployer) {
+      // Employer navigation mapping (6 tabs total: 0-5)
+      if (path.includes('/app/employer/jobs') || path === '/app/jobs') return 1;
+      if (path.includes('/app/messages')) return 2;
+      if (path.includes('/app/notifications')) return 3;
+      if (path.includes('/app/applications')) return 4;
+      if (path.includes('/app/employer/candidates')) return 5;
+      // Create post button is index 6 but doesn't stay selected
+    } else {
+      // Job seeker navigation mapping (6 tabs total: 0-5)  
+      if (path === '/app/jobs') return 1;
+      if (path.includes('/app/messages')) return 2;
+      if (path.includes('/app/notifications')) return 3;
+      if (path.includes('/app/applications')) return 4;
+      if (path.includes('/app/connections')) return 5;
+      // Create post button is index 6 but doesn't stay selected
+    }
     return 0;
   };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    switch (newValue) {
-      case 0:
-        navigate('/app/network');
-        break;
-      case 1:
-        navigate('/app/jobs');
-        break;
-      case 2:
-        navigate('/app/messages');
-        break;
-      case 3:
-        navigate('/app/notifications');
-        break;
-      case 4:
-        if (onShowConnections) {
-          onShowConnections();
-        } else {
-          navigate('/app/connections');
-        }
-        break;
-      case 5:
-        if (onCreatePost) {
-          onCreatePost();
-        }
-        break;
+    if (isEmployer) {
+      // Employer navigation logic
+      switch (newValue) {
+        case 0:
+          navigate('/app/network');
+          break;
+        case 1:
+          navigate('/app/employer/jobs');
+          break;
+        case 2:
+          navigate('/app/messages');
+          break;
+        case 3:
+          navigate('/app/notifications');
+          break;
+        case 4:
+          navigate('/app/applications');
+          break;
+        case 5:
+          if (onShowCandidates) {
+            onShowCandidates();
+          } else {
+            navigate('/app/employer/candidates');
+          }
+          break;
+        case 6:
+          if (onCreatePost) {
+            onCreatePost();
+          }
+          break;
+      }
+    } else {
+      // Job seeker navigation logic
+      switch (newValue) {
+        case 0:
+          navigate('/app/network');
+          break;
+        case 1:
+          navigate('/app/jobs');
+          break;
+        case 2:
+          navigate('/app/messages');
+          break;
+        case 3:
+          navigate('/app/notifications');
+          break;
+        case 4:
+          navigate('/app/applications');
+          break;
+        case 5:
+          if (onShowConnections) {
+            onShowConnections();
+          } else {
+            navigate('/app/connections');
+          }
+          break;
+        case 6:
+          if (onCreatePost) {
+            onCreatePost();
+          }
+          break;
+      }
     }
   };
 
@@ -171,16 +234,19 @@ const MobileFooterNavbar: React.FC<MobileFooterNavbarProps> = ({
           }
         }}
       >
+        {/* Home */}
         <BottomNavigationAction
           label="Home"
           icon={<Home />}
         />
         
+        {/* Jobs/Employer Jobs */}
         <BottomNavigationAction
-          label="Jobs"
-          icon={<Work />}
+          label={isEmployer ? "My Jobs" : "Jobs"}
+          icon={isEmployer ? <Business /> : <Work />}
         />
         
+        {/* Messages */}
         <BottomNavigationAction
           label="Messages"
           icon={
@@ -190,6 +256,7 @@ const MobileFooterNavbar: React.FC<MobileFooterNavbarProps> = ({
           }
         />
         
+        {/* Notifications */}
         <BottomNavigationAction
           label="Alerts"
           icon={
@@ -199,11 +266,27 @@ const MobileFooterNavbar: React.FC<MobileFooterNavbarProps> = ({
           }
         />
         
+        {/* Applications tab */}
         <BottomNavigationAction
-          label="People"
-          icon={<People />}
+          label={isEmployer ? "My Apps" : "Apps"}
+          icon={<Assignment />}
         />
         
+        {/* Candidates tab for employers, Applications/Connections for job seekers */}
+        <BottomNavigationAction
+          label={isEmployer ? "Candidates" : "Connections"}
+          icon={
+            isEmployer ? (
+              <Badge badgeContent={candidateCount > 0 ? candidateCount : undefined} color="secondary">
+                <People />
+              </Badge>
+            ) : (
+              <Person />
+            )
+          }
+        />
+        
+        {/* Create Post */}
         <BottomNavigationAction
           label="Post"
           icon={

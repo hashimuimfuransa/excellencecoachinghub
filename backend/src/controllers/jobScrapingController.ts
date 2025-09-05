@@ -36,6 +36,37 @@ export class JobScrapingController {
   }
 
   /**
+   * Get AI usage statistics
+   */
+  static async getAIUsageStats(req: Request, res: Response): Promise<void> {
+    try {
+      // Access private static properties through reflection
+      const aiRequestCount = (JobScrapingService as any).aiRequestCount || 0;
+      const maxRequests = (JobScrapingService as any).MAX_AI_REQUESTS_PER_DAY || 40;
+      const lastResetDate = (JobScrapingService as any).lastResetDate || new Date().toDateString();
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          aiRequestsUsed: aiRequestCount,
+          aiRequestsLimit: maxRequests,
+          aiRequestsRemaining: Math.max(0, maxRequests - aiRequestCount),
+          lastResetDate: lastResetDate,
+          canUseAI: aiRequestCount < maxRequests,
+          nextResetDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString()
+        }
+      });
+    } catch (error) {
+      console.error('Error getting AI usage stats:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get AI usage statistics',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
    * Get job scraping statistics
    */
   static async getScrapingStats(req: Request, res: Response): Promise<void> {
@@ -57,8 +88,10 @@ export class JobScrapingController {
         data: {
           stats,
           recentJobs,
-          maxJobsPerDay: 24,
-          remainingQuota: Math.max(0, 24 - stats.todayJobs)
+          maxJobsPerDay: 30,
+          minJobsPerDay: 20,
+          remainingQuota: Math.max(0, 30 - stats.todayJobs),
+          meetsMinimum: stats.todayJobs >= 20
         }
       });
     } catch (error) {
@@ -223,6 +256,144 @@ export class JobScrapingController {
       res.status(500).json({
         success: false,
         message: 'Failed to update job status',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Force scraping to meet minimum quota (admin only)
+   */
+  static async forceScrapingToMeetQuota(req: Request, res: Response): Promise<void> {
+    try {
+      console.log('Force scraping to meet quota triggered by admin');
+      
+      const stats = await JobScrapingService.getScrapingStats();
+      
+      if (stats.todayJobs >= 20) {
+        res.status(200).json({
+          success: true,
+          message: `Daily quota already met with ${stats.todayJobs} jobs`,
+          data: { todayJobs: stats.todayJobs, minimumRequired: 20 }
+        });
+        return;
+      }
+      
+      const result = await JobScrapingService.scrapeAndProcessJobs();
+      
+      res.status(200).json({
+        success: result.success,
+        message: `Force scraping completed. Processed ${result.processedJobs} additional jobs.`,
+        data: {
+          processedJobs: result.processedJobs,
+          totalTodayJobs: stats.todayJobs + result.processedJobs,
+          errors: result.errors,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.error('Error in force scraping:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Force scraping failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Test scraping from specific website
+   */
+  static async testWebsiteScraping(req: Request, res: Response): Promise<void> {
+    try {
+      const { website } = req.params;
+      
+      console.log(`Testing scraping from specific website: ${website}`);
+      
+      // Get the website configuration
+      const sources = [
+        {
+          name: 'jobinrwanda',
+          baseUrl: 'https://www.jobinrwanda.com',
+          paths: ['/jobs', '/job', '/vacancies', '/opportunities', ''],
+          selectors: [
+            'a[href*="/job/"]',
+            'a[href*="/jobs/"]', 
+            'a[href*="/node/"]',
+            '.views-row a[href*="/node/"]',
+            '.job-item a',
+            '.job-listing a',
+            '.job-card a',
+            '.view-content a[href*="/node/"]',
+            'h2 a[href*="/node/"]',
+            'h3 a[href*="/node/"]',
+            '.field-content a[href*="/node/"]',
+            '.view-jobs a',
+            '.job-title a',
+            '.node-title a'
+          ]
+        },
+        {
+          name: 'workingnomads',
+          baseUrl: 'https://www.workingnomads.com',
+          paths: ['/jobs', '/remote-jobs', '/latest-jobs', '/job-board'],
+          selectors: [
+            'a[href*="/jobs/"]',
+            'a[href*="/job-"]',
+            '.job-item a',
+            '.job-listing a',
+            '.job-title a',
+            '.entry-title a',
+            'h2 a',
+            'h3 a'
+          ]
+        },
+        {
+          name: 'mucuruzi',
+          baseUrl: 'https://mucuruzi.com',
+          paths: ['/all-jobs/', '/jobs/', '/vacancies/', '/category/jobs/', '/'],
+          selectors: [
+            'a[href*="/job-"]',
+            'a[href*="/jobs/"]',
+            'a[href*="/vacancy"]',
+            '.job-item a',
+            '.job-listing a',
+            '.job-title a',
+            '.post-title a',
+            'h2 a',
+            'h3 a',
+            '.entry-title a'
+          ]
+        }
+      ];
+      
+      const targetSource = sources.find(s => s.name === website);
+      if (!targetSource) {
+        res.status(400).json({
+          success: false,
+          message: `Website '${website}' not found. Available: ${sources.map(s => s.name).join(', ')}`
+        });
+        return;
+      }
+      
+      // Test URL scraping from this specific source
+      const urls = await JobScrapingService['scrapeJobUrlsFromSource'](targetSource, 10);
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          website: website,
+          foundUrls: urls,
+          count: urls.length,
+          timestamp: new Date().toISOString()
+        },
+        message: `Found ${urls.length} job URLs from ${website}`
+      });
+    } catch (error) {
+      console.error('Error testing website scraping:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Website scraping test failed',
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }

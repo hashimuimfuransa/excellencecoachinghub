@@ -186,24 +186,35 @@ const SocialNetworkPage: React.FC = () => {
         filter
       });
 
-      if (response.success) {
-        const newPosts = response.data.posts || response.data || [];
-        
-        if (reset) {
-          setPosts(newPosts);
-          setPage(2);
-        } else {
-          setPosts(prev => [...prev, ...newPosts]);
-          setPage(prev => prev + 1);
+      // Handle different response formats more robustly
+      let newPosts = [];
+      if (response && response.success !== false) {
+        // Try to extract posts from various possible response structures
+        newPosts = response.data?.posts || response.data || response.posts || response || [];
+        // Ensure newPosts is an array
+        if (!Array.isArray(newPosts)) {
+          newPosts = [];
         }
-        
-        setHasMore(newPosts.length === 10);
-      } else {
+      } else if (response && response.success === false) {
         throw new Error(response.message || 'Failed to load posts');
       }
+      
+      if (reset) {
+        setPosts(newPosts);
+        setPage(2);
+      } else {
+        setPosts(prev => [...prev, ...newPosts]);
+        setPage(prev => prev + 1);
+      }
+      
+      setHasMore(newPosts.length === 10);
     } catch (err: any) {
       console.error('Error loading posts:', err);
       setError(err.response?.data?.error || err.message || 'Failed to load posts');
+      // Set empty posts to prevent UI from breaking
+      if (reset) {
+        setPosts([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -368,10 +379,9 @@ const SocialNetworkPage: React.FC = () => {
       
       setSuggestionsLoading(true);
       try {
-        const response = await socialNetworkService.getSuggestedConnections();
-        if (response.success) {
-          setSuggestedUsers(response.data || []);
-        }
+        const response = await socialNetworkService.getConnectionSuggestions();
+        // The service already returns the data or empty array
+        setSuggestedUsers(Array.isArray(response) ? response : []);
       } catch (error) {
         console.error('Error loading suggested connections:', error);
       } finally {
@@ -462,6 +472,11 @@ const SocialNetworkPage: React.FC = () => {
   }, []);
 
   const loadFeed = async (pageNum = 1, reset = false) => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
       setError(null);
@@ -474,13 +489,17 @@ const SocialNetworkPage: React.FC = () => {
 
       const response = await socialNetworkService.getFeed(options);
       
+      // Ensure response.data exists and is an array
+      const feedData = response?.data || response || [];
+      const feedPosts = Array.isArray(feedData) ? feedData : feedData?.posts || [];
+      
       if (reset) {
-        setPosts(response.data);
+        setPosts(feedPosts);
       } else {
-        setPosts(prev => [...prev, ...response.data]);
+        setPosts(prev => [...prev, ...feedPosts]);
       }
       
-      setHasMore(response.data.length === 10);
+      setHasMore(feedPosts.length === 10);
       setPage(pageNum);
     } catch (err) {
       setError('Failed to load feed. Please try again.');
@@ -496,7 +515,7 @@ const SocialNetworkPage: React.FC = () => {
 
   const loadMorePosts = () => {
     if (!loading && hasMore) {
-      loadPosts(false);
+      loadFeed(page + 1, false);
     }
   };
 

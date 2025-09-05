@@ -1,16 +1,23 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import mongoose from 'mongoose';
 import { GeneratedPsychometricTest } from '../models/GeneratedPsychometricTest';
+import { centralAIManager, AIGenerationOptions } from './centralAIManager';
 
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-
-// AI Service for various educational tasks
+// AI Service for various educational tasks - Now using Central AI Manager
 export class AIService {
-  private model: any;
+  private aiManager = centralAIManager;
 
   constructor() {
-    this.model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    console.log('🎓 AI Service initialized with Central AI Manager');
+    
+    // Listen to AI manager events for monitoring
+    this.aiManager.on('modelUpgraded', (data) => {
+      console.log(`🎓 AI Service: Model upgraded from ${data.from} to ${data.to}`);
+    });
+    
+    this.aiManager.on('generationError', (data) => {
+      console.warn(`🎓 AI Service: Generation error on attempt ${data.attempt}: ${data.error}`);
+    });
   }
 
   // Helper function to extract JSON from AI responses that might be wrapped in markdown
@@ -97,15 +104,34 @@ export class AIService {
     }
   }
 
-  // General content generation method
-  async generateContent(prompt: string): Promise<string> {
+  // General content generation method - Now using Central AI Manager
+  async generateContent(prompt: string, options?: AIGenerationOptions): Promise<string> {
     try {
-      const result = await this.model.generateContent(prompt);
-      return result.response.text();
+      return await this.aiManager.generateContent(prompt, {
+        retries: 3,
+        timeout: 30000,
+        priority: 'normal',
+        ...options
+      });
     } catch (error) {
-      console.error('Error generating content with AI:', error);
+      console.error('🎓 Error generating content with AI:', error);
       throw error;
     }
+  }
+
+  // Check if AI service is available
+  async isAvailable(): Promise<boolean> {
+    return await this.aiManager.isAvailable();
+  }
+
+  // Get current AI model information
+  getCurrentModel() {
+    return this.aiManager.getCurrentModel();
+  }
+
+  // Get AI service statistics
+  getServiceStats() {
+    return this.aiManager.getModelStats();
   }
 
   // Generate psychometric test questions with proper JSON parsing
@@ -216,33 +242,20 @@ QUALITY STANDARDS:
 
 Generate all ${questionCount} questions now:`;
 
-      // Implement retry logic for AI service
-      let result;
-      let text;
-      let retryCount = 0;
-      const maxRetries = 3;
-      const retryDelay = 2000; // 2 seconds
-      
-      while (retryCount < maxRetries) {
-        try {
-          console.log(`🤖 Attempting AI generation (attempt ${retryCount + 1}/${maxRetries})`);
-          result = await this.model.generateContent(prompt);
-          const response = await result.response;
-          text = response.text();
-          break; // Success, exit retry loop
-        } catch (aiError: any) {
-          retryCount++;
-          console.log(`⚠️ AI generation failed (attempt ${retryCount}/${maxRetries}):`, aiError.message);
-          
-          if (retryCount >= maxRetries) {
-            console.error('AI service failed after all retries, using fallback questions');
-            // Use fallback questions when AI service is unavailable
-            return this.generateFallbackQuestions(params);
-          }
-          
-          // Wait before retrying
-          await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount));
-        }
+      // Use the enhanced AI manager with built-in retry logic
+      let text: string;
+      try {
+        console.log(`🎓 Generating psychometric test using enhanced AI manager`);
+        text = await this.aiManager.generateContent(prompt, {
+          retries: 3,
+          timeout: 45000, // Longer timeout for complex generation
+          priority: 'high', // High priority for test generation
+          temperature: 0.3 // Lower temperature for more consistent results
+        });
+      } catch (aiError: any) {
+        console.error('🎓 AI service failed, using fallback questions:', aiError.message);
+        // Use fallback questions when AI service is unavailable
+        return this.generateFallbackQuestions(params);
       }
       
       console.log('🤖 Raw psychometric test response:', text.substring(0, 200) + '...');

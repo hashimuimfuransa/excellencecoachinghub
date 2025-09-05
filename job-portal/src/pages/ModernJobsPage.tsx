@@ -742,17 +742,18 @@ const ModernJobsPage: React.FC = () => {
                   WebkitTextFillColor: 'transparent'
                 }}
               >
-                Find Your Dream Job
+                Unlock Your Career Potential
               </Typography>
               <Typography 
-                variant={{ xs: 'body1', md: 'h6' }} 
+                variant="body1"
                 color="text.secondary" 
                 sx={{ 
                   mb: { xs: 2, md: 3 },
-                  fontSize: { xs: '1rem', md: '1.25rem' }
+                  fontSize: { xs: '0.875rem', md: '1rem' },
+                  lineHeight: 1.5
                 }}
               >
-                Discover {totalJobs} opportunities from top companies
+                {totalJobs} opportunities available
               </Typography>
             </Grid>
             <Grid item xs={12} md={6}>
@@ -832,11 +833,12 @@ const ModernJobsPage: React.FC = () => {
               <Button
                 fullWidth
                 variant="contained"
-                size="large"
-                onClick={() => window.location.href = '/cv-builder'}
+                size={isMobile ? 'medium' : 'large'}
+                onClick={() => navigate('/app/cv-builder')}
                 sx={{
-                  py: 2,
+                  py: { xs: 1.5, md: 2 },
                   borderRadius: 4,
+                  fontSize: { xs: '0.875rem', md: '1rem' },
                   background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
                   boxShadow: '0 8px 32px rgba(245, 87, 108, 0.3)',
                   '&:hover': {
@@ -862,11 +864,12 @@ const ModernJobsPage: React.FC = () => {
               <Button
                 fullWidth
                 variant="contained"
-                size="large"
-                onClick={() => window.location.href = '/career-guidance'}
+                size={isMobile ? 'medium' : 'large'}
+                onClick={() => navigate('/app/career-guidance')}
                 sx={{
-                  py: 2,
+                  py: { xs: 1.5, md: 2 },
                   borderRadius: 4,
+                  fontSize: { xs: '0.875rem', md: '1rem' },
                   background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
                   boxShadow: '0 8px 32px rgba(79, 172, 254, 0.3)',
                   '&:hover': {
@@ -892,11 +895,12 @@ const ModernJobsPage: React.FC = () => {
               <Button
                 fullWidth
                 variant="contained"
-                size="large"
-                onClick={() => window.location.href = '/ai-interviews'}
+                size={isMobile ? 'medium' : 'large'}
+                onClick={() => navigate('/app/interviews')}
                 sx={{
-                  py: 2,
+                  py: { xs: 1.5, md: 2 },
                   borderRadius: 4,
+                  fontSize: { xs: '0.875rem', md: '1rem' },
                   background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
                   boxShadow: '0 8px 32px rgba(250, 112, 154, 0.3)',
                   '&:hover': {

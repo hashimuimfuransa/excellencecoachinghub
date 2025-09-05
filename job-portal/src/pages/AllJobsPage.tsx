@@ -801,7 +801,7 @@ const AllJobsPage: React.FC = () => {
                           lineHeight: 1.2
                         }}
                       >
-                        AI Job Match
+                        Job Match
                       </Typography>
                       <Typography 
                         variant="caption" 
@@ -956,51 +956,7 @@ const AllJobsPage: React.FC = () => {
                   </Button>
                 </Grid>
 
-                <Grid item xs={6} sm={4} md={2}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    size={isMobile ? 'small' : 'large'}
-                    onClick={() => user ? navigate('/career-guidance') : navigate('/login')}
-                    sx={{
-                      py: { xs: 1, sm: 1.5, md: 2 },
-                      borderRadius: { xs: 2, md: 4 },
-                      background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-                      boxShadow: '0 8px 32px rgba(67, 233, 123, 0.3)',
-                      minHeight: { xs: '70px', sm: '80px', md: 'auto' },
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 12px 40px rgba(67, 233, 123, 0.4)',
-                      },
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                    }}
-                    startIcon={<School sx={{ fontSize: { xs: '0.9rem', sm: '1rem', md: '1.25rem' } }} />}
-                  >
-                    <Box>
-                      <Typography 
-                        variant="button" 
-                        fontWeight="bold"
-                        sx={{ 
-                          fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' },
-                          lineHeight: 1.2
-                        }}
-                      >
-                        Career Guide
-                      </Typography>
-                      <Typography 
-                        variant="caption" 
-                        display="block" 
-                        sx={{ 
-                          opacity: 0.9,
-                          fontSize: { xs: '0.55rem', sm: '0.65rem', md: '0.75rem' },
-                          lineHeight: 1.1
-                        }}
-                      >
-                        Expert guidance
-                      </Typography>
-                    </Box>
-                  </Button>
-                </Grid>
+             
 
                 <Grid item xs={6} sm={4} md={2}>
                   <Button

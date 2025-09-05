@@ -61,7 +61,8 @@ import {
   VideoLibrary,
   Schedule,
   LocationOn,
-  Twitter
+  Twitter,
+  PostAdd
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -123,6 +124,7 @@ const Navbar: React.FC = () => {
   const menuItems = [
     { text: 'All Jobs', icon: <Work />, path: '/' },
     // { text: 'Companies', icon: <Business />, path: '/companies' },  // Removed - Companies page no longer available
+    { text: 'Post Job', icon: <PostAdd />, path: '/app/jobs/create', highlight: true, requiresAuth: true },
     { text: 'Support', icon: <Support />, path: '/support' },
     { text: 'Contact Us', icon: <ContactSupport />, action: handleContactOpen, isContactDialog: true },
     // Protected items - only show if user is logged in
@@ -167,30 +169,45 @@ const Navbar: React.FC = () => {
             onClick={() => {
               if (item.isContactDialog) {
                 item.action();
+              } else if (item.requiresAuth && !user) {
+                navigate('/register?role=employer');
+                setMobileOpen(false);
               } else {
                 navigate(item.path);
                 setMobileOpen(false);
               }
             }}
             sx={{
-              backgroundColor: location.pathname === item.path ? 'primary.light' : 'transparent',
+              backgroundColor: item.highlight 
+                ? alpha(theme.palette.primary.main, 0.9)
+                : (location.pathname === item.path ? 'primary.light' : 'transparent'),
               '&:hover': {
-                backgroundColor: 'primary.light',
+                backgroundColor: item.highlight 
+                  ? alpha(theme.palette.primary.main, 1)
+                  : 'primary.light',
               },
               mx: 1,
-              borderRadius: 1,
-              mb: 0.5
+              borderRadius: 2,
+              mb: 0.5,
+              border: item.highlight ? `2px solid ${theme.palette.primary.main}` : 'none',
+              boxShadow: item.highlight ? '0 4px 12px rgba(76, 175, 80, 0.3)' : 'none',
             }}
           >
-            <ListItemIcon sx={{ color: location.pathname === item.path ? 'primary.main' : 'inherit' }}>
+            <ListItemIcon sx={{ 
+              color: item.highlight 
+                ? 'white' 
+                : (location.pathname === item.path ? 'primary.main' : 'inherit') 
+            }}>
               {item.icon}
             </ListItemIcon>
             <ListItemText 
               primary={item.text} 
               sx={{ 
                 '& .MuiListItemText-primary': { 
-                  fontWeight: location.pathname === item.path ? 'bold' : 'normal',
-                  color: location.pathname === item.path ? 'primary.main' : 'inherit'
+                  fontWeight: (item.highlight || location.pathname === item.path) ? 'bold' : 'normal',
+                  color: item.highlight 
+                    ? 'white' 
+                    : (location.pathname === item.path ? 'primary.main' : 'inherit')
                 } 
               }}
             />
@@ -376,19 +393,29 @@ const Navbar: React.FC = () => {
                   onClick={() => {
                     if (item.isContactDialog) {
                       item.action();
+                    } else if (item.requiresAuth && !user) {
+                      navigate('/register?role=employer');
                     } else {
                       navigate(item.path);
                     }
                   }}
+                  variant={item.highlight ? 'contained' : 'text'}
                   sx={{
-                    fontWeight: location.pathname === item.path ? 'bold' : 'normal',
-                    color: location.pathname === item.path ? 'primary.main' : 'text.primary',
-                    backgroundColor: location.pathname === item.path ? 'primary.light' : 'transparent',
+                    fontWeight: location.pathname === item.path ? 'bold' : (item.highlight ? 'bold' : 'normal'),
+                    color: item.highlight ? 'white' : (location.pathname === item.path ? 'primary.main' : 'text.primary'),
+                    backgroundColor: item.highlight 
+                      ? 'primary.main' 
+                      : (location.pathname === item.path ? 'primary.light' : 'transparent'),
                     '&:hover': {
-                      backgroundColor: 'primary.light',
+                      backgroundColor: item.highlight 
+                        ? 'primary.dark' 
+                        : 'primary.light',
+                      transform: item.highlight ? 'translateY(-1px)' : 'none',
+                      boxShadow: item.highlight ? '0 4px 12px rgba(76, 175, 80, 0.3)' : 'none',
                     },
                     borderRadius: 2,
-                    px: 2
+                    px: 2,
+                    transition: 'all 0.3s ease',
                   }}
                 >
                   {item.text}
@@ -494,6 +521,19 @@ const Navbar: React.FC = () => {
                 <MenuItem onClick={() => { navigate('/app/dashboard'); handleClose(); }}>
                   <Work sx={{ mr: 1 }} />
                   Dashboard
+                </MenuItem>
+                <MenuItem 
+                  onClick={() => { navigate('/app/jobs/create'); handleClose(); }}
+                  sx={{ 
+                    color: 'primary.main', 
+                    fontWeight: 'bold',
+                    '&:hover': {
+                      backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                    }
+                  }}
+                >
+                  <PostAdd sx={{ mr: 1 }} />
+                  Post a Job
                 </MenuItem>
                 <Divider />
                 <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>

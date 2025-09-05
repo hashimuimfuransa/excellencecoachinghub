@@ -13,7 +13,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Grid,
   InputAdornment,
   IconButton,
   useTheme,
@@ -251,21 +250,25 @@ const RegisterPage: React.FC = () => {
         }
       }}
     >
-      <Container component="main" maxWidth="md" sx={{ py: { xs: 2, md: 3 }, position: 'relative', zIndex: 1 }}>
-        <Slide direction="up" in={mounted} timeout={1000}>
+      <Container component="main" maxWidth="xl" sx={{ py: 2, position: 'relative', zIndex: 1 }}>
+        <Slide direction="up" in={mounted} timeout={800}>
           <Paper
-            elevation={isMobile ? 4 : 12}
+            elevation={6}
             sx={{
-              p: { xs: 3, sm: 4 },
+              p: { xs: 2.5, sm: 4, md: 5 },
               width: '100%',
-              borderRadius: 4,
-              backdropFilter: 'blur(15px)',
-              background: 'rgba(255, 255, 255, 0.98)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+              maxWidth: { xs: 420, md: 1200 },
+              mx: 'auto',
+              borderRadius: 3,
+              background: 'rgba(255, 255, 255, 0.95)',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
               border: '1px solid rgba(255, 255, 255, 0.2)',
               transition: 'all 0.3s ease-in-out',
               position: 'relative',
               overflow: 'hidden',
+              minHeight: { md: '80vh' },
+              display: 'flex',
+              flexDirection: 'column',
               '&::before': {
                 content: '""',
                 position: 'absolute',
@@ -273,16 +276,12 @@ const RegisterPage: React.FC = () => {
                 left: 0,
                 right: 0,
                 height: 3,
-                background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
-              },
-              '&:hover': {
-                transform: 'translateY(-4px)',
-                boxShadow: '0 30px 80px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.3)',
+                background: 'linear-gradient(45deg, #2E7D32 0%, #4CAF50 100%)',
               }
             }}
           >
             {/* Back to Home Button */}
-            <Box sx={{ position: 'absolute', top: 15, left: 15, zIndex: 10 }}>
+            <Box sx={{ position: 'absolute', top: 10, right: 10, zIndex: 10 }}>
               <Button
                 component={RouterLink}
                 to="/"
@@ -293,129 +292,38 @@ const RegisterPage: React.FC = () => {
                   borderRadius: 2,
                   textTransform: 'none',
                   fontWeight: 500,
-                  color: 'primary.main',
-                  fontSize: '0.8rem',
+                  color: '#4CAF50',
+                  fontSize: '0.7rem',
                   minWidth: 'auto',
-                  p: 1,
-                  '&:hover': {
-                    background: 'rgba(102, 126, 234, 0.08)',
-                  },
-                  transition: 'all 0.2s ease'
+                  p: 0.5
                 }}
               >
                 Home
               </Button>
             </Box>
             
-            {/* Header with Logo and Brand */}
-            <Fade in={mounted} timeout={1200}>
-              <Box sx={{ textAlign: 'center', mb: 3, pt: 2 }}>
-                <Box
-                  sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    mb: 2,
-                    p: 1.5,
-                    borderRadius: 3,
-                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
-                    border: '1px solid rgba(102, 126, 234, 0.1)',
-                  }}
-                >
-                  <img 
-                    src="/exjobnetlogo.png" 
-                    alt="ExJobNet" 
-                    style={{ height: 40, width: 40, objectFit: 'contain' }}
-                  />
-                </Box>
-                
-                <Typography 
-                  variant="h5" 
-                  component="h1" 
-                  sx={{ 
-                    fontWeight: 800,
-                    background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-                    backgroundClip: 'text',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    mb: 0.5,
-                    fontSize: { xs: '1.3rem', md: '1.5rem' }
-                  }}
-                >
-                  ExJobNet
-                </Typography>
-                
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '0.9rem' }}>
-                  Africa's Premier Career Platform
-                </Typography>
-                
-                {/* Welcome Message */}
-                <Typography 
-                  variant="h6" 
-                  fontWeight="600"
-                  sx={{ 
-                    color: 'text.primary',
-                    mb: 1,
-                    fontSize: { xs: '1.1rem', md: '1.2rem' }
-                  }}
-                >
-                  Join Our Community!
-                </Typography>
-                
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '0.85rem', maxWidth: 400, mx: 'auto' }}>
-                  Create your account to unlock career opportunities and connect with employers
-                </Typography>
-              </Box>
-            </Fade>
-            
-            <Grow in={mounted} timeout={1500}>
-              <Stepper 
-                activeStep={activeStep} 
-                alternativeLabel 
+            {/* Header */}
+            <Box sx={{ textAlign: 'center', mb: 2, pt: 1 }}>
+              <Typography 
+                variant="h6" 
+                component="h1" 
                 sx={{ 
-                  mb: 3,
-                  '& .MuiStepConnector-root': {
-                    top: 22,
-                    '&.Mui-completed .MuiStepConnector-line': {
-                      borderColor: '#667eea',
-                    },
-                    '&.Mui-active .MuiStepConnector-line': {
-                      borderColor: '#667eea',
-                    },
-                  },
-                  '& .MuiStepLabel-root .Mui-completed': {
-                    color: '#667eea',
-                  },
-                  '& .MuiStepLabel-root .Mui-active': {
-                    color: '#667eea',
-                  },
-                  '& .MuiStepIcon-root': {
-                    color: 'rgba(102, 126, 234, 0.2)',
-                    '&.Mui-active': {
-                      color: '#667eea',
-                    },
-                    '&.Mui-completed': {
-                      color: '#667eea',
-                    },
-                  }
+                  fontWeight: 700,
+                  background: 'linear-gradient(45deg, #2E7D32 30%, #4CAF50 90%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  mb: 1,
+                  fontSize: '1.2rem'
                 }}
               >
-                {steps.map((label) => (
-                  <Step key={label}>
-                    <StepLabel 
-                      sx={{
-                        '& .MuiStepLabel-label': {
-                          fontWeight: 600,
-                          fontSize: '1rem'
-                        }
-                      }}
-                    >
-                      {label}
-                    </StepLabel>
-                  </Step>
-                ))}
-              </Stepper>
-            </Grow>
+                Create Account
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem' }}>
+                Join ExJobNet and unlock your career potential
+              </Typography>
+            </Box>
+
 
             {error && (
               <Alert 
@@ -435,8 +343,27 @@ const RegisterPage: React.FC = () => {
               </Alert>
             )}
 
-            <Box component="form" onSubmit={activeStep === 2 ? handleSubmit : undefined} noValidate>
-              {activeStep === 0 && (
+            <Box 
+              component="form" 
+              onSubmit={activeStep === 2 ? handleSubmit : undefined} 
+              noValidate
+              sx={{ 
+                flex: 1,
+                display: 'flex',
+                flexDirection: { xs: 'column', md: 'row' },
+                gap: { md: 4 },
+                alignItems: { md: 'stretch' }
+              }}
+            >
+              {/* Form content area */}
+              <Box sx={{ 
+                flex: { md: 1 }, 
+                display: 'flex', 
+                flexDirection: 'column',
+                minHeight: { md: '60vh' },
+                justifyContent: 'center'
+              }}>
+                {activeStep === 0 && (
                 <Slide direction="right" in={mounted} timeout={800}>
                   <Box>
                     <Typography 
@@ -452,9 +379,14 @@ const RegisterPage: React.FC = () => {
                       Choose Your Path to Success
                     </Typography>
                     
-                    <Grid container spacing={2}>
+                    <Box sx={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
+                      gap: { xs: 2, md: 3 },
+                      justifyItems: 'center'
+                    }}>
                       {roleOptions.map((option, index) => (
-                        <Grid item xs={12} md={4} key={option.value}>
+                        <Box key={option.value}>
                           <Slide direction="up" in={mounted} timeout={1000 + index * 200}>
                             <Paper
                               elevation={formData.role === option.value ? 8 : 2}
@@ -552,9 +484,9 @@ const RegisterPage: React.FC = () => {
                               )}
                             </Paper>
                           </Slide>
-                        </Grid>
+                        </Box>
                       ))}
-                    </Grid>
+                    </Box>
                   </Box>
                 </Slide>
               )}
@@ -575,8 +507,12 @@ const RegisterPage: React.FC = () => {
                       Tell Us About Yourself
                     </Typography>
                     
-                    <Grid container spacing={3}>
-                      <Grid item xs={12} sm={6}>
+                    <Box sx={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                      gap: { xs: 3, md: 4 }
+                    }}>
+                      <Box>
                         <TextField
                           required
                           fullWidth
@@ -619,8 +555,8 @@ const RegisterPage: React.FC = () => {
                             }
                           }}
                         />
-                      </Grid>
-                      <Grid item xs={12} sm={6}>
+                      </Box>
+                      <Box>
                         <TextField
                           required
                           fullWidth
@@ -663,8 +599,8 @@ const RegisterPage: React.FC = () => {
                             }
                           }}
                         />
-                      </Grid>
-                      <Grid item xs={12}>
+                      </Box>
+                      <Box sx={{ gridColumn: { xs: '1', md: '1 / -1' } }}>
                         <TextField
                           required
                           fullWidth
@@ -708,11 +644,11 @@ const RegisterPage: React.FC = () => {
                             }
                           }}
                         />
-                      </Grid>
+                      </Box>
                       
                       {formData.role === UserRole.EMPLOYER && (
                         <>
-                          <Grid item xs={12} sm={6}>
+                          <Box>
                             <TextField
                               required
                               fullWidth
@@ -738,8 +674,8 @@ const RegisterPage: React.FC = () => {
                                 }
                               }}
                             />
-                          </Grid>
-                          <Grid item xs={12} sm={6}>
+                          </Box>
+                          <Box>
                             <TextField
                               required
                               fullWidth
@@ -765,10 +701,10 @@ const RegisterPage: React.FC = () => {
                                 }
                               }}
                             />
-                          </Grid>
+                          </Box>
                         </>
                       )}
-                    </Grid>
+                    </Box>
                   </Box>
                 </Slide>
               )}
@@ -789,8 +725,12 @@ const RegisterPage: React.FC = () => {
                       Secure Your Account
                     </Typography>
                     
-                    <Grid container spacing={3}>
-                      <Grid item xs={12}>
+                    <Box sx={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                      gap: { xs: 3, md: 4 }
+                    }}>
+                      <Box>
                         <TextField
                           required
                           fullWidth
@@ -851,8 +791,8 @@ const RegisterPage: React.FC = () => {
                             }
                           }}
                         />
-                      </Grid>
-                      <Grid item xs={12}>
+                      </Box>
+                      <Box>
                         <TextField
                           required
                           fullWidth
@@ -912,25 +852,244 @@ const RegisterPage: React.FC = () => {
                             }
                           }}
                         />
-                      </Grid>
-                    </Grid>
-                    
-                    <Box sx={{ mt: 3, mb: 2 }}>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
-                        Password requirements:
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        • At least 6 characters long
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        • Include a mix of letters, numbers, and symbols for better security
-                      </Typography>
+                      </Box>
+                      <Box sx={{ gridColumn: { xs: '1', md: '1 / -1' } }}>
+                        <Box sx={{ mt: 2 }}>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            Password requirements:
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            • At least 6 characters long
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            • Include a mix of letters, numbers, and symbols for better security
+                          </Typography>
+                        </Box>
+                      </Box>
                     </Box>
                   </Box>
                 </Slide>
               )}
+              </Box>
               
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 5 }}>
+              {/* Navigation Sidebar for desktop */}
+              <Box sx={{ 
+                display: { xs: 'none', md: 'flex' },
+                flexDirection: 'column',
+                width: '300px',
+                bgcolor: 'rgba(102, 126, 234, 0.05)',
+                borderRadius: 2,
+                p: 3,
+                gap: 3
+              }}>
+                {/* Progress Steps */}
+                <Box>
+                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, color: '#667eea' }}>
+                    Registration Progress
+                  </Typography>
+                  <Stack spacing={2}>
+                    {steps.map((step, index) => (
+                      <Box 
+                        key={step}
+                        sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: 2,
+                          p: 2,
+                          borderRadius: 2,
+                          bgcolor: index === activeStep ? 'rgba(102, 126, 234, 0.1)' : 'transparent',
+                          border: index === activeStep ? '2px solid #667eea' : '2px solid transparent',
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
+                        <Box sx={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: '50%',
+                          bgcolor: index <= activeStep ? '#667eea' : 'rgba(102, 126, 234, 0.2)',
+                          color: index <= activeStep ? 'white' : '#667eea',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 'bold',
+                          fontSize: '0.9rem'
+                        }}>
+                          {index < activeStep ? '✓' : index + 1}
+                        </Box>
+                        <Typography 
+                          variant="body1" 
+                          sx={{ 
+                            fontWeight: index === activeStep ? 700 : 500,
+                            color: index <= activeStep ? '#667eea' : 'text.secondary'
+                          }}
+                        >
+                          {step}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Box>
+
+                {/* Navigation Buttons for Desktop */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {activeStep === steps.length - 1 ? (
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={loading}
+                      startIcon={loading ? null : <HowToReg />}
+                      sx={{
+                        px: 4,
+                        py: 2,
+                        borderRadius: 3,
+                        fontSize: '1rem',
+                        fontWeight: 'bold',
+                        background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                        boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)',
+                        textTransform: 'none',
+                        '&:hover': {
+                          background: 'linear-gradient(45deg, #5a6fd8 30%, #694a9e 90%)',
+                          transform: 'translateY(-3px)',
+                          boxShadow: '0 12px 35px rgba(102, 126, 234, 0.5)',
+                        },
+                        '&:disabled': {
+                          background: 'linear-gradient(45deg, #ccc 30%, #999 90%)',
+                          transform: 'none',
+                          boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+                        },
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      {loading ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Box
+                            sx={{
+                              width: 20,
+                              height: 20,
+                              border: '2px solid transparent',
+                              borderTop: '2px solid #ffffff',
+                              borderRadius: '50%',
+                              animation: 'spin 1s linear infinite',
+                              '@keyframes spin': {
+                                '0%': { transform: 'rotate(0deg)' },
+                                '100%': { transform: 'rotate(360deg)' },
+                              }
+                            }}
+                          />
+                          Creating Account...
+                        </Box>
+                      ) : 'Create Account'}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="contained"
+                      onClick={handleNext}
+                      endIcon={<ArrowForward />}
+                      sx={{
+                        px: 4,
+                        py: 2,
+                        borderRadius: 3,
+                        fontSize: '1rem',
+                        fontWeight: 'bold',
+                        textTransform: 'none',
+                        background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                        boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)',
+                        '&:hover': {
+                          background: 'linear-gradient(45deg, #5a6fd8 30%, #694a9e 90%)',
+                          transform: 'translateY(-3px)',
+                          boxShadow: '0 12px 35px rgba(102, 126, 234, 0.5)',
+                        },
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      Next Step
+                    </Button>
+                  )}
+                  
+                  <Button
+                    variant="outlined"
+                    onClick={handleBack}
+                    disabled={activeStep === 0 || loading}
+                    startIcon={<ArrowBack />}
+                    sx={{
+                      borderRadius: 3,
+                      borderWidth: 2,
+                      px: 4,
+                      py: 1.5,
+                      borderColor: '#667eea',
+                      color: '#667eea',
+                      fontWeight: 600,
+                      '&:hover': {
+                        borderWidth: 2,
+                        borderColor: '#5a6fd8',
+                        color: '#5a6fd8',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 8px 25px rgba(102, 126, 234, 0.2)'
+                      },
+                      '&:disabled': {
+                        borderColor: 'rgba(0, 0, 0, 0.12)',
+                        color: 'rgba(0, 0, 0, 0.26)',
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Back
+                  </Button>
+                </Box>
+
+                {/* Tips */}
+                <Box sx={{ mt: 'auto' }}>
+                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 700, color: '#667eea' }}>
+                    Quick Tips
+                  </Typography>
+                  <Stack spacing={1.5}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                      <Box sx={{ color: '#4caf50', fontSize: '1rem' }}>💡</Box>
+                      <Typography variant="body2" color="text.secondary">
+                        Choose your role carefully - it affects the features you'll see
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                      <Box sx={{ color: '#4caf50', fontSize: '1rem' }}>🔒</Box>
+                      <Typography variant="body2" color="text.secondary">
+                        Use a strong password to keep your account secure
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                      <Box sx={{ color: '#4caf50', fontSize: '1rem' }}>✨</Box>
+                      <Typography variant="body2" color="text.secondary">
+                        Complete your profile to get better job matches
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+
+                {/* Sign in link for desktop */}
+                <Box sx={{ textAlign: 'center', mt: 3 }}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Already have an account?
+                  </Typography>
+                  <Button
+                    component={RouterLink}
+                    to="/login"
+                    variant="text"
+                    sx={{
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      color: '#667eea',
+                      '&:hover': {
+                        color: '#5a6fd8',
+                        textDecoration: 'underline'
+                      }
+                    }}
+                  >
+                    Sign In Instead
+                  </Button>
+                </Box>
+              </Box>
+            
+            {/* Mobile Navigation Buttons */}
+            <Box sx={{ display: { xs: 'flex', md: 'none' }, justifyContent: 'space-between', mt: 5 }}>
                 <Button
                   variant="outlined"
                   onClick={handleBack}
@@ -1036,52 +1195,55 @@ const RegisterPage: React.FC = () => {
                 )}
               </Box>
               
-              <Divider sx={{ my: 4 }}>
-                <Typography 
-                  variant="body2" 
-                  sx={{
-                    color: 'text.secondary',
-                    fontWeight: 600,
-                    px: 3,
-                    background: 'rgba(255, 255, 255, 0.8)',
-                    backdropFilter: 'blur(10px)',
-                    borderRadius: 3,
-                    py: 1
-                  }}
-                >
-                  Already have an account?
-                </Typography>
-              </Divider>
-              
-              <Box sx={{ textAlign: 'center' }}>
-                <Button
-                  component={RouterLink}
-                  to="/login"
-                  variant="outlined"
-                  sx={{
-                    px: 4,
-                    py: 1.5,
-                    borderRadius: 3,
-                    borderWidth: 2,
-                    fontSize: '1rem',
-                    fontWeight: 'bold',
-                    textTransform: 'none',
-                    borderColor: '#667eea',
-                    color: '#667eea',
-                    background: 'rgba(102, 126, 234, 0.05)',
-                    '&:hover': {
+              {/* Mobile Sign In Section */}
+              <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+                <Divider sx={{ my: 4 }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{
+                      color: 'text.secondary',
+                      fontWeight: 600,
+                      px: 3,
+                      background: 'rgba(255, 255, 255, 0.8)',
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: 3,
+                      py: 1
+                    }}
+                  >
+                    Already have an account?
+                  </Typography>
+                </Divider>
+                
+                <Box sx={{ textAlign: 'center' }}>
+                  <Button
+                    component={RouterLink}
+                    to="/login"
+                    variant="outlined"
+                    sx={{
+                      px: 4,
+                      py: 1.5,
+                      borderRadius: 3,
                       borderWidth: 2,
-                      borderColor: '#5a6fd8',
-                      color: '#5a6fd8',
-                      background: 'rgba(102, 126, 234, 0.1)',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 8px 25px rgba(102, 126, 234, 0.2)'
-                    },
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  Sign In Instead
-                </Button>
+                      fontSize: '1rem',
+                      fontWeight: 'bold',
+                      textTransform: 'none',
+                      borderColor: '#667eea',
+                      color: '#667eea',
+                      background: 'rgba(102, 126, 234, 0.05)',
+                      '&:hover': {
+                        borderWidth: 2,
+                        borderColor: '#5a6fd8',
+                        color: '#5a6fd8',
+                        background: 'rgba(102, 126, 234, 0.1)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 8px 25px rgba(102, 126, 234, 0.2)'
+                      },
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Sign In Instead
+                  </Button>
+                </Box>
               </Box>
             </Box>
           </Paper>

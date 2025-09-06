@@ -603,52 +603,8 @@ const AllJobsPage: React.FC = () => {
               </Typography>
               
               {/* Quick Action Buttons */}
-              <Grid container spacing={{ xs: 1, sm: 1.5, md: 2 }} sx={{ justifyContent: 'center', mb: { xs: 0.5, sm: 1, md: 2 }, px: { xs: 1, sm: 0 } }}>
-                <Grid item xs={6} sm={4} md={2}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    size={isMobile ? 'small' : 'large'}
-                    onClick={() => user ? navigate('/jobs/ai-matches') : navigate('/login')}
-                    sx={{
-                      py: { xs: 1, sm: 1.5, md: 2 },
-                      borderRadius: { xs: 2, md: 4 },
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
-                      minHeight: { xs: '70px', sm: '80px', md: 'auto' },
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)',
-                      },
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                    }}
-                    startIcon={<Psychology sx={{ fontSize: { xs: '0.9rem', sm: '1rem', md: '1.25rem' } }} />}
-                  >
-                    <Box>
-                      <Typography 
-                        variant="button" 
-                        fontWeight="bold"
-                        sx={{ 
-                          fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' },
-                          lineHeight: 1.2
-                        }}
-                      >
-                        Job Match
-                      </Typography>
-                      <Typography 
-                        variant="caption" 
-                        display="block" 
-                        sx={{ 
-                          opacity: 0.9,
-                          fontSize: { xs: '0.55rem', sm: '0.65rem', md: '0.75rem' },
-                          lineHeight: 1.1
-                        }}
-                      >
-                        Personalized matches
-                      </Typography>
-                    </Box>
-                  </Button>
-                </Grid>
+              <Grid container spacing={{ xs: 0.5, sm: 1.5, md: 2 }} sx={{ justifyContent: 'center', mb: { xs: 0.5, sm: 1, md: 2 }, px: { xs: 1, sm: 0 } }}>
+                
                 
                 <Grid item xs={6} sm={4} md={2}>
                   <Button
@@ -675,7 +631,7 @@ const AllJobsPage: React.FC = () => {
                         variant="button" 
                         fontWeight="bold"
                         sx={{ 
-                          fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' },
+                          fontSize: { xs: '0.45rem', sm: '0.75rem', md: '0.875rem' },
                           lineHeight: 1.2
                         }}
                       >
@@ -686,7 +642,7 @@ const AllJobsPage: React.FC = () => {
                         display="block" 
                         sx={{ 
                           opacity: 0.9,
-                          fontSize: { xs: '0.55rem', sm: '0.65rem', md: '0.75rem' },
+                          fontSize: { xs: '0.35rem', sm: '0.65rem', md: '0.75rem' },
                           lineHeight: 1.1
                         }}
                       >
@@ -721,7 +677,7 @@ const AllJobsPage: React.FC = () => {
                         variant="button" 
                         fontWeight="bold"
                         sx={{ 
-                          fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' },
+                          fontSize: { xs: '0.45rem', sm: '0.75rem', md: '0.875rem' },
                           lineHeight: 1.2
                         }}
                       >
@@ -732,7 +688,7 @@ const AllJobsPage: React.FC = () => {
                         display="block" 
                         sx={{ 
                           opacity: 0.9,
-                          fontSize: { xs: '0.55rem', sm: '0.65rem', md: '0.75rem' },
+                          fontSize: { xs: '0.35rem', sm: '0.65rem', md: '0.75rem' },
                           lineHeight: 1.1
                         }}
                       >
@@ -767,7 +723,7 @@ const AllJobsPage: React.FC = () => {
                         variant="button" 
                         fontWeight="bold"
                         sx={{ 
-                          fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' },
+                          fontSize: { xs: '0.45rem', sm: '0.75rem', md: '0.875rem' },
                           lineHeight: 1.2
                         }}
                       >
@@ -778,7 +734,7 @@ const AllJobsPage: React.FC = () => {
                         display="block" 
                         sx={{ 
                           opacity: 0.9,
-                          fontSize: { xs: '0.55rem', sm: '0.65rem', md: '0.75rem' },
+                          fontSize: { xs: '0.35rem', sm: '0.65rem', md: '0.75rem' },
                           lineHeight: 1.1
                         }}
                       >
@@ -815,7 +771,7 @@ const AllJobsPage: React.FC = () => {
                         variant="button" 
                         fontWeight="bold"
                         sx={{ 
-                          fontSize: { xs: '0.65rem', sm: '0.75rem', md: '0.875rem' },
+                          fontSize: { xs: '0.45rem', sm: '0.75rem', md: '0.875rem' },
                           lineHeight: 1.2
                         }}
                       >
@@ -826,7 +782,7 @@ const AllJobsPage: React.FC = () => {
                         display="block" 
                         sx={{ 
                           opacity: 0.9,
-                          fontSize: { xs: '0.55rem', sm: '0.65rem', md: '0.75rem' },
+                          fontSize: { xs: '0.35rem', sm: '0.65rem', md: '0.75rem' },
                           lineHeight: 1.1
                         }}
                       >
@@ -1099,9 +1055,11 @@ const AllJobsPage: React.FC = () => {
                     gridTemplateColumns: { 
                       xs: '1fr',
                       sm: 'repeat(2, 1fr)',
-                      md: 'repeat(2, 1fr)'
+                      md: 'repeat(2, 1fr)',
+                      lg: 'repeat(2, 1fr)',
+                      xl: 'repeat(2, 1fr)'
                     },
-                    gap: { xs: 2, md: 3 }
+                    gap: { xs: 2, sm: 1.5, md: 1.5, lg: 2 }
                   }}>
                     {[1, 2, 3, 4, 5, 6].map((i) => (
                       <Box key={i}>
@@ -1199,11 +1157,11 @@ const AllJobsPage: React.FC = () => {
                     flexDirection: (isMobile || viewMode === 'list') ? 'column' : undefined,
                     gridTemplateColumns: (!isMobile && viewMode === 'grid') ? { 
                       sm: 'repeat(2, 1fr)', // Two columns on small tablets
-                      md: 'repeat(2, 1fr)', // Two columns on medium screens
-                      lg: 'repeat(2, 1fr)', // Two columns on large screens
-                      xl: 'repeat(2, 1fr)'  // Two columns on extra large screens
+                      md: 'repeat(2, 1fr)', // Three columns on medium screens (tablets)
+                      lg: 'repeat(2, 1fr)', // Three columns on large screens
+                      xl: 'repeat(3, 1fr)'  // Four columns on extra large screens
                     } : undefined,
-                    gap: { xs: 1, sm: 1.5, md: 2, lg: 3 },
+                    gap: { xs: 1, sm: 1.5, md: 1.5, lg: 2 },
                     maxWidth: '100%',
                     width: '100%'
                   }}>
@@ -1211,7 +1169,7 @@ const AllJobsPage: React.FC = () => {
                       <Box 
                         key={job._id}
                         sx={{
-                          maxWidth: { xs: '100%', md: '500px' },
+                          maxWidth: { xs: '100%', sm: '100%', md: '350px', lg: '350px' },
                           width: '100%'
                         }}
                       >
@@ -1228,7 +1186,7 @@ const AllJobsPage: React.FC = () => {
                               ${alpha(theme.palette.background.paper, 1)} 0%, 
                               ${alpha(theme.palette.primary.main, 0.02)} 100%)`,
                             maxWidth: '100%',
-                            minHeight: { xs: '180px', sm: '200px', md: '320px' },
+                            minHeight: { xs: '180px', sm: '200px', md: '280px' },
                             '&:hover': {
                               transform: { xs: 'translateY(-2px)', sm: 'translateY(-4px)', md: 'translateY(-8px)' },
                               boxShadow: `0 ${isMobile ? '6px 20px' : '12px 40px'} ${alpha(theme.palette.common.black, 0.15)}`,
@@ -1238,11 +1196,11 @@ const AllJobsPage: React.FC = () => {
                           onClick={() => user ? navigate(`/app/jobs/${job._id}`) : navigate(`/login?redirect=job&jobId=${job._id}`)}
                         >
                           <CardContent sx={{ 
-                            p: { xs: 1.2, sm: 2, md: 3 }, 
+                            p: { xs: 1.2, sm: 1.5, md: 2 }, 
                             height: '100%', 
                             display: 'flex', 
                             flexDirection: 'column',
-                            '&:last-child': { pb: { xs: 1.2, sm: 2, md: 3 } }
+                            '&:last-child': { pb: { xs: 1.2, sm: 1.5, md: 2 } }
                           }}>
                             {/* Company Logo & Header */}
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.8, sm: 1, md: 1.5 } }}>

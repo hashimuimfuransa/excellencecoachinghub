@@ -76,6 +76,8 @@ const Navbar: React.FC = () => {
   const { mode, toggleTheme } = useCustomTheme();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -152,7 +154,7 @@ const Navbar: React.FC = () => {
     : publicMenuItems;
 
   const drawer = (
-    <Box sx={{ width: 280 }}>
+    <Box sx={{ width: { xs: 280, sm: 320 } }}>
       <Box sx={{ 
         p: 3, 
         display: 'flex', 
@@ -342,7 +344,11 @@ const Navbar: React.FC = () => {
           color: 'text.primary'
         }}
       >
-        <Toolbar sx={{ px: { xs: 1, sm: 2, md: 4 }, minHeight: { xs: 60, sm: 64 } }}>
+        <Toolbar sx={{ 
+          px: { xs: 1, sm: 1, md: 4 }, 
+          minHeight: { xs: 60, sm: 48, md: 80 },
+          py: { xs: 1, sm: 0.25, md: 2 }
+        }}>
           {isMobile && (
             <IconButton
               color="inherit"
@@ -369,7 +375,7 @@ const Navbar: React.FC = () => {
             sx={{ 
               display: 'flex', 
               alignItems: 'center', 
-              gap: 2,
+              gap: isTablet ? 1 : 2,
               cursor: 'pointer'
             }}
             onClick={() => navigate(user ? '/app/network' : '/')}
@@ -378,7 +384,7 @@ const Navbar: React.FC = () => {
               src="/exjobnetlogo.png" 
               alt="ExJobNet" 
               style={{ 
-                height: isMobile ? 50 : 80, 
+                height: isMobile ? 50 : isTablet ? 35 : 80, 
                 width: 'auto',
                 transition: 'height 0.3s ease'
               }}
@@ -402,37 +408,46 @@ const Navbar: React.FC = () => {
           <Box sx={{ flexGrow: 1 }} />
 
           {!isMobile && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 3 }}>
-              {currentMenuItems.filter(item => !item.protected || user).map((item) => (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: isTablet ? 0.125 : 1, 
+              mr: isTablet ? 0.5 : 3 
+            }}>
+              {currentMenuItems.filter(item => !('protected' in item) || !item.protected || user).map((item) => (
                 <Button
                   key={item.text}
                   color="inherit"
-                  startIcon={item.icon}
+                  startIcon={isTablet ? undefined : item.icon}
                   onClick={() => {
-                    if (item.isContactDialog) {
+                    if (item.isContactDialog && 'action' in item) {
                       item.action();
-                    } else if (item.requiresAuth && !user) {
+                    } else if ('requiresAuth' in item && item.requiresAuth && !user) {
                       navigate('/register?role=employer');
-                    } else {
+                    } else if ('path' in item) {
                       navigate(item.path);
                     }
                   }}
-                  variant={item.highlight ? 'contained' : 'text'}
+                  variant={('highlight' in item && item.highlight) ? 'contained' : 'text'}
                   sx={{
-                    fontWeight: location.pathname === item.path ? 'bold' : (item.highlight ? 'bold' : 'normal'),
-                    color: item.highlight ? 'white' : (location.pathname === item.path ? 'primary.main' : 'text.primary'),
-                    backgroundColor: item.highlight 
+                    fontWeight: ('path' in item && location.pathname === item.path) ? 'bold' : (('highlight' in item && item.highlight) ? 'bold' : 'normal'),
+                    color: ('highlight' in item && item.highlight) ? 'white' : (('path' in item && location.pathname === item.path) ? 'primary.main' : 'text.primary'),
+                    backgroundColor: ('highlight' in item && item.highlight)
                       ? 'primary.main' 
-                      : (location.pathname === item.path ? 'primary.light' : 'transparent'),
+                      : (('path' in item && location.pathname === item.path) ? 'primary.light' : 'transparent'),
                     '&:hover': {
-                      backgroundColor: item.highlight 
+                      backgroundColor: ('highlight' in item && item.highlight)
                         ? 'primary.dark' 
                         : 'primary.light',
-                      transform: item.highlight ? 'translateY(-1px)' : 'none',
-                      boxShadow: item.highlight ? '0 4px 12px rgba(76, 175, 80, 0.3)' : 'none',
+                      transform: ('highlight' in item && item.highlight) ? 'translateY(-1px)' : 'none',
+                      boxShadow: ('highlight' in item && item.highlight) ? '0 4px 12px rgba(76, 175, 80, 0.3)' : 'none',
                     },
-                    borderRadius: 2,
-                    px: 2,
+                    borderRadius: 1,
+                    px: isTablet ? 0.75 : 2,
+                    py: isTablet ? 0.125 : 1,
+                    minWidth: isTablet ? 'auto' : undefined,
+                    fontSize: isTablet ? '0.625rem' : '1rem',
+                    height: isTablet ? 28 : 'auto',
                     transition: 'all 0.3s ease',
                   }}
                 >
@@ -443,30 +458,38 @@ const Navbar: React.FC = () => {
           )}
 
           {!isMobile && (location.pathname === '/jobs' || location.pathname === '/' || location.pathname === '/app') && (
-            <Box sx={{ mx: 2 }}>
+            <Box sx={{ mx: isTablet ? 0.25 : 2 }}>
               <TextField
-                size="small"
-                placeholder="Search jobs..."
+                size={isTablet ? 'small' : 'small'}
+                placeholder={isTablet ? "Search..." : "Search jobs..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch(e)}
                 sx={{
-                  width: 300,
+                  width: isTablet ? 120 : 300,
                   '& .MuiOutlinedInput-root': {
                     backgroundColor: alpha(theme.palette.background.paper, 0.8),
-                    borderRadius: 2,
+                    borderRadius: 1,
+                    fontSize: isTablet ? '0.625rem' : '1rem',
+                    height: isTablet ? 28 : 'auto',
                     '&:hover': {
                       backgroundColor: alpha(theme.palette.background.paper, 0.9),
                     },
                     '&.Mui-focused': {
                       backgroundColor: theme.palette.background.paper,
                     }
+                  },
+                  '& .MuiInputBase-input': {
+                    padding: isTablet ? '4px 6px' : undefined,
                   }
                 }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Search sx={{ color: 'text.secondary' }} />
+                      <Search sx={{ 
+                        color: 'text.secondary',
+                        fontSize: isTablet ? '0.875rem' : '1.5rem'
+                      }} />
                     </InputAdornment>
                   ),
                 }}
@@ -475,19 +498,38 @@ const Navbar: React.FC = () => {
           )}
 
           {!isMobile && (
-            <IconButton onClick={toggleTheme} color="inherit" sx={{ mr: 1 }}>
-              {mode === 'dark' ? <Brightness7 /> : <Brightness4 />}
-            </IconButton>
+            <Tooltip title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}>
+              <IconButton 
+                onClick={toggleTheme} 
+                color="inherit" 
+                sx={{ 
+                  mr: isTablet ? 0.125 : 1,
+                  p: isTablet ? 0.25 : 1.5,
+                  width: isTablet ? 28 : 'auto',
+                  height: isTablet ? 28 : 'auto',
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                    transform: 'scale(1.05)',
+                  },
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {mode === 'dark' ? 
+                  <Brightness7 sx={{ fontSize: isTablet ? '0.875rem' : '1.5rem' }} /> : 
+                  <Brightness4 sx={{ fontSize: isTablet ? '0.875rem' : '1.5rem' }} />
+                }
+              </IconButton>
+            </Tooltip>
           )}
 
           {/* Post Job Button for Employers */}
           {user && user.role === UserRole.EMPLOYER && !isMobile && (
             <Button
               variant="contained"
-              startIcon={<PostAdd />}
+              startIcon={isTablet ? undefined : <PostAdd />}
               onClick={() => navigate('/app/jobs/create')}
               sx={{
-                mr: 2,
+                mr: isTablet ? 0.25 : 2,
                 fontWeight: 'bold',
                 background: 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)',
                 boxShadow: '0 3px 10px rgba(76, 175, 80, 0.3)',
@@ -496,13 +538,16 @@ const Navbar: React.FC = () => {
                   boxShadow: '0 5px 15px rgba(76, 175, 80, 0.4)',
                   transform: 'translateY(-1px)',
                 },
-                borderRadius: 2,
-                px: 3,
-                py: 1,
+                borderRadius: 1,
+                px: isTablet ? 0.75 : 3,
+                py: isTablet ? 0.125 : 1,
+                fontSize: isTablet ? '0.625rem' : '1rem',
+                minWidth: isTablet ? 'auto' : undefined,
+                height: isTablet ? 28 : 'auto',
                 transition: 'all 0.3s ease',
               }}
             >
-              Post Job
+              {isTablet ? 'Post' : 'Post Job'}
             </Button>
           )}
 
@@ -519,9 +564,9 @@ const Navbar: React.FC = () => {
                 <Avatar 
                   sx={{ 
                     bgcolor: 'primary.main',
-                    width: 32,
-                    height: 32,
-                    fontSize: '0.9rem'
+                    width: isTablet ? 24 : 32,
+                    height: isTablet ? 24 : 32,
+                    fontSize: isTablet ? '0.625rem' : '0.9rem'
                   }}
                 >
                   {user.firstName?.charAt(0) || user.email?.charAt(0)}
@@ -590,13 +635,19 @@ const Navbar: React.FC = () => {
             </Box>
           ) : (
             !isMobile && (
-              <Box sx={{ display: 'flex', gap: 1 }}>
+              <Box sx={{ display: 'flex', gap: isTablet ? 0.125 : 1 }}>
                 <Button
                   color="inherit"
-                  startIcon={<Login />}
+                  startIcon={isTablet ? undefined : <Login />}
                   onClick={() => navigate('/login')}
                   sx={{ 
                     fontWeight: 'bold',
+                    px: isTablet ? 0.75 : 2,
+                    py: isTablet ? 0.125 : 1,
+                    fontSize: isTablet ? '0.625rem' : '1rem',
+                    minWidth: isTablet ? 'auto' : undefined,
+                    height: isTablet ? 28 : 'auto',
+                    borderRadius: 1,
                     '&:hover': {
                       backgroundColor: 'primary.light',
                     }
@@ -606,17 +657,23 @@ const Navbar: React.FC = () => {
                 </Button>
                 <Button
                   variant="contained"
-                  startIcon={<PersonAdd />}
+                  startIcon={isTablet ? undefined : <PersonAdd />}
                   onClick={() => navigate('/register')}
                   sx={{ 
                     fontWeight: 'bold',
+                    px: isTablet ? 0.75 : 2,
+                    py: isTablet ? 0.125 : 1,
+                    fontSize: isTablet ? '0.625rem' : '1rem',
+                    minWidth: isTablet ? 'auto' : undefined,
+                    height: isTablet ? 28 : 'auto',
+                    borderRadius: 1,
                     boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)',
                     '&:hover': {
                       boxShadow: '0 4px 12px rgba(76, 175, 80, 0.4)',
                     }
                   }}
                 >
-                  Sign Up
+                  {isTablet ? 'Sign Up' : 'Sign Up'}
                 </Button>
               </Box>
             )
@@ -635,7 +692,7 @@ const Navbar: React.FC = () => {
           display: { xs: 'block', md: 'none' },
           '& .MuiDrawer-paper': { 
             boxSizing: 'border-box', 
-            width: 280,
+            width: { xs: 280, sm: 320 },
             borderRadius: '0 20px 20px 0',
             background: theme.palette.mode === 'dark' 
               ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'

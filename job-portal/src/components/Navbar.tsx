@@ -122,31 +122,34 @@ const Navbar: React.FC = () => {
   };
 
   const menuItems = [
-    { text: 'All Jobs', icon: <Work />, path: '/' },
-    // { text: 'Companies', icon: <Business />, path: '/companies' },  // Removed - Companies page no longer available
-    { text: 'Post Job', icon: <PostAdd />, path: '/app/jobs/create', highlight: true, requiresAuth: true },
+    // Protected items - only show if user is logged in (Network is the main page for logged users)
+    { text: 'Network', icon: <Public />, path: '/app/network', protected: true, isHome: true },
+    { text: 'Jobs', icon: <Work />, path: '/app/jobs', protected: true },
     { text: 'Support', icon: <Support />, path: '/support' },
     { text: 'Contact Us', icon: <ContactSupport />, action: handleContactOpen, isContactDialog: true },
-    // Protected items - only show if user is logged in
-    { text: 'Network', icon: <Public />, path: '/app/network', protected: true },
-    { text: 'Connections', icon: <Group />, path: '/app/connections', protected: true },
-    { text: 'Career Insights', icon: <Psychology />, path: '/app/career-insights', protected: true },
   ];
 
   // Separate menu items for logged-in employers
   const employerMenuItems = [
-    { text: 'All Jobs', icon: <Work />, path: '/' },
-    { text: 'Post Job', icon: <PostAdd />, path: '/app/jobs/create', highlight: true },
+    // Protected items - only show if user is logged in (Network is the main page for logged users)
+    { text: 'Network', icon: <Public />, path: '/app/network', protected: true, isHome: true },
+    { text: 'My Jobs', icon: <Business />, path: '/app/employer/jobs', protected: true },
+    { text: 'Post Job', icon: <PostAdd />, path: '/app/jobs/create', highlight: true, protected: true },
     { text: 'Support', icon: <Support />, path: '/support' },
     { text: 'Contact Us', icon: <ContactSupport />, action: handleContactOpen, isContactDialog: true },
-    // Protected items - only show if user is logged in
-    { text: 'Network', icon: <Public />, path: '/app/network', protected: true },
-    { text: 'Connections', icon: <Group />, path: '/app/connections', protected: true },
-    { text: 'Career Insights', icon: <Psychology />, path: '/app/career-insights', protected: true },
   ];
 
-  // Choose which menu to show based on user role
-  const currentMenuItems = (user && user.role === UserRole.EMPLOYER) ? employerMenuItems : menuItems;
+  // For non-logged in users, show public menu
+  const publicMenuItems = [
+    { text: 'All Jobs', icon: <Work />, path: '/' },
+    { text: 'Support', icon: <Support />, path: '/support' },
+    { text: 'Contact Us', icon: <ContactSupport />, action: handleContactOpen, isContactDialog: true },
+  ];
+
+  // Choose which menu to show based on user authentication and role
+  const currentMenuItems = user 
+    ? (user.role === UserRole.EMPLOYER ? employerMenuItems : menuItems)
+    : publicMenuItems;
 
   const drawer = (
     <Box sx={{ width: 280 }}>
@@ -369,7 +372,7 @@ const Navbar: React.FC = () => {
               gap: 2,
               cursor: 'pointer'
             }}
-            onClick={() => navigate('/')}
+            onClick={() => navigate(user ? '/app/network' : '/')}
           >
             <img 
               src="/exjobnetlogo.png" 
@@ -555,13 +558,13 @@ const Navbar: React.FC = () => {
                     {user.email}
                   </Typography>
                 </Box>
+                <MenuItem onClick={() => { navigate('/app/network'); handleClose(); }}>
+                  <Home sx={{ mr: 1 }} />
+                  Network Home
+                </MenuItem>
                 <MenuItem onClick={() => { navigate('/app/profile'); handleClose(); }}>
                   <Person sx={{ mr: 1 }} />
                   Profile
-                </MenuItem>
-                <MenuItem onClick={() => { navigate('/app/dashboard'); handleClose(); }}>
-                  <Work sx={{ mr: 1 }} />
-                  Dashboard
                 </MenuItem>
                 {user?.role === UserRole.EMPLOYER && (
                   <MenuItem 

@@ -94,6 +94,9 @@ import { useAuth } from '../contexts/AuthContext';
 import FloatingChatButton from '../components/chat/FloatingChatButton';
 import FloatingContact from '../components/FloatingContact';
 import Navbar from '../components/Navbar';
+import QuickJobFilters from '../components/QuickJobFilters';
+import SmartJobSearch, { SearchType } from '../components/SmartJobSearch';
+import { useJobFilters, FilterState } from '../hooks/useJobFilters';
 import jobService from '../services/jobService';
 
 // Use the Job interface from the service to ensure compatibility
@@ -210,25 +213,37 @@ const AllJobsPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
   const [categories, setCategories] = useState<JobCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
-  const [locationFilter, setLocationFilter] = useState(searchParams.get('location') || '');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [sortBy, setSortBy] = useState<SortOption>('date');
   const [applicationDialogOpen, setApplicationDialogOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  
-  // New filter states
-  const [jobTypeFilter, setJobTypeFilter] = useState<string[]>([]);
-  const [locationTypeFilter, setLocationTypeFilter] = useState<string[]>([]);
-  const [salaryRange, setSalaryRange] = useState<number[]>([0, 200]);
-  const [experienceFilter, setExperienceFilter] = useState<string[]>([]);
+
+  // Enhanced filtering using the custom hook
+  const {
+    filters,
+    filteredJobs,
+    totalJobs,
+    setFilters,
+    updateFilter,
+    updateSearchTerm,
+    updateSearchType,
+    clearFilters,
+    isLoading: filtersLoading,
+    searchSuggestions
+  } = useJobFilters({
+    initialJobs: jobs,
+    categories: categories.map(cat => ({
+      key: cat.category,
+      label: cat.displayName,
+      count: cat.count || 0
+    })),
+    syncWithUrl: true
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Fetch jobs
@@ -251,7 +266,6 @@ const AllJobsPage: React.FC = () => {
       if (totalJobs > 10) {
         const allJobsResponse = await jobService.getJobs({}, 1, jobsToFetch);
         setJobs(allJobsResponse.data || []);
-        setFilteredJobs(allJobsResponse.data || []);
         
         // If we hit the limit, log a message
         if (totalJobs > MAX_JOBS_TO_FETCH) {
@@ -260,14 +274,12 @@ const AllJobsPage: React.FC = () => {
       } else {
         // If 10 or fewer jobs, use the initial response
         setJobs(initialResponse.data || []);
-        setFilteredJobs(initialResponse.data || []);
       }
     } catch (err) {
       console.error('Error fetching jobs:', err);
       setError('Failed to load jobs. Please try again.');
       // Set empty arrays to prevent further errors
       setJobs([]);
-      setFilteredJobs([]);
     } finally {
       setLoading(false);
     }
@@ -294,52 +306,7 @@ const AllJobsPage: React.FC = () => {
     fetchCategories();
   };
 
-  // Filter helper functions
-  const handleJobTypeToggle = (type: string) => {
-    setJobTypeFilter(prev => 
-      prev.includes(type) 
-        ? prev.filter(t => t !== type)
-        : [...prev, type]
-    );
-  };
 
-  const handleLocationTypeToggle = (type: string) => {
-    setLocationTypeFilter(prev => 
-      prev.includes(type) 
-        ? prev.filter(t => t !== type)
-        : [...prev, type]
-    );
-  };
-
-  const handleExperienceToggle = (exp: string) => {
-    setExperienceFilter(prev => 
-      prev.includes(exp) 
-        ? prev.filter(e => e !== exp)
-        : [...prev, exp]
-    );
-  };
-
-  const clearAllFilters = () => {
-    setSearchTerm('');
-    setLocationFilter('');
-    setSelectedCategory('all');
-    setJobTypeFilter([]);
-    setLocationTypeFilter([]);
-    setSalaryRange([0, 200]);
-    setExperienceFilter([]);
-  };
-
-  const getActiveFiltersCount = () => {
-    let count = 0;
-    if (searchTerm.trim()) count++;
-    if (locationFilter.trim()) count++;
-    if (selectedCategory !== 'all') count++;
-    if (jobTypeFilter.length > 0) count++;
-    if (locationTypeFilter.length > 0) count++;
-    if (salaryRange[0] > 0 || salaryRange[1] < 200) count++;
-    if (experienceFilter.length > 0) count++;
-    return count;
-  };
 
   // Scroll to top handler
   const handleScrollTop = () => {
@@ -374,87 +341,26 @@ const AllJobsPage: React.FC = () => {
   // Note: We no longer redirect logged-in users automatically
   // This allows logged-in users to browse all jobs if they want to
 
-  // Filter jobs based on search criteria
-  useEffect(() => {
-    let filtered = jobs;
 
-    // Category filter
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(job => 
-        job.category && job.category.toLowerCase() === selectedCategory.toLowerCase()
-      );
-    }
 
-    // Search term filter
-    if (searchTerm.trim()) {
-      const search = searchTerm.toLowerCase();
-      filtered = filtered.filter(job =>
-        job.title.toLowerCase().includes(search) ||
-        job.company.toLowerCase().includes(search) ||
-        job.description.toLowerCase().includes(search) ||
-        (job.skillsRequired && job.skillsRequired.some(skill => skill.toLowerCase().includes(search))) ||
-        (job.skills && job.skills.some(skill => skill.toLowerCase().includes(search)))
-      );
-    }
-
-    // Location filter
-    if (locationFilter.trim()) {
-      const location = locationFilter.toLowerCase();
-      filtered = filtered.filter(job =>
-        job.location.toLowerCase().includes(location)
-      );
-    }
-
-    // Job type filter (Full-time, Part-time, etc.)
-    if (jobTypeFilter.length > 0) {
-      filtered = filtered.filter(job =>
-        jobTypeFilter.includes(job.jobType?.toLowerCase() || 'full-time')
-      );
-    }
-
-    // Location type filter (Remote, On-site, Hybrid)
-    if (locationTypeFilter.length > 0) {
-      filtered = filtered.filter(job => {
-        if (locationTypeFilter.includes('remote') && job.remote) return true;
-        if (locationTypeFilter.includes('on-site') && !job.remote) return true;
-        if (locationTypeFilter.includes('hybrid') && job.location?.toLowerCase().includes('hybrid')) return true;
-        return false;
-      });
-    }
-
-    // Salary range filter
-    if (salaryRange[0] > 0 || salaryRange[1] < 200) {
-      filtered = filtered.filter(job => {
-        if (!job.salary) return salaryRange[0] === 0; // Include jobs without salary if min is 0
-        const jobMin = job.salary.min || 0;
-        const jobMax = job.salary.max || jobMin;
-        return jobMax >= salaryRange[0] && jobMin <= salaryRange[1];
-      });
-    }
-
-    // Experience filter
-    if (experienceFilter.length > 0) {
-      filtered = filtered.filter(job =>
-        experienceFilter.some(exp =>
-          job.experienceLevel?.toLowerCase().includes(exp) ||
-          job.experience?.toLowerCase().includes(exp)
-        )
-      );
-    }
-
-    setFilteredJobs(filtered);
-  }, [jobs, searchTerm, locationFilter, selectedCategory, jobTypeFilter, locationTypeFilter, salaryRange, experienceFilter]);
-
-  // Sort jobs
-  const sortJobs = (jobsToSort: Job[]) => {
-    return [...jobsToSort].sort((a, b) => {
-      switch (sortBy) {
+  // Get sorted jobs based on current filter state
+  const getSortedJobs = () => {
+    return [...filteredJobs].sort((a, b) => {
+      switch (filters.sortBy) {
         case 'title':
           return a.title.localeCompare(b.title);
         case 'company':
           return a.company.localeCompare(b.company);
         case 'location':
           return a.location.localeCompare(b.location);
+        case 'salary-high':
+          const salaryA = a.salary?.max || 0;
+          const salaryB = b.salary?.max || 0;
+          return salaryB - salaryA;
+        case 'salary-low':
+          const salaryMinA = a.salary?.min || 0;
+          const salaryMinB = b.salary?.min || 0;
+          return salaryMinA - salaryMinB;
         case 'date':
         default:
           // Handle both string and Date types for createdAt
@@ -465,7 +371,7 @@ const AllJobsPage: React.FC = () => {
     });
   };
 
-  const displayJobs = sortJobs(filteredJobs);
+  const displayJobs = getSortedJobs();
 
   const ApplicationDialog = () => (
     <Dialog
@@ -478,178 +384,21 @@ const AllJobsPage: React.FC = () => {
     </Dialog>
   );
 
-  // Sidebar component
-  const FilterSidebar = () => (
-    <Paper 
-      elevation={2}
-      sx={{ 
-        height: 'fit-content',
-        p: { xs: 2, md: 3 },
-        borderRadius: 3,
-        position: { xs: 'static', md: 'sticky' },
-        top: { xs: 'auto', md: 20 },
-        maxHeight: { xs: 'none', md: 'calc(100vh - 40px)' },
-        overflowY: { xs: 'visible', md: 'auto' }
-      }}
-    >
-      {/* Filter Header */}
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        mb: { xs: 2, md: 3 },
-        flexDirection: { xs: 'column', sm: 'row' },
-        gap: { xs: 1, sm: 0 }
-      }}>
-        <Typography 
-          variant={isMobile ? 'subtitle1' : 'h6'}
-          fontWeight="bold" 
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            fontSize: { xs: '1rem', md: '1.25rem' }
-          }}
-        >
-          <FilterAlt sx={{ mr: 1, color: 'primary.main', fontSize: { xs: '1.2rem', md: '1.5rem' } }} />
-          Filters
-        </Typography>
-        {getActiveFiltersCount() > 0 && (
-          <Button
-            size={isMobile ? 'small' : 'medium'}
-            onClick={clearAllFilters}
-            startIcon={<Clear fontSize={isMobile ? 'small' : 'medium'} />}
-            sx={{ 
-              color: 'error.main',
-              fontSize: { xs: '0.75rem', md: '0.875rem' },
-              '&:hover': { bgcolor: alpha(theme.palette.error.main, 0.1) }
-            }}
-          >
-            Clear ({getActiveFiltersCount()})
-          </Button>
-        )}
-      </Box>
 
-      <Divider sx={{ mb: 3 }} />
 
-      {/* Location Type Filter - Remote/On-site */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" fontWeight="600" gutterBottom sx={{ color: 'text.primary', mb: 2 }}>
-          Work Location
-        </Typography>
-        <FormGroup>
-          {[
-            { value: 'remote', label: 'Remote', icon: Computer },
-            { value: 'on-site', label: 'On-site', icon: Home },
-            { value: 'hybrid', label: 'Hybrid', icon: Work }
-          ].map((type) => (
-            <FormControlLabel
-              key={type.value}
-              control={
-                <Checkbox
-                  checked={locationTypeFilter.includes(type.value)}
-                  onChange={() => handleLocationTypeToggle(type.value)}
-                  size="small"
-                />
-              }
-              label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <type.icon sx={{ fontSize: 18, color: 'text.secondary' }} />
-                  {type.label}
-                </Box>
-              }
-              sx={{ mb: 0.5 }}
-            />
-          ))}
-        </FormGroup>
-      </Box>
 
-      <Divider sx={{ mb: 3 }} />
-
-      {/* Job Type Filter */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" fontWeight="600" gutterBottom sx={{ color: 'text.primary', mb: 2 }}>
-          Employment Type
-        </Typography>
-        <FormGroup>
-          {[
-            'full-time',
-            'part-time', 
-            'contract',
-            'freelance',
-            'internship'
-          ].map((type) => (
-            <FormControlLabel
-              key={type}
-              control={
-                <Checkbox
-                  checked={jobTypeFilter.includes(type)}
-                  onChange={() => handleJobTypeToggle(type)}
-                  size="small"
-                />
-              }
-              label={type.charAt(0).toUpperCase() + type.slice(1).replace('-', ' ')}
-              sx={{ mb: 0.5 }}
-            />
-          ))}
-        </FormGroup>
-      </Box>
-
-      <Divider sx={{ mb: 3 }} />
-
-      {/* Salary Range Filter */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" fontWeight="600" gutterBottom sx={{ color: 'text.primary', mb: 2 }}>
-          Salary Range (K USD)
-        </Typography>
-        <Box sx={{ px: 1 }}>
-          <Slider
-            value={salaryRange}
-            onChange={(_, newValue) => setSalaryRange(newValue as number[])}
-            valueLabelDisplay="auto"
-            min={0}
-            max={200}
-            step={10}
-            sx={{ mb: 2 }}
-          />
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', color: 'text.secondary' }}>
-            <span>${salaryRange[0]}k</span>
-            <span>${salaryRange[1]}k</span>
-          </Box>
-        </Box>
-      </Box>
-
-      <Divider sx={{ mb: 3 }} />
-
-      {/* Experience Level Filter */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="subtitle2" fontWeight="600" gutterBottom sx={{ color: 'text.primary', mb: 2 }}>
-          Experience Level
-        </Typography>
-        <FormGroup>
-          {[
-            'entry',
-            'junior',
-            'mid',
-            'senior',
-            'lead'
-          ].map((exp) => (
-            <FormControlLabel
-              key={exp}
-              control={
-                <Checkbox
-                  checked={experienceFilter.includes(exp)}
-                  onChange={() => handleExperienceToggle(exp)}
-                  size="small"
-                />
-              }
-              label={exp.charAt(0).toUpperCase() + exp.slice(1) + ' Level'}
-              sx={{ mb: 0.5 }}
-            />
-          ))}
-        </FormGroup>
-      </Box>
-    </Paper>
-  );
+  // Helper function to count active filters based on the new filter system
+  const getActiveFiltersCount = () => {
+    let count = 0;
+    if (filters.searchTerm?.trim()) count++;
+    if (filters.location?.trim()) count++;
+    if (filters.categories?.length > 0) count++;
+    if (filters.jobTypes?.length > 0) count++;
+    if (filters.experienceLevel?.length > 0) count++;
+    if (filters.salaryRange && (filters.salaryRange[0] > 0 || filters.salaryRange[1] < 200)) count++;
+    if (filters.workLocation?.length > 0) count++;
+    return count;
+  };
 
   return (
     <>
@@ -724,7 +473,57 @@ const AllJobsPage: React.FC = () => {
             </CardContent>
           </Card>
           
-          <FilterSidebar />
+          {/* Location Filter for Mobile */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <LocationOn fontSize="small" />
+              Location Filter
+            </Typography>
+            <FormControl fullWidth size="small">
+              <InputLabel>Select Location</InputLabel>
+              <Select
+                value={filters.location || ''}
+                onChange={(e) => updateFilter('location', e.target.value)}
+                label="Select Location"
+                displayEmpty
+                sx={{ borderRadius: 2 }}
+              >
+                <MenuItem value="">
+                  <em>All Locations</em>
+                </MenuItem>
+                <MenuItem value="Kigali">🏙️ Kigali</MenuItem>
+                <MenuItem value="Musanze">🏔️ Musanze</MenuItem>
+                <MenuItem value="Huye">🎓 Huye</MenuItem>
+                <MenuItem value="Rubavu">🏖️ Rubavu</MenuItem>
+                <MenuItem value="Rusizi">🌊 Rusizi</MenuItem>
+                <MenuItem value="Nyagatare">🌾 Nyagatare</MenuItem>
+                <MenuItem value="Muhanga">⛰️ Muhanga</MenuItem>
+                <MenuItem value="Rwamagana">🌱 Rwamagana</MenuItem>
+                <MenuItem value="Remote">💻 Remote</MenuItem>
+                <MenuItem value="International">🌍 International</MenuItem>
+              </Select>
+            </FormControl>
+            {filters.location && (
+              <Box sx={{ mt: 1 }}>
+                <Chip
+                  size="small"
+                  label={`📍 ${filters.location}`}
+                  onDelete={() => updateFilter('location', '')}
+                  color="primary"
+                  variant="outlined"
+                  sx={{ borderRadius: 2 }}
+                />
+              </Box>
+            )}
+          </Box>
+          
+          <QuickJobFilters
+            filters={filters}
+            onFilterChange={updateFilter}
+            onClearFilters={clearFilters}
+            totalJobs={filteredJobs.length}
+            isLoading={loading || filtersLoading}
+          />
         </Box>
       </Drawer>
 
@@ -1054,92 +853,103 @@ const AllJobsPage: React.FC = () => {
               border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
             }}
           >
-            <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} alignItems="center">
-              <Grid item xs={12} md={4}>
-                <TextField
-                  fullWidth
-                  placeholder={isMobile ? "Search jobs..." : "Search for jobs, companies, or skills..."}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  size="small"
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Search color="action" fontSize="small" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: { xs: 2, md: 3 },
-                      fontSize: { xs: '0.85rem', md: '1rem' }
-                    }
-                  }}
-                />
+            {/* Location Filter */}
+            <Box sx={{ mb: 2 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: { xs: 'column', md: 'row' },
+                gap: 2,
+                alignItems: { xs: 'stretch', md: 'center' }
+              }}>
+                <Box sx={{ flex: { xs: 1, md: 'none' }, width: { xs: '100%', md: '300px' } }}>
+                  <FormControl fullWidth size={isMobile ? 'small' : 'medium'}>
+                    <InputLabel sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: 0.5,
+                      '& .MuiInputLabel-asterisk': { display: 'none' }
+                    }}>
+                      <LocationOn fontSize="small" />
+                      Location
+                    </InputLabel>
+                    <Select
+                      value={filters.location || ''}
+                      onChange={(e) => updateFilter('location', e.target.value)}
+                      label="Location"
+                      displayEmpty
+                      sx={{
+                        borderRadius: 2,
+                        '& .MuiOutlinedInput-root': {
+                          '&:hover fieldset': {
+                            borderColor: 'primary.main',
+                          },
+                        }
+                      }}
+                    >
+                      <MenuItem value="">
+                        <em>All Locations</em>
+                      </MenuItem>
+                      <MenuItem value="Kigali">🏙️ Kigali</MenuItem>
+                      <MenuItem value="Musanze">🏔️ Musanze</MenuItem>
+                      <MenuItem value="Huye">🎓 Huye</MenuItem>
+                      <MenuItem value="Rubavu">🏖️ Rubavu</MenuItem>
+                      <MenuItem value="Rusizi">🌊 Rusizi</MenuItem>
+                      <MenuItem value="Nyagatare">🌾 Nyagatare</MenuItem>
+                      <MenuItem value="Muhanga">⛰️ Muhanga</MenuItem>
+                      <MenuItem value="Rwamagana">🌱 Rwamagana</MenuItem>
+                      <MenuItem value="Remote">💻 Remote</MenuItem>
+                      <MenuItem value="International">🌍 International</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                    {filters.location && (
+                      <Chip
+                        size="small"
+                        label={`📍 ${filters.location}`}
+                        onDelete={() => updateFilter('location', '')}
+                        color="primary"
+                        variant="outlined"
+                        sx={{ borderRadius: 2 }}
+                      />
+                    )}
+                    <Typography variant="body2" color="text.secondary">
+                      {filters.location ? `Showing jobs in ${filters.location}` : 'Select a location to filter jobs'}
+                    </Typography>
+                  </Stack>
+                </Box>
+              </Box>
+            </Box>
+
+            {/* Enhanced Search with Type Selection */}
+            <SmartJobSearch
+              searchTerm={filters.searchTerm}
+              searchType={filters.searchType}
+              onSearchChange={updateSearchTerm}
+              onSearchTypeChange={updateSearchType}
+              placeholder={isMobile ? "Search jobs..." : undefined}
+              size={isMobile ? 'small' : 'medium'}
+              showSearchType={!isMobile}
+              recentSearches={searchSuggestions.recentSearches}
+              trendingSearches={searchSuggestions.trendingSearches}
+              popularJobs={searchSuggestions.popularJobs}
+              popularCompanies={searchSuggestions.popularCompanies}
+              popularSkills={searchSuggestions.popularSkills}
+              popularLocations={searchSuggestions.popularLocations}
+              isLoading={loading || filtersLoading}
+            />
+            
+            <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} alignItems="center" sx={{ mt: 2 }}>
+              <Grid item xs={12} md={6}>
+                <Typography variant="body2" color="text.secondary">
+                  Showing {filteredJobs.length.toLocaleString()} of {totalJobs.toLocaleString()} jobs
+                </Typography>
               </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <TextField
-                  fullWidth
-                  placeholder={isMobile ? "Location" : "Location..."}
-                  value={locationFilter}
-                  onChange={(e) => setLocationFilter(e.target.value)}
-                  size="small"
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <LocationOn color="action" fontSize="small" />
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: { xs: 2, md: 3 },
-                      fontSize: { xs: '0.85rem', md: '1rem' }
-                    }
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6} md={2}>
-                <FormControl fullWidth size="small">
-                  <Select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as SortOption)}
-                    displayEmpty
-                    sx={{ 
-                      borderRadius: { xs: 2, md: 3 },
-                      fontSize: { xs: '0.85rem', md: '1rem' }
-                    }}
-                  >
-                    <MenuItem value="date" sx={{ fontSize: { xs: '0.85rem', md: '1rem' } }}>Latest</MenuItem>
-                    <MenuItem value="title" sx={{ fontSize: { xs: '0.85rem', md: '1rem' } }}>Title</MenuItem>
-                    <MenuItem value="company" sx={{ fontSize: { xs: '0.85rem', md: '1rem' } }}>Company</MenuItem>
-                    <MenuItem value="location" sx={{ fontSize: { xs: '0.85rem', md: '1rem' } }}>Location</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <Stack 
-                  direction={{ xs: 'column', sm: 'row' }} 
-                  spacing={{ xs: 1, sm: 2 }}
-                  sx={{ width: '100%' }}
-                >
+              <Grid item xs={12} md={6}>
+                <Stack direction="row" spacing={1} justifyContent="flex-end">
                   <Button
-                    fullWidth={isMobile}
                     variant="outlined"
-                    size="small"
-                    startIcon={<Tune fontSize="small" />}
-                    onClick={() => setSidebarOpen(true)}
-                    sx={{ 
-                      display: { xs: 'flex', md: 'none' },
-                      borderRadius: { xs: 2, md: 3 },
-                      fontSize: { xs: '0.8rem', md: '0.875rem' }
-                    }}
-                  >
-                    Filters {getActiveFiltersCount() > 0 && `(${getActiveFiltersCount()})`}
-                  </Button>
-                  <Button
-                    fullWidth={isMobile}
-                    variant="contained"
                     size="small"
                     startIcon={<Refresh fontSize="small" />}
                     onClick={handleRefresh}
@@ -1150,6 +960,19 @@ const AllJobsPage: React.FC = () => {
                   >
                     Refresh
                   </Button>
+                  <ToggleButtonGroup
+                    value={viewMode}
+                    exclusive
+                    onChange={(_e, newMode) => newMode && setViewMode(newMode)}
+                    size="small"
+                  >
+                    <ToggleButton value="grid">
+                      <ViewModule fontSize="small" />
+                    </ToggleButton>
+                    <ToggleButton value="list">
+                      <ViewList fontSize="small" />
+                    </ToggleButton>
+                  </ToggleButtonGroup>
                 </Stack>
               </Grid>
             </Grid>
@@ -1164,7 +987,7 @@ const AllJobsPage: React.FC = () => {
             alignItems: 'flex-start',
             flexDirection: { xs: 'column', md: 'row' }
           }}>
-            {/* Sidebar - Desktop Only */}
+            {/* Enhanced Filters Sidebar - Desktop Only */}
             <Box sx={{ 
               width: { xs: '100%', md: '25%' },
               display: { xs: 'none', md: 'block' },
@@ -1172,7 +995,13 @@ const AllJobsPage: React.FC = () => {
               top: 100,
               flexShrink: 0
             }}>
-              <FilterSidebar />
+              <QuickJobFilters
+                filters={filters}
+                onFilterChange={updateFilter}
+                onClearFilters={clearFilters}
+                totalJobs={filteredJobs.length}
+                isLoading={loading || filtersLoading}
+              />
             </Box>
 
             {/* Main Content Area */}
@@ -1191,15 +1020,31 @@ const AllJobsPage: React.FC = () => {
                 flexDirection: { xs: 'column', md: 'row' },
                 gap: { xs: 1.5, md: 2 }
               }}>
-                <Box>
-                  <Typography variant={isMobile ? 'h6' : 'h5'} sx={{ fontWeight: 700, mb: 0.5 }}>
-                    {loading ? 'Loading...' : `${filteredJobs.length} Jobs Found`}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}>
-                    {selectedCategory === 'all' 
-                      ? 'Showing all available positions' 
-                      : `Filtered by ${selectedCategory}`}
-                  </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                  <Box>
+                    <Typography variant={isMobile ? 'h6' : 'h5'} sx={{ fontWeight: 700, mb: 0.5 }}>
+                      {loading ? 'Loading...' : `${filteredJobs.length} Jobs Found`}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}>
+                      Showing all available positions
+                    </Typography>
+                  </Box>
+                  
+                  {/* Mobile Filter Button */}
+                  {isMobile && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<FilterAlt fontSize="small" />}
+                      onClick={() => setSidebarOpen(true)}
+                      sx={{ 
+                        borderRadius: 2,
+                        fontSize: '0.8rem'
+                      }}
+                    >
+                      Filters {getActiveFiltersCount() > 0 && `(${getActiveFiltersCount()})`}
+                    </Button>
+                  )}
                 </Box>
                 
 {!isMobile && (
@@ -1233,64 +1078,7 @@ const AllJobsPage: React.FC = () => {
                 )}
               </Box>
 
-              {/* Category Chips */}
-              <Box sx={{ mb: { xs: 2, md: 3 } }}>
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexWrap: 'wrap', 
-                  gap: { xs: 1, md: 1.5 },
-                  alignItems: 'center',
-                  overflowX: { xs: 'auto', md: 'visible' },
-                  pb: { xs: 1, md: 0 },
-                  '&::-webkit-scrollbar': {
-                    height: 4,
-                  },
-                  '&::-webkit-scrollbar-track': {
-                    backgroundColor: 'transparent',
-                  },
-                  '&::-webkit-scrollbar-thumb': {
-                    backgroundColor: alpha(theme.palette.primary.main, 0.3),
-                    borderRadius: 2,
-                  }
-                }}>
-                  <Chip
-                    label="All Jobs"
-                    icon={React.createElement(Work)}
-                    variant={selectedCategory === 'all' ? 'filled' : 'outlined'}
-                    color={selectedCategory === 'all' ? 'primary' : 'default'}
-                    onClick={() => setSelectedCategory('all')}
-                    size={theme.breakpoints.down('md') ? 'small' : 'medium'}
-                    sx={{ 
-                      fontWeight: 600,
-                      borderRadius: 20,
-                      fontSize: { xs: '0.75rem', md: '0.875rem' },
-                      whiteSpace: 'nowrap',
-                      '&:hover': { transform: 'scale(1.05)' },
-                      transition: 'all 0.2s ease'
-                    }}
-                  />
-                  
-                  {Array.isArray(categories) && categories.slice(0, isMobile ? 4 : 8).map((category) => (
-                    <Chip
-                      key={category.category}
-                      label={`${category.displayName} (${category.count})`}
-                      icon={React.createElement(getCategoryIcon(category.category))}
-                      variant={selectedCategory === category.category ? 'filled' : 'outlined'}
-                      color={selectedCategory === category.category ? 'primary' : 'default'}
-                      onClick={() => setSelectedCategory(category.category)}
-                      size={theme.breakpoints.down('md') ? 'small' : 'medium'}
-                      sx={{ 
-                        fontWeight: 600,
-                        borderRadius: 20,
-                        fontSize: { xs: '0.75rem', md: '0.875rem' },
-                        whiteSpace: 'nowrap',
-                        '&:hover': { transform: 'scale(1.05)' },
-                        transition: 'all 0.2s ease'
-                      }}
-                    />
-                  ))}
-                </Box>
-              </Box>
+
 
               {/* Job Listings */}
               {loading ? (
@@ -1419,7 +1207,7 @@ const AllJobsPage: React.FC = () => {
                     maxWidth: '100%',
                     width: '100%'
                   }}>
-                    {sortJobs(filteredJobs).map((job) => (
+                    {displayJobs.map((job) => (
                       <Box 
                         key={job._id}
                         sx={{

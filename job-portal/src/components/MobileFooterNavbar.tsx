@@ -5,21 +5,18 @@ import {
   Paper,
   Badge,
   Box,
+  Fab,
   useTheme,
   alpha
 } from '@mui/material';
 import {
   Home,
-  Search,
+  Work,
   Add,
   People,
   Notifications,
-  Work,
-  Psychology,
-  Assignment,
   Message,
-  Business,
-  Person
+  Business
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserRole } from '../contexts/AuthContext';
@@ -29,8 +26,6 @@ interface MobileFooterNavbarProps {
   unreadMessages?: number;
   userRole?: UserRole | string;
   onCreatePost?: () => void;
-  onShowConnections?: () => void;
-  onShowCandidates?: () => void;
   candidateCount?: number;
 }
 
@@ -39,8 +34,6 @@ const MobileFooterNavbar: React.FC<MobileFooterNavbarProps> = ({
   unreadMessages = 0,
   userRole,
   onCreatePost,
-  onShowConnections,
-  onShowCandidates,
   candidateCount = 0
 }) => {
   const navigate = useNavigate();
@@ -50,94 +43,64 @@ const MobileFooterNavbar: React.FC<MobileFooterNavbarProps> = ({
   // Check if user is an employer
   const isEmployer = userRole === UserRole.EMPLOYER;
 
-  // Determine current tab based on pathname
+  // Simplified navigation - only 5 essential tabs
   const getCurrentTab = () => {
     const path = location.pathname;
-    if (path === '/app/network') return 0;
     
-    if (isEmployer) {
-      // Employer navigation mapping (6 tabs total: 0-5)
-      if (path.includes('/app/employer/jobs') || path === '/app/jobs') return 1;
-      if (path.includes('/app/messages')) return 2;
-      if (path.includes('/app/notifications')) return 3;
-      if (path.includes('/app/applications')) return 4;
-      if (path.includes('/app/employer/candidates')) return 5;
-      // Create post button is index 6 but doesn't stay selected
-    } else {
-      // Job seeker navigation mapping (6 tabs total: 0-5)  
-      if (path === '/app/jobs') return 1;
-      if (path.includes('/app/messages')) return 2;
-      if (path.includes('/app/notifications')) return 3;
-      if (path.includes('/app/applications')) return 4;
-      if (path.includes('/app/connections')) return 5;
-      // Create post button is index 6 but doesn't stay selected
-    }
+    // Network/Home is always tab 0
+    if (path.includes('/app/network')) return 0;
+    
+    // Jobs tab (tab 1)
+    if (path.includes('/app/jobs') || path.includes('/app/employer/jobs')) return 1;
+    
+    // Messages tab (tab 2)
+    if (path.includes('/app/messages')) return 2;
+    
+    // Notifications tab (tab 3)  
+    if (path.includes('/app/notifications')) return 3;
+    
+    // People tab (tab 4) - Candidates for employers, Network connections for job seekers
+    if (isEmployer && path.includes('/app/employer/candidates')) return 4;
+    if (!isEmployer && path.includes('/app/connections')) return 4;
+    
+    // Default to Network/Home tab
     return 0;
   };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    if (isEmployer) {
-      // Employer navigation logic
-      switch (newValue) {
-        case 0:
-          navigate('/app/network');
-          break;
-        case 1:
+    // Simplified navigation logic for 5 tabs
+    switch (newValue) {
+      case 0:
+        // Network/Home - the main landing page for logged-in users
+        navigate('/app/network');
+        break;
+      case 1:
+        // Jobs - specific to user role
+        if (isEmployer) {
           navigate('/app/employer/jobs');
-          break;
-        case 2:
-          navigate('/app/messages');
-          break;
-        case 3:
-          navigate('/app/notifications');
-          break;
-        case 4:
-          navigate('/app/applications');
-          break;
-        case 5:
-          if (onShowCandidates) {
-            onShowCandidates();
-          } else {
-            navigate('/app/employer/candidates');
-          }
-          break;
-        case 6:
-          if (onCreatePost) {
-            onCreatePost();
-          }
-          break;
-      }
-    } else {
-      // Job seeker navigation logic
-      switch (newValue) {
-        case 0:
-          navigate('/app/network');
-          break;
-        case 1:
+        } else {
           navigate('/app/jobs');
-          break;
-        case 2:
-          navigate('/app/messages');
-          break;
-        case 3:
-          navigate('/app/notifications');
-          break;
-        case 4:
-          navigate('/app/applications');
-          break;
-        case 5:
-          if (onShowConnections) {
-            onShowConnections();
-          } else {
-            navigate('/app/connections');
-          }
-          break;
-        case 6:
-          if (onCreatePost) {
-            onCreatePost();
-          }
-          break;
-      }
+        }
+        break;
+      case 2:
+        // Messages
+        navigate('/app/messages');
+        break;
+      case 3:
+        // Notifications  
+        navigate('/app/notifications');
+        break;
+      case 4:
+        // People - Candidates for employers, Connections for job seekers
+        if (isEmployer) {
+          navigate('/app/employer/candidates');
+        } else {
+          navigate('/app/connections');
+        }
+        break;
+      default:
+        // Fallback to network
+        navigate('/app/network');
     }
   };
 
@@ -234,13 +197,13 @@ const MobileFooterNavbar: React.FC<MobileFooterNavbarProps> = ({
           }
         }}
       >
-        {/* Home */}
+        {/* Network/Home - Main landing page */}
         <BottomNavigationAction
-          label="Home"
+          label="Network"
           icon={<Home />}
         />
         
-        {/* Jobs/Employer Jobs */}
+        {/* Jobs - Role-specific */}
         <BottomNavigationAction
           label={isEmployer ? "My Jobs" : "Jobs"}
           icon={isEmployer ? <Business /> : <Work />}
@@ -250,7 +213,7 @@ const MobileFooterNavbar: React.FC<MobileFooterNavbarProps> = ({
         <BottomNavigationAction
           label="Messages"
           icon={
-            <Badge badgeContent={unreadMessages} color="error">
+            <Badge badgeContent={unreadMessages > 0 ? unreadMessages : undefined} color="error">
               <Message />
             </Badge>
           }
@@ -260,50 +223,23 @@ const MobileFooterNavbar: React.FC<MobileFooterNavbarProps> = ({
         <BottomNavigationAction
           label="Alerts"
           icon={
-            <Badge badgeContent={unreadNotifications} color="error">
+            <Badge badgeContent={unreadNotifications > 0 ? unreadNotifications : undefined} color="error">
               <Notifications />
             </Badge>
           }
         />
         
-        {/* Applications tab */}
+        {/* People - Candidates for employers, Connections for job seekers */}
         <BottomNavigationAction
-          label={isEmployer ? "My Apps" : "Apps"}
-          icon={<Assignment />}
-        />
-        
-        {/* Candidates tab for employers, Applications/Connections for job seekers */}
-        <BottomNavigationAction
-          label={isEmployer ? "Candidates" : "Connections"}
+          label={isEmployer ? "Candidates" : "People"}
           icon={
             isEmployer ? (
               <Badge badgeContent={candidateCount > 0 ? candidateCount : undefined} color="secondary">
                 <People />
               </Badge>
             ) : (
-              <Person />
+              <People />
             )
-          }
-        />
-        
-        {/* Create Post */}
-        <BottomNavigationAction
-          label="Post"
-          icon={
-            <Box
-              sx={{
-                backgroundColor: theme.palette.primary.main,
-                borderRadius: '50%',
-                width: 28,
-                height: 28,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-              }}
-            >
-              <Add sx={{ fontSize: 20 }} />
-            </Box>
           }
         />
       </BottomNavigation>

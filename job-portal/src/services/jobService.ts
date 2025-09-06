@@ -140,6 +140,7 @@ interface JobFilters {
   experienceLevel?: ExperienceLevel;
   educationLevel?: EducationLevel;
   location?: string;
+  workLocation?: string | string[];
   skills?: string[];
   isCurated?: boolean;
   search?: string;

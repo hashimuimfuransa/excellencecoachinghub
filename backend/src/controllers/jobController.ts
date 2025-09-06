@@ -14,6 +14,7 @@ export const getJobs = async (req: Request, res: Response) => {
       experienceLevel,
       educationLevel,
       location,
+      workLocation,
       skills,
       isCurated,
       page = 1,
@@ -30,6 +31,41 @@ export const getJobs = async (req: Request, res: Response) => {
     if (experienceLevel) query.experienceLevel = experienceLevel;
     if (educationLevel) query.educationLevel = educationLevel;
     if (location) query.location = { $regex: location, $options: 'i' };
+    
+    // Work location filter (remote, hybrid, on-site)
+    if (workLocation) {
+      const workLocationArray = Array.isArray(workLocation) ? workLocation : [workLocation];
+      const locationConditions: any[] = [];
+      
+      workLocationArray.forEach((wl: string) => {
+        if (wl === 'remote') {
+          locationConditions.push({
+            location: { 
+              $regex: '\\b(remote|anywhere|worldwide|work from home|wfh|global)\\b', 
+              $options: 'i' 
+            }
+          });
+        } else if (wl === 'hybrid') {
+          locationConditions.push({
+            location: { 
+              $regex: '\\b(hybrid|flexible)\\b', 
+              $options: 'i' 
+            }
+          });
+        } else if (wl === 'on-site') {
+          locationConditions.push({
+            $and: [
+              { location: { $not: { $regex: '\\b(remote|anywhere|worldwide|work from home|wfh|global|hybrid|flexible)\\b', $options: 'i' } } }
+            ]
+          });
+        }
+      });
+      
+      if (locationConditions.length > 0) {
+        query.$or = locationConditions;
+      }
+    }
+    
     if (isCurated !== undefined) query.isCurated = isCurated === 'true';
     if (skills) {
       const skillsArray = Array.isArray(skills) ? skills : [skills];

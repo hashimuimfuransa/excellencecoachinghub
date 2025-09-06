@@ -52,8 +52,31 @@ export class JobScrapingService {
   private static lastVersionCheck: string = '';
   private static readonly VERSION_CHECK_INTERVAL_HOURS = 24; // Check for newer versions daily
   
-  // Job sources configuration
+  // Job sources configuration - WorkingNomads prioritized for international remote jobs
   private static readonly JOB_SOURCES = [
+    {
+      name: 'workingnomads',
+      baseUrl: 'https://www.workingnomads.com',
+      paths: ['/jobs', '/remote-jobs', '/latest-jobs', ''],
+      selectors: [
+        'h4 a[href*="/jobs/"]',          // WorkingNomads job titles are in h4 elements
+        'a[href*="/jobs/"]',
+        'a[href*="/job-"]', 
+        '.job-item a',
+        '.job-listing a',
+        '.job-title a',
+        '.entry-title a',
+        '.job-card a',
+        '.post-title a',
+        'h2 a',
+        'h3 a',
+        'article a[href*="/job"]',
+        '.content a[href*="/job"]',
+        '.job-link a',
+        '.remote-job a',
+        '.position-title a'
+      ]
+    },
     {
       name: 'jobinrwanda',
       baseUrl: 'https://www.jobinrwanda.com',
@@ -76,46 +99,33 @@ export class JobScrapingService {
       ]
     },
     {
-      name: 'workingnomads',
-      baseUrl: 'https://www.workingnomads.com',
-      paths: ['/jobs', '/remote-jobs', '/latest-jobs', '/job-board'],
-      selectors: [
-        'a[href*="/jobs/"]',
-        'a[href*="/job-"]',
-        '.job-item a',
-        '.job-listing a',
-        '.job-title a',
-        '.entry-title a',
-        'h2 a',
-        'h3 a',
-        '.job-card a',
-        '.post-title a',
-        'article a[href*="/job"]',
-        '.content a[href*="/job"]'
-      ]
-    },
-    {
       name: 'mucuruzi',
       baseUrl: 'https://mucuruzi.com',
       paths: ['/all-jobs/', '/jobs', '/vacancies', ''],
       selectors: [
-        '.job-item a',
-        '.job-listing a',
-        '.job-title a',
+        'a[href*="vacancy-title"]',
+        'a[href*="job-title"]',
         'a[href*="/job"]',
         'a[href*="/vacancy"]',
         'a[href*="/opportunity"]',
+        '.job-item a',
+        '.job-listing a',
+        '.job-title a',
         '.post-title a',
+        '.entry-title a',
+        'h1 a',
         'h2 a',
         'h3 a',
-        '.entry-title a'
+        'article a'
       ]
     },
     {
       name: 'unjobs',
       baseUrl: 'https://unjobs.org',
-      paths: ['/duty_stations/kgl', '/duty_stations/kigali', '/jobs', ''],
+      paths: ['/', '/New', '/New/2'],
       selectors: [
+        'article a[href*="/vacancies/"]',          // Main job links in articles
+        'a[href*="/vacancies/"]',                  // All vacancy links
         '.job-item a',
         '.job-listing a',
         '.job-title a',
@@ -366,18 +376,24 @@ export class JobScrapingService {
         systemUser = await this.createSystemUser();
       }
 
-      // Calculate jobs per source (distribute evenly with minimum guarantee)
-      const jobsPerSource = Math.max(3, Math.floor(remainingQuota / this.JOB_SOURCES.length));
-      const prioritySources = ['jobinrwanda', 'mucuruzi', 'unjobs', 'mifotra']; // High-yield sources
-      console.log(`Will try to process up to ${jobsPerSource} jobs from each of ${this.JOB_SOURCES.length} sources`);
-      console.log(`Priority sources: ${prioritySources.join(', ')}`);
+      // Calculate jobs per source with priority for WorkingNomads
+      const baseJobsPerSource = Math.max(3, Math.floor(remainingQuota / this.JOB_SOURCES.length));
+      const prioritySources = ['workingnomads', 'jobinrwanda', 'mucuruzi', 'unjobs']; // WorkingNomads is top priority
+      console.log(`Base allocation: ${baseJobsPerSource} jobs per source from ${this.JOB_SOURCES.length} sources`);
+      console.log(`Priority sources (will get extra allocation): ${prioritySources.join(', ')}`);
 
       // Scrape jobs from all configured sources
       for (const source of this.JOB_SOURCES) {
+        // Give WorkingNomads and UNJobs higher allocations as priority sources
+        const sourceJobLimit = source.name === 'workingnomads' 
+          ? Math.min(Math.floor(baseJobsPerSource * 1.5), remainingQuota)
+          : source.name === 'unjobs'
+          ? Math.min(Math.floor(baseJobsPerSource * 1.3), remainingQuota)
+          : baseJobsPerSource;
         try {
-          console.log(`\n🔍 Scraping jobs from ${source.name} (${source.baseUrl})`);
+          console.log(`\n🔍 Scraping jobs from ${source.name} (${source.baseUrl}) - Limit: ${sourceJobLimit} jobs`);
           
-          const sourceJobUrls = await this.scrapeJobUrlsFromSource(source, jobsPerSource);
+          const sourceJobUrls = await this.scrapeJobUrlsFromSource(source, sourceJobLimit);
           console.log(`Found ${sourceJobUrls.length} job URLs from ${source.name}`);
 
           // Process each job URL from this source
@@ -404,7 +420,9 @@ export class JobScrapingService {
               }
 
               // Add smart delay before scraping to be respectful to the source
-              const baseDelay = source.name === 'jobinrwanda' ? 4000 : 3000;
+              const baseDelay = source.name === 'workingnomads' ? 2500 : 
+                               source.name === 'unjobs' ? 3500 :
+                               source.name === 'jobinrwanda' ? 4000 : 3000;
               const randomDelay = Math.random() * 1000; // 0-1s randomness
               const respectfulDelay = baseDelay + randomDelay;
               
@@ -469,25 +487,130 @@ export class JobScrapingService {
     urlFilter: (url: string) => boolean;
   } {
     const configs: { [key: string]: any } = {
-      'workingnomads': {
+      'unjobs': {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
           'Accept-Encoding': 'gzip, deflate, br',
           'DNT': '1',
           'Connection': 'keep-alive',
-          'Upgrade-Insecure-Requests': '1'
+          'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'same-origin',
+          'Sec-Fetch-User': '?1',
+          'Referer': 'https://unjobs.org/',
+          'Cache-Control': 'max-age=0'
         },
         selectors: [
-          'a[href*="/jobs/"]',
-          'a[href*="/job-"]',
+          'article a[href*="/vacancies/"]',          // Main job links in articles
+          'a[href*="/vacancies/"]',                  // All vacancy links
+          '.job-item a',
           '.job-listing a',
           '.job-title a',
+          'a[href*="/vacancy"]',
+          'a[href*="/job"]',
+          '.views-row a',
           'h2 a',
-          'h3 a'
+          'h3 a',
+          '.field-content a'
         ],
-        urlFilter: (url: string) => url.includes('/job') && !url.includes('#') && !url.includes('mailto:')
+        urlFilter: (url: string) => {
+          // UNJobs specific URL patterns
+          const unjobsPatterns = [
+            /\/vacancies\/\d+$/,                     // /vacancies/1234567890
+            /\/vacancy\/\d+$/,                       // /vacancy/1234567890
+            /\/job\/\d+$/                           // /job/1234567890
+          ];
+          
+          const excludePatterns = [
+            '/category/',
+            '/page/',
+            '/search',
+            '/filter',
+            '/login',
+            '/register',
+            '/non-un',                              // Exclude non-UN listings page
+            '/duty_stations',                       // Exclude duty stations index
+            '/organizations',                       // Exclude organizations index
+            '/closing'                              // Exclude closing soon index
+          ];
+          
+          // Check exclusions first
+          for (const pattern of excludePatterns) {
+            if (url.includes(pattern)) return false;
+          }
+          
+          // Check if URL matches UNJobs patterns
+          return unjobsPatterns.some(pattern => pattern.test(url));
+        }
+      },
+      'workingnomads': {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Referer': 'https://www.workingnomads.com/',
+          'Cache-Control': 'max-age=0'
+        },
+        selectors: [
+          'h4 a[href*="/jobs/"]',                    // Job titles in h4 elements
+          'a[href*="/jobs/"]',                       // All job URLs
+          '.job-listing a',
+          '.job-title a',
+          '.entry-title a',
+          '.job-card a',
+          '.post-title a',
+          '.remote-job a',
+          '.position-title a',
+          'article a[href*="/job"]',
+          '.content a[href*="/job"]'
+        ],
+        urlFilter: (url: string) => {
+          // WorkingNomads specific URL patterns for remote jobs
+          const remoteJobPatterns = [
+            /\/jobs\/[a-z0-9-]+-[a-z0-9-]+$/,    // /jobs/job-title-company-name format
+            /\/jobs\/[a-z0-9-]+$/,               // /jobs/job-title format
+            /\/remote-jobs\/[a-z0-9-]+-[a-z0-9-]+$/,  // /remote-jobs/job-title-company
+            /\/latest-jobs\/[a-z0-9-]+-[a-z0-9-]+$/   // /latest-jobs/job-title-company
+          ];
+          
+          const excludePatterns = [
+            '/category/',
+            '/page/',
+            '/search',
+            '/filter',
+            '/login',
+            '/register',
+            '/contact',
+            '/about',
+            '/pricing',
+            '/employer',
+            '/post-job',
+            '/subscribe',
+            '/blog',
+            '/faq',
+            '/terms'
+          ];
+          
+          const hasExcluded = excludePatterns.some(pattern => url.toLowerCase().includes(pattern));
+          if (hasExcluded) return false;
+          
+          return remoteJobPatterns.some(pattern => pattern.test(url)) && 
+                 !url.includes('#') && 
+                 !url.includes('mailto:') && 
+                 !url.includes('javascript:') &&
+                 url.length > 35; // Substantial URLs only
+        }
       },
       'mucuruzi': {
         headers: {
@@ -499,18 +622,63 @@ export class JobScrapingService {
         selectors: [
           'a[href*="/job"]',
           'a[href*="/vacancy"]',
+          'a[href*="vacancy-title"]',
+          'a[href*="job-title"]',
           '.entry-title a',
           '.post-title a',
           'h2 a',
           'h3 a',
           'article a'
         ],
-        urlFilter: (url: string) => (url.includes('/job') || url.includes('/vacancy')) && !url.includes('#')
+        urlFilter: (url: string) => {
+          // Exclude tender notices, procurement, and other non-job content
+          const excludePatterns = [
+            'tender-notice',
+            'invitation-to-bid',
+            'procurement',
+            'contract-award',
+            'category/job',
+            'category/vacancy',
+            '/category/',
+            '/page/',
+            '/search',
+            '/filter'
+          ];
+          
+          const hasExcluded = excludePatterns.some(pattern => url.toLowerCase().includes(pattern));
+          if (hasExcluded) return false;
+          
+          // Include only actual job/vacancy URLs
+          const includePatterns = [
+            'vacancy-title',
+            'job-title',
+            '/vacancy/',
+            '/job/',
+            '/opportunity/'
+          ];
+          
+          const hasIncluded = includePatterns.some(pattern => url.toLowerCase().includes(pattern));
+          return hasIncluded && 
+                 !url.includes('#') && 
+                 !url.includes('mailto:') && 
+                 !url.includes('javascript:') &&
+                 url.length > 40; // Ensure substantial URLs
+        }
       },
       'unjobs': {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Cache-Control': 'max-age=0'
         },
         selectors: [
           'a[href*="/vacancy"]',
@@ -520,7 +688,12 @@ export class JobScrapingService {
           'h2 a',
           'h3 a'
         ],
-        urlFilter: (url: string) => url.includes('/vacancy') || url.includes('/job')
+        urlFilter: (url: string) => {
+          return (url.includes('/vacancy') || url.includes('/job')) &&
+                 !url.includes('search') &&
+                 !url.includes('filter') &&
+                 url.length > 30;
+        }
       },
       'brightermonday': {
         headers: {
@@ -548,18 +721,64 @@ export class JobScrapingService {
         'Accept-Encoding': 'gzip, deflate, br',
         'DNT': '1',
         'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1'
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1'
       },
       selectors: [
-        'a[href*="/job"]',
-        'a[href*="/vacancy"]',
+        'a[href*="/node/"]',           // Drupal nodes first (most reliable)
+        'a[href*="/job/"]',
+        'a[href*="/vacancy/"]',
+        'a[href*="/jobs/"]',
         '.job-item a',
         '.job-listing a',
         '.job-title a',
+        '.views-row a',
+        '.field-content a',
         'h2 a',
         'h3 a'
       ],
-      urlFilter: (url: string) => (url.includes('/job') || url.includes('/vacancy')) && !url.includes('#')
+      urlFilter: (url: string) => {
+        // Exclude non-job content
+        const excludePatterns = [
+          '/category/',
+          '/page/',
+          '/search',
+          '/filter',
+          'recruitment/job-ad',
+          'advertise',
+          'post-job',
+          'submit-job',
+          'job-search',
+          'vacancy-search',
+          'tender-notice',
+          'procurement',
+          '/contact',
+          '/about'
+        ];
+        
+        const hasExcluded = excludePatterns.some(pattern => url.toLowerCase().includes(pattern));
+        if (hasExcluded) return false;
+        
+        // Include job URLs with specific patterns
+        const jobPatterns = [
+          /\/node\/\d+$/,                      // drupal node pattern (most reliable)
+          /\/job\/[\w-]+$/,                    // /job/specific-job-title  
+          /\/vacancy\/[\w-]+$/,                // /vacancy/specific-vacancy
+          /\/opportunity\/[\w-]+$/,            // /opportunity/specific-opportunity
+          /\/position\/[\w-]+$/,               // /position/specific-position
+          /\/jobs\/[\w-]+$/,                   // /jobs/specific-job
+          /\/job-vacancies-\w+\/[\w-]+$/       // rwandajob pattern
+        ];
+        
+        return jobPatterns.some(pattern => pattern.test(url)) && 
+               !url.includes('#') && 
+               !url.includes('mailto:') && 
+               !url.includes('javascript:') &&
+               url.length > 30;
+      }
     };
   }
 
@@ -643,21 +862,31 @@ export class JobScrapingService {
             if (href) {
               const fullUrl = href.startsWith('http') ? href : `${source.baseUrl}${href}`;
               
-              // Use website-specific URL filter
-              const isValidJobUrl = !jobUrls.includes(fullUrl) && 
-                specificConfig.urlFilter(fullUrl) && 
-                !fullUrl.includes('search') && 
-                !fullUrl.includes('filter') &&
-                !fullUrl.includes('mailto:') &&
-                !fullUrl.includes('javascript:') &&
-                fullUrl.length > source.baseUrl.length + 5; // Must be more than just the base URL
+              // Use website-specific URL filter and other validations
+              const isDuplicate = jobUrls.includes(fullUrl);
+              const passesSpecificFilter = specificConfig.urlFilter(fullUrl);
+              const hasSearchFilter = fullUrl.includes('search') || fullUrl.includes('filter');
+              const hasMailtoOrJs = fullUrl.includes('mailto:') || fullUrl.includes('javascript:');
+              const isNotTooShort = fullUrl.length > source.baseUrl.length + 5;
+              
+              const isValidJobUrl = !isDuplicate && 
+                passesSpecificFilter && 
+                !hasSearchFilter &&
+                !hasMailtoOrJs &&
+                isNotTooShort;
               
               if (isValidJobUrl) {
                 jobUrls.push(fullUrl);
                 console.log(`✅ Found job URL from ${source.name} with selector '${selector}': ${fullUrl}`);
-              } else if (index < 3) {
-                // Only log first few rejections to avoid spam
-                console.log(`❌ Rejected URL from ${source.name}: ${fullUrl} (filter failed)`);
+              } else if (index < 5) {
+                // Log more details about why URL was rejected
+                const reasons = [];
+                if (isDuplicate) reasons.push('duplicate');
+                if (!passesSpecificFilter) reasons.push('specific filter failed');
+                if (hasSearchFilter) reasons.push('contains search/filter');
+                if (hasMailtoOrJs) reasons.push('mailto/javascript');
+                if (!isNotTooShort) reasons.push('too short');
+                console.log(`❌ Rejected URL from ${source.name}: ${fullUrl} (${reasons.join(', ')})`);
               }
             }
           });
@@ -696,9 +925,20 @@ export class JobScrapingService {
 
         console.log(`Total job URLs found from ${source.name}: ${jobUrls.length}`);
         
+        // Log a sample of found URLs before filtering
+        if (jobUrls.length > 0) {
+          console.log(`Sample URLs from ${source.name}:`, jobUrls.slice(0, 3));
+        }
+        
         // Filter out invalid URLs (category pages, etc.)
         const validJobUrls = this.filterValidJobUrls(jobUrls);
-        console.log(`Valid job URLs after filtering: ${validJobUrls.length}`);
+        console.log(`Valid job URLs after final filtering: ${validJobUrls.length}`);
+        
+        // Log rejected URLs for debugging
+        const rejectedUrls = jobUrls.filter(url => !validJobUrls.includes(url));
+        if (rejectedUrls.length > 0) {
+          console.log(`URLs rejected by final filter from ${source.name}:`, rejectedUrls.slice(0, 2));
+        }
         
         if (validJobUrls.length > 0) {
           return validJobUrls.slice(0, limit);
@@ -1267,17 +1507,67 @@ export class JobScrapingService {
       '/job-skills',
       '/categories',
       '/search',
-      '/filter'
+      '/filter',
+      '/contact',
+      '/about',
+      '/login',
+      '/register',
+      '/home',
+      '/category/',
+      '/page/',
+      'recruitment/job-ad',
+      'advertise',
+      'post-job',
+      'submit-job',
+      'tender-notice',
+      'invitation-to-bid',
+      'procurement'
     ];
 
     return urls.filter(url => {
-      // Must contain specific job identifiers
-      const hasJobId = /\/(node|job|vacancy)\/[\w-]+/.test(url) || /\/jobs\/[\w-]+/.test(url);
+      // Remove query parameters for cleaner analysis
+      const cleanUrl = (url || '').split('?')[0].toLowerCase();
       
       // Must not match invalid patterns
-      const isInvalid = invalidPatterns.some(pattern => new RegExp(pattern).test(url));
+      const isInvalid = invalidPatterns.some(pattern => cleanUrl.includes(pattern.toLowerCase()));
+      if (isInvalid) {
+        console.log(`🔍 URL rejected by invalid pattern: ${url}`);
+        return false;
+      }
       
-      return hasJobId && !isInvalid;
+      // Check for specific job URL patterns - more specific and accurate
+      const jobPatterns = [
+        /\/node\/\d+$/,                                    // Drupal nodes with numbers
+        /\/job\/[\w-]+$/,                                  // /job/specific-job
+        /\/vacancy\/[\w-]+$/,                              // /vacancy/specific-vacancy  
+        /\/vacancies\/\d+$/,                               // /vacancies/1234567890 (UNJobs pattern)
+        /\/opportunity\/[\w-]+$/,                          // /opportunity/specific-opportunity
+        /\/position\/[\w-]+$/,                             // /position/specific-position
+        /\/jobs\/[\w-]+$/,                                 // /jobs/specific-job (includes WorkingNomads)
+        /\/job-[\w-]+$/,                                   // /job-specific-title (WorkingNomads pattern)
+        /\/remote-jobs\/[\w-]+$/,                          // /remote-jobs/specific-job (WorkingNomads)
+        /\/latest-jobs\/[\w-]+$/,                          // /latest-jobs/specific-job (WorkingNomads) 
+        /\/job-board\/[\w-]+$/,                            // /job-board/specific-job (WorkingNomads)
+        /\/vacancies\/[\w-]+$/,                            // /vacancies/specific-vacancy
+        /\/job-vacancies-\w+\/[\w-]+$/,                    // rwandajob pattern
+        /\/vacancy-title-[\w-]+/,                          // mucuruzi vacancy pattern
+        /\/job-title-[\w-]+/,                             // mucuruzi job pattern
+        /\/[\w-]+-at-[\w-]+-deadline-[\w-]+/              // mucuruzi pattern with "at" and "deadline"
+      ];
+      
+      // Must match at least one specific job pattern
+      const hasJobPattern = jobPatterns.some(pattern => pattern.test(cleanUrl));
+      
+      // Must be substantial URL (not just base URL)
+      const isSubstantial = cleanUrl.length > 40 && cleanUrl.split('/').length >= 4;
+      
+      const isValid = hasJobPattern && isSubstantial;
+      
+      if (!isValid && urls.indexOf(url) < 5) {
+        console.log(`🔍 URL rejected - hasJobPattern: ${hasJobPattern}, isSubstantial: ${isSubstantial} for: ${url}`);
+      }
+      
+      return isValid;
     });
   }
 

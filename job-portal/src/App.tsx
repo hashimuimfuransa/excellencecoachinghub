@@ -67,6 +67,9 @@ import SmartTestResultsPage from './pages/SmartTestResultsPage';
 import QuickApplyPage from './pages/QuickApplyPage';
 import CVBuilderPage from './pages/CVBuilderPage';
 
+// Smart Home component
+import SmartHome from './components/SmartHome';
+
 // Social Network pages
 import SocialNetworkPage from './pages/SocialNetworkPage';
 import NetworkPage from './pages/NetworkPage';
@@ -94,8 +97,8 @@ function App() {
         <EmailApiHandler isActive={true} />
         <Router>
           <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<AllJobsPage />} />
+            {/* Smart Home Route - redirects authenticated users to network */}
+            <Route path="/" element={<SmartHome />} />
             <Route path="/jobs" element={<AllJobsPage />} />
             <Route path="/jobs/:id" element={<JobDetailsPage />} />
             <Route path="/login" element={<LoginPage />} />
@@ -355,8 +358,8 @@ function App() {
               } 
             />
             
-            {/* Legacy dashboard route redirect */}
-            <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
+            {/* Legacy dashboard route redirect - redirect to network page for general users */}
+            <Route path="/dashboard" element={<Navigate to="/app/network" replace />} />
             
             {/* Catch-all redirect */}
             <Route path="*" element={<Navigate to="/" replace />} />

@@ -91,13 +91,30 @@ const RegisterPage: React.FC = () => {
     
     // Check if role parameter is provided (e.g., /register?role=employer)
     const roleParam = searchParams.get('role');
-    if (roleParam === 'employer') {
-      setFormData(prev => ({
-        ...prev,
-        role: UserRole.EMPLOYER
-      }));
-      // Skip to step 1 (Personal Information) since role is already selected
-      setActiveStep(1);
+    if (roleParam) {
+      let mappedRole = '';
+      switch (roleParam) {
+        case 'employer':
+          mappedRole = UserRole.EMPLOYER;
+          break;
+        case 'job_seeker':
+          mappedRole = UserRole.PROFESSIONAL;
+          break;
+        case 'student':
+          mappedRole = UserRole.STUDENT;
+          break;
+        default:
+          mappedRole = '';
+      }
+      
+      if (mappedRole) {
+        setFormData(prev => ({
+          ...prev,
+          role: mappedRole
+        }));
+        // Skip to step 1 (Personal Information) since role is already selected
+        setActiveStep(1);
+      }
     }
   }, [searchParams]);
 

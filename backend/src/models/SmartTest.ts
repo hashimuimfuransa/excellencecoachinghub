@@ -3,12 +3,13 @@ import mongoose, { Document, Schema } from 'mongoose';
 interface ISmartTestQuestion {
   id: string;
   question: string;
-  type: 'multiple_choice' | 'case_study' | 'coding_challenge' | 'situational' | 'technical';
+  type: 'multiple_choice' | 'true_false' | 'short_answer' | 'essay' | 'case_study' | 'coding_challenge' | 'situational' | 'technical';
   options?: string[];
   correctAnswer: any;
   explanation: string;
   category: string;
   difficulty: 'basic' | 'intermediate' | 'advanced';
+  points?: number;
 }
 
 interface ISmartTest extends Document {
@@ -30,6 +31,7 @@ interface ISmartTest extends Document {
   testType?: 'free' | 'premium';
   isAdminUploaded?: boolean;
   uploadedBy?: string;
+  uploadedFileName?: string;
   testTakers?: number;
   averageScore?: number;
   createdAt: Date;
@@ -42,17 +44,18 @@ const smartTestQuestionSchema = new Schema<ISmartTestQuestion>({
   type: { 
     type: String, 
     required: true,
-    enum: ['multiple_choice', 'case_study', 'coding_challenge', 'situational', 'technical']
+    enum: ['multiple_choice', 'true_false', 'short_answer', 'essay', 'case_study', 'coding_challenge', 'situational', 'technical']
   },
   options: [{ type: String }],
   correctAnswer: { type: Schema.Types.Mixed, required: true },
-  explanation: { type: String, required: true },
-  category: { type: String, required: true },
+  explanation: { type: String },
+  category: { type: String },
   difficulty: { 
     type: String, 
     required: true,
     enum: ['basic', 'intermediate', 'advanced']
-  }
+  },
+  points: { type: Number, default: 1 }
 });
 
 const smartTestSchema = new Schema<ISmartTest>({
@@ -83,6 +86,7 @@ const smartTestSchema = new Schema<ISmartTest>({
   isPublished: { type: Boolean, default: false },
   isAdminUploaded: { type: Boolean, default: false },
   uploadedBy: { type: String },
+  uploadedFileName: { type: String },
   testTakers: { type: Number, default: 0 },
   averageScore: { type: Number, default: 0 }
 }, {

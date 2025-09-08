@@ -1,0 +1,49 @@
+[
+  {
+    "question": "What is the capital of France?",
+    "type": "multiple_choice",
+    "options": ["London", "Berlin", "Paris", "Madrid"],
+    "correctAnswer": "Paris",
+    "explanation": "Paris is the capital and largest city of France.",
+    "category": "Geography",
+    "difficulty": "basic",
+    "points": 1
+  },
+  {
+    "question": "JavaScript is a compiled language.",
+    "type": "true_false",
+    "correctAnswer": "false",
+    "explanation": "JavaScript is an interpreted language, not compiled.",
+    "category": "Programming",
+    "difficulty": "basic",
+    "points": 1
+  },
+  {
+    "question": "What is the result of 2 + 2?",
+    "type": "short_answer",
+    "correctAnswer": "4",
+    "explanation": "Basic arithmetic: 2 + 2 equals 4.",
+    "category": "Mathematics",
+    "difficulty": "basic",
+    "points": 1
+  },
+  {
+    "question": "Explain the concept of Object-Oriented Programming.",
+    "type": "essay",
+    "correctAnswer": "Object-Oriented Programming is a programming paradigm based on the concept of objects, which contain data and code.",
+    "explanation": "OOP is a fundamental programming concept involving encapsulation, inheritance, and polymorphism.",
+    "category": "Programming",
+    "difficulty": "intermediate",
+    "points": 5
+  },
+  {
+    "question": "Which of the following is NOT a HTTP method?",
+    "type": "multiple_choice",
+    "options": ["GET", "POST", "DELETE", "SEND"],
+    "correctAnswer": "SEND",
+    "explanation": "SEND is not a standard HTTP method. The main HTTP methods are GET, POST, PUT, DELETE, PATCH, etc.",
+    "category": "Web Development",
+    "difficulty": "intermediate",
+    "points": 2
+  }
+]

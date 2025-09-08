@@ -122,10 +122,11 @@ export class JobScrapingService {
     {
       name: 'unjobs',
       baseUrl: 'https://unjobs.org',
-      paths: ['/', '/New', '/New/2'],
+      paths: ['/', '/vacancies', '/jobs'],
       selectors: [
         'article a[href*="/vacancies/"]',          // Main job links in articles
         'a[href*="/vacancies/"]',                  // All vacancy links
+        'a[href*="/non-un"]',                      // Non-UN job listings
         '.job-item a',
         '.job-listing a',
         '.job-title a',
@@ -227,15 +228,16 @@ export class JobScrapingService {
       ]
     },
     {
-      name: 'eastafricanjobs',
-      baseUrl: 'https://www.eastafricanjobs.org',
-      paths: ['/rwanda-jobs', '/jobs', '/'],
+      name: 'greatrwandajobs',
+      baseUrl: 'https://www.greatrwandajobs.com',
+      paths: ['/jobs', '/vacancies', '/opportunities', '/'],
       selectors: [
         '.job-item a',
-        '.job-listing a',
+        '.job-listing a', 
         '.job-title a',
         'a[href*="/job"]',
         'a[href*="/vacancy"]',
+        'a[href*="/opportunity"]',
         '.post-title a',
         'h2 a',
         'h3 a',
@@ -243,16 +245,34 @@ export class JobScrapingService {
       ]
     },
     {
-      name: 'brightermonday',
-      baseUrl: 'https://www.brightermonday.com',
-      paths: ['/jobs/rwanda', '/jobs', '/'],
+      name: 'brightermonday-uganda',
+      baseUrl: 'https://www.brightermonday.co.ug',
+      paths: ['/jobs', '/jobs/rwanda', '/search/jobs', '/'],
       selectors: [
+        '.job-search-results a[href*="/job/"]',
         '.job-item a',
+        '.job-card a',
         '.job-listing a',
         '.job-title a',
-        'a[href*="/job"]',
-        'a[href*="/vacancy"]',
-        '.post-title a',
+        'a[href*="/job/"]',
+        'a[href*="/jobs/"]',
+        'h2 a',
+        'h3 a',
+        '.entry-title a'
+      ]
+    },
+    {
+      name: 'brightermonday-kenya',
+      baseUrl: 'https://www.brightermonday.co.ke',
+      paths: ['/jobs', '/search/jobs', '/'],
+      selectors: [
+        '.job-search-results a[href*="/job/"]',
+        '.job-item a',
+        '.job-card a',
+        '.job-listing a',
+        '.job-title a',
+        'a[href*="/job/"]',
+        'a[href*="/jobs/"]',
         'h2 a',
         'h3 a',
         '.entry-title a'
@@ -489,23 +509,25 @@ export class JobScrapingService {
     const configs: { [key: string]: any } = {
       'unjobs': {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
           'Accept-Language': 'en-US,en;q=0.9',
           'Accept-Encoding': 'gzip, deflate, br',
-          'DNT': '1',
           'Connection': 'keep-alive',
           'Upgrade-Insecure-Requests': '1',
           'Sec-Fetch-Dest': 'document',
           'Sec-Fetch-Mode': 'navigate',
-          'Sec-Fetch-Site': 'same-origin',
+          'Sec-Fetch-Site': 'none',
           'Sec-Fetch-User': '?1',
-          'Referer': 'https://unjobs.org/',
-          'Cache-Control': 'max-age=0'
+          'Cache-Control': 'max-age=0',
+          'sec-ch-ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+          'sec-ch-ua-mobile': '?0',
+          'sec-ch-ua-platform': '"Windows"'
         },
         selectors: [
           'article a[href*="/vacancies/"]',          // Main job links in articles
           'a[href*="/vacancies/"]',                  // All vacancy links
+          'a[href*="/non-un"]',                      // Non-UN job listings
           '.job-item a',
           '.job-listing a',
           '.job-title a',
@@ -517,24 +539,27 @@ export class JobScrapingService {
           '.field-content a'
         ],
         urlFilter: (url: string) => {
-          // UNJobs specific URL patterns
+          // UNJobs specific URL patterns - more inclusive
           const unjobsPatterns = [
             /\/vacancies\/\d+$/,                     // /vacancies/1234567890
             /\/vacancy\/\d+$/,                       // /vacancy/1234567890
-            /\/job\/\d+$/                           // /job/1234567890
+            /\/job\/\d+$/,                           // /job/1234567890
+            /\/non-un$/,                             // /non-un page (contains job listings)
+            /\/non-un\/[\w-]+$/                      // /non-un/specific-job links
           ];
           
           const excludePatterns = [
             '/category/',
             '/page/',
-            '/search',
+            '/search?',                              // Only exclude search with parameters
             '/filter',
             '/login',
             '/register',
-            '/non-un',                              // Exclude non-UN listings page
             '/duty_stations',                       // Exclude duty stations index
             '/organizations',                       // Exclude organizations index
-            '/closing'                              // Exclude closing soon index
+            '/closing$',                            // Only exclude closing index, not closing jobs
+            '/submit',                              // Exclude job submission pages
+            '/apply'                                // Exclude application pages
           ];
           
           // Check exclusions first
@@ -543,7 +568,10 @@ export class JobScrapingService {
           }
           
           // Check if URL matches UNJobs patterns
-          return unjobsPatterns.some(pattern => pattern.test(url));
+          return unjobsPatterns.some(pattern => pattern.test(url)) && 
+                 !url.includes('#') && 
+                 !url.includes('mailto:') &&
+                 url.length > 25;
         }
       },
       'workingnomads': {
@@ -695,21 +723,130 @@ export class JobScrapingService {
                  url.length > 30;
         }
       },
-      'brightermonday': {
+      'greatrwandajobs': {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Cache-Control': 'max-age=0'
         },
         selectors: [
-          'a[href*="/job"]',
-          'a[href*="/vacancy"]',
+          'a[href*="/job/"]',
+          'a[href*="/vacancy/"]',
+          'a[href*="/opportunity/"]',
+          '.job-item a',
+          '.job-listing a',
+          '.job-title a',
+          '.post-title a',
+          'h2 a',
+          'h3 a',
+          '.entry-title a'
+        ],
+        urlFilter: (url: string) => {
+          const jobPatterns = [
+            /\/job\/[\w-]+$/,
+            /\/vacancy\/[\w-]+$/,
+            /\/opportunity\/[\w-]+$/
+          ];
+          return jobPatterns.some(pattern => pattern.test(url)) &&
+                 !url.includes('search') &&
+                 !url.includes('filter') &&
+                 url.length > 30;
+        }
+      },
+      'brightermonday-uganda': {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Cache-Control': 'max-age=0'
+        },
+        selectors: [
+          '.job-search-results a[href*="/job/"]',
+          'a[href*="/job/"]',
+          'a[href*="/jobs/"]',
           '.job-item a',
           '.job-card a',
+          '.job-listing a',
           '.job-title a',
+          '.post-title a',
           'h2 a',
-          'h3 a'
+          'h3 a',
+          '.entry-title a'
         ],
-        urlFilter: (url: string) => url.includes('/job') || url.includes('/vacancy')
+        urlFilter: (url: string) => {
+          // BrighterMonday Uganda job URL patterns
+          const brightermondayPatterns = [
+            /\/job\/[\w-]+\/[\w-]+$/,            // /job/title/id format
+            /\/jobs\/[\w-]+$/,                   // /jobs/job-title format
+            /\/job\/[\w-]+$/                     // /job/job-title format
+          ];
+          return brightermondayPatterns.some(pattern => pattern.test(url)) &&
+                 !url.includes('search?') &&
+                 !url.includes('filter') &&
+                 !url.includes('submit-job') &&
+                 !url.includes('post-job') &&
+                 url.length > 35;
+        }
+      },
+      'brightermonday-kenya': {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Cache-Control': 'max-age=0'
+        },
+        selectors: [
+          '.job-search-results a[href*="/job/"]',
+          'a[href*="/job/"]',
+          'a[href*="/jobs/"]',
+          '.job-item a',
+          '.job-card a',
+          '.job-listing a',
+          '.job-title a',
+          '.post-title a',
+          'h2 a',
+          'h3 a',
+          '.entry-title a'
+        ],
+        urlFilter: (url: string) => {
+          // BrighterMonday Kenya job URL patterns
+          const brightermondayPatterns = [
+            /\/job\/[\w-]+\/[\w-]+$/,            // /job/title/id format
+            /\/jobs\/[\w-]+$/,                   // /jobs/job-title format
+            /\/job\/[\w-]+$/                     // /job/job-title format
+          ];
+          return brightermondayPatterns.some(pattern => pattern.test(url)) &&
+                 !url.includes('search?') &&
+                 !url.includes('filter') &&
+                 !url.includes('submit-job') &&
+                 !url.includes('post-job') &&
+                 url.length > 35;
+        }
       }
     };
 
@@ -1087,6 +1224,12 @@ export class JobScrapingService {
       console.log(`Extracting job data from: ${pageTitle}`);
       console.log(`Content length: ${bodyText.length} characters`);
       
+      // Check if this is actually a job posting page before proceeding
+      if (!this.isJobPostingPage(pageTitle, bodyText, jobUrl)) {
+        console.log(`❌ Page rejected - not a job posting: ${pageTitle}`);
+        return null;
+      }
+      
       // Try to parse with AI first
       let jobData: ScrapedJobData | null = await this.parseJobWithAI(bodyText, jobUrl);
       
@@ -1101,6 +1244,12 @@ export class JobScrapingService {
       // Ensure required fields are present
       if (jobData) {
         jobData = this.ensureRequiredFields(jobData);
+        
+        // Check if ensureRequiredFields rejected the job data
+        if (!jobData) {
+          console.log('❌ Job data rejected - contains generic or invalid content');
+          return null;
+        }
         
         // Validate the final job data
         if (!this.validateJobData(jobData)) {
@@ -1512,6 +1661,10 @@ export class JobScrapingService {
       '/about',
       '/login',
       '/register',
+      '/sign-up',
+      '/signup',
+      '/signin',
+      '/sign-in',
       '/home',
       '/category/',
       '/page/',
@@ -1519,9 +1672,42 @@ export class JobScrapingService {
       'advertise',
       'post-job',
       'submit-job',
+      'post-a-job',
+      'create-job',
+      'add-job',
+      'new-job',
+      'job-posting',
+      'job-submission',
+      'employer-login',
+      'employer-signup',
+      'employer-register',
+      'candidate-login',
+      'candidate-signup',
       'tender-notice',
       'invitation-to-bid',
-      'procurement'
+      'procurement',
+      '/discover/',           // BrighterMonday blog/discover content
+      '/blog/',               // Blog content
+      '/news/',               // News content
+      '/articles/',           // Article content
+      '/insights/',           // Insights content
+      '/research/',           // Research content
+      'jobberman.com',        // External links to other job sites
+      'brightermonday.co.',   // Cross-site links
+      '/employer/',           // Employer pages
+      '/company/',            // Company pages
+      '/career-advice',       // Career advice pages
+      '/duty_stations',       // UNJobs duty stations index
+      '/organizations',       // UNJobs organizations index
+      '/help',                // Help pages
+      '/faq',                 // FAQ pages
+      '/terms',               // Terms pages
+      '/privacy',             // Privacy pages
+      '/cookies',             // Cookie pages
+      '/dashboard',           // Dashboard pages
+      '/profile',             // Profile pages
+      '/settings',            // Settings pages
+      '/account'              // Account pages
     ];
 
     return urls.filter(url => {
@@ -1539,8 +1725,13 @@ export class JobScrapingService {
       const jobPatterns = [
         /\/node\/\d+$/,                                    // Drupal nodes with numbers
         /\/job\/[\w-]+$/,                                  // /job/specific-job
+        /\/job\/[\w-]+\/[\w-]+$/,                          // BrighterMonday format: /job/title/id
         /\/vacancy\/[\w-]+$/,                              // /vacancy/specific-vacancy  
+        /\/vacancy\/\d+$/,                                 // /vacancy/1234567890 (UNJobs pattern)
         /\/vacancies\/\d+$/,                               // /vacancies/1234567890 (UNJobs pattern)
+        /\/job\/\d+$/,                                     // /job/1234567890 (UNJobs pattern)
+        /\/non-un$/,                                       // /non-un page (UNJobs non-UN listings)
+        /\/non-un\/[\w-]+$/,                               // /non-un/specific-job (UNJobs)
         /\/opportunity\/[\w-]+$/,                          // /opportunity/specific-opportunity
         /\/position\/[\w-]+$/,                             // /position/specific-position
         /\/jobs\/[\w-]+$/,                                 // /jobs/specific-job (includes WorkingNomads)
@@ -1552,7 +1743,8 @@ export class JobScrapingService {
         /\/job-vacancies-\w+\/[\w-]+$/,                    // rwandajob pattern
         /\/vacancy-title-[\w-]+/,                          // mucuruzi vacancy pattern
         /\/job-title-[\w-]+/,                             // mucuruzi job pattern
-        /\/[\w-]+-at-[\w-]+-deadline-[\w-]+/              // mucuruzi pattern with "at" and "deadline"
+        /\/[\w-]+-at-[\w-]+-deadline-[\w-]+/,             // mucuruzi pattern with "at" and "deadline"
+        /\/jobs\/[\w-]+\/[\w-]+$/                          // BrighterMonday alternative: /jobs/title/id
       ];
       
       // Must match at least one specific job pattern
@@ -1572,16 +1764,39 @@ export class JobScrapingService {
   }
 
   /**
-   * Ensure required fields are present with defaults
+   * Ensure required fields are present with defaults (reject if too generic)
    */
-  private static ensureRequiredFields(jobData: any): ScrapedJobData {
+  private static ensureRequiredFields(jobData: any): ScrapedJobData | null {
+    // Don't create jobs with obviously generic or missing data
+    if (!jobData.title || 
+        !jobData.company || 
+        !jobData.location ||
+        jobData.title === 'Job Opportunity' ||
+        jobData.company === 'Company Not Specified' ||
+        jobData.location === 'Location Not Specified') {
+      return null;
+    }
+    
+    // Check for obvious non-job titles
+    const invalidTitles = [
+      'sign in', 'log in', 'login', 'register', 'home', 'dashboard',
+      'post job', 'create job', 'job posting', 'error', '404', 'not found'
+    ];
+    
+    const titleLower = jobData.title.toLowerCase();
+    for (const invalid of invalidTitles) {
+      if (titleLower.includes(invalid)) {
+        return null;
+      }
+    }
+
     return {
-      title: jobData.title || 'Untitled Position',
+      title: jobData.title,
       description: jobData.description || 'No description available',
-      company: jobData.company || 'Company Name Not Available',
-      location: jobData.location || 'Location Not Specified',
+      company: jobData.company,
+      location: jobData.location,
       jobType: jobData.jobType || JobType.FULL_TIME,
-      category: jobData.category || JobCategory.OTHER,
+      category: jobData.category || JobCategory.JOBS,
       experienceLevel: jobData.experienceLevel || ExperienceLevel.ENTRY_LEVEL,
       educationLevel: jobData.educationLevel || EducationLevel.HIGH_SCHOOL,
       salary: jobData.salary,
@@ -1595,6 +1810,84 @@ export class JobScrapingService {
       externalJobId: jobData.externalJobId || '',
       contactInfo: jobData.contactInfo
     };
+  }
+
+  /**
+   * Check if a page actually contains a job posting
+   */
+  private static isJobPostingPage(pageTitle: string, bodyText: string, jobUrl: string): boolean {
+    const title = pageTitle.toLowerCase();
+    const content = bodyText.toLowerCase();
+    const url = jobUrl.toLowerCase();
+    
+    // Immediate red flags - definitely not job postings
+    const rejectionPatterns = [
+      // Login and signup pages
+      'sign in', 'log in', 'login', 'sign up', 'signup', 'register', 'registration',
+      'create account', 'forgot password', 'reset password',
+      
+      // Job creation pages
+      'post a job', 'post job', 'create job', 'add job', 'new job', 'job posting',
+      'submit job', 'job submission', 'employer portal', 'recruiter dashboard',
+      
+      // Admin/dashboard pages
+      'dashboard', 'admin', 'profile', 'account', 'settings',
+      
+      // Error and utility pages
+      '404', 'not found', 'page not found', 'error', 'maintenance',
+      
+      // Navigation/index pages
+      'job search', 'browse jobs', 'all jobs', 'job categories',
+      'home page', 'homepage',
+      
+      // Help/info pages
+      'help', 'faq', 'contact', 'about', 'terms', 'privacy', 'cookies'
+    ];
+    
+    // Check if title or content contains rejection patterns
+    for (const pattern of rejectionPatterns) {
+      if (title.includes(pattern) || content.includes(pattern)) {
+        return false;
+      }
+    }
+    
+    // Additional content-based checks
+    if (content.includes('this page is the job creation page') ||
+        content.includes('this page is a login page') ||
+        content.includes('it does not contain a job posting') ||
+        content.includes('please log in to') ||
+        content.includes('sign in to continue') ||
+        content.includes('create your account') ||
+        content.includes('forgot your password') ||
+        content.includes('enter your email') ||
+        content.includes('enter your password')) {
+      return false;
+    }
+    
+    // Check for positive indicators that this is actually a job posting
+    const jobIndicators = [
+      'job description', 'job summary', 'responsibilities', 'requirements',
+      'qualifications', 'experience', 'salary', 'benefits', 'apply now',
+      'application deadline', 'position', 'role', 'company', 'location',
+      'employment', 'full time', 'part time', 'contract', 'remote',
+      'skills required', 'education', 'apply for', 'job title'
+    ];
+    
+    const indicatorCount = jobIndicators.reduce((count, indicator) => {
+      return count + (content.includes(indicator) ? 1 : 0);
+    }, 0);
+    
+    // Must have at least 3 job-related indicators
+    if (indicatorCount < 3) {
+      return false;
+    }
+    
+    // Check content length - job postings should have substantial content
+    if (content.length < 200) {
+      return false;
+    }
+    
+    return true;
   }
 
   /**

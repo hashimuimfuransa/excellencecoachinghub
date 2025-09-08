@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { SmartTest, SmartTestResult, Job } from '../models';
 import { AuthRequest } from '../middleware/auth';
 import { aiService } from '../services/aiService';
+import { fileParsingService } from '../services/fileParsingService';
 import mongoose from 'mongoose';
 
 /**
@@ -1132,17 +1133,14 @@ export const toggleSmartTestStatus = async (req: AuthRequest, res: Response) => 
 export const uploadSmartTestFile = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
-    const { 
-      title,
-      description,
-      jobTitle,
-      company,
-      industry,
-      timeLimit,
-      difficulty,
-      skillsRequired,
-      questionsData // Expected to be parsed questions from uploaded file
-    } = req.body;
+    const file = req.file;
+
+    console.log('📤 Smart test file upload request received');
+    console.log('File details:', file ? {
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size
+    } : 'No file provided');
 
     if (!userId) {
       return res.status(401).json({
@@ -1151,30 +1149,66 @@ export const uploadSmartTestFile = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    if (!title || !description || !jobTitle) {
+    if (!file) {
       return res.status(400).json({
         success: false,
-        error: 'Title, description, and job title are required'
+        error: 'No file uploaded'
       });
     }
 
+    // Parse the uploaded file to extract questions
+    console.log('📄 Parsing uploaded file...');
+    const parseResult = await fileParsingService.parseFile(file);
+
+    if (!parseResult.success || parseResult.questions.length === 0) {
+      console.error('❌ File parsing failed:', parseResult.errors);
+      return res.status(400).json({
+        success: false,
+        error: 'Failed to parse file',
+        details: {
+          errors: parseResult.errors,
+          warnings: parseResult.warnings
+        }
+      });
+    }
+
+    console.log(`✅ Successfully parsed ${parseResult.totalQuestions} questions from file`);
+
+    // Validate parsed questions
+    const validation = fileParsingService.validateQuestions(parseResult.questions);
+    if (validation.invalid.length > 0) {
+      console.warn(`⚠️ Found ${validation.invalid.length} invalid questions`);
+    }
+
+    if (validation.valid.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No valid questions found in uploaded file',
+        details: {
+          invalidQuestions: validation.invalid.map(q => ({ index: q.index, errors: q.errors }))
+        }
+      });
+    }
+
+    // Get additional metadata from request body
+    const { 
+      title,
+      description,
+      jobTitle,
+      company,
+      industry,
+      timeLimit,
+      difficulty,
+      skillsRequired
+    } = req.body;
+
+    // Use file name as title if not provided
+    const testTitle = title || file.originalname.replace(/\.[^/.]+$/, "").replace(/[_-]/g, ' ');
+    const testDescription = description || `Test created from uploaded file: ${file.originalname}`;
+    const testJobTitle = jobTitle || 'General Position';
+
     // Generate unique test ID
     const testId = `admin_upload_${Date.now()}`;
-
-    // Process questions from uploaded data
-    let processedQuestions: any[] = [];
-    if (questionsData && Array.isArray(questionsData)) {
-      processedQuestions = questionsData.map((q: any, index: number) => ({
-        id: q.id || `q${index + 1}`,
-        question: q.question,
-        type: q.type || 'multiple_choice',
-        options: q.options || [],
-        correctAnswer: q.correctAnswer,
-        explanation: q.explanation || '',
-        category: q.category || 'general',
-        difficulty: q.difficulty || difficulty || 'basic'
-      }));
-    }
 
     // Process skills required
     let processedSkills = [];
@@ -1182,35 +1216,47 @@ export const uploadSmartTestFile = async (req: AuthRequest, res: Response) => {
       if (Array.isArray(skillsRequired)) {
         processedSkills = skillsRequired;
       } else if (typeof skillsRequired === 'string') {
-        processedSkills = skillsRequired.split(',').map((s: string) => s.trim());
+        processedSkills = skillsRequired.split(',').map((s: string) => s.trim()).filter(s => s.length > 0);
       }
     }
 
+    // Create the smart test with parsed questions
     const smartTest = await SmartTest.create({
       testId,
-      title,
-      description,
-      jobTitle,
+      title: testTitle,
+      description: testDescription,
+      jobTitle: testJobTitle,
       company: company || '',
       industry: industry || '',
       userId,
-      questions: processedQuestions,
+      questions: validation.valid,
       timeLimit: timeLimit || 30,
       difficulty: difficulty || 'basic',
-      questionCount: processedQuestions.length,
-      jobRole: jobTitle,
+      questionCount: validation.valid.length,
+      jobRole: testJobTitle,
       skillsRequired: processedSkills,
       isActive: true,
       isAdminUploaded: true,
       uploadedBy: `${req.user?.firstName} ${req.user?.lastName}`,
+      uploadedFileName: file.originalname,
       createdAt: new Date(),
       updatedAt: new Date()
     });
 
+    console.log(`✅ Smart test created successfully with ID: ${smartTest._id}`);
+
+    // Include parsing statistics in response
     res.status(201).json({
       success: true,
       data: smartTest,
-      message: 'Smart test uploaded successfully'
+      message: `Smart test uploaded successfully with ${validation.valid.length} questions`,
+      parsingDetails: {
+        totalParsed: parseResult.totalQuestions,
+        validQuestions: validation.valid.length,
+        invalidQuestions: validation.invalid.length,
+        warnings: parseResult.warnings,
+        fileName: file.originalname
+      }
     });
 
   } catch (error: any) {
@@ -1227,7 +1273,15 @@ export const uploadTestContentToExisting = async (req: AuthRequest, res: Respons
   try {
     const userId = req.user?.id;
     const { testId } = req.params;
-    const { questionsData } = req.body;
+    const file = req.file;
+
+    console.log('📤 Upload test content request received');
+    console.log('Test ID:', testId);
+    console.log('File details:', file ? {
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size
+    } : 'No file provided');
 
     if (!userId) {
       return res.status(401).json({
@@ -1243,6 +1297,13 @@ export const uploadTestContentToExisting = async (req: AuthRequest, res: Respons
       });
     }
 
+    if (!file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No file uploaded'
+      });
+    }
+
     // Find the existing test
     const existingTest = await SmartTest.findOne({ _id: testId });
     if (!existingTest) {
@@ -1252,20 +1313,46 @@ export const uploadTestContentToExisting = async (req: AuthRequest, res: Respons
       });
     }
 
-    // Process and add new questions
-    let newQuestions = [];
-    if (questionsData && Array.isArray(questionsData)) {
-      newQuestions = questionsData.map((q: any, index: number) => ({
-        id: q.id || `q${existingTest.questions.length + index + 1}`,
-        question: q.question,
-        type: q.type || 'multiple_choice',
-        options: q.options || [],
-        correctAnswer: q.correctAnswer,
-        explanation: q.explanation || '',
-        category: q.category || 'general',
-        difficulty: q.difficulty || existingTest.difficulty
-      }));
+    // Parse the uploaded file to extract questions
+    console.log('📄 Parsing uploaded content file...');
+    const parseResult = await fileParsingService.parseFile(file);
+
+    if (!parseResult.success || parseResult.questions.length === 0) {
+      console.error('❌ File parsing failed:', parseResult.errors);
+      return res.status(400).json({
+        success: false,
+        error: 'Failed to parse file content',
+        details: {
+          errors: parseResult.errors,
+          warnings: parseResult.warnings
+        }
+      });
     }
+
+    console.log(`✅ Successfully parsed ${parseResult.totalQuestions} questions from content file`);
+
+    // Validate parsed questions
+    const validation = fileParsingService.validateQuestions(parseResult.questions);
+    if (validation.invalid.length > 0) {
+      console.warn(`⚠️ Found ${validation.invalid.length} invalid questions in content file`);
+    }
+
+    if (validation.valid.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No valid questions found in uploaded content file',
+        details: {
+          invalidQuestions: validation.invalid.map(q => ({ index: q.index, errors: q.errors }))
+        }
+      });
+    }
+
+    // Prepare new questions with updated IDs to avoid conflicts
+    const newQuestions = validation.valid.map((q: any, index: number) => ({
+      ...q,
+      id: `q${existingTest.questions.length + index + 1}`,
+      difficulty: q.difficulty || existingTest.difficulty
+    }));
 
     // Update the test with new questions
     existingTest.questions = [...existingTest.questions, ...newQuestions];
@@ -1274,10 +1361,20 @@ export const uploadTestContentToExisting = async (req: AuthRequest, res: Respons
 
     await existingTest.save();
 
+    console.log(`✅ Added ${newQuestions.length} questions to existing test: ${existingTest.title}`);
+
     res.status(200).json({
       success: true,
       data: existingTest,
-      message: `Added ${newQuestions.length} questions to the test`
+      message: `Added ${newQuestions.length} questions to the test`,
+      uploadDetails: {
+        totalParsed: parseResult.totalQuestions,
+        validQuestionsAdded: validation.valid.length,
+        invalidQuestions: validation.invalid.length,
+        warnings: parseResult.warnings,
+        fileName: file.originalname,
+        newTotalQuestions: existingTest.questions.length
+      }
     });
 
   } catch (error: any) {
@@ -1342,6 +1439,216 @@ export const togglePublishStatus = async (req: AuthRequest, res: Response) => {
   }
 };
 
+/**
+ * @desc Extract questions from admin test using AI (get random 20 questions)
+ * @route POST /api/smart-tests/admin/:testId/extract-questions
+ * @access Private (Admin)
+ */
+export const extractQuestionsFromTest = async (req: AuthRequest, res: Response) => {
+  try {
+    const { testId } = req.params;
+    const { questionCount = 20, randomize = true } = req.body;
+
+    if (!testId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Test ID is required'
+      });
+    }
+
+    // Find the admin test
+    const test = await SmartTest.findById(testId);
+    if (!test) {
+      return res.status(404).json({
+        success: false,
+        error: 'Test not found'
+      });
+    }
+
+    // Check if test has questions/content to extract from
+    if (!test.questions || test.questions.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Test has no questions available for extraction. Please upload content first.'
+      });
+    }
+
+    let selectedQuestions = [...test.questions];
+
+    // If randomize is true or we need fewer questions than available, randomize and select
+    if (randomize || test.questions.length > questionCount) {
+      // Shuffle questions using Fisher-Yates algorithm
+      for (let i = selectedQuestions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [selectedQuestions[i], selectedQuestions[j]] = [selectedQuestions[j], selectedQuestions[i]];
+      }
+      
+      // Select the requested number of questions
+      selectedQuestions = selectedQuestions.slice(0, Math.min(questionCount, selectedQuestions.length));
+    }
+
+    // Reassign question IDs for the extracted set
+    const extractedQuestions = selectedQuestions.map((question, index) => ({
+      ...question,
+      id: `extracted_q${index + 1}`,
+      order: index + 1
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        testId: test._id,
+        testTitle: test.title,
+        extractedQuestions,
+        totalAvailable: test.questions.length,
+        extracted: extractedQuestions.length,
+        randomized: randomize
+      },
+      message: `Successfully extracted ${extractedQuestions.length} questions from the test`
+    });
+
+  } catch (error: any) {
+    console.error('Error extracting questions:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to extract questions from test'
+    });
+  }
+};
+
+/**
+ * @desc Start admin test session with AI extracted questions
+ * @route POST /api/smart-tests/admin/:testId/start-admin-test
+ * @access Private
+ */
+export const startAdminTest = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const { testId } = req.params;
+    const { questionCount = 20, randomize = true } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    // Find the admin test
+    const test = await SmartTest.findById(testId);
+    if (!test) {
+      return res.status(404).json({
+        success: false,
+        error: 'Test not found'
+      });
+    }
+
+    // Check if test is active
+    if (!test.isActive) {
+      return res.status(400).json({
+        success: false,
+        error: 'Test is currently inactive'
+      });
+    }
+
+    // Check if test has questions
+    if (!test.questions || test.questions.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Test has no questions available. Please contact administrator.'
+      });
+    }
+
+    let selectedQuestions = [...test.questions];
+
+    // Always randomize for admin tests to ensure different questions each time
+    if (randomize && test.questions.length > questionCount) {
+      // Shuffle questions using Fisher-Yates algorithm for fair randomization
+      for (let i = selectedQuestions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [selectedQuestions[i], selectedQuestions[j]] = [selectedQuestions[j], selectedQuestions[i]];
+      }
+      
+      // Select the requested number of questions
+      selectedQuestions = selectedQuestions.slice(0, questionCount);
+    } else if (test.questions.length <= questionCount) {
+      // If we have fewer questions than requested, randomize order but use all
+      if (randomize) {
+        for (let i = selectedQuestions.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [selectedQuestions[i], selectedQuestions[j]] = [selectedQuestions[j], selectedQuestions[i]];
+        }
+      }
+    }
+
+    // Create a clean question set for the test session (without correct answers)
+    const testQuestions = selectedQuestions.map((question, index) => {
+      const cleanQuestion = {
+        id: `session_q${index + 1}`,
+        question: question.question,
+        type: question.type,
+        options: question.options || [],
+        category: question.category || 'General',
+        difficulty: question.difficulty || test.difficulty,
+        points: question.points || 1
+      };
+
+      // Remove correct answer from question data sent to frontend
+      return cleanQuestion;
+    });
+
+    // Generate a unique session ID
+    const sessionId = `admin_session_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+
+    // Store the session data with correct answers (for later validation)
+    // This could be stored in Redis or a session collection for better scalability
+    const sessionData = {
+      sessionId,
+      testId: test._id,
+      userId,
+      questions: selectedQuestions, // Keep the full questions with answers
+      startTime: new Date(),
+      timeLimit: test.timeLimit || 60,
+      isAdminTest: true
+    };
+
+    // For now, we'll return the session data directly
+    // In production, consider using Redis or a dedicated session store
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        sessionId,
+        test: {
+          _id: test._id,
+          testId: test.testId,
+          title: test.title,
+          description: test.description,
+          jobTitle: test.jobTitle,
+          company: test.company,
+          industry: test.industry,
+          timeLimit: test.timeLimit || 60,
+          difficulty: test.difficulty,
+          questionCount: testQuestions.length,
+          isAdminTest: true
+        },
+        questions: testQuestions,
+        timeLimit: test.timeLimit || 60,
+        totalQuestions: testQuestions.length,
+        randomized: randomize
+      },
+      message: 'Admin test session started successfully'
+    });
+
+  } catch (error: any) {
+    console.error('Error starting admin test:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to start admin test session'
+    });
+  }
+};
+
 export {
   getUserSmartTests,
   getSmartTestById,
@@ -1355,5 +1662,7 @@ export {
   toggleSmartTestStatus,
   uploadSmartTestFile,
   uploadTestContentToExisting,
-  togglePublishStatus
+  togglePublishStatus,
+  extractQuestionsFromTest,
+  startAdminTest
 };

@@ -13,6 +13,7 @@ import {
   startSmartTest,
   submitSmartTest,
   getUserSmartTestResults,
+  getSmartTestResultById,
   getAdminSmartTests,
   createAdminSmartTest,
   updateAdminSmartTest,
@@ -51,7 +52,13 @@ router.get('/user', getUserSmartTests);
 // Get user's smart test results
 router.get('/results', getUserSmartTestResults);
 
+// Get specific smart test result by ID
+router.get('/results/:resultId', getSmartTestResultById);
+
 // Admin routes (must come before dynamic routes)
+// Get admin uploaded smart tests (for job seekers) - legacy endpoint
+router.get('/admin', getAdminSmartTests);
+
 // Get admin uploaded smart tests (for job seekers)
 router.get('/admin/published', getAdminSmartTests);
 

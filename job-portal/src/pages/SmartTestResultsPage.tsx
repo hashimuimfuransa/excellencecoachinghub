@@ -144,6 +144,10 @@ const SmartTestResultsPage: React.FC = () => {
   const getCategoryPerformance = (result: SmartTestResult) => {
     const categories: Record<string, { correct: number; total: number }> = {};
     
+    if (!result.detailedResults || result.detailedResults.length === 0) {
+      return [];
+    }
+    
     result.detailedResults.forEach(item => {
       if (!categories[item.category]) {
         categories[item.category] = { correct: 0, total: 0 };
@@ -306,7 +310,7 @@ const SmartTestResultsPage: React.FC = () => {
                   {selectedResult.feedback.overall}
                 </Typography>
                 
-                {selectedResult.feedback.strengths.length > 0 && (
+                {selectedResult.feedback.strengths && selectedResult.feedback.strengths.length > 0 && (
                   <>
                     <Typography variant="subtitle1" color="success.main" gutterBottom sx={{ mt: 3 }}>
                       Strengths
@@ -324,7 +328,7 @@ const SmartTestResultsPage: React.FC = () => {
                   </>
                 )}
 
-                {selectedResult.feedback.improvements.length > 0 && (
+                {selectedResult.feedback.improvements && selectedResult.feedback.improvements.length > 0 && (
                   <>
                     <Typography variant="subtitle1" color="warning.main" gutterBottom sx={{ mt: 2 }}>
                       Areas for Improvement
@@ -351,19 +355,25 @@ const SmartTestResultsPage: React.FC = () => {
                 <Typography variant="h6" gutterBottom>
                   Recommendations
                 </Typography>
-                <List dense>
-                  {selectedResult.feedback.recommendations.map((rec, index) => (
-                    <ListItem key={index}>
-                      <ListItemIcon>
-                        <Lightbulb sx={{ color: theme.palette.info.main }} />
-                      </ListItemIcon>
-                      <ListItemText 
-                        primary={rec}
-                        primaryTypographyProps={{ variant: 'body2' }}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
+                {selectedResult.feedback.recommendations && selectedResult.feedback.recommendations.length > 0 ? (
+                  <List dense>
+                    {selectedResult.feedback.recommendations.map((rec, index) => (
+                      <ListItem key={index}>
+                        <ListItemIcon>
+                          <Lightbulb sx={{ color: theme.palette.info.main }} />
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={rec}
+                          primaryTypographyProps={{ variant: 'body2' }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    No specific recommendations available.
+                  </Typography>
+                )}
               </CardContent>
             </Card>
           </Grid>
@@ -375,7 +385,7 @@ const SmartTestResultsPage: React.FC = () => {
             <Typography variant="h6" gutterBottom>
               Question-by-Question Analysis
             </Typography>
-            {selectedResult.detailedResults.map((item, index) => (
+            {selectedResult.detailedResults && selectedResult.detailedResults.length > 0 ? selectedResult.detailedResults.map((item, index) => (
               <Accordion key={index}>
                 <AccordionSummary expandIcon={<ExpandMore />}>
                   <Box display="flex" alignItems="center" width="100%">
@@ -424,7 +434,11 @@ const SmartTestResultsPage: React.FC = () => {
                   </Box>
                 </AccordionDetails>
               </Accordion>
-            ))}
+            )) : (
+              <Typography variant="body2" color="text.secondary">
+                No detailed results available for this test.
+              </Typography>
+            )}
           </CardContent>
         </Card>
       </Container>

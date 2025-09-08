@@ -555,6 +555,38 @@ const SmartTestPage: React.FC = () => {
     }
   };
 
+  const startAdminTest = async (testId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Start admin test with AI-selected 20 questions
+      const session = await smartTestService.startAdminTest(testId, {
+        questionCount: 20,
+        randomize: true
+      });
+      
+      console.log('🎯 Admin test session started:', session);
+      
+      // Navigate to test taking page with admin test data
+      navigate('/take-smart-test', {
+        state: {
+          sessionId: session.sessionId,
+          test: session.test,
+          questions: session.questions,
+          isAdminTest: true,
+          totalQuestions: session.totalQuestions,
+          timeLimit: session.timeLimit
+        }
+      });
+    } catch (error: any) {
+      console.error('❌ Failed to start admin test:', error);
+      setError(error.response?.data?.error || 'Failed to start admin test');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleStartGeneratedTest = async () => {
     if (generatedTestId) {
       setShowStartTestDialog(false);
@@ -1078,24 +1110,20 @@ const SmartTestPage: React.FC = () => {
                         Skills: {test.skillsRequired.join(', ')}
                       </Typography>
 
-                      <Typography variant="caption" color="text.secondary" display="block" mb={1}>
-                        Uploaded: {new Date(test.createdAt).toLocaleDateString()}
-                      </Typography>
-                      
-                      <Typography variant="caption" color="text.secondary">
-                        By: {test.uploadedBy}
-                      </Typography>
-
                       <Box mt={3} display="flex" flexDirection="column" gap={1}>
                         <Button
                           variant="contained"
                           fullWidth
-                          startIcon={<PlayArrow />}
+                          startIcon={<Psychology />}
                           onClick={() => startAdminTest(test._id)}
                           disabled={loading || !test.isActive}
                           color="primary"
+                          sx={{ 
+                            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                            fontWeight: 'bold'
+                          }}
                         >
-                          {!test.isActive ? 'Test Inactive' : loading ? 'Starting...' : 'Start Admin Test (AI - 20 Questions)'}
+                          {!test.isActive ? 'Test Inactive' : loading ? 'Starting...' : 'Start AI Test (20 Questions)'}
                         </Button>
                         <Button
                           variant="outlined"
@@ -1105,7 +1133,7 @@ const SmartTestPage: React.FC = () => {
                           onClick={() => startTest(test.testId)}
                           disabled={loading || !test.isActive}
                         >
-                          {loading ? 'Starting...' : 'Start Full Test'}
+                          {loading ? 'Starting...' : 'Full Test'}
                         </Button>
                       </Box>
                     </CardContent>

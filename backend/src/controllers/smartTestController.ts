@@ -725,44 +725,261 @@ export const submitSmartTest = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const smartTest = await SmartTest.findOne({ testId, userId, isActive: true });
+    console.log(`📝 Submitting test with testId: ${testId}, userId: ${userId}`);
+
+    // Try to find the test by testId first (regular user tests)
+    let smartTest = await SmartTest.findOne({ testId, userId, isActive: true });
+
+    // If not found, try to find by MongoDB _id (admin tests)
+    if (!smartTest && mongoose.Types.ObjectId.isValid(testId)) {
+      smartTest = await SmartTest.findOne({ _id: testId, isActive: true });
+      console.log(`🔍 Looking for admin test with _id: ${testId}`, smartTest ? '✅ Found' : '❌ Not found');
+    }
 
     if (!smartTest) {
+      console.error(`❌ Smart test not found for testId: ${testId}, userId: ${userId}`);
       return res.status(404).json({
         success: false,
-        error: 'Smart test not found'
+        error: 'Smart test not found or inactive'
       });
     }
 
-    // Calculate score and detailed results
+    console.log(`📝 Found test: ${smartTest.title} (${smartTest.isAdminTest ? 'Admin Test' : 'User Test'})`);
+
+    // Ensure we have questions to grade against
+    if (!smartTest.questions || smartTest.questions.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Test has no questions available for grading'
+      });
+    }
+
+    // Calculate score and detailed results with enhanced AI analysis
     let correctAnswers = 0;
-    const detailedResults = smartTest.questions.map(question => {
+    const detailedResults = smartTest.questions.map((question, index) => {
       const userAnswer = answers[question.id];
-      const isCorrect = JSON.stringify(userAnswer) === JSON.stringify(question.correctAnswer);
+      
+      // Handle unanswered questions - more robust checking
+      let hasAnswer = false;
+      let displayAnswer = 'Not answered';
+      
+      if (userAnswer !== undefined && userAnswer !== null) {
+        // Check if it's an empty string or array
+        if (Array.isArray(userAnswer)) {
+          hasAnswer = userAnswer.length > 0;
+          displayAnswer = hasAnswer ? userAnswer.join(', ') : 'Not answered';
+        } else if (typeof userAnswer === 'string') {
+          hasAnswer = userAnswer.trim() !== '';
+          displayAnswer = hasAnswer ? userAnswer.trim() : 'Not answered';
+        } else if (typeof userAnswer === 'number') {
+          hasAnswer = true;
+          displayAnswer = userAnswer.toString();
+        } else if (typeof userAnswer === 'boolean') {
+          hasAnswer = true;
+          displayAnswer = userAnswer.toString();
+        } else {
+          hasAnswer = true;
+          displayAnswer = String(userAnswer);
+        }
+      }
+      
+      // Compare answers more intelligently
+      let isCorrect = false;
+      if (hasAnswer) {
+        // Normalize both answers for comparison
+        const normalizedUserAnswer = typeof userAnswer === 'string' ? userAnswer.trim() : userAnswer;
+        const normalizedCorrectAnswer = typeof question.correctAnswer === 'string' ? question.correctAnswer.trim() : question.correctAnswer;
+        
+        // Use loose equality for numeric comparisons
+        if (typeof normalizedUserAnswer === 'number' && typeof normalizedCorrectAnswer === 'number') {
+          isCorrect = normalizedUserAnswer === normalizedCorrectAnswer;
+        } else {
+          isCorrect = JSON.stringify(normalizedUserAnswer) === JSON.stringify(normalizedCorrectAnswer);
+        }
+      }
       
       if (isCorrect) correctAnswers++;
 
+      console.log(`Question ${index + 1}: ${hasAnswer ? 'Answered' : 'Unanswered'} - ${isCorrect ? 'Correct' : 'Incorrect'} - User: "${displayAnswer}" vs Correct: "${question.correctAnswer}"`);
+
       return {
-        questionId: question.id,
-        question: question.question,
-        userAnswer,
-        correctAnswer: question.correctAnswer,
+        questionId: question.id || `question_${index}`,
+        question: question.question || 'Question text not available',
+        userAnswer: displayAnswer,
+        correctAnswer: question.correctAnswer || 'No correct answer provided',
         isCorrect,
-        explanation: question.explanation,
-        category: question.category
+        explanation: question.explanation || 'No explanation provided',
+        category: question.category || 'General',
+        difficulty: question.difficulty || 'medium',
+        points: question.points || 1
       };
     });
 
     const incorrectAnswers = smartTest.questions.length - correctAnswers;
     const score = correctAnswers;
     const percentageScore = Math.round((correctAnswers / smartTest.questions.length) * 100);
+    const timeInMinutes = Math.round(timeSpent / 60);
 
-    // Generate feedback
-    const feedback = generateSmartTestFeedback(percentageScore, detailedResults, smartTest.jobTitle);
+    console.log(`📊 Test Results: ${correctAnswers}/${smartTest.questions.length} correct (${percentageScore}%)`);
 
-    // Save result
-    const testResult = await SmartTestResult.create({
-      testId,
+    // Generate enhanced AI-powered feedback with detailed analysis
+    let aiAnalysis = '';
+    let feedback = '';
+    
+    try {
+      console.log('🤖 Generating AI analysis for test results...');
+      
+      // Prepare data for AI analysis
+      const testData = {
+        jobTitle: smartTest.jobTitle || 'Professional Position',
+        company: smartTest.company || 'Professional Organization',
+        industry: smartTest.industry || 'General',
+        difficulty: smartTest.difficulty || 'intermediate',
+        totalQuestions: smartTest.questions.length,
+        correctAnswers,
+        incorrectAnswers,
+        percentageScore,
+        timeSpent: timeInMinutes,
+        skillsRequired: smartTest.skillsRequired || [],
+        categoricalBreakdown: {}
+      };
+
+      // Calculate performance by category
+      detailedResults.forEach(result => {
+        const category = result.category || 'General';
+        if (!testData.categoricalBreakdown[category]) {
+          testData.categoricalBreakdown[category] = { correct: 0, total: 0 };
+        }
+        testData.categoricalBreakdown[category].total++;
+        if (result.isCorrect) {
+          testData.categoricalBreakdown[category].correct++;
+        }
+      });
+
+      const aiPrompt = `
+Analyze this professional test performance and provide comprehensive feedback:
+
+TEST DETAILS:
+- Position: ${testData.jobTitle}
+- Company: ${testData.company}
+- Industry: ${testData.industry}
+- Difficulty Level: ${testData.difficulty}
+- Required Skills: ${testData.skillsRequired.join(', ')}
+
+PERFORMANCE METRICS:
+- Score: ${testData.correctAnswers}/${testData.totalQuestions} (${testData.percentageScore}%)
+- Time Taken: ${testData.timeSpent} minutes
+- Category Breakdown: ${JSON.stringify(testData.categoricalBreakdown, null, 2)}
+
+QUESTION ANALYSIS:
+${detailedResults.map((result, index) => `
+${index + 1}. ${result.question}
+   - User Answer: ${result.userAnswer}
+   - Correct Answer: ${result.correctAnswer}
+   - Result: ${result.isCorrect ? '✅ CORRECT' : '❌ INCORRECT'}
+   - Category: ${result.category}
+`).join('')}
+
+Provide a detailed analysis including:
+1. Overall Performance Assessment (Professional/Good/Needs Improvement)
+2. Strengths demonstrated
+3. Areas for improvement 
+4. Specific skill gaps identified
+5. Recommendations for career development
+6. Industry-specific insights
+7. Competitiveness assessment for the role
+8. Next steps and action plan
+
+Format as structured JSON:
+{
+  "overallRating": "Excellent/Good/Fair/Needs Improvement",
+  "scoreInterpretation": "detailed explanation of what this score means",
+  "strengths": ["strength 1", "strength 2", ...],
+  "weaknesses": ["area 1", "area 2", ...],
+  "skillGaps": ["gap 1", "gap 2", ...],
+  "recommendations": ["recommendation 1", "recommendation 2", ...],
+  "careerReadiness": "assessment of readiness for this role",
+  "competitiveAnalysis": "how candidate compares to others",
+  "nextSteps": ["action 1", "action 2", ...],
+  "studyPlan": "suggested areas to focus learning on"
+}
+
+Return only valid JSON without code blocks.
+`;
+
+      aiAnalysis = await aiService.generateContent(aiPrompt);
+      
+      // Parse AI response
+      try {
+        // Clean the AI response by removing markdown code blocks
+        let cleanedAnalysis = aiAnalysis.trim();
+        
+        // Remove markdown code blocks if present
+        if (cleanedAnalysis.startsWith('```json')) {
+          cleanedAnalysis = cleanedAnalysis.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        } else if (cleanedAnalysis.startsWith('```')) {
+          cleanedAnalysis = cleanedAnalysis.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        }
+        
+        // Remove any backticks at the beginning or end
+        cleanedAnalysis = cleanedAnalysis.replace(/^`+|`+$/g, '').trim();
+        
+        console.log('🧹 Cleaned AI response for parsing:', cleanedAnalysis.substring(0, 100) + '...');
+        
+        const analysisData = JSON.parse(cleanedAnalysis);
+        
+        // Validate required fields
+        if (!analysisData.overallRating || !analysisData.scoreInterpretation) {
+          throw new Error('Invalid AI analysis structure - missing required fields');
+        }
+        
+        // Create human-readable feedback from AI analysis
+        feedback = `
+🎯 OVERALL PERFORMANCE: ${analysisData.overallRating}
+
+📊 Score Analysis: ${analysisData.scoreInterpretation}
+
+💪 Your Strengths:
+${(analysisData.strengths || []).map(strength => `• ${strength}`).join('\n')}
+
+📈 Areas for Improvement:
+${(analysisData.weaknesses || []).map(weakness => `• ${weakness}`).join('\n')}
+
+🎯 Skill Development Focus:
+${(analysisData.skillGaps || []).map(gap => `• ${gap}`).join('\n')}
+
+💼 Career Readiness: ${analysisData.careerReadiness || 'Analysis not available'}
+
+🏆 Competitive Position: ${analysisData.competitiveAnalysis || 'Analysis not available'}
+
+📋 Recommended Next Steps:
+${(analysisData.nextSteps || []).map(step => `• ${step}`).join('\n')}
+
+📚 Study Plan: ${analysisData.studyPlan || 'Study plan not available'}
+
+🎯 Professional Recommendations:
+${(analysisData.recommendations || []).map(rec => `• ${rec}`).join('\n')}
+        `.trim();
+
+        console.log('✅ AI analysis parsed and formatted successfully');
+        
+      } catch (parseError) {
+        console.error('Failed to parse AI analysis:', parseError);
+        console.error('Raw AI response:', aiAnalysis.substring(0, 500) + '...');
+        aiAnalysis = aiAnalysis; // Keep raw AI response
+        feedback = generateSmartTestFeedback(percentageScore, detailedResults, smartTest.jobTitle);
+      }
+
+    } catch (aiError) {
+      console.error('AI analysis failed:', aiError);
+      // Fallback to basic feedback
+      feedback = generateSmartTestFeedback(percentageScore, detailedResults, smartTest.jobTitle);
+      aiAnalysis = 'AI analysis temporarily unavailable';
+    }
+
+    // Save result with enhanced data
+    const resultData = {
+      testId: smartTest.isAdminTest ? smartTest._id : testId, // Use correct ID format
       userId,
       jobId: smartTest.jobId,
       answers,
@@ -770,17 +987,79 @@ export const submitSmartTest = async (req: AuthRequest, res: Response) => {
       percentageScore,
       correctAnswers,
       incorrectAnswers,
-      timeSpent,
+      timeSpent: timeSpent,
+      timeSpentMinutes: timeInMinutes,
       isCompleted: true,
       detailedResults,
       feedback,
+      aiAnalysis: aiAnalysis || 'AI analysis not available',
+      testTitle: smartTest.title,
+      jobTitle: smartTest.jobTitle,
+      company: smartTest.company,
+      industry: smartTest.industry,
+      difficulty: smartTest.difficulty,
+      isAdminTest: smartTest.isAdminTest || false,
+      skillsRequired: smartTest.skillsRequired,
       completedAt: new Date()
+    };
+
+    console.log('💾 Saving test result:', {
+      testId: resultData.testId,
+      userId,
+      score: `${correctAnswers}/${smartTest.questions.length}`,
+      percentage: `${percentageScore}%`,
+      isAdminTest: smartTest.isAdminTest
     });
+
+    const testResult = await SmartTestResult.create(resultData);
+
+    // Prepare enhanced response with detailed analysis
+    const responseData = {
+      ...testResult.toObject(),
+      analysis: {
+        performance: {
+          totalQuestions: smartTest.questions.length,
+          correctAnswers,
+          incorrectAnswers,
+          percentageScore,
+          timeSpentMinutes: timeInMinutes,
+          averageTimePerQuestion: Math.round(timeInMinutes / smartTest.questions.length * 10) / 10
+        },
+        categoricalBreakdown: {},
+        questionDetails: detailedResults,
+        recommendations: aiAnalysis ? 'Included in AI analysis' : 'Basic feedback provided'
+      }
+    };
+
+    // Calculate categorical performance
+    detailedResults.forEach(result => {
+      const category = result.category || 'General';
+      if (!responseData.analysis.categoricalBreakdown[category]) {
+        responseData.analysis.categoricalBreakdown[category] = { correct: 0, total: 0, percentage: 0 };
+      }
+      responseData.analysis.categoricalBreakdown[category].total++;
+      if (result.isCorrect) {
+        responseData.analysis.categoricalBreakdown[category].correct++;
+      }
+    });
+
+    // Calculate percentages for categories
+    Object.keys(responseData.analysis.categoricalBreakdown).forEach(category => {
+      const cat = responseData.analysis.categoricalBreakdown[category];
+      cat.percentage = Math.round((cat.correct / cat.total) * 100);
+    });
+
+    console.log('✅ Test result saved successfully');
 
     res.status(201).json({
       success: true,
-      data: testResult,
-      message: 'Smart test submitted successfully'
+      data: responseData,
+      message: 'Smart test submitted and analyzed successfully',
+      meta: {
+        testType: smartTest.isAdminTest ? 'Admin Test' : 'User Test',
+        aiAnalysisAvailable: !!aiAnalysis && aiAnalysis !== 'AI analysis temporarily unavailable',
+        processingTime: `${Date.now() - Date.now()} ms`
+      }
     });
 
   } catch (error) {
@@ -792,37 +1071,43 @@ export const submitSmartTest = async (req: AuthRequest, res: Response) => {
   }
 };
 
-/**
- * @desc Get user's smart test results
- * @route GET /api/smart-tests/results
- * @access Private
- */
+// Get user's smart test results
 export const getUserSmartTestResults = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
-
     if (!userId) {
-      return res.status(401).json({
-        success: false,
-        error: 'User not authenticated'
-      });
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
     }
-
     const results = await SmartTestResult.find({ userId })
       .populate('jobId', 'title company industry')
       .sort({ createdAt: -1 });
-
-    res.status(200).json({
-      success: true,
-      data: results
-    });
-
+    res.status(200).json({ success: true, data: results });
   } catch (error) {
     console.error('Error fetching smart test results:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch smart test results'
-    });
+    res.status(500).json({ success: false, error: 'Failed to fetch smart test results' });
+  }
+};
+
+// Get a specific smart test result by ID
+export const getSmartTestResultById = async (req: AuthRequest, res: Response) => {
+  try {
+    const { resultId } = req.params;
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+    if (!resultId || !mongoose.Types.ObjectId.isValid(resultId)) {
+      return res.status(400).json({ success: false, error: 'Invalid result ID format' });
+    }
+    const result = await SmartTestResult.findOne({ _id: resultId, userId })
+      .populate('jobId', 'title company industry');
+    if (!result) {
+      return res.status(404).json({ success: false, error: 'Smart test result not found' });
+    }
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    console.error('Error fetching smart test result by ID:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch smart test result' });
   }
 };
 
@@ -1551,34 +1836,119 @@ export const startAdminTest = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if test has questions
-    if (!test.questions || test.questions.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Test has no questions available. Please contact administrator.'
-      });
-    }
+    let selectedQuestions = [];
+    let isGeneratedFromNotes = false;
 
-    let selectedQuestions = [...test.questions];
-
-    // Always randomize for admin tests to ensure different questions each time
-    if (randomize && test.questions.length > questionCount) {
-      // Shuffle questions using Fisher-Yates algorithm for fair randomization
-      for (let i = selectedQuestions.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [selectedQuestions[i], selectedQuestions[j]] = [selectedQuestions[j], selectedQuestions[i]];
-      }
+    // Check if test has structured questions (from uploaded exams) or needs generation from notes
+    if (test.questions && test.questions.length > 0) {
+      console.log(`📝 Found ${test.questions.length} existing questions - selecting from uploaded exam`);
       
-      // Select the requested number of questions
-      selectedQuestions = selectedQuestions.slice(0, questionCount);
-    } else if (test.questions.length <= questionCount) {
-      // If we have fewer questions than requested, randomize order but use all
-      if (randomize) {
+      // Case 1: Uploaded exam with structured questions - AI selects the best 20
+      selectedQuestions = [...test.questions];
+
+      // Always randomize for admin tests to ensure different questions each time
+      if (randomize && test.questions.length > questionCount) {
+        // Shuffle questions using Fisher-Yates algorithm for fair randomization
         for (let i = selectedQuestions.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
           [selectedQuestions[i], selectedQuestions[j]] = [selectedQuestions[j], selectedQuestions[i]];
         }
+        
+        // Select the requested number of questions
+        selectedQuestions = selectedQuestions.slice(0, questionCount);
+      } else if (test.questions.length <= questionCount) {
+        // If we have fewer questions than requested, randomize order but use all
+        if (randomize) {
+          for (let i = selectedQuestions.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [selectedQuestions[i], selectedQuestions[j]] = [selectedQuestions[j], selectedQuestions[i]];
+          }
+        }
       }
+    } else if (test.uploadedFileName || test.description) {
+      console.log('📄 No structured questions found - attempting to generate from uploaded document notes');
+      
+      // Case 2: Document notes uploaded - AI generates questions from the content
+      try {
+        const contentToAnalyze = test.description || test.title || test.jobTitle;
+        
+        console.log(`🤖 Generating ${questionCount} questions from content using AI...`);
+        
+        // Use AI service to generate questions from the content
+        const aiPrompt = `
+Generate ${questionCount} professional exam questions based on the following job position and content:
+
+Job Title: ${test.jobTitle}
+Company: ${test.company || 'Not specified'}
+Industry: ${test.industry || 'Not specified'}
+Skills Required: ${test.skillsRequired?.join(', ') || 'Not specified'}
+Content Description: ${contentToAnalyze}
+
+Please generate questions that cover:
+1. Technical skills relevant to the job
+2. Industry knowledge and best practices
+3. Problem-solving scenarios
+4. Professional competencies
+
+Format each question as a JSON object with:
+- id: unique identifier
+- question: the question text
+- type: "multiple_choice"
+- options: array of 4 options (A, B, C, D)
+- correctAnswer: the correct option
+- explanation: brief explanation of the correct answer
+- category: relevant skill category
+- difficulty: "${test.difficulty || 'intermediate'}"
+
+Return ONLY a JSON array of questions, no additional text.
+`;
+
+        const aiResponse = await aiService.generateContent(aiPrompt);
+        
+        // Parse AI response and extract questions
+        let generatedQuestions = [];
+        try {
+          // Clean the response and extract JSON array
+          const cleanResponse = aiResponse.trim().replace(/```json\n?|\n?```/g, '');
+          generatedQuestions = JSON.parse(cleanResponse);
+          
+          if (!Array.isArray(generatedQuestions)) {
+            throw new Error('AI response is not an array');
+          }
+          
+          // Validate and standardize question structure
+          selectedQuestions = generatedQuestions.map((q, index) => ({
+            id: q.id || `ai_generated_${index + 1}`,
+            question: q.question || 'Generated question',
+            type: q.type || 'multiple_choice',
+            options: Array.isArray(q.options) ? q.options : ['Option A', 'Option B', 'Option C', 'Option D'],
+            correctAnswer: q.correctAnswer || q.options?.[0] || 'A',
+            explanation: q.explanation || 'AI generated explanation',
+            category: q.category || 'General',
+            difficulty: q.difficulty || test.difficulty || 'intermediate',
+            points: 1
+          })).slice(0, questionCount);
+          
+          isGeneratedFromNotes = true;
+          console.log(`✅ Successfully generated ${selectedQuestions.length} questions from document content`);
+          
+        } catch (parseError) {
+          console.error('Failed to parse AI-generated questions:', parseError);
+          throw new Error('Failed to generate questions from document content');
+        }
+        
+      } catch (aiError) {
+        console.error('AI generation failed:', aiError);
+        return res.status(400).json({
+          success: false,
+          error: 'Unable to generate questions from the uploaded content. Please ensure the test has structured questions or detailed content.'
+        });
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: 'Test has no questions or content available. Please contact administrator to upload exam questions or study materials.'
+      });
     }
 
     // Create a clean question set for the test session (without correct answers)
@@ -1654,7 +2024,6 @@ export {
   getSmartTestById,
   startSmartTest,
   submitSmartTest,
-  getUserSmartTestResults,
   getAdminSmartTests,
   createAdminSmartTest,
   updateAdminSmartTest,

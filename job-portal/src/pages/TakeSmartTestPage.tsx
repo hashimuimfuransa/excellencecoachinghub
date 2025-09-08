@@ -67,12 +67,23 @@ const TakeSmartTestPage: React.FC = () => {
   const { user } = useAuth();
 
   // Get data from navigation state
-  const { sessionId, test } = location.state as { sessionId: string; test: SmartTest };
+  const { sessionId, test, questions: adminQuestions, isAdminTest, totalQuestions, timeLimit } = location.state as { 
+    sessionId: string; 
+    test: SmartTest; 
+    questions?: SmartTestQuestion[];
+    isAdminTest?: boolean;
+    totalQuestions?: number;
+    timeLimit?: number;
+  };
+
+  // Determine which questions to use - admin questions if available, otherwise test questions
+  const testQuestions = adminQuestions || test.questions || [];
+  const testTimeLimit = timeLimit || test.timeLimit;
 
   // State
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
-  const [timeRemaining, setTimeRemaining] = useState(test.timeLimit * 60); // Convert to seconds
+  const [timeRemaining, setTimeRemaining] = useState(testTimeLimit * 60); // Convert to seconds
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [startTime] = useState(Date.now());
@@ -82,6 +93,16 @@ const TakeSmartTestPage: React.FC = () => {
       navigate('/smart-tests');
       return;
     }
+    
+    // Debug logging for questions structure
+    console.log('Test Questions Debug:', {
+      isAdminTest,
+      adminQuestions: adminQuestions?.length || 0,
+      testQuestions: test.questions?.length || 0,
+      totalTestQuestions: testQuestions.length,
+      firstQuestionId: testQuestions[0]?.id,
+      firstQuestionStructure: testQuestions[0]
+    });
   }, [test, sessionId, navigate]);
 
   // Timer countdown
@@ -119,10 +140,15 @@ const TakeSmartTestPage: React.FC = () => {
   };
 
   const handleAnswerChange = (questionId: string, value: any) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: value
-    }));
+    console.log(`Answer changed for question ${questionId}:`, value);
+    setAnswers(prev => {
+      const newAnswers = {
+        ...prev,
+        [questionId]: value
+      };
+      console.log('Updated answers object:', newAnswers);
+      return newAnswers;
+    });
   };
 
   const renderAnswerInput = (question: SmartTestQuestion) => {
@@ -185,7 +211,7 @@ const TakeSmartTestPage: React.FC = () => {
   };
 
   const goToQuestion = (index: number) => {
-    if (index >= 0 && index < test.questions.length) {
+    if (index >= 0 && index < testQuestions.length) {
       setCurrentQuestionIndex(index);
     }
   };
@@ -201,11 +227,18 @@ const TakeSmartTestPage: React.FC = () => {
         testId: test.testId,
         sessionId,
         answers,
-        timeSpent
+        timeSpent,
+        answersKeys: Object.keys(answers),
+        answersValues: Object.values(answers),
+        questionIds: testQuestions.map(q => q.id),
+        totalQuestions: testQuestions.length
       });
 
+      // Use appropriate test ID - for admin tests use _id, for regular tests use testId
+      const testIdToSubmit = isAdminTest ? test._id : test.testId;
+      
       const result = await smartTestService.submitSmartTest(
-        test.testId,
+        testIdToSubmit,
         sessionId,
         answers,
         timeSpent
@@ -264,20 +297,32 @@ const TakeSmartTestPage: React.FC = () => {
   };
 
   const getAnsweredQuestionsCount = () => {
-    return test.questions.filter(isQuestionAnswered).length;
+    return testQuestions.filter(isQuestionAnswered).length;
   };
 
-  const currentQuestion = test.questions[currentQuestionIndex];
-  const progress = ((currentQuestionIndex + 1) / test.questions.length) * 100;
-  const isLastQuestion = currentQuestionIndex === test.questions.length - 1;
+  const currentQuestion = testQuestions[currentQuestionIndex];
+  const progress = ((currentQuestionIndex + 1) / testQuestions.length) * 100;
+  const isLastQuestion = currentQuestionIndex === testQuestions.length - 1;
   const isFirstQuestion = currentQuestionIndex === 0;
 
-  if (!test || !sessionId) {
+  if (!test || !sessionId || !testQuestions || testQuestions.length === 0) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Alert severity="error">
-          Invalid test session. Please start a new test.
+          {!test || !sessionId 
+            ? "Invalid test session. Please start a new test." 
+            : "No questions available for this test. Please contact support."
+          }
         </Alert>
+        <Box mt={2}>
+          <Button 
+            variant="contained" 
+            onClick={() => navigate('/smart-tests')}
+            startIcon={<ArrowBack />}
+          >
+            Back to Tests
+          </Button>
+        </Box>
       </Container>
     );
   }
@@ -320,7 +365,7 @@ const TakeSmartTestPage: React.FC = () => {
             
             <Box textAlign="center">
               <Typography variant="body2" color="text.secondary">
-                Question {currentQuestionIndex + 1} of {test.questions.length}
+                Question {currentQuestionIndex + 1} of {testQuestions.length}
               </Typography>
               <LinearProgress 
                 variant="determinate" 
@@ -335,10 +380,10 @@ const TakeSmartTestPage: React.FC = () => {
       {/* Question Navigation */}
       <Box mb={3}>
         <Typography variant="body2" color="text.secondary" gutterBottom>
-          Questions Overview ({getAnsweredQuestionsCount()}/{test.questions.length} answered)
+          Questions Overview ({getAnsweredQuestionsCount()}/{testQuestions.length} answered)
         </Typography>
         <Box display="flex" flexWrap="wrap" gap={1}>
-          {test.questions.map((question, index) => (
+          {testQuestions.map((question, index) => (
             <Button
               key={index}
               variant={index === currentQuestionIndex ? 'contained' : 'outlined'}
@@ -450,19 +495,19 @@ const TakeSmartTestPage: React.FC = () => {
               <strong>Test Summary:</strong>
             </Typography>
             <Typography variant="body2">
-              • Questions Answered: {getAnsweredQuestionsCount()} / {test.questions.length}
+              • Questions Answered: {getAnsweredQuestionsCount()} / {testQuestions.length}
             </Typography>
             <Typography variant="body2">
               • Time Remaining: {formatTime(timeRemaining)}
             </Typography>
             <Typography variant="body2">
-              • Unanswered Questions: {test.questions.length - getAnsweredQuestionsCount()}
+              • Unanswered Questions: {testQuestions.length - getAnsweredQuestionsCount()}
             </Typography>
           </Box>
           
-          {getAnsweredQuestionsCount() < test.questions.length && (
+          {getAnsweredQuestionsCount() < testQuestions.length && (
             <Alert severity="info" sx={{ mt: 2 }}>
-              You have {test.questions.length - getAnsweredQuestionsCount()} unanswered questions. 
+              You have {testQuestions.length - getAnsweredQuestionsCount()} unanswered questions. 
               These will be marked as incorrect.
             </Alert>
           )}

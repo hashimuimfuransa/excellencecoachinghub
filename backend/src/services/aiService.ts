@@ -60,7 +60,7 @@ export class AIService {
       try {
         // Strategy 1: Extract just the questions array
         const questionsMatch = jsonText.match(/"questions":\s*(\[[\s\S]*?\])/);
-        if (questionsMatch) {
+        if (questionsMatch && questionsMatch[1]) {
           // Try to fix common JSON issues in the questions array
           let questionsStr = questionsMatch[1];
           questionsStr = questionsStr.replace(/,(\s*[}\]])/g, '$1'); // Remove trailing commas
@@ -117,6 +117,12 @@ export class AIService {
       console.error('🎓 Error generating content with AI:', error);
       throw error;
     }
+  }
+
+  // Legacy method alias for backward compatibility
+  async generateText(prompt: string, options?: AIGenerationOptions): Promise<string> {
+    console.log('🔄 Using legacy generateText method, redirecting to generateContent');
+    return this.generateContent(prompt, options);
   }
 
   // Check if AI service is available
@@ -434,9 +440,12 @@ Generate all ${questionCount} questions now:`;
     try {
       console.log(`🎯 Generating job preparation test for ${params.jobTitle} at ${params.company}`);
       
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      let textResponse = response.text();
+      let textResponse = await this.aiManager.generateContent(prompt, {
+        retries: 3,
+        timeout: 45000,
+        priority: 'high',
+        temperature: 0.3
+      });
 
       // Clean and parse the response
       textResponse = textResponse.replace(/```json\s*|\s*```/g, '').trim();
@@ -571,11 +580,13 @@ Generate all ${questionCount} questions now:`;
     const questions = [];
     for (let i = 0; i < Math.min(questionCount, 20); i++) {
       const baseQuestion = fallbackQuestions[i % fallbackQuestions.length];
-      questions.push({
-        ...baseQuestion,
-        id: `q${i + 1}`,
-        question: baseQuestion.question.replace(/\$\{jobTitle\}/g, jobTitle)
-      });
+      if (baseQuestion) {
+        questions.push({
+          ...baseQuestion,
+          id: `q${i + 1}`,
+          question: baseQuestion.question.replace(/\$\{jobTitle\}/g, jobTitle)
+        });
+      }
     }
 
     return { questions };
@@ -670,17 +681,20 @@ Generate all ${questionCount} questions now:`;
     
     // Generate questions evenly across categories
     for (let i = 0; i < questionCount; i++) {
-      const category = categories[i % categories.length];
-      const templates = questionTemplates[category];
-      const template = templates[Math.floor(Math.random() * templates.length)];
-      
-      questions.push({
-        question: template.question,
-        options: template.options,
-        correctAnswer: template.correctAnswer,
-        explanation: template.explanation,
-        category: category
-      });
+      const categoryIndex = i % categories.length;
+      const category = categories[categoryIndex];
+      if (category && questionTemplates[category]) {
+        const templates = questionTemplates[category];
+        const template = templates[Math.floor(Math.random() * templates.length)];
+        
+        questions.push({
+          question: template.question,
+          options: template.options,
+          correctAnswer: template.correctAnswer,
+          explanation: template.explanation,
+          category: category as string
+        });
+      }
     }
     
     return { questions };
@@ -694,7 +708,12 @@ Generate all ${questionCount} questions now:`;
     jobId?: string;
   }): Promise<{
     scores: Record<string, number>;
+    categoryScores: Record<string, number>;
     overallScore: number;
+    grade: string;
+    percentile: number;
+    questionByQuestionAnalysis: any[];
+    failedQuestions: any[];
     interpretation: string;
     recommendations: string[];
     detailedAnalysis: any;
@@ -816,9 +835,12 @@ Generate all ${questionCount} questions now:`;
       `;
 
       console.log('Sending prompt to AI model...');
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+      const text = await this.aiManager.generateContent(prompt, {
+        retries: 3,
+        timeout: 45000,
+        priority: 'high',
+        temperature: 0.3
+      });
       
       console.log('AI response received, length:', text?.length || 0);
       console.log('Raw AI response (first 500 chars):', text?.substring(0, 500));
@@ -906,9 +928,12 @@ Generate all ${questionCount} questions now:`;
         Return only the category name in lowercase, no additional text or explanation.
       `;
 
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      const category = response.text().trim().toLowerCase();
+      const response = await this.aiManager.generateContent(prompt, {
+        retries: 2,
+        timeout: 15000,
+        priority: 'normal'
+      });
+      const category = response.trim().toLowerCase();
 
       // Validate the category
       const validCategories = ['jobs', 'tenders', 'trainings', 'internships', 'scholarships', 'access_to_finance'];

@@ -1,6 +1,17 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { EventEmitter } from 'events';
 
+// API Key Configuration for fallback support
+export interface APIKeyConfig {
+  key: string;
+  name: string;
+  dailyLimit: number;
+  used: number;
+  lastReset: string;
+  status: 'active' | 'quota_exceeded' | 'failed' | 'blocked';
+  lastError?: string;
+}
+
 // AI Model Configuration with version management
 export interface AIModelConfig {
   name: string;
@@ -29,6 +40,11 @@ export class CentralAIManager extends EventEmitter {
   private isInitialized: boolean = false;
   private lastVersionCheck: string = '';
   private readonly VERSION_CHECK_INTERVAL_HOURS = 24;
+  
+  // API Key management for fallback support
+  private apiKeys: APIKeyConfig[] = [];
+  private currentAPIKeyIndex: number = 0;
+  
   private requestCount: number = 0;
   private dailyRequestLimit: number = 300; // Reduced due to quota issues
   private minuteRequestCount: number = 0;
@@ -105,13 +121,24 @@ export class CentralAIManager extends EventEmitter {
 
   private constructor() {
     super();
-    this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+    
+    // Initialize API keys with fallback support
+    this.initializeAPIKeys();
+    
+    // Use the first available API key
+    const currentAPIKey = this.getCurrentAPIKey();
+    this.genAI = new GoogleGenerativeAI(currentAPIKey.key);
     this.currentConfig = this.getBestAvailableModel();
     this.initializeModel();
     this.isInitialized = true;
     
-    console.log('🤖 Central AI Manager initialized');
-    this.emit('initialized', { model: this.currentConfig.name });
+    console.log(`🤖 Central AI Manager initialized with ${this.apiKeys.length} API key(s)`);
+    console.log(`🔑 Active API Key: ${currentAPIKey.name}`);
+    this.emit('initialized', { 
+      model: this.currentConfig.name,
+      apiKeyName: currentAPIKey.name,
+      totalAPIKeys: this.apiKeys.length
+    });
   }
 
   public static getInstance(): CentralAIManager {
@@ -119,6 +146,158 @@ export class CentralAIManager extends EventEmitter {
       CentralAIManager.instance = new CentralAIManager();
     }
     return CentralAIManager.instance;
+  }
+
+  /**
+   * Initialize API keys from environment variables and fallback keys
+   */
+  private initializeAPIKeys(): void {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Primary API key from environment
+    const primaryKey = process.env.GEMINI_API_KEY;
+    if (primaryKey && primaryKey.trim()) {
+      this.apiKeys.push({
+        key: primaryKey.trim(),
+        name: 'Primary (ENV)',
+        dailyLimit: 300,
+        used: 0,
+        lastReset: today,
+        status: 'active'
+      });
+    }
+
+    // Fallback API keys
+    const fallbackKeys = [
+      'AIzaSyBrQhEtPsUQHlxWR1GdkIPRpHJlBlw58f4',
+      'AIzaSyDZw17oFP3WV-pbw_i_txgLX9qEQN7VUBo'
+    ];
+
+    fallbackKeys.forEach((key, index) => {
+      if (key && key.trim()) {
+        this.apiKeys.push({
+          key: key.trim(),
+          name: `Fallback-${index + 1}`,
+          dailyLimit: 300,
+          used: 0,
+          lastReset: today,
+          status: 'active'
+        });
+      }
+    });
+
+    if (this.apiKeys.length === 0) {
+      throw new Error('No valid Gemini API keys found. Please check your configuration.');
+    }
+
+    console.log(`✅ Initialized ${this.apiKeys.length} API keys for fallback support`);
+  }
+
+  /**
+   * Get the current active API key
+   */
+  private getCurrentAPIKey(): APIKeyConfig {
+    // Reset daily usage if needed
+    this.resetDailyUsageIfNeeded();
+    
+    // Find the first available API key
+    for (let i = 0; i < this.apiKeys.length; i++) {
+      const keyConfig = this.apiKeys[i];
+      if (keyConfig.status === 'active' && keyConfig.used < keyConfig.dailyLimit) {
+        this.currentAPIKeyIndex = i;
+        return keyConfig;
+      }
+    }
+    
+    // If all keys are exhausted, return the first one (will handle quota errors)
+    this.currentAPIKeyIndex = 0;
+    return this.apiKeys[0];
+  }
+
+  /**
+   * Switch to next available API key
+   */
+  private switchToNextAPIKey(): boolean {
+    const originalIndex = this.currentAPIKeyIndex;
+    
+    // Try each API key starting from the next one
+    for (let attempts = 0; attempts < this.apiKeys.length; attempts++) {
+      this.currentAPIKeyIndex = (this.currentAPIKeyIndex + 1) % this.apiKeys.length;
+      const keyConfig = this.apiKeys[this.currentAPIKeyIndex];
+      
+      if (keyConfig.status === 'active' && keyConfig.used < keyConfig.dailyLimit) {
+        // Switch to the new API key
+        this.genAI = new GoogleGenerativeAI(keyConfig.key);
+        this.initializeModel();
+        
+        console.log(`🔄 Switched to API key: ${keyConfig.name}`);
+        this.emit('apiKeySwitched', {
+          from: this.apiKeys[originalIndex].name,
+          to: keyConfig.name,
+          reason: 'fallback'
+        });
+        
+        return true;
+      }
+    }
+    
+    console.warn('⚠️ No available API keys found for fallback');
+    return false;
+  }
+
+  /**
+   * Mark current API key as failed and switch to next
+   */
+  private markCurrentAPIKeyAsFailed(error: string): boolean {
+    const currentKey = this.apiKeys[this.currentAPIKeyIndex];
+    
+    if (error.includes('quota') || error.includes('429')) {
+      currentKey.status = 'quota_exceeded';
+      currentKey.lastError = `Quota exceeded: ${error}`;
+      console.log(`🚫 API key ${currentKey.name} marked as quota exceeded`);
+    } else if (error.includes('403') || error.includes('401')) {
+      currentKey.status = 'blocked';
+      currentKey.lastError = `Access denied: ${error}`;
+      console.log(`🚫 API key ${currentKey.name} marked as blocked`);
+    } else {
+      currentKey.status = 'failed';
+      currentKey.lastError = error;
+      console.log(`❌ API key ${currentKey.name} marked as failed`);
+    }
+    
+    return this.switchToNextAPIKey();
+  }
+
+  /**
+   * Reset daily usage counters if needed
+   */
+  private resetDailyUsageIfNeeded(): void {
+    const today = new Date().toISOString().split('T')[0];
+    
+    this.apiKeys.forEach(keyConfig => {
+      if (keyConfig.lastReset !== today) {
+        keyConfig.used = 0;
+        keyConfig.lastReset = today;
+        // Reset status if it was quota exceeded (give it another chance)
+        if (keyConfig.status === 'quota_exceeded') {
+          keyConfig.status = 'active';
+          keyConfig.lastError = undefined;
+        }
+      }
+    });
+  }
+
+  /**
+   * Increment usage counter for current API key
+   */
+  private incrementCurrentAPIKeyUsage(): void {
+    const currentKey = this.apiKeys[this.currentAPIKeyIndex];
+    currentKey.used++;
+    
+    // Check if approaching limit
+    if (currentKey.used >= currentKey.dailyLimit * 0.9) {
+      console.warn(`⚠️ API key ${currentKey.name} approaching daily limit: ${currentKey.used}/${currentKey.dailyLimit}`);
+    }
   }
 
   private getBestAvailableModel(): AIModelConfig {
@@ -289,13 +468,21 @@ export class CentralAIManager extends EventEmitter {
           throw new Error('Empty response from AI model');
         }
         
+        // Increment usage counters
         this.requestCount++;
-        console.log(`✅ AI Generation successful (${text.length} characters) - Request count: ${this.requestCount}`);
+        this.incrementCurrentAPIKeyUsage();
+        
+        const currentAPIKey = this.apiKeys[this.currentAPIKeyIndex];
+        console.log(`✅ AI Generation successful (${text.length} characters)`);
+        console.log(`📊 Usage: Global ${this.requestCount} | ${currentAPIKey.name}: ${currentAPIKey.used}/${currentAPIKey.dailyLimit}`);
+        
         this.emit('contentGenerated', { 
           model: this.currentConfig.name, 
+          apiKey: currentAPIKey.name,
           length: text.length,
           attempt,
-          requestCount: this.requestCount
+          requestCount: this.requestCount,
+          apiKeyUsage: currentAPIKey.used
         });
         
         return text;
@@ -311,16 +498,28 @@ export class CentralAIManager extends EventEmitter {
           model: this.currentConfig.name 
         });
         
-        // Check for specific error types that might require model fallback
-        if (error.message.includes('quota') || error.message.includes('429')) {
-          console.log('🚫 Rate limit/quota exceeded - waiting longer before retry');
-          // For quota issues, wait much longer and try fallback
-          if (attempt < retries) {
-            const quotaDelay = Math.min(30000 * Math.pow(2, attempt - 1), 300000); // 30s to 5min
-            console.log(`⏳ Quota delay: Waiting ${Math.round(quotaDelay/1000)}s before retry...`);
-            await new Promise(resolve => setTimeout(resolve, quotaDelay));
+        // Check for specific error types that might require API key or model fallback
+        if (error.message.includes('quota') || error.message.includes('429') || 
+            error.message.includes('403') || error.message.includes('401')) {
+          
+          console.log(`🚫 API key issue detected: ${error.message}`);
+          
+          // Try to switch to a different API key first
+          const apiKeySwitched = this.markCurrentAPIKeyAsFailed(error.message);
+          
+          if (apiKeySwitched) {
+            console.log('🔄 Switched to fallback API key, retrying immediately...');
+            continue; // Retry immediately with new API key
+          } else {
+            console.log('⚠️ No fallback API keys available, trying model fallback...');
+            // If no API keys available, try model fallback
+            if (attempt < retries) {
+              const quotaDelay = Math.min(30000 * Math.pow(2, attempt - 1), 300000); // 30s to 5min
+              console.log(`⏳ Quota delay: Waiting ${Math.round(quotaDelay/1000)}s before retry...`);
+              await new Promise(resolve => setTimeout(resolve, quotaDelay));
+            }
+            await this.tryFallbackModel();
           }
-          await this.tryFallbackModel();
         } else if (error.message.includes('404') || error.message.includes('not found') || error.message.includes('is not found')) {
           console.log(`❌ Model ${this.currentConfig.name} not found, trying fallback model`);
           await this.tryFallbackModel();
@@ -548,11 +747,197 @@ export class CentralAIManager extends EventEmitter {
   }
 
   /**
+   * Get API key statistics and status
+   */
+  public getAPIKeyStats(): {
+    currentAPIKey: string;
+    totalAPIKeys: number;
+    activeKeys: number;
+    quotaExceededKeys: number;
+    failedKeys: number;
+    keys: Array<{
+      name: string;
+      status: string;
+      used: number;
+      dailyLimit: number;
+      usagePercentage: number;
+      lastError?: string;
+    }>;
+  } {
+    const activeKeys = this.apiKeys.filter(k => k.status === 'active').length;
+    const quotaExceededKeys = this.apiKeys.filter(k => k.status === 'quota_exceeded').length;
+    const failedKeys = this.apiKeys.filter(k => k.status === 'failed' || k.status === 'blocked').length;
+    
+    return {
+      currentAPIKey: this.apiKeys[this.currentAPIKeyIndex]?.name || 'Unknown',
+      totalAPIKeys: this.apiKeys.length,
+      activeKeys,
+      quotaExceededKeys,
+      failedKeys,
+      keys: this.apiKeys.map(key => ({
+        name: key.name,
+        status: key.status,
+        used: key.used,
+        dailyLimit: key.dailyLimit,
+        usagePercentage: Math.round((key.used / key.dailyLimit) * 100),
+        lastError: key.lastError
+      }))
+    };
+  }
+
+  /**
+   * Manually switch to a specific API key by name
+   */
+  public switchToAPIKey(keyName: string): boolean {
+    const targetIndex = this.apiKeys.findIndex(key => key.name === keyName);
+    
+    if (targetIndex === -1) {
+      console.error(`❌ API key '${keyName}' not found`);
+      return false;
+    }
+    
+    const targetKey = this.apiKeys[targetIndex];
+    
+    if (targetKey.status !== 'active') {
+      console.warn(`⚠️ API key '${keyName}' is not active (status: ${targetKey.status})`);
+      return false;
+    }
+    
+    if (targetKey.used >= targetKey.dailyLimit) {
+      console.warn(`⚠️ API key '${keyName}' has exceeded daily limit`);
+      return false;
+    }
+    
+    const previousKey = this.apiKeys[this.currentAPIKeyIndex];
+    this.currentAPIKeyIndex = targetIndex;
+    this.genAI = new GoogleGenerativeAI(targetKey.key);
+    this.initializeModel();
+    
+    console.log(`🔄 Manually switched to API key: ${keyName}`);
+    this.emit('apiKeySwitched', {
+      from: previousKey.name,
+      to: keyName,
+      reason: 'manual'
+    });
+    
+    return true;
+  }
+
+  /**
+   * Reset API key status (useful for recovering from temporary issues)
+   */
+  public resetAPIKeyStatus(keyName: string): boolean {
+    const keyIndex = this.apiKeys.findIndex(key => key.name === keyName);
+    
+    if (keyIndex === -1) {
+      console.error(`❌ API key '${keyName}' not found`);
+      return false;
+    }
+    
+    const key = this.apiKeys[keyIndex];
+    const previousStatus = key.status;
+    
+    key.status = 'active';
+    key.lastError = undefined;
+    
+    console.log(`🔄 Reset API key '${keyName}' status: ${previousStatus} → active`);
+    this.emit('apiKeyStatusReset', {
+      keyName,
+      previousStatus,
+      newStatus: 'active'
+    });
+    
+    return true;
+  }
+
+  /**
+   * Add a new API key for fallback
+   */
+  public addAPIKey(apiKey: string, name: string, dailyLimit: number = 300): boolean {
+    if (!apiKey || !apiKey.trim()) {
+      console.error('❌ Invalid API key provided');
+      return false;
+    }
+    
+    // Check if key already exists
+    const existingKey = this.apiKeys.find(key => key.key === apiKey.trim());
+    if (existingKey) {
+      console.warn(`⚠️ API key already exists: ${existingKey.name}`);
+      return false;
+    }
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    this.apiKeys.push({
+      key: apiKey.trim(),
+      name: name || `Custom-${this.apiKeys.length + 1}`,
+      dailyLimit,
+      used: 0,
+      lastReset: today,
+      status: 'active'
+    });
+    
+    console.log(`✅ Added new API key: ${name} (Limit: ${dailyLimit}/day)`);
+    this.emit('apiKeyAdded', {
+      name,
+      dailyLimit,
+      totalKeys: this.apiKeys.length
+    });
+    
+    return true;
+  }
+
+  /**
+   * Remove an API key (except if it's the only one active)
+   */
+  public removeAPIKey(keyName: string): boolean {
+    const keyIndex = this.apiKeys.findIndex(key => key.name === keyName);
+    
+    if (keyIndex === -1) {
+      console.error(`❌ API key '${keyName}' not found`);
+      return false;
+    }
+    
+    if (this.apiKeys.length === 1) {
+      console.error(`❌ Cannot remove the last API key`);
+      return false;
+    }
+    
+    // If removing the current key, switch to another one first
+    if (keyIndex === this.currentAPIKeyIndex) {
+      const switched = this.switchToNextAPIKey();
+      if (!switched) {
+        console.error(`❌ Cannot remove current API key: no fallback available`);
+        return false;
+      }
+      // Adjust index after removal
+      if (this.currentAPIKeyIndex > keyIndex) {
+        this.currentAPIKeyIndex--;
+      }
+    } else if (this.currentAPIKeyIndex > keyIndex) {
+      // Adjust current index if it's after the removed key
+      this.currentAPIKeyIndex--;
+    }
+    
+    const removedKey = this.apiKeys.splice(keyIndex, 1)[0];
+    
+    console.log(`🗑️ Removed API key: ${removedKey.name}`);
+    this.emit('apiKeyRemoved', {
+      name: removedKey.name,
+      totalKeys: this.apiKeys.length
+    });
+    
+    return true;
+  }
+
+  /**
    * Reset daily request count (typically called at midnight)
    */
   public resetDailyRequestCount(): void {
     this.requestCount = 0;
-    console.log('🔄 Daily AI request count reset');
+    // Also reset API key usage counters
+    this.resetDailyUsageIfNeeded();
+    console.log('🔄 Daily AI request count and API key usage reset');
     this.emit('requestCountReset');
   }
 
@@ -723,6 +1108,13 @@ export class CentralAIManager extends EventEmitter {
     requestCount: number;
     dailyLimit: number;
     isAvailable: boolean;
+    apiKeyInfo: {
+      currentAPIKey: string;
+      totalAPIKeys: number;
+      activeKeys: number;
+      quotaExceededKeys: number;
+      failedKeys: number;
+    };
     queueStatus: {
       queueLength: number;
       requestCount: number;
@@ -734,6 +1126,7 @@ export class CentralAIManager extends EventEmitter {
     };
   } {
     const stats = this.getModelStats();
+    const apiKeyStats = this.getAPIKeyStats();
     
     return {
       isInitialized: this.isInitialized,
@@ -742,6 +1135,13 @@ export class CentralAIManager extends EventEmitter {
       requestCount: this.requestCount,
       dailyLimit: this.dailyRequestLimit,
       isAvailable: true, // We'll assume it's available if initialized
+      apiKeyInfo: {
+        currentAPIKey: apiKeyStats.currentAPIKey,
+        totalAPIKeys: apiKeyStats.totalAPIKeys,
+        activeKeys: apiKeyStats.activeKeys,
+        quotaExceededKeys: apiKeyStats.quotaExceededKeys,
+        failedKeys: apiKeyStats.failedKeys
+      },
       queueStatus: this.getQueueStatus()
     };
   }

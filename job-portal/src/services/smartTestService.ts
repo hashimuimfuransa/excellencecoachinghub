@@ -170,6 +170,19 @@ class SmartTestService {
     const response = await apiGet<any>(`/smart-tests/job/${jobId}`);
     return handleApiResponse(response);
   }
+
+  // Start admin test with AI-selected questions
+  async startAdminTest(testId: string, options?: { questionCount?: number; randomize?: boolean }): Promise<{ 
+    sessionId: string; 
+    test: SmartTest; 
+    questions: any[]; 
+    timeLimit: number; 
+    totalQuestions: number; 
+    randomized: boolean;
+  }> {
+    const response = await apiPost<any>(`/smart-tests/admin/${testId}/start-admin-test`, options || {});
+    return handleApiResponse(response);
+  }
 }
 
 export const smartTestService = new SmartTestService();

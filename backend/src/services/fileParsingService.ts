@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import * as pdfParse from 'pdf-parse';
 import { aiService } from './aiService';
+import { DocumentParser } from '../utils/documentParser';
 
 export interface ParsedQuestion {
   id?: string;
@@ -220,14 +221,48 @@ class FileParsingService {
    */
   private async parseTextFile(file: Express.Multer.File, result: FileParsingResult): Promise<FileParsingResult> {
     try {
-      const content = file.buffer.toString('utf8');
+      let content: string;
+      
+      // Handle different file types properly
+      if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
+          file.originalname.toLowerCase().endsWith('.docx')) {
+        console.log('📄 Parsing .docx file:', file.originalname);
+        // Use DocumentParser for .docx files
+        const parseResult = await DocumentParser.parseDocument(file.buffer, file.mimetype, file.originalname);
+        content = DocumentParser.cleanText(parseResult.text);
+        
+        // Try structured extraction first
+        const structuredQuestions = DocumentParser.extractStructuredQuestions(content);
+        if (structuredQuestions.length > 0) {
+          console.log(`✅ Found ${structuredQuestions.length} structured questions in .docx file`);
+          result.questions = structuredQuestions.map((q, index) => ({
+            id: `q${index + 1}`,
+            question: q.question,
+            type: q.type === 'multiple-choice' ? 'multiple_choice' : 'short_answer' as any,
+            options: q.options || [],
+            correctAnswer: q.answer || (q.options && q.options.length > 0 ? q.options[0] : ''),
+            explanation: '',
+            category: 'general',
+            difficulty: 'intermediate' as any,
+            points: 1
+          }));
+          
+          result.success = true;
+          result.totalQuestions = result.questions.length;
+          return result;
+        }
+      } else {
+        // Handle plain text files
+        content = file.buffer.toString('utf8');
+      }
 
       if (!content || content.trim().length === 0) {
-        result.errors.push('No content found in text file');
+        result.errors.push('No content found in file');
         return result;
       }
 
-      console.log('🤖 Using AI to extract questions from text content...');
+      console.log(`🤖 Using AI to extract questions from ${file.originalname} content...`);
+      console.log(`📄 Content length: ${content.length} characters`);
       
       // Use AI to extract questions from text content
       const aiResult = await this.extractQuestionsWithAI(content);
@@ -243,6 +278,7 @@ class FileParsingService {
 
       return result;
     } catch (error: any) {
+      console.error('❌ Text file parsing error:', error);
       result.errors.push(`Text file parsing error: ${error.message}`);
       return result;
     }
@@ -261,73 +297,156 @@ class FileParsingService {
     };
 
     try {
-      const prompt = `Please extract all questions from the following text and format them as a JSON array. Each question should include:
-- question: The question text
-- type: One of "multiple_choice", "true_false", "short_answer", or "essay"
-- options: Array of options (for multiple choice questions)
-- correctAnswer: The correct answer
-- explanation: Brief explanation (if available)
-- difficulty: "basic", "intermediate", or "advanced"
+      console.log('🤖 Using AI to extract questions from text content...');
+      
+      // Limit text size to avoid overwhelming AI
+      const limitedText = text.length > 8000 ? text.substring(0, 8000) + '...' : text;
+      
+      const prompt = `You are an expert question parser. Analyze the following text and extract ALL questions, converting them into a standardized JSON format.
 
-Text to parse:
-${text}
+IMPORTANT INSTRUCTIONS:
+1. Find ALL questions in the text (look for: question marks (?), numbered lists (1., 2., etc.), lettered items (a), b), etc.), or any text that appears to be a question)
+2. For each question found:
+   - Extract the complete question text
+   - Determine question type: "multiple_choice", "true_false", "short_answer", or "essay"
+   - If there are multiple choice options (A, B, C, D or 1, 2, 3, 4), extract them
+   - If there's an indicated correct answer, include it
+   - Provide a brief explanation if one exists in the text
+   - Set difficulty as "basic", "intermediate", or "advanced" based on complexity
+   - Set category as "general" unless a specific subject is clear
 
-Please respond with only valid JSON in this format:
+3. CRITICAL: Return ONLY a valid JSON array. No markdown backticks, no extra text, no explanations.
+
+EXAMPLE OUTPUT FORMAT:
 [
   {
-    "question": "What is...?",
+    "question": "What is the capital of France?",
     "type": "multiple_choice",
-    "options": ["A", "B", "C", "D"],
-    "correctAnswer": "A",
-    "explanation": "Because...",
-    "difficulty": "basic"
+    "options": ["London", "Berlin", "Paris", "Madrid"],
+    "correctAnswer": "Paris",
+    "explanation": "Paris is the capital and largest city of France",
+    "difficulty": "basic",
+    "category": "geography"
+  },
+  {
+    "question": "Describe the process of photosynthesis.",
+    "type": "short_answer",
+    "options": [],
+    "correctAnswer": "Process by which plants convert light energy into chemical energy",
+    "explanation": "Expected answer should include light, chlorophyll, CO2, water, glucose, and oxygen",
+    "difficulty": "intermediate",
+    "category": "biology"
   }
-]`;
+]
 
-      const aiResponse = await aiService.generateText(prompt);
+If no questions are found, return an empty array: []
+
+TEXT TO ANALYZE:
+${limitedText}
+
+JSON ARRAY:`;
+
+      // Use improved AI generation with better error handling
+      const aiResponse = await aiService.generateContent(prompt, {
+        retries: 3,
+        timeout: 60000, // Longer timeout for complex parsing
+        priority: 'high',
+        temperature: 0.2 // Lower temperature for more structured responses
+      });
+      console.log(`📄 AI response length: ${aiResponse?.length || 0} characters`);
       
       if (aiResponse && aiResponse.trim()) {
         try {
-          // Clean the AI response to extract JSON
+          // Enhanced JSON extraction with multiple strategies
           let jsonStr = aiResponse.trim();
           
-          // Remove markdown code blocks if present
-          jsonStr = jsonStr.replace(/```json\s*/, '').replace(/```\s*$/, '');
+          // Strategy 1: Remove markdown code blocks
+          jsonStr = jsonStr.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
+          jsonStr = jsonStr.replace(/```\s*/g, '').replace(/```$/g, '');
           
-          // Try to find JSON array in the response
-          const jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
-          if (jsonMatch) {
-            jsonStr = jsonMatch[0];
+          // Strategy 2: Find JSON array boundaries
+          const arrayStart = jsonStr.indexOf('[');
+          const arrayEnd = jsonStr.lastIndexOf(']');
+          
+          if (arrayStart !== -1 && arrayEnd !== -1 && arrayEnd > arrayStart) {
+            jsonStr = jsonStr.substring(arrayStart, arrayEnd + 1);
           }
+          
+          // Strategy 3: Clean up common JSON issues
+          jsonStr = jsonStr
+            .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
+            .replace(/([}\]])(\s*)([{])/g, '$1,$2$3') // Add missing commas between objects
+            .replace(/\n\s*\n/g, '\n') // Remove double newlines
+            .trim();
 
+          console.log(`🔍 Attempting to parse JSON of length: ${jsonStr.length}`);
           const questions = JSON.parse(jsonStr);
           
           if (Array.isArray(questions)) {
+            console.log(`✅ Successfully parsed ${questions.length} questions from AI response`);
+            
+            let processedCount = 0;
             questions.forEach((q, index) => {
               const processedQuestion = this.processQuestionItem(q, index + 1);
               if (processedQuestion) {
                 result.questions.push(processedQuestion);
+                processedCount++;
               } else {
-                result.warnings.push(`AI extracted invalid question at index ${index + 1}`);
+                result.warnings.push(`Invalid question structure at index ${index + 1}`);
               }
             });
 
             result.success = result.questions.length > 0;
             result.totalQuestions = result.questions.length;
+            console.log(`🎯 Processed ${processedCount} valid questions out of ${questions.length} extracted`);
           } else {
+            console.error('❌ AI response is not a valid array');
             result.errors.push('AI response is not a valid array of questions');
           }
+          
         } catch (parseError: any) {
-          console.error('Error parsing AI response:', parseError);
-          result.errors.push(`Failed to parse AI response: ${parseError.message}`);
+          console.error('❌ JSON parsing failed:', parseError.message);
+          
+          // Fallback: Try to extract individual question objects
+          try {
+            console.log('🔄 Attempting fallback extraction...');
+            const fallbackQuestions = this.extractQuestionsWithRegex(aiResponse);
+            if (fallbackQuestions.length > 0) {
+              result.questions = fallbackQuestions;
+              result.success = true;
+              result.totalQuestions = fallbackQuestions.length;
+              result.warnings.push('Used fallback extraction method due to JSON parsing issues');
+              console.log(`✅ Fallback extracted ${fallbackQuestions.length} questions`);
+            } else {
+              result.errors.push(`Failed to parse AI response: ${parseError.message}`);
+            }
+          } catch (fallbackError) {
+            result.errors.push(`JSON parsing failed and fallback extraction failed: ${parseError.message}`);
+          }
         }
       } else {
+        console.error('❌ AI service returned empty response');
         result.errors.push('AI service returned empty response');
       }
 
     } catch (error: any) {
-      console.error('AI extraction error:', error);
+      console.error('❌ AI extraction error:', error);
       result.errors.push(`AI service error: ${error.message}`);
+      
+      // Try pattern-based extraction as final fallback
+      try {
+        console.log('🔄 Attempting pattern-based fallback extraction...');
+        const patternQuestions = this.extractQuestionsWithPattern(text);
+        if (patternQuestions.length > 0) {
+          result.questions = patternQuestions;
+          result.success = true;
+          result.totalQuestions = patternQuestions.length;
+          result.warnings.push('Used pattern-based extraction due to AI service unavailability');
+          console.log(`✅ Pattern-based extraction found ${patternQuestions.length} questions`);
+        }
+      } catch (patternError) {
+        console.error('❌ Pattern-based fallback also failed:', patternError);
+      }
     }
 
     return result;
@@ -528,6 +647,126 @@ Please respond with only valid JSON in this format:
     });
 
     return { valid, invalid };
+  }
+
+  /**
+   * Fallback method to extract questions using regex patterns
+   */
+  private extractQuestionsWithRegex(text: string): ParsedQuestion[] {
+    const questions: ParsedQuestion[] = [];
+    
+    try {
+      // Pattern to match question objects in text
+      const questionPattern = /"question":\s*"([^"]+)"/g;
+      const optionsPattern = /"options":\s*\[([^\]]+)\]/g;
+      const answerPattern = /"correctAnswer":\s*"([^"]+)"/g;
+      
+      const questionMatches = [...text.matchAll(questionPattern)];
+      const optionMatches = [...text.matchAll(optionsPattern)];
+      const answerMatches = [...text.matchAll(answerPattern)];
+      
+      const minLength = Math.min(questionMatches.length, answerMatches.length);
+      
+      for (let i = 0; i < minLength; i++) {
+        const question = questionMatches[i][1];
+        const answer = answerMatches[i][1];
+        let options: string[] = [];
+        
+        if (i < optionMatches.length) {
+          const optionsText = optionMatches[i][1];
+          options = optionsText.split(',').map(opt => 
+            opt.replace(/"/g, '').trim()
+          ).filter(opt => opt.length > 0);
+        }
+        
+        questions.push({
+          id: `fallback_q${i + 1}`,
+          question: question.trim(),
+          type: options.length > 0 ? 'multiple_choice' : 'short_answer',
+          options: options.length > 0 ? options : undefined,
+          correctAnswer: answer.trim(),
+          explanation: 'Extracted using fallback method',
+          difficulty: 'intermediate'
+        });
+      }
+    } catch (error) {
+      console.error('Regex extraction error:', error);
+    }
+    
+    return questions;
+  }
+
+  /**
+   * Pattern-based extraction for when AI is completely unavailable
+   */
+  private extractQuestionsWithPattern(text: string): ParsedQuestion[] {
+    const questions: ParsedQuestion[] = [];
+    
+    try {
+      // Look for numbered questions or questions with question marks
+      const lines = text.split('\n');
+      let currentQuestion = '';
+      let options: string[] = [];
+      let answer = '';
+      let questionIndex = 1;
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        
+        // Detect question patterns
+        if (line.match(/^\d+[\.\)]\s*/) || line.includes('?')) {
+          // Save previous question if exists
+          if (currentQuestion) {
+            questions.push({
+              id: `pattern_q${questionIndex}`,
+              question: currentQuestion.trim(),
+              type: options.length > 0 ? 'multiple_choice' : 'short_answer',
+              options: options.length > 0 ? options : undefined,
+              correctAnswer: answer || options[0] || 'Not specified',
+              explanation: 'Extracted using pattern matching',
+              difficulty: 'intermediate'
+            });
+            questionIndex++;
+          }
+          
+          // Start new question
+          currentQuestion = line.replace(/^\d+[\.\)]\s*/, '');
+          options = [];
+          answer = '';
+        }
+        // Detect options (A, B, C, D or a, b, c, d)
+        else if (line.match(/^[A-Da-d][\.\)]\s*/)) {
+          const optionText = line.replace(/^[A-Da-d][\.\)]\s*/, '');
+          options.push(optionText);
+        }
+        // Detect answer patterns
+        else if (line.toLowerCase().includes('answer') || line.toLowerCase().includes('correct')) {
+          answer = line;
+        }
+        // Continue question text
+        else if (currentQuestion && line.length > 0 && !line.match(/^[A-Da-d][\.\)]/)) {
+          currentQuestion += ' ' + line;
+        }
+      }
+      
+      // Don't forget the last question
+      if (currentQuestion) {
+        questions.push({
+          id: `pattern_q${questionIndex}`,
+          question: currentQuestion.trim(),
+          type: options.length > 0 ? 'multiple_choice' : 'short_answer',
+          options: options.length > 0 ? options : undefined,
+          correctAnswer: answer || options[0] || 'Not specified',
+          explanation: 'Extracted using pattern matching',
+          difficulty: 'intermediate'
+        });
+      }
+      
+    } catch (error) {
+      console.error('Pattern extraction error:', error);
+    }
+    
+    return questions;
   }
 }
 

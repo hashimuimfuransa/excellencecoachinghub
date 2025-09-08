@@ -1,6 +1,7 @@
 import express from 'express';
 import { auth } from '../middleware/auth';
 import { authorizeRoles } from '../middleware/roleAuth';
+import { uploadSmartTestFile } from '../config/cloudinary';
 import {
   generateSmartTest,
   generateFreeSmartTest,
@@ -17,9 +18,11 @@ import {
   updateAdminSmartTest,
   deleteAdminSmartTest,
   toggleSmartTestStatus,
-  uploadSmartTestFile,
+  uploadSmartTestFile as uploadSmartTestFileController,
   uploadTestContentToExisting,
-  togglePublishStatus
+  togglePublishStatus,
+  extractQuestionsFromTest,
+  startAdminTest
 } from '../controllers/smartTestController';
 
 const router = express.Router();
@@ -59,7 +62,7 @@ router.post('/admin/create', authorizeRoles(['admin', 'super_admin']), createAdm
 router.get('/admin/manage', authorizeRoles(['admin', 'super_admin']), getAdminSmartTests);
 
 // Upload smart test file (requires admin role)
-router.post('/admin/upload', authorizeRoles(['admin', 'super_admin']), uploadSmartTestFile);
+router.post('/admin/upload', authorizeRoles(['admin', 'super_admin']), uploadSmartTestFile.single('file'), uploadSmartTestFileController);
 
 // Update admin smart test (requires admin role)
 router.put('/admin/:testId', authorizeRoles(['admin', 'super_admin']), updateAdminSmartTest);
@@ -71,10 +74,16 @@ router.delete('/admin/:testId', authorizeRoles(['admin', 'super_admin']), delete
 router.patch('/admin/:testId/status', authorizeRoles(['admin', 'super_admin']), toggleSmartTestStatus);
 
 // Upload content to existing test (requires admin role)
-router.post('/admin/:testId/upload-content', authorizeRoles(['admin', 'super_admin']), uploadTestContentToExisting);
+router.post('/admin/:testId/upload-content', authorizeRoles(['admin', 'super_admin']), uploadSmartTestFile.single('file'), uploadTestContentToExisting);
 
 // Toggle publish status (requires admin role)
 router.put('/admin/:testId/publish', authorizeRoles(['admin', 'super_admin']), togglePublishStatus);
+
+// Extract questions from test using AI (requires admin role)
+router.post('/admin/:testId/extract-questions', authorizeRoles(['admin', 'super_admin']), extractQuestionsFromTest);
+
+// Start admin test session with AI extracted questions (for job seekers)
+router.post('/admin/:testId/start-admin-test', startAdminTest);
 
 // Dynamic routes (must come after static routes)
 // Get smart test by ID

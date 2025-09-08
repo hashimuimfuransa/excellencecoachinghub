@@ -34,11 +34,7 @@ import {
   FormControlLabel,
   Badge,
   LinearProgress,
-  Avatar,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemSecondaryAction
+  Avatar
 } from '@mui/material';
 import {
   Search,
@@ -58,8 +54,6 @@ import {
   Schedule,
   People,
   Assignment,
-  TrendingUp,
-  TrendingDown,
   Warning,
   Error,
   Info,
@@ -84,18 +78,11 @@ interface JobManagementProps {
   onJobSelect?: (job: Job) => void;
 }
 
-interface JobStats {
-  totalJobs: number;
-  activeJobs: number;
-  draftJobs: number;
-  expiredJobs: number;
-  totalApplications: number;
-  averageApplicationsPerJob: number;
-  topEmployers: Array<{ company: string; jobs: number; applications: number }>;
-}
+
 
 interface JobFilter {
   search: string;
+  searchType: 'job' | 'company' | 'other';
   status: string;
   type: string;
   experienceLevel: string;
@@ -111,18 +98,11 @@ const JobManagement: React.FC<JobManagementProps> = ({ onJobSelect }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalJobs, setTotalJobs] = useState(0);
-  const [stats, setStats] = useState<JobStats>({
-    totalJobs: 0,
-    activeJobs: 0,
-    draftJobs: 0,
-    expiredJobs: 0,
-    totalApplications: 0,
-    averageApplicationsPerJob: 0,
-    topEmployers: []
-  });
+
 
   const [filters, setFilters] = useState<JobFilter>({
     search: '',
+    searchType: 'job',
     status: '',
     type: '',
     experienceLevel: '',
@@ -151,20 +131,31 @@ const JobManagement: React.FC<JobManagementProps> = ({ onJobSelect }) => {
 
   useEffect(() => {
     loadJobs();
-    loadStats();
   }, [page, rowsPerPage, filters]);
 
   const loadJobs = async () => {
     setLoading(true);
     try {
-      const response = await superAdminService.getAllJobs({
+      // Build search parameters based on search type
+      const searchParams: any = {
         page: page + 1,
         limit: rowsPerPage,
-        search: filters.search || undefined,
-        status: filters.status || undefined,
         sortBy: 'createdAt',
         sortOrder: 'desc'
-      });
+      };
+
+      // Add search parameter - backend should handle different search types
+      if (filters.search) {
+        searchParams.search = filters.search;
+        // Add search type as a hint to the backend
+        searchParams.searchType = filters.searchType;
+      }
+
+      if (filters.status) {
+        searchParams.status = filters.status;
+      }
+
+      const response = await superAdminService.getAllJobs(searchParams);
 
       console.log('🔍 JobManagement: Raw API response:', response);
 
@@ -286,60 +277,7 @@ const JobManagement: React.FC<JobManagementProps> = ({ onJobSelect }) => {
     }
   };
 
-  const loadStats = async () => {
-    try {
-      console.log('🔍 JobManagement: Loading real job stats from backend...');
-      const statsData = await superAdminService.getJobStats();
-      console.log('📊 JobManagement: Successfully loaded stats from backend:', statsData);
 
-      // Use the real data from backend
-      setStats({
-        totalJobs: statsData.totalJobs || 0,
-        activeJobs: statsData.activeJobs || 0,
-        draftJobs: statsData.draftJobs || 0,
-        expiredJobs: statsData.expiredJobs || 0,
-        totalApplications: statsData.totalApplications || 0,
-        averageApplicationsPerJob: statsData.averageApplicationsPerJob || 0,
-        topEmployers: statsData.topEmployers || []
-      });
-    } catch (error) {
-      console.error('❌ Error loading job stats from backend:', error);
-      console.log('🏗️ This indicates the backend /admin/jobs/stats endpoint may not be working');
-      
-      // Try to calculate basic stats from the loaded jobs as fallback
-      try {
-        console.log('🔄 Attempting to calculate stats from current jobs data...');
-        const activeJobsCount = jobs.filter(job => job.status === 'active').length;
-        const draftJobsCount = jobs.filter(job => job.status === 'draft').length;
-        const expiredJobsCount = jobs.filter(job => job.status === 'expired').length;
-        
-        // Use minimal fallback with calculated data where possible
-        setStats({
-          totalJobs: totalJobs || jobs.length,
-          activeJobs: activeJobsCount,
-          draftJobs: draftJobsCount,
-          expiredJobs: expiredJobsCount,
-          totalApplications: jobs.reduce((total, job) => total + (job.applicationsCount || 0), 0),
-          averageApplicationsPerJob: jobs.length > 0 ? 
-            Math.round((jobs.reduce((total, job) => total + (job.applicationsCount || 0), 0) / jobs.length) * 10) / 10 : 0,
-          topEmployers: []
-        });
-        console.log('✅ Calculated fallback stats from current jobs data');
-      } catch (fallbackError) {
-        console.error('❌ Failed to calculate fallback stats, using empty stats:', fallbackError);
-        // Final fallback to empty stats
-        setStats({
-          totalJobs: 0,
-          activeJobs: 0,
-          draftJobs: 0,
-          expiredJobs: 0,
-          totalApplications: 0,
-          averageApplicationsPerJob: 0,
-          topEmployers: []
-        });
-      }
-    }
-  };
 
   const handleFilterChange = (field: keyof JobFilter, value: string | boolean) => {
     setFilters(prev => ({ ...prev, [field]: value }));
@@ -380,36 +318,53 @@ const JobManagement: React.FC<JobManagementProps> = ({ onJobSelect }) => {
   const handleActivateJob = async (job: Job) => {
     try {
       console.log('Activating job:', job.title);
+      await superAdminService.updateJob(job._id, { status: JobStatus.ACTIVE });
+      console.log('✅ Job activated successfully');
       loadJobs();
     } catch (error) {
-      console.error('Error activating job:', error);
+      console.error('❌ Error activating job:', error);
+      alert('Failed to activate job. Please try again.');
     }
   };
 
   const handlePauseJob = async (job: Job) => {
     try {
       console.log('Pausing job:', job.title);
+      await superAdminService.updateJob(job._id, { status: JobStatus.PAUSED });
+      console.log('✅ Job paused successfully');
       loadJobs();
     } catch (error) {
-      console.error('Error pausing job:', error);
+      console.error('❌ Error pausing job:', error);
+      alert('Failed to pause job. Please try again.');
     }
   };
 
   const handleArchiveJob = async (job: Job) => {
     try {
       console.log('Archiving job:', job.title);
+      await superAdminService.updateJob(job._id, { status: JobStatus.CLOSED });
+      console.log('✅ Job archived successfully');
       loadJobs();
     } catch (error) {
-      console.error('Error archiving job:', error);
+      console.error('❌ Error archiving job:', error);
+      alert('Failed to archive job. Please try again.');
     }
   };
 
   const handleFeatureJob = async (job: Job) => {
     try {
       console.log('Featuring job:', job.title);
+      if (job.isCurated) {
+        await superAdminService.unfeatureJob(job._id);
+        console.log('✅ Job unfeatured successfully');
+      } else {
+        await superAdminService.featureJob(job._id);
+        console.log('✅ Job featured successfully');
+      }
       loadJobs();
     } catch (error) {
-      console.error('Error featuring job:', error);
+      console.error('❌ Error featuring/unfeaturing job:', error);
+      alert('Failed to update job feature status. Please try again.');
     }
   };
 
@@ -417,9 +372,13 @@ const JobManagement: React.FC<JobManagementProps> = ({ onJobSelect }) => {
     if (window.confirm(`Are you sure you want to delete "${job.title}"?`)) {
       try {
         console.log('Deleting job:', job.title);
-        loadJobs();
+        await superAdminService.deleteJob(job._id);
+        console.log('✅ Job deleted successfully');
+        loadJobs(); // Reload the jobs list
       } catch (error) {
-        console.error('Error deleting job:', error);
+        console.error('❌ Error deleting job:', error);
+        // You might want to show an error message to the user here
+        alert('Failed to delete job. Please try again.');
       }
     }
   };
@@ -433,31 +392,55 @@ const JobManagement: React.FC<JobManagementProps> = ({ onJobSelect }) => {
     }
   };
 
-  const handleBulkAction = (action: string) => {
+  const handleBulkAction = async (action: string) => {
     const selectedJobIds = bulkActions.selectedJobs;
     if (selectedJobIds.length === 0) return;
 
-    switch (action) {
-      case 'activate':
-        console.log('Bulk activating jobs:', selectedJobIds);
-        break;
-      case 'pause':
-        console.log('Bulk pausing jobs:', selectedJobIds);
-        break;
-      case 'archive':
-        console.log('Bulk archiving jobs:', selectedJobIds);
-        break;
-      case 'delete':
-        if (window.confirm(`Delete ${selectedJobIds.length} selected jobs?`)) {
-          console.log('Bulk deleting jobs:', selectedJobIds);
-        }
-        break;
-      case 'export':
-        console.log('Exporting selected jobs:', selectedJobIds);
-        break;
+    try {
+      switch (action) {
+        case 'activate':
+          console.log('Bulk activating jobs:', selectedJobIds);
+          await Promise.all(selectedJobIds.map(id => 
+            superAdminService.updateJob(id, { status: JobStatus.ACTIVE })
+          ));
+          console.log('✅ Bulk activation completed');
+          break;
+        case 'pause':
+          console.log('Bulk pausing jobs:', selectedJobIds);
+          await Promise.all(selectedJobIds.map(id => 
+            superAdminService.updateJob(id, { status: JobStatus.PAUSED })
+          ));
+          console.log('✅ Bulk pause completed');
+          break;
+        case 'archive':
+          console.log('Bulk archiving jobs:', selectedJobIds);
+          await Promise.all(selectedJobIds.map(id => 
+            superAdminService.updateJob(id, { status: JobStatus.CLOSED })
+          ));
+          console.log('✅ Bulk archive completed');
+          break;
+        case 'delete':
+          if (window.confirm(`Delete ${selectedJobIds.length} selected jobs?`)) {
+            console.log('Bulk deleting jobs:', selectedJobIds);
+            await Promise.all(selectedJobIds.map(id => 
+              superAdminService.deleteJob(id)
+            ));
+            console.log('✅ Bulk deletion completed');
+          }
+          break;
+        case 'export':
+          console.log('Exporting selected jobs:', selectedJobIds);
+          // Export functionality can be implemented later
+          break;
+      }
+      
+      loadJobs(); // Reload the jobs list
+    } catch (error) {
+      console.error('❌ Error in bulk action:', error);
+      alert(`Failed to ${action} jobs. Please try again.`);
+    } finally {
+      setBulkActions({ selectedJobs: [], selectAll: false });
     }
-    
-    setBulkActions({ selectedJobs: [], selectAll: false });
   };
 
   const getStatusColor = (status: JobStatus) => {
@@ -507,152 +490,20 @@ const JobManagement: React.FC<JobManagementProps> = ({ onJobSelect }) => {
     });
   };
 
-  const StatCard = ({ title, value, subtitle, icon, color, trend }: any) => (
-    <Card sx={{ height: '100%' }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box>
-            <Typography color="textSecondary" gutterBottom variant="overline">
-              {title}
-            </Typography>
-            <Typography variant="h4" component="div">
-              {typeof value === 'number' ? value.toLocaleString() : value}
-            </Typography>
-            {subtitle && (
-              <Typography variant="body2" color="text.secondary">
-                {subtitle}
-              </Typography>
-            )}
-            {trend !== undefined && (
-              <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                {trend > 0 ? (
-                  <TrendingUp color="success" fontSize="small" />
-                ) : (
-                  <TrendingDown color="error" fontSize="small" />
-                )}
-                <Typography
-                  variant="body2"
-                  color={trend > 0 ? 'success.main' : 'error.main'}
-                  sx={{ ml: 0.5 }}
-                >
-                  {Math.abs(trend)}%
-                </Typography>
-              </Box>
-            )}
-          </Box>
-          <Avatar sx={{ bgcolor: `${color}.main`, width: 56, height: 56 }}>
-            {icon}
-          </Avatar>
-        </Box>
-      </CardContent>
-    </Card>
-  );
+
 
   return (
     <Box>
-      {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Total Jobs"
-            value={stats.totalJobs}
-            icon={<Work />}
-            color="primary"
-            trend={12}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Active Jobs"
-            value={stats.activeJobs}
-            icon={<CheckCircle />}
-            color="success"
-            trend={8}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Total Applications"
-            value={stats.totalApplications}
-            icon={<Assignment />}
-            color="info"
-            trend={-3}
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Avg Applications"
-            value={stats.averageApplicationsPerJob}
-            subtitle="Per job"
-            icon={<TrendingUp />}
-            color="warning"
-            trend={15}
-          />
-        </Grid>
-      </Grid>
 
-      {/* Top Employers */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Top Employers
-              </Typography>
-              <List>
-                {Array.isArray(stats.topEmployers) && stats.topEmployers.slice(0, 5).map((employer, index) => (
-                  <ListItem key={employer.company}>
-                    <ListItemAvatar>
-                      <Avatar sx={{ bgcolor: 'primary.main' }}>
-                        {index + 1}
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={employer.company}
-                      secondary={`${employer.jobs} jobs, ${employer.applications} applications`}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Job Status Distribution
-              </Typography>
-              <Box sx={{ mt: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">Active</Typography>
-                  <Typography variant="body2">67%</Typography>
-                </Box>
-                <LinearProgress variant="determinate" value={67} color="success" sx={{ mb: 2 }} />
-                
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">Draft</Typography>
-                  <Typography variant="body2">16%</Typography>
-                </Box>
-                <LinearProgress variant="determinate" value={16} sx={{ mb: 2 }} />
-                
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">Expired</Typography>
-                  <Typography variant="body2">17%</Typography>
-                </Box>
-                <LinearProgress variant="determinate" value={17} color="error" />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+
+
 
       {/* Filters and Actions */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
           <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
             <TextField
-              placeholder="Search jobs..."
+              placeholder={`Search ${filters.searchType === 'job' ? 'jobs' : filters.searchType === 'company' ? 'companies' : 'other'}...`}
               variant="outlined"
               size="small"
               value={filters.search}
@@ -662,6 +513,19 @@ const JobManagement: React.FC<JobManagementProps> = ({ onJobSelect }) => {
               }}
               sx={{ minWidth: 250 }}
             />
+            
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel>Search By</InputLabel>
+              <Select
+                value={filters.searchType}
+                label="Search By"
+                onChange={(e) => handleFilterChange('searchType', e.target.value)}
+              >
+                <MenuItem value="job">Job</MenuItem>
+                <MenuItem value="company">Company</MenuItem>
+                <MenuItem value="other">Other</MenuItem>
+              </Select>
+            </FormControl>
             
             <FormControl size="small" sx={{ minWidth: 120 }}>
               <InputLabel>Status</InputLabel>

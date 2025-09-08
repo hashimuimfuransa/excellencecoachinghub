@@ -117,12 +117,33 @@ class SmartTestService {
   }
 
   /**
-   * Upload test file
+   * Upload test file with optional metadata
    */
-  async uploadTestFile(file: File): Promise<SmartTest> {
+  async uploadTestFile(file: File, metadata?: {
+    title?: string;
+    description?: string;
+    jobTitle?: string;
+    company?: string;
+    industry?: string;
+    timeLimit?: number;
+    difficulty?: string;
+    skillsRequired?: string[];
+  }): Promise<SmartTest> {
     try {
       const formData = new FormData();
       formData.append('file', file);
+
+      // Add optional metadata
+      if (metadata) {
+        if (metadata.title) formData.append('title', metadata.title);
+        if (metadata.description) formData.append('description', metadata.description);
+        if (metadata.jobTitle) formData.append('jobTitle', metadata.jobTitle);
+        if (metadata.company) formData.append('company', metadata.company);
+        if (metadata.industry) formData.append('industry', metadata.industry);
+        if (metadata.timeLimit) formData.append('timeLimit', metadata.timeLimit.toString());
+        if (metadata.difficulty) formData.append('difficulty', metadata.difficulty);
+        if (metadata.skillsRequired) formData.append('skillsRequired', metadata.skillsRequired.join(','));
+      }
 
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/smart-tests/admin/upload`, {
         method: 'POST',
@@ -134,7 +155,7 @@ class SmartTestService {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Upload failed');
+        throw new Error(errorData.error || errorData.message || 'Upload failed');
       }
 
       const result = await response.json();
@@ -197,7 +218,6 @@ class SmartTestService {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('testId', testId);
 
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/smart-tests/admin/${testId}/upload-content`, {
         method: 'POST',
@@ -209,13 +229,67 @@ class SmartTestService {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Content upload failed');
+        throw new Error(errorData.error || errorData.message || 'Content upload failed');
       }
 
       const result = await response.json();
       return handleApiResponse(result);
     } catch (error) {
       console.error('Failed to upload test content:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Extract questions from test using AI (get random 20 questions)
+   */
+  async extractQuestionsFromTest(testId: string, questionCount: number = 20): Promise<any> {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/smart-tests/admin/${testId}/extract-questions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ questionCount, randomize: true })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.message || 'Failed to extract questions');
+      }
+
+      const result = await response.json();
+      return handleApiResponse(result);
+    } catch (error) {
+      console.error('Failed to extract questions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Start admin test session with extracted questions
+   */
+  async startAdminTest(testId: string, questionCount: number = 20): Promise<any> {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/smart-tests/admin/${testId}/start-admin-test`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ questionCount, randomize: true })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.message || 'Failed to start admin test');
+      }
+
+      const result = await response.json();
+      return handleApiResponse(result);
+    } catch (error) {
+      console.error('Failed to start admin test:', error);
       throw error;
     }
   }

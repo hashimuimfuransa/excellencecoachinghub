@@ -34,6 +34,7 @@ import {
 import { useNavigate, useLocation, Link as RouterLink, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import FloatingContact from '../components/FloatingContact';
+import AccountTypeModal from '../components/AccountTypeModal';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -42,6 +43,7 @@ const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [showAccountTypeModal, setShowAccountTypeModal] = useState(false);
   
   const { login, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
@@ -140,6 +142,15 @@ const LoginPage: React.FC = () => {
   
   const handleTogglePasswordVisibility = () => {
     setShowPassword((prev) => !prev);
+  };
+
+  const handleCreateAccount = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setShowAccountTypeModal(true);
+  };
+
+  const handleCloseAccountTypeModal = () => {
+    setShowAccountTypeModal(false);
   };
 
   const services = [
@@ -411,13 +422,17 @@ const LoginPage: React.FC = () => {
                         Don't have an account?
                       </Typography>
                       <Link 
-                        component={RouterLink} 
-                        to={redirectType === 'job' && jobId ? `/register?redirect=job&jobId=${jobId}` : "/register"} 
+                        href="#"
+                        onClick={handleCreateAccount}
                         sx={{ 
                           color: '#4CAF50', 
                           textDecoration: 'none',
                           fontWeight: 600,
-                          fontSize: '0.9rem'
+                          fontSize: '0.9rem',
+                          cursor: 'pointer',
+                          '&:hover': {
+                            textDecoration: 'underline'
+                          }
                         }}
                       >
                         Create Account
@@ -596,6 +611,14 @@ const LoginPage: React.FC = () => {
       
       {/* Floating Contact Button */}
       <FloatingContact />
+      
+      {/* Account Type Selection Modal */}
+      <AccountTypeModal
+        open={showAccountTypeModal}
+        onClose={handleCloseAccountTypeModal}
+        redirectType={redirectType}
+        jobId={jobId}
+      />
     </Box>
   );
 };

@@ -548,6 +548,7 @@ class SuperAdminService {
     page?: number;
     limit?: number;
     search?: string;
+    searchType?: string;
     status?: string;
     employerId?: string;
     sortBy?: string;
@@ -564,6 +565,7 @@ class SuperAdminService {
       if (params?.page) queryParams.append('page', params.page.toString());
       if (params?.limit) queryParams.append('limit', params.limit.toString());
       if (params?.search) queryParams.append('search', params.search);
+      if (params?.searchType) queryParams.append('searchType', params.searchType);
       if (params?.status) queryParams.append('status', params.status);
       if (params?.employerId) queryParams.append('employerId', params.employerId);
       if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
@@ -613,8 +615,90 @@ class SuperAdminService {
           featured: false,
           applicationCount: 32,
           viewCount: 180
+        },
+        {
+          _id: '3',
+          title: 'Backend Engineer',
+          description: 'Looking for a skilled backend engineer to join our team...',
+          company: 'TechCorp Inc.',
+          location: 'Austin, TX',
+          type: 'full-time',
+          salary: { min: 110000, max: 140000, currency: 'USD' },
+          requirements: ['Node.js', 'MongoDB', 'Express'],
+          benefits: ['Health Insurance', 'Remote Work', 'Learning Budget'],
+          status: 'active',
+          postedBy: '2',
+          createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
+          featured: false,
+          applicationCount: 28,
+          viewCount: 145
+        },
+        {
+          _id: '4',
+          title: 'Product Manager',
+          description: 'Seeking an experienced product manager to lead our initiatives...',
+          company: 'InnovateHub',
+          location: 'Seattle, WA',
+          type: 'full-time',
+          salary: { min: 140000, max: 180000, currency: 'USD' },
+          requirements: ['Product Management', 'Agile', 'Analytics'],
+          benefits: ['Health Insurance', 'Stock Options', 'Unlimited PTO'],
+          status: 'pending',
+          postedBy: '4',
+          createdAt: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(),
+          featured: true,
+          applicationCount: 52,
+          viewCount: 280
+        },
+        {
+          _id: '5',
+          title: 'DevOps Engineer',
+          description: 'Join our infrastructure team to build scalable systems...',
+          company: 'CloudFirst Technologies',
+          location: 'Denver, CO',
+          type: 'contract',
+          salary: { min: 100000, max: 130000, currency: 'USD' },
+          requirements: ['AWS', 'Docker', 'Kubernetes'],
+          benefits: ['Health Insurance', 'Flexible Schedule'],
+          status: 'active',
+          postedBy: '5',
+          createdAt: new Date(Date.now() - 96 * 60 * 60 * 1000).toISOString(),
+          updatedAt: new Date(Date.now() - 96 * 60 * 60 * 1000).toISOString(),
+          featured: false,
+          applicationCount: 19,
+          viewCount: 92
         }
       ];
+
+      // Apply search filtering to mock data
+      let filteredJobs = mockJobs;
+      
+      if (params?.search) {
+        const searchTerm = params.search.toLowerCase();
+        const searchType = params.searchType || 'job';
+        
+        filteredJobs = mockJobs.filter(job => {
+          if (searchType === 'company') {
+            return job.company.toLowerCase().includes(searchTerm);
+          } else if (searchType === 'job') {
+            return job.title.toLowerCase().includes(searchTerm) ||
+                   job.description.toLowerCase().includes(searchTerm);
+          } else {
+            // 'other' - search in all fields
+            return job.title.toLowerCase().includes(searchTerm) ||
+                   job.description.toLowerCase().includes(searchTerm) ||
+                   job.company.toLowerCase().includes(searchTerm) ||
+                   job.location.toLowerCase().includes(searchTerm);
+          }
+        });
+      }
+      
+      // Apply status filtering
+      if (params?.status) {
+        filteredJobs = filteredJobs.filter(job => job.status === params.status);
+      }
 
       const limit = params?.limit || 10;
       const page = params?.page || 1;
@@ -622,10 +706,10 @@ class SuperAdminService {
       const endIndex = startIndex + limit;
 
       return {
-        jobs: mockJobs.slice(startIndex, endIndex),
-        total: mockJobs.length,
+        jobs: filteredJobs.slice(startIndex, endIndex),
+        total: filteredJobs.length,
         page: page,
-        totalPages: Math.ceil(mockJobs.length / limit)
+        totalPages: Math.ceil(filteredJobs.length / limit)
       };
     }
   }

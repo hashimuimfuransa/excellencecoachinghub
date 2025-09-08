@@ -495,4 +495,38 @@ export const uploadDocument = multer({
   },
 });
 
+// Configure multer for smart test file uploads
+export const uploadSmartTestFile = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit for smart test files
+  },
+  fileFilter: (req, file, cb) => {
+    // Check file type for smart test uploads
+    const allowedTypes = [
+      'application/json',
+      'text/csv',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-excel',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ];
+    
+    const allowedExtensions = ['.json', '.csv', '.xlsx', '.xls', '.pdf', '.doc', '.docx', '.txt'];
+    
+    // Check both mimetype and file extension
+    const fileName = file.originalname.toLowerCase();
+    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+    const hasValidMimeType = allowedTypes.includes(file.mimetype);
+    
+    if (hasValidMimeType || hasValidExtension) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JSON, CSV, XLSX, PDF, DOC, DOCX, and TXT files are allowed for smart test uploads!'));
+    }
+  },
+});
+
 export default cloudinary;

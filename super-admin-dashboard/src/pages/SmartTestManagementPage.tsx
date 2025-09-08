@@ -335,12 +335,34 @@ const SmartTestManagementPage: React.FC = () => {
     }
 
     try {
-      await smartTestService.uploadTestFile(uploadFile);
-      showSnackbar('Test file uploaded successfully', 'success');
+      // Prepare metadata from form data if provided
+      const metadata = {
+        title: formData.title || undefined,
+        description: formData.description || undefined,
+        jobTitle: formData.jobTitle || undefined,
+        company: formData.company || undefined,
+        industry: formData.industry || undefined,
+        timeLimit: formData.timeLimit || undefined,
+        difficulty: formData.difficulty || undefined,
+        skillsRequired: undefined // Can be added later if needed
+      };
+
+      const result = await smartTestService.uploadTestFile(uploadFile, metadata);
+      
+      // Show success message with parsing details if available
+      const response = result as any;
+      if (response.parsingDetails) {
+        showSnackbar(`Test uploaded successfully! Parsed ${response.parsingDetails.validQuestions} valid questions from ${response.parsingDetails.fileName}`, 'success');
+      } else {
+        showSnackbar('Test file uploaded successfully', 'success');
+      }
+      
       setUploadDialog(false);
       setUploadFile(null);
+      resetForm();
       fetchTests();
     } catch (error: any) {
+      console.error('Upload error:', error);
       showSnackbar('Upload failed: ' + error.message, 'error');
     }
   };
@@ -465,7 +487,7 @@ const SmartTestManagementPage: React.FC = () => {
       </Box>
 
       {/* Stats Cards */}
-      <Grid container spacing={3} mb={4}>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
           <Card elevation={2}>
             <CardContent>
@@ -708,6 +730,16 @@ const SmartTestManagementPage: React.FC = () => {
                               onClick={() => openUploadContentDialog(test)}
                             >
                               <FileUploadIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Start Admin Test (20 random questions)">
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={() => handleStartAdminTest(test)}
+                              disabled={test.questionCount === 0}
+                            >
+                              <QuizIcon />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title={test.isPublished ? "Unpublish Test" : "Publish Test"}>
@@ -982,58 +1014,164 @@ const SmartTestManagementPage: React.FC = () => {
       </Dialog>
 
       {/* Upload Dialog */}
-      <Dialog open={uploadDialog} onClose={() => setUploadDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog open={uploadDialog} onClose={() => setUploadDialog(false)} maxWidth="md" fullWidth>
         <DialogTitle>Upload Test File</DialogTitle>
         <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <input
-              type="file"
-              accept=".json,.csv,.xlsx,.doc,.docx,.pdf"
-              onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-              style={{ display: 'none' }}
-              id="file-upload"
-            />
-            <label htmlFor="file-upload">
-              <Button
-                variant="outlined"
-                component="span"
-                startIcon={<UploadIcon />}
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            {/* File Selection */}
+            <Grid item xs={12}>
+              <input
+                type="file"
+                accept=".json,.csv,.xlsx,.doc,.docx,.pdf,.txt"
+                onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                style={{ display: 'none' }}
+                id="file-upload"
+              />
+              <label htmlFor="file-upload">
+                <Button
+                  variant="outlined"
+                  component="span"
+                  startIcon={<UploadIcon />}
+                  fullWidth
+                  sx={{ mb: 2 }}
+                >
+                  Choose File
+                </Button>
+              </label>
+              {uploadFile && (
+                <Alert 
+                  severity={validateFile(uploadFile).isValid ? "success" : "warning"} 
+                  sx={{ mb: 2 }}
+                >
+                  {validateFile(uploadFile).isValid
+                    ? `Selected: ${uploadFile.name} (${(uploadFile.size / 1024 / 1024).toFixed(2)} MB)`
+                    : validateFile(uploadFile).error
+                  }
+                </Alert>
+              )}
+            </Grid>
+
+            {/* Optional Metadata */}
+            <Grid item xs={12}>
+              <Typography variant="subtitle2" gutterBottom>
+                Optional Test Information (will use defaults if not provided)
+              </Typography>
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
                 fullWidth
-                sx={{ mb: 2 }}
-              >
-                Choose File
-              </Button>
-            </label>
-            {uploadFile && (
-              <Alert 
-                severity={validateFile(uploadFile).isValid ? "info" : "warning"} 
-                sx={{ mb: 2 }}
-              >
-                {validateFile(uploadFile).isValid
-                  ? `Selected: ${uploadFile.name} (${(uploadFile.size / 1024 / 1024).toFixed(2)} MB)`
-                  : validateFile(uploadFile).error
-                }
-              </Alert>
-            )}
-            <Typography variant="body2" color="text.secondary">
-              Supported formats: JSON, CSV, XLSX, DOC, DOCX, PDF. The file should contain test questions and answers.
-            </Typography>
-            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-              • JSON/CSV/XLSX: Structured data with questions, options, and answers<br/>
-              • DOC/DOCX: Text documents with questions that will be parsed<br/>
-              • PDF: Document containing questions for AI-powered extraction<br/>
-              • Maximum file size: 10MB
-            </Typography>
-          </Box>
+                label="Test Title"
+                variant="outlined"
+                size="small"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="Will use filename if empty"
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Job Title"
+                variant="outlined"
+                size="small"
+                value={formData.jobTitle}
+                onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
+                placeholder="General Position"
+              />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                variant="outlined"
+                size="small"
+                multiline
+                rows={2}
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Will auto-generate if empty"
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Company"
+                variant="outlined"
+                size="small"
+                value={formData.company}
+                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Industry"
+                variant="outlined"
+                size="small"
+                value={formData.industry}
+                onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Difficulty</InputLabel>
+                <Select
+                  value={formData.difficulty}
+                  label="Difficulty"
+                  onChange={(e) => setFormData({ ...formData, difficulty: e.target.value as any })}
+                >
+                  <MenuItem value="basic">Basic</MenuItem>
+                  <MenuItem value="intermediate">Intermediate</MenuItem>
+                  <MenuItem value="advanced">Advanced</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Time Limit (minutes)"
+                variant="outlined"
+                size="small"
+                type="number"
+                value={formData.timeLimit}
+                onChange={(e) => setFormData({ ...formData, timeLimit: parseInt(e.target.value) || 30 })}
+              />
+            </Grid>
+
+            {/* File Format Information */}
+            <Grid item xs={12}>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Supported formats:</strong> JSON, CSV, XLSX, DOC, DOCX, PDF, TXT
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                • <strong>JSON/CSV/XLSX:</strong> Structured data with questions, options, and answers<br/>
+                • <strong>DOC/DOCX/TXT:</strong> Text documents with questions that will be AI-parsed<br/>
+                • <strong>PDF:</strong> Document containing questions for AI-powered extraction<br/>
+                • <strong>Maximum file size:</strong> 10MB
+              </Typography>
+            </Grid>
+          </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setUploadDialog(false)}>Cancel</Button>
+          <Button onClick={() => {
+            setUploadDialog(false);
+            setUploadFile(null);
+            resetForm();
+          }}>Cancel</Button>
           <Button 
             onClick={handleFileUpload} 
             variant="contained" 
             disabled={!uploadFile || !validateFile(uploadFile).isValid}
+            startIcon={<CloudUploadIcon />}
           >
-            Upload
+            Upload & Parse
           </Button>
         </DialogActions>
       </Dialog>

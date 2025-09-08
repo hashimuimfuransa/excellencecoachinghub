@@ -1086,15 +1086,26 @@ const SmartTestPage: React.FC = () => {
                         By: {test.uploadedBy}
                       </Typography>
 
-                      <Box mt={3}>
+                      <Box mt={3} display="flex" flexDirection="column" gap={1}>
                         <Button
                           variant="contained"
                           fullWidth
                           startIcon={<PlayArrow />}
+                          onClick={() => startAdminTest(test._id)}
+                          disabled={loading || !test.isActive}
+                          color="primary"
+                        >
+                          {!test.isActive ? 'Test Inactive' : loading ? 'Starting...' : 'Start Admin Test (AI - 20 Questions)'}
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          fullWidth
+                          size="small"
+                          startIcon={<Settings />}
                           onClick={() => startTest(test.testId)}
                           disabled={loading || !test.isActive}
                         >
-                          {!test.isActive ? 'Test Inactive' : loading ? 'Starting...' : 'Start Test'}
+                          {loading ? 'Starting...' : 'Start Full Test'}
                         </Button>
                       </Box>
                     </CardContent>

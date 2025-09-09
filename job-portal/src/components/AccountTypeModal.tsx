@@ -25,6 +25,7 @@ import {
 } from '@mui/icons-material';
 import { TransitionProps } from '@mui/material/transitions';
 import { useNavigate } from 'react-router-dom';
+import { SafeSlideUp } from '../utils/transitionFix';
 
 interface AccountTypeModalProps {
   open: boolean;
@@ -33,14 +34,7 @@ interface AccountTypeModalProps {
   jobId?: string;
 }
 
-const Transition = React.forwardRef(function Transition(
-  props: TransitionProps & {
-    children: React.ReactElement<any, any>;
-  },
-  ref: React.Ref<unknown>,
-) {
-  return <Slide direction="up" ref={ref} {...props} />;
-});
+const Transition = SafeSlideUp;
 
 const AccountTypeModal: React.FC<AccountTypeModalProps> = ({ 
   open, 

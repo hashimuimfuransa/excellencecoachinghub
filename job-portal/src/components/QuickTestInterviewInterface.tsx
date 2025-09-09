@@ -25,6 +25,7 @@ import {
   ListItemText,
   Avatar
 } from '@mui/material';
+import { SafeSlideUp } from '../utils/transitionFix';
 import {
   PlayArrow,
   Pause,
@@ -574,7 +575,7 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
 
   if (!session || !currentQuestion) {
     return (
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth TransitionComponent={SafeSlideUp}>
         <DialogContent sx={{ textAlign: 'center', py: 4 }}>
           <CircularProgress size={40} />
           <Typography variant="h6" sx={{ mt: 2 }}>
@@ -592,6 +593,7 @@ export const QuickTestInterviewInterface: React.FC<QuickTestInterviewInterfacePr
       maxWidth={false}
       fullWidth
       fullScreen={isFullscreen || isMobile}
+      TransitionComponent={SafeSlideUp}
       PaperProps={{
         sx: {
           width: isFullscreen ? '100vw' : isMobile ? '100vw' : '90vw',

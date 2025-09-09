@@ -579,53 +579,165 @@ class ModernInterviewService {
       'Frontend Developer': [
         {
           id: '1',
-          question: "Can you explain the difference between React functional components and class components, and when you would use each?",
-          type: 'technical' as const,
+          question: "Tell me about yourself and your background in frontend development.",
+          type: 'behavioral' as const,
           expectedDuration: 45,
+          difficulty: 'easy' as const,
+          keywords: ['background', 'experience', 'frontend', 'skills', 'career']
+        },
+        {
+          id: '2',
+          question: "Can you explain the difference between React functional components and class components?",
+          type: 'technical' as const,
+          expectedDuration: 60,
           difficulty: 'medium' as const,
           keywords: ['React', 'functional', 'class', 'components', 'hooks', 'lifecycle']
         },
         {
-          id: '2',
-          question: "Tell me about a challenging UI problem you solved and how you approached it.",
+          id: '3',
+          question: "How do you ensure cross-browser compatibility in your projects?",
+          type: 'technical' as const,
+          expectedDuration: 50,
+          difficulty: 'medium' as const,
+          keywords: ['cross-browser', 'compatibility', 'testing', 'CSS', 'polyfills']
+        },
+        {
+          id: '4',
+          question: "Describe a challenging UI/UX problem you solved recently.",
+          type: 'behavioral' as const,
+          expectedDuration: 55,
+          difficulty: 'medium' as const,
+          keywords: ['UI', 'UX', 'problem-solving', 'design', 'user-experience']
+        },
+        {
+          id: '5',
+          question: "What's your approach to state management in large applications?",
+          type: 'technical' as const,
+          expectedDuration: 65,
+          difficulty: 'hard' as const,
+          keywords: ['state-management', 'Redux', 'Context', 'scalability', 'architecture']
+        },
+        {
+          id: '6',
+          question: "How do you optimize web application performance?",
+          type: 'technical' as const,
+          expectedDuration: 70,
+          difficulty: 'hard' as const,
+          keywords: ['performance', 'optimization', 'bundling', 'lazy-loading', 'metrics']
+        },
+        {
+          id: '7',
+          question: "Tell me about a time you had to work with a difficult stakeholder or client.",
           type: 'behavioral' as const,
           expectedDuration: 60,
           difficulty: 'medium' as const,
-          keywords: ['problem-solving', 'UI', 'approach', 'challenge', 'solution']
+          keywords: ['stakeholder', 'communication', 'conflict-resolution', 'collaboration']
         },
         {
-          id: '3',
-          question: "How would you optimize a React application that's performing poorly?",
+          id: '8',
+          question: "How do you stay updated with the latest frontend technologies?",
+          type: 'behavioral' as const,
+          expectedDuration: 40,
+          difficulty: 'easy' as const,
+          keywords: ['learning', 'technology', 'trends', 'development', 'growth']
+        },
+        {
+          id: '9',
+          question: "Explain how you would implement responsive design for a complex dashboard.",
           type: 'technical' as const,
           expectedDuration: 75,
           difficulty: 'hard' as const,
-          keywords: ['optimization', 'performance', 'React', 'memo', 'profiling', 'bundle']
+          keywords: ['responsive', 'design', 'dashboard', 'mobile', 'CSS-Grid', 'flexbox']
+        },
+        {
+          id: '10',
+          question: "Where do you see yourself in your frontend development career in 3 years?",
+          type: 'behavioral' as const,
+          expectedDuration: 45,
+          difficulty: 'easy' as const,
+          keywords: ['career', 'goals', 'growth', 'aspirations', 'future']
         }
       ],
       'Backend Developer': [
         {
           id: '1',
+          question: "Tell me about your experience with backend development and the technologies you've worked with.",
+          type: 'behavioral' as const,
+          expectedDuration: 45,
+          difficulty: 'easy' as const,
+          keywords: ['backend', 'experience', 'technologies', 'skills', 'development']
+        },
+        {
+          id: '2',
           question: "Explain how you would design a REST API for a user management system.",
           type: 'technical' as const,
-          expectedDuration: 60,
+          expectedDuration: 70,
           difficulty: 'medium' as const,
           keywords: ['REST', 'API', 'design', 'endpoints', 'HTTP', 'users']
         },
         {
-          id: '2',
-          question: "Describe a time when you had to debug a complex production issue. What was your approach?",
-          type: 'behavioral' as const,
-          expectedDuration: 45,
-          difficulty: 'medium' as const,
-          keywords: ['debugging', 'production', 'approach', 'logs', 'monitoring', 'troubleshooting']
-        },
-        {
           id: '3',
-          question: "How do you handle database performance optimization in a high-traffic application?",
+          question: "How do you handle database performance optimization in high-traffic applications?",
           type: 'technical' as const,
-          expectedDuration: 75,
+          expectedDuration: 80,
           difficulty: 'hard' as const,
           keywords: ['database', 'optimization', 'performance', 'indexing', 'queries', 'scaling']
+        },
+        {
+          id: '4',
+          question: "Describe a time when you had to debug a complex production issue.",
+          type: 'behavioral' as const,
+          expectedDuration: 60,
+          difficulty: 'medium' as const,
+          keywords: ['debugging', 'production', 'troubleshooting', 'logs', 'monitoring']
+        },
+        {
+          id: '5',
+          question: "What's your approach to API versioning and backward compatibility?",
+          type: 'technical' as const,
+          expectedDuration: 65,
+          difficulty: 'hard' as const,
+          keywords: ['API', 'versioning', 'compatibility', 'migration', 'strategy']
+        },
+        {
+          id: '6',
+          question: "How do you implement security best practices in your backend services?",
+          type: 'technical' as const,
+          expectedDuration: 70,
+          difficulty: 'hard' as const,
+          keywords: ['security', 'authentication', 'authorization', 'encryption', 'best-practices']
+        },
+        {
+          id: '7',
+          question: "Tell me about a time you had to optimize system architecture for better scalability.",
+          type: 'behavioral' as const,
+          expectedDuration: 75,
+          difficulty: 'medium' as const,
+          keywords: ['architecture', 'scalability', 'optimization', 'system-design']
+        },
+        {
+          id: '8',
+          question: "How do you handle error handling and logging in distributed systems?",
+          type: 'technical' as const,
+          expectedDuration: 60,
+          difficulty: 'medium' as const,
+          keywords: ['error-handling', 'logging', 'distributed', 'monitoring', 'observability']
+        },
+        {
+          id: '9',
+          question: "Explain your experience with containerization and deployment strategies.",
+          type: 'technical' as const,
+          expectedDuration: 65,
+          difficulty: 'medium' as const,
+          keywords: ['containerization', 'Docker', 'deployment', 'CI/CD', 'DevOps']
+        },
+        {
+          id: '10',
+          question: "What are your career goals in backend development?",
+          type: 'behavioral' as const,
+          expectedDuration: 40,
+          difficulty: 'easy' as const,
+          keywords: ['career', 'goals', 'backend', 'growth', 'aspirations']
         }
       ],
       'default': [
@@ -641,7 +753,7 @@ class ModernInterviewService {
           id: '2',
           question: "Why are you interested in this role and our company?",
           type: 'behavioral' as const,
-          expectedDuration: 60,
+          expectedDuration: 50,
           difficulty: 'easy' as const,
           keywords: ['interest', 'motivation', 'company', 'role', 'fit']
         },
@@ -649,9 +761,65 @@ class ModernInterviewService {
           id: '3',
           question: "Describe a challenging project you worked on and how you overcame obstacles.",
           type: 'situational' as const,
-          expectedDuration: 75,
+          expectedDuration: 70,
           difficulty: 'medium' as const,
           keywords: ['project', 'challenges', 'obstacles', 'problem-solving', 'teamwork']
+        },
+        {
+          id: '4',
+          question: "What are your greatest strengths and how do they apply to this role?",
+          type: 'behavioral' as const,
+          expectedDuration: 55,
+          difficulty: 'easy' as const,
+          keywords: ['strengths', 'skills', 'role', 'value', 'contribution']
+        },
+        {
+          id: '5',
+          question: "How do you handle working under pressure and tight deadlines?",
+          type: 'behavioral' as const,
+          expectedDuration: 60,
+          difficulty: 'medium' as const,
+          keywords: ['pressure', 'deadlines', 'stress', 'time-management', 'prioritization']
+        },
+        {
+          id: '6',
+          question: "Describe your experience working in a team environment.",
+          type: 'behavioral' as const,
+          expectedDuration: 55,
+          difficulty: 'easy' as const,
+          keywords: ['teamwork', 'collaboration', 'communication', 'team-player']
+        },
+        {
+          id: '7',
+          question: "Tell me about a time when you had to learn something new quickly.",
+          type: 'behavioral' as const,
+          expectedDuration: 65,
+          difficulty: 'medium' as const,
+          keywords: ['learning', 'adaptability', 'quick-learner', 'growth-mindset']
+        },
+        {
+          id: '8',
+          question: "How do you prioritize tasks when you have multiple competing deadlines?",
+          type: 'situational' as const,
+          expectedDuration: 60,
+          difficulty: 'medium' as const,
+          keywords: ['prioritization', 'time-management', 'deadlines', 'organization']
+        },
+        {
+          id: '9',
+          question: "What motivates you in your work and keeps you engaged?",
+          type: 'behavioral' as const,
+          expectedDuration: 50,
+          difficulty: 'easy' as const,
+          keywords: ['motivation', 'engagement', 'passion', 'drive', 'satisfaction']
+        },
+        {
+          id: '10',
+          question: "Where do you see yourself professionally in the next 3-5 years?",
+          type: 'behavioral' as const,
+          expectedDuration: 45,
+          difficulty: 'easy' as const,
+          keywords: ['career-goals', 'future', 'growth', 'aspirations', 'development']
         }
       ]
     };

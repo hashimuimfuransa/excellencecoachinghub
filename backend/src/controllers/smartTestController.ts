@@ -5,6 +5,45 @@ import { aiService } from '../services/aiService';
 import { fileParsingService } from '../services/fileParsingService';
 import mongoose from 'mongoose';
 
+// In-memory session store for admin test sessions
+const adminTestSessions = new Map<string, {
+  sessionId: string;
+  testId: string;
+  userId: string;
+  questions: any[];
+  startTime: Date;
+  timeLimit: number;
+  isAdminTest: boolean;
+}>();
+
+// Session cleanup function to prevent memory leaks
+const cleanupExpiredSessions = () => {
+  const now = new Date();
+  const expiredSessions: string[] = [];
+  
+  for (const [sessionId, sessionData] of adminTestSessions.entries()) {
+    // Calculate session expiry time (timeLimit + 1 hour buffer)
+    const sessionExpiryTime = new Date(sessionData.startTime.getTime() + (sessionData.timeLimit + 60) * 60 * 1000);
+    
+    if (now > sessionExpiryTime) {
+      expiredSessions.push(sessionId);
+    }
+  }
+  
+  // Remove expired sessions
+  expiredSessions.forEach(sessionId => {
+    adminTestSessions.delete(sessionId);
+    console.log(`🧹 Cleaned up expired session: ${sessionId}`);
+  });
+  
+  if (expiredSessions.length > 0) {
+    console.log(`🧹 Cleaned up ${expiredSessions.length} expired sessions`);
+  }
+};
+
+// Run cleanup every 30 minutes
+setInterval(cleanupExpiredSessions, 30 * 60 * 1000);
+
 /**
  * @desc Generate a smart test for job preparation
  * @route POST /api/smart-tests/generate
@@ -745,9 +784,98 @@ export const submitSmartTest = async (req: AuthRequest, res: Response) => {
     }
 
     console.log(`📝 Found test: ${smartTest.title} (${smartTest.isAdminTest ? 'Admin Test' : 'User Test'})`);
+    console.log('📝 Received answers object:', answers);
+    console.log('📝 Answer keys:', Object.keys(answers));
+
+    // Debug session information
+    console.log('📝 Submission sessionId:', sessionId);
+    console.log('📝 Available sessions in memory:', Array.from(adminTestSessions.keys()));
+    
+    // Check if this is an admin test session by looking for session data
+    let sessionData = adminTestSessions.get(sessionId);
+    let questionsToGrade = smartTest.questions;
+    let isAdminTestSession = false;
+
+    // First check in-memory session data
+    if (sessionData && sessionData.isAdminTest) {
+      console.log(`📝 Found admin test session data in memory: ${sessionData.questions.length} questions to grade`);
+      questionsToGrade = sessionData.questions;
+      isAdminTestSession = true;
+    } else {
+      // If not in memory, check for session pattern and try to recover from backup
+      const answerKeys = Object.keys(answers);
+      const hasSessionPattern = answerKeys.some(key => key.startsWith('session_q'));
+      
+      if (hasSessionPattern) {
+        console.log('🔄 Session data not found in memory but session_q pattern detected - treating as admin test session');
+        isAdminTestSession = true;
+        
+        // Try to recover question selection from backup stored in test document
+        const backupKey = `sessionData_${sessionId}`;
+        console.log(`🔍 Looking for backup data with key: ${backupKey}`);
+        
+        // Get fresh test document to check for backup data
+        const testWithBackup = await SmartTest.findById(smartTest._id);
+        const testObject = testWithBackup?.toObject();
+        const backupData = testObject ? (testObject as any)[backupKey] : null;
+        
+        console.log('🔍 Available backup keys:', testWithBackup ? Object.keys(testWithBackup.toObject()).filter(k => k.startsWith('sessionData_')) : []);
+        console.log('🔍 Backup data found:', !!backupData);
+        
+        if (backupData && (backupData.selectedQuestions || backupData.selectedQuestionIds)) {
+          console.log('🔄 Found backup session data');
+          
+          // Try to use full question data first (preferred method)
+          if (backupData.selectedQuestions && Array.isArray(backupData.selectedQuestions)) {
+            questionsToGrade = backupData.selectedQuestions;
+            console.log(`📝 Successfully recovered ${questionsToGrade.length} questions from full backup data`);
+          }
+          // Fallback to reconstructing from IDs
+          else if (backupData.selectedQuestionIds && Array.isArray(backupData.selectedQuestionIds)) {
+            console.log('🔄 Reconstructing questions from stored IDs');
+            const selectedQuestionIds = backupData.selectedQuestionIds;
+            
+            questionsToGrade = selectedQuestionIds.map((id: string) => {
+              const question = smartTest.questions.find((q: any) => q.id === id);
+              if (!question) {
+                console.error(`⚠️ Could not find question with ID: ${id}`);
+                return null;
+              }
+              return question;
+            }).filter((q: any) => q !== null);
+            
+            console.log(`📝 Successfully reconstructed ${questionsToGrade.length} questions from backup IDs`);
+          }
+          
+          // Restore session data to memory if it was stored in backup
+          if (backupData.sessionData && !adminTestSessions.has(sessionId)) {
+            adminTestSessions.set(sessionId, backupData.sessionData);
+            console.log('🔄 Restored session data to memory from backup');
+          }
+          
+          // Clean up the backup data after successful recovery
+          try {
+            await SmartTest.findByIdAndUpdate(smartTest._id, {
+              $unset: { [backupKey]: 1 }
+            });
+            console.log('🧹 Cleaned up backup session data after successful recovery');
+          } catch (cleanupError) {
+            console.error('⚠️ Failed to cleanup backup data:', cleanupError);
+          }
+        } else {
+          // Last resort fallback - use first N questions
+          const sessionQuestionCount = answerKeys.length;
+          questionsToGrade = smartTest.questions.slice(0, sessionQuestionCount);
+          console.log(`📝 Fallback: Will grade first ${questionsToGrade.length} questions (no backup found)`);
+          console.log(`⚠️ WARNING: Session and backup data lost. Grading against first ${sessionQuestionCount} questions as fallback.`);
+        }
+      } else {
+        console.log('📝 Using regular test questions for grading (not an admin session)');
+      }
+    }
 
     // Ensure we have questions to grade against
-    if (!smartTest.questions || smartTest.questions.length === 0) {
+    if (!questionsToGrade || questionsToGrade.length === 0) {
       return res.status(400).json({
         success: false,
         error: 'Test has no questions available for grading'
@@ -756,8 +884,20 @@ export const submitSmartTest = async (req: AuthRequest, res: Response) => {
 
     // Calculate score and detailed results with enhanced AI analysis
     let correctAnswers = 0;
-    const detailedResults = smartTest.questions.map((question, index) => {
-      const userAnswer = answers[question.id];
+    const detailedResults = questionsToGrade.map((question, index) => {
+      // For admin test sessions, answers use session_q{index+1} format
+      // For regular tests, use the original question.id
+      let questionKey = question.id;
+      
+      if (isAdminTestSession) {
+        questionKey = `session_q${index + 1}`;
+      }
+      
+      const userAnswer = answers[questionKey];
+      
+      if (index === 0) {
+        console.log(`📝 Question matching - Index: ${index}, Original ID: ${question.id}, Using key: ${questionKey}, isAdminTestSession: ${isAdminTestSession}`);
+      }
       
       // Handle unanswered questions - more robust checking
       let hasAnswer = false;
@@ -773,7 +913,12 @@ export const submitSmartTest = async (req: AuthRequest, res: Response) => {
           displayAnswer = hasAnswer ? userAnswer.trim() : 'Not answered';
         } else if (typeof userAnswer === 'number') {
           hasAnswer = true;
-          displayAnswer = userAnswer.toString();
+          // For multiple choice questions, convert option index to option text
+          if (question.options && Array.isArray(question.options) && userAnswer >= 0 && userAnswer < question.options.length) {
+            displayAnswer = question.options[userAnswer];
+          } else {
+            displayAnswer = userAnswer.toString();
+          }
         } else if (typeof userAnswer === 'boolean') {
           hasAnswer = true;
           displayAnswer = userAnswer.toString();
@@ -786,21 +931,31 @@ export const submitSmartTest = async (req: AuthRequest, res: Response) => {
       // Compare answers more intelligently
       let isCorrect = false;
       if (hasAnswer) {
-        // Normalize both answers for comparison
-        const normalizedUserAnswer = typeof userAnswer === 'string' ? userAnswer.trim() : userAnswer;
-        const normalizedCorrectAnswer = typeof question.correctAnswer === 'string' ? question.correctAnswer.trim() : question.correctAnswer;
-        
-        // Use loose equality for numeric comparisons
-        if (typeof normalizedUserAnswer === 'number' && typeof normalizedCorrectAnswer === 'number') {
-          isCorrect = normalizedUserAnswer === normalizedCorrectAnswer;
+        // For multiple choice questions, compare the selected option text with correct answer
+        if (typeof userAnswer === 'number' && question.options && Array.isArray(question.options)) {
+          // Convert option index to option text for comparison
+          const selectedOption = question.options[userAnswer];
+          const correctAnswer = question.correctAnswer;
+          isCorrect = selectedOption === correctAnswer;
         } else {
-          isCorrect = JSON.stringify(normalizedUserAnswer) === JSON.stringify(normalizedCorrectAnswer);
+          // For text/other answer types, normalize and compare
+          const normalizedUserAnswer = typeof userAnswer === 'string' ? userAnswer.trim() : userAnswer;
+          const normalizedCorrectAnswer = typeof question.correctAnswer === 'string' ? question.correctAnswer.trim() : question.correctAnswer;
+          
+          // Use loose equality for numeric comparisons
+          if (typeof normalizedUserAnswer === 'number' && typeof normalizedCorrectAnswer === 'number') {
+            isCorrect = normalizedUserAnswer === normalizedCorrectAnswer;
+          } else {
+            isCorrect = JSON.stringify(normalizedUserAnswer) === JSON.stringify(normalizedCorrectAnswer);
+          }
         }
       }
       
       if (isCorrect) correctAnswers++;
 
-      console.log(`Question ${index + 1}: ${hasAnswer ? 'Answered' : 'Unanswered'} - ${isCorrect ? 'Correct' : 'Incorrect'} - User: "${displayAnswer}" vs Correct: "${question.correctAnswer}"`);
+      if (index < 3) {
+        console.log(`Question ${index + 1}: ${hasAnswer ? 'Answered' : 'Unanswered'} - ${isCorrect ? 'Correct' : 'Incorrect'} - UserRaw: ${JSON.stringify(userAnswer)} - User: "${displayAnswer}" vs Correct: "${question.correctAnswer}" - Type: ${typeof userAnswer} - HasOptions: ${question.options ? question.options.length : 0}`);
+      }
 
       return {
         questionId: question.id || `question_${index}`,
@@ -815,12 +970,13 @@ export const submitSmartTest = async (req: AuthRequest, res: Response) => {
       };
     });
 
-    const incorrectAnswers = smartTest.questions.length - correctAnswers;
+    const totalQuestions = questionsToGrade.length;
+    const incorrectAnswers = totalQuestions - correctAnswers;
     const score = correctAnswers;
-    const percentageScore = Math.round((correctAnswers / smartTest.questions.length) * 100);
+    const percentageScore = Math.round((correctAnswers / totalQuestions) * 100);
     const timeInMinutes = Math.round(timeSpent / 60);
 
-    console.log(`📊 Test Results: ${correctAnswers}/${smartTest.questions.length} correct (${percentageScore}%)`);
+    console.log(`📊 Test Results: ${correctAnswers}/${totalQuestions} correct (${percentageScore}%)`);
 
     // Generate enhanced AI-powered feedback with detailed analysis
     let aiAnalysis = '';
@@ -835,7 +991,7 @@ export const submitSmartTest = async (req: AuthRequest, res: Response) => {
         company: smartTest.company || 'Professional Organization',
         industry: smartTest.industry || 'General',
         difficulty: smartTest.difficulty || 'intermediate',
-        totalQuestions: smartTest.questions.length,
+        totalQuestions: totalQuestions,
         correctAnswers,
         incorrectAnswers,
         percentageScore,
@@ -1006,19 +1162,25 @@ ${(analysisData.recommendations || []).map(rec => `• ${rec}`).join('\n')}
     console.log('💾 Saving test result:', {
       testId: resultData.testId,
       userId,
-      score: `${correctAnswers}/${smartTest.questions.length}`,
+      score: `${correctAnswers}/${totalQuestions}`,
       percentage: `${percentageScore}%`,
-      isAdminTest: smartTest.isAdminTest
+      isAdminTest: isAdminTestSession || smartTest.isAdminTest
     });
 
     const testResult = await SmartTestResult.create(resultData);
+
+    // Clean up session data after successful submission
+    if (sessionData) {
+      adminTestSessions.delete(sessionId);
+      console.log(`🗑️ Cleaned up session: ${sessionId}`);
+    }
 
     // Prepare enhanced response with detailed analysis
     const responseData = {
       ...testResult.toObject(),
       analysis: {
         performance: {
-          totalQuestions: smartTest.questions.length,
+          totalQuestions: totalQuestions,
           correctAnswers,
           incorrectAnswers,
           percentageScore,
@@ -1982,6 +2144,30 @@ Return ONLY a JSON array of questions, no additional text.
       isAdminTest: true
     };
 
+    // Store session data in memory (in production, use Redis or database)
+    adminTestSessions.set(sessionId, sessionData);
+    console.log(`💾 Stored admin test session: ${sessionId} with ${selectedQuestions.length} questions`);
+
+    // BACKUP: Store both question IDs and full question data in the test document for recovery
+    try {
+      const selectedQuestionIds = selectedQuestions.map(q => q.id);
+      await SmartTest.findByIdAndUpdate(testId, {
+        $set: {
+          [`sessionData_${sessionId}`]: {
+            selectedQuestionIds,
+            selectedQuestions, // Store full question data as additional backup
+            sessionData: sessionData, // Store complete session data
+            createdAt: new Date()
+          }
+        }
+      });
+      console.log(`💾 Backup: Stored complete session data in test document for session ${sessionId}`);
+    } catch (backupError) {
+      console.error('⚠️ Failed to backup session data:', backupError);
+      // Don't fail the request if backup fails, but log it
+      console.error('Backup error details:', backupError);
+    }
+
     // For now, we'll return the session data directly
     // In production, consider using Redis or a dedicated session store
     
@@ -2005,7 +2191,9 @@ Return ONLY a JSON array of questions, no additional text.
         questions: testQuestions,
         timeLimit: test.timeLimit || 60,
         totalQuestions: testQuestions.length,
-        randomized: randomize
+        randomized: randomize,
+        // Include the selected question IDs for recovery
+        selectedQuestionIds: selectedQuestions.map(q => q.id)
       },
       message: 'Admin test session started successfully'
     });

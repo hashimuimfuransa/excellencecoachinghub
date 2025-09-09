@@ -32,6 +32,7 @@ import {
   AccordionSummary,
   AccordionDetails
 } from '@mui/material';
+import { SafeSlideUp } from '../utils/transitionFix';
 import {
   Assessment,
   EmojiEvents,
@@ -457,7 +458,7 @@ const InterviewResultsPage: React.FC = () => {
       </Grid>
 
       {/* Share Dialog */}
-      <Dialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)} maxWidth="sm" fullWidth TransitionComponent={SafeSlideUp}>
         <DialogTitle>Share Interview Results</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ mb: 3 }}>

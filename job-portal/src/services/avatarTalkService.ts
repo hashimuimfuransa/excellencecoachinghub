@@ -27,7 +27,7 @@ class AvatarTalkService {
   
   // Valid emotions according to AvatarTalk API
   private readonly validEmotions = ['happy', 'neutral', 'serious', 'surprise', 'fear', 'disgust'];
-  private readonly validAvatars = ['black_man', 'white_woman', 'asian_man', 'hispanic_woman', 'indian_man'];
+  private readonly validAvatars = ['japanese_man', 'old_european_woman', 'european_woman', 'black_man', 'japanese_woman', 'iranian_man', 'mexican_man', 'mexican_woman'];
   
   // Simple cache for frequently used videos
   private videoCache = new Map<string, string>();
@@ -62,8 +62,8 @@ class AvatarTalkService {
    */
   private validateAvatar(avatar: string): string {
     if (!this.validAvatars.includes(avatar)) {
-      console.warn(`Invalid avatar "${avatar}". Using "black_man" instead. Valid avatars: ${this.validAvatars.join(', ')}`);
-      return 'black_man';
+      console.warn(`Invalid avatar "${avatar}". Using "european_woman" instead. Valid avatars: ${this.validAvatars.join(', ')}`);
+      return 'european_woman';
     }
     return avatar;
   }
@@ -291,7 +291,7 @@ class AvatarTalkService {
    */
   async generateWelcomeMessage(
     messageContext: string, 
-    avatar: string = 'black_man', 
+    avatar: string = 'european_woman', 
     stream: boolean = false
   ): Promise<AvatarTalkResponse> {
     const welcomeText = `Hello and welcome to your AI interview for ${messageContext}. I'm your virtual interviewer and I'll be conducting this interview today. Please make sure you're in a quiet environment and your microphone is working properly. We'll start with a few questions to assess your qualifications for this role. Are you ready to begin?`;
@@ -319,7 +319,7 @@ class AvatarTalkService {
 
     return this.generateVideo({
       text: question,
-      avatar: 'black_man',
+      avatar: 'european_woman',
       emotion: emotion,
       language: 'en'
     });
@@ -342,7 +342,7 @@ class AvatarTalkService {
     
     return this.generateVideo({
       text: text,
-      avatar: 'black_man',
+      avatar: 'european_woman',
       emotion: 'positive',
       language: 'en'
     });
@@ -358,7 +358,7 @@ class AvatarTalkService {
     
     return this.generateVideo({
       text: resultsText,
-      avatar: 'black_man',
+      avatar: 'european_woman',
       emotion: 'positive',
       language: 'en'
     });
@@ -383,7 +383,7 @@ class AvatarTalkService {
       // Test with a simple request
       const testRequest = {
         text: 'Test connection',
-        avatar: 'black_man',
+        avatar: 'european_woman',
         emotion: 'neutral',
         language: 'en'
       };

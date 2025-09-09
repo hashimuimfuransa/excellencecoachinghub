@@ -58,6 +58,8 @@ import {
 } from '@mui/icons-material';
 import { QuickInterviewSession, QuickInterviewQuestion, optimizedQuickInterviewService } from '../services/optimizedQuickInterviewService';
 import { speechToTextService, SpeechToTextResult } from '../services/speechToTextService';
+import { interviewRecordingService, InterviewRecording } from '../services/interviewRecordingService';
+import { SafeSlideUp } from '../utils/transitionFix';
 import StreamingAvatarVideo from './StreamingAvatarVideo';
 
 // Add Web Speech API types
@@ -141,6 +143,11 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
   const [allResponses, setAllResponses] = useState<any[]>([]);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   
+  // Recording state
+  const [interviewRecording, setInterviewRecording] = useState<InterviewRecording | null>(null);
+  const [isRecordingInterview, setIsRecordingInterview] = useState(false);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
+  
   // Media refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingChunksRef = useRef<Blob[]>([]);
@@ -192,6 +199,11 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
       mediaRecorderRef.current.stop();
     }
     
+    // Stop interview recording
+    if (isRecordingInterview) {
+      stopInterviewRecording();
+    }
+    
     // Clean up audio context
     if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
       audioContextRef.current.close().catch(console.error);
@@ -199,7 +211,7 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
     
     // Stop real-time transcription
     stopRealTimeTranscription();
-  }, [isRecording]);
+  }, [isRecording, isRecordingInterview]);
 
   const initializeJobInterview = async () => {
     if (!session) return;
@@ -427,6 +439,59 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
     }, 100);
   };
 
+  // Interview recording functions
+  const startInterviewRecording = async () => {
+    if (!session) return;
+    
+    try {
+      setRecordingError(null);
+      
+      const recording = await interviewRecordingService.startRecording(
+        session.id,
+        session.userId,
+        session.jobTitle,
+        session.jobId || '',
+        session.company
+      );
+      
+      setInterviewRecording(recording);
+      setIsRecordingInterview(true);
+      console.log('🎬 Interview recording started:', recording.id);
+      
+    } catch (error) {
+      console.error('Failed to start interview recording:', error);
+      setRecordingError('Failed to start recording. Please check microphone permissions.');
+    }
+  };
+  
+  const stopInterviewRecording = async () => {
+    if (!interviewRecording || !isRecordingInterview) return;
+    
+    try {
+      const completedRecording = await interviewRecordingService.stopRecording();
+      if (completedRecording) {
+        setInterviewRecording(completedRecording);
+        console.log('✅ Interview recording completed:', completedRecording.id);
+      }
+      setIsRecordingInterview(false);
+      
+    } catch (error) {
+      console.error('Failed to stop interview recording:', error);
+      setRecordingError('Failed to stop recording properly.');
+    }
+  };
+  
+  const recordQuestionAndAnswer = async (questionId: string, question: string, answer: string, duration: number) => {
+    if (!isRecordingInterview || !interviewRecording) return;
+    
+    try {
+      await interviewRecordingService.recordQuestion(questionId, question, answer, duration);
+      console.log('📝 Question and answer recorded:', questionId);
+    } catch (error) {
+      console.error('Failed to record question and answer:', error);
+    }
+  };
+
   const handleRecordingComplete = async (audioBlob: Blob) => {
     if (!currentQuestion || !session) return;
 
@@ -447,6 +512,16 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
 
       // Add to responses
       setAllResponses(prev => [...prev, response]);
+
+      // Record question and answer if interview recording is active
+      if (isRecordingInterview && currentTranscript) {
+        await recordQuestionAndAnswer(
+          currentQuestion.id,
+          currentQuestion.text,
+          currentTranscript,
+          recordingDuration
+        );
+      }
 
       console.log('✅ Job interview recording processed successfully');
       
@@ -547,6 +622,12 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
     if (!session) return;
     
     setIsLoading(true);
+    
+    // Stop interview recording before cleanup
+    if (isRecordingInterview) {
+      await stopInterviewRecording();
+    }
+    
     cleanup();
     
     try {
@@ -570,6 +651,9 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
       await optimizedQuickInterviewService.startSession(session?.id || '');
       setHasStarted(true);
       setShowWelcome(false);
+      
+      // Start interview recording
+      await startInterviewRecording();
       
       // Load the first question (instant since pre-generated)
       await loadCurrentQuestion();
@@ -599,7 +683,7 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
 
   if (!session) {
     return (
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth TransitionComponent={SafeSlideUp}>
         <DialogContent sx={{ textAlign: 'center', py: 4 }}>
           <CircularProgress size={40} />
           <Typography variant="h6" sx={{ mt: 2 }}>
@@ -619,6 +703,7 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
       maxWidth={false}
       fullWidth
       fullScreen={isFullscreen || isMobile}
+      TransitionComponent={SafeSlideUp}
       PaperProps={{
         sx: {
           width: isFullscreen ? '100vw' : isMobile ? '100vw' : '95vw',
@@ -1110,10 +1195,40 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
                   {/* Recording Controls - Always Visible */}
                   <Card elevation={3} sx={{ mb: 3 }}>
                     <CardContent>
-                      <Typography variant="h6" gutterBottom display="flex" alignItems="center" gap={1}>
-                        <RecordVoiceOver color="primary" />
-                        Your Answer
-                      </Typography>
+                      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                        <Typography variant="h6" display="flex" alignItems="center" gap={1}>
+                          <RecordVoiceOver color="primary" />
+                          Your Answer
+                        </Typography>
+                        
+                        {/* Interview Recording Indicator */}
+                        {isRecordingInterview && (
+                          <Chip
+                            icon={<Mic />}
+                            label="Recording Interview"
+                            color="error"
+                            variant="filled"
+                            size="small"
+                            sx={{
+                              animation: 'pulse 2s infinite',
+                              '@keyframes pulse': {
+                                '0%': { opacity: 1 },
+                                '50%': { opacity: 0.5 },
+                                '100%': { opacity: 1 }
+                              }
+                            }}
+                          />
+                        )}
+                        
+                        {recordingError && (
+                          <Chip
+                            label={recordingError}
+                            color="error"
+                            variant="outlined"
+                            size="small"
+                          />
+                        )}
+                      </Stack>
                         
                         {/* Volume Indicator */}
                         {isRecording && (

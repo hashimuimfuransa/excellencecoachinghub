@@ -767,20 +767,22 @@ class InterviewRecordingService {
         // Debug: Check what's actually in localStorage
         this.debugStorageContents(recordingId);
         
-        // Try to load audio blob again after debug (might have recovered it)
-        const recoveredAudioBlob = this.loadAudioBlob(recordingId);
-        if (recoveredAudioBlob) {
-          console.log('✅ Audio blob recovered after debug, size:', recoveredAudioBlob.size, 'type:', recoveredAudioBlob.type);
-          
-          recording.audioBlob = recoveredAudioBlob;
-          const newUrl = URL.createObjectURL(recoveredAudioBlob);
-          recording.audioUrl = newUrl;
-          
-          // Update the stored recording
-          this.saveRecording(recording);
-          
-          console.log('✅ New audio URL created after recovery:', newUrl);
-          return true;
+        // Try enhanced recovery
+        if (this.recoverMissingAudioBlob(recordingId)) {
+          const recoveredAudioBlob = this.loadAudioBlob(recordingId);
+          if (recoveredAudioBlob) {
+            console.log('✅ Audio blob recovered via enhanced method, size:', recoveredAudioBlob.size, 'type:', recoveredAudioBlob.type);
+            
+            recording.audioBlob = recoveredAudioBlob;
+            const newUrl = URL.createObjectURL(recoveredAudioBlob);
+            recording.audioUrl = newUrl;
+            
+            // Update the stored recording
+            this.saveRecording(recording);
+            
+            console.log('✅ New audio URL created after enhanced recovery:', newUrl);
+            return true;
+          }
         }
         
         // Mark recording as corrupted but don't remove it completely
@@ -904,6 +906,108 @@ class InterviewRecordingService {
     }
     
     console.log('=== End Debug Info ===');
+  }
+
+  /**
+   * Enhanced recovery for missing audio blobs with smart ID matching
+   */
+  recoverMissingAudioBlob(recordingId: string): boolean {
+    try {
+      console.log('🔧 Attempting enhanced recovery for recording:', recordingId);
+      
+      // Get all available audio blob keys
+      const audioBlobs = JSON.parse(localStorage.getItem(this.AUDIO_STORAGE_KEY) || '{}');
+      const availableKeys = Object.keys(audioBlobs);
+      
+      if (availableKeys.length === 0) {
+        console.log('❌ No audio blobs available for recovery');
+        return false;
+      }
+      
+      // Extract timestamp from the target recording ID
+      const targetTimestamp = this.extractTimestamp(recordingId);
+      if (!targetTimestamp) {
+        console.log('❌ Could not extract timestamp from recording ID:', recordingId);
+        return false;
+      }
+      
+      // Find the closest matching audio blob by timestamp
+      let bestMatch = null;
+      let smallestTimeDiff = Infinity;
+      
+      for (const key of availableKeys) {
+        const keyTimestamp = this.extractTimestamp(key);
+        if (keyTimestamp) {
+          const timeDiff = Math.abs(targetTimestamp - keyTimestamp);
+          if (timeDiff < smallestTimeDiff) {
+            smallestTimeDiff = timeDiff;
+            bestMatch = key;
+          }
+        }
+      }
+      
+      if (bestMatch && smallestTimeDiff < 300000) { // Within 5 minutes
+        console.log(`✅ Found potential match: ${bestMatch} (time diff: ${smallestTimeDiff}ms)`);
+        
+        // Copy the audio data to the correct recording ID
+        const audioData = audioBlobs[bestMatch];
+        audioBlobs[recordingId] = audioData;
+        localStorage.setItem(this.AUDIO_STORAGE_KEY, JSON.stringify(audioBlobs));
+        
+        console.log('✅ Successfully recovered audio blob for recording:', recordingId);
+        return true;
+      }
+      
+      console.log('❌ No suitable match found for recovery');
+      return false;
+    } catch (error) {
+      console.error('❌ Error during enhanced recovery:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Extract timestamp from recording ID
+   */
+  private extractTimestamp(recordingId: string): number | null {
+    try {
+      const match = recordingId.match(/recording_(\d+)_/);
+      return match ? parseInt(match[1], 10) : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Repair method to fix existing recordings with missing audio blobs
+   */
+  repairExistingRecordings(): { repaired: number; failed: number } {
+    console.log('🔧 Starting repair of existing recordings...');
+    
+    const recordings = this.getRecordings();
+    let repairedCount = 0;
+    let failedCount = 0;
+    
+    for (const recording of recordings) {
+      if (recording.status === 'completed' && !this.loadAudioBlob(recording.id)) {
+        console.log(`🔧 Attempting to repair recording: ${recording.id}`);
+        
+        if (this.recoverMissingAudioBlob(recording.id)) {
+          repairedCount++;
+          console.log(`✅ Successfully repaired recording: ${recording.id}`);
+        } else {
+          failedCount++;
+          console.log(`❌ Could not repair recording: ${recording.id}`);
+          
+          // Mark as processing so user knows there's an issue
+          recording.status = 'processing';
+          this.saveRecording(recording);
+        }
+      }
+    }
+    
+    console.log(`🔧 Repair complete. Repaired: ${repairedCount}, Failed: ${failedCount}`);
+    return { repaired: repairedCount, failed: failedCount };
   }
 
   /**

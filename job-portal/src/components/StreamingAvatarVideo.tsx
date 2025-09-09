@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Box, CircularProgress, Typography, Alert, Avatar } from '@mui/material';
 import { avatarTalkService } from '../services/avatarTalkService';
-import { interviewRecordingService } from '../services/interviewRecordingService';
+import { modernInterviewRecordingService } from '../services/modernInterviewRecordingService';
 
 interface StreamingAvatarVideoProps {
   text: string;

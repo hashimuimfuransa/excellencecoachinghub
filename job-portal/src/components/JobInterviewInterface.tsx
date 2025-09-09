@@ -59,7 +59,7 @@ import {
 } from '@mui/icons-material';
 import { QuickInterviewSession, QuickInterviewQuestion, optimizedQuickInterviewService } from '../services/optimizedQuickInterviewService';
 import { speechToTextService, SpeechToTextResult } from '../services/speechToTextService';
-import { interviewRecordingService, InterviewRecording } from '../services/interviewRecordingService';
+import { modernInterviewRecordingService, InterviewRecording } from '../services/modernInterviewRecordingService';
 import { SafeSlideUp } from '../utils/transitionFix';
 import StreamingAvatarVideo from './StreamingAvatarVideo';
 
@@ -491,13 +491,16 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
     try {
       setRecordingError(null);
       
-      // Use mixed recording to capture both AI avatar and user audio
-      const recording = await interviewRecordingService.startMixedRecording(
+      // Use modern recording to capture interview audio
+      const recording = await modernInterviewRecordingService.startRecording(
         session.id,
-        session.userId,
         session.jobTitle,
-        session.jobId || '',
-        session.company
+        session.company,
+        session.questions.map(q => ({
+          question: q.text,
+          answer: '',
+          duration: 0
+        }))
       );
       
       setInterviewRecording(recording);
@@ -514,7 +517,7 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
     if (!interviewRecording || !isRecordingInterview) return;
     
     try {
-      const completedRecording = await interviewRecordingService.stopRecording();
+      const completedRecording = await modernInterviewRecordingService.stopRecording();
       if (completedRecording) {
         setInterviewRecording(completedRecording);
         console.log('✅ Interview recording completed:', completedRecording.id);
@@ -531,8 +534,21 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
     if (!isRecordingInterview || !interviewRecording) return;
     
     try {
-      await interviewRecordingService.recordQuestion(questionId, question, answer, duration);
-      console.log('📝 Question and answer recorded:', questionId);
+      // Update the recording with question and answer data
+      // The new service handles questions as part of the main recording
+      console.log('📝 Question and answer recorded in main stream:', questionId);
+      
+      // Store question data for later use if needed
+      if (interviewRecording.questions) {
+        const questionIndex = interviewRecording.questions.findIndex(q => q.question === question);
+        if (questionIndex >= 0) {
+          interviewRecording.questions[questionIndex] = {
+            question,
+            answer,
+            duration
+          };
+        }
+      }
     } catch (error) {
       console.error('Failed to record question and answer:', error);
     }

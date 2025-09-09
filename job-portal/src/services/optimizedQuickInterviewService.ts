@@ -262,58 +262,36 @@ class OptimizedQuickInterviewService {
   private async generateAllJobQuestions(job: any, difficulty: 'easy' | 'medium' | 'hard'): Promise<QuickInterviewQuestion[]> {
     console.log('🎯 Pre-generating all job questions with avatars for:', job.title);
     
-    const jobQuestions: QuickInterviewQuestion[] = [
-      {
-        id: 'q1',
-        text: `Welcome to your interview for the ${job.title} position at ${job.company}! Tell me about yourself and why you're interested in this role.`,
-        expectedDuration: this.calculateExpectedDuration('introduction', difficulty),
-        type: 'behavioral',
-        category: 'Introduction',
-        questionNumber: 1,
-        totalQuestions: 5
-      },
-      {
-        id: 'q2',
-        text: `What specific experience do you have that makes you a good fit for this ${job.title} position?`,
-        expectedDuration: this.calculateExpectedDuration('experience', difficulty),
-        type: 'behavioral',
-        category: 'Experience',
-        questionNumber: 2,
-        totalQuestions: 5
-      },
-      {
-        id: 'q3',
-        text: `How would you approach the key responsibilities of this ${job.title} role?`,
-        expectedDuration: this.calculateExpectedDuration('technical', difficulty),
-        type: 'technical',
-        category: 'Technical Skills',
-        questionNumber: 3,
-        totalQuestions: 5
-      },
-      {
-        id: 'q4',
-        text: `Tell me about a challenging project you've worked on and how you handled it.`,
-        expectedDuration: this.calculateExpectedDuration('challenging', difficulty),
-        type: 'situational',
-        category: 'Problem Solving',
-        questionNumber: 4,
-        totalQuestions: 5
-      },
-      {
-        id: 'q5',
-        text: `Why do you want to work at ${job.company} specifically?`,
-        expectedDuration: this.calculateExpectedDuration('motivation', difficulty),
-        type: 'behavioral',
-        category: 'Motivation',
-        questionNumber: 5,
-        totalQuestions: 5
-      }
-    ];
+    // Get previously used questions for this job
+    const usedQuestions = this.getUsedQuestionsForJob(job._id);
+    console.log('📝 Previously used questions for this job:', usedQuestions.length);
+    
+    // Generate 10 unique questions for this job with proper ordering
+    const allAvailableQuestions = this.generateQuestionPool(job, difficulty);
+    const selectedQuestions = this.selectUniqueQuestions(allAvailableQuestions, usedQuestions, 10);
+    
+    console.log('📋 Questions selected in order:', selectedQuestions.map((q, i) => `${i+1}. ${q.category}: ${q.text.substring(0, 50)}...`));
+    
+    // Verify introduction question is first
+    if (selectedQuestions.length > 0 && selectedQuestions[0].category !== 'Introduction') {
+      console.warn('⚠️ Warning: First question is not an Introduction question!', selectedQuestions[0]);
+    } else {
+      console.log('✅ Introduction question correctly placed first');
+    }
+    
+    // Store the selected questions as used for future interviews
+    this.storeUsedQuestions(job._id, selectedQuestions.map(q => q.id));
+    
+    const jobQuestions: QuickInterviewQuestion[] = selectedQuestions.map((question, index) => ({
+      ...question,
+      questionNumber: index + 1,
+      totalQuestions: 10
+    }));
 
     // Generate avatars for all questions concurrently
     const avatarPromises = jobQuestions.map(async (question, index) => {
       try {
-        console.log(`🎬 Generating avatar for job question ${index + 1}/5...`);
+        console.log(`🎬 Generating avatar for job question ${index + 1}/10...`);
         const avatarResponse = await avatarTalkService.generateInterviewQuestion(
           question.text,
           'black_man',
@@ -347,11 +325,305 @@ class OptimizedQuickInterviewService {
       'experience': 150,
       'technical': 180,
       'challenging': 180,
-      'motivation': 120
+      'motivation': 120,
+      'skills': 150,
+      'problem_solving': 180,
+      'teamwork': 140,
+      'leadership': 160,
+      'career_goals': 130
     };
     
     const multiplier = { easy: 0.8, medium: 1.0, hard: 1.2 };
     return Math.round((baseDuration[category] || 120) * multiplier[difficulty]);
+  }
+
+  /**
+   * Generate a comprehensive question pool for a job
+   */
+  private generateQuestionPool(job: any, difficulty: 'easy' | 'medium' | 'hard') {
+    const baseQuestions = [
+      // Introduction Questions (3)
+      {
+        id: 'intro_1',
+        text: `Welcome to your interview for the ${job.title} position at ${job.company}! Tell me about yourself and why you're interested in this role.`,
+        expectedDuration: this.calculateExpectedDuration('introduction', difficulty),
+        type: 'behavioral' as const,
+        category: 'Introduction'
+      },
+      {
+        id: 'intro_2',
+        text: `What attracted you to this ${job.title} position specifically?`,
+        expectedDuration: this.calculateExpectedDuration('introduction', difficulty),
+        type: 'behavioral' as const,
+        category: 'Introduction'
+      },
+      {
+        id: 'intro_3',
+        text: `Walk me through your professional journey that led you to apply for this ${job.title} role.`,
+        expectedDuration: this.calculateExpectedDuration('introduction', difficulty),
+        type: 'behavioral' as const,
+        category: 'Introduction'
+      },
+
+      // Experience Questions (4)
+      {
+        id: 'exp_1',
+        text: `What specific experience do you have that makes you a good fit for this ${job.title} position?`,
+        expectedDuration: this.calculateExpectedDuration('experience', difficulty),
+        type: 'behavioral' as const,
+        category: 'Experience'
+      },
+      {
+        id: 'exp_2',
+        text: `Describe your most relevant work experience for this ${job.title} role.`,
+        expectedDuration: this.calculateExpectedDuration('experience', difficulty),
+        type: 'behavioral' as const,
+        category: 'Experience'
+      },
+      {
+        id: 'exp_3',
+        text: `Tell me about a time when you successfully handled a responsibility similar to what this ${job.title} position requires.`,
+        expectedDuration: this.calculateExpectedDuration('experience', difficulty),
+        type: 'behavioral' as const,
+        category: 'Experience'
+      },
+      {
+        id: 'exp_4',
+        text: `What achievements from your previous roles are you most proud of that relate to this ${job.title} position?`,
+        expectedDuration: this.calculateExpectedDuration('experience', difficulty),
+        type: 'behavioral' as const,
+        category: 'Experience'
+      },
+
+      // Technical/Skills Questions (4)
+      {
+        id: 'tech_1',
+        text: `How would you approach the key responsibilities of this ${job.title} role?`,
+        expectedDuration: this.calculateExpectedDuration('technical', difficulty),
+        type: 'technical' as const,
+        category: 'Technical Skills'
+      },
+      {
+        id: 'tech_2',
+        text: `What technical skills or knowledge do you possess that would be valuable in this ${job.title} position?`,
+        expectedDuration: this.calculateExpectedDuration('technical', difficulty),
+        type: 'technical' as const,
+        category: 'Technical Skills'
+      },
+      {
+        id: 'tech_3',
+        text: `How do you stay updated with the latest trends and best practices relevant to ${job.title} roles?`,
+        expectedDuration: this.calculateExpectedDuration('technical', difficulty),
+        type: 'technical' as const,
+        category: 'Technical Skills'
+      },
+      {
+        id: 'tech_4',
+        text: `Describe a technical challenge you've overcome that would be relevant to this ${job.title} position.`,
+        expectedDuration: this.calculateExpectedDuration('technical', difficulty),
+        type: 'technical' as const,
+        category: 'Technical Skills'
+      },
+
+      // Problem Solving Questions (3)
+      {
+        id: 'prob_1',
+        text: `Tell me about a challenging project you've worked on and how you handled it.`,
+        expectedDuration: this.calculateExpectedDuration('problem_solving', difficulty),
+        type: 'situational' as const,
+        category: 'Problem Solving'
+      },
+      {
+        id: 'prob_2',
+        text: `Describe a time when you had to solve a complex problem under pressure. How did you approach it?`,
+        expectedDuration: this.calculateExpectedDuration('problem_solving', difficulty),
+        type: 'situational' as const,
+        category: 'Problem Solving'
+      },
+      {
+        id: 'prob_3',
+        text: `Give me an example of a time when you had to think creatively to solve a work-related problem.`,
+        expectedDuration: this.calculateExpectedDuration('problem_solving', difficulty),
+        type: 'situational' as const,
+        category: 'Problem Solving'
+      },
+
+      // Teamwork & Leadership Questions (3)
+      {
+        id: 'team_1',
+        text: `Tell me about a time when you worked effectively as part of a team.`,
+        expectedDuration: this.calculateExpectedDuration('teamwork', difficulty),
+        type: 'behavioral' as const,
+        category: 'Teamwork'
+      },
+      {
+        id: 'team_2',
+        text: `Describe a situation where you had to lead a project or team. What was your approach?`,
+        expectedDuration: this.calculateExpectedDuration('leadership', difficulty),
+        type: 'behavioral' as const,
+        category: 'Leadership'
+      },
+      {
+        id: 'team_3',
+        text: `How do you handle conflicts or disagreements within a team?`,
+        expectedDuration: this.calculateExpectedDuration('teamwork', difficulty),
+        type: 'behavioral' as const,
+        category: 'Teamwork'
+      },
+
+      // Company & Motivation Questions (3)
+      {
+        id: 'comp_1',
+        text: `Why do you want to work at ${job.company} specifically?`,
+        expectedDuration: this.calculateExpectedDuration('motivation', difficulty),
+        type: 'behavioral' as const,
+        category: 'Motivation'
+      },
+      {
+        id: 'comp_2',
+        text: `What do you know about ${job.company} and how does it align with your career goals?`,
+        expectedDuration: this.calculateExpectedDuration('motivation', difficulty),
+        type: 'behavioral' as const,
+        category: 'Motivation'
+      },
+      {
+        id: 'comp_3',
+        text: `Where do you see yourself in 5 years, and how does this ${job.title} role fit into that vision?`,
+        expectedDuration: this.calculateExpectedDuration('career_goals', difficulty),
+        type: 'behavioral' as const,
+        category: 'Career Goals'
+      }
+    ];
+
+    return baseQuestions;
+  }
+
+  /**
+   * Select unique questions that haven't been used before with proper ordering
+   */
+  private selectUniqueQuestions(availableQuestions: any[], usedQuestionIds: string[], count: number) {
+    // Define category priority order (Introduction questions must come first)
+    const categoryPriority = {
+      'Introduction': 1,
+      'Experience': 2,
+      'Technical Skills': 3,
+      'Problem Solving': 4,
+      'Teamwork': 5,
+      'Leadership': 6,
+      'Challenging Situations': 7,
+      'Motivation': 8,
+      'Career Goals': 9
+    };
+    
+    // Filter out already used questions
+    const unusedQuestions = availableQuestions.filter(q => !usedQuestionIds.includes(q.id));
+    
+    // Group questions by category
+    const groupedQuestions = availableQuestions.reduce((groups, question) => {
+      const category = question.category || 'Other';
+      if (!groups[category]) {
+        groups[category] = [];
+      }
+      groups[category].push(question);
+      return groups;
+    }, {} as Record<string, any[]>);
+    
+    const selectedQuestions: any[] = [];
+    
+    // First, ensure we always start with an Introduction question
+    const introQuestions = groupedQuestions['Introduction']?.filter(q => !usedQuestionIds.includes(q.id)) || [];
+    if (introQuestions.length > 0) {
+      selectedQuestions.push(introQuestions[0]); // Always use the first introduction question
+    } else if (groupedQuestions['Introduction']?.length > 0) {
+      // If all intro questions were used, pick the first one anyway for consistency
+      selectedQuestions.push(groupedQuestions['Introduction'][0]);
+    }
+    
+    // Then select remaining questions from other categories, maintaining some variety
+    const remainingCount = count - selectedQuestions.length;
+    const otherCategories = Object.keys(groupedQuestions)
+      .filter(cat => cat !== 'Introduction')
+      .sort((a, b) => (categoryPriority[a] || 10) - (categoryPriority[b] || 10));
+    
+    // Distribute remaining questions across categories
+    let questionsPerCategory = Math.ceil(remainingCount / otherCategories.length);
+    
+    for (const category of otherCategories) {
+      if (selectedQuestions.length >= count) break;
+      
+      const categoryQuestions = groupedQuestions[category] || [];
+      const unusedInCategory = categoryQuestions.filter(q => 
+        !usedQuestionIds.includes(q.id) && 
+        !selectedQuestions.some(selected => selected.id === q.id)
+      );
+      
+      const questionsToTake = Math.min(
+        questionsPerCategory,
+        unusedInCategory.length,
+        count - selectedQuestions.length
+      );
+      
+      // If no unused questions in this category, take from used ones
+      const questionsToSelect = questionsToTake > 0 ? 
+        unusedInCategory.slice(0, questionsToTake) :
+        categoryQuestions.filter(q => !selectedQuestions.some(selected => selected.id === q.id))
+          .slice(0, Math.min(1, count - selectedQuestions.length));
+      
+      selectedQuestions.push(...questionsToSelect);
+    }
+    
+    // If we still need more questions, fill from any remaining unused questions
+    if (selectedQuestions.length < count) {
+      const remainingUnused = unusedQuestions.filter(q => 
+        !selectedQuestions.some(selected => selected.id === q.id)
+      );
+      const stillNeeded = count - selectedQuestions.length;
+      selectedQuestions.push(...remainingUnused.slice(0, stillNeeded));
+    }
+    
+    return selectedQuestions.slice(0, count);
+  }
+
+  /**
+   * Get previously used question IDs for a job
+   */
+  private getUsedQuestionsForJob(jobId: string): string[] {
+    try {
+      const usedQuestions = JSON.parse(localStorage.getItem('used_interview_questions') || '{}');
+      return usedQuestions[jobId] || [];
+    } catch (error) {
+      console.error('Error loading used questions:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Store used question IDs for a job
+   */
+  private storeUsedQuestions(jobId: string, questionIds: string[]): void {
+    try {
+      const usedQuestions = JSON.parse(localStorage.getItem('used_interview_questions') || '{}');
+      
+      // Append new question IDs to existing ones
+      if (!usedQuestions[jobId]) {
+        usedQuestions[jobId] = [];
+      }
+      
+      // Add new questions to the list (avoid duplicates)
+      const existingIds = new Set(usedQuestions[jobId]);
+      questionIds.forEach(id => existingIds.add(id));
+      usedQuestions[jobId] = Array.from(existingIds);
+      
+      // Keep only the last 50 question IDs per job to prevent unlimited growth
+      if (usedQuestions[jobId].length > 50) {
+        usedQuestions[jobId] = usedQuestions[jobId].slice(-50);
+      }
+      
+      localStorage.setItem('used_interview_questions', JSON.stringify(usedQuestions));
+      console.log('✅ Stored used questions for job:', jobId, questionIds.length);
+    } catch (error) {
+      console.error('Error storing used questions:', error);
+    }
   }
 
   private generateLocalResults(session: QuickInterviewSession, responses: any[]): QuickInterviewResult {

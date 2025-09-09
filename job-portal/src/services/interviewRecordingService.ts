@@ -40,9 +40,157 @@ class InterviewRecordingService {
   private currentRecording: InterviewRecording | null = null;
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
+  private audioContext: AudioContext | null = null;
+  private destination: MediaStreamAudioDestinationNode | null = null;
 
   /**
-   * Start recording a new interview session
+   * Start recording a new interview session with mixed audio (AI + User)
+   */
+  async startMixedRecording(sessionId: string, userId: string, jobTitle: string, jobId: string, company?: string): Promise<InterviewRecording> {
+    try {
+      // Stop any existing recording
+      if (this.currentRecording) {
+        await this.stopRecording();
+      }
+
+      // Create new recording session
+      const recording: InterviewRecording = {
+        id: `recording_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        sessionId,
+        userId,
+        jobTitle,
+        jobId,
+        company,
+        duration: 0,
+        timestamp: new Date(),
+        questions: [],
+        status: 'recording'
+      };
+
+      this.currentRecording = recording;
+
+      // Create audio context for mixing
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      this.destination = this.audioContext.createMediaStreamDestination();
+
+      // Get user microphone
+      const micStream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100
+        },
+        video: false 
+      });
+
+      // Connect microphone to destination
+      const micSource = this.audioContext.createMediaStreamSource(micStream);
+      micSource.connect(this.destination);
+
+      // Set up MediaRecorder with the mixed stream
+      this.mediaRecorder = new MediaRecorder(this.destination.stream, {
+        mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+      });
+
+      this.audioChunks = [];
+
+      this.mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          console.log('📊 Audio chunk received, size:', event.data.size, 'total chunks:', this.audioChunks.length + 1);
+          this.audioChunks.push(event.data);
+        }
+      };
+
+      this.mediaRecorder.onstop = async () => {
+        console.log('🛑 MediaRecorder stopped, total chunks:', this.audioChunks.length);
+        await this.finalizeRecording();
+      };
+
+      this.mediaRecorder.onerror = (event) => {
+        console.error('❌ MediaRecorder error:', event);
+      };
+
+      // Start recording with timeslice to ensure regular data events
+      this.mediaRecorder.start(1000); // Request data every 1 second
+
+      // Verify recording actually started
+      setTimeout(() => {
+        if (this.mediaRecorder && this.mediaRecorder.state !== 'recording') {
+          console.error('⚠️ MediaRecorder failed to start properly. State:', this.mediaRecorder.state);
+        } else {
+          console.log('✅ MediaRecorder confirmed started. State:', this.mediaRecorder?.state);
+        }
+      }, 500);
+
+      // Save initial recording state
+      this.saveRecording(recording);
+
+      console.log('🎙️ Mixed interview recording started:', recording.id);
+      return recording;
+
+    } catch (error) {
+      console.error('Failed to start mixed interview recording:', error);
+      throw new Error('Could not start recording. Please check microphone permissions.');
+    }
+  }
+
+  /**
+   * Add AI avatar audio to the recording mix with proper isolation
+   */
+  async addAvatarAudioToRecording(mediaElement: HTMLAudioElement | HTMLVideoElement): Promise<void> {
+    if (!this.audioContext || !this.destination) {
+      console.warn('No active mixed recording to add avatar audio to');
+      return;
+    }
+
+    try {
+      // Create a dedicated audio context for avatar to prevent interference
+      const avatarContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Create audio source from the avatar media element
+      const avatarSource = avatarContext.createMediaElementSource(mediaElement);
+      
+      // Create gain nodes for better audio control
+      const avatarGain = avatarContext.createGain();
+      const outputGain = avatarContext.createGain();
+      
+      // Set appropriate volumes
+      avatarGain.gain.value = 0.8; // Slightly lower for mixing
+      outputGain.gain.value = 1.0; // Full volume for user hearing
+      
+      // Connect avatar audio to both recording and output
+      avatarSource.connect(avatarGain);
+      avatarGain.connect(outputGain);
+      outputGain.connect(avatarContext.destination);
+      
+      // For recording mixing - create a separate stream
+      const recordingDestination = avatarContext.createMediaStreamDestination();
+      avatarGain.connect(recordingDestination);
+      
+      // Mix the avatar stream with the main recording destination
+      if (this.audioContext && this.destination) {
+        const avatarStreamSource = this.audioContext.createMediaStreamSource(recordingDestination.stream);
+        avatarStreamSource.connect(this.destination);
+      }
+      
+      console.log('✅ Avatar audio added to recording mix with isolation');
+    } catch (error) {
+      console.error('Failed to add avatar audio to recording (continuing with separate audio):', error);
+      
+      // Fallback: Just ensure avatar plays normally without recording integration
+      try {
+        if (mediaElement) {
+          mediaElement.volume = 1.0;
+          console.log('🔊 Avatar audio fallback: playing without recording integration');
+        }
+      } catch (fallbackError) {
+        console.error('Avatar audio fallback failed:', fallbackError);
+      }
+    }
+  }
+
+  /**
+   * Start recording a new interview session (original method for backward compatibility)
    */
   async startRecording(sessionId: string, userId: string, jobTitle: string, jobId: string, company?: string): Promise<InterviewRecording> {
     try {
@@ -85,15 +233,31 @@ class InterviewRecordingService {
 
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
+          console.log('📊 Audio chunk received, size:', event.data.size, 'total chunks:', this.audioChunks.length + 1);
           this.audioChunks.push(event.data);
         }
       };
 
-      this.mediaRecorder.onstop = () => {
-        this.finalizeRecording();
+      this.mediaRecorder.onstop = async () => {
+        console.log('🛑 MediaRecorder stopped, total chunks:', this.audioChunks.length);
+        await this.finalizeRecording();
       };
 
-      this.mediaRecorder.start();
+      this.mediaRecorder.onerror = (event) => {
+        console.error('❌ MediaRecorder error:', event);
+      };
+
+      // Start recording with timeslice to ensure regular data events
+      this.mediaRecorder.start(1000); // Request data every 1 second
+
+      // Verify recording actually started
+      setTimeout(() => {
+        if (this.mediaRecorder && this.mediaRecorder.state !== 'recording') {
+          console.error('⚠️ MediaRecorder failed to start properly. State:', this.mediaRecorder.state);
+        } else {
+          console.log('✅ MediaRecorder confirmed started. State:', this.mediaRecorder?.state);
+        }
+      }, 500);
 
       // Save initial recording state
       this.saveRecording(recording);
@@ -139,8 +303,9 @@ class InterviewRecordingService {
 
     return new Promise((resolve) => {
       if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-        this.mediaRecorder.onstop = () => {
-          const finalizedRecording = this.finalizeRecording();
+        this.mediaRecorder.onstop = async () => {
+          const finalizedRecording = await this.finalizeRecording();
+          this.cleanupAudioContext();
           resolve(finalizedRecording);
         };
         this.mediaRecorder.stop();
@@ -150,23 +315,52 @@ class InterviewRecordingService {
           this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
         }
       } else {
-        const finalizedRecording = this.finalizeRecording();
-        resolve(finalizedRecording);
+        // Handle case where recorder is already stopped
+        this.finalizeRecording().then(finalizedRecording => {
+          this.cleanupAudioContext();
+          resolve(finalizedRecording);
+        }).catch(error => {
+          console.error('Error finalizing recording:', error);
+          this.cleanupAudioContext();
+          resolve(this.currentRecording);
+        });
       }
     });
   }
 
   /**
+   * Clean up audio context and related resources
+   */
+  private cleanupAudioContext(): void {
+    if (this.audioContext) {
+      this.audioContext.close().catch(error => {
+        console.warn('Error closing audio context:', error);
+      });
+      this.audioContext = null;
+    }
+    
+    this.destination = null;
+  }
+
+  /**
    * Finalize recording and create audio blob
    */
-  private finalizeRecording(): InterviewRecording | null {
+  private async finalizeRecording(): Promise<InterviewRecording | null> {
     if (!this.currentRecording) {
       return null;
     }
 
+    // Capture the recording ID at the start to prevent any changes
+    const recordingId = this.currentRecording.id;
+    console.log('🎯 Finalizing recording with ID:', recordingId);
+
     try {
       // Create audio blob from chunks
       if (this.audioChunks.length > 0) {
+        console.log('🎵 Creating audio blob from', this.audioChunks.length, 'chunks');
+        const totalSize = this.audioChunks.reduce((sum, chunk) => sum + chunk.size, 0);
+        console.log('📊 Total audio size:', totalSize, 'bytes');
+        
         const audioBlob = new Blob(this.audioChunks, { 
           type: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
         });
@@ -176,12 +370,42 @@ class InterviewRecordingService {
         this.currentRecording.audioBlob = audioBlob;
         this.currentRecording.audioUrl = audioUrl;
         
-        // Save audio blob separately for persistence
-        this.saveAudioBlob(this.currentRecording.id, audioBlob);
+        console.log('🎵 Audio blob created, size:', audioBlob.size, 'type:', audioBlob.type);
+        
+        // Save audio blob separately for persistence - await to ensure it's saved
+        // Use the captured recordingId to ensure consistency
+        try {
+          console.log('💾 Saving audio blob for recording:', recordingId, 'blob size:', audioBlob.size);
+          await this.saveAudioBlob(recordingId, audioBlob);
+          console.log('✅ Audio blob save completed for recording:', recordingId);
+          
+          // Verify the audio blob was saved correctly immediately
+          const savedBlob = this.loadAudioBlob(recordingId);
+          if (savedBlob) {
+            console.log('✅ Audio blob verification successful:', recordingId, 'size:', savedBlob.size);
+          } else {
+            console.error('❌ Audio blob verification failed immediately after save:', recordingId);
+          }
+        } catch (error) {
+          console.error('❌ Failed to save audio blob for recording:', recordingId, error);
+        }
+      } else {
+        console.warn('⚠️ No audio chunks collected for recording:', recordingId);
+        console.warn('MediaRecorder state:', this.mediaRecorder?.state);
+        console.warn('Audio chunks array:', this.audioChunks);
       }
 
       this.currentRecording.status = 'completed';
       this.currentRecording.duration = Date.now() - this.currentRecording.timestamp.getTime();
+
+      // Ensure the recording ID hasn't changed
+      if (this.currentRecording.id !== recordingId) {
+        console.error('⚠️ Recording ID changed during finalization!', 
+          'Original:', recordingId, 
+          'Current:', this.currentRecording.id);
+        // Restore the original ID to maintain consistency
+        this.currentRecording.id = recordingId;
+      }
 
       // Save final recording
       this.saveRecording(this.currentRecording);
@@ -191,7 +415,7 @@ class InterviewRecordingService {
       this.mediaRecorder = null;
       this.audioChunks = [];
 
-      console.log('✅ Interview recording completed:', finalRecording.id);
+      console.log('✅ Interview recording completed:', finalRecording.id, 'Duration:', finalRecording.duration, 'ms');
       return finalRecording;
 
     } catch (error) {
@@ -367,23 +591,42 @@ class InterviewRecordingService {
   /**
    * Save audio blob separately using IndexedDB-like approach
    */
-  private saveAudioBlob(recordingId: string, blob: Blob): void {
+  private async saveAudioBlob(recordingId: string, blob: Blob): Promise<void> {
     try {
       // For now, we'll use a simple approach with localStorage
       // In a production environment, you'd want to use IndexedDB
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const audioBlobs = JSON.parse(localStorage.getItem(this.AUDIO_STORAGE_KEY) || '{}');
-          audioBlobs[recordingId] = reader.result;
-          localStorage.setItem(this.AUDIO_STORAGE_KEY, JSON.stringify(audioBlobs));
-        } catch (error) {
-          console.warn('Could not save audio blob to localStorage:', error);
-        }
-      };
-      reader.readAsDataURL(blob);
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const audioBlobs = JSON.parse(localStorage.getItem(this.AUDIO_STORAGE_KEY) || '{}');
+            audioBlobs[recordingId] = reader.result;
+            localStorage.setItem(this.AUDIO_STORAGE_KEY, JSON.stringify(audioBlobs));
+            
+            // Verify the save worked by reading it back
+            const savedBlobs = JSON.parse(localStorage.getItem(this.AUDIO_STORAGE_KEY) || '{}');
+            if (savedBlobs[recordingId]) {
+              console.log('✅ Audio blob saved and verified for recording:', recordingId, 'size:', blob.size);
+              resolve();
+            } else {
+              const error = new Error('Audio blob save verification failed');
+              console.error('❌ Audio blob save verification failed for recording:', recordingId);
+              reject(error);
+            }
+          } catch (error) {
+            console.warn('Could not save audio blob to localStorage:', error);
+            reject(error);
+          }
+        };
+        reader.onerror = () => {
+          console.error('Error reading blob for recording:', recordingId);
+          reject(new Error('Failed to read blob'));
+        };
+        reader.readAsDataURL(blob);
+      });
     } catch (error) {
       console.error('Error saving audio blob:', error);
+      throw error;
     }
   }
 
@@ -395,32 +638,58 @@ class InterviewRecordingService {
       const audioBlobs = JSON.parse(localStorage.getItem(this.AUDIO_STORAGE_KEY) || '{}');
       const dataUrl = audioBlobs[recordingId];
       
-      if (dataUrl && typeof dataUrl === 'string' && dataUrl.startsWith('data:')) {
-        try {
-          // Parse the data URL properly
-          const [header, data] = dataUrl.split(',');
-          if (!data) return null;
-          
-          // Extract the MIME type
-          const mimeMatch = header.match(/data:([^;]+)/);
-          const mimeType = mimeMatch ? mimeMatch[1] : 'audio/webm';
-          
-          // Convert base64 to binary
-          const binaryString = atob(data);
-          const bytes = new Uint8Array(binaryString.length);
-          
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          
-          return new Blob([bytes], { type: mimeType });
-        } catch (conversionError) {
-          console.error('Error converting data URL to blob:', conversionError);
-          return null;
-        }
+      if (!dataUrl) {
+        console.warn('No audio data found for recording:', recordingId);
+        return null;
       }
       
-      return null;
+      if (typeof dataUrl !== 'string') {
+        console.error('Invalid audio data type for recording:', recordingId, 'type:', typeof dataUrl);
+        return null;
+      }
+      
+      if (!dataUrl.startsWith('data:')) {
+        console.error('Invalid audio data format for recording:', recordingId, 'data preview:', dataUrl.substring(0, 50));
+        return null;
+      }
+      
+      try {
+        // Parse the data URL properly
+        const [header, data] = dataUrl.split(',');
+        if (!data || data.length === 0) {
+          console.error('Empty audio data for recording:', recordingId);
+          return null;
+        }
+        
+        // Extract the MIME type
+        const mimeMatch = header.match(/data:([^;]+)/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'audio/webm';
+        
+        // Convert base64 to binary
+        const binaryString = atob(data);
+        const bytes = new Uint8Array(binaryString.length);
+        
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        const blob = new Blob([bytes], { type: mimeType });
+        console.log('✅ Successfully loaded audio blob for recording:', recordingId, 'size:', blob.size, 'type:', blob.type);
+        return blob;
+      } catch (conversionError) {
+        console.error('Error converting data URL to blob for recording:', recordingId, conversionError);
+        
+        // Try to clean up corrupted data
+        try {
+          delete audioBlobs[recordingId];
+          localStorage.setItem(this.AUDIO_STORAGE_KEY, JSON.stringify(audioBlobs));
+          console.log('🧹 Cleaned up corrupted audio data for recording:', recordingId);
+        } catch (cleanupError) {
+          console.error('Failed to clean up corrupted data:', cleanupError);
+        }
+        
+        return null;
+      }
     } catch (error) {
       console.error('Error loading audio blob:', error);
       return null;
@@ -494,12 +763,108 @@ class InterviewRecordingService {
         return true;
       } else {
         console.error('❌ No audio blob data found for recording:', recordingId);
+        
+        // Debug: Check what's actually in localStorage
+        this.debugStorageContents(recordingId);
+        
+        // Try to load audio blob again after debug (might have recovered it)
+        const recoveredAudioBlob = this.loadAudioBlob(recordingId);
+        if (recoveredAudioBlob) {
+          console.log('✅ Audio blob recovered after debug, size:', recoveredAudioBlob.size, 'type:', recoveredAudioBlob.type);
+          
+          recording.audioBlob = recoveredAudioBlob;
+          const newUrl = URL.createObjectURL(recoveredAudioBlob);
+          recording.audioUrl = newUrl;
+          
+          // Update the stored recording
+          this.saveRecording(recording);
+          
+          console.log('✅ New audio URL created after recovery:', newUrl);
+          return true;
+        }
+        
+        // Mark recording as corrupted but don't remove it completely
+        recording.status = 'processing'; // Reset status to indicate issue
+        this.saveRecording(recording);
+        
         return false;
       }
 
     } catch (error) {
       console.error('Error refreshing recording audio:', error);
       return false;
+    }
+  }
+
+  /**
+   * Debug storage contents for troubleshooting
+   */
+  private debugStorageContents(recordingId: string): void {
+    try {
+      console.log('🔍 Debugging storage for recording:', recordingId);
+      
+      // Check main recording storage
+      const allRecordings = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '[]');
+      const recording = allRecordings.find((r: InterviewRecording) => r.id === recordingId);
+      console.log('Recording in main storage:', !!recording);
+      
+      // Check audio blob storage
+      const audioBlobs = JSON.parse(localStorage.getItem(this.AUDIO_STORAGE_KEY) || '{}');
+      const audioKeys = Object.keys(audioBlobs);
+      console.log('Audio blob keys in storage:', audioKeys);
+      console.log('Current recording ID:', recordingId);
+      console.log('Has audio blob for this recording:', recordingId in audioBlobs);
+      
+      // Show all existing keys for comparison
+      if (audioKeys.length > 0) {
+        console.log('🔍 Existing audio blob keys:');
+        audioKeys.forEach((key, index) => {
+          console.log(`  ${index + 1}. "${key}"`);
+        });
+      }
+      
+      // Try to find similar keys (in case there's a slight mismatch)
+      const similarKeys = audioKeys.filter(key => key.includes(recordingId.split('_')[1]) || recordingId.includes(key.split('_')[1]));
+      if (similarKeys.length > 0) {
+        console.log('🔍 Found similar keys:', similarKeys);
+        
+        // Try to recover using the first similar key
+        const similarKey = similarKeys[0];
+        console.log('🔧 Attempting recovery with key:', similarKey);
+        
+        try {
+          const dataUrl = audioBlobs[similarKey];
+          if (dataUrl && typeof dataUrl === 'string' && dataUrl.startsWith('data:')) {
+            // Copy the audio data to the correct key
+            audioBlobs[recordingId] = dataUrl;
+            localStorage.setItem(this.AUDIO_STORAGE_KEY, JSON.stringify(audioBlobs));
+            console.log('✅ Recovered audio data for recording:', recordingId);
+            return; // Exit early as we've recovered
+          }
+        } catch (recoveryError) {
+          console.error('Failed to recover audio data:', recoveryError);
+        }
+      }
+      
+      if (recordingId in audioBlobs) {
+        const dataUrl = audioBlobs[recordingId];
+        console.log('Audio data type:', typeof dataUrl);
+        console.log('Audio data starts with data:?', dataUrl?.startsWith?.('data:'));
+        console.log('Audio data length:', dataUrl?.length || 'undefined');
+      }
+      
+      // Check localStorage usage
+      let totalSize = 0;
+      for (let key in localStorage) {
+        if (localStorage.hasOwnProperty(key)) {
+          totalSize += localStorage[key].length;
+        }
+      }
+      console.log('Total localStorage usage (chars):', totalSize);
+      console.log('Estimated localStorage usage (MB):', (totalSize / 1024 / 1024).toFixed(2));
+      
+    } catch (error) {
+      console.error('Error debugging storage:', error);
     }
   }
 
@@ -588,6 +953,40 @@ class InterviewRecordingService {
   }
 
   /**
+   * Clean up orphaned audio blobs that don't match any existing recordings
+   */
+  cleanupOrphanedAudioBlobs(): void {
+    try {
+      console.log('🧹 Cleaning up orphaned audio blobs...');
+      
+      const recordings = this.getRecordings();
+      const validRecordingIds = new Set(recordings.map(r => r.id));
+      
+      const audioBlobs = JSON.parse(localStorage.getItem(this.AUDIO_STORAGE_KEY) || '{}');
+      const audioKeys = Object.keys(audioBlobs);
+      
+      let cleaned = 0;
+      audioKeys.forEach(key => {
+        if (!validRecordingIds.has(key)) {
+          delete audioBlobs[key];
+          cleaned++;
+          console.log('🗑️ Removed orphaned audio blob:', key);
+        }
+      });
+      
+      if (cleaned > 0) {
+        localStorage.setItem(this.AUDIO_STORAGE_KEY, JSON.stringify(audioBlobs));
+        console.log(`✅ Cleaned ${cleaned} orphaned audio blobs`);
+      } else {
+        console.log('✅ No orphaned audio blobs found');
+      }
+      
+    } catch (error) {
+      console.error('Error cleaning orphaned audio blobs:', error);
+    }
+  }
+
+  /**
    * Clear all recordings (for testing/cleanup)
    */
   clearAllRecordings(): void {
@@ -595,8 +994,44 @@ class InterviewRecordingService {
     localStorage.removeItem(this.AUDIO_STORAGE_KEY);
     console.log('🧹 All recordings cleared');
   }
+
+  /**
+   * Initialize audio URLs for all recordings that don't have them
+   */
+  initializeAudioUrls(): void {
+    console.log('🔧 Initializing audio URLs for existing recordings...');
+    
+    // First clean up orphaned audio blobs
+    this.cleanupOrphanedAudioBlobs();
+    
+    const recordings = this.getRecordings();
+    let initialized = 0;
+    
+    recordings.forEach(recording => {
+      if (recording.status === 'completed' && !recording.audioUrl) {
+        const audioBlob = this.loadAudioBlob(recording.id);
+        if (audioBlob) {
+          recording.audioBlob = audioBlob;
+          recording.audioUrl = URL.createObjectURL(audioBlob);
+          this.saveRecording(recording);
+          initialized++;
+          console.log('✅ Initialized audio URL for recording:', recording.id);
+        }
+      }
+    });
+    
+    console.log(`🎉 Initialized ${initialized} audio URLs`);
+  }
 }
 
 // Export singleton instance
 export const interviewRecordingService = new InterviewRecordingService();
+
+// Initialize audio URLs when the service is first loaded
+try {
+  interviewRecordingService.initializeAudioUrls();
+} catch (error) {
+  console.warn('Failed to initialize audio URLs:', error);
+}
+
 export default interviewRecordingService;

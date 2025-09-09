@@ -120,7 +120,7 @@ class InterviewService {
   private generateQuestionsForJob(job: any, difficulty: 'Easy' | 'Medium' | 'Hard'): InterviewQuestion[] {
     const questions: InterviewQuestion[] = [];
     
-    // General questions
+    // Question 1: Introduction and Interest
     questions.push({
       _id: `q-general-1`,
       question: `Tell me about yourself and why you're interested in the ${job.title} position.`,
@@ -134,7 +134,7 @@ class InterviewService {
       difficulty
     });
 
-    // Behavioral questions
+    // Question 2: Challenging Project (Behavioral)
     questions.push({
       _id: `q-behavioral-1`,
       question: 'Describe a challenging project you worked on and how you overcame the obstacles.',
@@ -148,7 +148,7 @@ class InterviewService {
       difficulty
     });
 
-    // Technical questions based on job skills
+    // Question 3: Technical Skill Question
     if (job.skills && job.skills.length > 0) {
       const primarySkill = job.skills[0];
       questions.push({
@@ -163,9 +163,22 @@ class InterviewService {
         ],
         difficulty
       });
+    } else {
+      questions.push({
+        _id: `q-technical-1`,
+        question: 'Tell me about a technical challenge you faced recently and how you solved it.',
+        type: 'technical',
+        expectedDuration: 180,
+        tips: [
+          'Describe the problem clearly',
+          'Explain your approach step by step',
+          'Highlight the outcome and lessons learned'
+        ],
+        difficulty
+      });
     }
 
-    // Situational questions
+    // Question 4: Situational Question
     questions.push({
       _id: `q-situational-1`,
       question: `Imagine you're working on a tight deadline for a ${job.title} project, but you discover a significant issue that could delay the delivery. How would you handle this situation?`,
@@ -179,7 +192,7 @@ class InterviewService {
       difficulty
     });
 
-    // Company-specific question
+    // Question 5: Company-specific question
     questions.push({
       _id: `q-general-2`,
       question: `What do you know about ${job.company} and why do you want to work here?`,
@@ -193,7 +206,21 @@ class InterviewService {
       difficulty
     });
 
-    // Role-specific question
+    // Question 6: Team Collaboration
+    questions.push({
+      _id: `q-behavioral-2`,
+      question: 'Tell me about a time when you had to work with a difficult team member. How did you handle the situation?',
+      type: 'behavioral',
+      expectedDuration: 150,
+      tips: [
+        'Focus on professional behavior',
+        'Show conflict resolution skills',
+        'Emphasize positive outcomes'
+      ],
+      difficulty
+    });
+
+    // Question 7: Role-specific question
     if (job.responsibilities && job.responsibilities.length > 0) {
       const primaryResponsibility = job.responsibilities[0];
       questions.push({
@@ -208,12 +235,53 @@ class InterviewService {
         ],
         difficulty
       });
+    } else {
+      questions.push({
+        _id: `q-technical-2`,
+        question: 'What do you consider to be your greatest professional strength and how does it relate to this position?',
+        type: 'technical',
+        expectedDuration: 120,
+        tips: [
+          'Choose a strength relevant to the role',
+          'Provide concrete examples',
+          'Show how it benefits the organization'
+        ],
+        difficulty
+      });
     }
 
-    // Closing question
+    // Question 8: Leadership/Initiative
     questions.push({
-      _id: `q-general-3`,
-      question: 'Do you have any questions about the role or the company?',
+      _id: `q-behavioral-3`,
+      question: 'Describe a time when you took initiative to improve a process or solve a problem without being asked.',
+      type: 'behavioral',
+      expectedDuration: 180,
+      tips: [
+        'Show proactive thinking',
+        'Demonstrate leadership qualities',
+        'Quantify the impact of your actions'
+      ],
+      difficulty
+    });
+
+    // Question 9: Future Goals and Growth
+    questions.push({
+      _id: `q-general-4`,
+      question: 'Where do you see yourself professionally in 3-5 years, and how does this role fit into those goals?',
+      type: 'general',
+      expectedDuration: 120,
+      tips: [
+        'Show ambition but be realistic',
+        'Connect your goals to the company',
+        'Demonstrate long-term commitment'
+      ],
+      difficulty
+    });
+
+    // Question 10: Closing question - Questions for us
+    questions.push({
+      _id: `q-general-5`,
+      question: 'Do you have any questions about the role, team, or company culture?',
       type: 'general',
       expectedDuration: 120,
       tips: [

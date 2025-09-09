@@ -48,6 +48,7 @@ import { TransitionProps } from '@mui/material/transitions';
 import { CreatePostData, socialNetworkService } from '../../services/socialNetworkService';
 import { uploadService } from '../../services/uploadService';
 import { useAuth } from '../../contexts/AuthContext';
+import { SafeSlideUp } from '../../utils/transitionFix';
 
 interface MediaFile {
   file: File;
@@ -64,14 +65,7 @@ interface MobileCreatePostProps {
   onPostCreated?: (post: any) => void;
 }
 
-const Transition = React.forwardRef(function Transition(
-  props: TransitionProps & {
-    children: React.ReactElement;
-  },
-  ref: React.Ref<unknown>,
-) {
-  return <Slide direction="up" ref={ref} {...props} />;
-});
+const Transition = SafeSlideUp;
 
 const MobileCreatePost: React.FC<MobileCreatePostProps> = ({ 
   open, 

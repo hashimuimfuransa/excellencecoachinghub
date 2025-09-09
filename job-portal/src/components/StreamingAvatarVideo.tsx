@@ -34,11 +34,14 @@ const StreamingAvatarVideo: React.FC<StreamingAvatarVideoProps> = ({
 
   // Memoized avatar placeholder mapping to prevent recreation
   const avatarPlaceholders = useMemo(() => ({
+    'japanese_man': '👨🏻‍💼',
+    'old_european_woman': '👩🏻‍💼',
+    'european_woman': '👩🏻‍💼', 
     'black_man': '👨🏿‍💼',
-    'white_woman': '👩🏻‍💼', 
-    'asian_man': '👨🏻‍💼',
-    'hispanic_woman': '👩🏽‍💼',
-    'indian_man': '👨🏾‍💼'
+    'japanese_woman': '👩🏻‍💼',
+    'iranian_man': '👨🏽‍💼',
+    'mexican_man': '👨🏽‍💼',
+    'mexican_woman': '👩🏽‍💼'
   }), []);
 
   // Create stable request identifier to avoid regenerating same content

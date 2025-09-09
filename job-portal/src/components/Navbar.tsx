@@ -31,6 +31,7 @@ import {
   ListItemText as ListItemTextMui,
   Tooltip
 } from '@mui/material';
+import { SafeSlideUp } from '../utils/transitionFix';
 import {
   Menu as MenuIcon,
   Work,
@@ -721,7 +722,7 @@ const Navbar: React.FC = () => {
               : '0 20px 60px rgba(0, 0, 0, 0.15)',
           },
         }}
-        TransitionComponent={Slide}
+        TransitionComponent={SafeSlideUp}
         slotProps={{
           backdrop: {
             timeout: 500,

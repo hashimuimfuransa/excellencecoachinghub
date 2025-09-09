@@ -47,6 +47,7 @@ import {
 } from '../services/modernInterviewService';
 import { AvatarTalkResponse } from '../services/avatarTalkService';
 import { speechToTextService, SpeechToTextResult } from '../services/speechToTextService';
+import { interviewStorageService } from '../services/interviewStorageService';
 import StreamingAvatarVideo from './StreamingAvatarVideo';
 
 interface AvatarInterviewInterfaceProps {
@@ -242,6 +243,23 @@ const AvatarInterviewInterface: React.FC<AvatarInterviewInterfaceProps> = ({
 
       console.log('✅ Audio transcription completed:', transcriptionResult);
 
+      // Save recording to storage service
+      try {
+        await interviewStorageService.saveInterviewRecording(
+          session.id,
+          currentQuestion.id,
+          currentQuestion.question,
+          audioBlob,
+          recordingDuration,
+          transcriptionResult.transcript,
+          transcriptionResult.confidence || 0.8
+        );
+        console.log('✅ Recording saved to storage');
+      } catch (storageError) {
+        console.error('❌ Failed to save recording:', storageError);
+        // Continue with interview even if storage fails
+      }
+
       // Update state with transcript
       setState(prev => ({ 
         ...prev, 
@@ -387,6 +405,28 @@ const AvatarInterviewInterface: React.FC<AvatarInterviewInterfaceProps> = ({
   const completeInterview = async (allResponses: InterviewResponse[]) => {
     try {
       const result = await modernInterviewService.completeInterview(session.id, allResponses);
+      
+      // Save complete interview to history with recording
+      try {
+        const totalDuration = allResponses.reduce((total, response) => total + response.duration, 0);
+        await interviewStorageService.saveInterviewToHistory(
+          session.id,
+          session.jobTitle,
+          'Practice Interview', // Default company for practice interviews
+          allResponses.length,
+          totalDuration,
+          result.score,
+          result.overallFeedback,
+          'completed',
+          'european_woman', // European woman avatar
+          'practice'
+        );
+        console.log('✅ Complete interview saved to history');
+      } catch (historyError) {
+        console.error('❌ Failed to save interview to history:', historyError);
+        // Continue even if history save fails
+      }
+      
       onComplete(result);
     } catch (error) {
       console.error('Failed to complete interview:', error);

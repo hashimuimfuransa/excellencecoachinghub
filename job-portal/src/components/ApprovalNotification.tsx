@@ -19,6 +19,7 @@ import {
   Schedule
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SafeSlideDown } from '../utils/transitionFix';
 
 interface ApprovalNotificationProps {
   open: boolean;
@@ -32,9 +33,7 @@ interface ApprovalNotificationProps {
   autoHideDuration?: number;
 }
 
-function SlideTransition(props: SlideProps) {
-  return <Slide {...props} direction="down" />;
-}
+const SlideTransition = SafeSlideDown;
 
 const ApprovalNotification: React.FC<ApprovalNotificationProps> = ({
   open,

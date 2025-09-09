@@ -110,7 +110,7 @@ const TrendingJobsSection: React.FC = () => {
   };
 
   const formatSalary = (salary?: { min: number; max: number; currency: string }) => {
-    if (!salary) return 'Competitive salary';
+    if (!salary || salary.min === undefined || salary.max === undefined || !salary.currency) return 'Competitive salary';
     return `${salary.currency} ${salary.min.toLocaleString()} - ${salary.currency} ${salary.max.toLocaleString()}`;
   };
 

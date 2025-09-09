@@ -20,6 +20,7 @@ import {
   useTheme,
   useMediaQuery,
 } from '@mui/material';
+import { SafeSlideUp } from '../utils/transitionFix';
 import {
   ContactSupport,
   Close,
@@ -224,7 +225,7 @@ const FloatingContact: React.FC = () => {
               : '0 20px 60px rgba(0, 0, 0, 0.15)',
           },
         }}
-        TransitionComponent={Slide}
+        TransitionComponent={SafeSlideUp}
         slotProps={{
           backdrop: {
             timeout: 500,

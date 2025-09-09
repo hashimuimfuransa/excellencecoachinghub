@@ -239,7 +239,11 @@ const NetworkPage: React.FC = () => {
       const sentRequestsData = Array.isArray(sentRequestsRes) ? sentRequestsRes : (sentRequestsRes?.data || []);
       const suggestionsData = Array.isArray(suggestionsRes) ? suggestionsRes : (suggestionsRes?.data || []);
 
-      setConnections(connectionsData);
+      // Filter out connections with null or undefined user data
+      const validConnections = connectionsData.filter((conn: any) => conn?.user != null);
+      console.log('Connections loaded:', connectionsData.length, 'valid:', validConnections.length);
+      
+      setConnections(validConnections);
       setPendingRequests(requestsData);
       setSentRequests(sentRequestsData);
       setSuggestions(suggestionsData);
@@ -341,7 +345,7 @@ const NetworkPage: React.FC = () => {
   const handleRemoveConnection = async (userId: string) => {
     try {
       await socialNetworkService.removeConnection(userId);
-      setConnections(prev => prev.filter(conn => conn.user._id !== userId));
+      setConnections(prev => prev.filter(conn => conn.user?._id !== userId));
     } catch (error) {
       console.error('Error removing connection:', error);
     }
@@ -386,11 +390,21 @@ const NetworkPage: React.FC = () => {
     }
   };
 
-  const filteredConnections = connections.filter(conn =>
-    `${conn.user.firstName} ${conn.user.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    conn.user.company?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    conn.user.jobTitle?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredConnections = connections.filter(conn => {
+    // Skip connections where user data is null or undefined
+    if (!conn?.user) {
+      return false;
+    }
+    
+    const fullName = `${conn.user.firstName || ''} ${conn.user.lastName || ''}`.toLowerCase();
+    const company = conn.user.company?.toLowerCase() || '';
+    const jobTitle = conn.user.jobTitle?.toLowerCase() || '';
+    const query = searchQuery.toLowerCase();
+    
+    return fullName.includes(query) || 
+           company.includes(query) || 
+           jobTitle.includes(query);
+  });
 
   if (loading) {
     return (
@@ -522,84 +536,98 @@ const NetworkPage: React.FC = () => {
                     }
                   }}
                   onClick={() => {
-                    handleViewProfile(connection.user);
+                    if (connection.user) {
+                      handleViewProfile(connection.user);
+                    }
                   }}
                 >
                   <CardContent sx={{ textAlign: 'center' }}>
-                    <Avatar
-                      src={connection.user.profilePicture}
-                      sx={{ width: 64, height: 64, mx: 'auto', mb: 2 }}
-                    >
-                      {connection.user.firstName[0]}{connection.user.lastName[0]}
-                    </Avatar>
-                    
-                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                      {connection.user.firstName} {connection.user.lastName}
-                    </Typography>
-                    
-                    {connection.user.jobTitle && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        {connection.user.jobTitle}
+                    {connection.user ? (
+                      <>
+                        <Avatar
+                          src={connection.user.profilePicture}
+                          sx={{ width: 64, height: 64, mx: 'auto', mb: 2 }}
+                        >
+                          {connection.user.firstName?.[0] || ''}{connection.user.lastName?.[0] || ''}
+                        </Avatar>
+                        
+                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                          {connection.user.firstName || ''} {connection.user.lastName || ''}
+                        </Typography>
+                        
+                        {connection.user.jobTitle && (
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            {connection.user.jobTitle}
+                          </Typography>
+                        )}
+                        
+                        {connection.user.company && (
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            at {connection.user.company}
+                          </Typography>
+                        )}
+
+                        {/* Show user role/type */}
+                        {(connection.user as any).role && (
+                          <Chip
+                            label={
+                              ((connection.user as any).role === 'job_seeker' || (connection.user as any).role === 'jobseeker') 
+                                ? 'Job Seeker' 
+                                : (connection.user as any).role?.charAt(0).toUpperCase() + (connection.user as any).role?.slice(1)
+                            }
+                            size="small"
+                            color="secondary"
+                            variant="outlined"
+                            sx={{ mb: 1 }}
+                          />
+                        )}
+
+                        <Chip
+                          label={connection.connectionType === 'follow' ? 'Following' : 'Connected'}
+                          size="small"
+                          color="primary"
+                          variant="filled"
+                          sx={{ mb: 2 }}
+                        />
+
+                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<Message />}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const userId = connection.user?._id;
+                              const userName = `${connection.user?.firstName || ''} ${connection.user?.lastName || ''}`;
+                              if (userId && userName.trim()) {
+                                handleStartChat(userId, userName);
+                              }
+                            }}
+                          >
+                            Message
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            color="error"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (connection.user?._id) {
+                                handleRemoveConnection(connection.user._id);
+                              }
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        </Box>
+                      </>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        User data unavailable
                       </Typography>
                     )}
-                    
-                    {connection.user.company && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        at {connection.user.company}
-                      </Typography>
-                    )}
-
-                    {/* Show user role/type */}
-                    {(connection.user as any).role && (
-                      <Chip
-                        label={
-                          ((connection.user as any).role === 'job_seeker' || (connection.user as any).role === 'jobseeker') 
-                            ? 'Job Seeker' 
-                            : (connection.user as any).role?.charAt(0).toUpperCase() + (connection.user as any).role?.slice(1)
-                        }
-                        size="small"
-                        color="secondary"
-                        variant="outlined"
-                        sx={{ mb: 1 }}
-                      />
-                    )}
-
-                    <Chip
-                      label={connection.connectionType === 'follow' ? 'Following' : 'Connected'}
-                      size="small"
-                      color="primary"
-                      variant="filled"
-                      sx={{ mb: 2 }}
-                    />
-
-                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<Message />}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          const userId = connection.user._id;
-                          const userName = `${connection.user.firstName} ${connection.user.lastName}`;
-                          handleStartChat(userId, userName);
-                        }}
-                      >
-                        Message
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        color="error"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleRemoveConnection(connection.user._id);
-                        }}
-                      >
-                        Remove
-                      </Button>
-                    </Box>
                   </CardContent>
                 </Card>
               </Grid>

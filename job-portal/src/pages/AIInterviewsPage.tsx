@@ -71,7 +71,8 @@ import {
   WhatsApp,
   Phone,
   AdminPanelSettings,
-  History
+  History,
+  Headphones
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -96,7 +97,7 @@ const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'practice' | 'history'>('practice');
+  const [activeTab, setActiveTab] = useState<'practice'>('practice');
 
   // Job selection states
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -1008,72 +1009,10 @@ const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
               </SafeSlideDown>
             )}
 
-            {/* Tab Navigation */}
-            <Box sx={{ mb: 4 }}>
-              <Paper 
-                sx={{ 
-                  borderRadius: 3,
-                  background: `linear-gradient(135deg, 
-                    ${alpha(theme.palette.primary.main, 0.08)} 0%, 
-                    ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
-                  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`
-                }}
-              >
-                <Tabs
-                  value={activeTab}
-                  onChange={(_, newValue) => setActiveTab(newValue)}
-                  centered
-                  sx={{
-                    '& .MuiTabs-indicator': {
-                      background: `linear-gradient(135deg, 
-                        ${theme.palette.primary.main}, 
-                        ${theme.palette.secondary.main})`,
-                      height: 3,
-                      borderRadius: 1.5
-                    }
-                  }}
-                >
-                  <Tab
-                    label="Practice Interviews"
-                    value="practice"
-                    icon={<Psychology />}
-                    iconPosition="start"
-                    sx={{
-                      minHeight: 60,
-                      fontSize: '1.1rem',
-                      fontWeight: activeTab === 'practice' ? 'bold' : 'normal',
-                      '&.Mui-selected': {
-                        background: `linear-gradient(135deg, 
-                          ${alpha(theme.palette.primary.main, 0.1)} 0%, 
-                          ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
-                        color: theme.palette.primary.main
-                      }
-                    }}
-                  />
-                  <Tab
-                    label="Interview History"
-                    value="history"
-                    icon={<History />}
-                    iconPosition="start"
-                    sx={{
-                      minHeight: 60,
-                      fontSize: '1.1rem',
-                      fontWeight: activeTab === 'history' ? 'bold' : 'normal',
-                      '&.Mui-selected': {
-                        background: `linear-gradient(135deg, 
-                          ${alpha(theme.palette.primary.main, 0.1)} 0%, 
-                          ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
-                        color: theme.palette.primary.main
-                      }
-                    }}
-                  />
-                </Tabs>
-              </Paper>
-            </Box>
 
-            {/* Practice Tab Content */}
-            {activeTab === 'practice' && (
-              <Box>
+
+            {/* Practice Interview Content */}
+            <Box>
                 {/* Progress for question generation */}
             {generatingQuestions && (
               <Fade in={generatingQuestions}>
@@ -1747,169 +1686,7 @@ const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
                 </Box>
               </Fade>
             )}
-              </Box>
-            )}
-
-            {/* History Tab Content */}
-            {activeTab === 'history' && (
-              <Fade in timeout={600}>
-                <Box>
-                  <Box 
-                    display="flex" 
-                    alignItems="center" 
-                    justifyContent="space-between" 
-                    mb={3}
-                    sx={{
-                      background: `linear-gradient(135deg, 
-                        ${alpha(theme.palette.secondary.main, 0.1)} 0%, 
-                        ${alpha(theme.palette.secondary.main, 0.05)} 100%)`,
-                      borderRadius: 2,
-                      p: 2,
-                      border: `1px solid ${alpha(theme.palette.secondary.main, 0.2)}`
-                    }}
-                  >
-                    <Box>
-                      <Typography variant={isMobile ? "h5" : "h4"} fontWeight="bold">
-                        Your Interview History
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Review your completed interviews and track your progress
-                      </Typography>
-                    </Box>
-                    <Badge 
-                      badgeContent={interviewResults.length} 
-                      color="secondary"
-                      sx={{ ml: 'auto' }}
-                    >
-                      <Analytics sx={{ fontSize: 32, color: theme.palette.secondary.main }} />
-                    </Badge>
-                  </Box>
-
-                  {interviewResults.length === 0 ? (
-                    <Paper
-                      sx={{
-                        p: 6,
-                        textAlign: 'center',
-                        borderRadius: 3,
-                        background: `linear-gradient(135deg, 
-                          ${alpha(theme.palette.grey[100], 0.8)} 0%, 
-                          ${alpha(theme.palette.grey[50], 0.4)} 100%)`,
-                        border: `1px solid ${alpha(theme.palette.grey[300], 0.5)}`
-                      }}
-                    >
-                      <History 
-                        sx={{ 
-                          fontSize: 60, 
-                          color: theme.palette.grey[400],
-                          mb: 2 
-                        }} 
-                      />
-                      <Typography variant="h6" color="text.secondary" gutterBottom>
-                        No Interview History Yet
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                        Complete your first interview practice to see your results here
-                      </Typography>
-                      <Button
-                        variant="contained"
-                        startIcon={<PlayArrow />}
-                        onClick={() => setActiveTab('practice')}
-                        sx={{
-                          borderRadius: 2,
-                          px: 4,
-                          py: 1.5
-                        }}
-                      >
-                        Start Your First Interview
-                      </Button>
-                    </Paper>
-                  ) : (
-                    <Grid container spacing={isMobile ? 2 : 3}>
-                      {interviewResults.map((result, index) => (
-                        <Grid item xs={12} md={6} lg={4} key={index}>
-                          <Card
-                            sx={{
-                              borderRadius: 3,
-                              background: `linear-gradient(135deg, 
-                                ${alpha(result.overallScore >= 80 ? theme.palette.success.main : 
-                                  result.overallScore >= 60 ? theme.palette.warning.main : 
-                                  theme.palette.error.main, 0.08)} 0%, 
-                                ${alpha(result.overallScore >= 80 ? theme.palette.success.light : 
-                                  result.overallScore >= 60 ? theme.palette.warning.light : 
-                                  theme.palette.error.light, 0.04)} 100%)`,
-                              border: `2px solid ${alpha(result.overallScore >= 80 ? theme.palette.success.main : 
-                                result.overallScore >= 60 ? theme.palette.warning.main : 
-                                theme.palette.error.main, 0.2)}`,
-                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                              '&:hover': {
-                                transform: 'translateY(-4px)',
-                                boxShadow: `0 12px 24px ${alpha(result.overallScore >= 80 ? theme.palette.success.main : 
-                                  result.overallScore >= 60 ? theme.palette.warning.main : 
-                                  theme.palette.error.main, 0.2)}`
-                              }
-                            }}
-                          >
-                            <CardContent sx={{ p: 3 }}>
-                              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                                <Typography variant="h6" fontWeight="bold">
-                                  Interview #{interviewResults.length - index}
-                                </Typography>
-                                <Chip 
-                                  label={`${result.overallScore}%`} 
-                                  color={result.overallScore >= 80 ? 'success' : result.overallScore >= 60 ? 'warning' : 'error'}
-                                  sx={{ fontWeight: 'bold' }}
-                                />
-                              </Box>
-                              
-                              <Typography variant="body2" color="text.secondary" gutterBottom>
-                                {new Date(result.completedAt).toLocaleDateString('en-US', {
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </Typography>
-                              
-                              <Stack direction="row" spacing={2} mb={2}>
-                                <Box display="flex" alignItems="center">
-                                  <Assessment sx={{ fontSize: 16, mr: 0.5 }} />
-                                  <Typography variant="body2">
-                                    {result.totalQuestions} Questions
-                                  </Typography>
-                                </Box>
-                                <Box display="flex" alignItems="center">
-                                  <CheckCircle sx={{ 
-                                    color: theme.palette.success.main, 
-                                    fontSize: 16, 
-                                    mr: 0.5 
-                                  }} />
-                                  <Typography variant="body2">
-                                    Completed
-                                  </Typography>
-                                </Box>
-                              </Stack>
-                            </CardContent>
-                            <CardActions sx={{ p: 3, pt: 0 }}>
-                              <Button
-                                variant="outlined"
-                                fullWidth
-                                size="medium"
-                                startIcon={<Visibility />}
-                                onClick={() => navigate(`/app/interviews/feedback/${result.sessionId}`)}
-                                sx={{ borderRadius: 2 }}
-                              >
-                                View Details
-                              </Button>
-                            </CardActions>
-                          </Card>
-                        </Grid>
-                      ))}
-                    </Grid>
-                  )}
-                </Box>
-              </Fade>
-            )}
+            </Box>
           </Box>
         </Container>
 

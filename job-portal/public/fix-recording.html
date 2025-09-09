@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Interview Recording Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .result { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        button { padding: 10px 15px; margin: 5px; font-size: 16px; cursor: pointer; }
+        .btn-primary { background-color: #007bff; color: white; border: none; border-radius: 4px; }
+        .btn-success { background-color: #28a745; color: white; border: none; border-radius: 4px; }
+        .btn-danger { background-color: #dc3545; color: white; border: none; border-radius: 4px; }
+        pre { background-color: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Interview Recording Recovery Tool</h1>
+    
+    <div class="info">
+        <strong>Issue:</strong> Your interview recording exists but the audio can't be played because the audio blob data is stored under a different key.
+    </div>
+
+    <h2>Quick Actions</h2>
+    <button class="btn-primary" onclick="diagnoseIssue()">🔍 Diagnose Issue</button>
+    <button class="btn-success" onclick="fixRecording()">🔧 Fix Recording</button>
+    <button class="btn-danger" onclick="clearResults()">🧹 Clear Results</button>
+
+    <div id="results"></div>
+
+    <script>
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        function diagnoseIssue() {
+            clearResults();
+            addResult('<h3>🔍 Diagnosing Recording Issue...</h3>', 'info');
+
+            try {
+                const STORAGE_KEY = 'interview_recordings';
+                const AUDIO_STORAGE_KEY = 'interview_audio_blobs';
+
+                // Get recordings and audio blobs
+                const recordings = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+                const audioBlobs = JSON.parse(localStorage.getItem(AUDIO_STORAGE_KEY) || '{}');
+
+                addResult(`<strong>Total Recordings:</strong> ${recordings.length}`, 'info');
+                addResult(`<strong>Total Audio Blobs:</strong> ${Object.keys(audioBlobs).length}`, 'info');
+
+                // Find problematic recordings
+                const problemRecordings = recordings.filter(r => 
+                    r.status === 'completed' && !audioBlobs[r.id]
+                );
+
+                const orphanedAudioKeys = Object.keys(audioBlobs).filter(key => 
+                    !recordings.find(r => r.id === key)
+                );
+
+                if (problemRecordings.length > 0) {
+                    addResult(`<strong>❌ Recordings with missing audio:</strong>`, 'error');
+                    problemRecordings.forEach(r => {
+                        addResult(`• ${r.id} (${r.jobTitle})`, 'error');
+                    });
+                }
+
+                if (orphanedAudioKeys.length > 0) {
+                    addResult(`<strong>🔍 Orphaned audio blobs:</strong>`, 'info');
+                    orphanedAudioKeys.forEach(key => {
+                        addResult(`• ${key}`, 'info');
+                    });
+                }
+
+                // Check for potential matches
+                if (problemRecordings.length > 0 && orphanedAudioKeys.length > 0) {
+                    addResult(`<strong>🎯 Potential Matches Found!</strong>`, 'success');
+                    addResult('The fix button below should be able to recover your recording.', 'success');
+                } else if (problemRecordings.length === 0) {
+                    addResult('✅ No recordings with missing audio found!', 'success');
+                } else {
+                    addResult('❌ No orphaned audio blobs available for recovery.', 'error');
+                }
+
+            } catch (error) {
+                addResult(`❌ Error during diagnosis: ${error.message}`, 'error');
+            }
+        }
+
+        function extractTimestamp(recordingId) {
+            const match = recordingId.match(/recording_(\\d+)_/);
+            return match ? parseInt(match[1], 10) : null;
+        }
+
+        function fixRecording() {
+            addResult('<h3>🔧 Attempting to Fix Recording...</h3>', 'info');
+
+            try {
+                const STORAGE_KEY = 'interview_recordings';
+                const AUDIO_STORAGE_KEY = 'interview_audio_blobs';
+
+                // Get data
+                const recordings = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+                const audioBlobs = JSON.parse(localStorage.getItem(AUDIO_STORAGE_KEY) || '{}');
+
+                // Find recordings without audio blobs
+                const orphanedRecordings = recordings.filter(r => 
+                    r.status === 'completed' && !audioBlobs[r.id]
+                );
+
+                const orphanedAudioKeys = Object.keys(audioBlobs).filter(key => 
+                    !recordings.find(r => r.id === key)
+                );
+
+                if (orphanedRecordings.length === 0) {
+                    addResult('✅ No recordings need fixing!', 'success');
+                    return;
+                }
+
+                if (orphanedAudioKeys.length === 0) {
+                    addResult('❌ No orphaned audio blobs available for recovery.', 'error');
+                    return;
+                }
+
+                let fixedCount = 0;
+
+                // Try to match recordings with audio blobs by timestamp
+                for (const recording of orphanedRecordings) {
+                    const recordingTimestamp = extractTimestamp(recording.id);
+                    let bestMatch = null;
+                    let smallestDiff = Infinity;
+
+                    for (const audioKey of orphanedAudioKeys) {
+                        const audioTimestamp = extractTimestamp(audioKey);
+                        if (audioTimestamp) {
+                            const diff = Math.abs(recordingTimestamp - audioTimestamp);
+                            if (diff < smallestDiff) {
+                                smallestDiff = diff;
+                                bestMatch = audioKey;
+                            }
+                        }
+                    }
+
+                    if (bestMatch && smallestDiff < 3600000) { // Within 1 hour
+                        // Copy audio data to correct key
+                        audioBlobs[recording.id] = audioBlobs[bestMatch];
+                        
+                        // Update recording status
+                        recording.status = 'completed';
+                        
+                        fixedCount++;
+                        
+                        const timeDiffMinutes = Math.round(smallestDiff / 60000);
+                        addResult(`✅ Fixed: ${recording.jobTitle || recording.id} (time diff: ${timeDiffMinutes} min)`, 'success');
+                        
+                        // Remove the matched key from orphaned list
+                        const index = orphanedAudioKeys.indexOf(bestMatch);
+                        if (index > -1) {
+                            orphanedAudioKeys.splice(index, 1);
+                        }
+                    }
+                }
+
+                if (fixedCount > 0) {
+                    // Save the updated data
+                    localStorage.setItem(AUDIO_STORAGE_KEY, JSON.stringify(audioBlobs));
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(recordings));
+
+                    addResult(`<h3>🎉 Success! Fixed ${fixedCount} recording(s)</h3>`, 'success');
+                    addResult('<strong>Next Steps:</strong>', 'success');
+                    addResult('1. Close this page', 'success');
+                    addResult('2. Go back to your interview history', 'success');
+                    addResult('3. Refresh the page', 'success');
+                    addResult('4. Try playing your recording again', 'success');
+                } else {
+                    addResult('❌ Could not automatically fix any recordings. The timestamps may be too different.', 'error');
+                }
+
+            } catch (error) {
+                addResult(`❌ Error during fix: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-diagnose on page load
+        window.onload = function() {
+            addResult('<h3>👋 Welcome to the Interview Recording Recovery Tool</h3>', 'info');
+            addResult('This tool will help recover your interview recording. Click "Diagnose Issue" to start.', 'info');
+        };
+    </script>
+</body>
+</html>

@@ -7,8 +7,8 @@ const EMAILJS_CONFIG = {
   PASSWORD_RESET_TEMPLATE_ID: 'template_9apzq9s', // Your EmailJS template ID for password reset
   WELCOME_TEMPLATE_ID: 'template_sikm5se', // Your EmailJS template ID for welcome email
   JOB_APPLICATION_TEMPLATE_ID: 'template_btwevvq', // Your EmailJS template ID for job applications
-  JOB_RECOMMENDATION_TEMPLATE_ID: 'template_f0oaoz8', // NEW SIMPLE template for job recommendations
-  JOB_RECOMMENDATION_TEMPLATE_ID_OLD: 'template_f0oaoz8', // OLD complex template (backup)
+  JOB_RECOMMENDATION_TEMPLATE_ID: 'template_f0oaoz8', // NEW template with auto-apply confirmation
+  JOB_RECOMMENDATION_TEMPLATE_ID_OLD: 'template_f0oaoz8', // OLD simple template (backup)
   PUBLIC_KEY: 'VLY7_POWX21gRHMof' // Your EmailJS public key from .env
 };
 
@@ -558,6 +558,9 @@ export const sendJobRecommendationEmails = async (
       firstName: string;
       name?: string;
     };
+    batchId?: string;
+    confirmUrl?: string;
+    rejectUrl?: string;
     recommendations: Array<{
       id: string;
       title: string;
@@ -655,10 +658,14 @@ export const sendJobRecommendationEmails = async (
         jobs_list: jobsText.trim(),
         platform_name: 'ExJobNet',
         
+        // Auto-apply confirmation URLs
+        confirm_url: emailRequest.confirmUrl || '#',
+        reject_url: emailRequest.rejectUrl || '#',
+        
         // Email metadata
         from_name: 'ExJobNet Job Recommendations',
-        message: `Hi ${user.firstName || 'there'}! We found ${recommendations.length} new job opportunities that match your profile. Check them out below:`,
-        subject: `${recommendations.length} New Job Matches for You!`
+        message: `Hi ${user.firstName || 'there'}! We found ${recommendations.length} new job opportunities that match your profile. Would you like us to automatically apply to all of them for you, or would you prefer to apply manually?`,
+        subject: `${recommendations.length} New Job Matches - Auto-Apply Available!`
       };
 
       // Ensure all parameters are clean strings and remove undefined/null values

@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './layouts/MainLayout';
 import { initEmailJS } from './services/emailjsService';
 import { pushNotificationService } from './services/pushNotificationService';
+import { jobEmailService } from './services/jobEmailService';
 import EmailApiHandler from './components/EmailApiHandler';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -89,6 +90,15 @@ function App() {
     
     // Initialize push notifications
     pushNotificationService.init().catch(console.error);
+    
+    // Start job email service for periodic checking
+    jobEmailService.start();
+    console.log('🚀 Job email service started automatically');
+    
+    // Cleanup function to stop service when app unmounts
+    return () => {
+      jobEmailService.stop();
+    };
   }, []);
 
   return (

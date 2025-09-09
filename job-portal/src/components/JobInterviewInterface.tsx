@@ -29,7 +29,8 @@ import {
   Rating,
   TextField,
   ToggleButton,
-  ToggleButtonGroup
+  ToggleButtonGroup,
+  Tooltip
 } from '@mui/material';
 import {
   PlayArrow,
@@ -124,7 +125,7 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
   const [questionTime, setQuestionTime] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(true); // Start in fullscreen by default
   const [recordingVolume, setRecordingVolume] = useState(0);
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
@@ -257,6 +258,17 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
         setCurrentQuestion(question);
         setQuestionTime(question.expectedDuration);
         
+        // Temporarily pause any audio processing to give avatar clean audio space
+        const wasRecording = isRecording;
+        if (wasRecording) {
+          console.log('⏸️ Temporarily pausing recording for clean avatar audio');
+          try {
+            stopRecording();
+          } catch (e) {
+            console.warn('Could not pause recording:', e);
+          }
+        }
+        
         // Set the avatar text to speak the question
         setCurrentAvatarText(question.text);
         console.log('🎬 Updated job interview avatar text for question:', question.text);
@@ -264,10 +276,22 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
           setHasStarted(true);
         }
         
-        // Give avatar some time to prepare before removing loading state
+        // Give avatar time to start speaking, then resume recording if needed
         setTimeout(() => {
           setAvatarLoading(false);
-        }, 2000); // 2 second loading state to show preparation
+          
+          // Resume recording after avatar starts (if it was recording before)
+          if (wasRecording && indexToLoad > 0) { // Don't auto-resume on first question
+            console.log('▶️ Resuming recording after avatar started');
+            setTimeout(() => {
+              try {
+                startRecording();
+              } catch (e) {
+                console.warn('Could not resume recording:', e);
+              }
+            }, 1000); // Wait 1 more second for avatar to get going
+          }
+        }, 3000); // 3 second loading state to ensure avatar audio is clear
       } else {
         // No more questions, complete the interview
         console.log('❌ No question found at index:', indexToLoad);
@@ -344,32 +368,50 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
 
   const startRecording = async () => {
     try {
+      console.log('🎙️ Starting recording with avatar-safe constraints...');
+      
+      // Use dedicated audio constraints for cleaner recording that won't interfere with avatar audio
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 44100
+          autoGainControl: false, // Disable auto gain to prevent interference with avatar audio
+          sampleRate: 44100,
+          channelCount: 1, // Use mono to avoid conflicts
+          latency: 0.01, // Low latency for better real-time performance
+          // Add constraints to prevent interference with system audio
+          googEchoCancellation: false,
+          googAutoGainControl: false,
+          googNoiseSuppression: true,
+          googHighpassFilter: true
         }
       });
       
-      // Setup audio context for volume monitoring
+      // Create isolated audio context for volume monitoring only
       audioContextRef.current = new AudioContext();
       analyserRef.current = audioContextRef.current.createAnalyser();
-      const source = audioContextRef.current.createMediaStreamSource(stream);
-      source.connect(analyserRef.current);
+      
+      // Create a separate audio context for volume monitoring to avoid conflicts
+      const volumeStream = stream.clone();
+      const volumeSource = audioContextRef.current.createMediaStreamSource(volumeStream);
+      volumeSource.connect(analyserRef.current);
       
       // Start volume monitoring
       monitorVolume();
       
+      // Create media recorder with original stream (not the cloned one)
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
+        mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+          ? 'audio/webm;codecs=opus' 
+          : 'audio/webm'
       });
       mediaRecorderRef.current = mediaRecorder;
       recordingChunksRef.current = [];
       
       mediaRecorder.ondataavailable = (event) => {
-        recordingChunksRef.current.push(event.data);
+        if (event.data && event.data.size > 0) {
+          recordingChunksRef.current.push(event.data);
+        }
       };
       
       mediaRecorder.onstop = async () => {
@@ -382,19 +424,22 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
           volumeIntervalRef.current = null;
         }
         
-        // Clean up stream
+        // Clean up streams
         stream.getTracks().forEach(track => track.stop());
+        volumeStream.getTracks().forEach(track => track.stop());
         
-        // Clean up audio context
-        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-          audioContextRef.current.close().catch(console.error);
-        }
+        // Clean up audio context with delay to ensure avatar audio isn't affected
+        setTimeout(() => {
+          if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+            audioContextRef.current.close().catch(console.error);
+          }
+        }, 100);
         
         // Process the audio recording
         await handleRecordingComplete(blob);
       };
       
-      mediaRecorder.start();
+      mediaRecorder.start(1000); // Record in 1 second chunks for better performance
       setIsRecording(true);
       setRecordingStartTime(Date.now());
       setCurrentTranscript('');
@@ -446,7 +491,8 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
     try {
       setRecordingError(null);
       
-      const recording = await interviewRecordingService.startRecording(
+      // Use mixed recording to capture both AI avatar and user audio
+      const recording = await interviewRecordingService.startMixedRecording(
         session.id,
         session.userId,
         session.jobTitle,
@@ -456,7 +502,7 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
       
       setInterviewRecording(recording);
       setIsRecordingInterview(true);
-      console.log('🎬 Interview recording started:', recording.id);
+      console.log('🎬 Mixed interview recording started:', recording.id);
       
     } catch (error) {
       console.error('Failed to start interview recording:', error);
@@ -702,15 +748,15 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
       onClose={onClose}
       maxWidth={false}
       fullWidth
-      fullScreen={isFullscreen || isMobile}
+      fullScreen={true} // Always fullscreen for better interview experience
       TransitionComponent={SafeSlideUp}
       PaperProps={{
         sx: {
-          width: isFullscreen ? '100vw' : isMobile ? '100vw' : '95vw',
-          height: isFullscreen ? '100vh' : isMobile ? '100vh' : '95vh',
+          width: '100vw',
+          height: '100vh',
           maxWidth: 'none',
           maxHeight: 'none',
-          m: isFullscreen || isMobile ? 0 : 1,
+          m: 0,
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           overflow: 'hidden'
         }
@@ -781,9 +827,11 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
                 />
               )}
               
-              <IconButton onClick={toggleFullscreen} size="small">
-                {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
-              </IconButton>
+              <Tooltip title="Interview is in fullscreen mode for best experience">
+                <IconButton disabled size="small">
+                  <Fullscreen />
+                </IconButton>
+              </Tooltip>
               
               <IconButton onClick={onClose} size="small">
                 <Close />
@@ -858,7 +906,7 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
                   <Box display="flex" justifyContent="center" gap={1} mt={2}>
                     <Chip label={`${session.difficulty} Level`} color="primary" />
                     <Chip label="15 minutes" color="secondary" />
-                    <Chip label="5 questions" color="success" />
+                    <Chip label="10 questions" color="success" />
                   </Box>
                 </Box>
 
@@ -1069,6 +1117,7 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
                       emotion="serious"
                       language="en"
                       autoPlay={true}
+                      enableMixedRecording={false} // Disable mixed recording to prevent audio interference
                       onVideoStart={() => {
                         console.log('🎬 Job interview avatar started');
                         setIsPlaying(true);
@@ -1126,7 +1175,7 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
                     }}
                   >
                     <Typography color="white" variant="h6" fontWeight="bold">
-                      Question {currentQuestionIndex + 1} / 5
+                      Question {currentQuestionIndex + 1} / {session?.questions?.length || 10}
                     </Typography>
                   </Box>
                   
@@ -1271,13 +1320,13 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
                               startIcon={<Mic />}
                               onClick={startRecording}
                               size="large"
-                              disabled={isProcessingAudio || awaitingNextQuestion || !currentQuestion}
+                              disabled={isProcessingAudio || awaitingNextQuestion || !currentQuestion || avatarLoading}
                               sx={{
                                 background: 'linear-gradient(45deg, #4caf50 30%, #66bb6a 90%)',
                                 flex: 1
                               }}
                             >
-                              {!currentQuestion ? 'Loading Question...' : isProcessingAudio ? 'Processing...' : 'Record Answer'}
+                              {!currentQuestion ? 'Loading Question...' : isProcessingAudio ? 'Processing...' : avatarLoading ? 'Wait for Question...' : 'Record Answer'}
                             </Button>
                           ) : (
                             <Button
@@ -1299,7 +1348,7 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
                             disabled={isLoading || isProcessingAudio || awaitingNextQuestion || !currentQuestion}
                             size="large"
                           >
-                            {currentQuestionIndex === 4 ? 'Finish' : 'Next'}
+                            {currentQuestionIndex === (session?.questions?.length - 1) ? 'Finish' : 'Next'}
                           </Button>
                         </Stack>
                       </CardContent>
@@ -1350,12 +1399,12 @@ export const JobInterviewInterface: React.FC<JobInterviewInterfaceProps> = ({
                           Questions Completed
                         </Typography>
                         <Typography variant="body2" fontWeight="bold">
-                          {currentQuestionIndex} / 5
+                          {currentQuestionIndex} / {session?.questions?.length || 10}
                         </Typography>
                       </Box>
                       <LinearProgress 
                         variant="determinate" 
-                        value={(currentQuestionIndex / 5) * 100} 
+                        value={(currentQuestionIndex / (session?.questions?.length || 10)) * 100} 
                         sx={{ 
                           height: 8, 
                           borderRadius: 4,

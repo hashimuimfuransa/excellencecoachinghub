@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Box, CircularProgress, Typography, Alert, Avatar } from '@mui/material';
 import { avatarTalkService } from '../services/avatarTalkService';
+import { interviewRecordingService } from '../services/interviewRecordingService';
 
 interface StreamingAvatarVideoProps {
   text: string;
@@ -11,6 +12,7 @@ interface StreamingAvatarVideoProps {
   onVideoStart?: () => void;
   onVideoEnd?: () => void;
   onError?: (error: string) => void;
+  enableMixedRecording?: boolean; // New prop to enable mixed recording
 }
 
 const StreamingAvatarVideo: React.FC<StreamingAvatarVideoProps> = ({
@@ -21,7 +23,8 @@ const StreamingAvatarVideo: React.FC<StreamingAvatarVideoProps> = ({
   autoPlay = true,
   onVideoStart,
   onVideoEnd,
-  onError
+  onError,
+  enableMixedRecording = false
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [loading, setLoading] = useState(false);
@@ -108,8 +111,27 @@ const StreamingAvatarVideo: React.FC<StreamingAvatarVideoProps> = ({
           isGeneratingRef.current = false;
           
           if (autoPlay) {
+            // Ensure video element is properly configured for clear audio playback
+            if (videoRef.current) {
+              videoRef.current.volume = 1.0;
+              videoRef.current.muted = false;
+              videoRef.current.preload = 'auto';
+              
+              // Set audio properties for better compatibility
+              if ('audioTracks' in videoRef.current && videoRef.current.audioTracks) {
+                for (let i = 0; i < videoRef.current.audioTracks.length; i++) {
+                  videoRef.current.audioTracks[i].enabled = true;
+                }
+              }
+            }
+            
             videoRef.current?.play().then(() => {
               onVideoStart?.();
+              
+              // DISABLED: Skip audio mixing to prevent interference with avatar playback
+              // The avatar audio will play independently and won't be included in recording
+              // This ensures clear avatar audio without interference
+              console.log('🔊 Avatar audio playing independently (not mixed with recording)');
             }).catch(e => {
               console.warn('Autoplay failed, user interaction required:', e);
             });
@@ -119,6 +141,24 @@ const StreamingAvatarVideo: React.FC<StreamingAvatarVideoProps> = ({
         const handleLoadedData = () => {
           console.log('📹 Video data loaded');
           setVideoReady(true);
+          
+          // Ensure clean audio setup for each new question
+          if (videoRef.current) {
+            videoRef.current.volume = 1.0;
+            videoRef.current.muted = false;
+            
+            // Reset any audio constraints that might interfere
+            try {
+              if ('setSinkId' in videoRef.current) {
+                // Use default audio output to avoid conflicts
+                (videoRef.current as any).setSinkId('').catch(() => {
+                  // Silently fail if not supported
+                });
+              }
+            } catch (e) {
+              // Ignore setSinkId errors
+            }
+          }
         };
 
         const handleVideoError = () => {

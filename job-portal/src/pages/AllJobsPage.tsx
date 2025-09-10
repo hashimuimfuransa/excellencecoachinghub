@@ -491,14 +491,21 @@ const AllJobsPage: React.FC = () => {
                 <MenuItem value="">
                   <em>All Locations</em>
                 </MenuItem>
-                <MenuItem value="Kigali">🏙️ Kigali</MenuItem>
-                <MenuItem value="Musanze">🏔️ Musanze</MenuItem>
-                <MenuItem value="Huye">🎓 Huye</MenuItem>
-                <MenuItem value="Rubavu">🏖️ Rubavu</MenuItem>
-                <MenuItem value="Rusizi">🌊 Rusizi</MenuItem>
-                <MenuItem value="Nyagatare">🌾 Nyagatare</MenuItem>
-                <MenuItem value="Muhanga">⛰️ Muhanga</MenuItem>
-                <MenuItem value="Rwamagana">🌱 Rwamagana</MenuItem>
+                <MenuItem value="Rwanda">🇷🇼 Rwanda</MenuItem>
+                <MenuItem value="Kenya">🇰🇪 Kenya</MenuItem>
+                <MenuItem value="Uganda">🇺🇬 Uganda</MenuItem>
+                <MenuItem value="Tanzania">🇹🇿 Tanzania</MenuItem>
+                <MenuItem value="Ethiopia">🇪🇹 Ethiopia</MenuItem>
+                <MenuItem value="South Africa">🇿🇦 South Africa</MenuItem>
+                <MenuItem value="Nigeria">🇳🇬 Nigeria</MenuItem>
+                <MenuItem value="Ghana">🇬🇭 Ghana</MenuItem>
+                <MenuItem value="United States">🇺🇸 United States</MenuItem>
+                <MenuItem value="United Kingdom">🇬🇧 United Kingdom</MenuItem>
+                <MenuItem value="Canada">🇨🇦 Canada</MenuItem>
+                <MenuItem value="Germany">🇩🇪 Germany</MenuItem>
+                <MenuItem value="France">🇫🇷 France</MenuItem>
+                <MenuItem value="Netherlands">🇳🇱 Netherlands</MenuItem>
+                <MenuItem value="Dubai">🇦🇪 Dubai</MenuItem>
                 <MenuItem value="Remote">💻 Remote</MenuItem>
                 <MenuItem value="International">🌍 International</MenuItem>
               </Select>
@@ -845,14 +852,21 @@ const AllJobsPage: React.FC = () => {
                       <MenuItem value="">
                         <em>All Locations</em>
                       </MenuItem>
-                      <MenuItem value="Kigali">🏙️ Kigali</MenuItem>
-                      <MenuItem value="Musanze">🏔️ Musanze</MenuItem>
-                      <MenuItem value="Huye">🎓 Huye</MenuItem>
-                      <MenuItem value="Rubavu">🏖️ Rubavu</MenuItem>
-                      <MenuItem value="Rusizi">🌊 Rusizi</MenuItem>
-                      <MenuItem value="Nyagatare">🌾 Nyagatare</MenuItem>
-                      <MenuItem value="Muhanga">⛰️ Muhanga</MenuItem>
-                      <MenuItem value="Rwamagana">🌱 Rwamagana</MenuItem>
+                      <MenuItem value="Rwanda">🇷🇼 Rwanda</MenuItem>
+                      <MenuItem value="Kenya">🇰🇪 Kenya</MenuItem>
+                      <MenuItem value="Uganda">🇺🇬 Uganda</MenuItem>
+                      <MenuItem value="Tanzania">🇹🇿 Tanzania</MenuItem>
+                      <MenuItem value="Ethiopia">🇪🇹 Ethiopia</MenuItem>
+                      <MenuItem value="South Africa">🇿🇦 South Africa</MenuItem>
+                      <MenuItem value="Nigeria">🇳🇬 Nigeria</MenuItem>
+                      <MenuItem value="Ghana">🇬🇭 Ghana</MenuItem>
+                      <MenuItem value="United States">🇺🇸 United States</MenuItem>
+                      <MenuItem value="United Kingdom">🇬🇧 United Kingdom</MenuItem>
+                      <MenuItem value="Canada">🇨🇦 Canada</MenuItem>
+                      <MenuItem value="Germany">🇩🇪 Germany</MenuItem>
+                      <MenuItem value="France">🇫🇷 France</MenuItem>
+                      <MenuItem value="Netherlands">🇳🇱 Netherlands</MenuItem>
+                      <MenuItem value="Dubai">🇦🇪 Dubai</MenuItem>
                       <MenuItem value="Remote">💻 Remote</MenuItem>
                       <MenuItem value="International">🌍 International</MenuItem>
                     </Select>

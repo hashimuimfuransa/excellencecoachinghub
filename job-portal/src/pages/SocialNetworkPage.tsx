@@ -1523,7 +1523,7 @@ const SocialNetworkPage: React.FC = () => {
                           </Card>
                         ) : (
                           <Stack spacing={{ xs: 2, sm: 2.5, md: 3, lg: 3.5 }}>
-                            {posts.map((post, postIndex) => (
+                            {posts.filter((p: any) => p && p._id).map((post, postIndex) => (
                               <motion.div
                                 key={post._id}
                                 initial={{ opacity: 0, y: 30 }}

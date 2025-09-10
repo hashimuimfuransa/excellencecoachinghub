@@ -86,20 +86,20 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated, onCancel }) => {
 
       const postData: CreatePostData = {
         content: content.trim(),
-        postType,
+        postType: 'text',
         visibility,
         tags: tags.length > 0 ? tags : undefined,
         media: uploadedMediaList.length > 0 ? uploadedMediaList : undefined,
       };
 
-      // Temporarily only allow text posts and training posts
-      if (postType === 'job_post' || postType === 'event' || postType === 'company_update') {
-        setUploadError(`${postType.replace('_', ' ')} posts are not yet available. Please use text or training post types.`);
+      // Enforce text-only posts
+      if (postType !== 'text') {
+        setUploadError('Only text posts are allowed at the moment.');
         return;
       }
 
-      const response = await socialNetworkService.createPost(postData);
-      onPostCreated?.(response.data);
+      const createdPost = await socialNetworkService.createPost(postData);
+      onPostCreated?.(createdPost);
       
       // Reset form
       setContent('');
@@ -347,13 +347,10 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated, onCancel }) => {
 
         {/* Post Type & Visibility */}
         <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+          {/* Post Type fixed to text; selector removed per requirement */}
           <FormControl size="small" sx={{ minWidth: 140 }}>
             <InputLabel>Post Type</InputLabel>
-            <Select
-              value={postType}
-              label="Post Type"
-              onChange={(e) => setPostType(e.target.value as CreatePostData['postType'])}
-            >
+            <Select value={"text" as any} label="Post Type" disabled>
               <MenuItem value="text">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box 
@@ -365,30 +362,6 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated, onCancel }) => {
                     }} 
                   />
                   Text Post
-                </Box>
-              </MenuItem>
-              <MenuItem value="job_post">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Business fontSize="small" sx={{ color: getPostTypeColor('job_post') }} />
-                  Job Post
-                </Box>
-              </MenuItem>
-              <MenuItem value="event">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Event fontSize="small" sx={{ color: getPostTypeColor('event') }} />
-                  Event
-                </Box>
-              </MenuItem>
-              <MenuItem value="training">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <VideoLibrary fontSize="small" sx={{ color: getPostTypeColor('training') }} />
-                  Training
-                </Box>
-              </MenuItem>
-              <MenuItem value="company_update">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Business fontSize="small" sx={{ color: getPostTypeColor('company_update') }} />
-                  Company Update
                 </Box>
               </MenuItem>
             </Select>

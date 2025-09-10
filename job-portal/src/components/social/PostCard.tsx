@@ -255,7 +255,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
               overflow: 'hidden',
               backgroundColor: theme.palette.grey[100],
               aspectRatio: post.media[0].type === 'video' ? '16/9' : 'auto',
-              maxHeight: 400,
+              maxHeight: { xs: 360, sm: 420, md: 600 },
             }}
           >
             {post.media[0].type === 'image' ? (
@@ -265,8 +265,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                 style={{
                   width: '100%',
                   height: '100%',
-                  objectFit: 'cover',
+                  objectFit: 'contain',
                   cursor: 'pointer',
+                  backgroundColor: '#000',
                 }}
                 onClick={() => setSelectedMedia(0)}
               />
@@ -309,7 +310,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                         style={{
                           width: '100%',
                           height: '100%',
-                          objectFit: 'cover',
+                          objectFit: 'contain',
+                          backgroundColor: '#000',
                           cursor: 'pointer',
                         }}
                         onClick={() => setSelectedMedia(index)}
@@ -323,7 +325,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                           style={{
                             width: '100%',
                             height: '100%',
-                            objectFit: 'cover',
+                            objectFit: 'contain',
+                            backgroundColor: '#000',
                           }}
                         />
                         <IconButton
@@ -367,7 +370,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                       style={{
                         width: '100%',
                         height: '100%',
-                        objectFit: 'cover',
+                        objectFit: 'contain',
+                        backgroundColor: '#000',
                         cursor: 'pointer',
                       }}
                       onClick={() => setSelectedMedia(0)}
@@ -420,7 +424,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                           style={{
                             width: '100%',
                             height: '100%',
-                            objectFit: 'cover',
+                            objectFit: 'contain',
+                            backgroundColor: '#000',
                             cursor: 'pointer',
                           }}
                           onClick={() => setSelectedMedia(index + 1)}

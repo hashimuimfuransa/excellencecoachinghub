@@ -156,6 +156,27 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
       .limit(limit)
       .lean();
 
+    // Attach profile completion so Super Admin UI can display it
+    const usersWithCompletion = await Promise.all(
+      users.map(async (u: any) => {
+        try {
+          const completion = profileCompletionService.calculateProfileCompletion(u as any);
+          return {
+            ...u,
+            profileCompletion: {
+              percentage: completion.percentage,
+              status: completion.status
+          }
+          };
+        } catch (e) {
+          return {
+            ...u,
+            profileCompletion: { percentage: 0, status: 'incomplete' }
+          };
+        }
+      })
+    );
+
     // Get total count for pagination
     const totalUsers = await User.countDocuments(filter);
     const totalPages = Math.ceil(totalUsers / limit);
@@ -163,7 +184,7 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
     res.status(200).json({
       success: true,
       data: {
-        users,
+        users: usersWithCompletion,
         pagination: {
           currentPage: page,
           totalPages,
@@ -893,14 +914,17 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
       return;
     }
 
-    // Select fields based on whether it's own profile or not
-    // For employers, always show contact info (email, phone) for hiring purposes
+    // Select fields based on viewer role and whether it's own profile
+    const isAdminViewer = req.user?.role === 'super_admin' || req.user?.role === 'admin';
     const isEmployer = userToCheck.role === 'employer';
-    const selectFields = isOwnProfile 
+    // For admins and super admins, always return full profile fields (include email)
+    const selectFields = isAdminViewer
       ? '-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil'
-      : isEmployer 
+      : isOwnProfile 
+      ? '-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil'
+      : isEmployer
       ? '-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil' // Include email and phone for employers
-      : '-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil -email';
+      : '-password -emailVerificationToken -email -passwordResetToken -loginAttempts -lockUntil';
 
     const user = await User.findById(userId).select(selectFields);
 

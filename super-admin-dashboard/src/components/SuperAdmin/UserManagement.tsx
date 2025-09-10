@@ -304,13 +304,20 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUserSelect }) => {
     setPage(0);
   };
 
-  const handleUserAction = (action: string, user: User) => {
+  const handleUserAction = async (action: string, user: User) => {
     setActionMenu({ anchorEl: null, user: null });
     
     switch (action) {
-      case 'view':
-        setUserDialog({ open: true, mode: 'view', user });
+      case 'view': {
+        try {
+          // Fetch full profile like job portal for accurate profile completion & details
+          const fullUser = await superAdminService.getUserById(user._id);
+          setUserDialog({ open: true, mode: 'view', user: fullUser });
+        } catch (e) {
+          setUserDialog({ open: true, mode: 'view', user });
+        }
         break;
+      }
       case 'edit':
         setUserDialog({ open: true, mode: 'edit', user });
         break;
@@ -685,6 +692,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUserSelect }) => {
                   <TableCell>User</TableCell>
                   <TableCell>Role</TableCell>
                   <TableCell>Status</TableCell>
+                  <TableCell>Profile Completion</TableCell>
                   <TableCell>Joined</TableCell>
                   <TableCell>Last Active</TableCell>
                   <TableCell>Actions</TableCell>
@@ -754,6 +762,19 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUserSelect }) => {
                         color={user.isActive ? 'success' : 'error'}
                         size="small"
                       />
+                    </TableCell>
+                    <TableCell>
+                      {user.profileCompletion ? (
+                        <Box sx={{ minWidth: 160 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                            <Typography variant="caption">{user.profileCompletion.status.toUpperCase()}</Typography>
+                            <Typography variant="caption">{user.profileCompletion.percentage}%</Typography>
+                          </Box>
+                          <LinearProgress variant="determinate" value={user.profileCompletion.percentage} />
+                        </Box>
+                      ) : (
+                        <Typography variant="caption" color="text.secondary">No data</Typography>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
@@ -861,6 +882,120 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUserSelect }) => {
            userDialog.mode === 'edit' ? 'Edit User' : 'User Details'}
         </DialogTitle>
         <DialogContent>
+          {userDialog.mode === 'view' && userDialog.user && (
+            <Box sx={{ mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <Avatar sx={{ width: 56, height: 56 }}>
+                  {userDialog.user.firstName[0]}{userDialog.user.lastName[0]}
+                </Avatar>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="h6">
+                    {userDialog.user.firstName} {userDialog.user.lastName}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">{userDialog.user.email}</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                    <Chip size="small" label={userDialog.user.role.replace('_', ' ').toUpperCase()} color={getRoleColor(userDialog.user.role) as any} variant="outlined" />
+                    <Chip size="small" label={userDialog.user.isActive ? 'Active' : 'Inactive'} color={userDialog.user.isActive ? 'success' : 'error'} />
+                  </Box>
+                </Box>
+                {userDialog.user.profileCompletion && (
+                  <Box sx={{ minWidth: 220 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                      <Typography variant="caption">Profile: {userDialog.user.profileCompletion.status.toUpperCase()}</Typography>
+                      <Typography variant="caption">{userDialog.user.profileCompletion.percentage}%</Typography>
+                    </Box>
+                    <LinearProgress variant="determinate" value={userDialog.user.profileCompletion.percentage} />
+                  </Box>
+                )}
+              </Box>
+              <Grid container spacing={2}>
+                {userDialog.user.phone && (
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Phone fontSize="small" />
+                      <Typography variant="body2">{userDialog.user.phone}</Typography>
+                    </Box>
+                  </Grid>
+                )}
+                {userDialog.user.location && (
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <LocationOn fontSize="small" />
+                      <Typography variant="body2">{userDialog.user.location}</Typography>
+                    </Box>
+                  </Grid>
+                )}
+                {userDialog.user.jobTitle && (
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Work fontSize="small" />
+                      <Typography variant="body2">{userDialog.user.jobTitle}</Typography>
+                    </Box>
+                  </Grid>
+                )}
+              </Grid>
+              {userDialog.user.bio && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>About</Typography>
+                  <Typography variant="body2" color="text.secondary">{userDialog.user.bio}</Typography>
+                </Box>
+              )}
+              {userDialog.user.skills && userDialog.user.skills.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>Skills</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    {userDialog.user.skills.map((s) => (
+                      <Chip key={s} label={s} size="small" />
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              {/* Experience */}
+              {userDialog.user.experience && userDialog.user.experience.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>Experience</Typography>
+                  <Box sx={{ display: 'grid', gap: 1 }}>
+                    {userDialog.user.experience.map((exp, idx) => (
+                      <Box key={idx} sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                        <Typography variant="body2" fontWeight={600}>{exp.position} {exp.company ? `• ${exp.company}` : ''}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {exp.startDate} {exp.endDate ? `- ${exp.endDate}` : '(Present)'}
+                        </Typography>
+                        {exp.description && (
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                            {exp.description}
+                          </Typography>
+                        )}
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              {/* Education */}
+              {userDialog.user.education && userDialog.user.education.length > 0 && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>Education</Typography>
+                  <Box sx={{ display: 'grid', gap: 1 }}>
+                    {userDialog.user.education.map((ed, idx) => (
+                      <Box key={idx} sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                        <Typography variant="body2" fontWeight={600}>{ed.degree} {ed.institution ? `• ${ed.institution}` : ''}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {ed.startDate} {ed.endDate ? `- ${ed.endDate}` : ''}
+                        </Typography>
+                        {ed.description && (
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                            {ed.description}
+                          </Typography>
+                        )}
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+            </Box>
+          )}
           <Grid container spacing={2} sx={{ mt: 1 }}>
             <Grid item xs={12} sm={6}>
               <TextField

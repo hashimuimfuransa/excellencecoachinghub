@@ -16,18 +16,25 @@ export const getAllJobSeekers = async (req: Request, res: Response, next: NextFu
     const status = req.query.status as string;
     const completion = req.query.completion as string;
 
-    // Build filter object - include students and professionals as job seekers
-    const filter: any = { 
-      role: { $in: [UserRole.STUDENT, UserRole.PROFESSIONAL, UserRole.JOB_SEEKER] }
+    // Build filter object - align with model storage: role values 'professional' | 'job_seeker' and userType 'job_seeker'
+    const filter: any = {
+      $and: [
+        { $or: [
+          { role: { $in: ['professional', 'job_seeker'] } },
+          { userType: 'job_seeker' }
+        ]}
+      ]
     };
     
     if (search) {
-      filter.$or = [
-        { firstName: { $regex: search, $options: 'i' } },
-        { lastName: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { jobTitle: { $regex: search, $options: 'i' } }
-      ];
+      filter.$and.push({
+        $or: [
+          { firstName: { $regex: search, $options: 'i' } },
+          { lastName: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+          { jobTitle: { $regex: search, $options: 'i' } }
+        ]
+      });
     }
     
     if (status === 'active') {

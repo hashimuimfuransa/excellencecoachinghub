@@ -106,14 +106,14 @@ const MobileCreatePost: React.FC<MobileCreatePostProps> = ({
 
       const postData: CreatePostData = {
         content: content.trim(),
-        postType,
+        postType: 'text',
         visibility,
         tags: tags.length > 0 ? tags : undefined,
         media: uploadedMediaList.length > 0 ? uploadedMediaList : undefined,
       };
 
-      const response = await socialNetworkService.createPost(postData);
-      onPostCreated?.(response.data);
+      const createdPost = await socialNetworkService.createPost(postData);
+      onPostCreated?.(createdPost);
       
       // Reset form and close
       handleClose();
@@ -499,13 +499,10 @@ const MobileCreatePost: React.FC<MobileCreatePostProps> = ({
         Post Settings
       </Typography>
 
+      {/* Post Type fixed to text; selector disabled */}
       <FormControl fullWidth sx={{ mb: 3 }}>
         <InputLabel>Post Type</InputLabel>
-        <Select
-          value={postType}
-          label="Post Type"
-          onChange={(e) => setPostType(e.target.value as CreatePostData['postType'])}
-        >
+        <Select value={"text" as any} label="Post Type" disabled>
           <MenuItem value="text">
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Box 
@@ -517,12 +514,6 @@ const MobileCreatePost: React.FC<MobileCreatePostProps> = ({
                 }} 
               />
               Text Post
-            </Box>
-          </MenuItem>
-          <MenuItem value="training">
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <VideoLibrary fontSize="small" sx={{ color: getPostTypeColor('training') }} />
-              Training
             </Box>
           </MenuItem>
         </Select>

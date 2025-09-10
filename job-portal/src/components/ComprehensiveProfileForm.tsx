@@ -403,7 +403,19 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
     setSaveSuccess(false);
 
     try {
-      console.log('Saving profile data:', formData);
+      console.log('🔄 Frontend: Saving profile data:', {
+        formDataKeys: Object.keys(formData),
+        phone: formData.phone,
+        location: formData.location,
+        jobTitle: formData.jobTitle,
+        bio: formData.bio,
+        skills: formData.skills,
+        experience: formData.experience?.length || 0,
+        education: formData.education?.length || 0,
+        expectedSalary: formData.expectedSalary,
+        passport: formData.passport,
+        fullFormData: formData
+      });
       await onSave(formData);
       
       setSaveSuccess(true);

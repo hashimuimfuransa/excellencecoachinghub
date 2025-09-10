@@ -1004,6 +1004,18 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
     if (isOwnProfile) {
       // Return full profile data for own profile
       responseUserData = user.toObject();
+      console.log('🔍 Returning full profile data for own profile:', {
+        userId: responseUserData._id,
+        phone: responseUserData.phone,
+        location: responseUserData.location,
+        jobTitle: responseUserData.jobTitle,
+        bio: responseUserData.bio,
+        skills: responseUserData.skills,
+        experience: responseUserData.experience?.length || 0,
+        education: responseUserData.education?.length || 0,
+        expectedSalary: responseUserData.expectedSalary,
+        passport: responseUserData.passport
+      });
     } else if (isEmployer) {
       // For employers, include contact information for hiring purposes
       responseUserData = {
@@ -1125,13 +1137,31 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
       }
     }
 
-    console.log('💾 Attempting to update user in database:', { userId, updateData });
+    console.log('💾 Attempting to update user in database:', { 
+      userId, 
+      updateData,
+      updateDataKeys: Object.keys(updateData),
+      updateDataValues: Object.entries(updateData).map(([key, value]) => `${key}: ${typeof value === 'object' ? JSON.stringify(value) : value}`)
+    });
     
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       updateData,
       { new: true, runValidators: true }
     ).select('-password -emailVerificationToken -passwordResetToken -loginAttempts -lockUntil');
+    
+    console.log('🔍 User data after database update:', {
+      userId: updatedUser?._id,
+      phone: updatedUser?.phone,
+      location: updatedUser?.location,
+      jobTitle: updatedUser?.jobTitle,
+      bio: updatedUser?.bio,
+      skills: updatedUser?.skills,
+      experience: updatedUser?.experience,
+      education: updatedUser?.education,
+      expectedSalary: updatedUser?.expectedSalary,
+      passport: updatedUser?.passport
+    });
 
     if (!updatedUser) {
       console.log('❌ User not found in database');

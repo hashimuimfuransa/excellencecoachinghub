@@ -60,7 +60,7 @@ const ProfileEditPage: React.FC = () => {
 
     setLoading(true);
     try {
-      const updatedProfile = await userService.updateUserProfile(profile._id, updatedData);
+      const updatedProfile = await userService.updateProfile(profile._id, updatedData);
       setProfile(updatedProfile);
       setUserData(updatedProfile);
       setSuccessMessage('Profile updated successfully!');

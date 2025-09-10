@@ -805,7 +805,7 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
-                  label="National ID Number"
+                  label="National ID Number (Optional)"
                   value={formData.idNumber || ''}
                   onChange={(e) => handleInputChange('idNumber', e.target.value)}
                   helperText="Enter your national identification number"
@@ -814,6 +814,23 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
                     startAdornment: (
                       <InputAdornment position="start">
                         🆔
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Passport Number (Optional)"
+                  value={formData.passport || ''}
+                  onChange={(e) => handleInputChange('passport', e.target.value)}
+                  helperText="Enter your passport number if you don't have an ID"
+                  sx={{ mb: 2 }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        📘
                       </InputAdornment>
                     ),
                   }}

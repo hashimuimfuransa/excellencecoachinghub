@@ -66,6 +66,7 @@ export interface User {
   nationality?: string;
   location?: string;
   idNumber?: string;
+  passport?: string;
   address?: string;
   
   // Professional Information

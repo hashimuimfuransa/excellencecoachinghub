@@ -85,6 +85,7 @@ export interface IUser {
   role: UserRole;
   avatar?: string;
   idNumber?: string;
+  passport?: string;
   isEmailVerified: boolean;
   isActive: boolean;
   lastLogin?: Date;

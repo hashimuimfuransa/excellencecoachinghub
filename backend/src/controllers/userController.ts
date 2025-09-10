@@ -16,9 +16,9 @@ export const getAllJobSeekers = async (req: Request, res: Response, next: NextFu
     const status = req.query.status as string;
     const completion = req.query.completion as string;
 
-    // Build filter object - only get job seekers (students)
+    // Build filter object - include students and professionals as job seekers
     const filter: any = { 
-      role: UserRole.STUDENT // Job seekers are students in our system
+      role: { $in: [UserRole.STUDENT, UserRole.PROFESSIONAL, UserRole.JOB_SEEKER] }
     };
     
     if (search) {
@@ -47,29 +47,85 @@ export const getAllJobSeekers = async (req: Request, res: Response, next: NextFu
       .limit(limit)
       .lean();
 
-    // Calculate profile completion for each job seeker
+    // Calculate profile completion for each job seeker (robust with fallback)
     const jobSeekersWithCompletion = await Promise.all(
       jobSeekers.map(async (jobSeeker: any) => {
-        const completionResult = profileCompletionService.calculateProfileCompletion(jobSeeker);
-        
-        return {
-          ...jobSeeker,
-          profileCompletion: {
-            percentage: completionResult.percentage,
-            status: completionResult.status
-          },
-          verification: {
-            email: jobSeeker.isEmailVerified || false,
-            phone: !!jobSeeker.phone,
-            identity: !!jobSeeker.idNumber
-          },
-          // Mock application counts - replace with real data when available
-          applicationCount: Math.floor(Math.random() * 20),
-          savedJobsCount: Math.floor(Math.random() * 15),
-          certificatesCount: jobSeeker.certifications?.length || 0,
-          testsCompletedCount: Math.floor(Math.random() * 10),
-          interviewsCount: Math.floor(Math.random() * 8)
-        };
+        try {
+          // 1) Use stored positive value if present
+          if (
+            jobSeeker.profileCompletion &&
+            typeof jobSeeker.profileCompletion.percentage === 'number' &&
+            jobSeeker.profileCompletion.percentage > 0
+          ) {
+            return {
+              ...jobSeeker,
+              profileCompletion: {
+                percentage: jobSeeker.profileCompletion.percentage,
+                status: jobSeeker.profileCompletion.status || 'basic'
+              },
+              verification: {
+                email: jobSeeker.isEmailVerified || false,
+                phone: !!jobSeeker.phone,
+                identity: !!jobSeeker.idNumber
+              },
+              // Mock application counts - replace with real data when available
+              applicationCount: Math.floor(Math.random() * 20),
+              savedJobsCount: Math.floor(Math.random() * 15),
+              certificatesCount: jobSeeker.certifications?.length || 0,
+              testsCompletedCount: Math.floor(Math.random() * 10),
+              interviewsCount: Math.floor(Math.random() * 8)
+            };
+          }
+
+          // 2) Detailed calculator
+          const detailed = profileCompletionService.calculateProfileCompletion(jobSeeker);
+          let percentage = detailed?.percentage ?? 0;
+          let status = detailed?.status ?? 'incomplete';
+
+          // 3) Fallback to simple calculator if still 0
+          if (!percentage || percentage === 0) {
+            try {
+              const simple = simpleProfileCompletionService.calculateCompletion(jobSeeker as any);
+              if (simple && typeof simple.percentage === 'number' && simple.percentage > percentage) {
+                percentage = simple.percentage;
+                status = simple.status as any;
+              }
+            } catch {
+              // ignore fallback errors
+            }
+          }
+
+          return {
+            ...jobSeeker,
+            profileCompletion: { percentage, status },
+            verification: {
+              email: jobSeeker.isEmailVerified || false,
+              phone: !!jobSeeker.phone,
+              identity: !!jobSeeker.idNumber
+            },
+            // Mock application counts - replace with real data when available
+            applicationCount: Math.floor(Math.random() * 20),
+            savedJobsCount: Math.floor(Math.random() * 15),
+            certificatesCount: jobSeeker.certifications?.length || 0,
+            testsCompletedCount: Math.floor(Math.random() * 10),
+            interviewsCount: Math.floor(Math.random() * 8)
+          };
+        } catch (e) {
+          return {
+            ...jobSeeker,
+            profileCompletion: { percentage: 0, status: 'incomplete' },
+            verification: {
+              email: jobSeeker.isEmailVerified || false,
+              phone: !!jobSeeker.phone,
+              identity: !!jobSeeker.idNumber
+            },
+            applicationCount: Math.floor(Math.random() * 20),
+            savedJobsCount: Math.floor(Math.random() * 15),
+            certificatesCount: jobSeeker.certifications?.length || 0,
+            testsCompletedCount: Math.floor(Math.random() * 10),
+            interviewsCount: Math.floor(Math.random() * 8)
+          };
+        }
       })
     );
 

@@ -12,7 +12,22 @@ export class SimpleProfileCompletionService {
   /**
    * Calculate profile completion with simple, reliable logic
    */
-  calculateCompletion(user: IUserDocument): SimpleProfileCompletionResult {
+  calculateCompletion(user: IUserDocument | null | undefined): SimpleProfileCompletionResult {
+    if (!user) {
+      console.warn('calculateCompletion called with no user. Returning 0% completion.');
+      return {
+        percentage: 0,
+        status: 'incomplete',
+        completedFields: [],
+        missingFields: [
+          'First Name', 'Last Name', 'Email', 'Phone Number', 'Location',
+          'Job Title', 'Bio/Summary', 'Skills', 'Resume/CV',
+          'Work Experience', 'Education', 'Job Preferences', 'Expected Salary'
+        ],
+        recommendations: ['Please log in and complete your basic profile information']
+      };
+    }
+
     console.log('🔍 Simple profile completion calculation for user:', user._id);
     
     const completedFields: string[] = [];

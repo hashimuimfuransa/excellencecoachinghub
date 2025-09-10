@@ -101,19 +101,22 @@ const NetworkPage: React.FC = () => {
   }, []);
 
   // Filter and sort suggestions
-  const filteredSuggestions = (suggestions || []).filter(user => {
-    // Search query filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
-      const title = (user.jobTitle || '').toLowerCase();
-      const company = (user.company || '').toLowerCase();
-      const bio = (user.bio || '').toLowerCase();
-      
-      if (!fullName.includes(query) && !title.includes(query) && !company.includes(query) && !bio.includes(query)) {
-        return false;
+  const filteredSuggestions = (suggestions || [])
+    // Ensure each suggestion is a valid object with an _id
+    .filter((u: any) => Boolean(u && u._id))
+    .filter(user => {
+      // Search query filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+        const title = (user.jobTitle || '').toLowerCase();
+        const company = (user.company || '').toLowerCase();
+        const bio = (user.bio || '').toLowerCase();
+        
+        if (!fullName.includes(query) && !title.includes(query) && !company.includes(query) && !bio.includes(query)) {
+          return false;
+        }
       }
-    }
 
     // Role filter
     if (filters.role && (user.role || user.userType) !== filters.role) {
@@ -243,10 +246,13 @@ const NetworkPage: React.FC = () => {
       const validConnections = connectionsData.filter((conn: any) => conn?.user != null);
       console.log('Connections loaded:', connectionsData.length, 'valid:', validConnections.length);
       
+      // Also sanitize suggestions to avoid undefined/null items
+      const validSuggestions = (suggestionsData || []).filter(Boolean);
+
       setConnections(validConnections);
       setPendingRequests(requestsData);
       setSentRequests(sentRequestsData);
-      setSuggestions(suggestionsData);
+      setSuggestions(validSuggestions);
     } catch (err) {
       setError('Failed to load network data. Please try again.');
       console.error('Error loading network data:', err);

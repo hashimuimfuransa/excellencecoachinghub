@@ -128,7 +128,35 @@ function getNestedValue(obj: any, path: string): any {
 /**
  * Calculate profile completion percentage and status
  */
-export function validateProfile(user: User): ProfileValidationResult {
+export function validateProfile(user: User | null | undefined): ProfileValidationResult {
+  // Guard against undefined user to avoid runtime errors
+  if (!user) {
+    console.warn('validateProfile called without a user. Returning default incomplete result.');
+    return {
+      isValid: false,
+      completionPercentage: 0,
+      status: ProfileCompletionStatus.INCOMPLETE,
+      missingFields: [],
+      recommendations: [],
+      canAccessFeatures: {
+        psychometricTests: false,
+        aiInterviews: false,
+        premiumJobs: false
+      },
+      completedSections: {
+        basic: false,
+        contact: false,
+        personal: false,
+        professional: false,
+        education: false,
+        experience: false,
+        skills: false,
+        preferences: false,
+        documents: false
+      }
+    };
+  }
+
   console.log('🔍 Frontend profile validation for user:', user._id || user.id);
   console.log('📋 Frontend user data summary:', {
     firstName: user.firstName,

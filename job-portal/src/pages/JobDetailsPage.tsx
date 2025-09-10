@@ -291,6 +291,19 @@ const JobDetailsPage: React.FC = () => {
     return daysAgo === 0 ? 'Today' : `${daysAgo} days ago`;
   };
 
+  // Helper function to check if we have a valid employer email (not the default one)
+  const hasValidEmployerEmail = (job: Job | null): boolean => {
+    if (!job) return false;
+    
+    const defaultEmails = [
+      'info@excellencecoachinghub',
+      'info@excellencecoachinghub.com'
+    ];
+    const employerEmail = job.contactInfo?.email || job.employer?.email;
+    
+    return !!(employerEmail && !defaultEmails.includes(employerEmail.toLowerCase()));
+  };
+
   // Apply for job function
   const handleApplyForJob = async () => {
     if (!user || !job) return;
@@ -351,7 +364,19 @@ const JobDetailsPage: React.FC = () => {
         } else {
           const reason = result.emailData?.reason || 'Unknown reason';
           if (reason === 'No employer email available') {
-            alert(`✅ Application submitted successfully!\n\n⚠️ However, no employer email was provided for this job posting.\n\n💡 Please use alternative contact methods or look for contact information in the job description.`);
+            // Provide guidance based on available alternatives
+            let guidanceMessage = `✅ Application submitted successfully!\n\n⚠️ However, no employer email was provided for this job posting.`;
+            
+            if (job?.externalApplicationUrl) {
+              guidanceMessage += `\n\n🌐 You can also apply directly at: ${job.externalApplicationUrl}`;
+            } else if (job?.contactInfo?.website || job?.employer?.socialLinks?.website) {
+              const websiteUrl = job.contactInfo?.website || job.employer?.socialLinks?.website;
+              guidanceMessage += `\n\n🌐 You can visit the company website to apply: ${websiteUrl}`;
+            } else {
+              guidanceMessage += `\n\n💡 Please check the job description below for contact information or application instructions.`;
+            }
+            
+            alert(guidanceMessage);
           } else {
             alert('✅ Application submitted successfully!');
           }
@@ -1216,8 +1241,8 @@ const JobDetailsPage: React.FC = () => {
                 🎯 Get Position Ready
               </Button>
               
-              {/* Profile Completion Warning */}
-              {user && profileCompletion < 50 && (
+              {/* Profile Completion Warning - only for direct applications */}
+              {user && profileCompletion < 60 && hasValidEmployerEmail(job) && (
                 <Alert 
                   severity="warning" 
                   sx={{ 
@@ -1237,13 +1262,35 @@ const JobDetailsPage: React.FC = () => {
                   }
                 >
                   <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    Complete your profile ({profileCompletion}%) to apply for jobs
+                    Complete your profile ({profileCompletion}%) to apply for jobs directly
+                  </Typography>
+                </Alert>
+              )}
+
+              {/* No profile completion required indicator - for external applications */}
+              {user && !hasValidEmployerEmail(job) && (
+                <Alert 
+                  severity="success" 
+                  sx={{ 
+                    borderRadius: 2,
+                    bgcolor: alpha(theme.palette.success.main, 0.1),
+                    border: `1px solid ${alpha(theme.palette.success.main, 0.3)}`,
+                    '& .MuiAlert-icon': {
+                      color: theme.palette.success.main
+                    },
+                    '& .MuiAlert-message': {
+                      width: '100%'
+                    }
+                  }}
+                >
+                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                    ✨ <strong>No profile completion required!</strong> This job redirects to the source website for applications.
                   </Typography>
                 </Alert>
               )}
               
-              {/* Apply Button or View More Details */}
-              {(job.contactInfo?.email || job.employer?.email) && user ? (
+              {/* Apply Button or Apply on Source Website */}
+              {hasValidEmployerEmail(job) && user ? (
                 <Button
                   onClick={hasApplied ? undefined : handleApplyForJob}
                   disabled={hasApplied || applying}
@@ -1279,70 +1326,93 @@ const JobDetailsPage: React.FC = () => {
                 </Button>
               ) : (
                 <Button
-                  variant="contained"
-                  size="large"
-                  startIcon={
-                    !user ? <Login /> :
-                    // Determine the job source URL for icon selection
-                    (job?.isExternalJob && job?.externalApplicationUrl) ||
-                    job?.contactInfo?.website ||
-                    job?.employer?.socialLinks?.website
-                      ? <Language />
-                      : <Work />
-                  }
-                  onClick={() => {
-                    if (!user) {
-                      navigate(`/login?redirect=job&jobId=${id}`);
-                      return;
+                    variant="contained"
+                    size="large"
+                    startIcon={
+                      !user ? <Login /> :
+                      // Determine the job source URL for icon selection
+                      (job?.isExternalJob && job?.externalApplicationUrl) ||
+                      job?.contactInfo?.website ||
+                      job?.employer?.socialLinks?.website
+                        ? <Language />
+                        : <Assignment />
                     }
-
-                    // Determine the job source URL
-                    let sourceUrl = null;
-                    
-                    // Priority 1: External job application URL
-                    if (job?.isExternalJob && job?.externalApplicationUrl) {
-                      sourceUrl = job.externalApplicationUrl;
-                    }
-                    // Priority 2: Contact info website
-                    else if (job?.contactInfo?.website) {
-                      sourceUrl = job.contactInfo.website;
-                    }
-                    // Priority 3: Employer's website
-                    else if (job?.employer?.socialLinks?.website) {
-                      sourceUrl = job.employer.socialLinks.website;
-                    }
-                    
-                    if (sourceUrl) {
-                      // Ensure URL has protocol
-                      if (!sourceUrl.startsWith('http://') && !sourceUrl.startsWith('https://')) {
-                        sourceUrl = 'https://' + sourceUrl;
+                    onClick={() => {
+                      if (!user) {
+                        navigate(`/login?redirect=job&jobId=${id}`);
+                        return;
                       }
-                      window.open(sourceUrl, '_blank', 'noopener,noreferrer');
-                    } else {
-                      // Fallback: scroll to job description
-                      document.getElementById('job-description')?.scrollIntoView({ 
-                        behavior: 'smooth' 
-                      });
+
+                      // Determine the job source URL
+                      let sourceUrl = null;
+                      let sourceName = 'source website';
+                      
+                      // Priority 1: External job application URL
+                      if (job?.isExternalJob && job?.externalApplicationUrl) {
+                        sourceUrl = job.externalApplicationUrl;
+                        sourceName = job.externalJobSource || 'job source';
+                      }
+                      // Priority 2: Contact info website
+                      else if (job?.contactInfo?.website) {
+                        sourceUrl = job.contactInfo.website;
+                        sourceName = 'company website';
+                      }
+                      // Priority 3: Employer's website
+                      else if (job?.employer?.socialLinks?.website) {
+                        sourceUrl = job.employer.socialLinks.website;
+                        sourceName = 'company website';
+                      }
+                      
+                      if (sourceUrl) {
+                        // Show confirmation before redirecting
+                        const confirmed = window.confirm(
+                          `You will be redirected to ${sourceName} to apply for this position.\n\n` +
+                          `Please follow their application process to submit your application.\n\n` +
+                          `Continue?`
+                        );
+                        
+                        if (confirmed) {
+                          // Ensure URL has protocol
+                          if (!sourceUrl.startsWith('http://') && !sourceUrl.startsWith('https://')) {
+                            sourceUrl = 'https://' + sourceUrl;
+                          }
+                          window.open(sourceUrl, '_blank', 'noopener,noreferrer');
+                        }
+                      } else {
+                        // Fallback: Show alert if no URL is available
+                        alert(
+                          '⚠️ No application URL available for this job.\n\n' +
+                          '💡 Please check the job description below for application instructions or contact information.'
+                        );
+                        document.getElementById('job-description')?.scrollIntoView({ 
+                          behavior: 'smooth' 
+                        });
+                      }
+                    }}
+                    fullWidth
+                    sx={{ 
+                      py: 1.8,
+                      fontWeight: 700,
+                      fontSize: '1rem',
+                      borderRadius: 3,
+                      background: !user 
+                        ? `linear-gradient(45deg, ${theme.palette.secondary.main} 30%, ${theme.palette.primary.main} 90%)`
+                        : `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.info.main} 90%)`,
+                      boxShadow: '0 6px 20px ' + alpha(theme.palette.primary.main, 0.3),
+                      '&:hover': {
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 8px 25px ' + alpha(theme.palette.primary.main, 0.4),
+                      }
+                    }}
+                  >
+                    {!user ? '🔐 Login to Apply' : 
+                     (job?.isExternalJob && job?.externalApplicationUrl) ||
+                     job?.contactInfo?.website ||
+                     job?.employer?.socialLinks?.website
+                       ? '🌐 Apply on Source Website'
+                       : '📋 View Application Details'
                     }
-                  }}
-                  fullWidth
-                  sx={{ 
-                    py: 1.8,
-                    fontWeight: 700,
-                    fontSize: '1rem',
-                    borderRadius: 3,
-                    background: !user 
-                      ? `linear-gradient(45deg, ${theme.palette.secondary.main} 30%, ${theme.palette.primary.main} 90%)`
-                      : `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.info.main} 90%)`,
-                    boxShadow: '0 6px 20px ' + alpha(theme.palette.primary.main, 0.3),
-                    '&:hover': {
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 8px 25px ' + alpha(theme.palette.primary.main, 0.4),
-                    }
-                  }}
-                >
-                  {!user ? '🔐 Login to Apply' : '📋 View More Details'}
-                </Button>
+                  </Button>
               )}
 
               <Stack direction="row" spacing={1}>
@@ -1665,7 +1735,7 @@ const JobDetailsPage: React.FC = () => {
                     )}
                     
                     {/* Email - Use scraped email first, then employer email for internal jobs */}
-                    {(job.contactInfo?.email || (job.employer?.email && !job.isExternalJob)) && (
+                    {hasValidEmployerEmail(job) && (
                       <ListItem sx={{ 
                         px: 0, 
                         py: 0.5,

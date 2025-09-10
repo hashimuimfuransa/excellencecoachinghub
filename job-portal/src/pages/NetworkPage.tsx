@@ -246,8 +246,8 @@ const NetworkPage: React.FC = () => {
       const validConnections = connectionsData.filter((conn: any) => conn?.user != null);
       console.log('Connections loaded:', connectionsData.length, 'valid:', validConnections.length);
       
-      // Also sanitize suggestions to avoid undefined/null items
-      const validSuggestions = (suggestionsData || []).filter(Boolean);
+      // Also sanitize suggestions to avoid undefined/null items, and require a valid _id
+      const validSuggestions = (suggestionsData || []).filter((u: any) => Boolean(u && u._id));
 
       setConnections(validConnections);
       setPendingRequests(requestsData);
@@ -272,11 +272,11 @@ const NetworkPage: React.FC = () => {
     try {
       const response = await socialNetworkService.sendConnectionRequest(userId);
       
-      // Remove from suggestions
-      setSuggestions(prev => prev.filter(user => user._id !== userId));
+      // Remove from suggestions (guard against bad items)
+      setSuggestions(prev => (prev || []).filter((user: any) => user && user._id !== userId));
       
       // Find the user to add to pending requests
-      const userToAdd = suggestions.find(user => user._id === userId);
+      const userToAdd = (suggestions || []).find((user: any) => user && user._id === userId);
       if (userToAdd) {
         const newPendingRequest: ConnectionRequest = {
           _id: response.data?._id || `temp-${userId}`,

@@ -278,15 +278,69 @@ router.get('/users', asyncHandler(async (req, res) => {
       .select('-password -emailVerificationToken -passwordResetToken -__v')
       .lean(); // Use lean for better performance
 
+    // Attach profile completion with robust calculation and sensible fallbacks
+    const usersWithCompletion = await Promise.all(
+      users.map(async (u: any) => {
+        try {
+          // 1) Prefer stored value only if it's a positive percentage
+          if (
+            u.profileCompletion &&
+            typeof u.profileCompletion.percentage === 'number' &&
+            u.profileCompletion.percentage > 0
+          ) {
+            return {
+              ...u,
+              profileCompletion: {
+                percentage: u.profileCompletion.percentage,
+                status: u.profileCompletion.status || 'basic'
+              }
+            };
+          }
+
+          // 2) Compute using detailed backend calculator
+          const { profileCompletionService } = require('../services/profileCompletionService');
+          const detailed = profileCompletionService.calculateProfileCompletion(u as any);
+
+          let percentage = detailed?.percentage ?? 0;
+          let status = detailed?.status ?? 'incomplete';
+
+          // 3) If still 0 (e.g., minimal data), try simple calculator as a fallback
+          if (!percentage || percentage === 0) {
+            try {
+              const { simpleProfileCompletionService } = require('../services/simpleProfileCompletion');
+              const simple = simpleProfileCompletionService.calculateCompletion(u as any);
+              if (simple && typeof simple.percentage === 'number' && simple.percentage > percentage) {
+                percentage = simple.percentage;
+                status = simple.status as any;
+              }
+            } catch (fallbackErr) {
+              // Ignore fallback errors; we'll return the detailed result
+            }
+          }
+
+          return {
+            ...u,
+            profileCompletion: { percentage, status }
+          };
+        } catch (e) {
+          // Final safety net
+          return {
+            ...u,
+            profileCompletion: { percentage: 0, status: 'incomplete' }
+          };
+        }
+      })
+    );
+
     const total = await User.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
 
-    console.log(`👥 Found ${users.length} users out of ${total} total`);
+    console.log(`👥 Found ${usersWithCompletion.length} users out of ${total} total`);
 
     res.json({
       success: true,
       data: {
-        users,
+        users: usersWithCompletion,
         total,
         page,
         totalPages
@@ -298,6 +352,51 @@ router.get('/users', asyncHandler(async (req, res) => {
       success: false,
       error: 'Failed to fetch users',
       details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}));
+
+// User Statistics
+router.get('/users/stats', asyncHandler(async (req, res) => {
+  try {
+    // Get user statistics
+    const totalUsers = await User.countDocuments();
+    const activeUsers = await User.countDocuments({ isActive: true });
+    const newUsersThisMonth = await User.countDocuments({
+      createdAt: { $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) }
+    });
+    const suspendedUsers = await User.countDocuments({ isActive: false });
+
+    // Get users by role
+    const usersByRoleArray = await User.aggregate([
+      { $group: { _id: '$role', count: { $sum: 1 } } },
+      { $project: { role: '$_id', count: 1, _id: 0 } }
+    ]);
+
+    const usersByRole = usersByRoleArray.reduce((acc, item) => {
+      acc[item.role] = item.count;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const stats = {
+      totalUsers,
+      activeUsers,
+      newUsersThisMonth,
+      suspendedUsers,
+      usersByRole
+    };
+
+    console.log('📊 User stats fetched:', stats);
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch user statistics'
     });
   }
 }));

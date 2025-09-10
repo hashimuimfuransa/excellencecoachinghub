@@ -425,11 +425,18 @@ class SuperAdminService {
 
   async getUserById(userId: string): Promise<User> {
     try {
+      // Prefer the dedicated user profile endpoint to get full profile like Job Portal
+      const response = await apiGet<any>(`/users/${userId}/profile`);
+      const data = this.extractApiData(response);
+      // Backend returns { success, data: { user, profileCompletion } }
+      if (data?.user) return { ...data.user, profileCompletion: data.profileCompletion };
+      // In case API is already unwrapped
+      if (data?.profileCompletion || data?.firstName) return data;
+      return data;
+    } catch (error) {
+      console.warn('Fallback to admin user endpoint for getUserById due to error:', error);
       const response = await apiGet<any>(`/admin/users/${userId}`);
       return this.extractApiData(response);
-    } catch (error) {
-      console.error('Failed to get user by id:', error);
-      throw error;
     }
   }
 

@@ -9,6 +9,11 @@ export const enum UserRole {
   JOB_SEEKER = 'job_seeker'
 }
 
+export interface ProfileCompletion {
+  percentage: number;
+  status: 'incomplete' | 'basic' | 'good' | 'excellent' | 'complete';
+}
+
 export interface User {
   _id: string;
   firstName: string;
@@ -34,6 +39,7 @@ export interface User {
     twitter?: string;
     portfolio?: string;
   };
+  profileCompletion?: ProfileCompletion;
   isActive: boolean;
   lastLogin?: string;
   createdAt: string;

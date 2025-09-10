@@ -26,7 +26,6 @@ import {
   Phone,
   WhatsApp,
   LocationOn,
-  Telegram,
   Facebook,
   LinkedIn,
   Twitter,

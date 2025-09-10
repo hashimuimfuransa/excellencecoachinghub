@@ -70,13 +70,16 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   const [videoStates, setVideoStates] = useState<{ [key: number]: { playing: boolean; muted: boolean } }>({});
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'connected' | 'loading'>('none');
 
+  // Precompute authorId to avoid undefined access
+  const authorId = post?.author?._id;
+
   // Check connection status on component mount
   useEffect(() => {
     const checkConnectionStatus = async () => {
-      if (!user || post.author._id === user._id) return;
+      if (!user || !authorId || authorId === user._id) return;
       
       try {
-        const response = await socialNetworkService.getConnectionStatus(post.author._id);
+        const response = await socialNetworkService.getConnectionStatus(authorId);
         const status = response.data?.status || 'none';
         // Map backend status to component status
         if (status === 'accepted') {
@@ -93,7 +96,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     };
 
     checkConnectionStatus();
-  }, [user, post.author._id]);
+  }, [user?._id, authorId]);
 
   const handleLike = async () => {
     try {
@@ -164,11 +167,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   };
 
   const handleStartChat = async () => {
-    if (!user || post.author._id === user._id) return;
+    if (!user || !authorId || authorId === user._id) return;
     
     try {
       const chat = await chatService.createOrGetChat(
-        [post.author._id], 
+        [authorId], 
         `Hi! I saw your post about ${post.postType === 'job_post' ? 'the job position' : 'your post'}. I'd like to know more.`
       );
       
@@ -192,21 +195,23 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
 
   const handleViewProfile = () => {
     // Always navigate to summary profile page to maintain consistency
-    navigate(`/app/profile/view/${post.author._id}`);
+    if (authorId) {
+      navigate(`/app/profile/view/${authorId}`);
+    }
   };
 
   const handleConnect = async () => {
-    if (!user || post.author._id === user._id || connectionStatus === 'loading') return;
+    if (!user || !authorId || authorId === user._id || connectionStatus === 'loading') return;
     
     try {
       setConnectionStatus('loading');
       
       if (connectionStatus === 'none') {
-        await socialNetworkService.sendConnectionRequest(post.author._id, 'connect');
+        await socialNetworkService.sendConnectionRequest(authorId, 'connect');
         setConnectionStatus('pending');
       } else if (connectionStatus === 'pending') {
         // Cancel request if it was sent by current user
-        await socialNetworkService.cancelConnectionRequest(post.author._id);
+        await socialNetworkService.cancelConnectionRequest(authorId);
         setConnectionStatus('none');
       }
     } catch (error) {
@@ -499,7 +504,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
       <CardContent sx={{ pb: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
           <Avatar
-            src={post.author.profilePicture}
+            src={post?.author?.profilePicture || undefined}
             sx={{ 
               width: 48, 
               height: 48, 
@@ -512,7 +517,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
             }}
             onClick={handleViewProfile}
           >
-            {post.author.firstName[0]}{post.author.lastName[0]}
+            {(post?.author?.firstName?.[0] || '')}{(post?.author?.lastName?.[0] || '')}
           </Avatar>
           
           <Box sx={{ flexGrow: 1 }}>
@@ -529,11 +534,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
               }}
               onClick={handleViewProfile}
             >
-              {post.author.firstName} {post.author.lastName}
+              {(post?.author?.firstName || '')} {(post?.author?.lastName || '')}
             </Typography>
-            {post.author.jobTitle && (
+            {post?.author?.jobTitle && (
               <Typography variant="body2" color="text.secondary">
-                {post.author.jobTitle} {post.author.company && `at ${post.author.company}`}
+                {post?.author?.jobTitle} {post?.author?.company && `at ${post?.author?.company}`}
               </Typography>
             )}
             <Typography variant="caption" color="text.secondary">
@@ -543,7 +548,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {/* Connect Button - Only show if not the current user's post */}
-            {user && post.author._id !== user._id && (
+            {user && authorId && authorId !== user._id && (
               <Button
                 size="small"
                 variant={connectionStatus === 'connected' ? 'contained' : 'outlined'}
@@ -689,7 +694,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
           </Typography>
 
           {/* Chat Button - Only show if not the current user's post */}
-          {user && post.author._id !== user._id && (
+          {user && authorId && authorId !== user._id && (
             <IconButton 
               onClick={handleStartChat}
               sx={{ ml: 'auto' }}

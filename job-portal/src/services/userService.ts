@@ -119,10 +119,21 @@ export class UserService {
       });
       
       const response = await apiPut<any>(`/users/${userId}/profile`, profileData);
-      console.log('Profile update API response:', response);
+      console.log('✅ Profile update API response:', response);
       
       // Handle the response structure from backend
       if (response.success && response.data && response.data.user) {
+        console.log('🔍 Updated user data from API:', {
+          phone: response.data.user.phone,
+          location: response.data.user.location,
+          jobTitle: response.data.user.jobTitle,
+          bio: response.data.user.bio,
+          skills: response.data.user.skills,
+          experience: response.data.user.experience?.length || 0,
+          education: response.data.user.education?.length || 0,
+          expectedSalary: response.data.user.expectedSalary,
+          passport: response.data.user.passport
+        });
         return response.data.user;
       } else if (response.data) {
         return response.data;

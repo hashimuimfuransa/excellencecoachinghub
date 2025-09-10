@@ -53,21 +53,16 @@ const FloatingContact: React.FC = () => {
     {
       icon: <Phone color="primary" />,
       title: 'Call Us',
-      description: '+250 788 123 456',
-      action: () => window.open('tel:+250788123456', '_blank'),
+      description: '+250788535156',
+      action: () => window.open('tel:+250788535156', '_blank'),
     },
     {
       icon: <WhatsApp sx={{ color: '#25D366' }} />,
       title: 'WhatsApp',
       description: 'Chat with us instantly',
-      action: () => window.open('https://wa.me/250788123456?text=Hello%20Excellence%20Coaching%20Hub', '_blank'),
+      action: () => window.open('https://wa.me/250788535156?text=Hello%20Excellence%20Coaching%20Hub', '_blank'),
     },
-    {
-      icon: <Telegram sx={{ color: '#0088cc' }} />,
-      title: 'Telegram',
-      description: 'Join our Telegram channel',
-      action: () => window.open('https://t.me/excellencecoachinghub', '_blank'),
-    },
+   
   ];
 
   const socialMedia = [

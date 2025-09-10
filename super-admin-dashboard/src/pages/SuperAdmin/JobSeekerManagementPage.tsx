@@ -164,39 +164,18 @@ const JobSeekerManagementPage: React.FC = () => {
     const fetchJobSeekers = async () => {
       setLoading(true);
       try {
-        // Fetch real job seekers data from API
-        const token = localStorage.getItem('token');
-        console.log('🔍 Fetching job seekers from:', '/api/users/job-seekers?limit=100');
-        console.log('🔑 Using token:', token ? 'Token present' : 'No token');
-        
-        const response = await fetch('/api/users/job-seekers?limit=100', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        // Use centralized API client to respect baseURL and avoid SPA rewrites
+        const { apiGet, handleApiResponse } = await import('../../services/api');
+        console.log('🔍 Fetching job seekers via API client:', '/users/job-seekers?limit=100');
 
-        console.log('📡 Response status:', response.status);
-        console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+        const apiResponse = await apiGet<any>('/users/job-seekers', { limit: 100 });
+        const data = handleApiResponse(apiResponse);
+        console.log('✅ Job seekers data:', data.jobSeekers);
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.log('❌ Error response text:', errorText);
-          throw new Error(`Failed to fetch job seekers: ${response.status} - ${errorText}`);
-        }
-
-        const result = await response.json();
-        console.log('✅ API Response:', result);
-        
-        if (result.success) {
-          console.log('✅ Job seekers data:', result.data.jobSeekers);
-          setJobSeekers(result.data.jobSeekers || []);
-        } else {
-          throw new Error(result.error || 'Failed to fetch job seekers');
-        }
-      } catch (error) {
+        setJobSeekers(data.jobSeekers || []);
+      } catch (error: any) {
         console.error('❌ Error fetching job seekers:', error);
-        setJobSeekers([]); // Set empty array on error
+        setJobSeekers([]);
       } finally {
         setLoading(false);
       }

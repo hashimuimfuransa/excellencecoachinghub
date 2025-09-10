@@ -10,5 +10,8 @@
 /*.woff  /:splat.woff  200
 /*.woff2  /:splat.woff2  200
 
+# Preserve API routes (do not rewrite to index.html)
+/api/*  /api/:splat  200
+
 # Fallback for client-side routing (everything else)
 /*    /index.html   200

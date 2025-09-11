@@ -23,10 +23,10 @@ router.get('/curated', getCuratedInternships);
 router.use(auth); // All routes below require authentication
 
 router.get('/student/available', getInternshipsForStudent);
+router.get('/employer/my-internships', getInternshipsByEmployer);
 
 // Routes with parameters - these should come AFTER specific routes
 router.get('/:id', getInternshipById);
-router.get('/employer/my-internships', getInternshipsByEmployer);
 router.post('/', createInternship);
 router.put('/:id', updateInternship);
 router.delete('/:id', deleteInternship);

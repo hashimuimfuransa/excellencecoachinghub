@@ -164,7 +164,7 @@ const EmployerInternshipsPage: React.FC = () => {
 
   const handleDeleteClick = () => {
     setDeleteDialogOpen(true);
-    handleMenuClose();
+    setAnchorEl(null); // Close the menu but keep selectedInternship
   };
 
   const handleDeleteConfirm = async () => {
@@ -172,13 +172,20 @@ const EmployerInternshipsPage: React.FC = () => {
 
     try {
       setDeleteLoading(true);
-      await internshipService.deleteInternship(selectedInternship._id);
+      setError(null); // Clear previous errors
+      console.log('Deleting internship:', selectedInternship._id);
+      
+      const result = await internshipService.deleteInternship(selectedInternship._id);
+      console.log('Delete result:', result);
+      
       setSuccess('Internship deleted successfully');
       setDeleteDialogOpen(false);
       setSelectedInternship(null);
       fetchInternships();
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Failed to delete internship');
+      console.error('Delete error:', err);
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to delete internship';
+      setError(errorMessage);
     } finally {
       setDeleteLoading(false);
     }
@@ -523,7 +530,10 @@ const EmployerInternshipsPage: React.FC = () => {
         {/* Delete Confirmation Dialog */}
         <Dialog
           open={deleteDialogOpen}
-          onClose={() => setDeleteDialogOpen(false)}
+          onClose={() => {
+            setDeleteDialogOpen(false);
+            setSelectedInternship(null);
+          }}
           maxWidth="sm"
           fullWidth
         >
@@ -535,7 +545,10 @@ const EmployerInternshipsPage: React.FC = () => {
             </Typography>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setDeleteDialogOpen(false)}>
+            <Button onClick={() => {
+              setDeleteDialogOpen(false);
+              setSelectedInternship(null);
+            }}>
               Cancel
             </Button>
             <Button

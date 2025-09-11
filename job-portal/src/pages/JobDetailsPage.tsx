@@ -185,6 +185,111 @@ const JobDetailsPage: React.FC = () => {
     }
   }, [id]);
 
+  // Inject JobPosting structured data for rich results
+  useEffect(() => {
+    if (!job) return;
+    try {
+      const scriptId = 'jobposting-jsonld';
+      const existing = document.getElementById(scriptId);
+      if (existing) existing.remove();
+
+      const toGoogleEmployment = (jt: JobType) => {
+        switch (jt) {
+          case JobType.FULL_TIME: return 'FULL_TIME';
+          case JobType.PART_TIME: return 'PART_TIME';
+          case JobType.CONTRACT: return 'CONTRACTOR';
+          case JobType.INTERNSHIP: return 'INTERN';
+          case JobType.FREELANCE: return 'CONTRACTOR';
+          default: return 'OTHER';
+        }
+      };
+
+      // Sanitize description to plain text
+      const descriptionText = (job.description || '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      const isRemote = /remote/i.test(job.location || '');
+
+      const jobPosting: any = {
+        '@context': 'https://schema.org',
+        '@type': 'JobPosting',
+        title: job.title,
+        description: descriptionText || job.title,
+        datePosted: new Date(job.createdAt).toISOString(),
+        employmentType: toGoogleEmployment(job.jobType),
+        hiringOrganization: {
+          '@type': 'Organization',
+          name: job.company || 'ExJobNet Employer'
+        },
+        identifier: {
+          '@type': 'PropertyValue',
+          name: job.company || 'ExJobNet',
+          value: job._id
+        },
+        url: window.location.href,
+        directApply: !job.isExternalJob
+      };
+
+      if (job.applicationDeadline) {
+        jobPosting.validThrough = new Date(job.applicationDeadline).toISOString();
+      }
+
+      if (Array.isArray(job.benefits) && job.benefits.length) {
+        jobPosting.jobBenefits = job.benefits.join(', ');
+      }
+      if (Array.isArray(job.requirements) && job.requirements.length) {
+        jobPosting.qualifications = job.requirements.join('\n');
+      }
+      if (Array.isArray(job.responsibilities) && job.responsibilities.length) {
+        jobPosting.responsibilities = job.responsibilities.join('\n');
+      }
+
+      if (job.salary && job.salary.min != null && job.salary.max != null) {
+        jobPosting.baseSalary = {
+          '@type': 'MonetaryAmount',
+          currency: job.salary.currency || 'USD',
+          value: {
+            '@type': 'QuantitativeValue',
+            minValue: job.salary.min,
+            maxValue: job.salary.max,
+            unitText: 'YEAR'
+          }
+        };
+      }
+
+      if (isRemote) {
+        jobPosting.jobLocationType = 'TELECOMMUTE';
+      } else {
+        jobPosting.jobLocation = [
+          {
+            '@type': 'Place',
+            address: {
+              '@type': 'PostalAddress',
+              addressLocality: job.location || '',
+              addressCountry: (job.location || '').split(',').slice(-1)[0]?.trim() || 'RW'
+            }
+          }
+        ];
+      }
+
+      const script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.id = scriptId;
+      script.text = JSON.stringify(jobPosting);
+      document.head.appendChild(script);
+    } catch (e) {
+      console.error('Failed to inject JobPosting JSON-LD', e);
+    }
+
+    // Cleanup on unmount or job change
+    return () => {
+      const existing = document.getElementById('jobposting-jsonld');
+      if (existing) existing.remove();
+    };
+  }, [job]);
+
   const fetchJobDetails = async () => {
     try {
       setLoading(true);

@@ -94,8 +94,16 @@ class InternshipService {
 
   // Delete internship
   async deleteInternship(id: string) {
-    const response = await api.delete(`/internships/${id}`);
-    return response.data;
+    try {
+      console.log('Attempting to delete internship with ID:', id);
+      const response = await api.delete(`/internships/${id}`);
+      console.log('Delete response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Delete internship error:', error);
+      console.error('Error response:', error.response?.data);
+      throw error;
+    }
   }
 
   // Get curated internships

@@ -250,30 +250,50 @@ export const deleteInternship = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const userId = req.user?.id;
     
+    console.log('Delete internship request:', { id, userId });
+    
     if (!userId) {
+      console.log('User not authenticated for delete request');
       return res.status(401).json({
         success: false,
         error: 'User not authenticated'
       });
     }
 
-    const internship = await Internship.findOneAndDelete({ _id: id, employer: userId });
+    // First, find the internship to check if it exists and user owns it
+    const existingInternship = await Internship.findOne({ _id: id });
+    console.log('Existing internship:', existingInternship);
     
-    if (!internship) {
+    if (!existingInternship) {
+      console.log('Internship not found:', id);
       return res.status(404).json({
         success: false,
-        error: 'Internship not found or not authorized'
+        error: 'Internship not found'
+      });
+    }
+    
+    if (existingInternship.employer.toString() !== userId) {
+      console.log('User not authorized to delete this internship:', { owner: existingInternship.employer, userId });
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to delete this internship'
       });
     }
 
+    // Delete the internship
+    const internship = await Internship.findOneAndDelete({ _id: id, employer: userId });
+    console.log('Internship deleted:', internship?._id);
+    
     // Also delete associated applications
-    await JobApplication.deleteMany({ jobId: id });
+    const deletedApplications = await JobApplication.deleteMany({ jobId: id });
+    console.log('Deleted applications count:', deletedApplications.deletedCount);
 
     res.status(200).json({
       success: true,
       message: 'Internship deleted successfully'
     });
   } catch (error: any) {
+    console.error('Delete internship error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to delete internship',

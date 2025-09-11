@@ -450,6 +450,93 @@ const NetworkPage: React.FC = () => {
           </Typography>
         </Box>
 
+        {/* Employer Quick Actions Banner */}
+        {hasRole(UserRole.EMPLOYER) && (
+          <Paper 
+            sx={{ 
+              mb: 3, 
+              p: 3, 
+              borderRadius: 3,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                width: '200px',
+                height: '200px',
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '50%',
+                transform: 'translate(50%, -50%)',
+              }
+            }}
+          >
+            <Box sx={{ position: 'relative', zIndex: 1 }}>
+              <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
+                🚀 Expand Your Talent Network
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 3, opacity: 0.9 }}>
+                Connect with top talent and grow your team. Post jobs and internships to attract the best candidates.
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Button
+                  variant="contained"
+                  sx={{
+                    bgcolor: 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    fontWeight: 600,
+                    px: 3,
+                    py: 1,
+                    '&:hover': {
+                      bgcolor: 'rgba(255, 255, 255, 0.3)',
+                    },
+                  }}
+                  startIcon={<Work />}
+                  onClick={() => navigate('/app/jobs/create')}
+                >
+                  Post New Job
+                </Button>
+                <Button
+                  variant="outlined"
+                  sx={{
+                    borderColor: 'rgba(255, 255, 255, 0.3)',
+                    color: 'white',
+                    fontWeight: 600,
+                    px: 3,
+                    py: 1,
+                    '&:hover': {
+                      borderColor: 'rgba(255, 255, 255, 0.5)',
+                      bgcolor: 'rgba(255, 255, 255, 0.1)',
+                    },
+                  }}
+                  startIcon={<School />}
+                  onClick={() => navigate('/app/internships/create')}
+                >
+                  Post Internship
+                </Button>
+                <Button
+                  variant="text"
+                  sx={{
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    fontWeight: 600,
+                    '&:hover': {
+                      color: 'white',
+                      bgcolor: 'rgba(255, 255, 255, 0.1)',
+                    },
+                  }}
+                  startIcon={<Business />}
+                  onClick={() => navigate('/app/employer/internships')}
+                >
+                  Manage Internships
+                </Button>
+              </Box>
+            </Box>
+          </Paper>
+        )}
+
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}

@@ -26,6 +26,7 @@ import { proctoringService } from '@/services/proctoringService';
 import { validateCloudinaryConfig } from '@/config/cloudinary';
 import videoProviderService from '@/services/videoProviderService';
 import { JobScrapingScheduler } from '@/services/jobScrapingScheduler';
+import { ContinuousJobScrapingService } from '@/services/continuousJobScrapingService';
 import { JobRecommendationEmailService } from '@/services/jobRecommendationEmailService';
 import { jobCleanupScheduler } from '@/services/jobCleanupScheduler';
 
@@ -65,6 +66,7 @@ import testRoutes from '@/routes/testRoutes';
 
 // Job Portal routes
 import jobRoutes from '@/routes/jobRoutes';
+import internshipRoutes from '@/routes/internshipRoutes';
 import jobApplicationRoutes from '@/routes/jobApplicationRoutes';
 import psychometricTestRoutes from '@/routes/psychometricTestRoutes';
 import simplePsychometricRoutes from '@/routes/simplePsychometricRoutes';
@@ -703,6 +705,7 @@ app.use('/api/test', testRoutes);
 
 // Job Portal routes
 app.use('/api/jobs', jobRoutes);
+app.use('/api/internships', internshipRoutes);
 app.use('/api/job-applications', jobApplicationRoutes);
 // Additional mounting for frontend compatibility
 app.use('/api/applications', jobApplicationRoutes);
@@ -911,8 +914,11 @@ const startServer = async () => {
       // Start the live session scheduler
       liveSessionScheduler.start();
       
-      // Start the job scraping scheduler
-      JobScrapingScheduler.start();
+      // Initialize continuous job scraping service (replaces scheduled scraping)
+      ContinuousJobScrapingService.init();
+      
+      // Keep the original scheduler as fallback (but reduce frequency)
+      // JobScrapingScheduler.start();
       
       // Start the job recommendation email scheduler
       JobRecommendationEmailService.start();

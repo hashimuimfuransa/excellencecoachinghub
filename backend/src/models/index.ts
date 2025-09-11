@@ -26,6 +26,7 @@ export { Assignment, AssignmentSubmission, IAssignment, IAssignmentSubmission } 
 
 // Job Portal Models
 export { Job, IJobDocument, IJobModel } from './Job';
+export { Internship, IInternshipDocument, IInternshipModel } from './Internship';
 export { JobApplication, IJobApplicationDocument, IJobApplicationModel } from './JobApplication';
 export { PsychometricTest, IPsychometricTestDocument, IPsychometricTestModel, IPsychometricQuestionDocument } from './PsychometricTest';
 export { PsychometricTestResult, IPsychometricTestResultDocument, IPsychometricTestResultModel } from './PsychometricTestResult';

@@ -98,6 +98,7 @@ import QuickJobFilters from '../components/QuickJobFilters';
 import SmartJobSearch, { SearchType } from '../components/SmartJobSearch';
 import { useJobFilters, FilterState } from '../hooks/useJobFilters';
 import jobService from '../services/jobService';
+import { internshipService } from '../services/internshipService';
 
 // Use the Job interface from the service to ensure compatibility
 interface Job {
@@ -191,6 +192,8 @@ const getCategoryIcon = (category: string) => {
     'public': AccountBalance,
     'service': DesignServices,
     'customer': DesignServices,
+    'internship': School,
+    'intern': School,
   };
   
   // Check for exact matches or partial matches
@@ -246,7 +249,58 @@ const AllJobsPage: React.FC = () => {
   });
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Fetch jobs
+  // Helper function to transform internship to job format
+  const transformInternshipToJob = (internship: any): Job => {
+    return {
+      _id: internship._id,
+      title: internship.title,
+      company: internship.company,
+      location: internship.location,
+      description: internship.description,
+      requirements: internship.requirements || [],
+      benefits: internship.benefits || [],
+      salary: internship.stipend ? {
+        min: internship.stipend.amount || 0,
+        max: internship.stipend.amount || 0,
+        currency: internship.stipend.currency || 'USD'
+      } : undefined,
+      jobType: 'internship',
+      category: 'Internship',
+      skills: internship.skills || [],
+      skillsRequired: internship.skills || [],
+      experience: internship.experienceLevel,
+      experienceLevel: internship.experienceLevel,
+      educationLevel: internship.educationLevel,
+      remote: internship.workArrangement === 'remote',
+      urgent: false,
+      featured: internship.isCurated || false,
+      applicationDeadline: internship.applicationDeadline,
+      companyLogo: undefined,
+      companySize: undefined,
+      companyIndustry: internship.department,
+      companyWebsite: internship.contactInfo?.website,
+      contactEmail: internship.contactInfo?.email,
+      jobLevel: internship.experienceLevel,
+      languages: [],
+      certifications: [],
+      applicationCount: internship.applicationsCount || 0,
+      applicationsCount: internship.applicationsCount || 0,
+      viewCount: internship.viewsCount || 0,
+      viewsCount: internship.viewsCount || 0,
+      createdAt: internship.createdAt || internship.postedDate,
+      updatedAt: internship.updatedAt,
+      employerId: internship.employer,
+      employer: internship.employer,
+      status: internship.status,
+      applicationUrl: undefined,
+      applicationInstructions: internship.applicationProcedure,
+      isCurated: internship.isCurated || false,
+      relatedCourses: internship.relatedCourses || [],
+      psychometricTests: internship.psychometricTests || []
+    };
+  };
+
+  // Fetch jobs and internships
   const fetchJobs = async (refresh = false) => {
     if (refresh) {
       setError(null);
@@ -254,31 +308,41 @@ const AllJobsPage: React.FC = () => {
     setLoading(true);
     
     try {
-      // First, get a small batch to determine total count
-      const initialResponse = await jobService.getJobs({}, 1, 10);
-      const totalJobs = initialResponse.pagination?.total || 0;
+      const MAX_ITEMS_TO_FETCH = 1000; // Reasonable limit to prevent UI lag
       
-      // Set a reasonable limit for fetching jobs to avoid performance issues
-      const MAX_JOBS_TO_FETCH = 1000; // Reasonable limit to prevent UI lag
-      const jobsToFetch = Math.min(totalJobs, MAX_JOBS_TO_FETCH);
+      // Fetch jobs and internships in parallel
+      const [jobsResponse, internshipsResponse] = await Promise.all([
+        // Fetch jobs
+        jobService.getJobs({}, 1, MAX_ITEMS_TO_FETCH).catch(err => {
+          console.warn('Error fetching jobs:', err);
+          return { data: [], pagination: { total: 0 } };
+        }),
+        // Fetch internships
+        internshipService.getInternships({ limit: MAX_ITEMS_TO_FETCH }).catch(err => {
+          console.warn('Error fetching internships:', err);
+          return { data: [], pagination: { total: 0 } };
+        })
+      ]);
+
+      const jobs = jobsResponse.data || [];
+      const internships = internshipsResponse.data || [];
       
-      // If there are jobs and we have more than 10, fetch all jobs up to the limit
-      if (totalJobs > 10) {
-        const allJobsResponse = await jobService.getJobs({}, 1, jobsToFetch);
-        setJobs(allJobsResponse.data || []);
-        
-        // If we hit the limit, log a message
-        if (totalJobs > MAX_JOBS_TO_FETCH) {
-          console.log(`Showing first ${MAX_JOBS_TO_FETCH} out of ${totalJobs} total jobs for performance reasons`);
-        }
-      } else {
-        // If 10 or fewer jobs, use the initial response
-        setJobs(initialResponse.data || []);
-      }
+      // Transform internships to job format
+      const transformedInternships = internships.map(transformInternshipToJob);
+      
+      // Combine jobs and transformed internships
+      const allJobs = [...jobs, ...transformedInternships];
+      
+      setJobs(allJobs);
+      
+      const totalCount = (jobsResponse.pagination?.total || jobs.length) + 
+                        (internshipsResponse.pagination?.total || internships.length);
+      
+      console.log(`Loaded ${jobs.length} jobs and ${internships.length} internships (${totalCount} total)`);
+      
     } catch (err) {
-      console.error('Error fetching jobs:', err);
-      setError('Failed to load jobs. Please try again.');
-      // Set empty arrays to prevent further errors
+      console.error('Error fetching jobs and internships:', err);
+      setError('Failed to load jobs and internships. Please try again.');
       setJobs([]);
     } finally {
       setLoading(false);
@@ -289,13 +353,53 @@ const AllJobsPage: React.FC = () => {
   const fetchCategories = async () => {
     setCategoriesLoading(true);
     try {
-      const fetchedCategories = await jobService.getJobCategories();
-      // Ensure categories is always an array
-      setCategories(Array.isArray(fetchedCategories) ? fetchedCategories : []);
+      // Fetch both job and internship categories in parallel
+      const [jobCategories, internshipCategories] = await Promise.all([
+        jobService.getJobCategories().catch(err => {
+          console.warn('Error fetching job categories:', err);
+          return [];
+        }),
+        internshipService.getInternshipCategories().catch(err => {
+          console.warn('Error fetching internship categories:', err);
+          return [];
+        })
+      ]);
+
+      // Merge categories and ensure Internship category exists
+      const combinedCategories = [...(Array.isArray(jobCategories) ? jobCategories : [])];
+      
+      // Add internship categories if they exist
+      if (Array.isArray(internshipCategories)) {
+        internshipCategories.forEach(category => {
+          if (!combinedCategories.find(c => c.category === category.category)) {
+            combinedCategories.push(category);
+          }
+        });
+      }
+      
+      // Ensure there's always an "Internship" category
+      const hasInternshipCategory = combinedCategories.find(c => 
+        c.category?.toLowerCase().includes('internship') || 
+        c.displayName?.toLowerCase().includes('internship')
+      );
+      
+      if (!hasInternshipCategory) {
+        combinedCategories.push({
+          category: 'Internship',
+          displayName: 'Internship',
+          count: 0
+        });
+      }
+
+      setCategories(combinedCategories);
     } catch (err) {
       console.error('Error fetching categories:', err);
-      // Set some default categories if API fails
-      setCategories([]);
+      // Set some default categories including internship if API fails
+      setCategories([{
+        category: 'Internship',
+        displayName: 'Internship',
+        count: 0
+      }]);
     } finally {
       setCategoriesLoading(false);
     }

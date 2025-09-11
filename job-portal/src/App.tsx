@@ -37,9 +37,11 @@ import FreeTestPage from './pages/FreeTestPage';
 import TestDetailsPage from './pages/TestDetailsPage';
 import SavedCardsManager from './components/SavedCardsManager';
 import CreateJobPage from './pages/CreateJobPage';
+import CreateInternshipPage from './pages/CreateInternshipPage';
 import EmployerJobsPage from './pages/EmployerJobsPage';
+import EmployerInternshipsPage from './pages/EmployerInternshipsPage';
 import EmployerCandidatesPage from './pages/EmployerCandidatesPage';
-import EmployerDashboardPage from './pages/EmployerDashboardPage';
+
 import JobApplicationsPage from './pages/JobApplicationsPage';
 import PsychometricResultsPage from './pages/PsychometricResultsPage';
 import InterviewResultsPage from './pages/InterviewResultsPage';
@@ -261,18 +263,27 @@ function App() {
                 } 
               />
               <Route 
-                path="employer/dashboard" 
+                path="internships/create" 
                 element={
                   <ProtectedRoute roles={[UserRole.EMPLOYER]}>
-                    <EmployerDashboardPage />
+                    <CreateInternshipPage />
                   </ProtectedRoute>
                 } 
               />
+
               <Route 
                 path="employer/jobs" 
                 element={
                   <ProtectedRoute roles={[UserRole.EMPLOYER]}>
                     <EmployerJobsPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="employer/internships" 
+                element={
+                  <ProtectedRoute roles={[UserRole.EMPLOYER]}>
+                    <EmployerInternshipsPage />
                   </ProtectedRoute>
                 } 
               />

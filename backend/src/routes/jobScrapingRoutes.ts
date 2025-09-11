@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { JobScrapingController } from '../controllers/jobScrapingController';
+import { ContinuousJobScrapingController } from '../controllers/continuousJobScrapingController';
+import { JobScrapingWebhookController } from '../controllers/jobScrapingWebhookController';
 import { auth } from '../middleware/auth';
 import { authorizeRoles } from '../middleware/roleAuth';
 
@@ -111,6 +113,138 @@ router.get(
   auth,
   authorizeRoles(['super_admin', 'admin']),
   JobScrapingController.testConnection
+);
+
+// Continuous Job Scraping Routes
+
+/**
+ * @route   GET /api/job-scraping/continuous/status
+ * @desc    Get continuous scraping service status
+ * @access  Private - Admin
+ */
+router.get(
+  '/continuous/status',
+  auth,
+  authorizeRoles(['super_admin', 'admin']),
+  ContinuousJobScrapingController.getStatus
+);
+
+/**
+ * @route   POST /api/job-scraping/continuous/trigger
+ * @desc    Manually trigger continuous scraping
+ * @access  Private - Admin
+ */
+router.post(
+  '/continuous/trigger',
+  auth,
+  authorizeRoles(['super_admin', 'admin']),
+  ContinuousJobScrapingController.triggerScraping
+);
+
+/**
+ * @route   PUT /api/job-scraping/continuous/interval
+ * @desc    Update check interval for continuous scraping
+ * @access  Private - Super Admin
+ */
+router.put(
+  '/continuous/interval',
+  auth,
+  authorizeRoles(['super_admin']),
+  ContinuousJobScrapingController.updateInterval
+);
+
+/**
+ * @route   POST /api/job-scraping/continuous/restart
+ * @desc    Restart continuous scraping service
+ * @access  Private - Super Admin
+ */
+router.post(
+  '/continuous/restart',
+  auth,
+  authorizeRoles(['super_admin']),
+  ContinuousJobScrapingController.restartService
+);
+
+/**
+ * @route   GET /api/job-scraping/continuous/analytics
+ * @desc    Get detailed continuous scraping analytics
+ * @access  Private - Admin
+ */
+router.get(
+  '/continuous/analytics',
+  auth,
+  authorizeRoles(['super_admin', 'admin']),
+  ContinuousJobScrapingController.getAnalytics
+);
+
+// Webhook Routes (Public endpoints for external systems)
+
+/**
+ * @route   POST /api/job-scraping/webhook/job-notification
+ * @desc    Receive job notification webhooks from external systems
+ * @access  Public (with optional secret verification)
+ */
+router.post(
+  '/webhook/job-notification',
+  JobScrapingWebhookController.handleJobNotification
+);
+
+/**
+ * @route   POST /api/job-scraping/webhook/external-system
+ * @desc    Receive notifications from external systems
+ * @access  Public (with optional secret verification)
+ */
+router.post(
+  '/webhook/external-system',
+  JobScrapingWebhookController.handleExternalSystemNotification
+);
+
+/**
+ * @route   GET /api/job-scraping/webhook/stats
+ * @desc    Get webhook statistics
+ * @access  Private - Admin
+ */
+router.get(
+  '/webhook/stats',
+  auth,
+  authorizeRoles(['super_admin', 'admin']),
+  JobScrapingWebhookController.getWebhookStats
+);
+
+/**
+ * @route   DELETE /api/job-scraping/webhook/history
+ * @desc    Clear webhook history
+ * @access  Private - Super Admin
+ */
+router.delete(
+  '/webhook/history',
+  auth,
+  authorizeRoles(['super_admin']),
+  JobScrapingWebhookController.clearWebhookHistory
+);
+
+/**
+ * @route   POST /api/job-scraping/webhook/test
+ * @desc    Test webhook functionality
+ * @access  Private - Admin
+ */
+router.post(
+  '/webhook/test',
+  auth,
+  authorizeRoles(['super_admin', 'admin']),
+  JobScrapingWebhookController.testWebhook
+);
+
+/**
+ * @route   POST /api/job-scraping/webhook/simulate
+ * @desc    Simulate job board notification for testing
+ * @access  Private - Admin
+ */
+router.post(
+  '/webhook/simulate',
+  auth,
+  authorizeRoles(['super_admin', 'admin']),
+  JobScrapingWebhookController.simulateJobBoardNotification
 );
 
 export default router;

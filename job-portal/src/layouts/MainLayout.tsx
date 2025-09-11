@@ -341,6 +341,23 @@ const MainLayout: React.FC = () => {
         ]
       },
       {
+        label: 'Internship Management',
+        path: '#',
+        icon: <School />,
+        children: [
+          {
+            label: 'Post New Internship',
+            path: '/app/internships/create',
+            icon: <Add />,
+          },
+          {
+            label: 'My Internships',
+            path: '/app/employer/internships',
+            icon: <School />,
+          }
+        ]
+      },
+      {
         label: 'Candidates',
         path: '#',
         icon: <People />,
@@ -1146,6 +1163,52 @@ const MainLayout: React.FC = () => {
                 </IconButton>
               </Tooltip>
             </Box>
+
+            {/* Employer Quick Actions */}
+            {hasRole(UserRole.EMPLOYER) && (
+              <Box sx={{ display: { xs: 'none', lg: 'flex' }, gap: 1, mr: 1 }}>
+                <Tooltip title="Post New Job">
+                  <IconButton
+                    onClick={() => navigate('/app/jobs/create')}
+                    size="small"
+                    sx={{
+                      color: 'success.main',
+                      bgcolor: alpha(muiTheme.palette.success.main, 0.1),
+                      borderRadius: '10px',
+                      border: `1px solid ${alpha(muiTheme.palette.success.main, 0.2)}`,
+                      '&:hover': {
+                        bgcolor: alpha(muiTheme.palette.success.main, 0.2),
+                        transform: 'scale(1.05)',
+                        boxShadow: `0 4px 12px ${alpha(muiTheme.palette.success.main, 0.3)}`,
+                      },
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <Work fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Post New Internship">
+                  <IconButton
+                    onClick={() => navigate('/app/internships/create')}
+                    size="small"
+                    sx={{
+                      color: 'warning.main',
+                      bgcolor: alpha(muiTheme.palette.warning.main, 0.1),
+                      borderRadius: '10px',
+                      border: `1px solid ${alpha(muiTheme.palette.warning.main, 0.2)}`,
+                      '&:hover': {
+                        bgcolor: alpha(muiTheme.palette.warning.main, 0.2),
+                        transform: 'scale(1.05)',
+                        boxShadow: `0 4px 12px ${alpha(muiTheme.palette.warning.main, 0.3)}`,
+                      },
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <School fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            )}
 
             {/* Notifications */}
             <Tooltip title="Notifications">

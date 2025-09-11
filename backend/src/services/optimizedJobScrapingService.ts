@@ -351,6 +351,117 @@ export class OptimizedJobScrapingService {
       },
       requiresJS: false,
       rateLimit: { delayMs: 4000, maxConcurrent: 1 }
+    },
+    {
+      name: 'emiratesgroupcareers',
+      baseUrl: 'https://www.emiratesgroupcareers.com',
+      paths: ['/search-and-apply/'],
+      priority: 7,
+      selectors: {
+        jobLink: [
+          'a[href*="emiratesjobs.avature.net"]',
+          '.job-card a',
+          '[data-job-id] a',
+          'a[href*="/job/"]',
+          '.job-item a',
+          'h3 a',
+          'h4 a'
+        ],
+        title: ['h1', '.job-title', 'h3', 'h4', '.title', '.position-title'],
+        company: ['.company-name', '.employer', '.brand', '.organization', '.division'],
+        location: ['.location', '.job-location', '.city', '.country', '.duty-station'],
+        description: ['.job-description', '.description', '.content', '.summary', '.job-detail', '.responsibilities'],
+        requirements: ['.requirements', '.qualifications', '.skills', '.eligibility'],
+        responsibilities: ['.responsibilities', '.duties', '.job-duties', '.key-responsibilities'],
+        benefits: ['.benefits', '.perks', '.compensation-benefits'],
+        salary: ['.salary', '.compensation', '.remuneration', '.pay'],
+        deadline: ['.deadline', '.closing-date', '.application-deadline', '.expires'],
+        postedDate: ['.posted-date', '.date-posted', '.publish-date', '.job-date']
+      },
+      pagination: {
+        type: 'none',
+        maxPages: 1
+      },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Connection': 'keep-alive',
+        'Referer': 'https://www.emiratesgroupcareers.com/'
+      },
+      urlFilter: (url: string) => {
+        const patterns = [
+          /emiratesjobs\.avature\.net.*\/job\//,
+          /\/job\/[a-zA-Z0-9-]+/,
+          /\/jobs\/[a-zA-Z0-9-]+/,
+          /\/position\/[a-zA-Z0-9-]+/
+        ];
+        const excludes = ['/search', '/filter', '/apply', '/login', '/sign-in', '/register'];
+        return patterns.some(p => p.test(url)) && !excludes.some(e => url.includes(e)) && url.length > 30;
+      },
+      requiresJS: true, // Emirates Group uses dynamic loading
+      rateLimit: { delayMs: 5000, maxConcurrent: 1 }
+    },
+    {
+      name: 'landmark-oracle-hcm',
+      baseUrl: 'https://efhi.fa.em3.oraclecloud.com',
+      paths: ['/hcmUI/CandidateExperience/en/sites/CX_1/jobs'],
+      priority: 8,
+      selectors: {
+        jobLink: [
+          'a[href*="/job/"]',
+          'a[href*="CandidateExperience"]',
+          '[data-job-id] a',
+          '.job-item a',
+          '.job-card a',
+          'li a[href*="/job/"]'
+        ],
+        title: ['h1', '.job-title', '.position-title', 'h3', 'h4', '.title'],
+        company: ['.company-name', '.employer', '.organization', '.brand', '.division'],
+        location: ['.location', '.job-location', '.city', '.country', '.work-location'],
+        description: ['.job-description', '.description', '.content', '.summary', '.job-detail'],
+        requirements: ['.requirements', '.qualifications', '.skills', '.minimum-qualifications'],
+        responsibilities: ['.responsibilities', '.duties', '.job-duties', '.key-responsibilities'],
+        benefits: ['.benefits', '.perks', '.compensation'],
+        salary: ['.salary', '.compensation', '.pay', '.wage'],
+        deadline: ['.deadline', '.closing-date', '.application-deadline', '.expires'],
+        postedDate: ['.posted-date', '.date-posted', '.publish-date', '.job-date', '.posting-date']
+      },
+      pagination: {
+        type: 'none',
+        maxPages: 1
+      },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Connection': 'keep-alive',
+        'Referer': 'https://efhi.fa.em3.oraclecloud.com/'
+      },
+      urlFilter: (url: string) => {
+        const patterns = [
+          /efhi\.fa\.em3\.oraclecloud\.com.*\/job\/[a-zA-Z0-9]+$/,
+          /CandidateExperience.*\/job\/[a-zA-Z0-9]+$/
+        ];
+        const excludes = ['/search', '/filter', '/apply', '/login', '/sign-in', '/register', '/my-profile'];
+        return patterns.some(p => p.test(url)) && !excludes.some(e => url.includes(e)) && url.length > 40;
+      },
+      requiresJS: true, // Oracle HCM uses heavy JavaScript
+      rateLimit: { delayMs: 6000, maxConcurrent: 1 }
     }
   ];
 

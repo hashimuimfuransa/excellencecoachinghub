@@ -108,7 +108,8 @@ const QuickJobFilters: React.FC<QuickJobFiltersProps> = ({
         { value: 'finance', label: 'Finance', color: 'warning' },
         { value: 'education', label: 'Education', color: 'info' },
         { value: 'marketing', label: 'Marketing', color: 'secondary' },
-        { value: 'sales', label: 'Sales', color: 'error' }
+        { value: 'sales', label: 'Sales', color: 'error' },
+        { value: 'internship', label: 'Internship', color: 'success' }
       ]
     }
   ];

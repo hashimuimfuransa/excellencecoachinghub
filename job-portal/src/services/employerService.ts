@@ -87,6 +87,94 @@ class EmployerService {
     return response.json();
   }
 
+  // Internships Management
+  async getInternships(params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+  } = {}) {
+    const searchParams = new URLSearchParams();
+    if (params.page) searchParams.append('page', params.page.toString());
+    if (params.limit) searchParams.append('limit', params.limit.toString());
+    if (params.search) searchParams.append('search', params.search);
+    if (params.status && params.status !== 'all') searchParams.append('status', params.status);
+
+    const response = await fetch(`${API_BASE_URL}/internships/employer/my-internships?${searchParams}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch internships');
+    }
+
+    return response.json();
+  }
+
+  async createInternship(internshipData: any) {
+    const response = await fetch(`${API_BASE_URL}/internships`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(internshipData),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create internship');
+    }
+
+    return response.json();
+  }
+
+  async updateInternship(internshipId: string, internshipData: any) {
+    const response = await fetch(`${API_BASE_URL}/internships/${internshipId}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(internshipData),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update internship');
+    }
+
+    return response.json();
+  }
+
+  async deleteInternship(internshipId: string) {
+    const response = await fetch(`${API_BASE_URL}/internships/${internshipId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete internship');
+    }
+
+    return response.json();
+  }
+
+  async getInternshipApplications(internshipId: string, params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+  } = {}) {
+    const searchParams = new URLSearchParams();
+    if (params.page) searchParams.append('page', params.page.toString());
+    if (params.limit) searchParams.append('limit', params.limit.toString());
+    if (params.search) searchParams.append('search', params.search);
+    if (params.status && params.status !== 'all') searchParams.append('status', params.status);
+
+    const response = await fetch(`${API_BASE_URL}/internships/${internshipId}/applications?${searchParams}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch internship applications');
+    }
+
+    return response.json();
+  }
+
   async toggleJobStatus(jobId: string) {
     const response = await fetch(`${API_BASE_URL}/employer/jobs/${jobId}/toggle-status`, {
       method: 'PATCH',
@@ -161,6 +249,20 @@ class EmployerService {
     }
 
     return response.json();
+  }
+
+  // Get applications for both jobs and internships
+  async getAllApplications(postingId: string, postingType: 'job' | 'internship', params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+  } = {}) {
+    if (postingType === 'internship') {
+      return this.getInternshipApplications(postingId, params);
+    } else {
+      return this.getJobApplications(postingId, params);
+    }
   }
 
   async getApplicationDetails(applicationId: string) {
@@ -806,7 +908,7 @@ class EmployerService {
   }
 
   // AI Shortlisting
-  async aiShortlistCandidates(data: { jobId: string; maxCandidates?: number }) {
+  async aiShortlistCandidates(data: { jobId: string; maxCandidates?: number; postingType?: 'job' | 'internship' }) {
     const response = await fetch(`${API_BASE_URL}/employer/ai-shortlist`, {
       method: 'POST',
       headers: this.getAuthHeaders(),

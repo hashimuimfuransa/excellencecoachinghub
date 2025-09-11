@@ -103,6 +103,7 @@ interface Job {
   skillsRequired: string[];
   experienceLevel: string;
   applicationsCount?: number;
+  type?: 'job' | 'internship'; // Add type to distinguish between jobs and internships
 }
 
 interface AIShortlistResult {
@@ -165,11 +166,46 @@ const EmployerCandidatesPage: React.FC = () => {
 
   const loadJobs = async () => {
     try {
-      const response = await employerService.getJobs();
-      console.log('Jobs response:', response); // Debug log
-      setJobs(response.data || []);
+      // Load both jobs and internships
+      const [jobsResponse, internshipsResponse] = await Promise.all([
+        employerService.getJobs().catch(err => {
+          console.warn('Error loading jobs:', err);
+          return { data: [] };
+        }),
+        employerService.getInternships().catch(err => {
+          console.warn('Error loading internships:', err);
+          return { data: [] };
+        })
+      ]);
+
+      console.log('Jobs response:', jobsResponse); // Debug log
+      console.log('Internships response:', internshipsResponse); // Debug log
+
+      // Transform jobs to include type
+      const jobs = (jobsResponse.data || []).map((job: any) => ({
+        ...job,
+        type: 'job' as const
+      }));
+
+      // Transform internships to match Job interface
+      const internships = (internshipsResponse.data || []).map((internship: any) => ({
+        _id: internship._id,
+        title: internship.title,
+        company: internship.company,
+        location: internship.location,
+        description: internship.description,
+        requirements: internship.requirements || [],
+        skillsRequired: internship.skills || [],
+        experienceLevel: internship.experienceLevel,
+        applicationsCount: internship.applicationsCount,
+        type: 'internship' as const
+      }));
+
+      // Combine jobs and internships
+      const allPostings = [...jobs, ...internships];
+      setJobs(allPostings);
     } catch (error) {
-      console.error('Error loading jobs:', error);
+      console.error('Error loading jobs and internships:', error);
     }
   };
 
@@ -178,7 +214,11 @@ const EmployerCandidatesPage: React.FC = () => {
     
     setLoading(true);
     try {
-      const response = await employerService.getJobApplications(selectedJob);
+      // Find the selected job/internship to determine its type
+      const selectedPosting = jobs.find(job => job._id === selectedJob);
+      const postingType = selectedPosting?.type || 'job';
+      
+      const response = await employerService.getAllApplications(selectedJob, postingType);
       console.log('Applications response:', response); // Debug log
       setApplications(response.data || []);
     } catch (error) {
@@ -241,9 +281,14 @@ const EmployerCandidatesPage: React.FC = () => {
     
     setAiLoading(true);
     try {
+      // Find the selected job/internship to determine its type
+      const selectedPosting = jobs.find(job => job._id === selectedJob);
+      const postingType = selectedPosting?.type || 'job';
+      
       const response = await employerService.aiShortlistCandidates({
         jobId: selectedJob,
-        maxCandidates
+        maxCandidates,
+        postingType
       });
       
       if (response.success && response.data) {
@@ -362,15 +407,25 @@ const EmployerCandidatesPage: React.FC = () => {
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} md={4}>
             <FormControl fullWidth>
-              <InputLabel>Select Job</InputLabel>
+              <InputLabel>Select Job/Internship</InputLabel>
               <Select
                 value={selectedJob}
                 onChange={(e) => handleJobChange(e.target.value)}
-                label="Select Job"
+                label="Select Job/Internship"
               >
                 {jobs.map((job) => (
                   <MenuItem key={job._id} value={job._id}>
-                    {job.title} - {job.company}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {job.type === 'internship' ? <School fontSize="small" /> : <Work fontSize="small" />}
+                      <Box>
+                        <Typography variant="body2">
+                          {job.title} - {job.company}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {job.type === 'internship' ? 'Internship' : 'Job'} • {job.applicationsCount || 0} applications
+                        </Typography>
+                      </Box>
+                    </Box>
                   </MenuItem>
                 ))}
               </Select>
@@ -436,7 +491,15 @@ const EmployerCandidatesPage: React.FC = () => {
 
         {selectedJobData && (
           <Box sx={{ mt: 2, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
-            <Typography variant="h6">{selectedJobData.title}</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              {selectedJobData.type === 'internship' ? <School /> : <Work />}
+              <Typography variant="h6">{selectedJobData.title}</Typography>
+              <Chip 
+                label={selectedJobData.type === 'internship' ? 'Internship' : 'Job'} 
+                size="small" 
+                color={selectedJobData.type === 'internship' ? 'success' : 'primary'}
+              />
+            </Box>
             <Typography variant="body2" color="text.secondary">
               {selectedJobData.company} • {selectedJobData.location} • {applications.length} applications
             </Typography>

@@ -137,7 +137,9 @@ const Navbar: React.FC = () => {
     // Protected items - only show if user is logged in (Network is the main page for logged users)
     { text: 'Network', icon: <Public />, path: '/app/network', protected: true, isHome: true },
     { text: 'My Jobs', icon: <Business />, path: '/app/employer/jobs', protected: true },
+    { text: 'My Internships', icon: <School />, path: '/app/employer/internships', protected: true },
     { text: 'Post Job', icon: <PostAdd />, path: '/app/jobs/create', highlight: true, protected: true },
+    { text: 'Post Internship', icon: <School />, path: '/app/internships/create', highlight: true, protected: true },
     { text: 'Support', icon: <Support />, path: '/support' },
     { text: 'Contact Us', icon: <ContactSupport />, action: handleContactOpen, isContactDialog: true },
   ];

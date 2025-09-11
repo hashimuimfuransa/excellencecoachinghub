@@ -4,6 +4,8 @@ import { User, Job, JobApplication } from '../models';
 import { IUserDocument } from '../models/User';
 import { JobRecommendationEmailService } from '../services/jobRecommendationEmailService';
 import { ApplicationStatus } from '../types';
+import { protect as auth } from '../middleware/auth';
+import { authorizeRoles } from '../middleware/roleAuth';
 
 const router = Router();
 
@@ -151,40 +153,80 @@ router.post('/send-recommendations', async (req: Request, res: Response) => {
  */
 async function getEligibleUsers(): Promise<IUserDocument[]> {
   try {
-    // Find users who:
-    // 1. Are job seekers or students
-    // 2. Have email notifications enabled (default to true if not set)
-    // 3. Have completed profiles (at least 80% complete)
-    // 4. Are active and email verified
-    const users = await User.find({
-      $and: [
-        {
-          $or: [
-            { role: 'student' },
-            { role: 'user' },
-            { userType: 'job_seeker' },
-            { userType: 'student' }
-          ]
-        },
-        { isActive: true },
-        { isEmailVerified: true },
-        { emailNotifications: { $ne: false } }, // Include undefined as true
-        {
-          $or: [
-            { skills: { $exists: true, $not: { $size: 0 } } },
-            { experience: { $exists: true, $not: { $size: 0 } } },
-            { education: { $exists: true, $not: { $size: 0 } } }
-          ]
-        }
+    console.log('🔍 Fetching eligible users for job recommendations...');
+
+    // Debug: Check total users first
+    const totalUsers = await User.countDocuments({});
+    console.log(`📊 Total users in database: ${totalUsers}`);
+
+    // Debug: Check active users
+    const activeUsers = await User.countDocuments({ isActive: true });
+    console.log(`📊 Active users: ${activeUsers}`);
+
+    // Debug: Check what roles users actually have
+    const allRoles = await User.aggregate([
+      { $group: { _id: { role: '$role', userType: '$userType' }, count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+    console.log(`📊 All user roles and types:`, allRoles);
+
+    // Debug: Check job seeker roles
+    const jobSeekerRoles = await User.countDocuments({
+      $or: [
+        { role: 'student' },
+        { role: 'job_seeker' },
+        { userType: 'job_seeker' },
+        { userType: 'student' }
       ]
     });
+    console.log(`📊 Job seeker roles: ${jobSeekerRoles}`);
 
-    // Filter users with at least 80% profile completion
-    const eligibleUsers = users.filter(user => getProfileCompletionPercentage(user) >= 80);
+    // Be more inclusive - get most active users (excluding only admin/employer roles)
+    const users = await User.find({
+      isActive: true,
+      role: { $nin: ['admin', 'super_admin', 'employer'] }, // Exclude admin and employer roles
+      // Include all other roles: student, professional, teacher, job_seeker, etc.
+    });
+
+    console.log(`📊 Found ${users.length} active job seekers`);
+
+    // Debug: Check a few users to see their email notification settings
+    if (users.length > 0) {
+      console.log('📊 Sample users email settings:', users.slice(0, 3).map(u => ({
+        email: u.email,
+        emailNotifications: u.emailNotifications,
+        role: u.role,
+        userType: u.userType
+      })));
+    }
+
+    // Filter out users who explicitly disabled email notifications
+    const usersWantingEmails = users.filter(user => 
+      user.emailNotifications !== false
+    );
+    
+    console.log(`📊 Users wanting emails: ${usersWantingEmails.length}`);
+
+    // Filter users with at least 50% profile completion (temporarily lowered for debugging)
+    const eligibleUsers = usersWantingEmails.filter(user => {
+      const completionPercentage = getProfileCompletionPercentage(user);
+      if (completionPercentage >= 50) { // Log users with decent profiles
+        console.log(`👤 User ${user.email}: ${completionPercentage}% profile completion`);
+      }
+      return completionPercentage >= 50; // Temporarily lowered from 80% to catch more users
+    });
     
     console.log(`📊 User filtering results:`);
-    console.log(`   📝 Initial users found: ${users.length}`);
-    console.log(`   ✅ Users with 80%+ profile completion: ${eligibleUsers.length}`);
+    console.log(`   📝 Initial users found: ${usersWantingEmails.length}`);
+    console.log(`   ✅ Users with 50%+ profile completion: ${eligibleUsers.length}`);
+    
+    // Create role breakdown for logging
+    const roleBreakdown: { [key: string]: number } = {};
+    usersWantingEmails.forEach(user => {
+      const key = user.userType || user.role;
+      roleBreakdown[key] = (roleBreakdown[key] || 0) + 1;
+    });
+    console.log(`   📋 User breakdown by role:`, roleBreakdown);
     
     return eligibleUsers;
   } catch (error) {
@@ -200,25 +242,74 @@ function getProfileCompletionPercentage(user: IUserDocument): number {
   let score = 0;
   let maxScore = 100;
 
-  // Basic info (30 points)
-  if (user.firstName && user.email) score += 30;
+  // Debug logging for profile completion
+  const debugInfo: any = {
+    email: user.email,
+    checks: {}
+  };
+
+  // Basic info (25 points)
+  if (user.firstName && user.firstName.trim()) {
+    score += 10;
+    debugInfo.checks.firstName = true;
+  }
+  if (user.lastName && user.lastName.trim()) {
+    score += 10;
+    debugInfo.checks.lastName = true;
+  }
+  if (user.email && user.email.trim()) {
+    score += 5;
+    debugInfo.checks.email = true;
+  }
   
   // Skills (25 points)
-  if (user.skills && Array.isArray(user.skills) && user.skills.length > 0) score += 25;
+  if (user.skills && Array.isArray(user.skills) && user.skills.length > 0) {
+    score += 25;
+    debugInfo.checks.skills = user.skills.length;
+  }
   
   // Experience (20 points)
-  if (user.experience && Array.isArray(user.experience) && user.experience.length > 0) score += 20;
+  if (user.experience && Array.isArray(user.experience) && user.experience.length > 0) {
+    score += 20;
+    debugInfo.checks.experience = user.experience.length;
+  }
   
   // Education (15 points)
-  if (user.education && Array.isArray(user.education) && user.education.length > 0) score += 15;
+  if (user.education && Array.isArray(user.education) && user.education.length > 0) {
+    score += 15;
+    debugInfo.checks.education = user.education.length;
+  }
   
-  // Additional details (10 points total)
-  if (user.bio && user.bio.trim().length > 0) score += 3;
-  if (user.location && user.location.trim().length > 0) score += 3;
-  if (user.phone && user.phone.trim().length > 0) score += 2;
-  if (user.resume || user.cvFile) score += 2;
+  // Contact details (8 points)
+  if (user.phone && user.phone.trim().length > 0) {
+    score += 4;
+    debugInfo.checks.phone = true;
+  }
+  if (user.location && user.location.trim().length > 0) {
+    score += 4;
+    debugInfo.checks.location = true;
+  }
+  
+  // Bio/Description (4 points)
+  if (user.bio && user.bio.trim().length > 10) {
+    score += 4;
+    debugInfo.checks.bio = user.bio.length;
+  }
+  
+  // Resume/CV (3 points)
+  if (user.resume || user.cvFile) {
+    score += 3;
+    debugInfo.checks.resume = true;
+  }
 
-  return Math.round((score / maxScore) * 100);
+  const percentage = Math.round((score / maxScore) * 100);
+  
+  // Log details for users with high completion
+  if (percentage >= 70) {
+    console.log(`👤 Profile completion for ${user.email}: ${percentage}%`, debugInfo.checks);
+  }
+
+  return percentage;
 }
 
 /**
@@ -633,6 +724,86 @@ router.get('/reject-auto-apply/:userId/:batchId', async (req: Request, res: Resp
         </body>
       </html>
     `);
+  }
+});
+
+/**
+ * @route   GET /api/job-emails/debug-users
+ * @desc    Debug endpoint to check user profiles and completion percentages
+ * @access  Private - Admin
+ */
+router.get('/debug-users', auth, authorizeRoles(['super_admin', 'admin']), async (req, res) => {
+  try {
+    console.log('🔍 Debug endpoint: Analyzing user profiles...');
+
+    // Get all users with basic info
+    const allUsers = await User.find({}).select('email firstName lastName role userType isActive isEmailVerified skills experience education bio phone location resume cvFile').limit(20);
+    
+    const userAnalysis = allUsers.map(user => {
+      const completion = getProfileCompletionPercentage(user);
+      return {
+        email: user.email,
+        name: `${user.firstName || 'N/A'} ${user.lastName || 'N/A'}`,
+        role: user.role,
+        userType: user.userType,
+        isActive: user.isActive,
+        isEmailVerified: user.isEmailVerified,
+        completionPercentage: completion,
+        profileData: {
+          hasFirstName: !!user.firstName,
+          hasLastName: !!user.lastName,
+          hasSkills: !!(user.skills && user.skills.length > 0),
+          skillsCount: user.skills?.length || 0,
+          hasExperience: !!(user.experience && user.experience.length > 0),
+          experienceCount: user.experience?.length || 0,
+          hasEducation: !!(user.education && user.education.length > 0),
+          educationCount: user.education?.length || 0,
+          hasBio: !!(user.bio && user.bio.trim().length > 10),
+          hasPhone: !!(user.phone && user.phone.trim().length > 0),
+          hasLocation: !!(user.location && user.location.trim().length > 0),
+          hasResume: !!(user.resume || user.cvFile)
+        }
+      };
+    });
+
+    // Filter for 80%+ completion
+    const eligibleUsers = userAnalysis.filter(user => user.completionPercentage >= 80);
+    
+    res.json({
+      success: true,
+      message: 'User profile analysis completed',
+      data: {
+        summary: {
+          totalUsers: allUsers.length,
+          eligibleUsers: eligibleUsers.length,
+          eligibilityRate: `${Math.round((eligibleUsers.length / allUsers.length) * 100)}%`
+        },
+        allUsers: userAnalysis,
+        eligibleUsers: eligibleUsers,
+        thresholds: {
+          minimumCompletion: 80,
+          currentScoring: {
+            'First Name': 10,
+            'Last Name': 10,
+            'Email': 5,
+            'Skills': 25,
+            'Experience': 20,
+            'Education': 15,
+            'Phone': 4,
+            'Location': 4,
+            'Bio (10+ chars)': 4,
+            'Resume/CV': 3
+          }
+        }
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error in debug-users endpoint:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to analyze user profiles',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 

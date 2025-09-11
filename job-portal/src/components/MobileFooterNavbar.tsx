@@ -7,7 +7,10 @@ import {
   Box,
   Fab,
   useTheme,
-  alpha
+  alpha,
+  SpeedDial,
+  SpeedDialAction,
+  SpeedDialIcon
 } from '@mui/material';
 import {
   Home,
@@ -16,7 +19,8 @@ import {
   People,
   Notifications,
   Message,
-  Business
+  Business,
+  School
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { UserRole } from '../contexts/AuthContext';
@@ -39,9 +43,30 @@ const MobileFooterNavbar: React.FC<MobileFooterNavbarProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
+  const [speedDialOpen, setSpeedDialOpen] = React.useState(false);
 
   // Check if user is an employer
   const isEmployer = userRole === UserRole.EMPLOYER;
+
+  // Speed dial actions for employers
+  const speedDialActions = isEmployer ? [
+    {
+      icon: <Work />,
+      name: 'Post Job',
+      onClick: () => navigate('/app/jobs/create')
+    },
+    {
+      icon: <School />,
+      name: 'Post Internship',
+      onClick: () => navigate('/app/internships/create')
+    }
+  ] : [
+    {
+      icon: <Add />,
+      name: 'Create Post',
+      onClick: onCreatePost || (() => {})
+    }
+  ];
 
   // Simplified navigation - only 5 essential tabs
   const getCurrentTab = () => {
@@ -244,6 +269,47 @@ const MobileFooterNavbar: React.FC<MobileFooterNavbarProps> = ({
         />
       </BottomNavigation>
       </Paper>
+
+      {/* Floating Speed Dial for Quick Actions */}
+      <SpeedDial
+        ariaLabel="Quick Actions"
+        sx={{
+          position: 'absolute',
+          bottom: 85,
+          right: 16,
+          '& .MuiFab-primary': {
+            backgroundColor: theme.palette.primary.main,
+            boxShadow: theme.shadows[8],
+            '&:hover': {
+              backgroundColor: theme.palette.primary.dark,
+            }
+          }
+        }}
+        icon={<SpeedDialIcon />}
+        onClose={() => setSpeedDialOpen(false)}
+        onOpen={() => setSpeedDialOpen(true)}
+        open={speedDialOpen}
+      >
+        {speedDialActions.map((action) => (
+          <SpeedDialAction
+            key={action.name}
+            icon={action.icon}
+            tooltipTitle={action.name}
+            tooltipOpen
+            onClick={() => {
+              action.onClick();
+              setSpeedDialOpen(false);
+            }}
+            sx={{
+              backgroundColor: theme.palette.background.paper,
+              boxShadow: theme.shadows[4],
+              '&:hover': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.1),
+              }
+            }}
+          />
+        ))}
+      </SpeedDial>
     </Box>
   );
 };

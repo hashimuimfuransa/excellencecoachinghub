@@ -39,10 +39,15 @@ const createDeploymentFilesPlugin = () => {
 </configuration>`
       writeFileSync(path.join(distDir, 'web.config'), webConfigContent)
       
-      // Create vercel.json
+      // Create vercel.json with SEO-safe exceptions
       const vercelConfig = {
-        "rewrites": [
-          { "source": "/(.*)", "destination": "/index.html" }
+        rewrites: [
+          { source: "/(robots.txt|sitemap.xml|manifest.json)", destination: "/$1" },
+          { source: "/assets/(.*)", destination: "/assets/$1" },
+          { source: "/(.*)", destination: "/index.html" }
+        ],
+        headers: [
+          { source: "/sitemap.xml", headers: [{ key: "Content-Type", value: "application/xml; charset=utf-8" }] }
         ]
       }
       writeFileSync(path.join(distDir, 'vercel.json'), JSON.stringify(vercelConfig, null, 2))

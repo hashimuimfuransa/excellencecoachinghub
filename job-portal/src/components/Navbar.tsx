@@ -637,27 +637,33 @@ const Navbar: React.FC = () => {
               </Menu>
             </Box>
           ) : (
-            !isMobile && (
-              <Box sx={{ display: 'flex', gap: isTablet ? 0.125 : 1 }}>
-                <Button
-                  color="inherit"
-                  startIcon={isTablet ? undefined : <Login />}
-                  onClick={() => navigate('/login')}
-                  sx={{ 
-                    fontWeight: 'bold',
-                    px: isTablet ? 0.75 : 2,
-                    py: isTablet ? 0.125 : 1,
-                    fontSize: isTablet ? '0.625rem' : '1rem',
-                    minWidth: isTablet ? 'auto' : undefined,
-                    height: isTablet ? 28 : 'auto',
-                    borderRadius: 1,
-                    '&:hover': {
-                      backgroundColor: 'primary.light',
-                    }
-                  }}
-                >
-                  Login
-                </Button>
+            <Box sx={{ display: 'flex', gap: isMobile ? 0.5 : (isTablet ? 0.125 : 1) }}>
+              <Button
+                color="inherit"
+                startIcon={isMobile ? undefined : (isTablet ? undefined : <Login />)}
+                onClick={() => navigate('/login')}
+                variant={isMobile ? 'contained' : 'text'}
+                sx={{ 
+                  fontWeight: 'bold',
+                  px: isMobile ? 1.5 : (isTablet ? 0.75 : 2),
+                  py: isMobile ? 0.5 : (isTablet ? 0.125 : 1),
+                  fontSize: isMobile ? '0.75rem' : (isTablet ? '0.625rem' : '1rem'),
+                  minWidth: isMobile ? 'auto' : (isTablet ? 'auto' : undefined),
+                  height: isMobile ? 32 : (isTablet ? 28 : 'auto'),
+                  borderRadius: 1,
+                  background: isMobile ? 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)' : 'transparent',
+                  color: isMobile ? 'white' : 'inherit',
+                  boxShadow: isMobile ? '0 2px 8px rgba(76, 175, 80, 0.3)' : 'none',
+                  '&:hover': {
+                    backgroundColor: isMobile ? 'transparent' : 'primary.light',
+                    background: isMobile ? 'linear-gradient(45deg, #2e7d32 30%, #1b5e20 90%)' : undefined,
+                    boxShadow: isMobile ? '0 4px 12px rgba(76, 175, 80, 0.4)' : 'none',
+                  }
+                }}
+              >
+                Login
+              </Button>
+              {!isMobile && (
                 <Button
                   variant="contained"
                   startIcon={isTablet ? undefined : <PersonAdd />}
@@ -678,8 +684,8 @@ const Navbar: React.FC = () => {
                 >
                   {isTablet ? 'Sign Up' : 'Sign Up'}
                 </Button>
-              </Box>
-            )
+              )}
+            </Box>
           )}
         </Toolbar>
       </AppBar>

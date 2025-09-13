@@ -19,8 +19,8 @@ import {
   Divider,
   Switch,
   FormControlLabel,
-  TextField,
-  InputAdornment,
+
+
   alpha,
   Dialog,
   DialogTitle,
@@ -50,7 +50,7 @@ import {
   Group,
   Public,
   Psychology,
-  Search,
+
   ContactSupport,
   Phone,
   Email,
@@ -82,12 +82,15 @@ const Navbar: React.FC = () => {
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
   const isSmallLaptop = useMediaQuery(theme.breakpoints.between('lg', 'xl'));
   const isLargeLaptop = useMediaQuery(theme.breakpoints.up('xl'));
+  const isSmallDesktop = useMediaQuery('(min-width: 1440px) and (max-width: 1919px)');
+  const isLargeDesktop = useMediaQuery('(min-width: 1920px) and (max-width: 2559px)');
+  const isUltraWideDesktop = useMediaQuery('(min-width: 2560px)');
   const isLaptop = useMediaQuery(theme.breakpoints.up('lg'));
-  const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
+  const isDesktop = useMediaQuery('(min-width: 1440px)');
   
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -114,11 +117,7 @@ const Navbar: React.FC = () => {
     setMobileOpen(!mobileOpen);
   };
 
-  const handleSearch = (e: React.KeyboardEvent | React.MouseEvent) => {
-    if (searchTerm.trim()) {
-      navigate(`/?search=${encodeURIComponent(searchTerm.trim())}`);
-    }
-  };
+
 
   const handleContactOpen = () => {
     setContactDialogOpen(true);
@@ -152,7 +151,7 @@ const Navbar: React.FC = () => {
 
   // For non-logged in users, show public menu
   const publicMenuItems = [
-    { text: 'All Jobs', icon: <Work />, path: '/' },
+    { text: 'All Jobs', icon: <Work />, path: '/', special: true },
     { text: 'Internships', icon: <School />, path: '/internships' },
     { text: 'Support', icon: <Support />, path: '/support' },
     { text: 'Contact Us', icon: <ContactSupport />, action: handleContactOpen, isContactDialog: true },
@@ -210,23 +209,38 @@ const Navbar: React.FC = () => {
             sx={{
               backgroundColor: item.highlight 
                 ? alpha(theme.palette.primary.main, 0.9)
-                : (location.pathname === item.path ? 'primary.light' : 'transparent'),
+                : ('special' in item && item.special)
+                  ? alpha(theme.palette.primary.main, 0.05)
+                  : (location.pathname === item.path ? alpha(theme.palette.primary.main, 0.1) : 'transparent'),
               '&:hover': {
                 backgroundColor: item.highlight 
                   ? alpha(theme.palette.primary.main, 1)
-                  : 'primary.light',
+                  : ('special' in item && item.special)
+                    ? alpha(theme.palette.primary.main, 0.1)
+                    : alpha(theme.palette.primary.main, 0.08),
               },
               mx: 1,
               borderRadius: 2,
               mb: 0.5,
-              border: item.highlight ? `2px solid ${theme.palette.primary.main}` : 'none',
-              boxShadow: item.highlight ? '0 4px 12px rgba(76, 175, 80, 0.3)' : 'none',
+              border: item.highlight 
+                ? `2px solid ${theme.palette.primary.main}` 
+                : ('special' in item && item.special)
+                  ? `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
+                  : 'none',
+              boxShadow: item.highlight 
+                ? '0 4px 12px rgba(76, 175, 80, 0.3)' 
+                : ('special' in item && item.special)
+                  ? '0 2px 8px rgba(76, 175, 80, 0.1)'
+                  : 'none',
+              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
             }}
           >
             <ListItemIcon sx={{ 
               color: item.highlight 
                 ? 'white' 
-                : (location.pathname === item.path ? 'primary.main' : 'inherit') 
+                : ('special' in item && item.special)
+                  ? 'primary.main'
+                  : (location.pathname === item.path ? 'primary.main' : 'inherit') 
             }}>
               {item.icon}
             </ListItemIcon>
@@ -234,10 +248,12 @@ const Navbar: React.FC = () => {
               primary={item.text} 
               sx={{ 
                 '& .MuiListItemText-primary': { 
-                  fontWeight: (item.highlight || location.pathname === item.path) ? 'bold' : 'normal',
+                  fontWeight: (item.highlight || ('special' in item && item.special) || location.pathname === item.path) ? 'bold' : 'normal',
                   color: item.highlight 
                     ? 'white' 
-                    : (location.pathname === item.path ? 'primary.main' : 'inherit')
+                    : ('special' in item && item.special)
+                      ? 'primary.main'
+                      : (location.pathname === item.path ? 'primary.main' : 'inherit')
                 } 
               }}
             />
@@ -355,9 +371,29 @@ const Navbar: React.FC = () => {
         }}
       >
         <Toolbar sx={{ 
-          px: { xs: 1, sm: 1.5, md: 2.5, lg: 4, xl: 6 }, 
-          minHeight: { xs: 60, sm: 56, md: 64, lg: 80, xl: 84 },
-          py: { xs: 1, sm: 0.5, md: 1, lg: 2, xl: 2.5 }
+          px: { 
+            xs: 1, 
+            sm: 1.5, 
+            md: 2.5, 
+            lg: 4, 
+            xl: isSmallDesktop ? 6 : isLargeDesktop ? 8 : isUltraWideDesktop ? 12 : 6 
+          }, 
+          minHeight: { 
+            xs: 60, 
+            sm: 56, 
+            md: 64, 
+            lg: 80, 
+            xl: isSmallDesktop ? 85 : isLargeDesktop ? 88 : isUltraWideDesktop ? 92 : 84 
+          },
+          py: { 
+            xs: 1, 
+            sm: 0.5, 
+            md: 1, 
+            lg: 2, 
+            xl: isSmallDesktop ? 2.5 : isLargeDesktop ? 3 : isUltraWideDesktop ? 3.5 : 2.5 
+          },
+          justifyContent: 'space-between',
+          alignItems: 'center'
         }}>
           {(isMobile || isSmallTablet) && (
             <IconButton
@@ -381,12 +417,20 @@ const Navbar: React.FC = () => {
             </IconButton>
           )}
           
+          {/* Left Section - Logo */}
           <Box 
             sx={{ 
               display: 'flex', 
               alignItems: 'center', 
-              gap: { xs: 1, sm: 1.5, md: 2, lg: 2.5, xl: 3 },
-              cursor: 'pointer'
+              gap: { 
+                xs: 1, 
+                sm: 1.5, 
+                md: 2, 
+                lg: 2.5, 
+                xl: isSmallDesktop ? 3 : isLargeDesktop ? 3.5 : isUltraWideDesktop ? 4 : 3 
+              },
+              cursor: 'pointer',
+              minWidth: 'fit-content'
             }}
             onClick={() => navigate(user ? '/app/network' : '/')}
           >
@@ -394,7 +438,14 @@ const Navbar: React.FC = () => {
               src="/exjobnetlogo.png" 
               alt="ExJobNet" 
               style={{ 
-                height: isMobile ? 50 : isSmallTablet ? 40 : isLargeTablet ? 45 : isSmallLaptop ? 75 : 80, 
+                height: isMobile ? 50 
+                  : isSmallTablet ? 40 
+                  : isLargeTablet ? 45 
+                  : isSmallLaptop ? 65 
+                  : isLargeLaptop ? 70
+                  : isSmallDesktop ? 72
+                  : isLargeDesktop ? 75
+                  : isUltraWideDesktop ? 78 : 70, 
                 width: 'auto',
                 transition: 'height 0.3s ease'
               }}
@@ -417,13 +468,24 @@ const Navbar: React.FC = () => {
 
           <Box sx={{ flexGrow: 1 }} />
 
-          {!isMobile && !isSmallTablet && (
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: isLargeTablet ? 0.5 : isSmallLaptop ? 1.5 : 2, 
-              mr: isLargeTablet ? 1 : isSmallLaptop ? 2 : 3 
-            }}>
+          {/* Center Section - Navigation */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            flex: 1,
+            justifyContent: 'center',
+          }}>
+            {!isMobile && !isSmallTablet && (
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: isLargeTablet ? 1 
+                  : isSmallLaptop ? 1.5 
+                  : isLargeLaptop ? 2
+                  : isSmallDesktop ? 2.5
+                  : isLargeDesktop ? 3
+                  : isUltraWideDesktop ? 3.5 : 2, 
+              }}>
               {currentMenuItems.filter(item => !('protected' in item) || !item.protected || user).map((item) => (
                 <Button
                   key={item.text}
@@ -440,25 +502,70 @@ const Navbar: React.FC = () => {
                   }}
                   variant={('highlight' in item && item.highlight) ? 'contained' : 'text'}
                   sx={{
-                    fontWeight: ('path' in item && location.pathname === item.path) ? 'bold' : (('highlight' in item && item.highlight) ? 'bold' : 'normal'),
-                    color: ('highlight' in item && item.highlight) ? 'white' : (('path' in item && location.pathname === item.path) ? 'primary.main' : 'text.primary'),
+                    fontWeight: ('path' in item && location.pathname === item.path) 
+                      ? 'bold' 
+                      : (('highlight' in item && item.highlight) || ('special' in item && item.special)) 
+                        ? 'bold' 
+                        : 'normal',
+                    color: ('highlight' in item && item.highlight) 
+                      ? 'white' 
+                      : ('special' in item && item.special)
+                        ? 'primary.main'
+                        : (('path' in item && location.pathname === item.path) ? 'primary.main' : 'text.primary'),
                     backgroundColor: ('highlight' in item && item.highlight)
                       ? 'primary.main' 
-                      : (('path' in item && location.pathname === item.path) ? 'primary.light' : 'transparent'),
+                      : (('path' in item && location.pathname === item.path) ? alpha(theme.palette.primary.main, 0.1) : 'transparent'),
+                    border: ('special' in item && item.special) 
+                      ? `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
+                      : 'none',
                     '&:hover': {
                       backgroundColor: ('highlight' in item && item.highlight)
                         ? 'primary.dark' 
-                        : 'primary.light',
-                      transform: ('highlight' in item && item.highlight) ? 'translateY(-1px)' : 'none',
-                      boxShadow: ('highlight' in item && item.highlight) ? '0 4px 12px rgba(76, 175, 80, 0.3)' : 'none',
+                        : ('special' in item && item.special)
+                          ? alpha(theme.palette.primary.main, 0.08)
+                          : alpha(theme.palette.primary.main, 0.04),
+                      transform: (('highlight' in item && item.highlight) || ('special' in item && item.special)) 
+                        ? 'translateY(-1px)' 
+                        : 'none',
+                      boxShadow: ('highlight' in item && item.highlight) 
+                        ? '0 4px 12px rgba(76, 175, 80, 0.3)' 
+                        : ('special' in item && item.special)
+                          ? '0 2px 8px rgba(76, 175, 80, 0.2)'
+                          : 'none',
+                      border: ('special' in item && item.special) 
+                        ? `1px solid ${alpha(theme.palette.primary.main, 0.5)}`
+                        : undefined,
                     },
-                    borderRadius: 1,
-                    px: isLargeTablet ? 1 : isSmallLaptop ? 2.5 : 3,
-                    py: isLargeTablet ? 0.5 : isSmallLaptop ? 1 : 1.2,
+                    borderRadius: 2,
+                    px: isLargeTablet ? 1.5 
+                      : isSmallLaptop ? 2 
+                      : isLargeLaptop ? 2.5
+                      : isSmallDesktop ? 2.5
+                      : isLargeDesktop ? 3
+                      : isUltraWideDesktop ? 3.2 : 2.5,
+                    py: isLargeTablet ? 0.75 
+                      : isSmallLaptop ? 1 
+                      : isLargeLaptop ? 1.25
+                      : isSmallDesktop ? 1.25
+                      : isLargeDesktop ? 1.5
+                      : isUltraWideDesktop ? 1.5 : 1.25,
                     minWidth: (isLargeTablet || isSmallLaptop) ? 'auto' : undefined,
-                    fontSize: isLargeTablet ? '0.8rem' : isSmallLaptop ? '1rem' : '1.1rem',
-                    height: isLargeTablet ? 36 : isSmallLaptop ? 40 : 44,
-                    transition: 'all 0.3s ease',
+                    fontSize: isLargeTablet ? '0.8rem' 
+                      : isSmallLaptop ? '0.95rem' 
+                      : isLargeLaptop ? '1rem'
+                      : isSmallDesktop ? '1rem'
+                      : isLargeDesktop ? '1.05rem'
+                      : isUltraWideDesktop ? '1.1rem' : '1rem',
+                    height: isLargeTablet ? 36 
+                      : isSmallLaptop ? 40 
+                      : isLargeLaptop ? 44
+                      : isSmallDesktop ? 46
+                      : isLargeDesktop ? 48
+                      : isUltraWideDesktop ? 50 : 44,
+                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:active': {
+                      transform: 'scale(0.98)',
+                    },
                   }}
                 >
                   {item.text}
@@ -467,71 +574,71 @@ const Navbar: React.FC = () => {
             </Box>
           )}
 
-          {!isMobile && !isSmallTablet && (location.pathname === '/jobs' || location.pathname === '/' || location.pathname === '/app') && (
-            <Box sx={{ mx: isLargeTablet ? 1 : isSmallLaptop ? 2.5 : 3 }}>
-              <TextField
-                size={isLargeTablet ? "small" : "medium"}
-                placeholder={isLargeTablet ? "Search..." : isSmallLaptop ? "Search jobs..." : "Search for jobs, internships..."}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch(e)}
-                sx={{
-                  width: isLargeTablet ? 180 : isSmallLaptop ? 320 : 400,
-                  '& .MuiOutlinedInput-root': {
-                    backgroundColor: alpha(theme.palette.background.paper, 0.8),
-                    borderRadius: 1.5,
-                    fontSize: isLargeTablet ? '0.875rem' : isSmallLaptop ? '1rem' : '1.1rem',
-                    height: isLargeTablet ? 36 : isSmallLaptop ? 40 : 44,
-                    '&:hover': {
-                      backgroundColor: alpha(theme.palette.background.paper, 0.9),
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                    },
-                    '&.Mui-focused': {
-                      backgroundColor: theme.palette.background.paper,
-                      boxShadow: '0 4px 12px rgba(76, 175, 80, 0.2)',
-                    },
-                    transition: 'all 0.2s ease'
-                  },
-                  '& .MuiInputBase-input': {
-                    padding: isLargeTablet ? '8px 10px' : isSmallLaptop ? '10px 12px' : '12px 14px',
-                  }
-                }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search sx={{ 
-                        color: 'text.secondary',
-                        fontSize: isLargeTablet ? '1.1rem' : isSmallLaptop ? '1.3rem' : '1.6rem'
-                      }} />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Box>
-          )}
 
+          </Box>
+
+          {/* Right Section - Theme Toggle and Auth */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: isLargeTablet ? 1 
+              : isSmallLaptop ? 1.5 
+              : isLargeLaptop ? 2
+              : isSmallDesktop ? 2.5
+              : isLargeDesktop ? 3
+              : isUltraWideDesktop ? 4 : 2,
+            minWidth: 'fit-content'
+          }}>
           {!isMobile && (
             <Tooltip title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}>
               <IconButton 
                 onClick={toggleTheme} 
                 color="inherit" 
                 sx={{ 
-                  mr: isLargeTablet ? 0.5 : isSmallLaptop ? 1.5 : 2,
-                  p: isLargeTablet ? 1 : isSmallLaptop ? 1.5 : 2,
-                  width: isLargeTablet ? 36 : isSmallLaptop ? 40 : 44,
-                  height: isLargeTablet ? 36 : isSmallLaptop ? 40 : 44,
-                  borderRadius: 2,
+                  p: isLargeTablet ? 1 
+                    : isSmallLaptop ? 1.5 
+                    : isLargeLaptop ? 1.8
+                    : isSmallDesktop ? 2
+                    : isLargeDesktop ? 2.2
+                    : isUltraWideDesktop ? 2.5 : 1.8,
+                  width: isLargeTablet ? 36 
+                    : isSmallLaptop ? 40 
+                    : isLargeLaptop ? 44
+                    : isSmallDesktop ? 46
+                    : isLargeDesktop ? 48
+                    : isUltraWideDesktop ? 50 : 44,
+                  height: isLargeTablet ? 36 
+                    : isSmallLaptop ? 40 
+                    : isLargeLaptop ? 44
+                    : isSmallDesktop ? 46
+                    : isLargeDesktop ? 48
+                    : isUltraWideDesktop ? 50 : 44,
+                  borderRadius: 3,
                   '&:hover': {
                     backgroundColor: alpha(theme.palette.primary.main, 0.1),
                     transform: 'scale(1.05)',
-                    boxShadow: '0 4px 12px rgba(76, 175, 80, 0.2)',
+                    boxShadow: isDesktop ? '0 6px 20px rgba(76, 175, 80, 0.3)' : '0 4px 12px rgba(76, 175, 80, 0.2)',
                   },
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.3s ease'
                 }}
               >
                 {mode === 'dark' ? 
-                  <Brightness7 sx={{ fontSize: isLargeTablet ? '1.1rem' : isSmallLaptop ? '1.4rem' : '1.6rem' }} /> : 
-                  <Brightness4 sx={{ fontSize: isLargeTablet ? '1.1rem' : isSmallLaptop ? '1.4rem' : '1.6rem' }} />
+                  <Brightness7 sx={{ 
+                    fontSize: isLargeTablet ? '1.1rem' 
+                      : isSmallLaptop ? '1.4rem' 
+                      : isLargeLaptop ? '1.5rem'
+                      : isSmallDesktop ? '1.6rem'
+                      : isLargeDesktop ? '1.7rem'
+                      : isUltraWideDesktop ? '1.8rem' : '1.5rem' 
+                  }} /> : 
+                  <Brightness4 sx={{ 
+                    fontSize: isLargeTablet ? '1.1rem' 
+                      : isSmallLaptop ? '1.4rem' 
+                      : isLargeLaptop ? '1.5rem'
+                      : isSmallDesktop ? '1.6rem'
+                      : isLargeDesktop ? '1.7rem'
+                      : isUltraWideDesktop ? '1.8rem' : '1.5rem' 
+                  }} />
                 }
               </IconButton>
             </Tooltip>
@@ -544,25 +651,54 @@ const Navbar: React.FC = () => {
               startIcon={isLargeTablet ? undefined : <PostAdd />}
               onClick={() => navigate('/app/jobs/create')}
               sx={{
-                mr: isLargeTablet ? 1 : isSmallLaptop ? 2 : 2.5,
+                mr: isLargeTablet ? 1 
+                  : isSmallLaptop ? 1.5 
+                  : isLargeLaptop ? 2
+                  : isSmallDesktop ? 2.5
+                  : isLargeDesktop ? 3
+                  : isUltraWideDesktop ? 3.5 : 2,
                 fontWeight: 'bold',
                 background: 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)',
-                boxShadow: '0 3px 10px rgba(76, 175, 80, 0.3)',
+                boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
                 '&:hover': {
                   background: 'linear-gradient(45deg, #2e7d32 30%, #1b5e20 90%)',
-                  boxShadow: '0 5px 15px rgba(76, 175, 80, 0.4)',
-                  transform: 'translateY(-1px)',
+                  boxShadow: isDesktop ? '0 8px 24px rgba(76, 175, 80, 0.5)' : '0 5px 15px rgba(76, 175, 80, 0.4)',
+                  transform: 'translateY(-2px)',
                 },
-                borderRadius: 1.5,
-                px: isLargeTablet ? 1.5 : isSmallLaptop ? 3 : 4,
-                py: isLargeTablet ? 0.5 : isSmallLaptop ? 1 : 1.2,
-                fontSize: isLargeTablet ? '0.8rem' : isSmallLaptop ? '1rem' : '1.1rem',
+                borderRadius: 2,
+                px: isLargeTablet ? 1.5 
+                  : isSmallLaptop ? 2 
+                  : isLargeLaptop ? 2.2
+                  : isSmallDesktop ? 2.5
+                  : isLargeDesktop ? 2.8
+                  : isUltraWideDesktop ? 3 : 2.2,
+                py: isLargeTablet ? 0.8 
+                  : isSmallLaptop ? 1 
+                  : isLargeLaptop ? 1
+                  : isSmallDesktop ? 1.1
+                  : isLargeDesktop ? 1.2
+                  : isUltraWideDesktop ? 1.3 : 1,
+                fontSize: isLargeTablet ? '0.8rem' 
+                  : isSmallLaptop ? '0.95rem' 
+                  : isLargeLaptop ? '1rem'
+                  : isSmallDesktop ? '1rem'
+                  : isLargeDesktop ? '1.05rem'
+                  : isUltraWideDesktop ? '1.1rem' : '1rem',
                 minWidth: isLargeTablet ? 'auto' : undefined,
-                height: isLargeTablet ? 36 : isSmallLaptop ? 40 : 44,
+                height: isLargeTablet ? 36 
+                  : isSmallLaptop ? 40 
+                  : isLargeLaptop ? 44
+                  : isSmallDesktop ? 46
+                  : isLargeDesktop ? 48
+                  : isUltraWideDesktop ? 50 : 44,
                 transition: 'all 0.3s ease',
               }}
             >
-              {isLargeLaptop ? 'Post New Job' : 'Post Job'}
+              {isLargeLaptop ? 'Post New Job' 
+                : isSmallDesktop ? 'Post New Job'
+                : isLargeDesktop ? 'Post New Job'
+                : isUltraWideDesktop ? 'Post New Job'
+                : 'Post Job'}
             </Button>
           )}
 
@@ -579,14 +715,32 @@ const Navbar: React.FC = () => {
                 <Avatar 
                   sx={{ 
                     bgcolor: 'primary.main',
-                    width: isLargeTablet ? 28 : isSmallLaptop ? 36 : 40,
-                    height: isLargeTablet ? 28 : isSmallLaptop ? 36 : 40,
-                    fontSize: isLargeTablet ? '0.8rem' : isSmallLaptop ? '1rem' : '1.1rem',
-                    boxShadow: isLaptop ? '0 2px 8px rgba(76, 175, 80, 0.2)' : 'none',
-                    transition: 'all 0.2s ease',
+                    width: isLargeTablet ? 28 
+                      : isSmallLaptop ? 36 
+                      : isLargeLaptop ? 40
+                      : isSmallDesktop ? 42
+                      : isLargeDesktop ? 44
+                      : isUltraWideDesktop ? 46 : 40,
+                    height: isLargeTablet ? 28 
+                      : isSmallLaptop ? 36 
+                      : isLargeLaptop ? 40
+                      : isSmallDesktop ? 42
+                      : isLargeDesktop ? 44
+                      : isUltraWideDesktop ? 46 : 40,
+                    fontSize: isLargeTablet ? '0.8rem' 
+                      : isSmallLaptop ? '1rem' 
+                      : isLargeLaptop ? '1.1rem'
+                      : isSmallDesktop ? '1.2rem'
+                      : isLargeDesktop ? '1.3rem'
+                      : isUltraWideDesktop ? '1.4rem' : '1.1rem',
+                    boxShadow: isLaptop ? '0 3px 12px rgba(76, 175, 80, 0.25)' : 'none',
+                    transition: 'all 0.3s ease',
+                    border: isDesktop ? '3px solid transparent' : '2px solid transparent',
+                    backgroundClip: 'padding-box',
                     '&:hover': {
-                      transform: 'scale(1.05)',
-                      boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+                      transform: 'scale(1.08)',
+                      boxShadow: isDesktop ? '0 6px 20px rgba(76, 175, 80, 0.4)' : '0 4px 12px rgba(76, 175, 80, 0.3)',
+                      borderColor: alpha(theme.palette.primary.light, 0.5),
                     }
                   }}
                 >
@@ -655,7 +809,16 @@ const Navbar: React.FC = () => {
               </Menu>
             </Box>
           ) : (
-            <Box sx={{ display: 'flex', gap: isMobile ? 0.5 : (isLargeTablet ? 0.5 : isSmallLaptop ? 1 : 1.5) }}>
+            <Box sx={{ 
+              display: 'flex', 
+              gap: isMobile ? 0.5 
+                : isLargeTablet ? 0.5 
+                : isSmallLaptop ? 1 
+                : isLargeLaptop ? 1.5
+                : isSmallDesktop ? 2
+                : isLargeDesktop ? 2.5
+                : isUltraWideDesktop ? 3 : 1.5 
+            }}>
               <Button
                 color="inherit"
                 startIcon={isMobile ? undefined : ((isLargeTablet || isSmallLaptop) ? undefined : <Login />)}
@@ -663,22 +826,51 @@ const Navbar: React.FC = () => {
                 variant={isMobile ? 'contained' : 'text'}
                 sx={{ 
                   fontWeight: 'bold',
-                  px: isMobile ? 1.5 : (isLargeTablet ? 1 : isSmallLaptop ? 2.5 : 3),
-                  py: isMobile ? 0.5 : (isLargeTablet ? 0.5 : isSmallLaptop ? 1 : 1.2),
-                  fontSize: isMobile ? '0.75rem' : (isLargeTablet ? '0.8rem' : isSmallLaptop ? '1rem' : '1.1rem'),
+                  px: isMobile ? 1.5 
+                    : isLargeTablet ? 1.5 
+                    : isSmallLaptop ? 2 
+                    : isLargeLaptop ? 2.5
+                    : isSmallDesktop ? 2.5
+                    : isLargeDesktop ? 3
+                    : isUltraWideDesktop ? 3.2 : 2.5,
+                  py: isMobile ? 0.5 
+                    : isLargeTablet ? 0.75 
+                    : isSmallLaptop ? 1 
+                    : isLargeLaptop ? 1.25
+                    : isSmallDesktop ? 1.25
+                    : isLargeDesktop ? 1.5
+                    : isUltraWideDesktop ? 1.5 : 1.25,
+                  fontSize: isMobile ? '0.75rem' 
+                    : isLargeTablet ? '0.8rem' 
+                    : isSmallLaptop ? '0.95rem' 
+                    : isLargeLaptop ? '1rem'
+                    : isSmallDesktop ? '1rem'
+                    : isLargeDesktop ? '1.05rem'
+                    : isUltraWideDesktop ? '1.1rem' : '1rem',
                   minWidth: isMobile ? 'auto' : ((isLargeTablet || isSmallLaptop) ? 'auto' : undefined),
-                  height: isMobile ? 32 : (isLargeTablet ? 36 : isSmallLaptop ? 40 : 44),
-                  borderRadius: 1.5,
+                  height: isMobile ? 32 
+                    : isLargeTablet ? 36 
+                    : isSmallLaptop ? 40 
+                    : isLargeLaptop ? 44
+                    : isSmallDesktop ? 46
+                    : isLargeDesktop ? 48
+                    : isUltraWideDesktop ? 50 : 44,
+                  borderRadius: 2,
                   background: isMobile ? 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)' : 'transparent',
                   color: isMobile ? 'white' : 'inherit',
                   boxShadow: isMobile ? '0 2px 8px rgba(76, 175, 80, 0.3)' : 'none',
                   '&:hover': {
                     backgroundColor: isMobile ? 'transparent' : 'primary.light',
                     background: isMobile ? 'linear-gradient(45deg, #2e7d32 30%, #1b5e20 90%)' : undefined,
-                    boxShadow: isMobile ? '0 4px 12px rgba(76, 175, 80, 0.4)' : (isLaptop ? '0 2px 8px rgba(76, 175, 80, 0.2)' : 'none'),
-                    transform: isLaptop ? 'translateY(-1px)' : 'none',
+                    boxShadow: isMobile ? '0 4px 12px rgba(76, 175, 80, 0.4)' 
+                      : isDesktop ? '0 4px 16px rgba(76, 175, 80, 0.25)'
+                      : isLaptop ? '0 2px 8px rgba(76, 175, 80, 0.2)' : 'none',
+                    transform: (isLaptop || isDesktop) ? 'translateY(-2px)' : 'none',
                   },
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:active': {
+                    transform: 'scale(0.98)',
+                  },
                 }}
               >
                 Login
@@ -690,25 +882,53 @@ const Navbar: React.FC = () => {
                   onClick={() => navigate('/register')}
                   sx={{ 
                     fontWeight: 'bold',
-                    px: isLargeTablet ? 1 : isSmallLaptop ? 2.5 : 3,
-                    py: isLargeTablet ? 0.5 : isSmallLaptop ? 1 : 1.2,
-                    fontSize: isLargeTablet ? '0.8rem' : isSmallLaptop ? '1rem' : '1.1rem',
+                    px: isLargeTablet ? 1.5 
+                      : isSmallLaptop ? 2 
+                      : isLargeLaptop ? 2.5
+                      : isSmallDesktop ? 2.5
+                      : isLargeDesktop ? 3
+                      : isUltraWideDesktop ? 3.2 : 2.5,
+                    py: isLargeTablet ? 0.75 
+                      : isSmallLaptop ? 1 
+                      : isLargeLaptop ? 1.25
+                      : isSmallDesktop ? 1.25
+                      : isLargeDesktop ? 1.5
+                      : isUltraWideDesktop ? 1.5 : 1.25,
+                    fontSize: isLargeTablet ? '0.8rem' 
+                      : isSmallLaptop ? '0.95rem' 
+                      : isLargeLaptop ? '1rem'
+                      : isSmallDesktop ? '1rem'
+                      : isLargeDesktop ? '1.05rem'
+                      : isUltraWideDesktop ? '1.1rem' : '1rem',
                     minWidth: (isLargeTablet || isSmallLaptop) ? 'auto' : undefined,
-                    height: isLargeTablet ? 36 : isSmallLaptop ? 40 : 44,
-                    borderRadius: 1.5,
-                    boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)',
+                    height: isLargeTablet ? 36 
+                      : isSmallLaptop ? 40 
+                      : isLargeLaptop ? 44
+                      : isSmallDesktop ? 46
+                      : isLargeDesktop ? 48
+                      : isUltraWideDesktop ? 50 : 44,
+                    borderRadius: 2,
+                    boxShadow: '0 3px 12px rgba(76, 175, 80, 0.3)',
                     '&:hover': {
-                      boxShadow: '0 4px 12px rgba(76, 175, 80, 0.4)',
-                      transform: 'translateY(-1px)',
+                      boxShadow: isDesktop ? '0 8px 24px rgba(76, 175, 80, 0.5)' : '0 4px 12px rgba(76, 175, 80, 0.4)',
+                      transform: 'translateY(-2px)',
                     },
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:active': {
+                      transform: 'scale(0.98)',
+                    },
                   }}
                 >
-                  {isLargeLaptop ? 'Sign Up Free' : 'Sign Up'}
+                  {isLargeLaptop ? 'Sign Up Free' 
+                    : isSmallDesktop ? 'Sign Up Free'
+                    : isLargeDesktop ? 'Join Free Now'
+                    : isUltraWideDesktop ? 'Join Free Now'
+                    : 'Sign Up'}
                 </Button>
               )}
             </Box>
           )}
+          </Box>
         </Toolbar>
       </AppBar>
 

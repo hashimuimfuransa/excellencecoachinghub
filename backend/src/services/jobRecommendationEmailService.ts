@@ -175,26 +175,19 @@ export class JobRecommendationEmailService {
       // 2. Have email notifications enabled
       // 3. Have completed profiles (skills, experience, or education)
       // 4. Are active and email verified
+      // Be more inclusive - get most active users (excluding only admin/employer roles)
       const users = await User.find({
-        $and: [
-          {
-            $or: [
-              { role: 'student' },
-              { role: 'user' },
-              { userType: 'job_seeker' },
-              { userType: 'student' }
-            ]
-          },
-          { isActive: true },
-          { isEmailVerified: true },
-          { emailNotifications: { $ne: false } }, // Include undefined as true
-          {
-            $or: [
-              { skills: { $exists: true, $not: { $size: 0 } } },
-              { experience: { $exists: true, $not: { $size: 0 } } },
-              { education: { $exists: true, $not: { $size: 0 } } }
-            ]
-          }
+        isActive: true,
+        role: { $nin: ['admin', 'super_admin', 'employer'] }, // Exclude admin and employer roles
+        // Don't require isEmailVerified as it might be undefined for some users
+        emailNotifications: { $ne: false }, // Include undefined as true
+        // Include users with any profile information
+        $or: [
+          { skills: { $exists: true, $not: { $size: 0 } } },
+          { experience: { $exists: true, $not: { $size: 0 } } },
+          { education: { $exists: true, $not: { $size: 0 } } },
+          { bio: { $exists: true, $ne: '' } },
+          { location: { $exists: true, $ne: '' } }
         ]
       });
 
@@ -231,26 +224,33 @@ export class JobRecommendationEmailService {
     const hasBasicInfo = user.firstName && user.email;
     
     // Additional profile completeness indicators
-    const hasBio = user.bio && user.bio.trim().length > 0;
+    const hasBio = user.bio && user.bio.trim().length > 10; // At least 10 characters
     const hasLocation = user.location && user.location.trim().length > 0;
     const hasPhone = user.phone && user.phone.trim().length > 0;
 
-    // Calculate profile completion score
+    // Calculate profile completion score (more inclusive)
     let completionScore = 0;
     if (hasBasicInfo) completionScore += 30; // Basic info is most important
-    if (hasSkills) completionScore += 25;
-    if (hasExperience) completionScore += 20;
-    if (hasEducation) completionScore += 15;
-    if (hasBio) completionScore += 5;
-    if (hasLocation) completionScore += 3;
-    if (hasPhone) completionScore += 2;
+    if (hasSkills) completionScore += 30; // Skills are crucial for matching
+    if (hasExperience) completionScore += 25;
+    if (hasEducation) completionScore += 20;
+    if (hasBio) completionScore += 10;
+    if (hasLocation) completionScore += 5;
+    if (hasPhone) completionScore += 5;
 
-    // User needs at least 55% completion (basic info + one major section)
-    const isComplete = completionScore >= 55;
+    // More inclusive: User needs at least 45% completion (basic info + some additional info)
+    const isComplete = completionScore >= 45;
     
-    if (!isComplete) {
-      console.log(`⚠️  Incomplete profile for ${user.email}: score ${completionScore}% (needs 55%+)`);
-    }
+    console.log(`👤 Profile analysis for ${user.email}: ${completionScore}% completion`, {
+      hasBasicInfo,
+      hasSkills,
+      hasExperience,
+      hasEducation,
+      hasBio,
+      hasLocation,
+      hasPhone,
+      isComplete
+    });
     
     return isComplete;
   }
@@ -275,44 +275,128 @@ export class JobRecommendationEmailService {
         let matchScore = 0;
         let maxPossibleScore = 100; // Simplified scoring
 
-        // Skills matching (50% weight)
-        const jobSkills = (job.skills || []).map(skill => skill.toLowerCase());
-        if (jobSkills.length > 0 && allUserSkills.length > 0) {
-          const matchingSkills = jobSkills.filter(jobSkill => 
-            allUserSkills.some(userSkill => 
-              userSkill === jobSkill || 
-              userSkill.includes(jobSkill) || 
-              jobSkill.includes(userSkill)
-            )
+        // Skills matching (40% weight) - more comprehensive
+        const jobSkills = (job.skills || job.skillsRequired || []).map(skill => skill.toLowerCase());
+        const jobTitle = (job.title || '').toLowerCase();
+        const jobDescription = (job.description || '').toLowerCase();
+        
+        if (allUserSkills.length > 0) {
+          let skillMatchCount = 0;
+          let skillScore = 0;
+          
+          // Check skills array
+          if (jobSkills.length > 0) {
+            const matchingSkills = jobSkills.filter(jobSkill => 
+              allUserSkills.some(userSkill => 
+                userSkill === jobSkill || 
+                userSkill.includes(jobSkill) || 
+                jobSkill.includes(userSkill) ||
+                // Fuzzy matching for similar skills
+                (userSkill.length > 3 && jobSkill.includes(userSkill.substring(0, 3))) ||
+                (jobSkill.length > 3 && userSkill.includes(jobSkill.substring(0, 3)))
+              )
+            );
+            skillMatchCount += matchingSkills.length;
+            if (matchingSkills.length > 0) {
+              skillScore += (matchingSkills.length / Math.max(jobSkills.length, 1)) * 30;
+            }
+          }
+          
+          // Check job title for skill matches
+          const titleMatches = allUserSkills.filter(skill => 
+            jobTitle.includes(skill) || skill.includes(jobTitle.split(' ')[0])
           );
+          skillMatchCount += titleMatches.length;
+          skillScore += titleMatches.length * 5;
           
-          if (matchingSkills.length > 0) {
-            const skillScore = (matchingSkills.length / Math.max(jobSkills.length, 1)) * 50;
-            matchScore += skillScore;
-          }
+          // Check job description for skill matches (limited weight)
+          const descriptionMatches = allUserSkills.filter(skill => 
+            jobDescription.includes(skill)
+          );
+          skillMatchCount += Math.min(descriptionMatches.length, 2); // Limit description matches
+          skillScore += Math.min(descriptionMatches.length * 2, 5);
+          
+          matchScore += Math.min(skillScore, 40); // Cap at 40%
         }
 
-        // Education matching (25% weight)
-        if (job.educationLevel && userEducation.length > 0) {
+        // Education matching (20% weight) - more flexible
+        if (userEducation.length > 0) {
           const userDegrees = userEducation.map(edu => edu.degree?.toLowerCase() || '');
-          const jobEducationLevel = job.educationLevel.toLowerCase();
+          const userFields = userEducation.map(edu => edu.fieldOfStudy?.toLowerCase() || '');
+          const allUserEducation = [...userDegrees, ...userFields].filter(Boolean);
           
-          const educationMatch = userDegrees.some(degree => {
-            return degree.includes(jobEducationLevel) || jobEducationLevel.includes(degree);
-          });
+          let educationScore = 0;
           
-          if (educationMatch) {
-            matchScore += 25;
+          if (job.educationLevel) {
+            const jobEducationLevel = job.educationLevel.toLowerCase();
+            const educationMatch = allUserEducation.some(item => {
+              return item.includes(jobEducationLevel) || jobEducationLevel.includes(item);
+            });
+            
+            if (educationMatch) {
+              educationScore += 15;
+            }
           }
+          
+          // Check job title/description for education field matches
+          const fieldMatches = allUserEducation.filter(item => 
+            jobTitle.includes(item) || jobDescription.includes(item)
+          );
+          educationScore += Math.min(fieldMatches.length * 3, 5);
+          
+          matchScore += educationScore;
         }
 
-        // Location matching (25% weight)
-        if (job.location && userLocation) {
+        // Location matching (20% weight) - more inclusive
+        let locationScore = 0;
+        if (job.location) {
           const jobLocation = job.location.toLowerCase();
-          if (jobLocation.includes(userLocation) || userLocation.includes(jobLocation) ||
-              jobLocation.includes('remote') || jobLocation.includes('anywhere')) {
-            matchScore += 25;
+          
+          // Perfect location match
+          if (userLocation && (jobLocation.includes(userLocation) || userLocation.includes(jobLocation))) {
+            locationScore = 20;
           }
+          // Remote work friendly
+          else if (jobLocation.includes('remote') || jobLocation.includes('anywhere') || 
+                   jobLocation.includes('work from home') || jobLocation.includes('hybrid')) {
+            locationScore = 15;
+          }
+          // Same country (for Rwanda-based platform)
+          else if (jobLocation.includes('rwanda') || jobLocation.includes('kigali')) {
+            locationScore = 10;
+          }
+          // Any location specified gets some points
+          else {
+            locationScore = 5;
+          }
+        } else {
+          // No location specified gets neutral points
+          locationScore = 10;
+        }
+        
+        matchScore += locationScore;
+
+        // Experience matching (20% weight) - bonus for relevant experience
+        if (userExperience.length > 0) {
+          const userJobTitles = userExperience.map(exp => (exp.jobTitle || '').toLowerCase());
+          const userCompanies = userExperience.map(exp => (exp.company || '').toLowerCase());
+          const userTechnologies = userExperience.flatMap(exp => (exp.technologies || []).map(t => t.toLowerCase()));
+          
+          let experienceScore = 0;
+          
+          // Job title similarity
+          const titleSimilarity = userJobTitles.filter(title => 
+            jobTitle.includes(title) || title.includes(jobTitle.split(' ')[0])
+          );
+          experienceScore += Math.min(titleSimilarity.length * 8, 12);
+          
+          // Technology experience
+          const techMatches = userTechnologies.filter(tech => 
+            jobTitle.includes(tech) || jobDescription.includes(tech) || jobSkills.includes(tech)
+          );
+          experienceScore += Math.min(techMatches.length * 3, 8);
+          
+          matchScore += experienceScore;
         }
 
         const matchPercentage = Math.round(matchScore);
@@ -323,13 +407,47 @@ export class JobRecommendationEmailService {
         };
       });
 
-      // Filter jobs with at least 40% match and sort by match percentage
-      const goodMatches = jobMatches
-        .filter(job => job.matchPercentage >= 40)
-        .sort((a, b) => b.matchPercentage - a.matchPercentage)
-        .slice(0, 5); // Limit to top 5 recommendations
+      // More inclusive matching - provide recommendations for more users
+      console.log(`📊 Job matching for ${user.email}:`, {
+        totalJobs: jobMatches.length,
+        matches40Plus: jobMatches.filter(job => job.matchPercentage >= 40).length,
+        matches30Plus: jobMatches.filter(job => job.matchPercentage >= 30).length,
+        matches20Plus: jobMatches.filter(job => job.matchPercentage >= 20).length
+      });
 
-      return goodMatches;
+      // Try multiple thresholds to ensure users get recommendations
+      let goodMatches = jobMatches
+        .filter(job => job.matchPercentage >= 40)
+        .sort((a, b) => b.matchPercentage - a.matchPercentage);
+
+      // If no matches at 40%, try 30%
+      if (goodMatches.length === 0) {
+        goodMatches = jobMatches
+          .filter(job => job.matchPercentage >= 30)
+          .sort((a, b) => b.matchPercentage - a.matchPercentage);
+        console.log(`⚠️ Using 30% threshold for ${user.email}, found ${goodMatches.length} matches`);
+      }
+
+      // If still no matches at 30%, try 20%
+      if (goodMatches.length === 0) {
+        goodMatches = jobMatches
+          .filter(job => job.matchPercentage >= 20)
+          .sort((a, b) => b.matchPercentage - a.matchPercentage);
+        console.log(`⚠️ Using 20% threshold for ${user.email}, found ${goodMatches.length} matches`);
+      }
+
+      // If still no matches, include top jobs anyway
+      if (goodMatches.length === 0 && jobMatches.length > 0) {
+        goodMatches = jobMatches
+          .sort((a, b) => b.matchPercentage - a.matchPercentage)
+          .slice(0, 3);
+        console.log(`⚠️ Using any match for ${user.email}, found ${goodMatches.length} jobs`);
+      }
+
+      const finalMatches = goodMatches.slice(0, 5); // Limit to top 5 recommendations
+      console.log(`✅ Final recommendations for ${user.email}: ${finalMatches.length} jobs`);
+
+      return finalMatches;
     } catch (error) {
       console.error(`Error getting job recommendations for user ${user.email}:`, error);
       return [];

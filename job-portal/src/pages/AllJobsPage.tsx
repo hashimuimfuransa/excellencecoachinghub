@@ -94,7 +94,7 @@ import { useAuth } from '../contexts/AuthContext';
 import FloatingChatButton from '../components/chat/FloatingChatButton';
 import FloatingContact from '../components/FloatingContact';
 import Navbar from '../components/Navbar';
-import QuickJobFilters from '../components/QuickJobFilters';
+import CompactJobFilter from '../components/CompactJobFilter';
 import SmartJobSearch, { SearchType } from '../components/SmartJobSearch';
 import { useJobFilters, FilterState } from '../hooks/useJobFilters';
 import jobService from '../services/jobService';
@@ -249,6 +249,60 @@ const AllJobsPage: React.FC = () => {
   });
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Helper function to get the current content type
+  const getCurrentContentType = () => {
+    const selectedCategories = filters.categories || [];
+    const isShowingInternships = selectedCategories.includes('internships') && selectedCategories.length === 1;
+    const isShowingJobs = selectedCategories.includes('jobs') && selectedCategories.length === 1;
+    
+    if (isShowingInternships) return 'internships';
+    if (isShowingJobs) return 'jobs';
+    return 'opportunities';
+  };
+
+  // Helper function to get display text based on current filters
+  const getDisplayInfo = () => {
+    const selectedCategories = filters.categories || [];
+    const isShowingInternships = selectedCategories.includes('internships') && selectedCategories.length === 1;
+    const isShowingJobs = selectedCategories.includes('jobs') && selectedCategories.length === 1;
+    const isShowingAll = selectedCategories.length === 0 || selectedCategories.includes('all');
+    
+    if (isShowingInternships) {
+      return {
+        title: `${filteredJobs.length} Internship${filteredJobs.length === 1 ? '' : 's'} Found`,
+        subtitle: 'Showing all available internship opportunities'
+      };
+    } else if (isShowingJobs) {
+      return {
+        title: `${filteredJobs.length} Job${filteredJobs.length === 1 ? '' : 's'} Found`,
+        subtitle: 'Showing all available job positions'
+      };
+    } else if (isShowingAll) {
+      return {
+        title: `${filteredJobs.length} Opportunit${filteredJobs.length === 1 ? 'y' : 'ies'} Found`,
+        subtitle: 'Showing all available positions and internships'
+      };
+    } else {
+      // Multiple categories or specific categories selected
+      const categoryNames = selectedCategories
+        .filter(cat => cat !== 'jobs' && cat !== 'internships')
+        .map(cat => cat.charAt(0).toUpperCase() + cat.slice(1))
+        .join(', ');
+      
+      if (categoryNames) {
+        return {
+          title: `${filteredJobs.length} ${categoryNames} Opportunit${filteredJobs.length === 1 ? 'y' : 'ies'} Found`,
+          subtitle: `Showing opportunities in ${categoryNames.toLowerCase()}`
+        };
+      } else {
+        return {
+          title: `${filteredJobs.length} Opportunit${filteredJobs.length === 1 ? 'y' : 'ies'} Found`,
+          subtitle: 'Showing filtered opportunities'
+        };
+      }
+    }
+  };
+
   // Helper function to transform internship to job format
   const transformInternshipToJob = (internship: any): Job => {
     return {
@@ -265,7 +319,7 @@ const AllJobsPage: React.FC = () => {
         currency: internship.stipend.currency || 'USD'
       } : undefined,
       jobType: 'internship',
-      category: 'Internship',
+      category: 'internships',
       skills: internship.skills || [],
       skillsRequired: internship.skills || [],
       experience: internship.experienceLevel,
@@ -312,19 +366,25 @@ const AllJobsPage: React.FC = () => {
       
       // Fetch jobs and internships in parallel
       const [jobsResponse, internshipsResponse] = await Promise.all([
-        // Fetch jobs
+        // Fetch jobs (excluding internship category jobs since those are handled by internship service)
         jobService.getJobs({}, 1, MAX_ITEMS_TO_FETCH).catch(err => {
           console.warn('Error fetching jobs:', err);
           return { data: [], pagination: { total: 0 } };
         }),
-        // Fetch internships
+        // Fetch internships (now includes both dedicated internships and jobs with category 'internships')
         internshipService.getInternships({ limit: MAX_ITEMS_TO_FETCH }).catch(err => {
           console.warn('Error fetching internships:', err);
           return { data: [], pagination: { total: 0 } };
         })
       ]);
 
-      const jobs = jobsResponse.data || [];
+      // Filter out jobs with category 'internships' to avoid duplication
+      const allJobsData = jobsResponse.data || [];
+      const jobs = allJobsData.filter(job => 
+        job.category !== 'internships' && 
+        job.category !== 'Internship' &&
+        job.jobType !== 'internship'
+      );
       const internships = internshipsResponse.data || [];
       
       // Transform internships to job format
@@ -335,10 +395,9 @@ const AllJobsPage: React.FC = () => {
       
       setJobs(allJobs);
       
-      const totalCount = (jobsResponse.pagination?.total || jobs.length) + 
-                        (internshipsResponse.pagination?.total || internships.length);
+      const totalCount = jobs.length + internships.length;
       
-      console.log(`Loaded ${jobs.length} jobs and ${internships.length} internships (${totalCount} total)`);
+      console.log(`Loaded ${jobs.length} jobs (excluded ${allJobsData.length - jobs.length} internship jobs) and ${internships.length} internships (${totalCount} total)`);
       
     } catch (err) {
       console.error('Error fetching jobs and internships:', err);
@@ -442,6 +501,22 @@ const AllJobsPage: React.FC = () => {
     fetchCategories();
   }, []);
 
+  // Update page title based on current filters
+  useEffect(() => {
+    const displayInfo = getDisplayInfo();
+    const selectedCategories = filters.categories || [];
+    
+    if (selectedCategories.includes('internships') && selectedCategories.length === 1) {
+      document.title = 'Internships - ExJobNet';
+    } else if (selectedCategories.includes('jobs') && selectedCategories.length === 1) {
+      document.title = 'Jobs - ExJobNet';
+    } else if (selectedCategories.length === 0) {
+      document.title = 'All Opportunities - ExJobNet';
+    } else {
+      document.title = 'Opportunities - ExJobNet';
+    }
+  }, [filters.categories, filteredJobs.length]);
+
   // Note: We no longer redirect logged-in users automatically
   // This allows logged-in users to browse all jobs if they want to
 
@@ -538,7 +613,7 @@ const AllJobsPage: React.FC = () => {
             py: 1
           }}>
             <Typography variant={isMobile ? "subtitle1" : "h6"} fontWeight="bold">
-              Filter Jobs
+              Filter {getCurrentContentType().charAt(0).toUpperCase() + getCurrentContentType().slice(1)}
             </Typography>
             <IconButton onClick={() => setSidebarOpen(false)} size="small">
               <Clear fontSize="small" />
@@ -628,12 +703,13 @@ const AllJobsPage: React.FC = () => {
             )}
           </Box>
           
-          <QuickJobFilters
+          <CompactJobFilter
             filters={filters}
             onFilterChange={updateFilter}
             onClearFilters={clearFilters}
             totalJobs={filteredJobs.length}
             isLoading={loading || filtersLoading}
+            type="jobs"
           />
         </Box>
       </Drawer>
@@ -757,7 +833,7 @@ const AllJobsPage: React.FC = () => {
                           lineHeight: 1.1
                         }}
                       >
-                        Create perfect resume
+                        Create perfect <br /> resume
                       </Typography>
                     </Box>
                   </Button>
@@ -792,7 +868,7 @@ const AllJobsPage: React.FC = () => {
                           lineHeight: 1.2
                         }}
                       >
-                        Network
+                        Networking
                       </Typography>
                       <Typography 
                         variant="caption" 
@@ -803,7 +879,8 @@ const AllJobsPage: React.FC = () => {
                           lineHeight: 1.1
                         }}
                       >
-                        Connect & grow
+                      Build Connections.<br />
+                       Unlock Success.
                       </Typography>
                     </Box>
                   </Button>
@@ -989,7 +1066,10 @@ const AllJobsPage: React.FC = () => {
                       />
                     )}
                     <Typography variant="body2" color="text.secondary">
-                      {filters.location ? `Showing jobs in ${filters.location}` : 'Select a location to filter jobs'}
+                      {filters.location ? 
+                        `Showing ${getCurrentContentType()} in ${filters.location}` : 
+                        `Select a location to filter ${getCurrentContentType()}`
+                      }
                     </Typography>
                   </Stack>
                 </Box>
@@ -1002,7 +1082,7 @@ const AllJobsPage: React.FC = () => {
               searchType={filters.searchType}
               onSearchChange={updateSearchTerm}
               onSearchTypeChange={updateSearchType}
-              placeholder={isMobile ? "Search jobs..." : undefined}
+              placeholder={isMobile ? `Search ${getCurrentContentType()}...` : undefined}
               size={isMobile ? 'small' : 'medium'}
               showSearchType={!isMobile}
               recentSearches={searchSuggestions.recentSearches}
@@ -1014,10 +1094,68 @@ const AllJobsPage: React.FC = () => {
               isLoading={loading || filtersLoading}
             />
             
+            {/* Category Filter Tabs */}
+            <Box sx={{ mt: 3, mb: 2 }}>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
+                Browse by Category
+              </Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ gap: 1 }}>
+                {[
+                  { key: 'all', label: 'All Opportunities', color: 'primary', icon: '🔍' },
+                  { key: 'jobs', label: 'Jobs', color: 'primary', icon: '💼' },
+                  { key: 'internships', label: 'Internships', color: 'success', icon: '🎓' },
+                  { key: 'access_to_finance', label: 'Access to Finance', color: 'warning', icon: '💰' },
+                  { key: 'tenders', label: 'Tenders', color: 'error', icon: '📋' },
+                  { key: 'trainings', label: 'Trainings', color: 'info', icon: '📚' },
+                  { key: 'scholarships', label: 'Scholarships', color: 'secondary', icon: '🎖️' }
+                ].map((category) => {
+                  const isSelected = filters.categories?.includes(category.key) || (category.key === 'all' && !filters.categories?.length);
+                  return (
+                    <Chip
+                      key={category.key}
+                      label={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <span>{category.icon}</span>
+                          {category.label}
+                        </Box>
+                      }
+                      onClick={() => {
+                        if (category.key === 'all') {
+                          updateFilter('categories', []);
+                        } else {
+                          const currentCategories = filters.categories || [];
+                          const newCategories = currentCategories.includes(category.key)
+                            ? currentCategories.filter(c => c !== category.key)
+                            : [category.key];
+                          updateFilter('categories', newCategories);
+                        }
+                      }}
+                      variant={isSelected ? 'filled' : 'outlined'}
+                      color={category.color as any}
+                      sx={{
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        borderRadius: 3,
+                        height: 36,
+                        fontWeight: isSelected ? 700 : 500,
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: `0 6px 20px ${alpha(theme.palette[category.color as keyof typeof theme.palette].main, 0.25)}`
+                        },
+                        ...(isSelected && {
+                          boxShadow: `0 4px 16px ${alpha(theme.palette[category.color as keyof typeof theme.palette].main, 0.3)}`
+                        })
+                      }}
+                    />
+                  );
+                })}
+              </Stack>
+            </Box>
+            
             <Grid container spacing={{ xs: 1.5, sm: 2, md: 3 }} alignItems="center" sx={{ mt: 2 }}>
               <Grid item xs={12} md={6}>
                 <Typography variant="body2" color="text.secondary">
-                  Showing {filteredJobs.length.toLocaleString()} of {totalJobs.toLocaleString()} jobs
+                  Showing {filteredJobs.length.toLocaleString()} of {totalJobs.toLocaleString()} {getCurrentContentType()}
                 </Typography>
               </Grid>
               <Grid item xs={12} md={6}>
@@ -1069,12 +1207,13 @@ const AllJobsPage: React.FC = () => {
               top: 100,
               flexShrink: 0
             }}>
-              <QuickJobFilters
+              <CompactJobFilter
                 filters={filters}
                 onFilterChange={updateFilter}
                 onClearFilters={clearFilters}
                 totalJobs={filteredJobs.length}
                 isLoading={loading || filtersLoading}
+                type="jobs"
               />
             </Box>
 
@@ -1097,10 +1236,10 @@ const AllJobsPage: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
                   <Box>
                     <Typography variant={isMobile ? 'h6' : 'h5'} sx={{ fontWeight: 700, mb: 0.5 }}>
-                      {loading ? 'Loading...' : `${filteredJobs.length} Jobs Found`}
+                      {loading ? 'Loading...' : getDisplayInfo().title}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}>
-                      Showing all available positions
+                      {getDisplayInfo().subtitle}
                     </Typography>
                   </Box>
                   
@@ -1241,7 +1380,7 @@ const AllJobsPage: React.FC = () => {
                       No opportunities found
                     </Typography>
                     <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 500, mx: 'auto' }}>
-                      We couldn't find any jobs matching your criteria. Try adjusting your search terms or browse different categories to discover new opportunities.
+                      We couldn't find any {getCurrentContentType()} matching your criteria. Try adjusting your search terms or browse different categories to discover new opportunities.
                     </Typography>
                     <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
                       <Button 

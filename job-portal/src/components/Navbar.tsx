@@ -128,6 +128,7 @@ const Navbar: React.FC = () => {
     // Protected items - only show if user is logged in (Network is the main page for logged users)
     { text: 'Network', icon: <Public />, path: '/app/network', protected: true, isHome: true },
     { text: 'Jobs', icon: <Work />, path: '/app/jobs', protected: true },
+    { text: 'Internships', icon: <School />, path: '/app/internships', protected: true },
     { text: 'Support', icon: <Support />, path: '/support' },
     { text: 'Contact Us', icon: <ContactSupport />, action: handleContactOpen, isContactDialog: true },
   ];
@@ -147,6 +148,7 @@ const Navbar: React.FC = () => {
   // For non-logged in users, show public menu
   const publicMenuItems = [
     { text: 'All Jobs', icon: <Work />, path: '/' },
+    { text: 'Internships', icon: <School />, path: '/internships' },
     { text: 'Support', icon: <Support />, path: '/support' },
     { text: 'Contact Us', icon: <ContactSupport />, action: handleContactOpen, isContactDialog: true },
   ];

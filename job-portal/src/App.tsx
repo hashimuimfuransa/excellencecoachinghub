@@ -48,6 +48,8 @@ import InterviewResultsPage from './pages/InterviewResultsPage';
 import InterviewFeedbackPage from './pages/InterviewFeedbackPage';
 import InterviewHistoryPage from './pages/InterviewHistoryPage';
 import AllJobsPage from './pages/AllJobsPage';
+import InternshipsPage from './pages/InternshipsPage';
+import SkillsPage from './pages/SkillsPage';
 import EmployerTalentPoolPage from './pages/EmployerTalentPoolPage';
 import EmployerSavedCandidatesPage from './pages/EmployerSavedCandidatesPage';
 import EmployerHiredPage from './pages/EmployerHiredPage';
@@ -113,6 +115,8 @@ function App() {
             <Route path="/" element={<SmartHome />} />
             <Route path="/jobs" element={<AllJobsPage />} />
             <Route path="/jobs/:id" element={<JobDetailsPage />} />
+            <Route path="/internships" element={<InternshipsPage />} />
+            <Route path="/skills" element={<SkillsPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -204,6 +208,10 @@ function App() {
               <Route path="jobs/:id" element={<JobDetailsPage />} />
               <Route path="jobs/:jobId/apply" element={<QuickApplyPage />} />
               <Route path="saved-jobs" element={<SavedJobsPage />} />
+              
+              {/* Internships and Skills */}
+              <Route path="internships" element={<InternshipsPage />} />
+              <Route path="skills" element={<SkillsPage />} />
               
               {/* Applications */}
               <Route path="applications" element={<ApplicationsPage />} />

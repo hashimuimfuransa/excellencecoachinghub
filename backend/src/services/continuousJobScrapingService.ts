@@ -15,8 +15,8 @@ export class ContinuousJobScrapingService {
   private static lastSuccessfulScrape: Date | null = null;
   private static consecutiveFailures = 0;
   private static readonly MAX_CONSECUTIVE_FAILURES = 3;
-  private static readonly MIN_JOBS_THRESHOLD = 5; // Trigger scraping if less than this many new jobs today
-  private static readonly CHECK_INTERVAL_MINUTES = 15; // Check every 15 minutes
+  private static readonly MIN_JOBS_THRESHOLD = 3; // Trigger scraping if less than this many new jobs today (reduced for hosted)
+  private static readonly CHECK_INTERVAL_MINUTES = 10; // Check every 10 minutes (more frequent for hosted)
 
   /**
    * Initialize continuous job scraping
@@ -227,6 +227,25 @@ export class ContinuousJobScrapingService {
       if (stats.todayJobs < 10) {
         console.log('🔄 Low job count, forcing maintenance scraping');
         await this.performIntelligentScraping('manual');
+      }
+      
+      // In production/hosted mode, check if restart is needed for better performance
+      if (process.env.NODE_ENV === 'production') {
+        const uptime = process.uptime();
+        const uptimeHours = uptime / 3600;
+        
+        console.log(`📊 Server uptime: ${Math.round(uptimeHours)} hours`);
+        
+        // If server has been running for more than 20 hours and it's late night (3:30 AM), consider restart
+        if (uptimeHours > 20 && stats.todayJobs < 5) {
+          console.log('⚠️ Long uptime detected with low job activity. Considering graceful restart for optimization...');
+          
+          // Trigger a graceful restart signal (for PM2 or similar process managers)
+          setTimeout(() => {
+            console.log('🔄 Initiating graceful restart for daily optimization...');
+            process.kill(process.pid, 'SIGTERM');
+          }, 30000); // 30 seconds delay to complete current operations
+        }
       }
       
       console.log('✅ Daily maintenance completed');

@@ -103,13 +103,20 @@ const QuickJobFilters: React.FC<QuickJobFiltersProps> = ({
       label: 'Category',
       icon: <BusinessCenter fontSize="small" />,
       options: [
+        { value: 'jobs', label: 'Jobs', color: 'primary' },
+        { value: 'internships', label: 'Internships', color: 'success' },
+        { value: 'access_to_finance', label: 'Access to Finance', color: 'warning' },
+        { value: 'tenders', label: 'Tenders', color: 'error' },
+        { value: 'trainings', label: 'Trainings', color: 'info' },
+        { value: 'scholarships', label: 'Scholarships', color: 'secondary' },
         { value: 'technology', label: 'Technology', color: 'primary' },
         { value: 'healthcare', label: 'Healthcare', color: 'success' },
         { value: 'finance', label: 'Finance', color: 'warning' },
         { value: 'education', label: 'Education', color: 'info' },
         { value: 'marketing', label: 'Marketing', color: 'secondary' },
-        { value: 'sales', label: 'Sales', color: 'error' },
-        { value: 'internship', label: 'Internship', color: 'success' }
+        { value: 'business', label: 'Business', color: 'primary' },
+        { value: 'engineering', label: 'Engineering', color: 'error' },
+        { value: 'design', label: 'Design', color: 'secondary' }
       ]
     }
   ];
@@ -160,12 +167,25 @@ const QuickJobFilters: React.FC<QuickJobFiltersProps> = ({
   return (
     <Box
       sx={{
-        borderRadius: 2,
-        backgroundColor: alpha(theme.palette.background.paper, 0.9),
-        backdropFilter: 'blur(8px)',
-        border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-        p: 2,
-        mb: 2
+        borderRadius: 3,
+        background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.95)} 0%, ${alpha(theme.palette.background.paper, 0.9)} 100%)`,
+        backdropFilter: 'blur(12px)',
+        border: `2px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+        boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.1)}`,
+        p: 3,
+        mb: 3,
+        position: 'relative',
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 4,
+          background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 50%, ${theme.palette.success.main} 100%)`,
+          borderRadius: '3px 3px 0 0'
+        }
       }}
     >
       {/* Header */}
@@ -177,17 +197,42 @@ const QuickJobFilters: React.FC<QuickJobFiltersProps> = ({
           mb: 2
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <FilterList color="primary" />
-          <Typography variant="h6" fontWeight={600}>
-            Quick Filters
-          </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              borderRadius: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+              color: 'white',
+              boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`
+            }}
+          >
+            <FilterList />
+          </Box>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
+              Smart Filters
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Find your perfect match
+            </Typography>
+          </Box>
           {totalJobs > 0 && (
             <Chip
               size="small"
-              label={`${totalJobs.toLocaleString()} jobs`}
-              color="primary"
-              variant="outlined"
+              label={`${totalJobs.toLocaleString()} opportunities`}
+              sx={{
+                bgcolor: alpha(theme.palette.success.main, 0.15),
+                color: 'success.main',
+                fontWeight: 600,
+                '& .MuiChip-label': {
+                  px: 1.5
+                }
+              }}
             />
           )}
         </Box>
@@ -197,11 +242,20 @@ const QuickJobFilters: React.FC<QuickJobFiltersProps> = ({
             size="small"
             startIcon={<Clear />}
             onClick={onClearFilters}
+            variant="outlined"
             sx={{
               color: 'error.main',
+              borderColor: alpha(theme.palette.error.main, 0.3),
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 600,
               '&:hover': {
-                backgroundColor: alpha(theme.palette.error.main, 0.1)
-              }
+                backgroundColor: alpha(theme.palette.error.main, 0.1),
+                borderColor: 'error.main',
+                transform: 'translateY(-1px)',
+                boxShadow: `0 4px 12px ${alpha(theme.palette.error.main, 0.2)}`
+              },
+              transition: 'all 0.2s ease'
             }}
           >
             Clear All ({activeCount})
@@ -218,13 +272,27 @@ const QuickJobFilters: React.FC<QuickJobFiltersProps> = ({
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 0.5,
-                mb: 1,
-                fontWeight: 600,
-                color: 'text.secondary'
+                gap: 1,
+                mb: 1.5,
+                fontWeight: 700,
+                color: 'text.primary',
+                fontSize: '0.9rem'
               }}
             >
-              {filter.icon}
+              <Box
+                sx={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 1.5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  color: 'primary.main'
+                }}
+              >
+                {filter.icon}
+              </Box>
               {filter.label}
             </Typography>
             
@@ -248,15 +316,27 @@ const QuickJobFilters: React.FC<QuickJobFiltersProps> = ({
                     size="small"
                     sx={{
                       cursor: 'pointer',
-                      transition: 'all 0.2s ease',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      borderRadius: 2.5,
+                      fontWeight: isActive ? 700 : 500,
+                      fontSize: '0.8rem',
+                      height: 32,
                       '&:hover': {
-                        transform: 'translateY(-1px)',
-                        boxShadow: theme.shadows[4]
+                        transform: 'translateY(-2px) scale(1.02)',
+                        boxShadow: `0 6px 20px ${alpha(theme.palette[option.color || 'primary'].main, 0.25)}`,
+                        borderColor: theme.palette[option.color || 'primary'].main
                       },
                       ...(isActive && {
-                        fontWeight: 600,
-                        boxShadow: theme.shadows[2]
-                      })
+                        boxShadow: `0 4px 16px ${alpha(theme.palette[option.color || 'primary'].main, 0.3)}`,
+                        border: `2px solid ${theme.palette[option.color || 'primary'].main}`,
+                        '&:hover': {
+                          transform: 'translateY(-2px) scale(1.02)',
+                          boxShadow: `0 8px 24px ${alpha(theme.palette[option.color || 'primary'].main, 0.4)}`
+                        }
+                      }),
+                      '&:active': {
+                        transform: 'translateY(0) scale(0.98)'
+                      }
                     }}
                   />
                 );
@@ -264,7 +344,14 @@ const QuickJobFilters: React.FC<QuickJobFiltersProps> = ({
             </Box>
             
             {index < quickFilters.length - 1 && (
-              <Divider sx={{ mt: 2, opacity: 0.3 }} />
+              <Divider 
+                sx={{ 
+                  mt: 3, 
+                  mb: 1,
+                  opacity: 0.2,
+                  background: `linear-gradient(90deg, transparent 0%, ${alpha(theme.palette.divider, 0.5)} 50%, transparent 100%)`
+                }} 
+              />
             )}
           </Box>
         ))}

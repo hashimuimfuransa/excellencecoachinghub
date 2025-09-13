@@ -19,6 +19,7 @@ import {
   Send
 } from '@mui/icons-material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -28,6 +29,7 @@ const ForgotPasswordPage: React.FC = () => {
   const [mounted, setMounted] = useState(false);
   
   const navigate = useNavigate();
+  const { forgotPassword } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -46,15 +48,39 @@ const ForgotPasswordPage: React.FC = () => {
     setError('');
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await forgotPassword(email);
       setSuccess(true);
       // Redirect to login after 3 seconds
       setTimeout(() => {
         navigate('/login');
       }, 3000);
-    } catch (err) {
-      setError('Failed to send reset email. Please try again.');
+    } catch (err: any) {
+      console.error('Forgot password error:', err);
+      
+      // Handle different types of errors with user-friendly messages
+      let errorMessage = 'Failed to send reset email. Please try again.';
+      
+      if (err.message?.includes('No user found') || 
+          err.message?.includes('not found') ||
+          err.message?.includes('couldn\'t find an account')) {
+        errorMessage = 'We couldn\'t find an account with that email address. Please check your email and try again, or create a new account if you haven\'t registered yet.';
+      } else if (err.message?.includes('rate limit') || 
+                 err.message?.includes('too many')) {
+        errorMessage = 'Too many password reset attempts. Please wait a few minutes before trying again.';
+      } else if (err.message?.includes('server error') || 
+                 err.message?.includes('internal error')) {
+        errorMessage = 'Our servers are experiencing issues. Please try again in a few minutes.';
+      } else if (err.message?.includes('Failed to fetch') || 
+                 err.message?.includes('Network')) {
+        errorMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (err.message?.includes('timeout')) {
+        errorMessage = 'Request timed out. Please check your internet connection and try again.';
+      } else if (err.message && !err.message.includes('status code')) {
+        // Use the original error message if it doesn't contain technical status codes
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

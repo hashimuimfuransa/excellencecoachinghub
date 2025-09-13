@@ -322,9 +322,34 @@ export const useJobFilters = ({
 
     // Categories filter
     if (filters.categories.length > 0) {
-      filtered = filtered.filter(job =>
-        filters.categories.includes(job.category?.toLowerCase() || '')
-      );
+      filtered = filtered.filter(job => {
+        const jobCategory = job.category?.toLowerCase() || '';
+        
+        // Handle special category filters
+        if (filters.categories.includes('jobs')) {
+          // If 'jobs' is selected, include all non-internship jobs
+          if (jobCategory !== 'internships' && job.jobType !== 'internship') {
+            return true;
+          }
+        }
+        
+        if (filters.categories.includes('internships')) {
+          // If 'internships' is selected, include internship jobs
+          if (jobCategory === 'internships' || job.jobType === 'internship') {
+            return true;
+          }
+        }
+        
+        // For other specific categories, use direct matching
+        const otherCategories = filters.categories.filter(cat => 
+          cat !== 'jobs' && cat !== 'internships'
+        );
+        if (otherCategories.length > 0) {
+          return otherCategories.includes(jobCategory);
+        }
+        
+        return false;
+      });
     }
 
     // Companies filter

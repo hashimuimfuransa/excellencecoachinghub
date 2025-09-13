@@ -36,6 +36,7 @@ interface AuthContextType {
   setUserData: (userData: User) => void;
   hasRole: (role: UserRole) => boolean;
   hasAnyRole: (roles: UserRole[]) => boolean;
+  forgotPassword: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -151,6 +152,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return user ? roles.includes(user.role) : false;
   };
 
+  const forgotPassword = async (email: string): Promise<void> => {
+    try {
+      const { default: authService } = await import('../services/authService');
+      await authService.forgotPassword(email);
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
@@ -161,7 +171,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     updateUser,
     setUserData,
     hasRole,
-    hasAnyRole
+    hasAnyRole,
+    forgotPassword
   };
 
   return (

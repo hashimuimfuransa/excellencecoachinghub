@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
-import { Internship, JobApplication, JobCourseMatch, StudentProfile, User } from '../models';
-import { JobStatus, UserRole, EducationLevel } from '../types';
+import { Internship, Job, JobApplication, JobCourseMatch, StudentProfile, User } from '../models';
+import { JobStatus, UserRole, EducationLevel, JobCategory, JobType } from '../types';
 import { AuthRequest } from '../middleware/auth';
 
-// Get all internships with filtering
+// Get all internships with filtering (from both Internship model and Job model)
 export const getInternships = async (req: Request, res: Response) => {
   try {
     const {
@@ -21,51 +21,137 @@ export const getInternships = async (req: Request, res: Response) => {
       search
     } = req.query;
 
-    const query: any = {};
-
-    // Build filter query
-    if (status) query.status = status;
-    if (experienceLevel) query.experienceLevel = experienceLevel;
-    if (educationLevel) query.educationLevel = educationLevel;
-    if (location) query.location = { $regex: location, $options: 'i' };
-    if (workArrangement) query.workArrangement = workArrangement;
-    if (department) query.department = { $regex: department, $options: 'i' };
-    if (isPaid !== undefined) query.isPaid = isPaid === 'true';
-    if (isCurated !== undefined) query.isCurated = isCurated === 'true';
-    
-    if (skills) {
-      const skillsArray = Array.isArray(skills) ? skills : [skills];
-      query.skills = { $in: skillsArray };
-    }
-
-    // Search functionality - use text search for better performance
-    if (search) {
-      query.$text = { $search: search };
-    }
-
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
-    let internshipQuery = Internship.find(query)
-      .populate('employer', 'firstName lastName company email phone')
-      .skip(skip)
-      .limit(limitNum);
-
-    // If searching by text, sort by text search score
+    // === FETCH FROM INTERNSHIP MODEL ===
+    const internshipQuery: any = {};
+    if (status) internshipQuery.status = status;
+    if (experienceLevel) internshipQuery.experienceLevel = experienceLevel;
+    if (educationLevel) internshipQuery.educationLevel = educationLevel;
+    if (location) internshipQuery.location = { $regex: location, $options: 'i' };
+    if (workArrangement) internshipQuery.workArrangement = workArrangement;
+    if (department) internshipQuery.department = { $regex: department, $options: 'i' };
+    if (isPaid !== undefined) internshipQuery.isPaid = isPaid === 'true';
+    if (isCurated !== undefined) internshipQuery.isCurated = isCurated === 'true';
+    if (skills) {
+      const skillsArray = Array.isArray(skills) ? skills : [skills];
+      internshipQuery.skills = { $in: skillsArray };
+    }
     if (search) {
-      internshipQuery = internshipQuery.sort({ score: { $meta: 'textScore' } });
-    } else {
-      // Default sort by creation date
-      internshipQuery = internshipQuery.sort({ createdAt: -1 });
+      internshipQuery.$text = { $search: search };
     }
 
-    const internships = await internshipQuery;
-    const total = await Internship.countDocuments(query);
+    // === FETCH FROM JOB MODEL (internship jobs) ===
+    const jobQuery: any = {
+      $or: [
+        { category: JobCategory.INTERNSHIPS },
+        { jobType: JobType.INTERNSHIP }
+      ]
+    };
+    
+    // Apply the same filters to job query
+    if (status) jobQuery.status = status;
+    if (experienceLevel) jobQuery.experienceLevel = experienceLevel;
+    if (educationLevel) jobQuery.educationLevel = educationLevel;
+    if (location) jobQuery.location = { $regex: location, $options: 'i' };
+    if (isCurated !== undefined) jobQuery.isCurated = isCurated === 'true';
+    if (skills) {
+      const skillsArray = Array.isArray(skills) ? skills : [skills];
+      jobQuery.skills = { $in: skillsArray };
+    }
+    if (search) {
+      jobQuery.$text = { $search: search };
+    }
+
+    // Execute both queries in parallel
+    const [dedicatedInternships, jobInternships] = await Promise.all([
+      Internship.find(internshipQuery)
+        .populate('employer', 'firstName lastName company email phone')
+        .sort({ createdAt: -1 }),
+      Job.find(jobQuery)
+        .populate('employer', 'firstName lastName company email phone')
+        .sort({ createdAt: -1 })
+    ]);
+
+    // Transform job internships to match internship format
+    const transformedJobInternships = jobInternships.map(job => ({
+      _id: job._id,
+      title: job.title,
+      description: job.description,
+      company: job.company,
+      employer: job.employer,
+      location: job.location,
+      department: job.category === JobCategory.INTERNSHIPS ? 'General' : 'Technology', // Default department
+      numberOfPositions: 1, // Default value
+      applicationProcedure: 'Please apply through the platform',
+      internshipPeriod: {
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days from now
+        duration: '3 months'
+      },
+      isPaid: job.salary && job.salary.min > 0,
+      stipend: job.salary ? {
+        amount: job.salary.min || 0,
+        currency: job.salary.currency || 'USD',
+        frequency: 'monthly'
+      } : undefined,
+      expectedStartDate: new Date(),
+      expectedEndDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+      experienceLevel: job.experienceLevel,
+      educationLevel: job.educationLevel,
+      skills: job.skills || [],
+      requirements: job.requirements || [],
+      responsibilities: job.responsibilities || [],
+      benefits: job.benefits || [],
+      learningObjectives: [],
+      mentorshipProvided: false,
+      certificateProvided: false,
+      applicationDeadline: job.applicationDeadline,
+      postedDate: job.postedDate,
+      status: job.status,
+      isCurated: job.isCurated,
+      curatedBy: job.curatedBy,
+      relatedCourses: job.relatedCourses || [],
+      psychometricTestRequired: job.psychometricTestRequired || false,
+      psychometricTests: job.psychometricTests || [],
+      applicationsCount: job.applicationsCount || 0,
+      viewsCount: job.viewsCount || 0,
+      workArrangement: job.jobType === JobType.INTERNSHIP ? 'on-site' : 'remote',
+      contactInfo: job.contactInfo,
+      createdAt: job.createdAt,
+      updatedAt: job.updatedAt,
+      isFromJobModel: true // Flag to indicate source
+    }));
+
+    // Combine both sets of internships
+    const allInternships = [...dedicatedInternships, ...transformedJobInternships];
+
+    // Sort combined results
+    allInternships.sort((a, b) => {
+      if (search) {
+        // If searching, prioritize dedicated internships
+        if (a.isFromJobModel && !b.isFromJobModel) return 1;
+        if (!a.isFromJobModel && b.isFromJobModel) return -1;
+      }
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+
+    // Apply pagination to combined results
+    const paginatedInternships = allInternships.slice(skip, skip + limitNum);
+    const total = allInternships.length;
+
+    // Debug logging
+    console.log('📊 Combined Internship Database Debug:');
+    console.log(`Dedicated internships: ${dedicatedInternships.length}`);
+    console.log(`Job-based internships: ${jobInternships.length}`);
+    console.log(`Total combined: ${allInternships.length}`);
+    console.log(`Returning paginated: ${paginatedInternships.length} (page ${pageNum})`);
 
     res.status(200).json({
       success: true,
-      data: internships,
+      data: paginatedInternships,
       pagination: {
         current: pageNum,
         pages: Math.ceil(total / limitNum),
@@ -73,6 +159,7 @@ export const getInternships = async (req: Request, res: Response) => {
       }
     });
   } catch (error: any) {
+    console.error('Error fetching internships:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch internships',
@@ -125,7 +212,9 @@ export const getInternshipsByEmployer = async (req: AuthRequest, res: Response) 
 
     const { page = 1, limit = 10, status } = req.query;
     
-    const query: any = { employer: userId };
+    const query: any = { 
+      employer: userId
+    };
     if (status) query.status = status;
     
     const pageNum = parseInt(page as string);
@@ -215,7 +304,10 @@ export const updateInternship = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const internship = await Internship.findOne({ _id: id, employer: userId });
+    const internship = await Internship.findOne({ 
+      _id: id, 
+      employer: userId
+    });
     
     if (!internship) {
       return res.status(404).json({
@@ -261,7 +353,7 @@ export const deleteInternship = async (req: AuthRequest, res: Response) => {
     }
 
     // First, find the internship to check if it exists and user owns it
-    const existingInternship = await Internship.findOne({ _id: id });
+    const existingInternship = await Internship.findById(id);
     console.log('Existing internship:', existingInternship);
     
     if (!existingInternship) {
@@ -281,7 +373,10 @@ export const deleteInternship = async (req: AuthRequest, res: Response) => {
     }
 
     // Delete the internship
-    const internship = await Internship.findOneAndDelete({ _id: id, employer: userId });
+    const internship = await Internship.findOneAndDelete({ 
+      _id: id, 
+      employer: userId
+    });
     console.log('Internship deleted:', internship?._id);
     
     // Also delete associated applications
@@ -330,46 +425,134 @@ export const getInternshipsForStudent = async (req: AuthRequest, res: Response) 
     const user = await User.findById(userId);
     const studentProfile = await StudentProfile.findOne({ userId });
 
-    const query: any = { status: JobStatus.ACTIVE };
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
 
-    // Add filters based on query parameters
-    if (experienceLevel) query.experienceLevel = experienceLevel;
-    if (educationLevel) query.educationLevel = educationLevel;
-    if (location) query.location = { $regex: location, $options: 'i' };
-    if (isPaid !== undefined) query.isPaid = isPaid === 'true';
-    if (workArrangement) query.workArrangement = workArrangement;
-    if (department) query.department = { $regex: department, $options: 'i' };
+    // === QUERY FOR INTERNSHIP MODEL ===
+    const internshipQuery: any = { 
+      status: JobStatus.ACTIVE 
+    };
+
+    // Add filters to internship query
+    if (experienceLevel) internshipQuery.experienceLevel = experienceLevel;
+    if (educationLevel) internshipQuery.educationLevel = educationLevel;
+    if (location) internshipQuery.location = { $regex: location, $options: 'i' };
+    if (isPaid !== undefined) internshipQuery.isPaid = isPaid === 'true';
+    if (workArrangement) internshipQuery.workArrangement = workArrangement;
+    if (department) internshipQuery.department = { $regex: department, $options: 'i' };
 
     if (skills) {
       const skillsArray = Array.isArray(skills) ? skills : [skills];
-      query.skills = { $in: skillsArray };
+      internshipQuery.skills = { $in: skillsArray };
+    }
+
+    // === QUERY FOR JOB MODEL (internship jobs) ===
+    const jobQuery: any = {
+      status: JobStatus.ACTIVE,
+      $or: [
+        { category: JobCategory.INTERNSHIPS },
+        { jobType: JobType.INTERNSHIP }
+      ]
+    };
+
+    // Add filters to job query
+    if (experienceLevel) jobQuery.experienceLevel = experienceLevel;
+    if (educationLevel) jobQuery.educationLevel = educationLevel;
+    if (location) jobQuery.location = { $regex: location, $options: 'i' };
+
+    if (skills) {
+      const skillsArray = Array.isArray(skills) ? skills : [skills];
+      jobQuery.skills = { $in: skillsArray };
     }
 
     // If no filters are provided, try to match based on user's profile
     if (!experienceLevel && !educationLevel && !skills && studentProfile) {
       if (studentProfile.skills && studentProfile.skills.length > 0) {
-        query.skills = { $in: studentProfile.skills };
+        internshipQuery.skills = { $in: studentProfile.skills };
+        jobQuery.skills = { $in: studentProfile.skills };
       }
       if (user?.educationLevel) {
-        query.educationLevel = user.educationLevel;
+        internshipQuery.educationLevel = user.educationLevel;
+        jobQuery.educationLevel = user.educationLevel;
       }
     }
 
-    const pageNum = parseInt(page as string);
-    const limitNum = parseInt(limit as string);
-    const skip = (pageNum - 1) * limitNum;
+    // Execute both queries in parallel
+    const [dedicatedInternships, jobInternships] = await Promise.all([
+      Internship.find(internshipQuery)
+        .populate('employer', 'firstName lastName company email phone profileImage')
+        .sort({ createdAt: -1 }),
+      Job.find(jobQuery)
+        .populate('employer', 'firstName lastName company email phone profileImage')
+        .sort({ createdAt: -1 })
+    ]);
 
-    const internships = await Internship.find(query)
-      .populate('employer', 'firstName lastName company email phone profileImage')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limitNum);
+    // Transform job internships to match internship format
+    const transformedJobInternships = jobInternships.map(job => ({
+      _id: job._id,
+      title: job.title,
+      description: job.description,
+      company: job.company,
+      employer: job.employer,
+      location: job.location,
+      department: job.category === JobCategory.INTERNSHIPS ? 'General' : 'Technology',
+      numberOfPositions: 1,
+      applicationProcedure: 'Please apply through the platform',
+      internshipPeriod: {
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+        duration: '3 months'
+      },
+      isPaid: job.salary && job.salary.min > 0,
+      stipend: job.salary ? {
+        amount: job.salary.min || 0,
+        currency: job.salary.currency || 'USD',
+        frequency: 'monthly'
+      } : undefined,
+      expectedStartDate: new Date(),
+      expectedEndDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+      experienceLevel: job.experienceLevel,
+      educationLevel: job.educationLevel,
+      skills: job.skills || [],
+      requirements: job.requirements || [],
+      responsibilities: job.responsibilities || [],
+      benefits: job.benefits || [],
+      learningObjectives: [],
+      mentorshipProvided: false,
+      certificateProvided: false,
+      applicationDeadline: job.applicationDeadline,
+      postedDate: job.postedDate,
+      status: job.status,
+      isCurated: job.isCurated,
+      curatedBy: job.curatedBy,
+      relatedCourses: job.relatedCourses || [],
+      psychometricTestRequired: job.psychometricTestRequired || false,
+      psychometricTests: job.psychometricTests || [],
+      applicationsCount: job.applicationsCount || 0,
+      viewsCount: job.viewsCount || 0,
+      workArrangement: job.jobType === JobType.INTERNSHIP ? 'on-site' : 'remote',
+      contactInfo: job.contactInfo,
+      createdAt: job.createdAt,
+      updatedAt: job.updatedAt,
+      isFromJobModel: true
+    }));
 
-    const total = await Internship.countDocuments(query);
+    // Combine both sets of internships
+    const allInternships = [...dedicatedInternships, ...transformedJobInternships];
+
+    // Sort combined results by creation date
+    allInternships.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    // Apply pagination to combined results
+    const paginatedInternships = allInternships.slice(skip, skip + limitNum);
+    const total = allInternships.length;
+
+    console.log(`Student internships - Dedicated: ${dedicatedInternships.length}, Job-based: ${jobInternships.length}, Total: ${total}`);
 
     res.status(200).json({
       success: true,
-      data: internships,
+      data: paginatedInternships,
       pagination: {
         current: pageNum,
         pages: Math.ceil(total / limitNum),
@@ -377,15 +560,16 @@ export const getInternshipsForStudent = async (req: AuthRequest, res: Response) 
       }
     });
   } catch (error: any) {
+    console.error('Error fetching internships for student:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch internships',
+      error: 'Failed to fetch internships for student',
       message: error.message
     });
   }
 };
 
-// Get curated internships
+// Get curated internships (from both Internship and Job models)
 export const getCuratedInternships = async (req: Request, res: Response) => {
   try {
     const { page = 1, limit = 10 } = req.query;
@@ -394,18 +578,93 @@ export const getCuratedInternships = async (req: Request, res: Response) => {
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
-    const internships = await Internship.findCuratedInternships()
-      .skip(skip)
-      .limit(limitNum);
+    // Fetch curated internships from both models
+    const [dedicatedInternships, jobInternships] = await Promise.all([
+      Internship.find({ 
+        isCurated: true,
+        status: JobStatus.ACTIVE,
+        $or: [
+          { applicationDeadline: { $exists: false } },
+          { applicationDeadline: { $gt: new Date() } }
+        ]
+      }).populate('curatedBy', 'firstName lastName')
+        .populate('relatedCourses', 'title description')
+        .sort({ createdAt: -1 }),
+      Job.find({
+        isCurated: true,
+        status: JobStatus.ACTIVE,
+        $or: [
+          { category: JobCategory.INTERNSHIPS },
+          { jobType: JobType.INTERNSHIP }
+        ]
+      }).populate('curatedBy', 'firstName lastName')
+        .populate('relatedCourses', 'title description')
+        .sort({ createdAt: -1 })
+    ]);
 
-    const total = await Internship.countDocuments({ 
-      isCurated: true, 
-      status: JobStatus.ACTIVE 
-    });
+    // Transform job internships to match internship format
+    const transformedJobInternships = jobInternships.map(job => ({
+      _id: job._id,
+      title: job.title,
+      description: job.description,
+      company: job.company,
+      employer: job.employer,
+      location: job.location,
+      department: job.category === JobCategory.INTERNSHIPS ? 'General' : 'Technology',
+      numberOfPositions: 1,
+      applicationProcedure: 'Please apply through the platform',
+      internshipPeriod: {
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+        duration: '3 months'
+      },
+      isPaid: job.salary && job.salary.min > 0,
+      stipend: job.salary ? {
+        amount: job.salary.min || 0,
+        currency: job.salary.currency || 'USD',
+        frequency: 'monthly'
+      } : undefined,
+      expectedStartDate: new Date(),
+      expectedEndDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+      experienceLevel: job.experienceLevel,
+      educationLevel: job.educationLevel,
+      skills: job.skills || [],
+      requirements: job.requirements || [],
+      responsibilities: job.responsibilities || [],
+      benefits: job.benefits || [],
+      learningObjectives: [],
+      mentorshipProvided: false,
+      certificateProvided: false,
+      applicationDeadline: job.applicationDeadline,
+      postedDate: job.postedDate,
+      status: job.status,
+      isCurated: job.isCurated,
+      curatedBy: job.curatedBy,
+      relatedCourses: job.relatedCourses || [],
+      psychometricTestRequired: job.psychometricTestRequired || false,
+      psychometricTests: job.psychometricTests || [],
+      applicationsCount: job.applicationsCount || 0,
+      viewsCount: job.viewsCount || 0,
+      workArrangement: job.jobType === JobType.INTERNSHIP ? 'on-site' : 'remote',
+      contactInfo: job.contactInfo,
+      createdAt: job.createdAt,
+      updatedAt: job.updatedAt,
+      isFromJobModel: true
+    }));
+
+    // Combine and sort by creation date
+    const allInternships = [...dedicatedInternships, ...transformedJobInternships];
+    allInternships.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    // Apply pagination
+    const paginatedInternships = allInternships.slice(skip, skip + limitNum);
+    const total = allInternships.length;
+
+    console.log(`Curated internships - Dedicated: ${dedicatedInternships.length}, Job-based: ${jobInternships.length}, Total: ${total}`);
 
     res.status(200).json({
       success: true,
-      data: internships,
+      data: paginatedInternships,
       pagination: {
         current: pageNum,
         pages: Math.ceil(total / limitNum),
@@ -413,6 +672,7 @@ export const getCuratedInternships = async (req: Request, res: Response) => {
       }
     });
   } catch (error: any) {
+    console.error('Error fetching curated internships:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch curated internships',
@@ -425,7 +685,9 @@ export const getCuratedInternships = async (req: Request, res: Response) => {
 export const getInternshipCategories = async (req: Request, res: Response) => {
   try {
     const categories = await Internship.aggregate([
-      { $match: { status: JobStatus.ACTIVE } },
+      { $match: { 
+        status: JobStatus.ACTIVE 
+      }},
       { $group: { _id: '$department', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 20 }

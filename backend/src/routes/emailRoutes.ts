@@ -219,7 +219,7 @@ router.get('/unsubscribe', async (req: Request, res: Response) => {
             <h2>Successfully Unsubscribed</h2>
             <p>You have been successfully unsubscribed from email notifications.</p>
             <p>If you change your mind, you can re-enable email notifications in your account settings.</p>
-            <a href="${process.env.JOB_PORTAL_URL || 'http://localhost:3000'}" 
+            <a href="${process.env.JOB_PORTAL_URL || 'https://exjobnet.com'}" 
                style="background-color: #1976d2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">
               Return to Exjobnet
             </a>

@@ -1,4 +1,5 @@
 import { apiService } from './api';
+import { emailService } from './emailService';
 import type { LoginForm, RegisterForm, User, AuthResponse } from '../types/auth';
 
 export const authService = {
@@ -61,7 +62,7 @@ export const authService = {
         // Send welcome email automatically after successful registration
         if (response.data.user) {
           try {
-            await sendWelcomeEmail(
+            await emailService.sendWelcomeEmail(
               response.data.user.email,
               response.data.user.firstName,
               response.data.user.role

@@ -70,7 +70,7 @@ router.get('/unsubscribe-job-emails/:userId', async (req, res) => {
             <p>You have been unsubscribed from job recommendation emails.</p>
             <p>You can re-enable email notifications anytime by logging into your account and updating your preferences.</p>
           </div>
-          <a href="${process.env.JOB_PORTAL_URL || 'http://localhost:3000'}" class="button">Return to ExJobNet</a>
+          <a href="${process.env.JOB_PORTAL_URL || 'https://exjobnet.com'}" class="button">Return to ExJobNet</a>
         </div>
       </body>
       </html>

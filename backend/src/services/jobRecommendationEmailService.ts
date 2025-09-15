@@ -485,12 +485,13 @@ export class JobRecommendationEmailService {
         
         // Generate batch ID and URLs for auto-apply functionality
         const batchId = `batch_${Date.now()}_${user._id}`;
-        const backendUrl = process.env.NODE_ENV === 'production'
-          ? (process.env.BACKEND_URL || 'https://api.exjobnet.com')
-          : 'http://localhost:5000';
-        const frontendUrl = process.env.NODE_ENV === 'production' 
-          ? (process.env.JOB_PORTAL_URL || 'https://exjobnet.com') 
-          : 'http://localhost:3000';
+        
+        // Use production URLs by default, fallback to environment variables, then localhost
+        const backendUrl = process.env.BACKEND_URL || 
+          (process.env.NODE_ENV === 'production' ? 'https://ech-w16g.onrender.com' : 'http://localhost:5000');
+        
+        const frontendUrl = process.env.JOB_PORTAL_URL || 
+          (process.env.NODE_ENV === 'production' ? 'https://exjobnet.com' : 'http://localhost:3000');
         const confirmUrl = `${backendUrl}/api/job-emails/confirm-auto-apply/${user._id}/${batchId}`;
         const rejectUrl = `${backendUrl}/api/job-emails/reject-auto-apply/${user._id}/${batchId}`;
 

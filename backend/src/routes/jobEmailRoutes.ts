@@ -74,12 +74,10 @@ router.post('/get-email-data', async (req: Request, res: Response) => {
         if (recommendations.length > 0) {
           // Generate a unique batch ID for this user's recommendations
           const batchId = `batch_${Date.now()}_${user._id}_${i}`;
-          const backendUrl = process.env.NODE_ENV === 'production'
-            ? (process.env.BACKEND_URL || 'https://api.exjobnet.com')
-            : 'http://localhost:5000';
-          const frontendUrl = process.env.NODE_ENV === 'production' 
-            ? (process.env.JOB_PORTAL_URL || 'https://exjobnet.com') 
-            : 'http://localhost:3000';
+          const backendUrl = process.env.BACKEND_URL ||
+            (process.env.NODE_ENV === 'production' ? 'https://ech-w16g.onrender.com' : 'http://localhost:5000');
+          const frontendUrl = process.env.JOB_PORTAL_URL ||
+            (process.env.NODE_ENV === 'production' ? 'https://exjobnet.com' : 'http://localhost:3000');
           
           const userRecommendation = {
             user: {
@@ -596,9 +594,8 @@ router.get('/confirm-auto-apply/:userId/:batchId', async (req: Request, res: Res
     }
 
     // Get environment-based URLs  
-    const frontendUrl = process.env.NODE_ENV === 'production' 
-      ? (process.env.JOB_PORTAL_URL || 'https://exjobnet.com') 
-      : 'http://localhost:3000';
+    const frontendUrl = process.env.JOB_PORTAL_URL ||
+      (process.env.NODE_ENV === 'production' ? 'https://exjobnet.com' : 'http://localhost:3000');
       
     // Get the job recommendations for this batch (from recent recommendations)
     const yesterday = new Date();
@@ -860,9 +857,8 @@ router.get('/reject-auto-apply/:userId/:batchId', async (req: Request, res: Resp
     console.log(`❌ Auto-apply rejection received for user ${userId}, batch ${batchId}`);
     
     // Get environment-based URLs  
-    const frontendUrl = process.env.NODE_ENV === 'production' 
-      ? (process.env.JOB_PORTAL_URL || 'https://exjobnet.com') 
-      : 'http://localhost:3000';
+    const frontendUrl = process.env.JOB_PORTAL_URL ||
+      (process.env.NODE_ENV === 'production' ? 'https://exjobnet.com' : 'http://localhost:3000');
     
     // Get user for personalization
     const user = await User.findById(userId);

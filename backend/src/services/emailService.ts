@@ -886,9 +886,9 @@ export const sendWelcomeEmail = async (userData: {
 
     // Fallback to original template-based system
     const platformUrls = {
-      homepage: process.env.HOMEPAGE_URL || 'http://localhost:3000',
-      'job-portal': process.env.JOB_PORTAL_URL || 'http://localhost:3001',
-      elearning: process.env.ELEARNING_URL || 'http://localhost:3002'
+      homepage: process.env.HOMEPAGE_URL || 'https://excellencecoachinghub.com',
+      'job-portal': process.env.JOB_PORTAL_URL || 'https://exjobnet.com',
+      elearning: process.env.ELEARNING_URL || 'https://elearning.excellencecoachinghub.com'
     };
 
     const platform = userData.platform || 'job-portal'; // Default to job-portal
@@ -919,9 +919,9 @@ export const sendEmployerWelcomeEmail = async (userData: {
 }): Promise<void> => {
   try {
     const platformUrls = {
-      homepage: process.env.HOMEPAGE_URL || 'http://localhost:3000',
-      'job-portal': process.env.JOB_PORTAL_URL || 'http://localhost:3001',
-      elearning: process.env.ELEARNING_URL || 'http://localhost:3002'
+      homepage: process.env.HOMEPAGE_URL || 'https://excellencecoachinghub.com',
+      'job-portal': process.env.JOB_PORTAL_URL || 'https://exjobnet.com',
+      elearning: process.env.ELEARNING_URL || 'https://elearning.excellencecoachinghub.com'
     };
 
     await sendEmail({

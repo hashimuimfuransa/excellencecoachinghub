@@ -1,4 +1,5 @@
 import { apiService } from './api';
+import { emailService } from './emailService';
 import { IUser, LoginForm, RegisterForm, ApiResponse } from '../shared/types';
 // EmailJS removed - now using backend SendGrid service
 
@@ -82,7 +83,7 @@ export const authService = {
           console.log('✅ Verification email sent to:', response.data.user.email);
 
           // Send welcome email automatically after successful registration
-          await sendWelcomeEmail(
+          await emailService.sendWelcomeEmail(
             response.data.user.email,
             response.data.user.firstName,
             response.data.user.role

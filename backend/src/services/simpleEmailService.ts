@@ -81,7 +81,7 @@ export const sendVerificationEmail = async (
   firstName: string,
   verificationCode: string
 ): Promise<void> => {
-  const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${verificationCode}`;
+  const verificationUrl = `${process.env.FRONTEND_URL || 'https://exjobnet.com'}/verify-email?token=${verificationCode}`;
   
   console.log('\n📧 EMAIL VERIFICATION SENT');
   console.log('==========================');
@@ -102,7 +102,7 @@ export const sendPasswordResetEmail = async (
   firstName: string,
   resetCode: string
 ): Promise<void> => {
-  const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetCode}`;
+  const resetUrl = `${process.env.FRONTEND_URL || 'https://exjobnet.com'}/reset-password?token=${resetCode}`;
   
   console.log('\n🔐 PASSWORD RESET EMAIL SENT');
   console.log('=============================');
@@ -120,7 +120,7 @@ export const sendWelcomeEmail = async (
   firstName: string,
   role: string
 ): Promise<void> => {
-  const dashboardUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard`;
+  const dashboardUrl = `${process.env.FRONTEND_URL || 'https://exjobnet.com'}/dashboard`;
   
   console.log('\n🎉 WELCOME EMAIL SENT');
   console.log('=====================');

@@ -136,37 +136,150 @@ app.set('trust proxy', 1);
 // Disable ETag to prevent 304 responses for AI matched jobs
 app.set('etag', false);
 
-// Security middleware
+// Enhanced Security middleware with comprehensive headers
 app.use(helmet({
-  crossOriginEmbedderPolicy: false, // Required for WebRTC
+  // Cross-Origin Embedder Policy (disabled for WebRTC compatibility)
+  crossOriginEmbedderPolicy: false,
+  
+  // Content Security Policy with comprehensive rules
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "wss:", "ws:"],
-      fontSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      scriptSrc: ["'self'", "'unsafe-eval'", "https://apis.google.com", "https://www.google.com"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      connectSrc: ["'self'", "wss:", "ws:", "https://api.sendgrid.com", "https://generativelanguage.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
       objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'self'", "https:"]
+      mediaSrc: ["'self'", "blob:", "data:"],
+      frameSrc: ["'self'", "https:", "https://www.google.com"],
+      childSrc: ["'self'", "blob:"],
+      manifestSrc: ["'self'"],
+      upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null
     }
+  },
+
+  // Strict Transport Security (HSTS) - Force HTTPS in production
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  },
+
+  // X-Frame-Options - Prevent clickjacking
+  frameguard: {
+    action: 'deny'
+  },
+
+  // X-Content-Type-Options - Prevent MIME type sniffing
+  noSniff: true,
+
+  // X-XSS-Protection - Enable XSS filtering
+  xssFilter: true,
+
+  // Referrer Policy - Control referrer information
+  referrerPolicy: {
+    policy: ['no-referrer-when-downgrade', 'strict-origin-when-cross-origin']
+  },
+
+  // Cross-Origin Resource Policy
+  crossOriginResourcePolicy: {
+    policy: 'cross-origin'
+  },
+
+  // Permissions Policy (Feature Policy)
+  permissionsPolicy: {
+    camera: ['self'],
+    microphone: ['self'],
+    geolocation: ['self'],
+    payment: ['self'],
+    usb: ['none'],
+    magnetometer: ['none'],
+    gyroscope: ['self'],
+    accelerometer: ['self']
   }
 }));
 
-// Rate limiting - Temporarily disabled for debugging
-const limiter = rateLimit({
-  windowMs: parseInt(process.env['RATE_LIMIT_WINDOW_MS'] || '900000'), // 15 minutes
-  max: parseInt(process.env['RATE_LIMIT_MAX_REQUESTS'] || '10000'), // Very high limit for debugging
-  message: 'Too many requests from this IP, please try again later.',
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: (req) => {
-    // Skip rate limiting for all endpoints during debugging
-    return true; // Disable rate limiting completely
-  }
+// Additional custom security headers
+app.use((req, res, next) => {
+  // Prevent caching of sensitive data
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+  
+  // Security headers
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow, nosnippet, noarchive');
+  res.setHeader('X-Powered-By', 'Excellence Coaching Hub');
+  res.setHeader('Server', 'ECH-Server');
+  
+  // Cross-Origin headers for enhanced security
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+  
+  // Content Security headers
+  res.setHeader('X-Download-Options', 'noopen');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+  
+  next();
 });
-app.use('/api/', limiter);
+
+// Enhanced Rate limiting with different limits for different endpoints
+const createRateLimiter = (windowMs: number, max: number, message: string) => {
+  return rateLimit({
+    windowMs,
+    max,
+    message: {
+      error: message,
+      retryAfter: Math.ceil(windowMs / 1000)
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res) => {
+      res.status(429).json({
+        success: false,
+        error: message,
+        retryAfter: Math.ceil(windowMs / 1000)
+      });
+    }
+  });
+};
+
+// General API rate limiting
+const generalLimiter = createRateLimiter(
+  parseInt(process.env['RATE_LIMIT_WINDOW_MS'] || '900000'), // 15 minutes
+  parseInt(process.env['RATE_LIMIT_MAX_REQUESTS'] || '100'), // 100 requests per 15 minutes
+  'Too many requests from this IP, please try again later.'
+);
+
+// Strict rate limiting for authentication endpoints
+const authLimiter = createRateLimiter(
+  15 * 60 * 1000, // 15 minutes
+  5, // 5 attempts per 15 minutes
+  'Too many authentication attempts. Please try again later.'
+);
+
+// Password reset rate limiting
+const passwordResetLimiter = createRateLimiter(
+  60 * 60 * 1000, // 1 hour
+  3, // 3 attempts per hour
+  'Too many password reset attempts. Please try again later.'
+);
+
+// Email sending rate limiting
+const emailLimiter = createRateLimiter(
+  60 * 60 * 1000, // 1 hour
+  10, // 10 emails per hour
+  'Too many email requests. Please try again later.'
+);
+
+// Apply rate limiters
+app.use('/api/', generalLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/forgot-password', passwordResetLimiter);
+app.use('/api/auth/reset-password', passwordResetLimiter);
+app.use('/api/email/', emailLimiter);
 
 // CORS configuration - More permissive for debugging
 const corsOptions = {
@@ -448,13 +561,64 @@ app.get('/api/test-jobs-early', async (req, res) => {
 // Global async error catcher
 app.use(globalAsyncErrorCatcher);
 
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Body parsing middleware with security considerations
+app.use(express.json({ 
+  limit: '10mb',
+  verify: (req: any, res, buf) => {
+    // Store raw body for webhook verification if needed
+    req.rawBody = buf;
+  }
+}));
+app.use(express.urlencoded({ 
+  extended: true, 
+  limit: '10mb',
+  parameterLimit: 100 // Limit number of parameters to prevent DoS
+}));
 
-// Security middleware
-app.use(mongoSanitize()); // Prevent NoSQL injection attacks
-app.use(hpp()); // Prevent HTTP Parameter Pollution attacks
+// Enhanced security middleware
+app.use(mongoSanitize({
+  replaceWith: '_', // Replace prohibited characters
+  allowDots: false  // Prevent prototype pollution
+})); // Prevent NoSQL injection attacks
+
+app.use(hpp({
+  whitelist: ['sort', 'filter', 'page', 'limit', 'skills', 'tags'] // Allow specific duplicate parameters
+})); // Prevent HTTP Parameter Pollution attacks
+
+// Additional security middleware for input validation
+app.use((req, res, next) => {
+  // Remove null bytes from all string inputs to prevent path traversal
+  const sanitizeObject = (obj: any): any => {
+    if (typeof obj === 'string') {
+      return obj.replace(/\0/g, '');
+    }
+    if (typeof obj === 'object' && obj !== null) {
+      if (Array.isArray(obj)) {
+        return obj.map(sanitizeObject);
+      }
+      const sanitized: any = {};
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          sanitized[key] = sanitizeObject(obj[key]);
+        }
+      }
+      return sanitized;
+    }
+    return obj;
+  };
+
+  if (req.body) {
+    req.body = sanitizeObject(req.body);
+  }
+  if (req.query) {
+    req.query = sanitizeObject(req.query);
+  }
+  if (req.params) {
+    req.params = sanitizeObject(req.params);
+  }
+
+  next();
+});
 
 // Compression middleware
 app.use(compression());

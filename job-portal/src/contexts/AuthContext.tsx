@@ -188,7 +188,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Use dedicated Google registration completion endpoint
       const authData = await authService.completeGoogleRegistration(googleCompleteData);
-      setUser(authData.user);
+      
+      // Set the user in context to log them in
+      if (authData.user) {
+        setUser(authData.user);
+        console.log('✅ User set in AuthContext after Google registration:', authData.user);
+      } else {
+        throw new Error('User data not returned from registration');
+      }
     } catch (error) {
       console.error('❌ Google registration error in AuthContext:', error);
       throw error;

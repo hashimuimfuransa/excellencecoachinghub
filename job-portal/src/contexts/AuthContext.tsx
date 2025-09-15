@@ -155,10 +155,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         platform: 'job-portal'
       };
       
-      console.log('🔍 Sending Google registration data:', {
-        ...googleRegisterData,
-        password: '[HIDDEN]' // Don't log the password
+      console.log('🔍 Sending Google registration data:', googleRegisterData);
+      console.log('🔍 Individual field values:', {
+        firstName: googleRegisterData.firstName,
+        lastName: googleRegisterData.lastName,
+        email: googleRegisterData.email,
+        password: googleRegisterData.password ? '[SET]' : '[EMPTY]',
+        role: googleRegisterData.role,
+        platform: googleRegisterData.platform
       });
+
+      // Validate required fields before sending
+      const missingFields = [];
+      if (!googleRegisterData.firstName) missingFields.push('firstName');
+      if (!googleRegisterData.lastName) missingFields.push('lastName');
+      if (!googleRegisterData.email) missingFields.push('email');
+      if (!googleRegisterData.password) missingFields.push('password');
+      if (!googleRegisterData.role) missingFields.push('role');
+
+      if (missingFields.length > 0) {
+        throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+      }
       
       const authData = await authService.register(googleRegisterData);
       setUser(authData.user);

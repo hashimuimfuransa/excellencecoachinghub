@@ -19,8 +19,6 @@ import {
   Divider,
   Switch,
   FormControlLabel,
-
-
   alpha,
   Dialog,
   DialogTitle,
@@ -29,7 +27,13 @@ import {
   Slide,
   ListItemIcon as ListItemIconMui,
   ListItemText as ListItemTextMui,
-  Tooltip
+  Tooltip,
+  Fade,
+  Paper,
+  MenuList,
+  ClickAwayListener,
+  Popper,
+  Grow
 } from '@mui/material';
 import { SafeSlideUp } from '../utils/transitionFix';
 import {
@@ -63,7 +67,14 @@ import {
   Schedule,
   LocationOn,
   Twitter,
-  PostAdd
+  PostAdd,
+  KeyboardArrowDown,
+  WorkOutline,
+  Psychology as InterviewIcon,
+  Description as TenderIcon,
+  CastForEducation as TrainingIcon,
+  AccountBalance as FinanceIcon,
+  Category as CategoryIcon
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -90,8 +101,9 @@ const Navbar: React.FC = () => {
   
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
-
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [opportunitiesOpen, setOpportunitiesOpen] = useState(false);
+  const opportunitiesRef = React.useRef<HTMLButtonElement>(null);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -128,11 +140,58 @@ const Navbar: React.FC = () => {
     setContactDialogOpen(false);
   };
 
+  const handleOpportunitiesToggle = () => {
+    setOpportunitiesOpen((prevOpen) => !prevOpen);
+  };
+
+  const handleOpportunitiesClose = (event?: Event | React.SyntheticEvent) => {
+    if (
+      opportunitiesRef.current &&
+      opportunitiesRef.current.contains(event?.target as HTMLElement)
+    ) {
+      return;
+    }
+    setOpportunitiesOpen(false);
+  };
+
+  // Define opportunity categories with modern styling
+  const opportunityCategories = [
+    {
+      id: 'internship',
+      label: 'Internships',
+      icon: <School sx={{ fontSize: 20 }} />,
+      path: user ? '/app/jobs/all?categories=internships' : '/jobs?categories=internships',
+      description: 'Student & graduate internships'
+    },
+    {
+      id: 'tender',
+      label: 'Tenders',
+      icon: <TenderIcon sx={{ fontSize: 20 }} />,
+      path: user ? '/app/jobs/all?categories=tenders' : '/jobs?categories=tenders',
+      description: 'Government & business tenders'
+    },
+    {
+      id: 'training',
+      label: 'Training',
+      icon: <TrainingIcon sx={{ fontSize: 20 }} />,
+      path: user ? '/app/jobs/all?categories=trainings' : '/jobs?categories=trainings',
+      description: 'Professional development'
+    },
+    {
+      id: 'finance',
+      label: 'Access to Finance',
+      icon: <FinanceIcon sx={{ fontSize: 20 }} />,
+      path: user ? '/app/jobs/all?categories=access_to_finance' : '/jobs?categories=access_to_finance',
+      description: 'Funding & financial support'
+    }
+  ];
+
   const menuItems = [
     // Protected items - only show if user is logged in (Network is the main page for logged users)
     { text: 'Network', icon: <Public />, path: '/app/network', protected: true, isHome: true },
     { text: 'Jobs', icon: <Work />, path: '/app/jobs', protected: true },
     { text: 'Internships', icon: <School />, path: '/app/internships', protected: true },
+    { text: 'Other Opportunities', icon: <CategoryIcon />, isDropdown: true, protected: true },
     { text: 'Support', icon: <Support />, path: '/support' },
     { text: 'Contact Us', icon: <ContactSupport />, action: handleContactOpen, isContactDialog: true },
   ];
@@ -143,6 +202,7 @@ const Navbar: React.FC = () => {
     { text: 'Network', icon: <Public />, path: '/app/network', protected: true, isHome: true },
     { text: 'My Jobs', icon: <Business />, path: '/app/employer/jobs', protected: true },
     { text: 'My Internships', icon: <School />, path: '/app/employer/internships', protected: true },
+    { text: 'Other Opportunities', icon: <CategoryIcon />, isDropdown: true, protected: true },
     { text: 'Post Job', icon: <PostAdd />, path: '/app/jobs/create', highlight: true, protected: true },
     { text: 'Post Internship', icon: <School />, path: '/app/internships/create', highlight: true, protected: true },
     { text: 'Support', icon: <Support />, path: '/support' },
@@ -153,6 +213,7 @@ const Navbar: React.FC = () => {
   const publicMenuItems = [
     { text: 'All Jobs', icon: <Work />, path: '/', special: true },
     { text: 'Internships', icon: <School />, path: '/internships' },
+    { text: 'Other Opportunities', icon: <CategoryIcon />, isDropdown: true },
     { text: 'Support', icon: <Support />, path: '/support' },
     { text: 'Contact Us', icon: <ContactSupport />, action: handleContactOpen, isContactDialog: true },
   ];
@@ -191,75 +252,147 @@ const Navbar: React.FC = () => {
       </Box>
       <Divider />
       <List>
-        {currentMenuItems.filter(item => !item.protected || user).map((item) => (
-          <ListItem
-            component="button"
-            key={item.text}
-            onClick={() => {
-              if (item.isContactDialog) {
-                item.action();
-              } else if (item.requiresAuth && !user) {
-                navigate('/register?role=employer');
-                setMobileOpen(false);
-              } else {
-                navigate(item.path);
-                setMobileOpen(false);
-              }
-            }}
-            sx={{
-              backgroundColor: item.highlight 
-                ? alpha(theme.palette.primary.main, 0.9)
-                : ('special' in item && item.special)
-                  ? alpha(theme.palette.primary.main, 0.05)
-                  : (location.pathname === item.path ? alpha(theme.palette.primary.main, 0.1) : 'transparent'),
-              '&:hover': {
-                backgroundColor: item.highlight 
-                  ? alpha(theme.palette.primary.main, 1)
-                  : ('special' in item && item.special)
-                    ? alpha(theme.palette.primary.main, 0.1)
-                    : alpha(theme.palette.primary.main, 0.08),
-              },
-              mx: 1,
-              borderRadius: 2,
-              mb: 0.5,
-              border: item.highlight 
-                ? `2px solid ${theme.palette.primary.main}` 
-                : ('special' in item && item.special)
-                  ? `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
-                  : 'none',
-              boxShadow: item.highlight 
-                ? '0 4px 12px rgba(76, 175, 80, 0.3)' 
-                : ('special' in item && item.special)
-                  ? '0 2px 8px rgba(76, 175, 80, 0.1)'
-                  : 'none',
-              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-            }}
-          >
-            <ListItemIcon sx={{ 
-              color: item.highlight 
-                ? 'white' 
-                : ('special' in item && item.special)
-                  ? 'primary.main'
-                  : (location.pathname === item.path ? 'primary.main' : 'inherit') 
-            }}>
-              {item.icon}
-            </ListItemIcon>
-            <ListItemText 
-              primary={item.text} 
-              sx={{ 
-                '& .MuiListItemText-primary': { 
-                  fontWeight: (item.highlight || ('special' in item && item.special) || location.pathname === item.path) ? 'bold' : 'normal',
-                  color: item.highlight 
-                    ? 'white' 
-                    : ('special' in item && item.special)
-                      ? 'primary.main'
-                      : (location.pathname === item.path ? 'primary.main' : 'inherit')
-                } 
+        {currentMenuItems.filter(item => !item.protected || user).map((item) => {
+          // If it's the dropdown item, render the opportunities as sub-items
+          if (item.isDropdown) {
+            return (
+              <React.Fragment key={item.text}>
+                {/* Dropdown header */}
+                <ListItem sx={{ px: 2, py: 1 }}>
+                  <ListItemIcon sx={{ color: 'primary.main' }}>
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={item.text} 
+                    sx={{ 
+                      '& .MuiListItemText-primary': { 
+                        fontWeight: 'bold',
+                        color: 'primary.main',
+                        fontSize: '0.95rem'
+                      } 
+                    }}
+                  />
+                </ListItem>
+                {/* Render opportunity categories as sub-items */}
+                {opportunityCategories.map((opportunity) => (
+                  <ListItem
+                    component="button"
+                    key={opportunity.id}
+                    onClick={() => {
+                      console.log('Navigating to:', opportunity.path);
+                      window.location.href = opportunity.path;
+                      setMobileOpen(false);
+                    }}
+                    sx={{
+                      backgroundColor: location.pathname === opportunity.path 
+                        ? alpha(theme.palette.primary.main, 0.1) 
+                        : 'transparent',
+                      '&:hover': {
+                        backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                      },
+                      mx: 3,
+                      borderRadius: 2,
+                      mb: 0.5,
+                      pl: 4,
+                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                    }}
+                  >
+                    <ListItemIcon sx={{ 
+                      color: location.pathname === opportunity.path ? 'primary.main' : 'inherit',
+                      minWidth: 36
+                    }}>
+                      {opportunity.icon}
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary={opportunity.label}
+                      secondary={opportunity.description}
+                      sx={{ 
+                        '& .MuiListItemText-primary': { 
+                          fontWeight: location.pathname === opportunity.path ? 'bold' : 'normal',
+                          color: location.pathname === opportunity.path ? 'primary.main' : 'inherit',
+                          fontSize: '0.9rem'
+                        },
+                        '& .MuiListItemText-secondary': {
+                          fontSize: '0.75rem'
+                        }
+                      }}
+                    />
+                  </ListItem>
+                ))}
+              </React.Fragment>
+            );
+          }
+
+          // Regular menu item
+          return (
+            <ListItem
+              component="button"
+              key={item.text}
+              onClick={() => {
+                if (item.isContactDialog) {
+                  item.action();
+                } else if (item.requiresAuth && !user) {
+                  navigate('/register?role=employer');
+                  setMobileOpen(false);
+                } else {
+                  navigate(item.path);
+                  setMobileOpen(false);
+                }
               }}
-            />
-          </ListItem>
-          
-        ))}
+              sx={{
+                backgroundColor: item.highlight 
+                  ? alpha(theme.palette.primary.main, 0.9)
+                  : ('special' in item && item.special)
+                    ? alpha(theme.palette.primary.main, 0.05)
+                    : (location.pathname === item.path ? alpha(theme.palette.primary.main, 0.1) : 'transparent'),
+                '&:hover': {
+                  backgroundColor: item.highlight 
+                    ? alpha(theme.palette.primary.main, 1)
+                    : ('special' in item && item.special)
+                      ? alpha(theme.palette.primary.main, 0.1)
+                      : alpha(theme.palette.primary.main, 0.08),
+                },
+                mx: 1,
+                borderRadius: 2,
+                mb: 0.5,
+                border: item.highlight 
+                  ? `2px solid ${theme.palette.primary.main}` 
+                  : ('special' in item && item.special)
+                    ? `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
+                    : 'none',
+                boxShadow: item.highlight 
+                  ? '0 4px 12px rgba(76, 175, 80, 0.3)' 
+                  : ('special' in item && item.special)
+                    ? '0 2px 8px rgba(76, 175, 80, 0.1)'
+                    : 'none',
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            >
+              <ListItemIcon sx={{ 
+                color: item.highlight 
+                  ? 'white' 
+                  : ('special' in item && item.special)
+                    ? 'primary.main'
+                    : (location.pathname === item.path ? 'primary.main' : 'inherit') 
+              }}>
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText 
+                primary={item.text} 
+                sx={{ 
+                  '& .MuiListItemText-primary': { 
+                    fontWeight: (item.highlight || ('special' in item && item.special) || location.pathname === item.path) ? 'bold' : 'normal',
+                    color: item.highlight 
+                      ? 'white' 
+                      : ('special' in item && item.special)
+                        ? 'primary.main'
+                        : (location.pathname === item.path ? 'primary.main' : 'inherit')
+                  } 
+                }}
+              />
+            </ListItem>
+          );
+        })}
       </List>
       <Divider sx={{ my: 2 }} />
       <Box sx={{ px: 2 }}>
@@ -486,91 +619,249 @@ const Navbar: React.FC = () => {
                   : isLargeDesktop ? 3
                   : isUltraWideDesktop ? 3.5 : 2, 
               }}>
-              {currentMenuItems.filter(item => !('protected' in item) || !item.protected || user).map((item) => (
-                <Button
-                  key={item.text}
-                  color="inherit"
-                  startIcon={(isLargeTablet || isSmallLaptop) ? undefined : item.icon}
-                  onClick={() => {
-                    if (item.isContactDialog && 'action' in item) {
-                      item.action();
-                    } else if ('requiresAuth' in item && item.requiresAuth && !user) {
-                      navigate('/register?role=employer');
-                    } else if ('path' in item) {
-                      navigate(item.path);
-                    }
-                  }}
-                  variant={('highlight' in item && item.highlight) ? 'contained' : 'text'}
-                  sx={{
-                    fontWeight: ('path' in item && location.pathname === item.path) 
-                      ? 'bold' 
-                      : (('highlight' in item && item.highlight) || ('special' in item && item.special)) 
+              {currentMenuItems.filter(item => !('protected' in item) || !item.protected || user).map((item) => {
+                // Handle dropdown menu item
+                if (item.isDropdown) {
+                  return (
+                    <React.Fragment key={item.text}>
+                      <Button
+                        ref={opportunitiesRef}
+                        color="inherit"
+                        startIcon={(isLargeTablet || isSmallLaptop) ? undefined : item.icon}
+                        endIcon={<KeyboardArrowDown sx={{ 
+                          fontSize: 16, 
+                          transform: opportunitiesOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                          transition: 'transform 0.2s'
+                        }} />}
+                        onClick={handleOpportunitiesToggle}
+                        variant="text"
+                        sx={{
+                          fontWeight: 'bold',
+                          color: opportunitiesOpen ? 'primary.main' : 'text.primary',
+                          backgroundColor: opportunitiesOpen ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
+                          '&:hover': {
+                            backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                            transform: 'translateY(-1px)',
+                          },
+                          borderRadius: 2,
+                          px: isLargeTablet ? 1.5 
+                            : isSmallLaptop ? 2 
+                            : isLargeLaptop ? 2.5
+                            : isSmallDesktop ? 2.5
+                            : isLargeDesktop ? 3
+                            : isUltraWideDesktop ? 3.2 : 2.5,
+                          py: isLargeTablet ? 0.75 
+                            : isSmallLaptop ? 1 
+                            : isLargeLaptop ? 1.25
+                            : isSmallDesktop ? 1.25
+                            : isLargeDesktop ? 1.5
+                            : isUltraWideDesktop ? 1.5 : 1.25,
+                          minWidth: (isLargeTablet || isSmallLaptop) ? 'auto' : undefined,
+                          fontSize: isLargeTablet ? '0.8rem' 
+                            : isSmallLaptop ? '0.95rem' 
+                            : isLargeLaptop ? '1rem'
+                            : isSmallDesktop ? '1rem'
+                            : isLargeDesktop ? '1.05rem'
+                            : isUltraWideDesktop ? '1.1rem' : '1rem',
+                          height: isLargeTablet ? 36 
+                            : isSmallLaptop ? 40 
+                            : isLargeLaptop ? 44
+                            : isSmallDesktop ? 46
+                            : isLargeDesktop ? 48
+                            : isUltraWideDesktop ? 50 : 44,
+                          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                          '&:active': {
+                            transform: 'scale(0.98)',
+                          },
+                        }}
+                      >
+                        {item.text}
+                      </Button>
+                      
+                      {/* Dropdown menu */}
+                      <Popper
+                        open={opportunitiesOpen}
+                        anchorEl={opportunitiesRef.current}
+                        role={undefined}
+                        placement="bottom-start"
+                        transition
+                        disablePortal
+                        sx={{ zIndex: 1300 }}
+                      >
+                        {({ TransitionProps, placement }) => (
+                          <Grow
+                            {...TransitionProps}
+                            style={{
+                              transformOrigin: placement === 'bottom-start' ? 'left top' : 'left bottom',
+                            }}
+                          >
+                            <Paper
+                              sx={{
+                                mt: 1,
+                                borderRadius: 3,
+                                overflow: 'hidden',
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                                border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                                minWidth: 280,
+                                maxWidth: 320
+                              }}
+                            >
+                              <ClickAwayListener onClickAway={handleOpportunitiesClose}>
+                                <MenuList
+                                  autoFocusItem={opportunitiesOpen}
+                                  sx={{ py: 1 }}
+                                >
+                                  {opportunityCategories.map((opportunity) => (
+                                    <MenuItem
+                                      key={opportunity.id}
+                                      onClick={() => {
+                                        console.log('Desktop navigating to:', opportunity.path);
+                                        window.location.href = opportunity.path;
+                                        setOpportunitiesOpen(false);
+                                      }}
+                                      sx={{
+                                        py: 1.5,
+                                        px: 2,
+                                        mx: 1,
+                                        borderRadius: 2,
+                                        '&:hover': {
+                                          backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                                          transform: 'translateX(4px)',
+                                        },
+                                        transition: 'all 0.2s ease',
+                                        gap: 2,
+                                        display: 'flex',
+                                        alignItems: 'flex-start'
+                                      }}
+                                    >
+                                      <Box sx={{ 
+                                        color: 'primary.main',
+                                        mt: 0.2,
+                                        minWidth: 'auto'
+                                      }}>
+                                        {opportunity.icon}
+                                      </Box>
+                                      <Box sx={{ flex: 1 }}>
+                                        <Typography 
+                                          variant="subtitle2" 
+                                          sx={{ 
+                                            fontWeight: 600, 
+                                            color: 'text.primary',
+                                            mb: 0.25 
+                                          }}
+                                        >
+                                          {opportunity.label}
+                                        </Typography>
+                                        <Typography 
+                                          variant="caption" 
+                                          sx={{ 
+                                            color: 'text.secondary',
+                                            lineHeight: 1.3,
+                                            display: 'block'
+                                          }}
+                                        >
+                                          {opportunity.description}
+                                        </Typography>
+                                      </Box>
+                                    </MenuItem>
+                                  ))}
+                                </MenuList>
+                              </ClickAwayListener>
+                            </Paper>
+                          </Grow>
+                        )}
+                      </Popper>
+                    </React.Fragment>
+                  );
+                }
+
+                // Regular menu item
+                return (
+                  <Button
+                    key={item.text}
+                    color="inherit"
+                    startIcon={(isLargeTablet || isSmallLaptop) ? undefined : item.icon}
+                    onClick={() => {
+                      if (item.isContactDialog && 'action' in item) {
+                        item.action();
+                      } else if ('requiresAuth' in item && item.requiresAuth && !user) {
+                        navigate('/register?role=employer');
+                      } else if ('path' in item) {
+                        navigate(item.path);
+                      }
+                    }}
+                    variant={('highlight' in item && item.highlight) ? 'contained' : 'text'}
+                    sx={{
+                      fontWeight: ('path' in item && location.pathname === item.path) 
                         ? 'bold' 
-                        : 'normal',
-                    color: ('highlight' in item && item.highlight) 
-                      ? 'white' 
-                      : ('special' in item && item.special)
-                        ? 'primary.main'
-                        : (('path' in item && location.pathname === item.path) ? 'primary.main' : 'text.primary'),
-                    backgroundColor: ('highlight' in item && item.highlight)
-                      ? 'primary.main' 
-                      : (('path' in item && location.pathname === item.path) ? alpha(theme.palette.primary.main, 0.1) : 'transparent'),
-                    border: ('special' in item && item.special) 
-                      ? `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
-                      : 'none',
-                    '&:hover': {
+                        : (('highlight' in item && item.highlight) || ('special' in item && item.special)) 
+                          ? 'bold' 
+                          : 'normal',
+                      color: ('highlight' in item && item.highlight) 
+                        ? 'white' 
+                        : ('special' in item && item.special)
+                          ? 'primary.main'
+                          : (('path' in item && location.pathname === item.path) ? 'primary.main' : 'text.primary'),
                       backgroundColor: ('highlight' in item && item.highlight)
-                        ? 'primary.dark' 
-                        : ('special' in item && item.special)
-                          ? alpha(theme.palette.primary.main, 0.08)
-                          : alpha(theme.palette.primary.main, 0.04),
-                      transform: (('highlight' in item && item.highlight) || ('special' in item && item.special)) 
-                        ? 'translateY(-1px)' 
-                        : 'none',
-                      boxShadow: ('highlight' in item && item.highlight) 
-                        ? '0 4px 12px rgba(76, 175, 80, 0.3)' 
-                        : ('special' in item && item.special)
-                          ? '0 2px 8px rgba(76, 175, 80, 0.2)'
-                          : 'none',
+                        ? 'primary.main' 
+                        : (('path' in item && location.pathname === item.path) ? alpha(theme.palette.primary.main, 0.1) : 'transparent'),
                       border: ('special' in item && item.special) 
-                        ? `1px solid ${alpha(theme.palette.primary.main, 0.5)}`
-                        : undefined,
-                    },
-                    borderRadius: 2,
-                    px: isLargeTablet ? 1.5 
-                      : isSmallLaptop ? 2 
-                      : isLargeLaptop ? 2.5
-                      : isSmallDesktop ? 2.5
-                      : isLargeDesktop ? 3
-                      : isUltraWideDesktop ? 3.2 : 2.5,
-                    py: isLargeTablet ? 0.75 
-                      : isSmallLaptop ? 1 
-                      : isLargeLaptop ? 1.25
-                      : isSmallDesktop ? 1.25
-                      : isLargeDesktop ? 1.5
-                      : isUltraWideDesktop ? 1.5 : 1.25,
-                    minWidth: (isLargeTablet || isSmallLaptop) ? 'auto' : undefined,
-                    fontSize: isLargeTablet ? '0.8rem' 
-                      : isSmallLaptop ? '0.95rem' 
-                      : isLargeLaptop ? '1rem'
-                      : isSmallDesktop ? '1rem'
-                      : isLargeDesktop ? '1.05rem'
-                      : isUltraWideDesktop ? '1.1rem' : '1rem',
-                    height: isLargeTablet ? 36 
-                      : isSmallLaptop ? 40 
-                      : isLargeLaptop ? 44
-                      : isSmallDesktop ? 46
-                      : isLargeDesktop ? 48
-                      : isUltraWideDesktop ? 50 : 44,
-                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '&:active': {
-                      transform: 'scale(0.98)',
-                    },
-                  }}
-                >
-                  {item.text}
-                </Button>
-              ))}
+                        ? `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
+                        : 'none',
+                      '&:hover': {
+                        backgroundColor: ('highlight' in item && item.highlight)
+                          ? 'primary.dark' 
+                          : ('special' in item && item.special)
+                            ? alpha(theme.palette.primary.main, 0.08)
+                            : alpha(theme.palette.primary.main, 0.04),
+                        transform: (('highlight' in item && item.highlight) || ('special' in item && item.special)) 
+                          ? 'translateY(-1px)' 
+                          : 'none',
+                        boxShadow: ('highlight' in item && item.highlight) 
+                          ? '0 4px 12px rgba(76, 175, 80, 0.3)' 
+                          : ('special' in item && item.special)
+                            ? '0 2px 8px rgba(76, 175, 80, 0.2)'
+                            : 'none',
+                        border: ('special' in item && item.special) 
+                          ? `1px solid ${alpha(theme.palette.primary.main, 0.5)}`
+                          : undefined,
+                      },
+                      borderRadius: 2,
+                      px: isLargeTablet ? 1.5 
+                        : isSmallLaptop ? 2 
+                        : isLargeLaptop ? 2.5
+                        : isSmallDesktop ? 2.5
+                        : isLargeDesktop ? 3
+                        : isUltraWideDesktop ? 3.2 : 2.5,
+                      py: isLargeTablet ? 0.75 
+                        : isSmallLaptop ? 1 
+                        : isLargeLaptop ? 1.25
+                        : isSmallDesktop ? 1.25
+                        : isLargeDesktop ? 1.5
+                        : isUltraWideDesktop ? 1.5 : 1.25,
+                      minWidth: (isLargeTablet || isSmallLaptop) ? 'auto' : undefined,
+                      fontSize: isLargeTablet ? '0.8rem' 
+                        : isSmallLaptop ? '0.95rem' 
+                        : isLargeLaptop ? '1rem'
+                        : isSmallDesktop ? '1rem'
+                        : isLargeDesktop ? '1.05rem'
+                        : isUltraWideDesktop ? '1.1rem' : '1rem',
+                      height: isLargeTablet ? 36 
+                        : isSmallLaptop ? 40 
+                        : isLargeLaptop ? 44
+                        : isSmallDesktop ? 46
+                        : isLargeDesktop ? 48
+                        : isUltraWideDesktop ? 50 : 44,
+                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&:active': {
+                        transform: 'scale(0.98)',
+                      },
+                    }}
+                  >
+                    {item.text}
+                  </Button>
+                );
+              })}
             </Box>
           )}
 

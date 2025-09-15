@@ -145,13 +145,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       const { default: authService } = await import('../services/authService');
       
-      // Prepare Google registration data
+      // Prepare Google registration data - only include fields expected by backend
       const googleRegisterData = {
-        ...userData,
+        firstName: userData.firstName || '',
+        lastName: userData.lastName || '',
+        email: userData.email || '',
+        password: `google_oauth_${userData.googleId || Date.now()}`, // Use googleId for consistency
         role: role,
-        password: 'google_oauth_' + Date.now(), // Temporary password for Google users
-        provider: 'google'
+        platform: 'job-portal',
+        // Additional fields for Google users (backend should handle these)
+        provider: 'google',
+        googleId: userData.googleId,
+        isEmailVerified: userData.isEmailVerified || true,
+        profilePicture: userData.profilePicture
       };
+      
+      console.log('🔍 Sending Google registration data:', {
+        ...googleRegisterData,
+        password: '[HIDDEN]' // Don't log the password
+      });
       
       const authData = await authService.register(googleRegisterData);
       setUser(authData.user);

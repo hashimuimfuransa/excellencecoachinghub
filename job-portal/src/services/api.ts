@@ -155,6 +155,23 @@ export const apiPost = async <T>(url: string, data?: any): Promise<T> => {
       throw new Error('Network connection failed. Please check your internet connection and try again.');
     }
     
+    // Handle validation errors (400)
+    if (error.response?.status === 400) {
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.response?.statusText || 
+                          'Invalid request data';
+      console.error('❌ Validation error details:', error.response?.data);
+      throw new Error(`Registration failed: ${errorMessage}`);
+    }
+    
+    // Handle authentication errors (401)
+    if (error.response?.status === 401) {
+      const errorMessage = error.response?.data?.message || 'Authentication failed';
+      throw new Error(errorMessage);
+    }
+    
+    // Handle server errors
     if (error.response?.status === 502 || error.response?.status === 503 || error.response?.status === 504) {
       throw new Error('Server is temporarily unavailable. Please try again in a few moments.');
     }

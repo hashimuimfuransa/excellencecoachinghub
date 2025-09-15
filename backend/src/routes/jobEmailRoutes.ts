@@ -74,7 +74,12 @@ router.post('/get-email-data', async (req: Request, res: Response) => {
         if (recommendations.length > 0) {
           // Generate a unique batch ID for this user's recommendations
           const batchId = `batch_${Date.now()}_${user._id}_${i}`;
-          const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+          const backendUrl = process.env.NODE_ENV === 'production'
+            ? (process.env.BACKEND_URL || 'https://api.exjobnet.com')
+            : 'http://localhost:5000';
+          const frontendUrl = process.env.NODE_ENV === 'production' 
+            ? (process.env.JOB_PORTAL_URL || 'https://exjobnet.com') 
+            : 'http://localhost:3000';
           
           const userRecommendation = {
             user: {
@@ -95,7 +100,7 @@ router.post('/get-email-data', async (req: Request, res: Response) => {
               matchPercentage: job.matchPercentage,
               salary: formatSalary(job.salary),
               skills: job.skills || job.skillsRequired || [],
-              jobUrl: `${process.env.JOB_PORTAL_URL || 'http://localhost:3000'}/jobs/${job._id}`,
+              jobUrl: `${frontendUrl}/jobs/${job._id}`,
               matchColor: job.matchPercentage >= 80 ? '#4caf50' : 
                           job.matchPercentage >= 60 ? '#ff9800' : '#2196f3'
             }))
@@ -584,12 +589,17 @@ router.get('/confirm-auto-apply/:userId/:batchId', async (req: Request, res: Res
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h2 style="color: #dc3545;">User Not Found</h2>
             <p>The user associated with this request could not be found.</p>
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Return to ExJobNet</a>
+            <a href="${frontendUrl}" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Return to Exjobnet</a>
           </body>
         </html>
       `);
     }
 
+    // Get environment-based URLs  
+    const frontendUrl = process.env.NODE_ENV === 'production' 
+      ? (process.env.JOB_PORTAL_URL || 'https://exjobnet.com') 
+      : 'http://localhost:3000';
+      
     // Get the job recommendations for this batch (from recent recommendations)
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
@@ -607,7 +617,7 @@ router.get('/confirm-auto-apply/:userId/:batchId', async (req: Request, res: Res
           <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
             <h2 style="color: #ffc107;">No Jobs Available</h2>
             <p>The recommended jobs are no longer available for automatic application.</p>
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/jobs" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Browse Jobs Manually</a>
+            <a href="${frontendUrl}/jobs" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Browse Jobs Manually</a>
           </body>
         </html>
       `);
@@ -636,6 +646,21 @@ router.get('/confirm-auto-apply/:userId/:batchId', async (req: Request, res: Res
           continue;
         }
 
+        // Check if job supports automatic application (has application procedure)
+        if (job.isExternalJob && !job.applicationUrl && !job.contactInfo?.email) {
+          // This job doesn't have application procedures - can't apply automatically
+          console.log(`⚠️  Job ${job.title} at ${job.company} doesn't have application procedures for auto-apply`);
+          failedApplications++;
+          applicationResults.push({
+            jobTitle: job.title,
+            status: 'no_application_procedure',
+            company: job.company,
+            sourceUrl: job.sourceUrl || job.originalUrl || `${frontendUrl}/jobs/${job._id}`,
+            error: 'No automatic application procedure available'
+          });
+          continue;
+        }
+
         // Create auto job application
         const jobApplication = new JobApplication({
           applicant: userId,
@@ -660,7 +685,7 @@ Best regards,
 ${user.firstName} ${user.lastName || ''}
 
 ---
-This application was submitted automatically through ExJobNet's job recommendation system.
+This application was submitted automatically through Exjobnet's job recommendation system.
 Contact: ${user.email}${user.phone ? ` | ${user.phone}` : ''}
 
 Profile Snapshot:
@@ -698,6 +723,36 @@ Profile Snapshot:
 
     // Log the results
     console.log(`📊 Auto-apply results for ${user.email}: ${successfulApplications} successful, ${failedApplications} failed`);
+    
+    // Send email summary to user with failed jobs information if any
+    try {
+      const { sendJobApplicationEmail } = await import('../services/sendGridService');
+      const failedJobsForEmail = applicationResults
+        .filter(app => app.status === 'no_application_procedure')
+        .map(app => ({
+          title: app.jobTitle,
+          company: app.company,
+          sourceUrl: app.sourceUrl
+        }));
+        
+      if (successfulApplications > 0) {
+        // Send summary email for the first successful job (as a representative)
+        const firstSuccessfulJob = applicationResults.find(app => app.status === 'success');
+        if (firstSuccessfulJob) {
+          await sendJobApplicationEmail(
+            user.email,
+            `${user.firstName} ${user.lastName || ''}`.trim(),
+            `${successfulApplications} Jobs (including ${firstSuccessfulJob.jobTitle})`,
+            'Multiple Companies',
+            'auto',
+            failedJobsForEmail.length > 0 ? failedJobsForEmail : undefined
+          );
+          console.log(`✅ Auto-apply summary email sent to: ${user.email}`);
+        }
+      }
+    } catch (emailError: any) {
+      console.error(`❌ Failed to send auto-apply summary email to ${user.email}:`, emailError.message);
+    }
 
     // Return success page
     const successApplicationsList = applicationResults
@@ -714,13 +769,18 @@ Profile Snapshot:
       .filter(app => app.status === 'failed')
       .map(app => `• ${app.jobTitle} at ${app.company}`)
       .join('\n');
+      
+    const noApplicationProcedureList = applicationResults
+      .filter(app => app.status === 'no_application_procedure')
+      .map(app => `• ${app.jobTitle} at ${app.company} - <a href="${app.sourceUrl}" target="_blank">Apply Manually</a>`)
+      .join('<br>');
 
     res.send(`
       <html>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Auto-Apply Confirmation - ExJobNet</title>
+          <title>Auto-Apply Confirmation - Exjobnet</title>
         </head>
         <body style="font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px;">
           <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden;">
@@ -742,22 +802,33 @@ Profile Snapshot:
               </div>
               ` : ''}
 
+              ${noApplicationProcedureList ? `
+              <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 15px 0; border-radius: 0 5px 5px 0;">
+                <strong>⚠️ Manual Application Required: ${applicationResults.filter(app => app.status === 'no_application_procedure').length} jobs</strong>
+                <p style="margin: 10px 0 5px 0; color: #856404;">These jobs don't have automatic application procedures. Click the links to apply manually:</p>
+                <div style="margin: 10px 0; font-family: Arial; line-height: 1.6;">${noApplicationProcedureList}</div>
+                <p style="margin: 10px 0 0 0; color: #856404; font-size: 14px;"><strong>💡 Tip:</strong> Manual applications allow you to customize your approach for better results!</p>
+              </div>
+              ` : ''}
+
               ${failedApplicationsList ? `
               <div style="background: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin: 15px 0; border-radius: 0 5px 5px 0;">
-                <strong>Failed Applications: ${failedApplications} jobs</strong>
+                <strong>Technical Failures: ${applicationResults.filter(app => app.status === 'failed').length} jobs</strong>
                 <pre style="margin: 10px 0; font-family: Arial; white-space: pre-wrap;">${failedApplicationsList}</pre>
+                <p style="margin: 10px 0 0 0; color: #721c24; font-size: 14px;">Please try applying to these jobs manually from the job portal.</p>
               </div>
               ` : ''}
 
               <div style="text-align: center; margin: 30px 0;">
                 <h3 style="color: #333;">What's Next?</h3>
                 <p style="color: #666; margin-bottom: 20px;">Monitor your applications and prepare for potential interviews!</p>
-                <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/applications" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 25px; margin: 10px; display: inline-block;">📋 View My Applications</a>
-                <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/jobs" style="background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 25px; margin: 10px; display: inline-block;">🔍 Browse More Jobs</a>
+                <a href="${frontendUrl}/applications" style="background: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 25px; margin: 10px; display: inline-block;">📋 View My Applications</a>
+                <a href="${frontendUrl}/jobs" style="background: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 25px; margin: 10px; display: inline-block;">🔍 Browse More Jobs</a>
+                <a href="${frontendUrl}/interview-prep" style="background: #17a2b8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 25px; margin: 10px; display: inline-block;">🎤 Interview Prep</a>
               </div>
             </div>
             <div style="background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px;">
-              <p style="margin: 0;"><strong>ExJobNet</strong> - Your applications are being processed by employers</p>
+              <p style="margin: 0;"><strong>Exjobnet</strong> - Your applications are being processed by employers</p>
               <p style="margin: 5px 0 0 0;">You'll receive notifications when employers respond to your applications</p>
             </div>
           </div>
@@ -772,7 +843,7 @@ Profile Snapshot:
         <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
           <h2 style="color: #dc3545;">Error Processing Request</h2>
           <p>There was an error processing your auto-apply request. Please try applying manually.</p>
-          <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/jobs" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Browse Jobs</a>
+          <a href="${frontendUrl}/jobs" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Browse Jobs</a>
         </body>
       </html>
     `);
@@ -788,6 +859,11 @@ router.get('/reject-auto-apply/:userId/:batchId', async (req: Request, res: Resp
     
     console.log(`❌ Auto-apply rejection received for user ${userId}, batch ${batchId}`);
     
+    // Get environment-based URLs  
+    const frontendUrl = process.env.NODE_ENV === 'production' 
+      ? (process.env.JOB_PORTAL_URL || 'https://exjobnet.com') 
+      : 'http://localhost:3000';
+    
     // Get user for personalization
     const user = await User.findById(userId);
     const userName = user ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Job Seeker';
@@ -801,7 +877,7 @@ router.get('/reject-auto-apply/:userId/:batchId', async (req: Request, res: Resp
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Manual Application Choice - ExJobNet</title>
+          <title>Manual Application Choice - Exjobnet</title>
         </head>
         <body style="font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px;">
           <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden;">
@@ -835,8 +911,8 @@ router.get('/reject-auto-apply/:userId/:batchId', async (req: Request, res: Resp
               <div style="text-align: center; margin: 30px 0;">
                 <h3 style="color: #333;">Ready to Apply?</h3>
                 <p style="color: #666; margin-bottom: 20px;">Browse the recommended jobs and apply to the ones that interest you most.</p>
-                <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/jobs" style="background: #0dcaf0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 25px; margin: 10px; display: inline-block;">🔍 Browse Recommended Jobs</a>
-                <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/profile" style="background: #6c757d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 25px; margin: 10px; display: inline-block;">👤 Update My Profile</a>
+                <a href="${frontendUrl}/jobs" style="background: #0dcaf0; color: white; padding: 12px 24px; text-decoration: none; border-radius: 25px; margin: 10px; display: inline-block;">🔍 Browse Recommended Jobs</a>
+                <a href="${frontendUrl}/profile" style="background: #6c757d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 25px; margin: 10px; display: inline-block;">👤 Update My Profile</a>
               </div>
 
               <div style="background: #f8f9fa; border-radius: 5px; padding: 15px; margin: 20px 0;">
@@ -846,7 +922,7 @@ router.get('/reject-auto-apply/:userId/:batchId', async (req: Request, res: Resp
               </div>
             </div>
             <div style="background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px;">
-              <p style="margin: 0;"><strong>ExJobNet</strong> - Connecting talent with opportunity</p>
+              <p style="margin: 0;"><strong>Exjobnet</strong> - Connecting talent with opportunity</p>
               <p style="margin: 5px 0 0 0;">We'll continue sending you personalized job recommendations</p>
             </div>
           </div>
@@ -861,7 +937,7 @@ router.get('/reject-auto-apply/:userId/:batchId', async (req: Request, res: Resp
         <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
           <h2 style="color: #dc3545;">Error Processing Request</h2>
           <p>There was an error processing your request. Please browse jobs manually.</p>
-          <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/jobs" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Browse Jobs</a>
+          <a href="${frontendUrl}/jobs" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Browse Jobs</a>
         </body>
       </html>
     `);

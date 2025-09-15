@@ -1,5 +1,4 @@
 import { api } from './api';
-import { sendJobRecommendationEmails } from './emailjsService';
 
 export interface JobRecommendation {
   id: string;
@@ -33,6 +32,7 @@ export interface JobEmailData {
 
 /**
  * Get job recommendation data from backend
+ * NOTE: Job emails are now sent automatically by backend SendGrid service
  */
 export const getJobEmailData = async (): Promise<{
   success: boolean;
@@ -53,7 +53,8 @@ export const getJobEmailData = async (): Promise<{
 };
 
 /**
- * Process and send job recommendation emails
+ * Job emails are now processed automatically by backend
+ * This function is kept for backward compatibility
  */
 export const processJobRecommendationEmails = async (): Promise<{
   success: boolean;
@@ -61,103 +62,39 @@ export const processJobRecommendationEmails = async (): Promise<{
   failed: number;
   errors: Array<{ email: string; error: string }>;
 }> => {
-  try {
-    console.log('🚀 Starting job recommendation email process...');
-    
-    // Get data from backend
-    const dataResult = await getJobEmailData();
-    
-    if (!dataResult.success || dataResult.data.users.length === 0) {
-      console.log('ℹ️ No users with job recommendations found');
-      return {
-        success: true,
-        sent: 0,
-        failed: 0,
-        errors: []
-      };
-    }
-
-    console.log(`📊 Processing emails for ${dataResult.data.users.length} users...`);
-    console.log(`📊 Total recommendations: ${dataResult.data.totalRecommendations}`);
-
-    // Send emails using EmailJS
-    const emailResult = await sendJobRecommendationEmails(dataResult.data.users);
-    
-    console.log('✅ Job recommendation email process completed:', emailResult);
-    return emailResult;
-    
-  } catch (error: any) {
-    console.error('❌ Job recommendation email process failed:', error);
-    return {
-      success: false,
-      sent: 0,
-      failed: 0,
-      errors: [{ email: 'system', error: error.message }]
-    };
-  }
+  console.log('📧 Job recommendation emails are now handled automatically by backend SendGrid service');
+  console.log('📧 No frontend processing needed - backend handles everything');
+  
+  return {
+    success: true,
+    sent: 0,
+    failed: 0,
+    errors: []
+  };
 };
 
 /**
- * Trigger job recommendation emails manually (for testing)
+ * Trigger manual job emails (backend handles this automatically)
  */
 export const triggerManualJobEmails = async (): Promise<{
   success: boolean;
   message: string;
   data?: any;
 }> => {
-  try {
-    console.log('🔧 Manually triggering job recommendation emails...');
-    
-    const result = await processJobRecommendationEmails();
-    
-    return {
-      success: result.success,
-      message: result.success 
-        ? `Successfully sent ${result.sent} job recommendation emails`
-        : `Email process completed with ${result.failed} failures`,
-      data: result
-    };
-  } catch (error: any) {
-    console.error('❌ Manual job email trigger failed:', error);
-    return {
-      success: false,
-      message: error.message || 'Manual trigger failed'
-    };
-  }
+  console.log('🔧 Job recommendation emails are sent automatically by backend - no manual trigger needed');
+  
+  return {
+    success: true,
+    message: 'Job emails handled automatically by backend SendGrid service'
+  };
 };
 
 /**
- * Set up automatic job recommendation email processing
- * This can be called when the frontend app loads
+ * Setup is no longer needed - backend handles everything automatically
  */
 export const setupJobRecommendationEmails = (): void => {
-  console.log('📧 Setting up job recommendation email processor...');
-  
-  // Check for job emails every 30 minutes
-  const checkInterval = 30 * 60 * 1000; // 30 minutes
-  
-  const checkForJobEmails = async () => {
-    try {
-      const dataResult = await getJobEmailData();
-      
-      if (dataResult.success && dataResult.data.users.length > 0) {
-        console.log(`📬 Found ${dataResult.data.users.length} users with job recommendations, processing emails...`);
-        await processJobRecommendationEmails();
-      } else {
-        console.log('ℹ️ No job recommendation emails to send');
-      }
-    } catch (error) {
-      console.error('❌ Automatic job email check failed:', error);
-    }
-  };
-  
-  // Initial check after 5 seconds
-  setTimeout(checkForJobEmails, 5000);
-  
-  // Set up periodic checks
-  setInterval(checkForJobEmails, checkInterval);
-  
-  console.log(`✅ Job recommendation email processor set up (checking every ${checkInterval / 60000} minutes)`);
+  console.log('📧 Job recommendation emails are now handled automatically by backend SendGrid service');
+  console.log('📧 No frontend setup needed - backend cron jobs handle everything');
 };
 
 const jobRecommendationService = {

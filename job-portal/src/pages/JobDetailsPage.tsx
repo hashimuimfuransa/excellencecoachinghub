@@ -31,7 +31,6 @@ import {
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 import { sendJobApplicationToEmployer } from '../services/jobApplicationEmailService';
-import { initEmailJS } from '../services/emailjsService';
 import {
   ArrowBack,
   LocationOn,
@@ -177,8 +176,8 @@ const JobDetailsPage: React.FC = () => {
   const [shareMenuAnchor, setShareMenuAnchor] = useState<null | HTMLElement>(null);
 
   useEffect(() => {
-    // Initialize EmailJS
-    initEmailJS();
+    // EmailJS removed - now using backend SendGrid service
+    console.log('📧 Email service now handled entirely by backend SendGrid');
     
     if (id) {
       fetchJobDetails();
@@ -1999,7 +1998,7 @@ const JobDetailsPage: React.FC = () => {
             )}
 
             {/* Application Instructions for External Jobs */}
-            {job.isExternalJob && job.contactInfo?.applicationInstructions && (
+            {job.isExternalJob && (
               <>
                 <Typography variant="subtitle2" color="text.primary" fontWeight="600" gutterBottom sx={{ 
                   color: theme.palette.secondary.main,
@@ -2018,14 +2017,33 @@ const JobDetailsPage: React.FC = () => {
                   mb: 3,
                   boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                 }}>
-                  <Typography variant="body1" sx={{ 
-                    whiteSpace: 'pre-line', 
-                    lineHeight: 1.7,
-                    color: theme.palette.text.primary,
-                    fontSize: '0.95rem'
-                  }}>
-                    {job.contactInfo.applicationInstructions}
-                  </Typography>
+                  {job.contactInfo?.applicationInstructions ? (
+                    <Typography variant="body1" sx={{ 
+                      whiteSpace: 'pre-line', 
+                      lineHeight: 1.7,
+                      color: theme.palette.text.primary,
+                      fontSize: '0.95rem'
+                    }}>
+                      {job.contactInfo.applicationInstructions}
+                    </Typography>
+                  ) : (
+                    <Stack spacing={2}>
+                      <Typography variant="body1" sx={{ 
+                        color: theme.palette.text.primary,
+                        fontSize: '0.95rem'
+                      }}>
+                        To apply for this position, please visit the original job posting by clicking the application button above.
+                      </Typography>
+                      {(job.contactInfo?.email || job.contactInfo?.phone || job.contactInfo?.website) && (
+                        <Typography variant="body2" sx={{ 
+                          color: theme.palette.text.secondary,
+                          fontStyle: 'italic'
+                        }}>
+                          You can also contact the employer directly using the contact information provided above.
+                        </Typography>
+                      )}
+                    </Stack>
+                  )}
                 </Paper>
               </>
             )}

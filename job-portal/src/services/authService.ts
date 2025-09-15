@@ -1,5 +1,4 @@
 import { apiPost, apiGet, handleApiResponse } from './api';
-import { sendWelcomeEmail, sendPasswordResetEmail } from './emailjsService';
 
 // Local type definitions
 export interface User {
@@ -69,17 +68,19 @@ class AuthService {
       localStorage.setItem('user', JSON.stringify(authData.user));
     }
     
-    // Send welcome email automatically after successful registration
+    // Send welcome email automatically after successful registration using backend SendGrid service
     if (authData.user) {
       try {
-        await sendWelcomeEmail(
-          authData.user.email,
-          authData.user.firstName,
-          authData.user.role
-        );
-        console.log('✅ Welcome email sent successfully after registration');
-      } catch (emailError) {
-        console.error('❌ Failed to send welcome email after registration:', emailError);
+        const emailResponse = await apiPost('/email/welcome', {
+          email: authData.user.email,
+          name: authData.user.firstName
+        });
+        
+        if (emailResponse && emailResponse.status === 200) {
+          console.log('✅ Welcome email sent successfully via SendGrid after registration');
+        }
+      } catch (emailError: any) {
+        console.error('❌ Failed to send welcome email after registration:', emailError.message);
         // Don't fail registration if email fails - it's not critical
       }
     }
@@ -141,20 +142,28 @@ class AuthService {
       
       // handleApiResponse returns response.data, so result IS the data object
       if (result && result.email && result.resetToken) {
-        console.log('Backend provided user data for frontend email sending:', result);
+        console.log('Backend provided user data for email sending:', result);
         
-        const emailSent = await sendPasswordResetEmail(
-          result.email,
-          result.firstName || 'User',
-          result.resetToken
-        );
+        try {
+          // Use the new backend SendGrid email service
+          const resetUrl = `${window.location.origin}/reset-password?token=${result.resetToken}`;
+          
+          const emailResponse = await apiPost('/email/password-reset', {
+            email: result.email,
+            name: result.firstName || 'User',
+            resetUrl: resetUrl
+          });
 
-        if (!emailSent) {
-          // EmailJS failed but backend succeeded - still continue since user can use console token
-          console.log('📧 Check your browser console for the password reset link (EmailJS may be in demo mode)');
-          console.log('🔗 Reset URL: http://localhost:5174/reset-password?token=' + result.resetToken);
-        } else {
-          console.log('✅ Password reset email sent successfully via EmailJS');
+          if (emailResponse && emailResponse.status === 200) {
+            console.log('✅ Password reset email sent successfully via SendGrid');
+          } else {
+            console.log('⚠️ Email service response:', emailResponse);
+          }
+        } catch (emailError: any) {
+          console.log('❌ Failed to send password reset email via SendGrid:', emailError.message);
+          // Fallback: show console message for development
+          console.log('📧 Check your browser console for the password reset link (Email service unavailable)');
+          console.log('🔗 Reset URL: ' + `${window.location.origin}/reset-password?token=${result.resetToken}`);
         }
       } else {
         console.log('❌ Backend did not provide expected user data for email sending:', result);

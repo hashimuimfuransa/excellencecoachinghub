@@ -144,9 +144,19 @@ const jobSchema = new Schema<IJobDocument>({
     type: Date,
     validate: {
       validator: function(this: IJobDocument, value: Date) {
-        return !value || value > new Date();
+        // Allow expired deadlines for external jobs (they might be historical data)
+        // Only enforce future deadlines for manually created jobs
+        if (!value) return true;
+        
+        if (this.isExternalJob) {
+          // For external jobs, allow any deadline date (past or future)
+          return true;
+        }
+        
+        // For internal jobs, deadline must be in the future
+        return value > new Date();
       },
-      message: 'Application deadline must be in the future'
+      message: 'Application deadline must be in the future (except for external jobs)'
     }
   },
   postedDate: {
@@ -215,7 +225,14 @@ const jobSchema = new Schema<IJobDocument>({
       type: String,
       trim: true,
       maxlength: [200, 'Contact email cannot exceed 200 characters'],
-      match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please provide a valid email address']
+      validate: {
+        validator: function(value: string) {
+          // Allow empty/undefined values, only validate if email is provided
+          if (!value || value.trim() === '') return true;
+          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+        },
+        message: 'Please provide a valid email address'
+      }
     },
     phone: {
       type: String,

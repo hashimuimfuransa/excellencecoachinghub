@@ -8,7 +8,7 @@ import 'react-toastify/dist/ReactToastify.css';
 // Context Providers
 import { AuthProvider } from './contexts/AuthContext';
 import { CustomThemeProvider, useThemeContext } from './contexts/ThemeContext';
-import { initEmailJS } from './services/emailjsService';
+// EmailJS removed - now using backend SendGrid service
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -83,9 +83,9 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
-  // Initialize EmailJS on app start
+  // EmailJS removed - now using backend SendGrid service
   useEffect(() => {
-    initEmailJS();
+    console.log('📧 Email service now handled entirely by backend SendGrid');
   }, []);
 
   return (

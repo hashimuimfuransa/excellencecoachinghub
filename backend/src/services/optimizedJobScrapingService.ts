@@ -60,6 +60,8 @@ export interface JobSourceConfig {
     salary?: string[];
     deadline?: string[];
     postedDate?: string[];
+    applicationInstructions?: string[];
+    contactInfo?: string[];
   };
   pagination?: {
     type: 'query' | 'selector' | 'none';
@@ -115,7 +117,9 @@ export class OptimizedJobScrapingService {
         benefits: ['.benefits', '.compensation', '.package'],
         salary: ['.salary', '.remuneration', '.pay'],
         deadline: ['.deadline', '.closing-date', '.application-deadline', '.expires'],
-        postedDate: ['.posted-date', '.published', '.date', '.opening-date']
+        postedDate: ['.posted-date', '.published', '.date', '.opening-date'],
+        applicationInstructions: ['.application-procedure', '.how-to-apply', '.application-instructions', '.apply-process', '.submission-process', '.contact-info'],
+        contactInfo: ['.contact-information', '.contact-details', '.employer-contact', '.company-contact', '.hiring-contact']
       },
       pagination: {
         type: 'query',
@@ -171,7 +175,9 @@ export class OptimizedJobScrapingService {
         benefits: ['.benefits', '.perks'],
         salary: ['.salary', '.compensation', '.pay'],
         deadline: ['.deadline', '.closing-date', '.application-deadline'],
-        postedDate: ['.posted-date', '.date-posted', '.publish-date', '.job-date', 'time', '.time-ago']
+        postedDate: ['.posted-date', '.date-posted', '.publish-date', '.job-date', 'time', '.time-ago'],
+        applicationInstructions: ['.application-procedure', '.how-to-apply', '.application-instructions', '.apply-info', '.contact-details', '.hiring-info'],
+        contactInfo: ['.contact-information', '.contact-details', '.employer-info', '.hiring-contact', '.company-contact']
       },
       pagination: {
         type: 'query',
@@ -273,9 +279,16 @@ export class OptimizedJobScrapingService {
       selectors: {
         jobLink: [
           'a[href*="vacancy-title"]',
+          'a[href*="vacancy--title"]',
           'a[href*="job-title"]',
+          'a[href*="/vacancy/"]',
+          'a[href*="/job/"]',
           '.job-title a',
-          'h2 a'
+          'h2 a',
+          'h3 a',
+          '.entry-title a',
+          '.post-title a',
+          'article a'
         ],
         title: ['h1', '.job-title', '.post-title', '.entry-title'],
         company: ['.company', '.employer', '.organization'],
@@ -836,7 +849,17 @@ export class OptimizedJobScrapingService {
             }
           }
           
-          const html = await this.fetchWebpage(pageUrl, source);
+          let html: string;
+          try {
+            html = await this.fetchWebpage(pageUrl, source);
+          } catch (error: any) {
+            // Handle specific HTTP errors during pagination
+            if (error.message?.includes('status code 500') || error.message?.includes('status code 404')) {
+              console.log(`⚠️ Page ${pageNum} returned ${error.message.includes('500') ? '500' : '404'} error, stopping pagination for this path`);
+              break; // Stop pagination for this path, but continue with next paths
+            }
+            throw error; // Re-throw other errors
+          }
           
           // Debug HTML content for workingnomads (minimal)
           if (source.name === 'workingnomads') {
@@ -1082,8 +1105,15 @@ export class OptimizedJobScrapingService {
       const responsibilities = this.extractArrayContent($, source.selectors.responsibilities);
       const benefits = source.selectors.benefits ? this.extractArrayContent($, source.selectors.benefits) : [];
       
+      // Extract application instructions and contact information
+      const applicationInstructions = source.selectors.applicationInstructions ? 
+        this.extractTextContent($, source.selectors.applicationInstructions) : '';
+      const contactInfoText = source.selectors.contactInfo ? 
+        this.extractTextContent($, source.selectors.contactInfo) : '';
+      
       // Debug extracted data
       console.log(`📋 Extracted data - Requirements: ${requirements.length}, Responsibilities: ${responsibilities.length}, Benefits: ${benefits.length}`);
+      console.log(`📞 Contact & Application info - Instructions: ${applicationInstructions ? 'Found' : 'None'}, Contact: ${contactInfoText ? 'Found' : 'None'}`);
       
       console.log(`📅 Posted date found: "${postedDateText}" -> ${postedDate?.toDateString() || 'not parsed'}`);
       
@@ -1096,6 +1126,8 @@ export class OptimizedJobScrapingService {
         requirements,
         responsibilities,
         benefits,
+        applicationInstructions,
+        contactInfoText,
         sourceUrl: jobUrl,
         postedDate: postedDate
       });
@@ -1145,6 +1177,8 @@ export class OptimizedJobScrapingService {
         Requirements: ${Array.isArray(rawJobData.requirements) ? rawJobData.requirements.join(', ') : rawJobData.requirements || 'Not specified'}
         Responsibilities: ${Array.isArray(rawJobData.responsibilities) ? rawJobData.responsibilities.join(', ') : rawJobData.responsibilities || 'Not specified'}
         Benefits: ${Array.isArray(rawJobData.benefits) ? rawJobData.benefits.join(', ') : rawJobData.benefits || 'Not specified'}
+        Application Instructions: ${rawJobData.applicationInstructions || 'Not specified'}
+        Contact Information: ${rawJobData.contactInfoText || 'Not specified'}
 
         Extract and return this exact JSON structure:
         {
@@ -1161,9 +1195,16 @@ export class OptimizedJobScrapingService {
           "responsibilities": ["responsibility1", "responsibility2"],
           "benefits": ["benefit1", "benefit2"],
           "salary": null,
-          "applicationDeadline": null,
-          "postedDate": null,
-          "contactInfo": null
+          "applicationDeadline": "2025-09-15T23:59:59.000Z or null",
+          "postedDate": "2024-09-08T00:00:00.000Z or null",
+          "contactInfo": {
+            "email": "contact@company.com or null",
+            "phone": "phone number or null",
+            "website": "company website or null",
+            "address": "physical address or null",
+            "contactPerson": "contact person name or null",
+            "applicationInstructions": "detailed application instructions or null"
+          }
         }
 
         Rules:
@@ -1173,10 +1214,35 @@ export class OptimizedJobScrapingService {
         - For experienceLevel: Use exact values - "entry_level", "mid_level", "senior_level", or "executive" (default: "mid_level")
         - For educationLevel: Use exact values - "high_school", "associate", "bachelor", "master", "doctorate", or "professional" (default: "bachelor")
         - Extract 3-8 relevant skills
+        - IMPORTANT: For applicationDeadline, look for patterns like:
+          * "Deadline 8 September 2025" -> convert to "2025-09-08T23:59:59.000Z"
+          * "Deadline: 30 September, 2025" -> convert to "2025-09-30T23:59:59.000Z"  
+          * "(Deadline 8 September 2025)" -> convert to "2025-09-08T23:59:59.000Z"
+          * "Apply before October 5, 2025" -> convert to "2025-10-05T23:59:59.000Z"
+          * Look for date patterns in the title, description, and contact information
+          * If no clear deadline found, return null
+          * ALWAYS use proper ISO 8601 format with timezone Z (2025 year is in the future)
+          * Set time to end of day (23:59:59) for deadlines
+          * CRITICAL: September 8, 2025 should be "2025-09-08T23:59:59.000Z" (year 2025 is future)
         - Include 3-6 key requirements
         - Include 3-6 main responsibilities
         - Include benefits if mentioned
-        - Return null for unknown fields
+        - IMPORTANT: Extract all contact information from the job posting:
+          * Look for email addresses (like contact@company.com, hr@company.com, apply@company.com)
+          * Do NOT use placeholder emails like [email protected], your@email.com, email@company.com
+          * Look for phone numbers (including country codes)
+          * Look for company websites or application portals
+          * Look for physical addresses or office locations
+          * Look for contact person names (HR Manager, Hiring Manager, etc.)
+          * Extract company name from the title if needed (e.g., "Agronomist at Association Mwana Ukundwa (AMU)" -> company: "Association Mwana Ukundwa (AMU)")
+        - CRITICAL: Extract detailed application instructions from the job posting:
+          * Look for phrases like "How to Apply", "Application Procedure", "To Apply"
+          * Include specific requirements like "send CV and cover letter to"
+          * Include application methods (email, online portal, physical submission)
+          * Include required documents (CV, certificates, portfolio, etc.)
+          * Include application deadlines if mentioned
+          * Include any special instructions or requirements
+        - Return null only if the specific field is completely missing from the job posting
       `;
 
       const aiResponse = await aiManager.generateContent(prompt);
@@ -1188,6 +1254,36 @@ export class OptimizedJobScrapingService {
 
       console.log('🤖 AI Response received:', aiResponse.substring(0, 200) + '...');
       const jobData = this.extractJsonFromResponse(aiResponse);
+      
+      // Parse date strings to Date objects
+      if (jobData.applicationDeadline && typeof jobData.applicationDeadline === 'string') {
+        try {
+          console.log(`📅 Parsing deadline string: "${jobData.applicationDeadline}"`);
+          jobData.applicationDeadline = new Date(jobData.applicationDeadline);
+          if (isNaN(jobData.applicationDeadline.getTime())) {
+            console.log('⚠️ Invalid application deadline format, setting to null');
+            jobData.applicationDeadline = null;
+          } else {
+            console.log(`📅 Successfully parsed deadline: ${jobData.applicationDeadline.toISOString()}`);
+          }
+        } catch (error) {
+          console.log('⚠️ Failed to parse application deadline, setting to null');
+          jobData.applicationDeadline = null;
+        }
+      }
+      
+      if (jobData.postedDate && typeof jobData.postedDate === 'string') {
+        try {
+          jobData.postedDate = new Date(jobData.postedDate);
+          if (isNaN(jobData.postedDate.getTime())) {
+            console.log('⚠️ Invalid posted date format, setting to null');
+            jobData.postedDate = null;
+          }
+        } catch (error) {
+          console.log('⚠️ Failed to parse posted date, setting to null');
+          jobData.postedDate = null;
+        }
+      }
       
       // Validate required fields
       if (!jobData.title || !jobData.description || !jobData.company) {
@@ -1212,6 +1308,60 @@ export class OptimizedJobScrapingService {
     sourceName: string
   ): Promise<void> {
     try {
+      // Handle expired deadline validation - if deadline is in the past, set status to EXPIRED
+      let jobStatus = JobStatus.ACTIVE;
+      let cleanedApplicationDeadline = jobData.applicationDeadline;
+      
+      if (jobData.applicationDeadline) {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0); // Set to start of today for fair comparison
+        
+        const deadline = new Date(jobData.applicationDeadline);
+        deadline.setHours(23, 59, 59, 999); // Set to end of deadline day
+        
+        console.log(`🔍 Date comparison: Now=${now.toISOString()}, Deadline=${deadline.toISOString()}`);
+        
+        if (deadline < now) {
+          console.log(`⏰ Job has expired deadline (${jobData.applicationDeadline.toDateString()}), marking as EXPIRED`);
+          jobStatus = JobStatus.EXPIRED;
+        } else {
+          console.log(`📅 Job deadline is valid (${jobData.applicationDeadline.toDateString()}), keeping as ACTIVE`);
+        }
+      }
+
+      // Clean and validate contact info to avoid validation errors
+      let cleanedContactInfo = jobData.contactInfo;
+      if (cleanedContactInfo) {
+        // Validate and clean email - remove placeholder emails and invalid formats
+        if (cleanedContactInfo.email) {
+          const email = cleanedContactInfo.email.toLowerCase().trim();
+          const isPlaceholder = email.includes('[email') || email.includes('email@') || 
+                                 email.includes('your@') || email.includes('contact@example') ||
+                                 email.includes('@company') || email.includes('@yourcompany');
+          const isValidFormat = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+          
+          if (isPlaceholder || !isValidFormat) {
+            console.log(`📧 Invalid or placeholder email detected (${cleanedContactInfo.email}), removing from contact info`);
+            cleanedContactInfo.email = undefined;
+          }
+        }
+        
+        // If no valid contact info remains, provide fallback
+        if (!cleanedContactInfo.email && !cleanedContactInfo.phone && !cleanedContactInfo.website && 
+            !cleanedContactInfo.contactPerson && !cleanedContactInfo.applicationInstructions) {
+          console.log(`📞 No valid contact info found, using external application URL`);
+          cleanedContactInfo = {
+            applicationInstructions: `Please apply through the original job posting: ${sourceUrl}`
+          };
+        }
+      } else {
+        // Provide fallback contact info if none exists
+        console.log(`📞 No contact info provided, creating fallback instructions`);
+        cleanedContactInfo = {
+          applicationInstructions: `Please apply through the original job posting: ${sourceUrl}`
+        };
+      }
+
       const job = new Job({
         title: jobData.title,
         description: jobData.description,
@@ -1226,21 +1376,21 @@ export class OptimizedJobScrapingService {
         responsibilities: jobData.responsibilities,
         benefits: jobData.benefits,
         salary: jobData.salary,
-        applicationDeadline: jobData.applicationDeadline,
+        applicationDeadline: cleanedApplicationDeadline,
         postedDate: jobData.postedDate,
-        status: JobStatus.ACTIVE,
+        status: jobStatus,
         employer: employerId,
         isExternalJob: true,
         externalJobSource: sourceName,
         externalJobId: jobData.externalJobId,
         externalApplicationUrl: jobData.externalApplicationUrl,
-        contactInfo: jobData.contactInfo,
+        contactInfo: cleanedContactInfo,
         createdAt: new Date(),
         updatedAt: new Date()
       });
 
       await job.save();
-      console.log(`💾 Saved job to database: ${jobData.title} at ${jobData.company}`);
+      console.log(`💾 Saved job to database: ${jobData.title} at ${jobData.company} (Status: ${jobStatus})`);
 
     } catch (error) {
       console.error('❌ Error saving job to database:', error instanceof Error ? error.message : 'Unknown error');

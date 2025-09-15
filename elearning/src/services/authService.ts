@@ -1,6 +1,6 @@
 import { apiService } from './api';
 import { IUser, LoginForm, RegisterForm, ApiResponse } from '../shared/types';
-import { sendVerificationEmail, sendPasswordResetEmail, sendWelcomeEmail, generateVerificationCode } from './emailjsService';
+// EmailJS removed - now using backend SendGrid service
 
 // Interface for forgot password response
 interface ForgotPasswordResponse {
@@ -173,7 +173,7 @@ export const authService = {
       }
 
       // Generate verification code
-      const verificationCode = generateVerificationCode();
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
       console.log('🔍 Generated verification code:', verificationCode);
 
       // Store verification code IMMEDIATELY (before any async operations)
@@ -189,17 +189,19 @@ export const authService = {
       console.log('- Stored email:', storedEmail);
       console.log('- Codes match:', storedCode === verificationCode);
 
-      // Send email using EmailJS (this can fail without affecting verification)
+      // Send email using backend SendGrid service
       try {
-        const emailSent = await sendVerificationEmail(
-          user.email,
-          user.firstName,
-          verificationCode
-        );
-        console.log('🔍 Email sent result:', emailSent);
+        await apiService.post('/email/verification-code', {
+          email: user.email,
+          name: user.firstName,
+          verificationCode: verificationCode
+        });
+        console.log('🔍 Verification email sent successfully via SendGrid');
       } catch (emailError) {
         console.error('🔍 Email sending failed, but verification code is stored:', emailError);
-        // Don't throw - the verification can still work with the stored code
+        // Fallback: show console message for development
+        console.log('📧 Check your browser console for the verification code (Email service unavailable)');
+        console.log('🔢 Verification Code: ' + verificationCode);
       }
 
     } catch (error) {
@@ -211,12 +213,21 @@ export const authService = {
   // Send verification email for new registration
   sendRegistrationVerification: async (email: string, firstName: string): Promise<string> => {
     try {
-      const verificationCode = generateVerificationCode();
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-      const emailSent = await sendVerificationEmail(email, firstName, verificationCode);
-
-      if (!emailSent) {
-        throw new Error('Failed to send verification email');
+      try {
+        await apiService.post('/email/verification-code', {
+          email: email,
+          name: firstName,
+          verificationCode: verificationCode
+        });
+        console.log('✅ Registration verification email sent successfully via SendGrid');
+      } catch (emailError) {
+        console.error('❌ Failed to send verification email via SendGrid:', emailError);
+        // Fallback: show console message for development
+        console.log('📧 Check your browser console for the verification code (Email service unavailable)');
+        console.log('🔢 Verification Code: ' + verificationCode);
+        // Don't throw - the verification can still work with the stored code
       }
 
       // Store verification code for later verification

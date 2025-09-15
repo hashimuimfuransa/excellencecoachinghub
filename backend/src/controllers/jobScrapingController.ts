@@ -207,6 +207,51 @@ export class JobScrapingController {
   }
 
   /**
+   * Bulk delete external jobs by source and external ID (admin only)
+   */
+  static async bulkDeleteExternalJobs(req: Request, res: Response): Promise<void> {
+    try {
+      const { externalJobSource, externalJobId } = req.body;
+      
+      if (!externalJobSource) {
+        res.status(400).json({
+          success: false,
+          message: 'External job source is required'
+        });
+        return;
+      }
+      
+      const query: any = {
+        isExternalJob: true,
+        externalJobSource
+      };
+      
+      if (externalJobId) {
+        query.externalJobId = externalJobId;
+      }
+      
+      const deletedJobs = await Job.deleteMany(query);
+      
+      res.status(200).json({
+        success: true,
+        message: `Successfully deleted ${deletedJobs.deletedCount} external jobs`,
+        data: {
+          deletedCount: deletedJobs.deletedCount,
+          source: externalJobSource,
+          externalJobId: externalJobId || 'all'
+        }
+      });
+    } catch (error) {
+      console.error('Error bulk deleting external jobs:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to bulk delete external jobs',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
    * Update external job status (admin only)
    */
   static async updateExternalJobStatus(req: Request, res: Response): Promise<void> {

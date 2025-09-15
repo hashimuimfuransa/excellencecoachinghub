@@ -6,7 +6,7 @@ import AdminLayout from './layouts/AdminLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
-import { initEmailJS } from './services/emailjsService';
+// EmailJS removed - now using backend SendGrid service
 
 // Super Admin Pages
 import AllUsersPage from './pages/SuperAdmin/AllUsersPage';
@@ -25,11 +25,12 @@ import SystemHealthPage from './pages/SuperAdmin/SystemHealthPage';
 import PerformanceReportsPage from './pages/SuperAdmin/PerformanceReportsPage';
 import UsageStatisticsPage from './pages/SuperAdmin/UsageStatisticsPage';
 import CompanyProfileApprovalPage from './pages/SuperAdmin/CompanyProfileApprovalPage';
+import EmailEventsPage from './pages/SuperAdmin/EmailEventsPage';
 
 function App() {
-  // Initialize EmailJS on app start
+  // EmailJS removed - now using backend SendGrid service
   useEffect(() => {
-    initEmailJS();
+    console.log('📧 Email service now handled entirely by backend SendGrid');
   }, []);
 
   return (
@@ -64,6 +65,7 @@ function App() {
               <Route path="system-analytics" element={<SystemAnalyticsPage />} />
               <Route path="system-settings" element={<SystemSettingsPage />} />
               <Route path="system-health" element={<SystemHealthPage />} />
+              <Route path="email-events" element={<EmailEventsPage />} />
               
               {/* Analytics */}
               <Route path="performance" element={<PerformanceReportsPage />} />

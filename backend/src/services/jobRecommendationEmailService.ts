@@ -1,16 +1,16 @@
 import * as cron from 'node-cron';
 import axios from 'axios';
-import { Job, JobStatus, User } from '../models';
+import { Job, JobStatus, User, EmailTracker, EmailType } from '../models';
 import { IUserDocument } from '../models/User';
+import { sendJobRecommendationEmail } from './sendGridService';
 
 /**
  * Job Recommendation Email Service
  * 
- * ✅ IMPORTANT: This service uses EMAILJS (not Nodemailer)
+ * ✅ UPDATED: This service now uses SendGrid REST API (replacing EmailJS)
  * - Backend prepares job recommendation data
- * - Frontend sends emails using EmailJS template: template_f0oaoz8
- * - Service ID: service_vtor3y8
- * - Public Key: VLY7_POWX21gRHMof
+ * - Backend sends emails directly using SendGrid API
+ * - No frontend dependency for email sending
  * 
  * Sends daily email recommendations to users with complete profiles when new matching jobs are found
  */
@@ -112,9 +112,19 @@ export class JobRecommendationEmailService {
 
       // Process all users and collect their recommendations for batch email sending
       const emailBatches: Array<{user: IUserDocument, recommendations: any[]}> = [];
+      let filteredOutUsers = 0;
       
       for (const user of eligibleUsers) {
         try {
+          // Check if we can send job recommendation email to this user
+          const canSendEmail = await EmailTracker.canSendEmail(user._id, EmailType.JOB_RECOMMENDATIONS);
+          
+          if (!canSendEmail) {
+            console.log(`⏰ Skipping ${user.email} - already received job recommendations email today`);
+            filteredOutUsers++;
+            continue;
+          }
+          
           const recommendations = await this.getJobRecommendationsForUser(user, newJobs);
           
           if (recommendations.length > 0) {
@@ -129,6 +139,8 @@ export class JobRecommendationEmailService {
           results.errors.push(errorMsg);
         }
       }
+      
+      console.log(`📊 Email filtering results: ${filteredOutUsers} users filtered out (already sent today), ${emailBatches.length} users eligible for email`);
 
       // Send all emails in batch if we have any
       if (emailBatches.length > 0) {
@@ -457,44 +469,95 @@ export class JobRecommendationEmailService {
 
 
   /**
-   * Send job recommendation emails by storing data for frontend to process
-   * Frontend will periodically check for new data and send emails using EmailJS
+   * Send job recommendation emails directly using SendGrid API
+   * No frontend dependency - emails sent immediately from backend
    */
   private static async sendJobRecommendationsToUsers(emailBatches: Array<{user: IUserDocument, recommendations: any[]}>): Promise<void> {
-    console.log(`🔄 Job recommendations ready for email processing: ${emailBatches.length} users`);
+    console.log(`🔄 Sending job recommendation emails: ${emailBatches.length} users`);
     console.log(`📊 Total recommendations: ${emailBatches.reduce((sum, batch) => sum + batch.recommendations.length, 0)}`);
     
-    // The data is already available via the /api/job-emails/get-email-data endpoint
-    // Frontend will automatically pick it up through periodic checks
+    const successCount = { sent: 0, failed: 0 };
     
-    try {
-      // Try to trigger frontend processing (optional - frontend also checks periodically)
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      const triggerEndpoint = `${frontendUrl}/api/trigger-job-emails`;
-      
-      // Make a simple GET request to trigger immediate processing
-      console.log(`🚨 Attempting to trigger immediate frontend email processing...`);
-      
-      const response = await axios.get(triggerEndpoint, {
-        timeout: 5000, // Short timeout since this is just a trigger
-        headers: {
-          'User-Agent': 'ExJobNet-BackendService/1.0'
-        }
-      });
+    for (const batch of emailBatches) {
+      try {
+        const user = batch.user;
+        const recommendations = batch.recommendations;
+        
+        // Generate batch ID and URLs for auto-apply functionality
+        const batchId = `batch_${Date.now()}_${user._id}`;
+        const backendUrl = process.env.NODE_ENV === 'production'
+          ? (process.env.BACKEND_URL || 'https://api.exjobnet.com')
+          : 'http://localhost:5000';
+        const frontendUrl = process.env.NODE_ENV === 'production' 
+          ? (process.env.JOB_PORTAL_URL || 'https://exjobnet.com') 
+          : 'http://localhost:3000';
+        const confirmUrl = `${backendUrl}/api/job-emails/confirm-auto-apply/${user._id}/${batchId}`;
+        const rejectUrl = `${backendUrl}/api/job-emails/reject-auto-apply/${user._id}/${batchId}`;
 
-      if (response.status === 200) {
-        console.log(`✅ Frontend email processing triggered successfully`);
+        // Format jobs for email template
+        const formattedJobs = recommendations.map(job => ({
+          id: job._id,
+          title: job.title,
+          company: job.company,
+          location: job.location || 'Remote/Various',
+          jobType: this.formatJobType(job.jobType),
+          matchPercentage: job.matchPercentage,
+          salary: this.formatSalary(job.salary),
+          skills: job.skills || job.skillsRequired || [],
+          jobUrl: `${frontendUrl}/jobs/${job._id}`,
+          matchColor: job.matchPercentage >= 80 ? '#4caf50' : 
+                      job.matchPercentage >= 60 ? '#ff9800' : '#2196f3'
+        }));
+
+        // Send email using SendGrid
+        await sendJobRecommendationEmail(
+          user.email,
+          user.firstName || user.name || 'Job Seeker',
+          formattedJobs,
+          confirmUrl,
+          rejectUrl
+        );
+
+        // Record that email was sent to prevent duplicate sends
+        await EmailTracker.recordEmailSent(
+          user._id, 
+          EmailType.JOB_RECOMMENDATIONS,
+          {
+            jobCount: formattedJobs.length,
+            campaignId: batchId,
+            reason: 'daily_job_recommendations'
+          }
+        );
+
+        console.log(`✅ Job recommendation email sent to: ${user.email} (${formattedJobs.length} jobs)`);
+        successCount.sent++;
+
+      } catch (error: any) {
+        console.error(`❌ Failed to send job recommendation email to ${batch.user.email}:`, error.message);
+        successCount.failed++;
       }
-
-    } catch (error: any) {
-      // This is expected if frontend isn't running or doesn't have the trigger endpoint
-      console.log(`ℹ️ Could not trigger immediate frontend processing (this is normal):`);
-      console.log(`   Reason: ${error?.message || 'Frontend not available'}`);
-      console.log(`   📧 Frontend will pick up emails during next periodic check`);
     }
     
-    // Store data for fallback notifications if needed
-    await this.fallbackEmailNotification(emailBatches);
+    console.log(`📊 Email sending completed: ${successCount.sent} sent, ${successCount.failed} failed`);
+  }
+
+  // Helper method to format job type
+  private static formatJobType(jobType: string): string {
+    if (!jobType) return 'Not specified';
+    return jobType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+
+  // Helper method to format salary
+  private static formatSalary(salary: any): string {
+    if (!salary) return 'Competitive';
+    if (typeof salary === 'string') return salary;
+    if (salary.min && salary.max) {
+      return `$${salary.min} - $${salary.max}`;
+    }
+    if (salary.amount) {
+      return `$${salary.amount}`;
+    }
+    return 'Competitive';
   }
 
   /**

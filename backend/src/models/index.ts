@@ -23,6 +23,8 @@ export { default as VideoProvider, IVideoProvider } from './VideoProvider';
 export { default as Certificate, ICertificate } from './Certificate';
 export { default as RecordedSession, IRecordedSession } from './RecordedSession';
 export { Assignment, AssignmentSubmission, IAssignment, IAssignmentSubmission } from './Assignment';
+export { EmailEvent, IEmailEvent } from './EmailEvent';
+export { default as EmailTracker, IEmailTracker, EmailType } from './EmailTracker';
 
 // Job Portal Models
 export { Job, IJobDocument, IJobModel } from './Job';

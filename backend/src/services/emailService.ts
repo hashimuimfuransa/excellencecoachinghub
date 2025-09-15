@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { sendEmail as sendGridEmail, sendWelcomeEmail as sendGridWelcomeEmail, sendPasswordResetEmail as sendGridPasswordResetEmail } from './sendGridService';
 
 interface EmailOptions {
   to: string;
@@ -758,12 +759,9 @@ const sendConsoleEmail = (options: EmailOptions): void => {
   console.log('==================\n');
 };
 
-// Send email function
+// Send email function (now using SendGrid by default, fallback to SMTP)
 export const sendEmail = async (options: EmailOptions): Promise<void> => {
   try {
-    // Try to send via Ethereal Email first
-    const transporter = await createTransporter();
-
     // Get email template
     const template = emailTemplates[options.template as keyof typeof emailTemplates];
     if (!template) {
@@ -772,6 +770,26 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
 
     // Generate HTML content
     const html = template(options.data);
+
+    // Create text version from HTML (simple fallback)
+    const text = html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+
+    // Try SendGrid first if configured
+    if (process.env.SENDGRID_API_KEY) {
+      console.log('Using SendGrid for email delivery');
+      await sendGridEmail({ 
+        to: options.to, 
+        subject: options.subject, 
+        text, 
+        html 
+      });
+      console.log('Email sent successfully via SendGrid');
+      return;
+    }
+
+    // Fallback to SMTP (original Nodemailer logic)
+    console.log('SendGrid not configured, falling back to SMTP');
+    const transporter = await createTransporter();
 
     // Email options
     const fromEmail = process.env['EMAIL_FROM'] || process.env['EMAIL_USER'] || 'noreply@excellencecoaching.com';
@@ -784,7 +802,7 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
 
     // Send email
     const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully:', info.messageId);
+    console.log('Email sent successfully via SMTP:', info.messageId);
 
     // If using Ethereal Email, log the preview URL
     if (info.messageId) {
@@ -794,7 +812,7 @@ export const sendEmail = async (options: EmailOptions): Promise<void> => {
       }
     }
   } catch (error) {
-    console.error('Failed to send email via SMTP, falling back to console logging');
+    console.error('Failed to send email via SendGrid/SMTP, falling back to console logging');
     // Fallback to console logging
     sendConsoleEmail(options);
   }
@@ -852,18 +870,28 @@ export const sendHtmlEmail = async (options: { to: string; subject: string; html
   }
 };
 
-// Send welcome email to new users
+// Send welcome email to new users (now uses SendGrid by default)
 export const sendWelcomeEmail = async (userData: {
   email: string;
   firstName: string;
-  platform: 'homepage' | 'job-portal' | 'elearning';
+  platform?: 'homepage' | 'job-portal' | 'elearning';
 }): Promise<void> => {
   try {
+    // If SendGrid is configured, use the optimized SendGrid service
+    if (process.env.SENDGRID_API_KEY) {
+      await sendGridWelcomeEmail(userData.email, userData.firstName);
+      console.log(`Welcome email sent via SendGrid to ${userData.email}`);
+      return;
+    }
+
+    // Fallback to original template-based system
     const platformUrls = {
       homepage: process.env.HOMEPAGE_URL || 'http://localhost:3000',
       'job-portal': process.env.JOB_PORTAL_URL || 'http://localhost:3001',
       elearning: process.env.ELEARNING_URL || 'http://localhost:3002'
     };
+
+    const platform = userData.platform || 'job-portal'; // Default to job-portal
 
     await sendEmail({
       to: userData.email,
@@ -871,12 +899,12 @@ export const sendWelcomeEmail = async (userData: {
       template: 'welcome',
       data: {
         firstName: userData.firstName,
-        platform: userData.platform,
-        platformUrl: platformUrls[userData.platform]
+        platform: platform,
+        platformUrl: platformUrls[platform]
       }
     });
 
-    console.log(`Welcome email sent to ${userData.email} for ${userData.platform} platform`);
+    console.log(`Welcome email sent to ${userData.email} for ${platform} platform`);
   } catch (error) {
     console.error('Error sending welcome email:', error);
     // Don't throw error - welcome email failure shouldn't break registration

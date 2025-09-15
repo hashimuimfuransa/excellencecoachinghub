@@ -23,7 +23,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from '../../services/api';
-import { testEmailJSConnection, sendPasswordResetEmail } from '../../services/emailjsService';
+// EmailJS removed - now using backend SendGrid service
 import { authService } from '../../services/authService';
 
 const EmailSystemDemo: React.FC = () => {

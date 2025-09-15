@@ -26,7 +26,6 @@
   "author": "Excellence Coaching Hub Team",
   "license": "MIT",
   "dependencies": {
-    "@emailjs/nodejs": "^5.0.2",
     "@google/generative-ai": "^0.21.0",
     "@types/cheerio": "^0.22.35",
     "@types/node-cron": "^3.0.11",

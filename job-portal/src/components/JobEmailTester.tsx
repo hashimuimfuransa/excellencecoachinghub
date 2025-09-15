@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import jobRecommendationService from '../services/jobRecommendationService';
-import { testJobRecommendationEmail } from '../services/emailjsService';
 
 const JobEmailTester: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [emailData, setEmailData] = useState<any>(null);
-  const [testEmail, setTestEmail] = useState('');
 
   const handleGetEmailData = async () => {
     setLoading(true);
@@ -47,30 +45,6 @@ const JobEmailTester: React.FC = () => {
     setLoading(false);
   };
 
-  const handleTestEmailJSTemplate = async () => {
-    if (!testEmail || !testEmail.includes('@')) {
-      setResult({ success: false, message: 'Please enter a valid test email address' });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      console.log(`🧪 Testing EmailJS template_f0oaoz8 with email: ${testEmail}`);
-      const success = await testJobRecommendationEmail(testEmail);
-      setResult({
-        success,
-        message: success 
-          ? `✅ Test job recommendation email sent successfully to ${testEmail}! Check your inbox.`
-          : '❌ Test email failed. This usually means the template variables don\'t match your EmailJS template. Check browser console for details.',
-        data: { sent: success ? 1 : 0, failed: success ? 0 : 1 }
-      });
-    } catch (error: any) {
-      console.error('❌ Test EmailJS template error:', error);
-      setResult({ success: false, message: `Error: ${error.message}` });
-    }
-    setLoading(false);
-  };
-
   return (
     <div style={{ 
       padding: '20px', 
@@ -80,41 +54,22 @@ const JobEmailTester: React.FC = () => {
       backgroundColor: '#f8f9fa'
     }}>
       <h3 style={{ color: '#4CAF50', marginBottom: '20px' }}>
-        📧 Job Recommendation Email Tester
+        📧 Job Recommendation Email System (Backend SendGrid)
       </h3>
 
-      {/* Test Email Input */}
-      <div style={{ marginBottom: '15px' }}>
-        <input
-          type="email"
-          placeholder="Enter test email address (e.g., your@email.com)"
-          value={testEmail}
-          onChange={(e) => setTestEmail(e.target.value)}
-          style={{
-            width: '300px',
-            padding: '10px',
-            marginRight: '10px',
-            border: '2px solid #ddd',
-            borderRadius: '4px',
-            fontSize: '14px'
-          }}
-        />
-        <button
-          onClick={handleTestEmailJSTemplate}
-          disabled={loading || !testEmail}
-          style={{
-            padding: '10px 15px',
-            backgroundColor: '#9C27B0',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: (loading || !testEmail) ? 'not-allowed' : 'pointer',
-            opacity: (loading || !testEmail) ? 0.6 : 1,
-            fontWeight: 'bold'
-          }}
-        >
-          🧪 Test EmailJS Template
-        </button>
+      <div style={{ 
+        backgroundColor: '#e3f2fd', 
+        padding: '15px', 
+        borderRadius: '4px', 
+        marginBottom: '15px',
+        border: '1px solid #2196F3'
+      }}>
+        <h4 style={{ color: '#1976D2', marginTop: 0 }}>ℹ️ Updated Email System</h4>
+        <p><strong>✅ Job recommendation emails are now handled automatically by the backend SendGrid service!</strong></p>
+        <p>• Emails are sent automatically via backend cron jobs</p>
+        <p>• No frontend email processing needed</p>
+        <p>• Better deliverability and reliability</p>
+        <p>• Unsubscribe functionality included</p>
       </div>
       
       <div style={{ marginBottom: '15px' }}>
@@ -132,7 +87,7 @@ const JobEmailTester: React.FC = () => {
             opacity: loading ? 0.6 : 1
           }}
         >
-          📊 Get Email Data
+          📊 Get Email Data (View Only)
         </button>
         
         <button
@@ -149,7 +104,7 @@ const JobEmailTester: React.FC = () => {
             opacity: loading ? 0.6 : 1
           }}
         >
-          📧 Process Job Emails
+          📧 Check Email Status
         </button>
         
         <button
@@ -165,7 +120,7 @@ const JobEmailTester: React.FC = () => {
             opacity: loading ? 0.6 : 1
           }}
         >
-          🚀 Trigger Manual Job Emails
+          ℹ️ Email System Info
         </button>
       </div>
 
@@ -219,26 +174,13 @@ const JobEmailTester: React.FC = () => {
           border: `1px solid ${result.success ? '#4CAF50' : '#f44336'}`
         }}>
           <h4 style={{ color: result.success ? '#2E7D32' : '#C62828', marginTop: 0 }}>
-            📧 Email Processing Result
+            📧 Email System Status
           </h4>
-          <p><strong>Success:</strong> {result.success ? '✅' : '❌'}</p>
+          <p><strong>Status:</strong> {result.success ? '✅' : '❌'}</p>
           <p><strong>Message:</strong> {result.message}</p>
           {result.data && (
             <div>
-              <p><strong>Emails Sent:</strong> {result.data.sent || 0}</p>
-              <p><strong>Failed:</strong> {result.data.failed || 0}</p>
-              {result.data.errors && result.data.errors.length > 0 && (
-                <div>
-                  <strong>Errors:</strong>
-                  <ul>
-                    {result.data.errors.map((error: any, index: number) => (
-                      <li key={index} style={{ color: '#d32f2f' }}>
-                        {error.email}: {error.error}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <p><strong>Info:</strong> {result.data.info || 'Backend handles all email sending automatically'}</p>
             </div>
           )}
         </div>
@@ -252,14 +194,15 @@ const JobEmailTester: React.FC = () => {
         backgroundColor: '#f0f0f0',
         borderRadius: '4px'
       }}>
-        <strong>💡 How it works:</strong>
+        <strong>🚀 New SendGrid Email System:</strong>
         <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-          <li><strong>Get Email Data:</strong> Fetches users with complete profiles and new job matches</li>
-          <li><strong>Process Job Emails:</strong> Processes any available job recommendations and sends emails</li>
-          <li><strong>Trigger Manual:</strong> Combines both steps - gets data and sends emails</li>
+          <li><strong>Automatic:</strong> Backend cron jobs handle all email scheduling</li>
+          <li><strong>Reliable:</strong> Professional email delivery via SendGrid API</li>
+          <li><strong>Complete:</strong> Includes unsubscribe links and proper formatting</li>
+          <li><strong>Scalable:</strong> Can handle large volumes of emails efficiently</li>
         </ul>
         <p style={{ margin: '5px 0' }}>
-          The system automatically checks for new job recommendations every 30 minutes when the app is running.
+          <strong>📧 Emails sent automatically include:</strong> Welcome emails, password resets, job recommendations, and application confirmations.
         </p>
       </div>
     </div>

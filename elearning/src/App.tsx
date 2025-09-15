@@ -105,14 +105,14 @@ import CareerAssessmentResults from './pages/CareerAssessment/CareerAssessmentRe
 // Import hooks
 import { useAuth } from './hooks/useAuth';
 import { UserRole } from './shared/types';
-import { initEmailJS } from './services/emailjsService';
+// EmailJS removed - now using backend SendGrid service
 
 const App: React.FC = () => {
   const { user, loading } = useAuth();
 
-  // Initialize EmailJS on app start
+  // EmailJS removed - now using backend SendGrid service
   React.useEffect(() => {
-    initEmailJS();
+    console.log('📧 Email service now handled entirely by backend SendGrid');
   }, []);
 
   // Handle unhandled promise rejections

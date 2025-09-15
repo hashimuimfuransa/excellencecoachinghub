@@ -1,5 +1,4 @@
 import { apiService } from './api';
-import { sendPasswordResetEmail, sendWelcomeEmail } from './emailjsService';
 import type { LoginForm, RegisterForm, User, AuthResponse } from '../types/auth';
 
 export const authService = {
@@ -138,17 +137,24 @@ export const authService = {
         throw new Error(response.error || 'Failed to send password reset email');
       }
 
-      // Backend returned success with user data, now send actual email via EmailJS
+      // Backend returned success with user data, now send actual email via SendGrid (handled by backend)
       if (response.data) {
-        const emailSent = await sendPasswordResetEmail(
-          response.data.email,
-          response.data.firstName || 'User',
-          response.data.resetToken
-        );
+        try {
+          // Use the new backend SendGrid email service
+          const resetUrl = `${window.location.origin}/reset-password?token=${response.data.resetToken}`;
+          
+          await apiService.post('/email/password-reset', {
+            email: response.data.email,
+            name: response.data.firstName || 'User',
+            resetUrl: resetUrl
+          });
 
-        if (!emailSent) {
-          // EmailJS failed but backend succeeded - still continue since user can use console token
-          console.log('📧 Check your browser console for the password reset link (EmailJS may be in demo mode)');
+          console.log('✅ Password reset email sent successfully via SendGrid');
+        } catch (emailError: any) {
+          console.log('❌ Failed to send password reset email via SendGrid:', emailError.message);
+          // Fallback: show console message for development
+          console.log('📧 Check your browser console for the password reset link (Email service unavailable)');
+          console.log('🔗 Reset URL: ' + `${window.location.origin}/reset-password?token=${response.data.resetToken}`);
         }
       }
     } catch (error: any) {

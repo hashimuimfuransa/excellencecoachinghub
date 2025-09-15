@@ -68,6 +68,18 @@ router.delete(
 );
 
 /**
+ * @route   DELETE /api/job-scraping/external-jobs/bulk
+ * @desc    Bulk delete external jobs by source
+ * @access  Private - Admin
+ */
+router.delete(
+  '/external-jobs/bulk',
+  auth,
+  authorizeRoles(['super_admin', 'admin']),
+  JobScrapingController.bulkDeleteExternalJobs
+);
+
+/**
  * @route   PATCH /api/job-scraping/external-jobs/:jobId/status
  * @desc    Update external job status
  * @access  Private - Admin

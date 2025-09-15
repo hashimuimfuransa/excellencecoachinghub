@@ -4,7 +4,7 @@ import { AuthProvider, UserRole } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './layouts/MainLayout';
-import { initEmailJS } from './services/emailjsService';
+// EmailJS removed - now using backend SendGrid service
 import { pushNotificationService } from './services/pushNotificationService';
 import { jobEmailService } from './services/jobEmailService';
 import EmailApiHandler from './components/EmailApiHandler';
@@ -90,7 +90,8 @@ import MessagesPage from './pages/MessagesPage';
 function App() {
   // Initialize services on app start
   useEffect(() => {
-    initEmailJS();
+    // EmailJS removed - now using backend SendGrid service
+    console.log('📧 Email service now handled entirely by backend SendGrid');
     
     // Initialize push notifications
     pushNotificationService.init().catch(console.error);

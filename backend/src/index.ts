@@ -89,6 +89,8 @@ import cvBuilderRoutes from '@/routes/cvBuilderRoutes';
 import jobRecommendationRoutes from '@/routes/jobRecommendationRoutes';
 import jobEmailRoutes from '@/routes/jobEmailRoutes';
 import jobCleanupRoutes from '@/routes/jobCleanupRoutes';
+import emailRoutes from '@/routes/emailRoutes';
+import sendGridWebhookRoutes from '@/routes/sendGridWebhookRoutes';
 
 // Social Network routes
 import postRoutes from '@/routes/postRoutes';
@@ -726,6 +728,8 @@ app.use('/api/smart-tests', smartTestRoutes);
 app.use('/api/job-recommendations', jobRecommendationRoutes);
 app.use('/api/job-emails', jobEmailRoutes);
 app.use('/api/admin/job-cleanup', jobCleanupRoutes);
+app.use('/api/email', emailRoutes); // SendGrid email routes (replaces EmailJS)
+app.use('/api/sendgrid', sendGridWebhookRoutes); // SendGrid webhook routes
 
 // Test Request routes
 app.use('/api/test-requests', testRequestRoutes);

@@ -15,10 +15,7 @@ import { AuthProvider } from './store/AuthContext';
 import { SocketProvider } from './store/SocketContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
-import { initEmailJS } from './services/emailjsService';
-
-// Initialize EmailJS for automatic email sending
-initEmailJS();
+// EmailJS removed - now using backend SendGrid service
 
 // Create a client
 const queryClient = new QueryClient({

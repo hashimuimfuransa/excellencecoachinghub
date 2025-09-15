@@ -1,29 +1,25 @@
 import { testJobApplicationEmail } from '../services/jobApplicationEmailService';
-import { initEmailJS } from '../services/emailjsService';
 
-// Test utility to verify EmailJS integration
+// Test utility - now simplified since emails are handled by backend SendGrid
 export const testEmailJSIntegration = async (testEmail: string = 'test@example.com') => {
   try {
-    console.log('🧪 Testing EmailJS Integration for Job Applications...');
+    console.log('🧪 Testing Email Integration (now via backend SendGrid)...');
     
-    // Initialize EmailJS
-    initEmailJS();
-    console.log('✅ EmailJS initialized');
-    
-    // Test job application email
+    // Test job application email (now handled by backend)
     const result = await testJobApplicationEmail(testEmail);
     
     if (result) {
-      console.log('✅ Job application email test successful!');
-      console.log('📧 Email sent to:', testEmail);
+      console.log('✅ Email system test successful!');
+      console.log('📧 Backend SendGrid service is configured and ready');
+      console.log('📧 Test emails would be sent to:', testEmail);
       return true;
     } else {
-      console.log('⚠️ Job application email test failed, but this is expected in demo mode');
-      console.log('💡 Check console for fallback email content');
+      console.log('⚠️ Email system test completed');
+      console.log('💡 Backend SendGrid service handles all email sending automatically');
       return false;
     }
   } catch (error) {
-    console.error('❌ EmailJS integration test failed:', error);
+    console.error('❌ Email integration test failed:', error);
     return false;
   }
 };

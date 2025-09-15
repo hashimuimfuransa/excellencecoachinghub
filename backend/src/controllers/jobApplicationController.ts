@@ -3,8 +3,8 @@ import { JobApplication, Job, User, PsychometricTestResult, AIInterview, Notific
 import { ApplicationStatus } from '@/types/job';
 import { UserRole } from '../../../shared/types';
 import { AuthRequest } from '@/middleware/auth';
-// Removed SMTP email dependency - using frontend EmailJS instead
 import { validateProfile } from '../utils/profileValidation';
+import { sendJobApplicationEmail } from '../services/sendGridService';
 
 // Apply for a job
 export const applyForJob = async (req: AuthRequest, res: Response) => {
@@ -165,6 +165,21 @@ export const applyForJob = async (req: AuthRequest, res: Response) => {
     const populatedApplication = await JobApplication.findById(application._id)
       .populate('job', 'title company location')
       .populate('applicant', 'firstName lastName email');
+
+    // Send job application confirmation email using SendGrid
+    try {
+      await sendJobApplicationEmail(
+        user.email,
+        user.firstName || user.name || 'Job Seeker',
+        job.title,
+        job.company,
+        'manual' // This is a manual application
+      );
+      console.log(`✅ Job application confirmation email sent to: ${user.email}`);
+    } catch (emailError: any) {
+      console.error(`❌ Failed to send job application confirmation email to ${user.email}:`, emailError.message);
+      // Don't fail the application if email fails - it's not critical
+    }
 
     res.status(201).json({
       success: true,

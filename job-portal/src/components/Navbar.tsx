@@ -87,17 +87,9 @@ const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
   const { mode, toggleTheme } = useCustomTheme();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isSmallTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
-  const isLargeTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
-  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
-  const isSmallLaptop = useMediaQuery(theme.breakpoints.between('lg', 'xl'));
-  const isLargeLaptop = useMediaQuery(theme.breakpoints.up('xl'));
-  const isSmallDesktop = useMediaQuery('(min-width: 1440px) and (max-width: 1919px)');
-  const isLargeDesktop = useMediaQuery('(min-width: 1920px) and (max-width: 2559px)');
-  const isUltraWideDesktop = useMediaQuery('(min-width: 2560px)');
-  const isLaptop = useMediaQuery(theme.breakpoints.up('lg'));
-  const isDesktop = useMediaQuery('(min-width: 1440px)');
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
+  const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
   
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -224,9 +216,9 @@ const Navbar: React.FC = () => {
     : publicMenuItems;
 
   const drawer = (
-    <Box sx={{ width: { xs: 280, sm: 320, md: 360, lg: 400 } }}>
+    <Box sx={{ width: { xs: 280, sm: 300, md: 320 } }}>
       <Box sx={{ 
-        p: { xs: 2.5, sm: 3, md: 3.5, lg: 4 }, 
+        p: 3, 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
@@ -258,8 +250,8 @@ const Navbar: React.FC = () => {
             return (
               <React.Fragment key={item.text}>
                 {/* Dropdown header */}
-                <ListItem sx={{ px: 2, py: 1 }}>
-                  <ListItemIcon sx={{ color: 'primary.main' }}>
+                <ListItem sx={{ px: 3, py: 1.5 }}>
+                  <ListItemIcon sx={{ color: 'primary.main', minWidth: 40 }}>
                     {item.icon}
                   </ListItemIcon>
                   <ListItemText 
@@ -268,7 +260,7 @@ const Navbar: React.FC = () => {
                       '& .MuiListItemText-primary': { 
                         fontWeight: 'bold',
                         color: 'primary.main',
-                        fontSize: '0.95rem'
+                        fontSize: '1rem'
                       } 
                     }}
                   />
@@ -291,15 +283,16 @@ const Navbar: React.FC = () => {
                         backgroundColor: alpha(theme.palette.primary.main, 0.08),
                       },
                       mx: 3,
-                      borderRadius: 2,
-                      mb: 0.5,
-                      pl: 4,
+                      borderRadius: 3,
+                      mb: 1,
+                      pl: 5,
+                      py: 1.5,
                       transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                     }}
                   >
                     <ListItemIcon sx={{ 
                       color: location.pathname === opportunity.path ? 'primary.main' : 'inherit',
-                      minWidth: 36
+                      minWidth: 40
                     }}>
                       {opportunity.icon}
                     </ListItemIcon>
@@ -310,10 +303,12 @@ const Navbar: React.FC = () => {
                         '& .MuiListItemText-primary': { 
                           fontWeight: location.pathname === opportunity.path ? 'bold' : 'normal',
                           color: location.pathname === opportunity.path ? 'primary.main' : 'inherit',
-                          fontSize: '0.9rem'
+                          fontSize: '0.95rem'
                         },
                         '& .MuiListItemText-secondary': {
-                          fontSize: '0.75rem'
+                          fontSize: '0.8rem',
+                          color: 'text.secondary',
+                          mt: 0.5
                         }
                       }}
                     />
@@ -352,9 +347,10 @@ const Navbar: React.FC = () => {
                       ? alpha(theme.palette.primary.main, 0.1)
                       : alpha(theme.palette.primary.main, 0.08),
                 },
-                mx: 1,
-                borderRadius: 2,
-                mb: 0.5,
+                mx: 2,
+                borderRadius: 3,
+                mb: 1,
+                py: 1.5,
                 border: item.highlight 
                   ? `2px solid ${theme.palette.primary.main}` 
                   : ('special' in item && item.special)
@@ -504,39 +500,21 @@ const Navbar: React.FC = () => {
         }}
       >
         <Toolbar sx={{ 
-          px: { 
-            xs: 1, 
-            sm: 1.5, 
-            md: 2.5, 
-            lg: 4, 
-            xl: isSmallDesktop ? 6 : isLargeDesktop ? 8 : isUltraWideDesktop ? 12 : 6 
-          }, 
-          minHeight: { 
-            xs: 60, 
-            sm: 56, 
-            md: 64, 
-            lg: 80, 
-            xl: isSmallDesktop ? 85 : isLargeDesktop ? 88 : isUltraWideDesktop ? 92 : 84 
-          },
-          py: { 
-            xs: 1, 
-            sm: 0.5, 
-            md: 1, 
-            lg: 2, 
-            xl: isSmallDesktop ? 2.5 : isLargeDesktop ? 3 : isUltraWideDesktop ? 3.5 : 2.5 
-          },
+          px: { xs: 2, md: 3, lg: 4 }, 
+          minHeight: { xs: 64, md: 72, lg: 80 },
+          py: { xs: 1, md: 1.5, lg: 2 },
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
-          {(isMobile || isSmallTablet) && (
+          {isMobile && (
             <IconButton
               color="inherit"
               aria-label="open drawer"
               edge="start"
               onClick={handleDrawerToggle}
               sx={{ 
-                mr: { xs: 1, sm: 1.5, md: 2 },
-                p: { xs: 1, sm: 1.25, md: 1.5 },
+                mr: 2,
+                p: 1.5,
                 borderRadius: '12px',
                 backgroundColor: alpha(theme.palette.primary.main, 0.08),
                 '&:hover': {
@@ -546,7 +524,7 @@ const Navbar: React.FC = () => {
                 transition: 'all 0.3s ease'
               }}
             >
-              <MenuIcon sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }} />
+              <MenuIcon sx={{ fontSize: '1.5rem' }} />
             </IconButton>
           )}
           
@@ -555,13 +533,7 @@ const Navbar: React.FC = () => {
             sx={{ 
               display: 'flex', 
               alignItems: 'center', 
-              gap: { 
-                xs: 1, 
-                sm: 1.5, 
-                md: 2, 
-                lg: 2.5, 
-                xl: isSmallDesktop ? 3 : isLargeDesktop ? 3.5 : isUltraWideDesktop ? 4 : 3 
-              },
+              gap: { xs: 1, md: 1.5, lg: 2 },
               cursor: 'pointer',
               minWidth: 'fit-content'
             }}
@@ -571,14 +543,9 @@ const Navbar: React.FC = () => {
               src="/exjobnetlogo.png" 
               alt="ExJobNet" 
               style={{ 
-                height: isMobile ? 50 
-                  : isSmallTablet ? 40 
-                  : isLargeTablet ? 45 
-                  : isSmallLaptop ? 65 
-                  : isLargeLaptop ? 70
-                  : isSmallDesktop ? 72
-                  : isLargeDesktop ? 75
-                  : isUltraWideDesktop ? 78 : 70, 
+                height: isMobile ? 40 
+                  : isTablet ? 48 
+                  : 56, 
                 width: 'auto',
                 transition: 'height 0.3s ease'
               }}
@@ -608,16 +575,11 @@ const Navbar: React.FC = () => {
             flex: 1,
             justifyContent: 'center',
           }}>
-            {!isMobile && !isSmallTablet && (
+            {!isMobile && (
               <Box sx={{ 
                 display: 'flex', 
                 alignItems: 'center', 
-                gap: isLargeTablet ? 1 
-                  : isSmallLaptop ? 1.5 
-                  : isLargeLaptop ? 2
-                  : isSmallDesktop ? 2.5
-                  : isLargeDesktop ? 3
-                  : isUltraWideDesktop ? 3.5 : 2, 
+                gap: { xs: 1, md: 1.5, lg: 2 }
               }}>
               {currentMenuItems.filter(item => !('protected' in item) || !item.protected || user).map((item) => {
                 // Handle dropdown menu item
@@ -627,7 +589,7 @@ const Navbar: React.FC = () => {
                       <Button
                         ref={opportunitiesRef}
                         color="inherit"
-                        startIcon={(isLargeTablet || isSmallLaptop) ? undefined : item.icon}
+                        startIcon={isTablet ? undefined : item.icon}
                         endIcon={<KeyboardArrowDown sx={{ 
                           fontSize: 16, 
                           transform: opportunitiesOpen ? 'rotate(180deg)' : 'rotate(0deg)',
@@ -644,31 +606,11 @@ const Navbar: React.FC = () => {
                             transform: 'translateY(-1px)',
                           },
                           borderRadius: 2,
-                          px: isLargeTablet ? 1.5 
-                            : isSmallLaptop ? 2 
-                            : isLargeLaptop ? 2.5
-                            : isSmallDesktop ? 2.5
-                            : isLargeDesktop ? 3
-                            : isUltraWideDesktop ? 3.2 : 2.5,
-                          py: isLargeTablet ? 0.75 
-                            : isSmallLaptop ? 1 
-                            : isLargeLaptop ? 1.25
-                            : isSmallDesktop ? 1.25
-                            : isLargeDesktop ? 1.5
-                            : isUltraWideDesktop ? 1.5 : 1.25,
-                          minWidth: (isLargeTablet || isSmallLaptop) ? 'auto' : undefined,
-                          fontSize: isLargeTablet ? '0.8rem' 
-                            : isSmallLaptop ? '0.95rem' 
-                            : isLargeLaptop ? '1rem'
-                            : isSmallDesktop ? '1rem'
-                            : isLargeDesktop ? '1.05rem'
-                            : isUltraWideDesktop ? '1.1rem' : '1rem',
-                          height: isLargeTablet ? 36 
-                            : isSmallLaptop ? 40 
-                            : isLargeLaptop ? 44
-                            : isSmallDesktop ? 46
-                            : isLargeDesktop ? 48
-                            : isUltraWideDesktop ? 50 : 44,
+                          px: { xs: 1.5, md: 2, lg: 2.5 },
+                          py: { xs: 0.75, md: 1, lg: 1.25 },
+                          minWidth: isTablet ? 'auto' : undefined,
+                          fontSize: { xs: '0.85rem', md: '0.95rem', lg: '1rem' },
+                          height: { xs: 36, md: 40, lg: 44 },
                           transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                           '&:active': {
                             transform: 'scale(0.98)',
@@ -780,7 +722,7 @@ const Navbar: React.FC = () => {
                   <Button
                     key={item.text}
                     color="inherit"
-                    startIcon={(isLargeTablet || isSmallLaptop) ? undefined : item.icon}
+                    startIcon={isTablet ? undefined : item.icon}
                     onClick={() => {
                       if (item.isContactDialog && 'action' in item) {
                         item.action();
@@ -827,31 +769,11 @@ const Navbar: React.FC = () => {
                           : undefined,
                       },
                       borderRadius: 2,
-                      px: isLargeTablet ? 1.5 
-                        : isSmallLaptop ? 2 
-                        : isLargeLaptop ? 2.5
-                        : isSmallDesktop ? 2.5
-                        : isLargeDesktop ? 3
-                        : isUltraWideDesktop ? 3.2 : 2.5,
-                      py: isLargeTablet ? 0.75 
-                        : isSmallLaptop ? 1 
-                        : isLargeLaptop ? 1.25
-                        : isSmallDesktop ? 1.25
-                        : isLargeDesktop ? 1.5
-                        : isUltraWideDesktop ? 1.5 : 1.25,
-                      minWidth: (isLargeTablet || isSmallLaptop) ? 'auto' : undefined,
-                      fontSize: isLargeTablet ? '0.8rem' 
-                        : isSmallLaptop ? '0.95rem' 
-                        : isLargeLaptop ? '1rem'
-                        : isSmallDesktop ? '1rem'
-                        : isLargeDesktop ? '1.05rem'
-                        : isUltraWideDesktop ? '1.1rem' : '1rem',
-                      height: isLargeTablet ? 36 
-                        : isSmallLaptop ? 40 
-                        : isLargeLaptop ? 44
-                        : isSmallDesktop ? 46
-                        : isLargeDesktop ? 48
-                        : isUltraWideDesktop ? 50 : 44,
+                      px: { xs: 1.5, md: 2, lg: 2.5 },
+                      py: { xs: 0.75, md: 1, lg: 1.25 },
+                      minWidth: isTablet ? 'auto' : undefined,
+                      fontSize: { xs: '0.85rem', md: '0.95rem', lg: '1rem' },
+                      height: { xs: 36, md: 40, lg: 44 },
                       transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&:active': {
                         transform: 'scale(0.98)',
@@ -872,12 +794,7 @@ const Navbar: React.FC = () => {
           <Box sx={{ 
             display: 'flex', 
             alignItems: 'center', 
-            gap: isLargeTablet ? 1 
-              : isSmallLaptop ? 1.5 
-              : isLargeLaptop ? 2
-              : isSmallDesktop ? 2.5
-              : isLargeDesktop ? 3
-              : isUltraWideDesktop ? 4 : 2,
+            gap: { xs: 1, md: 1.5, lg: 2 },
             minWidth: 'fit-content'
           }}>
           {!isMobile && (
@@ -886,24 +803,9 @@ const Navbar: React.FC = () => {
                 onClick={toggleTheme} 
                 color="inherit" 
                 sx={{ 
-                  p: isLargeTablet ? 1 
-                    : isSmallLaptop ? 1.5 
-                    : isLargeLaptop ? 1.8
-                    : isSmallDesktop ? 2
-                    : isLargeDesktop ? 2.2
-                    : isUltraWideDesktop ? 2.5 : 1.8,
-                  width: isLargeTablet ? 36 
-                    : isSmallLaptop ? 40 
-                    : isLargeLaptop ? 44
-                    : isSmallDesktop ? 46
-                    : isLargeDesktop ? 48
-                    : isUltraWideDesktop ? 50 : 44,
-                  height: isLargeTablet ? 36 
-                    : isSmallLaptop ? 40 
-                    : isLargeLaptop ? 44
-                    : isSmallDesktop ? 46
-                    : isLargeDesktop ? 48
-                    : isUltraWideDesktop ? 50 : 44,
+                  p: { xs: 1, md: 1.5, lg: 1.8 },
+                  width: { xs: 36, md: 40, lg: 44 },
+                  height: { xs: 36, md: 40, lg: 44 },
                   borderRadius: 3,
                   '&:hover': {
                     backgroundColor: alpha(theme.palette.primary.main, 0.1),
@@ -914,40 +816,21 @@ const Navbar: React.FC = () => {
                 }}
               >
                 {mode === 'dark' ? 
-                  <Brightness7 sx={{ 
-                    fontSize: isLargeTablet ? '1.1rem' 
-                      : isSmallLaptop ? '1.4rem' 
-                      : isLargeLaptop ? '1.5rem'
-                      : isSmallDesktop ? '1.6rem'
-                      : isLargeDesktop ? '1.7rem'
-                      : isUltraWideDesktop ? '1.8rem' : '1.5rem' 
-                  }} /> : 
-                  <Brightness4 sx={{ 
-                    fontSize: isLargeTablet ? '1.1rem' 
-                      : isSmallLaptop ? '1.4rem' 
-                      : isLargeLaptop ? '1.5rem'
-                      : isSmallDesktop ? '1.6rem'
-                      : isLargeDesktop ? '1.7rem'
-                      : isUltraWideDesktop ? '1.8rem' : '1.5rem' 
-                  }} />
+                  <Brightness7 sx={{ fontSize: { xs: '1.2rem', md: '1.4rem', lg: '1.5rem' } }} /> : 
+                  <Brightness4 sx={{ fontSize: { xs: '1.2rem', md: '1.4rem', lg: '1.5rem' } }} />
                 }
               </IconButton>
             </Tooltip>
           )}
 
           {/* Post Job Button for Employers */}
-          {user && user.role === UserRole.EMPLOYER && !isMobile && !isSmallTablet && (
+          {user && user.role === UserRole.EMPLOYER && !isMobile && (
             <Button
               variant="contained"
-              startIcon={isLargeTablet ? undefined : <PostAdd />}
+              startIcon={isTablet ? undefined : <PostAdd />}
               onClick={() => navigate('/app/jobs/create')}
               sx={{
-                mr: isLargeTablet ? 1 
-                  : isSmallLaptop ? 1.5 
-                  : isLargeLaptop ? 2
-                  : isSmallDesktop ? 2.5
-                  : isLargeDesktop ? 3
-                  : isUltraWideDesktop ? 3.5 : 2,
+                mr: { xs: 1, md: 1.5, lg: 2 },
                 fontWeight: 'bold',
                 background: 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)',
                 boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
@@ -957,39 +840,15 @@ const Navbar: React.FC = () => {
                   transform: 'translateY(-2px)',
                 },
                 borderRadius: 2,
-                px: isLargeTablet ? 1.5 
-                  : isSmallLaptop ? 2 
-                  : isLargeLaptop ? 2.2
-                  : isSmallDesktop ? 2.5
-                  : isLargeDesktop ? 2.8
-                  : isUltraWideDesktop ? 3 : 2.2,
-                py: isLargeTablet ? 0.8 
-                  : isSmallLaptop ? 1 
-                  : isLargeLaptop ? 1
-                  : isSmallDesktop ? 1.1
-                  : isLargeDesktop ? 1.2
-                  : isUltraWideDesktop ? 1.3 : 1,
-                fontSize: isLargeTablet ? '0.8rem' 
-                  : isSmallLaptop ? '0.95rem' 
-                  : isLargeLaptop ? '1rem'
-                  : isSmallDesktop ? '1rem'
-                  : isLargeDesktop ? '1.05rem'
-                  : isUltraWideDesktop ? '1.1rem' : '1rem',
-                minWidth: isLargeTablet ? 'auto' : undefined,
-                height: isLargeTablet ? 36 
-                  : isSmallLaptop ? 40 
-                  : isLargeLaptop ? 44
-                  : isSmallDesktop ? 46
-                  : isLargeDesktop ? 48
-                  : isUltraWideDesktop ? 50 : 44,
+                px: { xs: 1.5, md: 2, lg: 2.5 },
+                py: { xs: 0.8, md: 1, lg: 1.2 },
+                fontSize: { xs: '0.85rem', md: '0.95rem', lg: '1rem' },
+                minWidth: isTablet ? 'auto' : undefined,
+                height: { xs: 36, md: 40, lg: 44 },
                 transition: 'all 0.3s ease',
               }}
             >
-              {isLargeLaptop ? 'Post New Job' 
-                : isSmallDesktop ? 'Post New Job'
-                : isLargeDesktop ? 'Post New Job'
-                : isUltraWideDesktop ? 'Post New Job'
-                : 'Post Job'}
+              {isDesktop ? 'Post New Job' : 'Post Job'}
             </Button>
           )}
 
@@ -1006,25 +865,10 @@ const Navbar: React.FC = () => {
                 <Avatar 
                   sx={{ 
                     bgcolor: 'primary.main',
-                    width: isLargeTablet ? 28 
-                      : isSmallLaptop ? 36 
-                      : isLargeLaptop ? 40
-                      : isSmallDesktop ? 42
-                      : isLargeDesktop ? 44
-                      : isUltraWideDesktop ? 46 : 40,
-                    height: isLargeTablet ? 28 
-                      : isSmallLaptop ? 36 
-                      : isLargeLaptop ? 40
-                      : isSmallDesktop ? 42
-                      : isLargeDesktop ? 44
-                      : isUltraWideDesktop ? 46 : 40,
-                    fontSize: isLargeTablet ? '0.8rem' 
-                      : isSmallLaptop ? '1rem' 
-                      : isLargeLaptop ? '1.1rem'
-                      : isSmallDesktop ? '1.2rem'
-                      : isLargeDesktop ? '1.3rem'
-                      : isUltraWideDesktop ? '1.4rem' : '1.1rem',
-                    boxShadow: isLaptop ? '0 3px 12px rgba(76, 175, 80, 0.25)' : 'none',
+                    width: { xs: 32, md: 36, lg: 40 },
+                    height: { xs: 32, md: 36, lg: 40 },
+                    fontSize: { xs: '0.9rem', md: '1rem', lg: '1.1rem' },
+                    boxShadow: isDesktop ? '0 3px 12px rgba(76, 175, 80, 0.25)' : 'none',
                     transition: 'all 0.3s ease',
                     border: isDesktop ? '3px solid transparent' : '2px solid transparent',
                     backgroundClip: 'padding-box',
@@ -1102,50 +946,20 @@ const Navbar: React.FC = () => {
           ) : (
             <Box sx={{ 
               display: 'flex', 
-              gap: isMobile ? 0.5 
-                : isLargeTablet ? 0.5 
-                : isSmallLaptop ? 1 
-                : isLargeLaptop ? 1.5
-                : isSmallDesktop ? 2
-                : isLargeDesktop ? 2.5
-                : isUltraWideDesktop ? 3 : 1.5 
+              gap: { xs: 0.5, md: 1, lg: 1.5 }
             }}>
               <Button
                 color="inherit"
-                startIcon={isMobile ? undefined : ((isLargeTablet || isSmallLaptop) ? undefined : <Login />)}
+                startIcon={isMobile ? undefined : (isTablet ? undefined : <Login />)}
                 onClick={() => navigate('/login')}
                 variant={isMobile ? 'contained' : 'text'}
                 sx={{ 
                   fontWeight: 'bold',
-                  px: isMobile ? 1.5 
-                    : isLargeTablet ? 1.5 
-                    : isSmallLaptop ? 2 
-                    : isLargeLaptop ? 2.5
-                    : isSmallDesktop ? 2.5
-                    : isLargeDesktop ? 3
-                    : isUltraWideDesktop ? 3.2 : 2.5,
-                  py: isMobile ? 0.5 
-                    : isLargeTablet ? 0.75 
-                    : isSmallLaptop ? 1 
-                    : isLargeLaptop ? 1.25
-                    : isSmallDesktop ? 1.25
-                    : isLargeDesktop ? 1.5
-                    : isUltraWideDesktop ? 1.5 : 1.25,
-                  fontSize: isMobile ? '0.75rem' 
-                    : isLargeTablet ? '0.8rem' 
-                    : isSmallLaptop ? '0.95rem' 
-                    : isLargeLaptop ? '1rem'
-                    : isSmallDesktop ? '1rem'
-                    : isLargeDesktop ? '1.05rem'
-                    : isUltraWideDesktop ? '1.1rem' : '1rem',
-                  minWidth: isMobile ? 'auto' : ((isLargeTablet || isSmallLaptop) ? 'auto' : undefined),
-                  height: isMobile ? 32 
-                    : isLargeTablet ? 36 
-                    : isSmallLaptop ? 40 
-                    : isLargeLaptop ? 44
-                    : isSmallDesktop ? 46
-                    : isLargeDesktop ? 48
-                    : isUltraWideDesktop ? 50 : 44,
+                  px: { xs: 1.5, md: 2, lg: 2.5 },
+                  py: { xs: 0.5, md: 1, lg: 1.25 },
+                  fontSize: { xs: '0.8rem', md: '0.9rem', lg: '1rem' },
+                  minWidth: isMobile ? 'auto' : (isTablet ? 'auto' : undefined),
+                  height: { xs: 32, md: 40, lg: 44 },
                   borderRadius: 2,
                   background: isMobile ? 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)' : 'transparent',
                   color: isMobile ? 'white' : 'inherit',
@@ -1155,8 +969,8 @@ const Navbar: React.FC = () => {
                     background: isMobile ? 'linear-gradient(45deg, #2e7d32 30%, #1b5e20 90%)' : undefined,
                     boxShadow: isMobile ? '0 4px 12px rgba(76, 175, 80, 0.4)' 
                       : isDesktop ? '0 4px 16px rgba(76, 175, 80, 0.25)'
-                      : isLaptop ? '0 2px 8px rgba(76, 175, 80, 0.2)' : 'none',
-                    transform: (isLaptop || isDesktop) ? 'translateY(-2px)' : 'none',
+                      : '0 2px 8px rgba(76, 175, 80, 0.2)',
+                    transform: isDesktop ? 'translateY(-2px)' : 'none',
                   },
                   transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:active': {
@@ -1169,35 +983,15 @@ const Navbar: React.FC = () => {
               {!isMobile && (
                 <Button
                   variant="contained"
-                  startIcon={(isLargeTablet || isSmallLaptop) ? undefined : <PersonAdd />}
+                  startIcon={isTablet ? undefined : <PersonAdd />}
                   onClick={() => navigate('/register')}
                   sx={{ 
                     fontWeight: 'bold',
-                    px: isLargeTablet ? 1.5 
-                      : isSmallLaptop ? 2 
-                      : isLargeLaptop ? 2.5
-                      : isSmallDesktop ? 2.5
-                      : isLargeDesktop ? 3
-                      : isUltraWideDesktop ? 3.2 : 2.5,
-                    py: isLargeTablet ? 0.75 
-                      : isSmallLaptop ? 1 
-                      : isLargeLaptop ? 1.25
-                      : isSmallDesktop ? 1.25
-                      : isLargeDesktop ? 1.5
-                      : isUltraWideDesktop ? 1.5 : 1.25,
-                    fontSize: isLargeTablet ? '0.8rem' 
-                      : isSmallLaptop ? '0.95rem' 
-                      : isLargeLaptop ? '1rem'
-                      : isSmallDesktop ? '1rem'
-                      : isLargeDesktop ? '1.05rem'
-                      : isUltraWideDesktop ? '1.1rem' : '1rem',
-                    minWidth: (isLargeTablet || isSmallLaptop) ? 'auto' : undefined,
-                    height: isLargeTablet ? 36 
-                      : isSmallLaptop ? 40 
-                      : isLargeLaptop ? 44
-                      : isSmallDesktop ? 46
-                      : isLargeDesktop ? 48
-                      : isUltraWideDesktop ? 50 : 44,
+                    px: { xs: 1.5, md: 2, lg: 2.5 },
+                    py: { xs: 0.75, md: 1, lg: 1.25 },
+                    fontSize: { xs: '0.8rem', md: '0.95rem', lg: '1rem' },
+                    minWidth: isTablet ? 'auto' : undefined,
+                    height: { xs: 36, md: 40, lg: 44 },
                     borderRadius: 2,
                     boxShadow: '0 3px 12px rgba(76, 175, 80, 0.3)',
                     '&:hover': {
@@ -1210,11 +1004,7 @@ const Navbar: React.FC = () => {
                     },
                   }}
                 >
-                  {isLargeLaptop ? 'Sign Up Free' 
-                    : isSmallDesktop ? 'Sign Up Free'
-                    : isLargeDesktop ? 'Join Free Now'
-                    : isUltraWideDesktop ? 'Join Free Now'
-                    : 'Sign Up'}
+                  {isDesktop ? 'Sign Up Free' : 'Sign Up'}
                 </Button>
               )}
             </Box>
@@ -1231,10 +1021,10 @@ const Navbar: React.FC = () => {
           keepMounted: true,
         }}
         sx={{
-          display: { xs: 'block', lg: 'none' },
+          display: { xs: 'block', md: 'none' },
           '& .MuiDrawer-paper': { 
             boxSizing: 'border-box', 
-            width: { xs: 280, sm: 320, md: 360, lg: 400 },
+            width: { xs: 280, sm: 300, md: 320 },
             borderRadius: '0 20px 20px 0',
             background: theme.palette.mode === 'dark' 
               ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'

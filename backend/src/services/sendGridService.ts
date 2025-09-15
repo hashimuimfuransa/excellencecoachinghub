@@ -336,7 +336,7 @@ export const sendJobApplicationEmail = async (
       <div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0;">
         <a href="${baseUrl}/interview-prep" 
            style="background-color: #1976d2; color: white; padding: 8px 16px; text-decoration: none; border-radius: 20px; font-size: 14px; display: inline-block;">
-          🎤 AI Interview Practice
+          🎤 Interview Practice
         </a>
         <a href="${baseUrl}/courses" 
            style="background-color: #28a745; color: white; padding: 8px 16px; text-decoration: none; border-radius: 20px; font-size: 14px; display: inline-block;">

@@ -36,6 +36,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Link as RouterLink, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme as useCustomTheme } from '../contexts/ThemeContext';
 import FloatingContact from '../components/FloatingContact';
 import AccountTypeModal from '../components/AccountTypeModal';
 import GoogleRoleSelectionModal from '../components/GoogleRoleSelectionModal';
@@ -56,6 +57,7 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
+  const { mode } = useCustomTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [searchParams] = useSearchParams();
   
@@ -254,7 +256,9 @@ const LoginPage: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)',
+        background: mode === 'dark' 
+          ? 'linear-gradient(135deg, #1a3e1a 0%, #2c5f2d 100%)'
+          : 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)',
         position: 'relative',
         py: 2
       }}
@@ -277,9 +281,15 @@ const LoginPage: React.FC = () => {
                   width: '100%',
                   maxWidth: 380,
                   borderRadius: 3,
-                  background: 'rgba(255, 255, 255, 0.95)',
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  background: mode === 'dark' 
+                    ? 'rgba(30, 30, 30, 0.95)' 
+                    : 'rgba(255, 255, 255, 0.95)',
+                  boxShadow: mode === 'dark' 
+                    ? '0 4px 20px rgba(0, 0, 0, 0.4)' 
+                    : '0 4px 20px rgba(0, 0, 0, 0.1)',
+                  border: mode === 'dark' 
+                    ? '1px solid rgba(255, 255, 255, 0.1)' 
+                    : '1px solid rgba(255, 255, 255, 0.2)',
                   position: 'relative',
                   overflow: 'hidden',
                   '&::before': {
@@ -289,7 +299,9 @@ const LoginPage: React.FC = () => {
                     left: 0,
                     right: 0,
                     height: 3,
-                    background: 'linear-gradient(45deg, #2E7D32 0%, #4CAF50 100%)',
+                    background: mode === 'dark'
+                      ? 'linear-gradient(45deg, #4CAF50 0%, #66BB6A 100%)'
+                      : 'linear-gradient(45deg, #2E7D32 0%, #4CAF50 100%)',
                   }
                 }}
               >
@@ -305,7 +317,7 @@ const LoginPage: React.FC = () => {
                       borderRadius: 2,
                       textTransform: 'none',
                       fontWeight: 500,
-                      color: '#4CAF50',
+                      color: mode === 'dark' ? '#66BB6A' : '#4CAF50',
                       fontSize: '0.7rem',
                       minWidth: 'auto',
                       p: 0.5
@@ -328,7 +340,9 @@ const LoginPage: React.FC = () => {
                       component="h1" 
                       sx={{ 
                         fontWeight: 700,
-                        background: 'linear-gradient(45deg, #2E7D32 30%, #4CAF50 90%)',
+                        background: mode === 'dark'
+                          ? 'linear-gradient(45deg, #66BB6A 30%, #81C784 90%)'
+                          : 'linear-gradient(45deg, #2E7D32 30%, #4CAF50 90%)',
                         backgroundClip: 'text',
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent',
@@ -379,7 +393,7 @@ const LoginPage: React.FC = () => {
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
-                          <Email sx={{ color: '#4CAF50', fontSize: 20 }} />
+                          <Email sx={{ color: mode === 'dark' ? '#66BB6A' : '#4CAF50', fontSize: 20 }} />
                         </InputAdornment>
                       ),
                     }}
@@ -388,7 +402,7 @@ const LoginPage: React.FC = () => {
                       '& .MuiOutlinedInput-root': {
                         borderRadius: 2,
                         '&.Mui-focused fieldset': {
-                          borderColor: '#4CAF50',
+                          borderColor: mode === 'dark' ? '#66BB6A' : '#4CAF50',
                         }
                       }
                     }}
@@ -410,7 +424,7 @@ const LoginPage: React.FC = () => {
                     InputProps={{
                       startAdornment: (
                         <InputAdornment position="start">
-                          <Lock sx={{ color: '#4CAF50', fontSize: 20 }} />
+                          <Lock sx={{ color: mode === 'dark' ? '#66BB6A' : '#4CAF50', fontSize: 20 }} />
                         </InputAdornment>
                       ),
                       endAdornment: (
@@ -420,7 +434,7 @@ const LoginPage: React.FC = () => {
                             onClick={handleTogglePasswordVisibility}
                             edge="end"
                             size="small"
-                            sx={{ color: '#4CAF50' }}
+                            sx={{ color: mode === 'dark' ? '#66BB6A' : '#4CAF50' }}
                           >
                             {showPassword ? <VisibilityOff /> : <Visibility />}
                           </IconButton>
@@ -432,7 +446,7 @@ const LoginPage: React.FC = () => {
                       '& .MuiOutlinedInput-root': {
                         borderRadius: 2,
                         '&.Mui-focused fieldset': {
-                          borderColor: '#4CAF50',
+                          borderColor: mode === 'dark' ? '#66BB6A' : '#4CAF50',
                         }
                       }
                     }}
@@ -444,7 +458,7 @@ const LoginPage: React.FC = () => {
                         component={RouterLink} 
                         to="/forgot-password" 
                         variant="body2" 
-                        sx={{ color: '#4CAF50', textDecoration: 'none', fontSize: '0.8rem' }}
+                        sx={{ color: mode === 'dark' ? '#66BB6A' : '#4CAF50', textDecoration: 'none', fontSize: '0.8rem' }}
                       >
                         Forgot password?
                       </Link>
@@ -460,11 +474,16 @@ const LoginPage: React.FC = () => {
                         mb: 2,
                         py: 1,
                         borderRadius: 2,
-                        background: 'linear-gradient(45deg, #2E7D32 30%, #4CAF50 90%)',
+                        background: mode === 'dark'
+                          ? 'linear-gradient(45deg, #66BB6A 30%, #81C784 90%)'
+                          : 'linear-gradient(45deg, #2E7D32 30%, #4CAF50 90%)',
                         textTransform: 'none',
                         fontWeight: 600,
+                        color: mode === 'dark' ? '#000000' : '#ffffff',
                         '&:hover': {
-                          background: 'linear-gradient(45deg, #1B5E20 30%, #388E3C 90%)',
+                          background: mode === 'dark'
+                            ? 'linear-gradient(45deg, #4CAF50 30%, #66BB6A 90%)'
+                            : 'linear-gradient(45deg, #1B5E20 30%, #388E3C 90%)',
                         }
                       }}
                     >
@@ -489,18 +508,18 @@ const LoginPage: React.FC = () => {
                         mb: 2,
                         py: 1,
                         borderRadius: 2,
-                        borderColor: '#e0e0e0',
-                        color: '#424242',
+                        borderColor: mode === 'dark' ? '#555555' : '#e0e0e0',
+                        color: mode === 'dark' ? '#ffffff' : '#424242',
                         textTransform: 'none',
                         fontWeight: 600,
-                        backgroundColor: 'white',
+                        backgroundColor: mode === 'dark' ? 'transparent' : 'white',
                         '&:hover': {
                           borderColor: '#DB4437',
-                          backgroundColor: '#fff8f8',
+                          backgroundColor: mode === 'dark' ? 'rgba(219, 68, 55, 0.1)' : '#fff8f8',
                         },
                         '&:disabled': {
-                          borderColor: '#e0e0e0',
-                          backgroundColor: '#f5f5f5'
+                          borderColor: mode === 'dark' ? '#333333' : '#e0e0e0',
+                          backgroundColor: mode === 'dark' ? '#1a1a1a' : '#f5f5f5'
                         }
                       }}
                     >
@@ -509,7 +528,17 @@ const LoginPage: React.FC = () => {
                     
                     {/* Register Link */}
                     <Box sx={{ textAlign: 'center' }}>
-                      <Alert severity="info" sx={{ mb: 2, bgcolor: '#f3f8ff', border: '1px solid #e3f2fd' }}>
+                      <Alert 
+                        severity="info" 
+                        sx={{ 
+                          mb: 2, 
+                          bgcolor: mode === 'dark' ? 'rgba(33, 150, 243, 0.1)' : '#f3f8ff', 
+                          border: mode === 'dark' ? '1px solid rgba(33, 150, 243, 0.3)' : '1px solid #e3f2fd',
+                          '& .MuiAlert-icon': {
+                            color: mode === 'dark' ? '#66BB6A' : '#2196f3'
+                          }
+                        }}
+                      >
                         <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
                           <strong>New to ExJobNet?</strong> You'll need to create an account first to access jobs, courses, and career tools.
                         </Typography>
@@ -521,7 +550,7 @@ const LoginPage: React.FC = () => {
                         href="#"
                         onClick={handleCreateAccount}
                         sx={{ 
-                          color: '#4CAF50', 
+                          color: mode === 'dark' ? '#66BB6A' : '#4CAF50', 
                           textDecoration: 'none',
                           fontWeight: 600,
                           fontSize: '0.9rem',
@@ -550,11 +579,15 @@ const LoginPage: React.FC = () => {
                 p: { xs: 2, md: 4 }
               }}>
                 <Box sx={{
-                  background: 'rgba(255, 255, 255, 0.1)',
+                  background: mode === 'dark' 
+                    ? 'rgba(30, 30, 30, 0.8)' 
+                    : 'rgba(255, 255, 255, 0.1)',
                   backdropFilter: 'blur(10px)',
                   borderRadius: 3,
                   p: 4,
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  border: mode === 'dark' 
+                    ? '1px solid rgba(255, 255, 255, 0.1)' 
+                    : '1px solid rgba(255, 255, 255, 0.2)',
                   height: 'fit-content',
                   maxHeight: '600px',
                   overflow: 'auto'
@@ -566,7 +599,9 @@ const LoginPage: React.FC = () => {
                       component="h2" 
                       sx={{ 
                         fontWeight: 700,
-                        background: 'linear-gradient(45deg, #ffffff 30%, #e8f5e8 90%)',
+                        background: mode === 'dark'
+                          ? 'linear-gradient(45deg, #66BB6A 30%, #81C784 90%)'
+                          : 'linear-gradient(45deg, #ffffff 30%, #e8f5e8 90%)',
                         backgroundClip: 'text',
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent',
@@ -579,7 +614,7 @@ const LoginPage: React.FC = () => {
                     <Typography 
                       variant="subtitle1" 
                       sx={{ 
-                        color: 'rgba(255, 255, 255, 0.9)',
+                        color: mode === 'dark' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.9)',
                         fontWeight: 500
                       }}
                     >
@@ -598,16 +633,22 @@ const LoginPage: React.FC = () => {
                       <Box
                         key={service.title}
                         sx={{
-                          background: 'rgba(255, 255, 255, 0.15)',
+                          background: mode === 'dark' 
+                            ? 'rgba(255, 255, 255, 0.05)' 
+                            : 'rgba(255, 255, 255, 0.15)',
                           backdropFilter: 'blur(5px)',
                           borderRadius: 2,
                           p: 2.5,
-                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          border: mode === 'dark' 
+                            ? '1px solid rgba(255, 255, 255, 0.1)' 
+                            : '1px solid rgba(255, 255, 255, 0.2)',
                           transition: 'all 0.3s ease',
                           '&:hover': {
                             transform: 'translateY(-5px)',
                             boxShadow: '0 10px 30px rgba(0, 0, 0, 0.2)',
-                            background: 'rgba(255, 255, 255, 0.2)',
+                            background: mode === 'dark' 
+                              ? 'rgba(255, 255, 255, 0.1)' 
+                              : 'rgba(255, 255, 255, 0.2)',
                           }
                         }}
                       >
@@ -627,7 +668,7 @@ const LoginPage: React.FC = () => {
                             variant="h6" 
                             sx={{ 
                               fontWeight: 600, 
-                              color: 'white',
+                              color: mode === 'dark' ? '#ffffff' : 'white',
                               fontSize: '1rem'
                             }}
                           >
@@ -637,7 +678,7 @@ const LoginPage: React.FC = () => {
                         <Typography 
                           variant="body2" 
                           sx={{ 
-                            color: 'rgba(255, 255, 255, 0.8)',
+                            color: mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.8)',
                             lineHeight: 1.4,
                             fontSize: '0.85rem'
                           }}
@@ -653,7 +694,7 @@ const LoginPage: React.FC = () => {
                     <Typography 
                       variant="body1" 
                       sx={{ 
-                        color: 'rgba(255, 255, 255, 0.9)',
+                        color: mode === 'dark' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 255, 255, 0.9)',
                         fontWeight: 500,
                         mb: 2
                       }}
@@ -670,30 +711,42 @@ const LoginPage: React.FC = () => {
                         label="10k+ Jobs"
                         size="small"
                         sx={{
-                          background: 'rgba(76, 175, 80, 0.2)',
+                          background: mode === 'dark' 
+                            ? 'rgba(76, 175, 80, 0.3)' 
+                            : 'rgba(76, 175, 80, 0.2)',
                           color: 'white',
                           fontWeight: 600,
-                          border: '1px solid rgba(76, 175, 80, 0.3)'
+                          border: mode === 'dark' 
+                            ? '1px solid rgba(76, 175, 80, 0.5)' 
+                            : '1px solid rgba(76, 175, 80, 0.3)'
                         }}
                       />
                       <Chip
                         label="5k+ Companies"
                         size="small"
                         sx={{
-                          background: 'rgba(33, 150, 243, 0.2)',
+                          background: mode === 'dark' 
+                            ? 'rgba(33, 150, 243, 0.3)' 
+                            : 'rgba(33, 150, 243, 0.2)',
                           color: 'white',
                           fontWeight: 600,
-                          border: '1px solid rgba(33, 150, 243, 0.3)'
+                          border: mode === 'dark' 
+                            ? '1px solid rgba(33, 150, 243, 0.5)' 
+                            : '1px solid rgba(33, 150, 243, 0.3)'
                         }}
                       />
                       <Chip
                         label="100+ Courses"
                         size="small"
                         sx={{
-                          background: 'rgba(255, 152, 0, 0.2)',
+                          background: mode === 'dark' 
+                            ? 'rgba(255, 152, 0, 0.3)' 
+                            : 'rgba(255, 152, 0, 0.2)',
                           color: 'white',
                           fontWeight: 600,
-                          border: '1px solid rgba(255, 152, 0, 0.3)'
+                          border: mode === 'dark' 
+                            ? '1px solid rgba(255, 152, 0, 0.5)' 
+                            : '1px solid rgba(255, 152, 0, 0.3)'
                         }}
                       />
                     </Box>

@@ -1,4 +1,6 @@
-// Google OAuth types
+import config from '../config/env';
+
+// Google OAuth types - same as homepage
 declare global {
   interface Window {
     google: {
@@ -33,19 +35,19 @@ export interface GoogleAuthResponse {
   error?: string;
 }
 
-// Simple Google OAuth implementation for Job Portal
+// Simple Google OAuth implementation - adapted from homepage working version
 class GoogleAuthService {
   private clientId: string;
   private isLoaded = false;
 
   constructor() {
-    this.clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-    console.log('🔍 Google Client ID from env:', import.meta.env.VITE_GOOGLE_CLIENT_ID);
-    console.log('🔍 All env vars:', import.meta.env);
-    console.log('🔍 Final clientId:', this.clientId);
+    this.clientId = config.googleClientId;
+    console.log('🔍 GoogleAuthService initialized');
+    console.log('🔍 Client ID loaded from config:', this.clientId ? 'YES' : 'NO');
+    console.log('🔍 Client ID length:', this.clientId.length);
   }
 
-  // Load Google Identity Services
+  // Load Google Identity Services - exact same as homepage
   private loadGoogleScript(): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.isLoaded && window.google) {
@@ -81,27 +83,33 @@ class GoogleAuthService {
     });
   }
 
-  // Main Google authentication method
+  // Check if user already exists (simplified for job-portal)
+  private checkExistingUser(email: string): any {
+    try {
+      // Get all registered users from localStorage (for development)
+      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      return registeredUsers.find((user: any) => user.email === email);
+    } catch (error) {
+      console.error('Error checking existing user:', error);
+      return null;
+    }
+  }
+
+  // Main authentication method - using homepage's working GSI implementation
   async authenticate(): Promise<GoogleAuthResponse> {
     try {
       if (!this.clientId) {
-        return {
-          success: false,
-          error: 'Google Client ID not configured. Please contact support.'
-        };
+        throw new Error('Google Client ID not configured. Please add VITE_GOOGLE_CLIENT_ID to your .env file');
       }
 
       await this.loadGoogleScript();
 
       if (!window.google?.accounts?.id) {
-        return {
-          success: false,
-          error: 'Google services are not available. Please try again later.'
-        };
+        throw new Error('Google Identity Services not available. Please check your internet connection.');
       }
 
-      return new Promise((resolve) => {
-        // Initialize Google Identity Services
+      return new Promise((resolve, reject) => {
+        // Initialize Google Identity Services - exact same config as homepage
         window.google.accounts.id.initialize({
           client_id: this.clientId,
           callback: async (response: any) => {
@@ -109,11 +117,7 @@ class GoogleAuthService {
               console.log('Google credential response:', response);
               
               if (!response.credential) {
-                resolve({
-                  success: false,
-                  error: 'No credential received from Google'
-                });
-                return;
+                throw new Error('No credential received from Google');
               }
 
               // Parse the JWT credential to get user info
@@ -130,22 +134,32 @@ class GoogleAuthService {
                 googleId: userInfo.sub
               };
 
-              resolve({
-                success: true,
-                userData: googleUserData,
-                requiresRoleSelection: true
-              });
+              // Check if user already exists
+              const existingUser = this.checkExistingUser(googleUserData.email);
+              
+              if (existingUser && existingUser.registrationCompleted) {
+                // User exists and has completed registration
+                resolve({
+                  success: true,
+                  userData: googleUserData,
+                  requiresRoleSelection: false
+                });
+              } else {
+                // New user or incomplete registration - needs role selection
+                resolve({
+                  success: true,
+                  userData: googleUserData,
+                  requiresRoleSelection: true
+                });
+              }
             } catch (error) {
               console.error('Error processing Google credential:', error);
-              resolve({
-                success: false,
-                error: 'Failed to process Google authentication'
-              });
+              reject(error);
             }
           },
           auto_select: false,
           cancel_on_tap_outside: true,
-          use_fedcm_for_prompt: false
+          use_fedcm_for_prompt: false // Disable FedCM to avoid CORS issues - critical setting from homepage
         });
 
         // Try to show the One Tap dialog first
@@ -155,24 +169,14 @@ class GoogleAuthService {
           if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
             console.log('One Tap not displayed, falling back to popup');
             // Fallback to popup method if One Tap doesn't work
-            this.signInWithPopup().then(resolve).catch((error) => {
-              resolve({
-                success: false,
-                error: error.message || 'Google authentication failed'
-              });
-            });
+            this.signInWithPopup().then(resolve).catch(reject);
           }
         });
 
         // Set a timeout in case the prompt doesn't work
         setTimeout(() => {
           console.log('Prompt timeout, trying popup method');
-          this.signInWithPopup().then(resolve).catch((error) => {
-            resolve({
-              success: false,
-              error: error.message || 'Google authentication timeout'
-            });
-          });
+          this.signInWithPopup().then(resolve).catch(reject);
         }, 3000);
       });
 
@@ -180,12 +184,12 @@ class GoogleAuthService {
       console.error('Google authentication error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
+        error: error instanceof Error ? error.message : 'Google authentication failed. Please try again.'
       };
     }
   }
 
-  // Popup-based Google OAuth flow
+  // Popup-based Google OAuth flow - exact same as homepage
   private async signInWithPopup(): Promise<GoogleAuthResponse> {
     return new Promise((resolve, reject) => {
       if (!window.google?.accounts?.oauth2) {
@@ -220,11 +224,24 @@ class GoogleAuthService {
               googleId: userInfo.id
             };
 
-            resolve({
-              success: true,
-              userData: googleUserData,
-              requiresRoleSelection: true
-            });
+            // Check if user already exists
+            const existingUser = this.checkExistingUser(googleUserData.email);
+            
+            if (existingUser && existingUser.registrationCompleted) {
+              // User exists and has completed registration
+              resolve({
+                success: true,
+                userData: googleUserData,
+                requiresRoleSelection: false
+              });
+            } else {
+              // New user or incomplete registration - needs role selection
+              resolve({
+                success: true,
+                userData: googleUserData,
+                requiresRoleSelection: true
+              });
+            }
           } catch (error) {
             console.error('Error fetching user info:', error);
             reject(error);
@@ -237,7 +254,7 @@ class GoogleAuthService {
     });
   }
 
-  // Fetch user info from Google API
+  // Fetch user info from Google API - exact same as homepage
   private async fetchUserInfo(accessToken: string): Promise<any> {
     try {
       const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
@@ -257,7 +274,7 @@ class GoogleAuthService {
     }
   }
 
-  // Parse JWT token to extract user information
+  // Parse JWT token to extract user information - exact same as homepage
   private parseJWT(token: string): any {
     try {
       const base64Url = token.split('.')[1];
@@ -272,6 +289,27 @@ class GoogleAuthService {
     } catch (error) {
       console.error('Error parsing JWT:', error);
       throw new Error('Failed to parse authentication token');
+    }
+  }
+
+  // Save user to local storage (in production, this would be handled by backend)
+  saveUser(userData: any): void {
+    try {
+      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      const existingIndex = registeredUsers.findIndex((user: any) => user.email === userData.email);
+      
+      if (existingIndex >= 0) {
+        // Update existing user
+        registeredUsers[existingIndex] = { ...registeredUsers[existingIndex], ...userData };
+      } else {
+        // Add new user
+        registeredUsers.push(userData);
+      }
+      
+      localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
+      console.log('User saved to localStorage:', userData);
+    } catch (error) {
+      console.error('Error saving user:', error);
     }
   }
 }

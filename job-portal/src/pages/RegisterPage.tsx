@@ -47,6 +47,7 @@ import {
 import { useNavigate, Link as RouterLink, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../contexts/AuthContext';
+import { useTheme as useCustomTheme } from '../contexts/ThemeContext';
 import FloatingContact from '../components/FloatingContact';
 import PasswordValidation, { getPasswordValidationErrors } from '../components/PasswordValidation';
 import GoogleRoleSelectionModal from '../components/GoogleRoleSelectionModal';
@@ -76,6 +77,7 @@ const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
+  const { mode } = useCustomTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [searchParams] = useSearchParams();
   
@@ -298,7 +300,9 @@ const RegisterPage: React.FC = () => {
       sx={{
         minHeight: '100vh',
         display: 'flex',
-        background: 'linear-gradient(135deg, #4ade80 0%, #16a34a 50%, #14532d 100%)',
+        background: mode === 'dark' 
+          ? 'linear-gradient(135deg, #1a3e1a 0%, #2c5f2d 50%, #1a3e1a 100%)'
+          : 'linear-gradient(135deg, #4ade80 0%, #16a34a 50%, #14532d 100%)',
         position: 'relative',
         overflow: 'auto',
         '&::before': {
@@ -341,9 +345,15 @@ const RegisterPage: React.FC = () => {
               maxWidth: { xs: 420, md: 1200 },
               mx: 'auto',
               borderRadius: 3,
-              background: 'rgba(255, 255, 255, 0.95)',
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
+              background: mode === 'dark' 
+                ? 'rgba(30, 30, 30, 0.95)' 
+                : 'rgba(255, 255, 255, 0.95)',
+              boxShadow: mode === 'dark' 
+                ? '0 4px 20px rgba(0, 0, 0, 0.4)' 
+                : '0 4px 20px rgba(0, 0, 0, 0.1)',
+              border: mode === 'dark' 
+                ? '1px solid rgba(255, 255, 255, 0.1)' 
+                : '1px solid rgba(255, 255, 255, 0.2)',
               transition: 'all 0.3s ease-in-out',
               position: 'relative',
               overflow: 'hidden',
@@ -357,7 +367,9 @@ const RegisterPage: React.FC = () => {
                 left: 0,
                 right: 0,
                 height: 3,
-                background: 'linear-gradient(45deg, #2E7D32 0%, #4CAF50 100%)',
+                background: mode === 'dark'
+                  ? 'linear-gradient(45deg, #4CAF50 0%, #66BB6A 100%)'
+                  : 'linear-gradient(45deg, #2E7D32 0%, #4CAF50 100%)',
               }
             }}
           >
@@ -373,7 +385,7 @@ const RegisterPage: React.FC = () => {
                   borderRadius: 2,
                   textTransform: 'none',
                   fontWeight: 500,
-                  color: '#4CAF50',
+                  color: mode === 'dark' ? '#66BB6A' : '#4CAF50',
                   fontSize: '0.7rem',
                   minWidth: 'auto',
                   p: 0.5
@@ -390,7 +402,9 @@ const RegisterPage: React.FC = () => {
                 component="h1" 
                 sx={{ 
                   fontWeight: 700,
-                  background: 'linear-gradient(45deg, #2E7D32 30%, #4CAF50 90%)',
+                  background: mode === 'dark'
+                    ? 'linear-gradient(45deg, #66BB6A 30%, #81C784 90%)'
+                    : 'linear-gradient(45deg, #2E7D32 30%, #4CAF50 90%)',
                   backgroundClip: 'text',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
@@ -416,19 +430,19 @@ const RegisterPage: React.FC = () => {
                 sx={{
                   py: 1.5,
                   borderRadius: 2,
-                  borderColor: '#e0e0e0',
-                  color: '#424242',
+                  borderColor: mode === 'dark' ? '#555555' : '#e0e0e0',
+                  color: mode === 'dark' ? '#ffffff' : '#424242',
                   textTransform: 'none',
                   fontWeight: 600,
-                  backgroundColor: 'white',
+                  backgroundColor: mode === 'dark' ? 'transparent' : 'white',
                   fontSize: '0.95rem',
                   '&:hover': {
                     borderColor: '#DB4437',
-                    backgroundColor: '#fff8f8',
+                    backgroundColor: mode === 'dark' ? 'rgba(219, 68, 55, 0.1)' : '#fff8f8',
                   },
                   '&:disabled': {
-                    borderColor: '#e0e0e0',
-                    backgroundColor: '#f5f5f5'
+                    borderColor: mode === 'dark' ? '#333333' : '#e0e0e0',
+                    backgroundColor: mode === 'dark' ? '#1a1a1a' : '#f5f5f5'
                   }
                 }}
               >
@@ -513,7 +527,9 @@ const RegisterPage: React.FC = () => {
                                 borderRadius: 3,
                                 cursor: 'pointer',
                                 border: formData.role === option.value ? 2 : 1,
-                                borderColor: formData.role === option.value ? '#667eea' : 'rgba(102, 126, 234, 0.2)',
+                                borderColor: formData.role === option.value 
+                                  ? (mode === 'dark' ? '#66BB6A' : '#667eea') 
+                                  : (mode === 'dark' ? 'rgba(102, 187, 106, 0.3)' : 'rgba(102, 126, 234, 0.2)'),
                                 transition: 'all 0.3s ease',
                                 height: '100%',
                                 display: 'flex',
@@ -523,8 +539,10 @@ const RegisterPage: React.FC = () => {
                                 position: 'relative',
                                 overflow: 'hidden',
                                 background: formData.role === option.value 
-                                  ? 'linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%)'
-                                  : 'rgba(255, 255, 255, 0.95)',
+                                  ? (mode === 'dark' 
+                                      ? 'linear-gradient(135deg, rgba(102, 187, 106, 0.15) 0%, rgba(129, 199, 132, 0.15) 100%)'
+                                      : 'linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%)')
+                                  : (mode === 'dark' ? 'rgba(30, 30, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)'),
                                 '&::before': formData.role === option.value ? {
                                   content: '""',
                                   position: 'absolute',
@@ -532,7 +550,9 @@ const RegisterPage: React.FC = () => {
                                   left: 0,
                                   right: 0,
                                   height: 2,
-                                  background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
+                                  background: mode === 'dark'
+                                    ? 'linear-gradient(45deg, #66BB6A 0%, #81C784 100%)'
+                                    : 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
                                 } : {},
                                 '&:hover': {
                                   transform: 'translateY(-4px)',
@@ -586,7 +606,7 @@ const RegisterPage: React.FC = () => {
                                     position: 'absolute',
                                     top: 16,
                                     right: 16,
-                                    bgcolor: '#4caf50',
+                                    bgcolor: mode === 'dark' ? '#66BB6A' : '#4caf50',
                                     borderRadius: '50%',
                                     width: 24,
                                     height: 24,
@@ -644,31 +664,37 @@ const RegisterPage: React.FC = () => {
                           InputProps={{
                             startAdornment: (
                               <InputAdornment position="start">
-                                <Person sx={{ color: '#667eea' }} />
+                                <Person sx={{ color: mode === 'dark' ? '#66BB6A' : '#667eea' }} />
                               </InputAdornment>
                             ),
                           }}
                           sx={{ 
                             '& .MuiOutlinedInput-root': {
                               borderRadius: 3,
-                              backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                              backgroundColor: mode === 'dark' 
+                                ? 'rgba(102, 187, 106, 0.1)' 
+                                : 'rgba(102, 126, 234, 0.05)',
                               '& fieldset': {
-                                borderColor: 'rgba(102, 126, 234, 0.2)',
+                                borderColor: mode === 'dark' 
+                                  ? 'rgba(102, 187, 106, 0.3)' 
+                                  : 'rgba(102, 126, 234, 0.2)',
                                 borderWidth: 2,
                               },
                               '&:hover fieldset': {
-                                borderColor: 'rgba(102, 126, 234, 0.4)',
+                                borderColor: mode === 'dark' 
+                                  ? 'rgba(102, 187, 106, 0.5)' 
+                                  : 'rgba(102, 126, 234, 0.4)',
                               },
                               '&.Mui-focused fieldset': {
-                                borderColor: '#667eea',
+                                borderColor: mode === 'dark' ? '#66BB6A' : '#667eea',
                               },
                               transition: 'all 0.3s ease'
                             },
                             '& .MuiInputLabel-root': {
-                              color: '#667eea',
+                              color: mode === 'dark' ? '#66BB6A' : '#667eea',
                               fontWeight: 600,
                               '&.Mui-focused': {
-                                color: '#667eea',
+                                color: mode === 'dark' ? '#66BB6A' : '#667eea',
                               }
                             }
                           }}
@@ -688,31 +714,37 @@ const RegisterPage: React.FC = () => {
                           InputProps={{
                             startAdornment: (
                               <InputAdornment position="start">
-                                <Person sx={{ color: '#667eea' }} />
+                                <Person sx={{ color: mode === 'dark' ? '#66BB6A' : '#667eea' }} />
                               </InputAdornment>
                             ),
                           }}
                           sx={{ 
                             '& .MuiOutlinedInput-root': {
                               borderRadius: 3,
-                              backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                              backgroundColor: mode === 'dark' 
+                                ? 'rgba(102, 187, 106, 0.1)' 
+                                : 'rgba(102, 126, 234, 0.05)',
                               '& fieldset': {
-                                borderColor: 'rgba(102, 126, 234, 0.2)',
+                                borderColor: mode === 'dark' 
+                                  ? 'rgba(102, 187, 106, 0.3)' 
+                                  : 'rgba(102, 126, 234, 0.2)',
                                 borderWidth: 2,
                               },
                               '&:hover fieldset': {
-                                borderColor: 'rgba(102, 126, 234, 0.4)',
+                                borderColor: mode === 'dark' 
+                                  ? 'rgba(102, 187, 106, 0.5)' 
+                                  : 'rgba(102, 126, 234, 0.4)',
                               },
                               '&.Mui-focused fieldset': {
-                                borderColor: '#667eea',
+                                borderColor: mode === 'dark' ? '#66BB6A' : '#667eea',
                               },
                               transition: 'all 0.3s ease'
                             },
                             '& .MuiInputLabel-root': {
-                              color: '#667eea',
+                              color: mode === 'dark' ? '#66BB6A' : '#667eea',
                               fontWeight: 600,
                               '&.Mui-focused': {
-                                color: '#667eea',
+                                color: mode === 'dark' ? '#66BB6A' : '#667eea',
                               }
                             }
                           }}
@@ -733,31 +765,37 @@ const RegisterPage: React.FC = () => {
                           InputProps={{
                             startAdornment: (
                               <InputAdornment position="start">
-                                <Email sx={{ color: '#667eea' }} />
+                                <Email sx={{ color: mode === 'dark' ? '#66BB6A' : '#667eea' }} />
                               </InputAdornment>
                             ),
                           }}
                           sx={{ 
                             '& .MuiOutlinedInput-root': {
                               borderRadius: 3,
-                              backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                              backgroundColor: mode === 'dark' 
+                                ? 'rgba(102, 187, 106, 0.1)' 
+                                : 'rgba(102, 126, 234, 0.05)',
                               '& fieldset': {
-                                borderColor: 'rgba(102, 126, 234, 0.2)',
+                                borderColor: mode === 'dark' 
+                                  ? 'rgba(102, 187, 106, 0.3)' 
+                                  : 'rgba(102, 126, 234, 0.2)',
                                 borderWidth: 2,
                               },
                               '&:hover fieldset': {
-                                borderColor: 'rgba(102, 126, 234, 0.4)',
+                                borderColor: mode === 'dark' 
+                                  ? 'rgba(102, 187, 106, 0.5)' 
+                                  : 'rgba(102, 126, 234, 0.4)',
                               },
                               '&.Mui-focused fieldset': {
-                                borderColor: '#667eea',
+                                borderColor: mode === 'dark' ? '#66BB6A' : '#667eea',
                               },
                               transition: 'all 0.3s ease'
                             },
                             '& .MuiInputLabel-root': {
-                              color: '#667eea',
+                              color: mode === 'dark' ? '#66BB6A' : '#667eea',
                               fontWeight: 600,
                               '&.Mui-focused': {
-                                color: '#667eea',
+                                color: mode === 'dark' ? '#66BB6A' : '#667eea',
                               }
                             }
                           }}
@@ -779,7 +817,7 @@ const RegisterPage: React.FC = () => {
                               InputProps={{
                                 startAdornment: (
                                   <InputAdornment position="start">
-                                    <Business sx={{ color: '#667eea' }} />
+                                    <Business sx={{ color: mode === 'dark' ? '#66BB6A' : '#667eea' }} />
                                   </InputAdornment>
                                 ),
                               }}
@@ -806,7 +844,7 @@ const RegisterPage: React.FC = () => {
                               InputProps={{
                                 startAdornment: (
                                   <InputAdornment position="start">
-                                    <Work sx={{ color: '#667eea' }} />
+                                    <Work sx={{ color: mode === 'dark' ? '#66BB6A' : '#667eea' }} />
                                   </InputAdornment>
                                 ),
                               }}
@@ -863,7 +901,7 @@ const RegisterPage: React.FC = () => {
                           InputProps={{
                             startAdornment: (
                               <InputAdornment position="start">
-                                <Lock sx={{ color: '#667eea' }} />
+                                <Lock sx={{ color: mode === 'dark' ? '#66BB6A' : '#667eea' }} />
                               </InputAdornment>
                             ),
                             endAdornment: (
@@ -873,9 +911,11 @@ const RegisterPage: React.FC = () => {
                                   onClick={handleTogglePasswordVisibility}
                                   edge="end"
                                   sx={{
-                                    color: '#667eea',
+                                    color: mode === 'dark' ? '#66BB6A' : '#667eea',
                                     '&:hover': {
-                                      backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                      backgroundColor: mode === 'dark' 
+                                        ? 'rgba(102, 187, 106, 0.1)' 
+                                        : 'rgba(102, 126, 234, 0.1)',
                                     }
                                   }}
                                 >
@@ -887,24 +927,30 @@ const RegisterPage: React.FC = () => {
                           sx={{ 
                             '& .MuiOutlinedInput-root': {
                               borderRadius: 3,
-                              backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                              backgroundColor: mode === 'dark' 
+                                ? 'rgba(102, 187, 106, 0.1)' 
+                                : 'rgba(102, 126, 234, 0.05)',
                               '& fieldset': {
-                                borderColor: 'rgba(102, 126, 234, 0.2)',
+                                borderColor: mode === 'dark' 
+                                  ? 'rgba(102, 187, 106, 0.3)' 
+                                  : 'rgba(102, 126, 234, 0.2)',
                                 borderWidth: 2,
                               },
                               '&:hover fieldset': {
-                                borderColor: 'rgba(102, 126, 234, 0.4)',
+                                borderColor: mode === 'dark' 
+                                  ? 'rgba(102, 187, 106, 0.5)' 
+                                  : 'rgba(102, 126, 234, 0.4)',
                               },
                               '&.Mui-focused fieldset': {
-                                borderColor: '#667eea',
+                                borderColor: mode === 'dark' ? '#66BB6A' : '#667eea',
                               },
                               transition: 'all 0.3s ease'
                             },
                             '& .MuiInputLabel-root': {
-                              color: '#667eea',
+                              color: mode === 'dark' ? '#66BB6A' : '#667eea',
                               fontWeight: 600,
                               '&.Mui-focused': {
-                                color: '#667eea',
+                                color: mode === 'dark' ? '#66BB6A' : '#667eea',
                               }
                             }
                           }}
@@ -924,7 +970,7 @@ const RegisterPage: React.FC = () => {
                           InputProps={{
                             startAdornment: (
                               <InputAdornment position="start">
-                                <Lock sx={{ color: '#667eea' }} />
+                                <Lock sx={{ color: mode === 'dark' ? '#66BB6A' : '#667eea' }} />
                               </InputAdornment>
                             ),
                             endAdornment: (
@@ -934,9 +980,11 @@ const RegisterPage: React.FC = () => {
                                   onClick={handleToggleConfirmPasswordVisibility}
                                   edge="end"
                                   sx={{
-                                    color: '#667eea',
+                                    color: mode === 'dark' ? '#66BB6A' : '#667eea',
                                     '&:hover': {
-                                      backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                      backgroundColor: mode === 'dark' 
+                                        ? 'rgba(102, 187, 106, 0.1)' 
+                                        : 'rgba(102, 126, 234, 0.1)',
                                     }
                                   }}
                                 >
@@ -948,24 +996,30 @@ const RegisterPage: React.FC = () => {
                           sx={{ 
                             '& .MuiOutlinedInput-root': {
                               borderRadius: 3,
-                              backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                              backgroundColor: mode === 'dark' 
+                                ? 'rgba(102, 187, 106, 0.1)' 
+                                : 'rgba(102, 126, 234, 0.05)',
                               '& fieldset': {
-                                borderColor: 'rgba(102, 126, 234, 0.2)',
+                                borderColor: mode === 'dark' 
+                                  ? 'rgba(102, 187, 106, 0.3)' 
+                                  : 'rgba(102, 126, 234, 0.2)',
                                 borderWidth: 2,
                               },
                               '&:hover fieldset': {
-                                borderColor: 'rgba(102, 126, 234, 0.4)',
+                                borderColor: mode === 'dark' 
+                                  ? 'rgba(102, 187, 106, 0.5)' 
+                                  : 'rgba(102, 126, 234, 0.4)',
                               },
                               '&.Mui-focused fieldset': {
-                                borderColor: '#667eea',
+                                borderColor: mode === 'dark' ? '#66BB6A' : '#667eea',
                               },
                               transition: 'all 0.3s ease'
                             },
                             '& .MuiInputLabel-root': {
-                              color: '#667eea',
+                              color: mode === 'dark' ? '#66BB6A' : '#667eea',
                               fontWeight: 600,
                               '&.Mui-focused': {
-                                color: '#667eea',
+                                color: mode === 'dark' ? '#66BB6A' : '#667eea',
                               }
                             }
                           }}
@@ -1060,16 +1114,27 @@ const RegisterPage: React.FC = () => {
                         borderRadius: 3,
                         fontSize: '1rem',
                         fontWeight: 'bold',
-                        background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-                        boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)',
+                        background: mode === 'dark'
+                          ? 'linear-gradient(45deg, #66BB6A 30%, #81C784 90%)'
+                          : 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                        boxShadow: mode === 'dark'
+                          ? '0 8px 25px rgba(102, 187, 106, 0.4)'
+                          : '0 8px 25px rgba(102, 126, 234, 0.4)',
                         textTransform: 'none',
+                        color: mode === 'dark' ? '#000000' : '#ffffff',
                         '&:hover': {
-                          background: 'linear-gradient(45deg, #5a6fd8 30%, #694a9e 90%)',
+                          background: mode === 'dark'
+                            ? 'linear-gradient(45deg, #4CAF50 30%, #66BB6A 90%)'
+                            : 'linear-gradient(45deg, #5a6fd8 30%, #694a9e 90%)',
                           transform: 'translateY(-3px)',
-                          boxShadow: '0 12px 35px rgba(102, 126, 234, 0.5)',
+                          boxShadow: mode === 'dark'
+                            ? '0 12px 35px rgba(102, 187, 106, 0.5)'
+                            : '0 12px 35px rgba(102, 126, 234, 0.5)',
                         },
                         '&:disabled': {
-                          background: 'linear-gradient(45deg, #ccc 30%, #999 90%)',
+                          background: mode === 'dark'
+                            ? 'linear-gradient(45deg, #555555 30%, #333333 90%)'
+                            : 'linear-gradient(45deg, #ccc 30%, #999 90%)',
                           transform: 'none',
                           boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
                         },
@@ -1108,12 +1173,21 @@ const RegisterPage: React.FC = () => {
                         fontSize: '1rem',
                         fontWeight: 'bold',
                         textTransform: 'none',
-                        background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-                        boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)',
+                        background: mode === 'dark'
+                          ? 'linear-gradient(45deg, #66BB6A 30%, #81C784 90%)'
+                          : 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                        boxShadow: mode === 'dark'
+                          ? '0 8px 25px rgba(102, 187, 106, 0.4)'
+                          : '0 8px 25px rgba(102, 126, 234, 0.4)',
+                        color: mode === 'dark' ? '#000000' : '#ffffff',
                         '&:hover': {
-                          background: 'linear-gradient(45deg, #5a6fd8 30%, #694a9e 90%)',
+                          background: mode === 'dark'
+                            ? 'linear-gradient(45deg, #4CAF50 30%, #66BB6A 90%)'
+                            : 'linear-gradient(45deg, #5a6fd8 30%, #694a9e 90%)',
                           transform: 'translateY(-3px)',
-                          boxShadow: '0 12px 35px rgba(102, 126, 234, 0.5)',
+                          boxShadow: mode === 'dark'
+                            ? '0 12px 35px rgba(102, 187, 106, 0.5)'
+                            : '0 12px 35px rgba(102, 126, 234, 0.5)',
                         },
                         transition: 'all 0.3s ease'
                       }}
@@ -1132,15 +1206,17 @@ const RegisterPage: React.FC = () => {
                       borderWidth: 2,
                       px: 4,
                       py: 1.5,
-                      borderColor: '#667eea',
-                      color: '#667eea',
+                      borderColor: mode === 'dark' ? '#66BB6A' : '#667eea',
+                      color: mode === 'dark' ? '#66BB6A' : '#667eea',
                       fontWeight: 600,
                       '&:hover': {
                         borderWidth: 2,
-                        borderColor: '#5a6fd8',
-                        color: '#5a6fd8',
+                        borderColor: mode === 'dark' ? '#4CAF50' : '#5a6fd8',
+                        color: mode === 'dark' ? '#4CAF50' : '#5a6fd8',
                         transform: 'translateY(-2px)',
-                        boxShadow: '0 8px 25px rgba(102, 126, 234, 0.2)'
+                        boxShadow: mode === 'dark'
+                          ? '0 8px 25px rgba(102, 187, 106, 0.2)'
+                          : '0 8px 25px rgba(102, 126, 234, 0.2)'
                       },
                       '&:disabled': {
                         borderColor: 'rgba(0, 0, 0, 0.12)',
@@ -1166,13 +1242,13 @@ const RegisterPage: React.FC = () => {
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                      <Box sx={{ color: '#4caf50', fontSize: '1rem' }}>🔒</Box>
+                      <Box sx={{ color: mode === 'dark' ? '#66BB6A' : '#4caf50', fontSize: '1rem' }}>🔒</Box>
                       <Typography variant="body2" color="text.secondary">
                         Use a strong password to keep your account secure
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                      <Box sx={{ color: '#4caf50', fontSize: '1rem' }}>✨</Box>
+                      <Box sx={{ color: mode === 'dark' ? '#66BB6A' : '#4caf50', fontSize: '1rem' }}>✨</Box>
                       <Typography variant="body2" color="text.secondary">
                         Complete your profile to get better job matches
                       </Typography>
@@ -1192,9 +1268,9 @@ const RegisterPage: React.FC = () => {
                     sx={{
                       fontWeight: 600,
                       textTransform: 'none',
-                      color: '#667eea',
+                      color: mode === 'dark' ? '#66BB6A' : '#667eea',
                       '&:hover': {
-                        color: '#5a6fd8',
+                        color: mode === 'dark' ? '#4CAF50' : '#5a6fd8',
                         textDecoration: 'underline'
                       }
                     }}

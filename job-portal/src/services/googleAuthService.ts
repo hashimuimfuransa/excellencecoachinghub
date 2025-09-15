@@ -40,6 +40,9 @@ class GoogleAuthService {
 
   constructor() {
     this.clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+    console.log('🔍 Google Client ID from env:', import.meta.env.VITE_GOOGLE_CLIENT_ID);
+    console.log('🔍 All env vars:', import.meta.env);
+    console.log('🔍 Final clientId:', this.clientId);
   }
 
   // Load Google Identity Services

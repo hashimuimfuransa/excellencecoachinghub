@@ -115,7 +115,14 @@ function App() {
             {/* Smart Home Route - redirects authenticated users to network */}
             <Route path="/" element={<SmartHome />} />
             <Route path="/jobs" element={<AllJobsPage />} />
-            <Route path="/jobs/:id" element={<JobDetailsPage />} />
+            <Route 
+              path="/jobs/:id" 
+              element={
+                <ProtectedRoute>
+                  <JobDetailsPage />
+                </ProtectedRoute>
+              } 
+            />
             <Route path="/internships" element={<InternshipsPage />} />
             <Route path="/skills" element={<SkillsPage />} />
             <Route path="/login" element={<LoginPage />} />

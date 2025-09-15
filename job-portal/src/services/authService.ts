@@ -88,6 +88,22 @@ class AuthService {
     return authData;
   }
 
+  // Complete Google registration (similar to homepage)
+  async completeGoogleRegistration(userData: any): Promise<AuthResponse> {
+    console.log('🌐 Making POST request to /auth/google/complete-registration');
+    console.log('🌐 Request data:', userData);
+    
+    const authData = await apiPost<AuthResponse>('/auth/google/complete-registration', userData);
+    
+    // Store token and user data
+    localStorage.setItem('token', authData.token);
+    if (authData.user) {
+      localStorage.setItem('user', JSON.stringify(authData.user));
+    }
+    
+    return authData;
+  }
+
   // Logout user
   logout(): void {
     localStorage.removeItem('token');

@@ -145,39 +145,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       const { default: authService } = await import('../services/authService');
       
-      // Prepare Google registration data - only include fields expected by backend
-      const googleRegisterData = {
-        firstName: userData.firstName || '',
-        lastName: userData.lastName || '',
-        email: userData.email || '',
-        password: `google_oauth_${userData.googleId || Date.now().toString()}`, // Ensure at least 8 chars
+      // Use the same data structure as homepage for Google registration
+      const googleCompleteData = {
+        ...userData,
         role: role,
-        platform: 'job-portal'
+        provider: 'google',
+        isEmailVerified: true,
+        registrationCompleted: true,
+        platform: 'job-portal',
+        createdAt: new Date().toISOString()
       };
       
-      console.log('🔍 Sending Google registration data:', googleRegisterData);
-      console.log('🔍 Individual field values:', {
-        firstName: googleRegisterData.firstName,
-        lastName: googleRegisterData.lastName,
-        email: googleRegisterData.email,
-        password: googleRegisterData.password ? '[SET]' : '[EMPTY]',
-        role: googleRegisterData.role,
-        platform: googleRegisterData.platform
-      });
-
-      // Validate required fields before sending
-      const missingFields = [];
-      if (!googleRegisterData.firstName) missingFields.push('firstName');
-      if (!googleRegisterData.lastName) missingFields.push('lastName');
-      if (!googleRegisterData.email) missingFields.push('email');
-      if (!googleRegisterData.password) missingFields.push('password');
-      if (!googleRegisterData.role) missingFields.push('role');
-
-      if (missingFields.length > 0) {
-        throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
-      }
+      console.log('🔍 Sending Google complete registration data:', googleCompleteData);
       
-      const authData = await authService.register(googleRegisterData);
+      // Use dedicated Google registration completion endpoint
+      const authData = await authService.completeGoogleRegistration(googleCompleteData);
       setUser(authData.user);
     } catch (error) {
       console.error('❌ Google registration error in AuthContext:', error);

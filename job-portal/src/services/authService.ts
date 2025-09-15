@@ -13,11 +13,6 @@ export interface User {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  // Google OAuth fields
-  provider?: string;
-  googleId?: string;
-  isEmailVerified?: boolean;
-  profilePicture?: string;
 }
 
 export interface LoginCredentials {
@@ -34,11 +29,6 @@ export interface RegisterData {
   company?: string;
   jobTitle?: string;
   platform?: string;
-  // Google OAuth fields
-  provider?: string;
-  googleId?: string;
-  isEmailVerified?: boolean;
-  profilePicture?: string;
 }
 
 export interface AuthResponse {

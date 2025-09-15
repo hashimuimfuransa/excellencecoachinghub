@@ -150,14 +150,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         firstName: userData.firstName || '',
         lastName: userData.lastName || '',
         email: userData.email || '',
-        password: `google_oauth_${userData.googleId || Date.now()}`, // Use googleId for consistency
+        password: `google_oauth_${userData.googleId || Date.now().toString()}`, // Ensure at least 8 chars
         role: role,
-        platform: 'job-portal',
-        // Additional fields for Google users (backend should handle these)
-        provider: 'google',
-        googleId: userData.googleId,
-        isEmailVerified: userData.isEmailVerified || true,
-        profilePicture: userData.profilePicture
+        platform: 'job-portal'
       };
       
       console.log('🔍 Sending Google registration data:', {

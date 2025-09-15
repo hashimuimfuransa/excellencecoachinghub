@@ -111,12 +111,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       if (result.requiresRoleSelection && result.userData) {
-        // Return user data for role selection
+        // Return user data for role selection (new user)
         return { requiresRoleSelection: true, userData: result.userData };
       }
 
-      // If user already exists and is registered, we would have gotten user data back
-      // For now, this will always require role selection for new Google users
+      // User already exists and is registered - log them in directly
+      if (result.userData && !result.requiresRoleSelection) {
+        // For existing users, we should get user data and log them in
+        // But since we're using localStorage for development, we need to create an auth response
+        const existingUser = getExistingUserFromStorage(result.userData.email);
+        if (existingUser) {
+          setUser(existingUser);
+          return { requiresRoleSelection: false };
+        }
+      }
+
+      // Fallback for edge cases
       return { requiresRoleSelection: true, userData: result.userData };
     } catch (error) {
       console.error('❌ Google login error in AuthContext:', error);
@@ -137,6 +147,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       throw error; // Re-throw the error to preserve error details
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Helper method to get existing user from localStorage
+  const getExistingUserFromStorage = (email: string): User | null => {
+    try {
+      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      const existingUser = registeredUsers.find((user: any) => user.email === email);
+      if (existingUser && existingUser.registrationCompleted) {
+        // Also set token and user in localStorage for authentication
+        localStorage.setItem('token', `google_existing_${Date.now()}`);
+        localStorage.setItem('user', JSON.stringify(existingUser));
+        return existingUser;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting existing user from storage:', error);
+      return null;
     }
   };
 

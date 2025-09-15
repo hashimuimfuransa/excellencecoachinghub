@@ -99,6 +99,29 @@ class AuthService {
     localStorage.setItem('token', authData.token);
     if (authData.user) {
       localStorage.setItem('user', JSON.stringify(authData.user));
+      
+      // Also save to registeredUsers array for future Google login detection
+      try {
+        const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+        const existingIndex = registeredUsers.findIndex((user: any) => user.email === authData.user.email);
+        
+        const userToSave = {
+          ...authData.user,
+          registrationCompleted: true,
+          provider: 'google'
+        };
+        
+        if (existingIndex >= 0) {
+          registeredUsers[existingIndex] = userToSave;
+        } else {
+          registeredUsers.push(userToSave);
+        }
+        
+        localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
+        console.log('✅ User saved to registeredUsers for future Google login detection');
+      } catch (error) {
+        console.error('Error saving user to registeredUsers:', error);
+      }
     }
     
     return authData;

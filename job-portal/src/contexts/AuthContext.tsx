@@ -30,7 +30,9 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<{requiresRoleSelection?: boolean; userData?: any}>;
   register: (userData: any) => Promise<void>;
+  registerWithGoogle: (userData: any, role: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (userData: Partial<User>) => Promise<void>;
   setUserData: (userData: User) => void;
@@ -98,6 +100,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const loginWithGoogle = async (): Promise<{requiresRoleSelection?: boolean; userData?: any}> => {
+    try {
+      setIsLoading(true);
+      const { default: googleAuthService } = await import('../services/googleAuthService');
+      const result = await googleAuthService.authenticate();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Google authentication failed');
+      }
+
+      if (result.requiresRoleSelection && result.userData) {
+        // Return user data for role selection
+        return { requiresRoleSelection: true, userData: result.userData };
+      }
+
+      // If user already exists and is registered, we would have gotten user data back
+      // For now, this will always require role selection for new Google users
+      return { requiresRoleSelection: true, userData: result.userData };
+    } catch (error) {
+      console.error('❌ Google login error in AuthContext:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const register = async (userData: any): Promise<void> => {
     try {
       setIsLoading(true);
@@ -107,6 +135,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('❌ Registration error in AuthContext:', error);
       throw error; // Re-throw the error to preserve error details
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const registerWithGoogle = async (userData: any, role: string): Promise<void> => {
+    try {
+      setIsLoading(true);
+      const { default: authService } = await import('../services/authService');
+      
+      // Prepare Google registration data
+      const googleRegisterData = {
+        ...userData,
+        role: role,
+        password: 'google_oauth_' + Date.now(), // Temporary password for Google users
+        provider: 'google'
+      };
+      
+      const authData = await authService.register(googleRegisterData);
+      setUser(authData.user);
+    } catch (error) {
+      console.error('❌ Google registration error in AuthContext:', error);
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -166,7 +217,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated: !!user,
     isLoading,
     login,
+    loginWithGoogle,
     register,
+    registerWithGoogle,
     logout,
     updateUser,
     setUserData,

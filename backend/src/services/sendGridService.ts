@@ -164,11 +164,180 @@ export const sendEmail = async ({ to, subject, text, html }: SendEmailOptions): 
   }
 };
 
-// Welcome email template
-export const sendWelcomeEmail = async (email: string, name: string): Promise<void> => {
-  const subject = 'Welcome to Exjobnet 🎉';
-  const text = `Hi ${name}, welcome to Exjobnet!`;
-  const html = `<p>Hi <b>${name}</b>, welcome to <strong>Exjobnet</strong>!</p>`;
+// Welcome email template with platform-specific services
+export const sendWelcomeEmail = async (
+  email: string, 
+  name: string, 
+  platform: string = 'homepage',
+  platformUrl: string = ''
+): Promise<void> => {
+  const subject = 'Welcome to Excellence Coaching Hub! 🎉';
+  
+  // Generate HTML using the same template logic from emailService
+  const getWelcomeHTML = (platform: string) => {
+    // Determine platform-specific services
+    const getServicesSection = (platform: string) => {
+      switch (platform) {
+        case 'elearning':
+          return `
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="color: #1976d2; margin-top: 0;">🎓 E-Learning Platform Services</h3>
+              <ul style="color: #333; margin: 0; padding-left: 20px;">
+                <li><strong>Interactive Courses:</strong> Access comprehensive courses across various subjects with multimedia content</li>
+                <li><strong>AI-Powered Learning Assistant:</strong> Get instant help and personalized learning recommendations</li>
+                <li><strong>Live Virtual Classes:</strong> Join real-time sessions with expert instructors and peers</li>
+                <li><strong>Smart Assessments:</strong> Take AI-graded quizzes and exams with instant feedback</li>
+                <li><strong>Progress Tracking:</strong> Monitor your learning journey with detailed analytics</li>
+                <li><strong>Digital Certificates:</strong> Earn blockchain-verified certificates upon course completion</li>
+                <li><strong>Study Groups:</strong> Collaborate with fellow learners in virtual study rooms</li>
+                <li><strong>Mobile Learning:</strong> Learn anywhere with our responsive mobile platform</li>
+              </ul>
+            </div>
+          `;
+        case 'job-portal':
+          return `
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="color: #1976d2; margin-top: 0;">💼 ExJobNet Platform Services</h3>
+              <ul style="color: #333; margin: 0; padding-left: 20px;">
+                <li><strong>Smart Job Matching:</strong> AI-powered job recommendations based on your skills and preferences</li>
+                <li><strong>AI Interview Coaching:</strong> Practice with our AI interviewer and get real-time feedback</li>
+                <li><strong>Psychometric Testing:</strong> Comprehensive personality and skills assessments</li>
+                <li><strong>Career Guidance:</strong> Personalized career counseling and development planning</li>
+                <li><strong>Professional Networking:</strong> Connect with industry professionals and mentors</li>
+                <li><strong>Digital Portfolio Builder:</strong> Create compelling professional profiles and portfolios</li>
+                <li><strong>Employer Dashboard:</strong> For recruiters - access advanced talent acquisition tools</li>
+                <li><strong>Blockchain Certificates:</strong> Secure, verifiable digital credentials</li>
+              </ul>
+            </div>
+          `;
+        case 'homepage':
+        default:
+          return `
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="color: #1976d2; margin-top: 0;">🌟 Complete Excellence Coaching Hub Services</h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                  <h4 style="color: #1976d2; margin: 10px 0 5px 0; font-size: 14px;">🎓 Academic Coaching</h4>
+                  <ul style="color: #333; margin: 0; padding-left: 15px; font-size: 13px;">
+                    <li>High School Academic Support</li>
+                    <li>University Exam Preparation</li>
+                    <li>Study Skills & Time Management</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 style="color: #ff5722; margin: 10px 0 5px 0; font-size: 14px;">💼 Career Services</h4>
+                  <ul style="color: #333; margin: 0; padding-left: 15px; font-size: 13px;">
+                    <li>AI-Powered Job Matching</li>
+                    <li>Interview Preparation</li>
+                    <li>Career Guidance & Mentorship</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 style="color: #3f51b5; margin: 10px 0 5px 0; font-size: 14px;">💻 Technology Training</h4>
+                  <ul style="color: #333; margin: 0; padding-left: 15px; font-size: 13px;">
+                    <li>Software Development</li>
+                    <li>Web & Mobile Development</li>
+                    <li>Cloud Computing & DevOps</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 style="color: #4caf50; margin: 10px 0 5px 0; font-size: 14px;">📊 Business & Analytics</h4>
+                  <ul style="color: #333; margin: 0; padding-left: 15px; font-size: 13px;">
+                    <li>Data Analytics & Visualization</li>
+                    <li>Business Management</li>
+                    <li>Entrepreneurship Training</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          `;
+      }
+    };
+
+    return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1976d2;">Welcome to Excellence Coaching Hub! 🎉</h2>
+      <p>Hi ${name},</p>
+      <p>Thank you for joining Excellence Coaching Hub! We're excited to have you on board and can't wait to help you achieve your goals with our comprehensive career development platform.</p>
+      
+      ${getServicesSection(platform)}
+
+      <div style="background-color: #e8f5e9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="color: #2e7d32; margin-top: 0;">🚀 Your Next Steps</h3>
+        <ol style="color: #333; margin: 0; padding-left: 20px;">
+          <li><strong>Complete Your Profile:</strong> Add your skills, experience, and career goals</li>
+          <li><strong>Explore Our Platforms:</strong> Discover job opportunities and learning resources</li>
+          <li><strong>Take Assessments:</strong> Get matched with suitable opportunities through our AI tools</li>
+          <li><strong>Start Learning:</strong> Enroll in courses that advance your career</li>
+          <li><strong>Network & Connect:</strong> Build professional relationships with industry experts</li>
+        </ol>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${platformUrl || '#'}" 
+           style="background-color: #1976d2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 5px;">
+          🚀 Get Started Now
+        </a>
+        ${platform === 'elearning' ? `
+        <a href="${process.env.JOB_PORTAL_URL || 'http://localhost:3000'}" 
+           style="background-color: #ff5722; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 5px;">
+          💼 Find Jobs
+        </a>
+        ` : ''}
+        ${platform === 'job-portal' ? `
+        <a href="${process.env.FRONTEND_URL || 'http://localhost:3001'}" 
+           style="background-color: #3f51b5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 5px;">
+          🎓 Start Learning
+        </a>
+        ` : ''}
+        ${platform === 'homepage' ? `
+        <a href="${process.env.JOB_PORTAL_URL || 'http://localhost:3000'}" 
+           style="background-color: #ff5722; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 5px;">
+          💼 Job Portal
+        </a>
+        <a href="${process.env.FRONTEND_URL || 'http://localhost:3001'}" 
+           style="background-color: #3f51b5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 5px;">
+          🎓 E-Learning
+        </a>
+        ` : ''}
+      </div>
+
+      <div style="background-color: #fff3e0; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ff9800;">
+        <p style="margin: 0; color: #ef6c00;"><strong>🎯 Pro Tips for Success:</strong></p>
+        <ul style="color: #333; margin: 10px 0 0 0; padding-left: 20px; font-size: 14px;">
+          <li>Complete your profile within 48 hours for priority access to opportunities</li>
+          <li>Take our psychometric tests to get matched with your ideal career path</li>
+          <li>Join our professional networking community to connect with mentors</li>
+          <li>Enable notifications to stay updated on new job postings and courses</li>
+        </ul>
+      </div>
+
+      <div style="background-color: #e3f2fd; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <h4 style="color: #1565c0; margin-top: 0;">📞 Need Help Getting Started?</h4>
+        <p style="margin: 5px 0; color: #333; font-size: 14px;">Our support team is here to help you make the most of our platform:</p>
+        <ul style="color: #333; margin: 5px 0; padding-left: 20px; font-size: 14px;">
+          <li>📧 Email: info@excellencecoachinghub.com</li>
+          <li>💬 Live Chat: Available 24/7 on our platform</li>
+          <li>📚 Help Center: Comprehensive guides and tutorials</li>
+        </ul>
+      </div>
+
+      <p>We're committed to empowering your career journey and helping you achieve excellence in your chosen field. Welcome to a community of ambitious professionals and learners!</p>
+      <p style="font-weight: bold; color: #1976d2;">Here's to your success and bright future! 🌟</p>
+      
+      <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+      <p style="color: #666; font-size: 12px;">
+        Excellence Coaching Hub Team<br>
+        Empowering careers, one step at a time 🚀<br>
+        Africa's Leading Career Development Platform<br>
+        This is an automated email, please do not reply.
+      </p>
+    </div>
+    `;
+  };
+
+  const html = getWelcomeHTML(platform);
+  const text = `Hi ${name}, welcome to Excellence Coaching Hub! We're excited to have you on board.`;
 
   await sendEmail({ to: email, subject, text, html });
 };
@@ -454,7 +623,7 @@ export const testSendGridConfig = async (): Promise<boolean> => {
     // Test with a simple email to the configured FROM address
     const testEmail = process.env.EMAIL_FROM || 'noreply@excellencecoaching.com';
     
-    await sendWelcomeEmail(testEmail, 'Test User');
+    await sendWelcomeEmail(testEmail, 'Test User', 'homepage', 'https://excellencecoachinghub.com');
     console.log('✅ SendGrid configuration test successful');
     return true;
   } catch (error: any) {

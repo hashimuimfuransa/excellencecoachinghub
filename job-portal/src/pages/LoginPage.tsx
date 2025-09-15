@@ -16,7 +16,9 @@ import {
   Slide,
   Chip,
   Stack,
-  Grid
+  Grid,
+  Divider,
+  CircularProgress
 } from '@mui/material';
 import { 
   Email, 
@@ -29,12 +31,14 @@ import {
   School,
   Psychology,
   TrendingUp,
-  CheckCircle
+  CheckCircle,
+  Google
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Link as RouterLink, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import FloatingContact from '../components/FloatingContact';
 import AccountTypeModal from '../components/AccountTypeModal';
+import GoogleRoleSelectionModal from '../components/GoogleRoleSelectionModal';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -44,8 +48,11 @@ const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showAccountTypeModal, setShowAccountTypeModal] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [showGoogleRoleModal, setShowGoogleRoleModal] = useState(false);
+  const [googleUserData, setGoogleUserData] = useState(null);
   
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const { login, loginWithGoogle, registerWithGoogle, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
@@ -142,6 +149,54 @@ const LoginPage: React.FC = () => {
   
   const handleTogglePasswordVisibility = () => {
     setShowPassword((prev) => !prev);
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      setGoogleLoading(true);
+      setError('');
+
+      const result = await loginWithGoogle();
+      
+      if (result.requiresRoleSelection && result.userData) {
+        // Show role selection modal for new Google users
+        setGoogleUserData(result.userData);
+        setShowGoogleRoleModal(true);
+      } else {
+        // User already exists and is logged in
+        navigate(getRedirectPath(), { replace: true });
+      }
+    } catch (error: any) {
+      console.error('Google login error:', error);
+      
+      if (error.message?.includes('cancelled')) {
+        setError('Google sign-in was cancelled. Please try again.');
+      } else if (error.message?.includes('not configured')) {
+        setError('Google authentication is not properly configured. Please contact support.');
+      } else if (error.message?.includes('popup')) {
+        setError('Please allow popups for Google sign-in to work properly.');
+      } else if (error.message?.includes('not available')) {
+        setError('Google services are not available. Please try again later.');
+      } else {
+        setError('Unable to sign in with Google. Please try again or use email/password.');
+      }
+      
+      // Scroll to error message for better visibility
+      setTimeout(() => {
+        const errorElement = document.querySelector('[role="alert"]');
+        if (errorElement) {
+          errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleGoogleRoleSelection = async (role: string, userData: any) => {
+    await registerWithGoogle(userData, role);
+    setShowGoogleRoleModal(false);
+    navigate(getRedirectPath(), { replace: true });
   };
 
   const handleCreateAccount = (e: React.MouseEvent) => {
@@ -400,7 +455,7 @@ const LoginPage: React.FC = () => {
                       type="submit"
                       fullWidth
                       variant="contained"
-                      disabled={loading}
+                      disabled={loading || googleLoading}
                       sx={{
                         mb: 2,
                         py: 1,
@@ -416,8 +471,49 @@ const LoginPage: React.FC = () => {
                       {loading ? 'Signing In...' : 'Sign In'}
                     </Button>
                     
+                    {/* Divider */}
+                    <Divider sx={{ my: 2 }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                        OR
+                      </Typography>
+                    </Divider>
+                    
+                    {/* Google Sign In Button */}
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      disabled={loading || googleLoading}
+                      startIcon={googleLoading ? <CircularProgress size={20} /> : <Google sx={{ color: '#DB4437' }} />}
+                      onClick={handleGoogleLogin}
+                      sx={{
+                        mb: 2,
+                        py: 1,
+                        borderRadius: 2,
+                        borderColor: '#e0e0e0',
+                        color: '#424242',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        backgroundColor: 'white',
+                        '&:hover': {
+                          borderColor: '#DB4437',
+                          backgroundColor: '#fff8f8',
+                        },
+                        '&:disabled': {
+                          borderColor: '#e0e0e0',
+                          backgroundColor: '#f5f5f5'
+                        }
+                      }}
+                    >
+                      {googleLoading ? 'Signing in...' : 'Continue with Google'}
+                    </Button>
+                    
                     {/* Register Link */}
                     <Box sx={{ textAlign: 'center' }}>
+                      <Alert severity="info" sx={{ mb: 2, bgcolor: '#f3f8ff', border: '1px solid #e3f2fd' }}>
+                        <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>
+                          <strong>New to ExJobNet?</strong> You'll need to create an account first to access jobs, courses, and career tools.
+                        </Typography>
+                      </Alert>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontSize: '0.85rem' }}>
                         Don't have an account?
                       </Typography>
@@ -435,7 +531,7 @@ const LoginPage: React.FC = () => {
                           }
                         }}
                       >
-                        Create Account
+                        Create Your Free Account
                       </Link>
                     </Box>
                   </Box>
@@ -618,6 +714,15 @@ const LoginPage: React.FC = () => {
         onClose={handleCloseAccountTypeModal}
         redirectType={redirectType}
         jobId={jobId}
+      />
+      
+      {/* Google Role Selection Modal */}
+      <GoogleRoleSelectionModal
+        open={showGoogleRoleModal}
+        onClose={() => setShowGoogleRoleModal(false)}
+        userData={googleUserData}
+        onRoleSelect={handleGoogleRoleSelection}
+        loading={googleLoading}
       />
     </Box>
   );

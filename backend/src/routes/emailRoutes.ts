@@ -18,7 +18,7 @@ const router = Router();
  */
 router.post('/send-email', async (req: Request, res: Response) => {
   try {
-    const { email, name } = req.body;
+    const { email, name, platform = 'homepage', platformUrl = '' } = req.body;
 
     if (!email || !name) {
       return res.status(400).json({
@@ -34,10 +34,10 @@ router.post('/send-email', async (req: Request, res: Response) => {
       });
     }
 
-    // Send welcome email using SendGrid
-    await sendWelcomeEmail(email, name);
+    // Send welcome email using SendGrid with platform info
+    await sendWelcomeEmail(email, name, platform, platformUrl);
 
-    console.log(`✅ Welcome email sent successfully to: ${email}`);
+    console.log(`✅ Welcome email sent successfully to: ${email} for ${platform} platform`);
 
     res.status(200).json({
       message: 'Email sent'
@@ -56,7 +56,7 @@ router.post('/send-email', async (req: Request, res: Response) => {
  */
 router.post('/welcome', async (req: Request, res: Response) => {
   try {
-    const { email, name } = req.body;
+    const { email, name, platform = 'homepage', platformUrl = '' } = req.body;
 
     if (!email || !name) {
       return res.status(400).json({
@@ -64,7 +64,7 @@ router.post('/welcome', async (req: Request, res: Response) => {
       });
     }
 
-    await sendWelcomeEmail(email, name);
+    await sendWelcomeEmail(email, name, platform, platformUrl);
 
     res.status(200).json({
       message: 'Welcome email sent successfully'

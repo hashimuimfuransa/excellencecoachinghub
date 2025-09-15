@@ -25,7 +25,8 @@ import {
   Step,
   StepLabel,
   Chip,
-  Stack
+  Stack,
+  CircularProgress
 } from '@mui/material';
 import { 
   Email, 
@@ -40,12 +41,15 @@ import {
   HowToReg,
   School,
   PersonAdd,
-  Home as HomeIcon
+  Home as HomeIcon,
+  Google
 } from '@mui/icons-material';
 import { useNavigate, Link as RouterLink, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../contexts/AuthContext';
 import FloatingContact from '../components/FloatingContact';
+import PasswordValidation, { getPasswordValidationErrors } from '../components/PasswordValidation';
+import GoogleRoleSelectionModal from '../components/GoogleRoleSelectionModal';
 
 const RegisterPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -64,8 +68,11 @@ const RegisterPage: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [showGoogleRoleModal, setShowGoogleRoleModal] = useState(false);
+  const [googleUserData, setGoogleUserData] = useState(null);
   
-  const { register } = useAuth();
+  const { register, loginWithGoogle, registerWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
@@ -171,8 +178,12 @@ const RegisterPage: React.FC = () => {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
+    // Enhanced password validation
+    const passwordErrors = getPasswordValidationErrors(formData.password);
+    if (passwordErrors.length > 0) {
+      const errorMessage = "Please improve your password:\n\n" + 
+        passwordErrors.map(err => `• ${err}`).join('\n');
+      setError(errorMessage);
       return;
     }
 
@@ -219,6 +230,46 @@ const RegisterPage: React.FC = () => {
   
   const handleToggleConfirmPasswordVisibility = () => {
     setShowConfirmPassword((prev) => !prev);
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      setGoogleLoading(true);
+      setError('');
+
+      const result = await loginWithGoogle();
+      
+      if (result.requiresRoleSelection && result.userData) {
+        // Show role selection modal for new Google users
+        setGoogleUserData(result.userData);
+        setShowGoogleRoleModal(true);
+      } else {
+        // User already exists and is logged in
+        navigate(getRedirectPath());
+      }
+    } catch (error: any) {
+      console.error('Google login error:', error);
+      
+      if (error.message?.includes('cancelled')) {
+        setError('Google sign-in was cancelled. Please try again.');
+      } else if (error.message?.includes('not configured')) {
+        setError('Google authentication is not properly configured. Please contact support.');
+      } else if (error.message?.includes('popup')) {
+        setError('Please allow popups for Google sign-in to work properly.');
+      } else if (error.message?.includes('not available')) {
+        setError('Google services are not available. Please try again later.');
+      } else {
+        setError('Unable to sign in with Google. Please try again or use the form below.');
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleGoogleRoleSelection = async (role: string, userData: any) => {
+    await registerWithGoogle(userData, role);
+    setShowGoogleRoleModal(false);
+    navigate(getRedirectPath());
   };
 
   const roleOptions = [
@@ -352,6 +403,43 @@ const RegisterPage: React.FC = () => {
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.85rem' }}>
                 Join ExJobNet and unlock your career potential
               </Typography>
+            </Box>
+            
+            {/* Google Sign Up Button */}
+            <Box sx={{ mb: 3, px: { xs: 2, md: 4 } }}>
+              <Button
+                fullWidth
+                variant="outlined"
+                disabled={loading || googleLoading}
+                startIcon={googleLoading ? <CircularProgress size={20} /> : <Google sx={{ color: '#DB4437' }} />}
+                onClick={handleGoogleLogin}
+                sx={{
+                  py: 1.5,
+                  borderRadius: 2,
+                  borderColor: '#e0e0e0',
+                  color: '#424242',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  backgroundColor: 'white',
+                  fontSize: '0.95rem',
+                  '&:hover': {
+                    borderColor: '#DB4437',
+                    backgroundColor: '#fff8f8',
+                  },
+                  '&:disabled': {
+                    borderColor: '#e0e0e0',
+                    backgroundColor: '#f5f5f5'
+                  }
+                }}
+              >
+                {googleLoading ? 'Setting up your account...' : 'Continue with Google'}
+              </Button>
+              
+              <Divider sx={{ my: 3 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                  OR CREATE ACCOUNT MANUALLY
+                </Typography>
+              </Divider>
             </Box>
 
 
@@ -884,17 +972,15 @@ const RegisterPage: React.FC = () => {
                         />
                       </Box>
                       <Box sx={{ gridColumn: { xs: '1', md: '1 / -1' } }}>
-                        <Box sx={{ mt: 2 }}>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Password requirements:
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            • At least 6 characters long
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            • Include a mix of letters, numbers, and symbols for better security
-                          </Typography>
-                        </Box>
+                        <PasswordValidation 
+                          password={formData.password}
+                          show={formData.password.length > 0}
+                        />
+                        {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                          <Alert severity="error" sx={{ mt: 1 }}>
+                            Passwords do not match
+                          </Alert>
+                        )}
                       </Box>
                     </Box>
                   </Box>
@@ -1282,6 +1368,15 @@ const RegisterPage: React.FC = () => {
       
       {/* Floating Contact Button */}
       <FloatingContact />
+      
+      {/* Google Role Selection Modal */}
+      <GoogleRoleSelectionModal
+        open={showGoogleRoleModal}
+        onClose={() => setShowGoogleRoleModal(false)}
+        userData={googleUserData}
+        onRoleSelect={handleGoogleRoleSelection}
+        loading={googleLoading}
+      />
     </Box>
   );
 };

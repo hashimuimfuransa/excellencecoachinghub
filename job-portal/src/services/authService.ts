@@ -93,11 +93,20 @@ class AuthService {
     console.log('🌐 Making POST request to /auth/google/complete-registration');
     console.log('🌐 Request data:', userData);
     
-    const authData = await apiPost<AuthResponse>('/auth/google/complete-registration', userData);
+    const response = await apiPost('/auth/google/complete-registration', userData);
+    const authData = handleApiResponse(response);
+    
+    console.log('🔍 Complete Google registration raw response:', response);
+    console.log('🔍 Complete Google registration processed data:', authData);
+    console.log('🔍 AuthData user:', authData?.user);
+    console.log('🔍 AuthData token:', authData?.token);
     
     // Store token and user data
-    localStorage.setItem('token', authData.token);
-    if (authData.user) {
+    if (authData?.token) {
+      localStorage.setItem('token', authData.token);
+    }
+    
+    if (authData?.user) {
       localStorage.setItem('user', JSON.stringify(authData.user));
       
       // Also save to registeredUsers array for future Google login detection

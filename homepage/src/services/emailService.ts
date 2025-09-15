@@ -21,7 +21,8 @@ export const emailService = {
     try {
       const response = await apiService.post('/email/welcome', {
         email,
-        name
+        name,
+        role
       });
 
       if (!response.success) {

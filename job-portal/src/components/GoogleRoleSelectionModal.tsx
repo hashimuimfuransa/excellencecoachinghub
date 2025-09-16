@@ -20,7 +20,8 @@ import {
   Work as WorkIcon,
   Person as PersonIcon,
   Business as BusinessIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  School as SchoolIcon
 } from '@mui/icons-material';
 
 interface GoogleRoleSelectionModalProps {
@@ -38,7 +39,7 @@ interface GoogleRoleSelectionModalProps {
 
 const roleOptions = [
   {
-    value: 'job_seeker',
+    value: 'professional',
     label: 'Job Seeker',
     description: 'Looking for new opportunities',
     icon: PersonIcon,
@@ -52,10 +53,10 @@ const roleOptions = [
     color: '#059669'
   },
   {
-    value: 'hr_consultant',
-    label: 'HR Consultant',
-    description: 'Supporting recruitment processes',
-    icon: WorkIcon,
+    value: 'student',
+    label: 'Student',
+    description: 'Learning and seeking educational opportunities',
+    icon: SchoolIcon,
     color: '#dc2626'
   }
 ];
@@ -67,7 +68,7 @@ const GoogleRoleSelectionModal: React.FC<GoogleRoleSelectionModalProps> = ({
   onClose,
   loading = false
 }) => {
-  const [selectedRole, setSelectedRole] = useState<string>('job_seeker');
+  const [selectedRole, setSelectedRole] = useState<string>('professional');
   const [submitting, setSubmitting] = useState(false);
 
   const handleRoleChange = (event: React.ChangeEvent<HTMLInputElement>) => {

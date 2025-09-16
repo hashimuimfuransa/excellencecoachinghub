@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Button,
@@ -14,7 +14,9 @@ import {
   AccordionDetails,
   Chip,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Tabs,
+  Tab
 } from '@mui/material';
 import {
   Google,
@@ -22,7 +24,9 @@ import {
   ExpandMore,
   Info,
   CheckCircle,
-  Warning
+  Warning,
+  OpenInNew,
+  TouchApp
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -43,8 +47,16 @@ const MobileGoogleSignIn: React.FC<MobileGoogleSignInProps> = ({
   const [showInstructions, setShowInstructions] = useState(false);
   const [popupSupported, setPopupSupported] = useState<boolean | null>(null);
   const [instructionType, setInstructionType] = useState<'popup' | 'general'>('general');
+  const [selectedMethod, setSelectedMethod] = useState(0);
+  const googleButtonRef = useRef<HTMLDivElement>(null);
   
-  const { loginWithGoogle, loginWithGoogleMobile, getMobilePopupInstructions } = useAuth();
+  const { 
+    loginWithGoogle, 
+    loginWithGoogleMobile, 
+    createGoogleMobileButton, 
+    handleGoogleOAuthCallback,
+    getMobilePopupInstructions 
+  } = useAuth();
   const theme = useTheme();
   const isMobileQuery = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -80,6 +92,26 @@ const MobileGoogleSignIn: React.FC<MobileGoogleSignInProps> = ({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Handle OAuth callback on component mount
+  useEffect(() => {
+    const handleCallback = async () => {
+      try {
+        const result = await handleGoogleOAuthCallback();
+        if (result) {
+          onSuccess?.(result);
+        }
+      } catch (error: any) {
+        onError?.(error.message);
+      }
+    };
+
+    // Check if this is an OAuth callback
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('code') && urlParams.has('state')) {
+      handleCallback();
+    }
+  }, [handleGoogleOAuthCallback, onSuccess, onError]);
+
   const handleGoogleSignIn = async (useMobileOptimized = false) => {
     try {
       setLoading?.(true);
@@ -104,6 +136,24 @@ const MobileGoogleSignIn: React.FC<MobileGoogleSignInProps> = ({
       } else {
         onError?.(error.message);
       }
+    } finally {
+      setLoading?.(false);
+    }
+  };
+
+  const handleNativeGoogleButton = async () => {
+    if (!googleButtonRef.current) {
+      onError?.('Google button container not available');
+      return;
+    }
+
+    try {
+      setLoading?.(true);
+      const result = await createGoogleMobileButton(googleButtonRef.current);
+      onSuccess?.(result);
+    } catch (error: any) {
+      console.error('Google native button error:', error);
+      onError?.(error.message);
     } finally {
       setLoading?.(false);
     }
@@ -252,7 +302,118 @@ const MobileGoogleSignIn: React.FC<MobileGoogleSignInProps> = ({
     <Box>
       {renderMobileStatus()}
       
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+      {(isMobile || isMobileQuery) ? (
+        <Box>
+          <Tabs 
+            value={selectedMethod} 
+            onChange={(_, newValue) => setSelectedMethod(newValue)}
+            sx={{ mb: 2, minHeight: 'auto' }}
+            variant="fullWidth"
+          >
+            <Tab 
+              label="Standard" 
+              icon={<Google fontSize="small" />}
+              sx={{ minHeight: 'auto', py: 1 }}
+            />
+            <Tab 
+              label="Redirect" 
+              icon={<OpenInNew fontSize="small" />}
+              sx={{ minHeight: 'auto', py: 1 }}
+            />
+            <Tab 
+              label="Button" 
+              icon={<TouchApp fontSize="small" />}
+              sx={{ minHeight: 'auto', py: 1 }}
+            />
+          </Tabs>
+
+          {selectedMethod === 0 && (
+            <Button
+              fullWidth
+              variant="outlined"
+              size="large"
+              startIcon={<Google />}
+              onClick={() => handleGoogleSignIn(false)}
+              disabled={loading}
+              sx={{
+                py: 1.5,
+                borderColor: '#4285f4',
+                color: '#4285f4',
+                '&:hover': {
+                  borderColor: '#3367d6',
+                  backgroundColor: '#f8f9ff'
+                }
+              }}
+            >
+              {loading ? 'Signing in...' : 'Continue with Google'}
+            </Button>
+          )}
+
+          {selectedMethod === 1 && (
+            <Box>
+              <Button
+                fullWidth
+                variant="contained"
+                size="large"
+                startIcon={<OpenInNew />}
+                onClick={() => handleGoogleSignIn(true)}
+                disabled={loading}
+                sx={{
+                  py: 1.5,
+                  backgroundColor: '#34a853',
+                  '&:hover': {
+                    backgroundColor: '#2e7d47'
+                  }
+                }}
+              >
+                {loading ? 'Redirecting...' : 'Sign in via Redirect (No Popups)'}
+              </Button>
+              <Typography variant="caption" sx={{ display: 'block', mt: 1, textAlign: 'center', opacity: 0.7 }}>
+                Opens Google sign-in in the same tab
+              </Typography>
+            </Box>
+          )}
+
+          {selectedMethod === 2 && (
+            <Box>
+              <Box 
+                ref={googleButtonRef} 
+                sx={{ 
+                  minHeight: 48, 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  border: '1px dashed #ddd',
+                  borderRadius: 1,
+                  mb: 1
+                }}
+              />
+              <Button
+                fullWidth
+                variant="outlined"
+                size="large"
+                startIcon={<TouchApp />}
+                onClick={handleNativeGoogleButton}
+                disabled={loading}
+                sx={{
+                  py: 1.5,
+                  borderColor: '#fbbc04',
+                  color: '#fbbc04',
+                  '&:hover': {
+                    borderColor: '#f9ab00',
+                    backgroundColor: '#fffbf2'
+                  }
+                }}
+              >
+                {loading ? 'Loading...' : 'Create Google Button'}
+              </Button>
+              <Typography variant="caption" sx={{ display: 'block', mt: 1, textAlign: 'center', opacity: 0.7 }}>
+                Creates a native Google sign-in button
+              </Typography>
+            </Box>
+          )}
+        </Box>
+      ) : (
         <Button
           fullWidth
           variant="outlined"
@@ -272,27 +433,7 @@ const MobileGoogleSignIn: React.FC<MobileGoogleSignInProps> = ({
         >
           {loading ? 'Signing in...' : 'Continue with Google'}
         </Button>
-
-        {(isMobile || isMobileQuery) && (
-          <Button
-            fullWidth
-            variant="contained"
-            size="large"
-            startIcon={<PhoneAndroid />}
-            onClick={() => handleGoogleSignIn(true)}
-            disabled={loading}
-            sx={{
-              py: 1.5,
-              backgroundColor: '#34a853',
-              '&:hover': {
-                backgroundColor: '#2e7d47'
-              }
-            }}
-          >
-            {loading ? 'Signing in...' : 'Mobile-Optimized Sign-In'}
-          </Button>
-        )}
-      </Box>
+      )}
 
       {renderInstructionsDialog()}
     </Box>

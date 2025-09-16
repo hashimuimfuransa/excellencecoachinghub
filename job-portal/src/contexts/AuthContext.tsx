@@ -32,6 +32,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<{requiresRoleSelection?: boolean; userData?: any}>;
   loginWithGoogleMobile: () => Promise<{requiresRoleSelection?: boolean; userData?: any}>;
+  createGoogleMobileButton: (element: HTMLElement) => Promise<{requiresRoleSelection?: boolean; userData?: any}>;
+  handleGoogleOAuthCallback: () => Promise<{requiresRoleSelection?: boolean; userData?: any} | null>;
   getMobilePopupInstructions: () => string;
   register: (userData: any) => Promise<void>;
   registerWithGoogle: (userData: any, role: string) => Promise<void>;
@@ -162,6 +164,66 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const createGoogleMobileButton = async (element: HTMLElement): Promise<{requiresRoleSelection?: boolean; userData?: any}> => {
+    try {
+      setIsLoading(true);
+      const { default: googleAuthService } = await import('../services/googleAuthService');
+      const result = await googleAuthService.createMobileButton(element);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Mobile Google button authentication failed');
+      }
+
+      if (result.requiresRoleSelection && result.userData) {
+        return { requiresRoleSelection: true, userData: result.userData };
+      }
+
+      if (result.user && result.token) {
+        setUser(result.user);
+        return { requiresRoleSelection: false };
+      }
+
+      throw new Error('Unexpected Google mobile button result');
+    } catch (error) {
+      console.error('❌ Google mobile button error in AuthContext:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleOAuthCallback = async (): Promise<{requiresRoleSelection?: boolean; userData?: any} | null> => {
+    try {
+      setIsLoading(true);
+      const { default: googleAuthService } = await import('../services/googleAuthService');
+      const result = await googleAuthService.handleOAuthCallback();
+      
+      if (!result) {
+        return null; // Not an OAuth callback
+      }
+
+      if (!result.success) {
+        throw new Error(result.error || 'OAuth callback failed');
+      }
+
+      if (result.requiresRoleSelection && result.userData) {
+        return { requiresRoleSelection: true, userData: result.userData };
+      }
+
+      if (result.user && result.token) {
+        setUser(result.user);
+        return { requiresRoleSelection: false };
+      }
+
+      throw new Error('Unexpected OAuth callback result');
+    } catch (error) {
+      console.error('❌ OAuth callback error in AuthContext:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const getMobilePopupInstructions = (): string => {
     try {
       const { default: googleAuthService } = require('../services/googleAuthService');
@@ -276,6 +338,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     loginWithGoogle,
     loginWithGoogleMobile,
+    createGoogleMobileButton,
+    handleGoogleOAuthCallback,
     getMobilePopupInstructions,
     register,
     registerWithGoogle,

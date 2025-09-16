@@ -759,3 +759,97 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
     next(error);
   }
 };
+
+// @desc    Google OAuth callback handler
+// @route   POST /api/auth/google/callback
+// @access  Public
+export const googleOAuthCallback = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { code, redirectUri, platform } = req.body;
+
+    if (!code) {
+      res.status(400).json({
+        success: false,
+        error: 'Authorization code is required'
+      });
+      return;
+    }
+
+    // Exchange authorization code for access token
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        code,
+        grant_type: 'authorization_code',
+        redirect_uri: redirectUri
+      })
+    });
+
+    if (!tokenResponse.ok) {
+      throw new Error('Failed to exchange authorization code for access token');
+    }
+
+    const tokenData = await tokenResponse.json();
+    
+    if (!tokenData.access_token) {
+      throw new Error('No access token received');
+    }
+
+    // Get user info from Google
+    const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: {
+        'Authorization': `Bearer ${tokenData.access_token}`
+      }
+    });
+
+    if (!userResponse.ok) {
+      throw new Error('Failed to get user information from Google');
+    }
+
+    const userInfo = await userResponse.json();
+    
+    console.log('🔄 OAuth callback - received user info:', userInfo.email);
+
+    // Use the same logic as the existing googleAuth function
+    const email = userInfo.email;
+    let user = await User.findOne({ email });
+
+    if (user) {
+      // Existing user - log them in
+      console.log('✅ OAuth callback - existing user found');
+      sendTokenResponse(user, 200, res);
+    } else {
+      // New user - send back user data for role selection
+      console.log('🔄 OAuth callback - new user, needs role selection');
+      
+      const googleUserData = {
+        email: userInfo.email,
+        firstName: userInfo.given_name || userInfo.name?.split(' ')[0] || '',
+        lastName: userInfo.family_name || userInfo.name?.split(' ').slice(1).join(' ') || '',
+        profilePicture: userInfo.picture,
+        googleId: userInfo.id,
+        platform: platform || 'job-portal'
+      };
+
+      res.status(200).json({
+        success: true,
+        data: {
+          requiresRoleSelection: true,
+          googleUserData
+        }
+      });
+    }
+
+  } catch (error: any) {
+    console.error('❌ Google OAuth callback error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to process Google OAuth callback'
+    });
+  }
+};

@@ -444,8 +444,8 @@ class GoogleAuthService {
   }
 
   /**
-   * Mobile-optimized sign-in with popup guidance
-   * Provides instructions for enabling popups on mobile
+   * Mobile-optimized sign-in that completely avoids popups
+   * Uses redirect flow and direct button rendering for mobile devices
    */
   public async signInMobile(): Promise<AuthResult> {
     const isMobile = this.isMobileDevice();
@@ -456,34 +456,290 @@ class GoogleAuthService {
     }
 
     try {
-      console.log('📱 Starting mobile-optimized Google sign-in...');
+      console.log('📱 Starting mobile-optimized Google sign-in (no popups)...');
       
-      // First, test if we can open popups
-      const popupSupported = await this.testPopupSupport();
-      
-      if (!popupSupported) {
+      if (!this.clientId) {
         return {
           success: false,
-          error: `📱 Mobile Popup Setup Required:
-
-1. Tap your browser menu (⋮ or ⋯)
-2. Go to "Site Settings" or "Settings"
-3. Find "Pop-ups" or "Pop-ups and redirects"
-4. Set to "Allow" for this site
-5. Return here and try again
-
-Alternative: Use the Google button below if available`
+          error: 'Google Client ID not configured'
         };
       }
 
-      // If popups are supported, try regular sign-in with mobile optimizations
-      return this.signIn();
+      await this.initialize();
+
+      if (!window.google?.accounts?.id) {
+        return {
+          success: false,
+          error: 'Google Identity Services not available'
+        };
+      }
+
+      // Use redirect-based flow for mobile to completely avoid popups
+      return this.signInWithRedirect();
       
     } catch (error) {
       console.error('❌ Mobile sign-in error:', error);
       return {
         success: false,
-        error: 'Mobile sign-in setup failed. Please try enabling popups in your browser settings.'
+        error: 'Mobile sign-in failed. Please try refreshing the page.'
+      };
+    }
+  }
+
+  /**
+   * Sign in using redirect flow (no popups) - ideal for mobile
+   */
+  private async signInWithRedirect(): Promise<AuthResult> {
+    return new Promise<AuthResult>((resolve) => {
+      let resolved = false;
+      
+      const resolveOnce = (result: AuthResult) => {
+        if (!resolved) {
+          resolved = true;
+          resolve(result);
+        }
+      };
+
+      // Set a timeout for redirect flow
+      const timeout = setTimeout(() => {
+        resolveOnce({
+          success: false,
+          error: 'Google sign-in timeout. Please try again.'
+        });
+      }, 60000); // 60 seconds for redirect flow
+
+      try {
+        // Configure for redirect-based authentication
+        window.google!.accounts.id.initialize({
+          client_id: this.clientId,
+          callback: async (response) => {
+            clearTimeout(timeout);
+            try {
+              console.log('📨 Received Google response (redirect flow)');
+              
+              if (!response.credential) {
+                resolveOnce({
+                  success: false,
+                  error: 'No credential received from Google'
+                });
+                return;
+              }
+
+              const userInfo = this.parseJWT(response.credential);
+              console.log('👤 Parsed Google user info:', userInfo.email);
+              
+              const result = await this.processGoogleAuth(userInfo);
+              resolveOnce(result);
+
+            } catch (error) {
+              console.error('❌ Error in Google redirect callback:', error);
+              resolveOnce({
+                success: false,
+                error: 'Failed to process Google authentication'
+              });
+            }
+          },
+          auto_select: false,
+          cancel_on_tap_outside: false,
+          use_fedcm_for_prompt: true, // Use FedCM which works better on mobile
+          ux_mode: 'redirect' // Force redirect mode
+        });
+
+        // Instead of using prompt() which creates popups, create a direct OAuth URL
+        console.log('🔄 Creating Google OAuth redirect URL...');
+        
+        const state = Math.random().toString(36).substring(2);
+        const nonce = Math.random().toString(36).substring(2);
+        
+        // Store state for verification when user returns
+        localStorage.setItem('google_oauth_state', state);
+        localStorage.setItem('google_oauth_nonce', nonce);
+        localStorage.setItem('google_oauth_redirect_url', window.location.href);
+        
+        const redirectUri = encodeURIComponent(window.location.origin + window.location.pathname);
+        const scope = encodeURIComponent('openid email profile');
+        
+        const googleAuthUrl = `https://accounts.google.com/oauth/authorize?` +
+          `client_id=${encodeURIComponent(this.clientId)}&` +
+          `redirect_uri=${redirectUri}&` +
+          `response_type=code&` +
+          `scope=${scope}&` +
+          `state=${state}&` +
+          `nonce=${nonce}&` +
+          `access_type=online&` +
+          `include_granted_scopes=true`;
+
+        console.log('🚀 Redirecting to Google OAuth (mobile-friendly)...');
+        
+        // Give a short delay to let any UI updates complete
+        setTimeout(() => {
+          window.location.href = googleAuthUrl;
+        }, 500);
+        
+        // Don't resolve here - the page will redirect and come back
+        
+      } catch (error) {
+        clearTimeout(timeout);
+        console.error('❌ Error setting up Google redirect:', error);
+        resolveOnce({
+          success: false,
+          error: 'Failed to set up Google authentication redirect'
+        });
+      }
+    });
+  }
+
+  /**
+   * Handle OAuth redirect callback (when user returns from Google)
+   */
+  public async handleOAuthCallback(): Promise<AuthResult | null> {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      const storedState = localStorage.getItem('google_oauth_state');
+      
+      if (!code) {
+        return null; // Not an OAuth callback
+      }
+      
+      if (!state || state !== storedState) {
+        throw new Error('Invalid OAuth state parameter');
+      }
+      
+      console.log('🔄 Processing OAuth callback with code...');
+      
+      // Exchange code for tokens via backend
+      const response = await apiPost('/auth/google/callback', {
+        code,
+        redirectUri: window.location.origin + window.location.pathname,
+        platform: 'job-portal'
+      });
+      
+      if (response.success && response.data) {
+        // Clean up OAuth state
+        localStorage.removeItem('google_oauth_state');
+        localStorage.removeItem('google_oauth_nonce');
+        localStorage.removeItem('google_oauth_redirect_url');
+        
+        if (response.data.requiresRoleSelection) {
+          return {
+            success: true,
+            requiresRoleSelection: true,
+            userData: response.data.googleUserData
+          };
+        } else if (response.data.user && response.data.token) {
+          localStorage.setItem('token', response.data.token);
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+          
+          return {
+            success: true,
+            user: response.data.user,
+            token: response.data.token,
+            requiresRoleSelection: false
+          };
+        }
+      }
+      
+      throw new Error('Invalid OAuth callback response');
+      
+    } catch (error) {
+      console.error('❌ OAuth callback error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'OAuth callback failed'
+      };
+    }
+  }
+
+  /**
+   * Simple mobile sign-in using Google's renderButton (no popups, no redirects)
+   * Creates a native Google button that handles authentication in-place
+   */
+  public async createMobileButton(containerElement: HTMLElement): Promise<AuthResult> {
+    try {
+      if (!this.clientId) {
+        throw new Error('Google Client ID not configured');
+      }
+
+      await this.initialize();
+
+      if (!window.google?.accounts?.id) {
+        throw new Error('Google Identity Services not available');
+      }
+
+      console.log('📱 Creating mobile-friendly Google button...');
+
+      return new Promise<AuthResult>((resolve) => {
+        let resolved = false;
+        
+        const resolveOnce = (result: AuthResult) => {
+          if (!resolved) {
+            resolved = true;
+            resolve(result);
+          }
+        };
+
+        // Clear any existing content
+        containerElement.innerHTML = '';
+
+        try {
+          // Initialize Google Identity with button-specific config
+          window.google!.accounts.id.initialize({
+            client_id: this.clientId,
+            callback: async (response) => {
+              try {
+                console.log('📱 Mobile button callback received');
+                
+                if (!response.credential) {
+                  resolveOnce({
+                    success: false,
+                    error: 'No credential received from Google'
+                  });
+                  return;
+                }
+
+                const userInfo = this.parseJWT(response.credential);
+                const result = await this.processGoogleAuth(userInfo);
+                resolveOnce(result);
+
+              } catch (error) {
+                console.error('❌ Mobile button callback error:', error);
+                resolveOnce({
+                  success: false,
+                  error: 'Failed to process Google authentication'
+                });
+              }
+            }
+          });
+
+          // Render the Google button directly
+          window.google!.accounts.id.renderButton(containerElement, {
+            theme: 'outline',
+            size: 'large',
+            type: 'standard',
+            shape: 'rectangular',
+            text: 'continue_with',
+            logo_alignment: 'left',
+            width: '100%'
+          });
+
+          console.log('✅ Mobile Google button rendered successfully');
+
+        } catch (error) {
+          console.error('❌ Error creating mobile button:', error);
+          resolveOnce({
+            success: false,
+            error: 'Failed to create Google sign-in button'
+          });
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ Mobile button setup error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Mobile button setup failed'
       };
     }
   }

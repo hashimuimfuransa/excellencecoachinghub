@@ -9,6 +9,7 @@ import {
   resetPassword,
   testEmail,
   googleAuth,
+  googleOAuthCallback,
   googleCompleteRegistration,
   updateProfile
 } from '../controllers/authController';
@@ -130,6 +131,7 @@ router.get('/me', protect, getMe);
 router.post('/forgot-password', forgotPasswordValidation, validateRequest, forgotPassword);
 router.post('/reset-password', resetPasswordValidation, validateRequest, resetPassword);
 router.post('/google', googleAuth); // Main Google OAuth endpoint
+router.post('/google/callback', googleOAuthCallback); // OAuth callback endpoint for mobile
 router.post('/google/complete-registration', googleRegistrationValidation, validateRequest, googleCompleteRegistration);
 router.post('/test-email', testEmail); // Test endpoint for email service
 router.post('/update-profile', protect, updateProfile); // Profile update endpoint

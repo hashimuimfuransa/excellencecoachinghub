@@ -198,22 +198,19 @@ class GoogleAuthService {
             requiresRoleSelection: true,
             userData: result.data.googleUserData
           };
-        } else {
-          // Existing user - they should be logged in via sendTokenResponse
-          // The result should contain user and token
-          if (result.user && result.token) {
-            localStorage.setItem('token', result.token);
-            localStorage.setItem('user', JSON.stringify(result.user));
-            
-            console.log('✅ Existing Google user logged in:', result.user.email);
-            
-            return {
-              success: true,
-              user: result.user,
-              token: result.token,
-              requiresRoleSelection: false
-            };
-          }
+        } else if (result.data.user && result.data.token) {
+          // Existing user - they are logged in via sendTokenResponse
+          localStorage.setItem('token', result.data.token);
+          localStorage.setItem('user', JSON.stringify(result.data.user));
+          
+          console.log('✅ Existing Google user logged in:', result.data.user.email);
+          
+          return {
+            success: true,
+            user: result.data.user,
+            token: result.data.token,
+            requiresRoleSelection: false
+          };
         }
       }
       
@@ -333,20 +330,38 @@ class GoogleAuthService {
       const authData = handleApiResponse(response);
       
       // Store token and user data (same as local auth)
-      localStorage.setItem('token', authData.token);
-      if (authData.user) {
-        localStorage.setItem('user', JSON.stringify(authData.user));
-      }
-      
-      // Welcome email is sent automatically by the backend
-      console.log('✅ Google registration completed:', authData.user?.email);
+      // The response should have data.token and data.user structure
+      if (authData.data) {
+        localStorage.setItem('token', authData.data.token);
+        if (authData.data.user) {
+          localStorage.setItem('user', JSON.stringify(authData.data.user));
+        }
+        
+        // Welcome email is sent automatically by the backend
+        console.log('✅ Google registration completed:', authData.data.user?.email);
 
-      return {
-        success: true,
-        user: authData.user,
-        token: authData.token,
-        requiresRoleSelection: false
-      };
+        return {
+          success: true,
+          user: authData.data.user,
+          token: authData.data.token,
+          requiresRoleSelection: false
+        };
+      } else {
+        // Fallback for direct token/user response
+        localStorage.setItem('token', authData.token);
+        if (authData.user) {
+          localStorage.setItem('user', JSON.stringify(authData.user));
+        }
+        
+        console.log('✅ Google registration completed:', authData.user?.email);
+
+        return {
+          success: true,
+          user: authData.user,
+          token: authData.token,
+          requiresRoleSelection: false
+        };
+      }
 
     } catch (error) {
       console.error('❌ Error completing Google registration:', error);

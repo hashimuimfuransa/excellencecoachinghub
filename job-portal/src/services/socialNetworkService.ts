@@ -124,9 +124,10 @@ class SocialNetworkService {
   async getFeed(options: FeedOptions = {}) {
     const { page = 1, limit = 20, filter = 'all' } = options;
     
-    // For Google OAuth users, return mock feed data to avoid 401 errors
+    // Check for Google users using consistent logic
     const token = localStorage.getItem('token');
-    const isGoogleUser = token?.startsWith('google_');
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const isGoogleUser = token?.startsWith('google_') || currentUser.authProvider === 'google';
     
     if (isGoogleUser) {
       console.log('🔄 Returning mock feed for Google user');
@@ -220,9 +221,10 @@ class SocialNetworkService {
 
   // Connections API
   async getConnections() {
-    // For Google OAuth users, return mock data to avoid 401 errors
+    // Check for Google users using consistent logic
     const token = localStorage.getItem('token');
-    const isGoogleUser = token?.startsWith('google_') || token?.includes('google');
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const isGoogleUser = token?.startsWith('google_') || currentUser.authProvider === 'google';
     
     if (isGoogleUser) {
       console.log('🔄 Returning mock connections for Google user');
@@ -234,9 +236,10 @@ class SocialNetworkService {
   }
 
   async sendConnectionRequest(userId: string, connectionType: 'follow' | 'connect' = 'connect') {
-    // For Google OAuth users, simulate the request
+    // Check for Google users using consistent logic
     const token = localStorage.getItem('token');
-    const isGoogleUser = token?.startsWith('google_') || token?.includes('google');
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const isGoogleUser = token?.startsWith('google_') || currentUser.authProvider === 'google';
     
     if (isGoogleUser) {
       console.log('🔄 Simulating connection request for Google user');
@@ -270,9 +273,10 @@ class SocialNetworkService {
   }
 
   async getPendingRequests() {
-    // For Google OAuth users, return mock data to avoid 401 errors
+    // Check for Google users using consistent logic
     const token = localStorage.getItem('token');
-    const isGoogleUser = token?.startsWith('google_') || token?.includes('google');
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const isGoogleUser = token?.startsWith('google_') || currentUser.authProvider === 'google';
     
     if (isGoogleUser) {
       console.log('🔄 Returning mock pending requests for Google user');
@@ -284,9 +288,10 @@ class SocialNetworkService {
   }
 
   async getSentRequests() {
-    // For Google OAuth users, return mock data to avoid 401 errors
+    // Check for Google users using consistent logic
     const token = localStorage.getItem('token');
-    const isGoogleUser = token?.startsWith('google_') || token?.includes('google');
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const isGoogleUser = token?.startsWith('google_') || currentUser.authProvider === 'google';
     
     if (isGoogleUser) {
       console.log('🔄 Returning mock sent requests for Google user');
@@ -303,38 +308,93 @@ class SocialNetworkService {
   }
 
   async getConnectionSuggestions(limit = 10) {
-    // For Google OAuth users, return mock data to avoid 401 errors
+    // Check for Google users using the new token format from newGoogleAuth
     const token = localStorage.getItem('token');
-    const isGoogleUser = token?.startsWith('google_') || token?.includes('google');
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const isGoogleUser = token?.startsWith('google_') || currentUser.authProvider === 'google';
+    
+    console.log('🔍 getConnectionSuggestions - Google user check:', { 
+      token: token?.substring(0, 15) + '...', 
+      authProvider: currentUser.authProvider,
+      isGoogleUser 
+    });
     
     if (isGoogleUser) {
       console.log('🔄 Returning mock connection suggestions for Google user');
-      // Return some mock user suggestions based on registered users
-      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
       
-      // Filter out current user and return some mock suggestions
-      const suggestions = registeredUsers
-        .filter((user: any) => user._id !== currentUser._id && user.registrationCompleted)
-        .slice(0, limit)
+      // Create comprehensive mock suggestions for Google users
+      const mockSuggestions = [
+        {
+          _id: 'mock_user_1',
+          firstName: 'Sarah',
+          lastName: 'Johnson',
+          profilePicture: null,
+          company: 'Tech Innovations Inc.',
+          jobTitle: 'Senior Software Engineer',
+          location: 'New York, NY',
+          skills: ['React', 'TypeScript', 'Node.js'],
+          role: 'job_seeker',
+          industry: 'Technology',
+          mutualConnections: 5,
+          isConnected: false
+        },
+        {
+          _id: 'mock_user_2', 
+          firstName: 'Michael',
+          lastName: 'Chen',
+          profilePicture: null,
+          company: 'Digital Solutions Ltd.',
+          jobTitle: 'Product Manager',
+          location: 'San Francisco, CA',
+          skills: ['Product Strategy', 'Agile', 'Analytics'],
+          role: 'employer',
+          industry: 'Technology',
+          mutualConnections: 3,
+          isConnected: false
+        },
+        {
+          _id: 'mock_user_3',
+          firstName: 'Emily',
+          lastName: 'Rodriguez',
+          profilePicture: null,
+          company: 'Creative Agency',
+          jobTitle: 'UX Designer',
+          location: 'Austin, TX',
+          skills: ['UI/UX Design', 'Figma', 'User Research'],
+          role: 'job_seeker',
+          industry: 'Design',
+          mutualConnections: 8,
+          isConnected: false
+        }
+      ];
+      
+      // Also include any registered users from localStorage (excluding current user)
+      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      const additionalSuggestions = registeredUsers
+        .filter((user: any) => 
+          user._id !== currentUser._id && 
+          user.registrationCompleted &&
+          user.email !== currentUser.email
+        )
+        .slice(0, Math.max(0, limit - mockSuggestions.length))
         .map((user: any) => ({
-          _id: user._id || `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          _id: user._id || `registered_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           firstName: user.firstName,
           lastName: user.lastName,
           profilePicture: user.profilePicture,
-          company: user.company,
-          jobTitle: user.jobTitle,
-          location: user.location,
-          bio: user.bio,
-          skills: user.skills || [],
+          company: user.company || 'Company Name',
+          jobTitle: user.jobTitle || 'Professional',
+          location: user.location || 'Location',
+          skills: user.skills || ['Professional Skills'],
           role: user.role,
-          industry: user.industry,
-          connectionsCount: Math.floor(Math.random() * 500),
-          profileCompletion: Math.floor(Math.random() * 100),
-          createdAt: user.createdAt || new Date().toISOString()
+          industry: user.industry || 'Various Industries',
+          mutualConnections: Math.floor(Math.random() * 10),
+          isConnected: false
         }));
       
-      return suggestions;
+      const allSuggestions = [...mockSuggestions, ...additionalSuggestions].slice(0, limit);
+      console.log('✅ Returning', allSuggestions.length, 'mock connection suggestions');
+      return allSuggestions;
     }
     
     const response = await api.get('/connections/suggestions', {

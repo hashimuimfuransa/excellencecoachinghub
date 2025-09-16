@@ -94,10 +94,10 @@ api.interceptors.response.use(
       const isPublicPage = ['/', '/jobs', '/support', '/home'].includes(window.location.pathname) ||
                           window.location.pathname.startsWith('/jobs/');
       
-      // Check if this is a Google OAuth session
-      const isGoogleOAuthSession = localStorage.getItem('google_oauth_session') === 'true';
+      // Check if this is a Google OAuth session - simplified check
       const currentToken = localStorage.getItem('token');
-      const isGoogleToken = currentToken?.includes('google');
+      const isGoogleToken = currentToken?.startsWith('google_') || currentToken?.includes('google');
+      const isGoogleOAuthSession = isGoogleToken; // Any Google token is considered an OAuth session
       
       console.log('🔍 401 Error Analysis:', { 
         isAuthRequest, 
@@ -122,8 +122,6 @@ api.interceptors.response.use(
             console.error('🚨 Multiple 401s detected, logging out Google OAuth session');
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            localStorage.removeItem('google_oauth_session');
-            localStorage.removeItem('session_timestamp');
             sessionStorage.removeItem('consecutive_401s');
             
             if (window.location.pathname !== '/login') {

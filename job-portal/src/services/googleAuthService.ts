@@ -1,11 +1,29 @@
 /**
  * Modern Google OAuth Authentication Service
  * Clean, reliable implementation using Google Identity Services
+ * Integrates with the same backend API as local authentication
  */
 
 import config from '../config/env';
+import { apiPost, handleApiResponse } from './api';
 
-// Types
+// Types that match local auth service
+export interface User {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  avatar?: string;
+  company?: string;
+  jobTitle?: string;
+  isActive: boolean;
+  authProvider?: 'google' | 'local';
+  registrationCompleted?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface GoogleUserInfo {
   sub: string;           // Google ID
   name: string;          // Full name
@@ -18,25 +36,11 @@ export interface GoogleUserInfo {
 
 export interface AuthResult {
   success: boolean;
-  user?: any;
+  user?: User;
   token?: string;
   requiresRoleSelection?: boolean;
   userData?: any;
   error?: string;
-}
-
-export interface User {
-  _id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: string;
-  avatar?: string;
-  isActive: boolean;
-  authProvider: 'google' | 'local';
-  registrationCompleted: boolean;
-  createdAt: string;
-  updatedAt: string;
 }
 
 declare global {
@@ -90,22 +94,33 @@ class GoogleAuthService {
   private loadGoogleScript(): Promise<void> {
     return new Promise((resolve, reject) => {
       // Check if script already exists
-      if (document.querySelector('script[src*="accounts.google.com/gsi/client"]')) {
+      const existingScript = document.querySelector('script[src*="accounts.google.com/gsi/client"]');
+      
+      if (existingScript) {
         if (window.google?.accounts?.id) {
+          console.log('✅ Google Identity Services already loaded');
           resolve();
         } else {
-          // Script exists but not loaded yet, wait a bit
-          setTimeout(() => {
+          // Script exists but not loaded yet, wait a bit longer
+          let attempts = 0;
+          const checkGoogle = () => {
+            attempts++;
             if (window.google?.accounts?.id) {
+              console.log('✅ Google Identity Services loaded after wait');
               resolve();
+            } else if (attempts > 50) { // 5 seconds max wait
+              reject(new Error('Google script loaded but services not available after 5 seconds'));
             } else {
-              reject(new Error('Google script loaded but services not available'));
+              setTimeout(checkGoogle, 100);
             }
-          }, 1000);
+          };
+          checkGoogle();
         }
         return;
       }
 
+      console.log('📡 Loading Google Identity Services script...');
+      
       // Create and load script
       const script = document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client';
@@ -113,10 +128,16 @@ class GoogleAuthService {
       script.defer = true;
       
       script.onload = () => {
+        console.log('📦 Google script loaded, waiting for services...');
         // Wait for Google services to be available
+        let attempts = 0;
         const checkGoogle = () => {
+          attempts++;
           if (window.google?.accounts?.id) {
+            console.log('✅ Google Identity Services ready');
             resolve();
+          } else if (attempts > 100) { // 10 seconds max wait
+            reject(new Error('Google services not available after 10 seconds'));
           } else {
             setTimeout(checkGoogle, 100);
           }
@@ -124,7 +145,8 @@ class GoogleAuthService {
         checkGoogle();
       };
       
-      script.onerror = () => {
+      script.onerror = (error) => {
+        console.error('❌ Failed to load Google Identity Services script:', error);
         reject(new Error('Failed to load Google Identity Services'));
       };
       
@@ -153,106 +175,58 @@ class GoogleAuthService {
   }
 
   /**
-   * Check if user exists in storage
-   */
-  private findExistingUser(email: string): User | null {
-    try {
-      const users = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-      return users.find((user: User) => 
-        user.email === email && 
-        user.authProvider === 'google'
-      ) || null;
-    } catch (error) {
-      console.error('❌ Error checking existing user:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Save user to storage
-   */
-  private saveUser(user: User): void {
-    try {
-      const users = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-      const existingIndex = users.findIndex((u: User) => u.email === user.email);
-      
-      if (existingIndex >= 0) {
-        users[existingIndex] = { ...users[existingIndex], ...user };
-      } else {
-        users.push(user);
-      }
-      
-      localStorage.setItem('registeredUsers', JSON.stringify(users));
-    } catch (error) {
-      console.error('❌ Error saving user:', error);
-      throw new Error('Failed to save user data');
-    }
-  }
-
-  /**
-   * Generate authentication token
-   */
-  private generateToken(userId: string): string {
-    return `google_${userId}_${Date.now()}`;
-  }
-
-  /**
-   * Store authentication session
-   */
-  private storeAuthSession(user: User, token: string): void {
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-  }
-
-  /**
-   * Process Google authentication response
+   * Process Google authentication response using backend API
    */
   private async processGoogleAuth(googleUserInfo: GoogleUserInfo): Promise<AuthResult> {
     try {
-      // Check if user already exists
-      const existingUser = this.findExistingUser(googleUserInfo.email);
+      console.log('🌐 Processing Google auth for:', googleUserInfo.email);
       
-      if (existingUser && existingUser.registrationCompleted) {
-        // Existing user - log them in
-        const token = this.generateToken(existingUser._id);
-        this.storeAuthSession(existingUser, token);
-        
-        console.log('✅ Existing Google user logged in:', existingUser.email);
-        
-        return {
-          success: true,
-          user: existingUser,
-          token,
-          requiresRoleSelection: false
-        };
+      // Call the backend Google auth endpoint with the credential
+      const response = await apiPost('/auth/google', {
+        userInfo: googleUserInfo,
+        platform: 'job-portal'
+      });
+      
+      const result = handleApiResponse(response);
+      console.log('🔍 Google auth result:', result);
+      
+      if (result.data) {
+        if (result.data.requiresRoleSelection) {
+          // New user needs role selection
+          return {
+            success: true,
+            requiresRoleSelection: true,
+            userData: result.data.googleUserData
+          };
+        } else {
+          // Existing user - they should be logged in via sendTokenResponse
+          // The result should contain user and token
+          if (result.user && result.token) {
+            localStorage.setItem('token', result.token);
+            localStorage.setItem('user', JSON.stringify(result.user));
+            
+            console.log('✅ Existing Google user logged in:', result.user.email);
+            
+            return {
+              success: true,
+              user: result.user,
+              token: result.token,
+              requiresRoleSelection: false
+            };
+          }
+        }
       }
       
-      // New user - prepare data for role selection
-      const newUserData = {
-        _id: `google_${googleUserInfo.sub}_${Date.now()}`,
-        firstName: googleUserInfo.given_name || googleUserInfo.name.split(' ')[0] || 'User',
-        lastName: googleUserInfo.family_name || googleUserInfo.name.split(' ').slice(1).join(' ') || '',
-        email: googleUserInfo.email,
-        role: 'job_seeker', // Default role
-        avatar: googleUserInfo.picture,
-        isActive: true,
-        authProvider: 'google' as const,
-        registrationCompleted: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
       return {
-        success: true,
-        requiresRoleSelection: true,
-        userData: newUserData
+        success: false,
+        error: 'Unexpected response from Google authentication'
       };
       
     } catch (error) {
       console.error('❌ Error processing Google auth:', error);
       return {
         success: false,
-        error: 'Failed to process Google authentication'
+        error: error instanceof Error ? error.message : 'Failed to process Google authentication'
       };
     }
   }
@@ -337,30 +311,40 @@ class GoogleAuthService {
   }
 
   /**
-   * Complete user registration with role selection
+   * Complete user registration with role selection using backend API
    */
   public async completeRegistration(userData: any, selectedRole: string): Promise<AuthResult> {
     try {
-      const completeUser: User = {
-        ...userData,
+      console.log('🌐 Completing Google registration for:', userData.email);
+      
+      const registrationData = {
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
         role: selectedRole,
-        registrationCompleted: true,
-        updatedAt: new Date().toISOString()
+        googleId: userData.googleId,
+        profilePicture: userData.profilePicture || userData.avatar,
+        provider: 'google',
+        isEmailVerified: userData.isEmailVerified || true,
+        platform: 'job-portal'
       };
 
-      // Save user to storage
-      this.saveUser(completeUser);
-
-      // Generate token and store session
-      const token = this.generateToken(completeUser._id);
-      this.storeAuthSession(completeUser, token);
-
-      console.log('✅ Google registration completed:', completeUser.email);
+      const response = await apiPost('/auth/google/complete-registration', registrationData);
+      const authData = handleApiResponse(response);
+      
+      // Store token and user data (same as local auth)
+      localStorage.setItem('token', authData.token);
+      if (authData.user) {
+        localStorage.setItem('user', JSON.stringify(authData.user));
+      }
+      
+      // Welcome email is sent automatically by the backend
+      console.log('✅ Google registration completed:', authData.user?.email);
 
       return {
         success: true,
-        user: completeUser,
-        token,
+        user: authData.user,
+        token: authData.token,
         requiresRoleSelection: false
       };
 
@@ -368,7 +352,7 @@ class GoogleAuthService {
       console.error('❌ Error completing Google registration:', error);
       return {
         success: false,
-        error: 'Failed to complete registration'
+        error: error instanceof Error ? error.message : 'Failed to complete registration'
       };
     }
   }

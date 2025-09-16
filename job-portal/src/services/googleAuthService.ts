@@ -189,6 +189,8 @@ class GoogleAuthService {
       
       const result = handleApiResponse(response);
       console.log('🔍 Google auth result:', result);
+      console.log('🔍 Google auth result.data:', result.data);
+      console.log('🔍 Google auth result structure keys:', Object.keys(result));
       
       if (result.data) {
         if (result.data.requiresRoleSelection) {

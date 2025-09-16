@@ -26,6 +26,9 @@ api.interceptors.request.use(
 // Response interceptor to handle errors
 api.interceptors.response.use(
   (response) => {
+    // Clear consecutive error count on successful responses
+    sessionStorage.removeItem('consecutive_401s');
+    
     // Check if response data exists and is valid
     if (response.data === '' || response.data === null || response.data === undefined) {
       // Create a proper empty response
@@ -81,7 +84,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Check if this is a login or register request - don't redirect in these cases
       const isAuthRequest = error.config?.url?.includes('/auth/login') || 
-                           error.config?.url?.includes('/auth/register');
+                           error.config?.url?.includes('/auth/register') ||
+                           error.config?.url?.includes('/auth/google');
       
       // Check if this is a public endpoint that should not redirect
       const isPublicEndpoint = error.config?.url?.includes('/jobs') && !error.config?.url?.includes('/employer/') && !error.config?.url?.includes('/applications');
@@ -90,25 +94,65 @@ api.interceptors.response.use(
       const isPublicPage = ['/', '/jobs', '/support', '/home'].includes(window.location.pathname) ||
                           window.location.pathname.startsWith('/jobs/');
       
+      // Check if this is a Google OAuth session
+      const isGoogleOAuthSession = localStorage.getItem('google_oauth_session') === 'true';
+      const currentToken = localStorage.getItem('token');
+      const isGoogleToken = currentToken?.includes('google');
+      
+      console.log('🔍 401 Error Analysis:', { 
+        isAuthRequest, 
+        isPublicEndpoint, 
+        isPublicPage, 
+        isGoogleOAuthSession,
+        isGoogleToken,
+        currentPath: window.location.pathname 
+      });
+      
       if (!isAuthRequest && !isPublicEndpoint && !isPublicPage) {
-        // Token expired or invalid for protected routes
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        
-        // Use a more controlled redirect that won't cause loops
-        if (window.location.pathname !== '/login') {
-          // Delay the redirect slightly to avoid race conditions
-          setTimeout(() => {
-            window.location.replace('/login');
-          }, 100);
+        // For Google OAuth sessions, be more lenient
+        if (isGoogleOAuthSession && isGoogleToken) {
+          console.warn('⚠️ 401 detected on Google OAuth session - may be temporary network issue');
+          // Don't immediately logout on first 401 for Google sessions
+          // Add a flag to track consecutive 401s
+          const consecutiveErrors = parseInt(sessionStorage.getItem('consecutive_401s') || '0');
+          sessionStorage.setItem('consecutive_401s', (consecutiveErrors + 1).toString());
+          
+          // Only logout after multiple consecutive 401s
+          if (consecutiveErrors >= 2) {
+            console.error('🚨 Multiple 401s detected, logging out Google OAuth session');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('google_oauth_session');
+            localStorage.removeItem('session_timestamp');
+            sessionStorage.removeItem('consecutive_401s');
+            
+            if (window.location.pathname !== '/login') {
+              setTimeout(() => {
+                window.location.replace('/login');
+              }, 100);
+            }
+          }
+        } else {
+          // For non-Google sessions, logout immediately
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          
+          if (window.location.pathname !== '/login') {
+            setTimeout(() => {
+              window.location.replace('/login');
+            }, 100);
+          }
         }
       } else {
         // For auth requests, public endpoints, or public pages - just clear any existing invalid tokens but don't redirect
-        if (!isPublicEndpoint && !isPublicPage) {
+        if (!isPublicEndpoint && !isPublicPage && !isAuthRequest) {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
         }
       }
+    } else {
+      // Clear consecutive error count on successful requests
+      sessionStorage.removeItem('consecutive_401s');
     }
     return Promise.reject(error);
   }

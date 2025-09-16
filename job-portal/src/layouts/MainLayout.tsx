@@ -97,6 +97,7 @@ import EnhancedSearchBar from '../components/search/EnhancedSearchBar';
 import { notificationService } from '../services/notificationService';
 import { chatService } from '../services/chatService';
 import MobileCreatePost from '../components/social/MobileCreatePost';
+import { useSessionManager } from '../hooks/useSessionManager';
 
 const drawerWidth = 260;
 const drawerWidthClosed = 72;
@@ -116,6 +117,9 @@ const MainLayout: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({});
   const [hovered, setHovered] = useState(false); // Track hover state for mini drawer
+  
+  // Initialize session manager for Google OAuth session maintenance
+  useSessionManager();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false); // Mobile quick actions menu
   const [showMobileCreatePost, setShowMobileCreatePost] = useState(false); // Mobile create post popup
   const [contactDialogOpen, setContactDialogOpen] = useState(false); // Contact dialog

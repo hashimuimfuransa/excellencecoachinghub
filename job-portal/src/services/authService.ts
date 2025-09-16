@@ -101,13 +101,29 @@ class AuthService {
     console.log('🔍 AuthData user:', authData?.user);
     console.log('🔍 AuthData token:', authData?.token);
     
-    // Store token and user data
+    // Enhanced token handling for Google OAuth
     if (authData?.token) {
-      localStorage.setItem('token', authData.token);
+      // Generate a more robust token for Google OAuth sessions
+      const googleToken = authData.token.startsWith('google_') 
+        ? authData.token 
+        : `google_oauth_${Date.now()}_${authData.token}`;
+      
+      localStorage.setItem('token', googleToken);
+      localStorage.setItem('google_oauth_session', 'true');
+      localStorage.setItem('session_timestamp', Date.now().toString());
+      console.log('✅ Google OAuth token stored:', googleToken.substring(0, 20) + '...');
     }
     
     if (authData?.user) {
-      localStorage.setItem('user', JSON.stringify(authData.user));
+      // Store user data with additional Google OAuth metadata
+      const enhancedUser = {
+        ...authData.user,
+        provider: 'google',
+        sessionStarted: new Date().toISOString(),
+        sessionId: `google_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      };
+      
+      localStorage.setItem('user', JSON.stringify(enhancedUser));
       
       // Also save to registeredUsers array for future Google login detection
       try {
@@ -115,9 +131,9 @@ class AuthService {
         const existingIndex = registeredUsers.findIndex((user: any) => user.email === authData.user.email);
         
         const userToSave = {
-          ...authData.user,
+          ...enhancedUser,
           registrationCompleted: true,
-          provider: 'google'
+          lastLogin: new Date().toISOString()
         };
         
         if (existingIndex >= 0) {
@@ -138,8 +154,23 @@ class AuthService {
 
   // Logout user
   logout(): void {
+    console.log('🚪 Logging out user...');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('google_oauth_session');
+    localStorage.removeItem('session_timestamp');
+    
+    // Clear any Google Sign-In session if it exists
+    if (window.google?.accounts?.id) {
+      try {
+        window.google.accounts.id.disableAutoSelect();
+        console.log('✅ Google Sign-In session cleared');
+      } catch (error) {
+        console.log('Google Sign-In not available for cleanup:', error);
+      }
+    }
+    
+    console.log('✅ Logout completed successfully');
     // Don't force redirect here - let the component handle navigation
     // This prevents refresh loops and gives better control to the calling component
   }
@@ -170,7 +201,29 @@ class AuthService {
   isAuthenticated(): boolean {
     const token = this.getToken();
     const user = this.getCurrentUser();
-    return !!(token && user);
+    
+    if (!token || !user) {
+      return false;
+    }
+    
+    // Enhanced validation for Google OAuth sessions
+    const isGoogleSession = localStorage.getItem('google_oauth_session') === 'true';
+    if (isGoogleSession) {
+      const sessionTimestamp = localStorage.getItem('session_timestamp');
+      if (sessionTimestamp) {
+        const sessionAge = Date.now() - parseInt(sessionTimestamp);
+        const sessionExpired = sessionAge > 24 * 60 * 60 * 1000; // 24 hours
+        
+        if (sessionExpired) {
+          console.warn('🕒 Google OAuth session expired, clearing auth data');
+          this.logout();
+          return false;
+        }
+      }
+    }
+    
+    console.log('✅ User is authenticated:', user.email);
+    return true;
   }
 
   // Refresh user data

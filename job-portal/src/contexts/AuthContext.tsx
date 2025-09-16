@@ -52,7 +52,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    let isMounted = true; // Flag to prevent state updates if component is unmounted
+    let isMounted = true;
     
     const initializeAuth = async () => {
       try {
@@ -60,16 +60,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const currentUser = authService.getCurrentUser();
         const token = authService.getToken();
         
-        // Only set user if component is still mounted and we have valid auth data
+        console.log('🔍 AuthContext initialization:', { hasUser: !!currentUser, hasToken: !!token });
+        
+        // Enhanced validation: check if user exists and token is valid
         if (isMounted && currentUser && token) {
-          setUser(currentUser);
+          // For Google OAuth tokens, we store them with specific prefixes
+          const isGoogleToken = token.startsWith('google_') || token.includes('google');
+          const isValidToken = token.length > 10; // Basic token validation
+          
+          if (isValidToken) {
+            setUser(currentUser);
+            console.log('✅ User session restored successfully:', currentUser.email);
+          } else {
+            console.warn('⚠️ Invalid token detected, clearing auth data');
+            authService.logout();
+          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
         // Clear invalid auth data without redirecting
         if (isMounted) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          try {
+            const { default: authService } = await import('../services/authService');
+            authService.logout();
+          } catch (logoutError) {
+            console.error('Error during cleanup logout:', logoutError);
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+          }
         }
       } finally {
         if (isMounted) {
@@ -78,11 +96,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     };
 
-    initializeAuth();
+    // Add a small delay to ensure localStorage is accessible
+    const timer = setTimeout(initializeAuth, 100);
     
-    // Cleanup function to prevent memory leaks
+    // Listen for storage changes across tabs/windows
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'token' || e.key === 'user') {
+        console.log('🔄 Storage change detected, re-initializing auth');
+        initializeAuth();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Cleanup function
     return () => {
       isMounted = false;
+      clearTimeout(timer);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
@@ -156,10 +187,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
       const existingUser = registeredUsers.find((user: any) => user.email === email);
       if (existingUser && existingUser.registrationCompleted) {
-        // Also set token and user in localStorage for authentication
-        localStorage.setItem('token', `google_existing_${Date.now()}`);
-        localStorage.setItem('user', JSON.stringify(existingUser));
-        return existingUser;
+        // Generate a robust Google OAuth token for existing users
+        const googleToken = `google_oauth_existing_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Enhanced user data with session info
+        const enhancedUser = {
+          ...existingUser,
+          provider: 'google',
+          sessionStarted: new Date().toISOString(),
+          sessionId: `google_existing_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          lastLogin: new Date().toISOString()
+        };
+        
+        // Set authentication data with Google OAuth session markers
+        localStorage.setItem('token', googleToken);
+        localStorage.setItem('user', JSON.stringify(enhancedUser));
+        localStorage.setItem('google_oauth_session', 'true');
+        localStorage.setItem('session_timestamp', Date.now().toString());
+        
+        console.log('✅ Existing Google user session restored:', email);
+        return enhancedUser;
       }
       return null;
     } catch (error) {
@@ -232,8 +279,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const setUserData = (userData: User): void => {
     console.log('🔄 AuthContext updating user data:', userData);
     setUser(userData);
-    // Update localStorage as well
+    // Update localStorage with session refresh
     localStorage.setItem('user', JSON.stringify(userData));
+    
+    // Refresh session timestamp for Google OAuth
+    const isGoogleSession = localStorage.getItem('google_oauth_session') === 'true';
+    if (isGoogleSession) {
+      localStorage.setItem('session_timestamp', Date.now().toString());
+      console.log('✅ Google OAuth session timestamp refreshed');
+    }
   };
 
   const hasRole = (role: UserRole): boolean => {

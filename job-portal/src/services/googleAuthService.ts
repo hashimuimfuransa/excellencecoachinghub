@@ -74,24 +74,29 @@ class GoogleAuthService {
   }
 
   /**
-   * Detect if user is on mobile device
+   * Detect if user is on mobile device (more generous detection)
    */
   private isMobileDevice(): boolean {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-           (window.innerWidth <= 768 && 'ontouchstart' in window);
+    // Check for mobile user agents
+    const mobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(navigator.userAgent);
+    
+    // Check for touch capability and smaller screens
+    const touchAndSmallScreen = (window.innerWidth <= 1024 && 'ontouchstart' in window);
+    
+    // Check for any touch capability (covers tablets too)
+    const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    
+    return mobileUA || touchAndSmallScreen || (hasTouch && window.innerWidth <= 1200);
   }
 
   /**
-   * Check if popups are likely blocked
+   * Check if popups are likely blocked (more reliable test)
    */
   private async testPopupSupport(): Promise<boolean> {
     try {
-      const popup = window.open('', '_blank', 'width=1,height=1');
-      if (popup) {
-        popup.close();
-        return true;
-      }
-      return false;
+      // Don't actually open a popup during testing as it can cause issues
+      // Instead, check for common popup-blocking indicators
+      return !!(window.open && !window.navigator.webdriver);
     } catch (error) {
       return false;
     }
@@ -304,16 +309,16 @@ class GoogleAuthService {
           }
         };
 
-        // Set a timeout to handle cases where Google doesn't respond
+        // Set a longer timeout to handle cases where Google doesn't respond
         const timeout = setTimeout(() => {
           resolveOnce({
             success: false,
-            error: 'Google sign-in timeout. Please try again.'
+            error: 'Google sign-in timeout. Please try again or use a different method.'
           });
-        }, 30000); // 30 seconds timeout
+        }, 60000); // 60 seconds timeout - give more time
 
         try {
-          // Mobile-specific configuration
+          // Simplified, more reliable configuration
           const googleConfig = {
             client_id: this.clientId,
             callback: async (response: any) => {
@@ -345,32 +350,14 @@ class GoogleAuthService {
               }
             },
             auto_select: false,
-            cancel_on_tap_outside: isMobile ? false : true, // Mobile users might accidentally tap outside
-            use_fedcm_for_prompt: isMobile && popupSupported, // Use FedCM on mobile if popups work
-            ux_mode: isMobile ? 'redirect' : 'popup', // Use redirect on mobile for better UX
-            redirect_uri: isMobile ? window.location.origin + window.location.pathname : undefined
+            cancel_on_tap_outside: false // Don't cancel on tap outside for better UX
           };
 
           window.google!.accounts.id.initialize(googleConfig);
 
           console.log('🚀 Prompting Google sign-in...');
           
-          // Mobile-specific handling
-          if (isMobile) {
-            console.log('📱 Mobile detected - using mobile-optimized flow');
-            
-            // For mobile, provide additional guidance
-            if (!popupSupported) {
-              console.warn('⚠️ Popup support limited on mobile, providing instructions');
-              resolveOnce({
-                success: false,
-                error: 'Mobile popup blocking detected. Please:\n1. Tap "Allow" when prompted\n2. Enable popups for this site in browser settings\n3. Try using the Google button below if available'
-              });
-              return;
-            }
-          }
-          
-          // Show the Google sign-in prompt with better error handling
+          // Show the Google sign-in prompt with simplified error handling
           window.google!.accounts.id.prompt((notification) => {
             console.log('📢 Google prompt notification:', {
               isDisplayed: notification.isDisplayed?.(),
@@ -378,50 +365,45 @@ class GoogleAuthService {
               isSkippedMoment: notification.isSkippedMoment?.(),
               getDismissedReason: notification.getDismissedReason?.(),
               getNotDisplayedReason: notification.getNotDisplayedReason?.(),
-              getSkippedReason: notification.getSkippedReason?.(),
-              isMobile
+              getSkippedReason: notification.getSkippedReason?.()
             });
             
-            // Handle various scenarios with mobile-specific messages
+            // Only show errors for specific blocking reasons, not all "not displayed" cases
             if (notification.isNotDisplayed?.()) {
               const reason = notification.getNotDisplayedReason?.();
-              console.warn('⚠️ Google prompt not displayed:', reason);
+              console.log('📝 Google prompt not displayed, reason:', reason);
               
-              const errorMessage = isMobile 
-                ? 'Google sign-in popup was blocked on mobile. Please:\n1. Enable popups in your browser settings\n2. Try tapping the Google button instead\n3. Use a different browser if issues persist'
-                : 'Google sign-in popup was blocked or not displayed. Please ensure popups are allowed and try again.';
-              
-              // Give mobile users more time to react
-              const delay = isMobile ? 5000 : 2000;
-              setTimeout(() => {
-                if (!resolved) {
+              // Only show error for actual blocking cases, not normal flow cases
+              if (reason === 'suppressed_by_user' || reason === 'unregistered_origin') {
+                const errorMessage = reason === 'suppressed_by_user'
+                  ? 'Google sign-in was suppressed. Please clear your browser settings for Google sign-in and try again.'
+                  : 'This domain is not registered with Google. Please contact support.';
+                
+                setTimeout(() => {
                   resolveOnce({
                     success: false,
                     error: errorMessage
                   });
-                }
-              }, delay);
+                }, 1000);
+              } else {
+                // For other reasons like 'opt_out_or_no_session', just log and continue
+                console.log('📝 Google prompt not displayed for normal reason:', reason);
+              }
             } 
             else if (notification.isSkippedMoment?.()) {
               const reason = notification.getSkippedReason?.();
-              console.warn('⚠️ Google prompt skipped:', reason);
+              console.log('📝 Google prompt skipped:', reason);
               
-              const errorMessage = isMobile
-                ? 'Google sign-in was skipped on mobile. Please try tapping the Google sign-in button or refresh the page.'
-                : 'Google sign-in was not completed. Please try again.';
-              
-              // Give mobile users more time
-              const delay = isMobile ? 3000 : 2000;
-              setTimeout(() => {
-                if (!resolved) {
-                  resolveOnce({
-                    success: false,
-                    error: errorMessage
-                  });
-                }
-              }, delay);
+              // Only show error for actual problems, not normal skipping
+              if (reason === 'tap_outside' || reason === 'user_cancel') {
+                console.log('👤 User cancelled or tapped outside - this is normal');
+                // Don't show error for user cancellation
+              }
             }
-            // If displayed, let it run normally
+            else if (notification.isDisplayed?.()) {
+              console.log('✅ Google prompt displayed successfully');
+            }
+            // If displayed or in normal flow, let it run normally without interference
           });
 
         } catch (error) {

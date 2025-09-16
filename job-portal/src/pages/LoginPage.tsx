@@ -38,6 +38,7 @@ import { useNavigate, useLocation, Link as RouterLink, useSearchParams } from 'r
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme as useCustomTheme } from '../contexts/ThemeContext';
 import FloatingContact from '../components/FloatingContact';
+import MobileGoogleSignIn from '../components/MobileGoogleSignIn';
 import AccountTypeModal from '../components/AccountTypeModal';
 import GoogleRoleSelectionModal from '../components/GoogleRoleSelectionModal';
 
@@ -502,34 +503,29 @@ const LoginPage: React.FC = () => {
                       </Typography>
                     </Divider>
                     
-                    {/* Google Sign In Button */}
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      disabled={loading || googleLoading}
-                      startIcon={googleLoading ? <CircularProgress size={20} /> : <Google sx={{ color: '#DB4437' }} />}
-                      onClick={handleGoogleLogin}
-                      sx={{
-                        mb: 2,
-                        py: 1,
-                        borderRadius: 2,
-                        borderColor: mode === 'dark' ? '#555555' : '#e0e0e0',
-                        color: mode === 'dark' ? '#ffffff' : '#424242',
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        backgroundColor: mode === 'dark' ? 'transparent' : 'white',
-                        '&:hover': {
-                          borderColor: '#DB4437',
-                          backgroundColor: mode === 'dark' ? 'rgba(219, 68, 55, 0.1)' : '#fff8f8',
-                        },
-                        '&:disabled': {
-                          borderColor: mode === 'dark' ? '#333333' : '#e0e0e0',
-                          backgroundColor: mode === 'dark' ? '#1a1a1a' : '#f5f5f5'
+                    {/* Mobile-Friendly Google Sign In */}
+                    <MobileGoogleSignIn
+                      onSuccess={(result) => {
+                        if (result.requiresRoleSelection && result.userData) {
+                          setGoogleUserData(result.userData);
+                          setShowGoogleRoleModal(true);
+                        } else {
+                          navigate(getRedirectPath(), { replace: true });
                         }
                       }}
-                    >
-                      {googleLoading ? 'Signing in...' : 'Continue with Google'}
-                    </Button>
+                      onError={(error) => {
+                        setError(error);
+                        // Scroll to error message for better visibility
+                        setTimeout(() => {
+                          const errorElement = document.querySelector('[role="alert"]');
+                          if (errorElement) {
+                            errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          }
+                        }, 100);
+                      }}
+                      loading={googleLoading}
+                      setLoading={setGoogleLoading}
+                    />
                     
                     {/* Register Link */}
                     <Box sx={{ textAlign: 'center' }}>

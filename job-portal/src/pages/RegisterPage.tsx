@@ -51,6 +51,7 @@ import { useTheme as useCustomTheme } from '../contexts/ThemeContext';
 import FloatingContact from '../components/FloatingContact';
 import PasswordValidation, { getPasswordValidationErrors } from '../components/PasswordValidation';
 import GoogleRoleSelectionModal from '../components/GoogleRoleSelectionModal';
+import MobileGoogleSignIn from '../components/MobileGoogleSignIn';
 
 const RegisterPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -424,35 +425,23 @@ const RegisterPage: React.FC = () => {
               </Typography>
             </Box>
             
-            {/* Google Sign Up Button */}
+            {/* Mobile-Friendly Google Sign Up */}
             <Box sx={{ mb: 3, px: { xs: 2, md: 4 } }}>
-              <Button
-                fullWidth
-                variant="outlined"
-                disabled={loading || googleLoading}
-                startIcon={googleLoading ? <CircularProgress size={20} /> : <Google sx={{ color: '#DB4437' }} />}
-                onClick={handleGoogleLogin}
-                sx={{
-                  py: 1.5,
-                  borderRadius: 2,
-                  borderColor: mode === 'dark' ? '#555555' : '#e0e0e0',
-                  color: mode === 'dark' ? '#ffffff' : '#424242',
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  backgroundColor: mode === 'dark' ? 'transparent' : 'white',
-                  fontSize: '0.95rem',
-                  '&:hover': {
-                    borderColor: '#DB4437',
-                    backgroundColor: mode === 'dark' ? 'rgba(219, 68, 55, 0.1)' : '#fff8f8',
-                  },
-                  '&:disabled': {
-                    borderColor: mode === 'dark' ? '#333333' : '#e0e0e0',
-                    backgroundColor: mode === 'dark' ? '#1a1a1a' : '#f5f5f5'
+              <MobileGoogleSignIn
+                onSuccess={(result) => {
+                  if (result.requiresRoleSelection && result.userData) {
+                    setGoogleUserData(result.userData);
+                    setShowGoogleRoleModal(true);
+                  } else {
+                    navigate(getRedirectPath());
                   }
                 }}
-              >
-                {googleLoading ? 'Setting up your account...' : 'Continue with Google'}
-              </Button>
+                onError={(error) => {
+                  setError(error);
+                }}
+                loading={googleLoading}
+                setLoading={setGoogleLoading}
+              />
               
               <Divider sx={{ my: 3 }}>
                 <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>

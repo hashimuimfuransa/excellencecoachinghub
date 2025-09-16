@@ -31,6 +31,8 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<{requiresRoleSelection?: boolean; userData?: any}>;
+  loginWithGoogleMobile: () => Promise<{requiresRoleSelection?: boolean; userData?: any}>;
+  getMobilePopupInstructions: () => string;
   register: (userData: any) => Promise<void>;
   registerWithGoogle: (userData: any, role: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -126,6 +128,52 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       throw error;
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loginWithGoogleMobile = async (): Promise<{requiresRoleSelection?: boolean; userData?: any}> => {
+    try {
+      setIsLoading(true);
+      const { default: googleAuthService } = await import('../services/googleAuthService');
+      const result = await googleAuthService.signInMobile();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Mobile Google authentication failed');
+      }
+
+      if (result.requiresRoleSelection && result.userData) {
+        // New user needs role selection
+        return { requiresRoleSelection: true, userData: result.userData };
+      }
+
+      // User already exists and is logged in
+      if (result.user && result.token) {
+        setUser(result.user);
+        return { requiresRoleSelection: false };
+      }
+
+      // Shouldn't reach here, but handle edge case
+      throw new Error('Unexpected Google mobile login result');
+    } catch (error) {
+      console.error('❌ Google mobile login error in AuthContext:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getMobilePopupInstructions = (): string => {
+    try {
+      const { default: googleAuthService } = require('../services/googleAuthService');
+      return googleAuthService.getMobilePopupInstructions();
+    } catch (error) {
+      console.error('Error getting mobile popup instructions:', error);
+      return `📱 Enable Popups on Mobile:
+1. Open your browser settings
+2. Find "Site Settings" or "Permissions"  
+3. Look for "Pop-ups" or "Pop-ups and redirects"
+4. Set to "Allow" for this site
+5. Return here and try Google sign-in again`;
     }
   };
 
@@ -227,6 +275,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     login,
     loginWithGoogle,
+    loginWithGoogleMobile,
+    getMobilePopupInstructions,
     register,
     registerWithGoogle,
     logout,

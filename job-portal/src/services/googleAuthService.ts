@@ -74,6 +74,30 @@ class GoogleAuthService {
   }
 
   /**
+   * Detect if user is on mobile device
+   */
+  private isMobileDevice(): boolean {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           (window.innerWidth <= 768 && 'ontouchstart' in window);
+  }
+
+  /**
+   * Check if popups are likely blocked
+   */
+  private async testPopupSupport(): Promise<boolean> {
+    try {
+      const popup = window.open('', '_blank', 'width=1,height=1');
+      if (popup) {
+        popup.close();
+        return true;
+      }
+      return false;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
    * Initialize Google Identity Services
    */
   private async initialize(): Promise<void> {
@@ -236,7 +260,7 @@ class GoogleAuthService {
   }
 
   /**
-   * Sign in with Google using popup
+   * Sign in with Google using mobile-aware approach
    */
   public async signIn(): Promise<AuthResult> {
     try {
@@ -259,6 +283,15 @@ class GoogleAuthService {
         };
       }
 
+      const isMobile = this.isMobileDevice();
+      const popupSupported = await this.testPopupSupport();
+      
+      console.log('📱 Device info:', { 
+        isMobile, 
+        popupSupported, 
+        userAgent: navigator.userAgent.substring(0, 50) + '...' 
+      });
+
       console.log('✅ Google services ready, starting sign-in flow');
 
       return new Promise<AuthResult>((resolve, reject) => {
@@ -280,9 +313,10 @@ class GoogleAuthService {
         }, 30000); // 30 seconds timeout
 
         try {
-          window.google!.accounts.id.initialize({
+          // Mobile-specific configuration
+          const googleConfig = {
             client_id: this.clientId,
-            callback: async (response) => {
+            callback: async (response: any) => {
               clearTimeout(timeout);
               try {
                 console.log('📨 Received Google response');
@@ -311,11 +345,30 @@ class GoogleAuthService {
               }
             },
             auto_select: false,
-            cancel_on_tap_outside: false,
-            use_fedcm_for_prompt: false // Disable FedCM to avoid network errors
-          });
+            cancel_on_tap_outside: isMobile ? false : true, // Mobile users might accidentally tap outside
+            use_fedcm_for_prompt: isMobile && popupSupported, // Use FedCM on mobile if popups work
+            ux_mode: isMobile ? 'redirect' : 'popup', // Use redirect on mobile for better UX
+            redirect_uri: isMobile ? window.location.origin + window.location.pathname : undefined
+          };
+
+          window.google!.accounts.id.initialize(googleConfig);
 
           console.log('🚀 Prompting Google sign-in...');
+          
+          // Mobile-specific handling
+          if (isMobile) {
+            console.log('📱 Mobile detected - using mobile-optimized flow');
+            
+            // For mobile, provide additional guidance
+            if (!popupSupported) {
+              console.warn('⚠️ Popup support limited on mobile, providing instructions');
+              resolveOnce({
+                success: false,
+                error: 'Mobile popup blocking detected. Please:\n1. Tap "Allow" when prompted\n2. Enable popups for this site in browser settings\n3. Try using the Google button below if available'
+              });
+              return;
+            }
+          }
           
           // Show the Google sign-in prompt with better error handling
           window.google!.accounts.id.prompt((notification) => {
@@ -325,37 +378,48 @@ class GoogleAuthService {
               isSkippedMoment: notification.isSkippedMoment?.(),
               getDismissedReason: notification.getDismissedReason?.(),
               getNotDisplayedReason: notification.getNotDisplayedReason?.(),
-              getSkippedReason: notification.getSkippedReason?.()
+              getSkippedReason: notification.getSkippedReason?.(),
+              isMobile
             });
             
-            // Handle various scenarios
+            // Handle various scenarios with mobile-specific messages
             if (notification.isNotDisplayed?.()) {
               const reason = notification.getNotDisplayedReason?.();
               console.warn('⚠️ Google prompt not displayed:', reason);
               
-              // Don't immediately resolve as cancelled, give user a chance
+              const errorMessage = isMobile 
+                ? 'Google sign-in popup was blocked on mobile. Please:\n1. Enable popups in your browser settings\n2. Try tapping the Google button instead\n3. Use a different browser if issues persist'
+                : 'Google sign-in popup was blocked or not displayed. Please ensure popups are allowed and try again.';
+              
+              // Give mobile users more time to react
+              const delay = isMobile ? 5000 : 2000;
               setTimeout(() => {
                 if (!resolved) {
                   resolveOnce({
                     success: false,
-                    error: 'Google sign-in popup was blocked or not displayed. Please ensure popups are allowed and try again.'
+                    error: errorMessage
                   });
                 }
-              }, 2000);
+              }, delay);
             } 
             else if (notification.isSkippedMoment?.()) {
               const reason = notification.getSkippedReason?.();
               console.warn('⚠️ Google prompt skipped:', reason);
               
-              // Don't immediately resolve, user might still interact
+              const errorMessage = isMobile
+                ? 'Google sign-in was skipped on mobile. Please try tapping the Google sign-in button or refresh the page.'
+                : 'Google sign-in was not completed. Please try again.';
+              
+              // Give mobile users more time
+              const delay = isMobile ? 3000 : 2000;
               setTimeout(() => {
                 if (!resolved) {
                   resolveOnce({
                     success: false,
-                    error: 'Google sign-in was not completed. Please try again.'
+                    error: errorMessage
                   });
                 }
-              }, 2000);
+              }, delay);
             }
             // If displayed, let it run normally
           });
@@ -377,6 +441,100 @@ class GoogleAuthService {
         error: error instanceof Error ? error.message : 'Google sign-in failed'
       };
     }
+  }
+
+  /**
+   * Mobile-optimized sign-in with popup guidance
+   * Provides instructions for enabling popups on mobile
+   */
+  public async signInMobile(): Promise<AuthResult> {
+    const isMobile = this.isMobileDevice();
+    
+    if (!isMobile) {
+      // If not mobile, use regular sign-in
+      return this.signIn();
+    }
+
+    try {
+      console.log('📱 Starting mobile-optimized Google sign-in...');
+      
+      // First, test if we can open popups
+      const popupSupported = await this.testPopupSupport();
+      
+      if (!popupSupported) {
+        return {
+          success: false,
+          error: `📱 Mobile Popup Setup Required:
+
+1. Tap your browser menu (⋮ or ⋯)
+2. Go to "Site Settings" or "Settings"
+3. Find "Pop-ups" or "Pop-ups and redirects"
+4. Set to "Allow" for this site
+5. Return here and try again
+
+Alternative: Use the Google button below if available`
+        };
+      }
+
+      // If popups are supported, try regular sign-in with mobile optimizations
+      return this.signIn();
+      
+    } catch (error) {
+      console.error('❌ Mobile sign-in error:', error);
+      return {
+        success: false,
+        error: 'Mobile sign-in setup failed. Please try enabling popups in your browser settings.'
+      };
+    }
+  }
+
+  /**
+   * Guide user through enabling popups for their specific browser/mobile device
+   */
+  public getMobilePopupInstructions(): string {
+    const userAgent = navigator.userAgent.toLowerCase();
+    
+    if (userAgent.includes('chrome')) {
+      return `📱 Chrome Mobile - Enable Popups:
+1. Tap menu (⋮) → Settings
+2. Tap "Site Settings"
+3. Tap "Pop-ups and redirects"
+4. Toggle to "Allowed"
+5. Return here and try again`;
+    }
+    
+    if (userAgent.includes('safari')) {
+      return `📱 Safari Mobile - Enable Popups:
+1. Go to Settings app on your device
+2. Scroll down to Safari
+3. Tap "Block Pop-ups" to turn OFF
+4. Return to this page and try again`;
+    }
+    
+    if (userAgent.includes('firefox')) {
+      return `📱 Firefox Mobile - Enable Popups:
+1. Tap menu (⋮) → Settings
+2. Tap "Site Settings"
+3. Find this site in the list
+4. Tap "Permissions"
+5. Set Pop-ups to "Allow"`;
+    }
+    
+    if (userAgent.includes('edge')) {
+      return `📱 Edge Mobile - Enable Popups:
+1. Tap menu (⋯) → Settings
+2. Tap "Site permissions"
+3. Tap "Pop-ups and redirects"
+4. Toggle to "Allow"
+5. Return and try again`;
+    }
+    
+    return `📱 Enable Popups on Mobile:
+1. Open your browser settings
+2. Find "Site Settings" or "Permissions"
+3. Look for "Pop-ups" or "Pop-ups and redirects"
+4. Set to "Allow" for this site
+5. Return here and try Google sign-in again`;
   }
 
   /**

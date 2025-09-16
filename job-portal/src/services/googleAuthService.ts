@@ -236,7 +236,15 @@ class GoogleAuthService {
   }
 
   /**
-   * Main sign-in method
+   * Detect if the user is on a mobile device
+   */
+  private isMobileDevice(): boolean {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           (window.innerWidth <= 768 && 'ontouchstart' in window);
+  }
+
+  /**
+   * Main sign-in method - Mobile-optimized with popup fallback
    */
   public async signIn(): Promise<AuthResult> {
     try {
@@ -256,54 +264,16 @@ class GoogleAuthService {
         };
       }
 
-      return new Promise<AuthResult>((resolve) => {
-        try {
-          window.google!.accounts.id.initialize({
-            client_id: this.clientId,
-            callback: async (response) => {
-              try {
-                if (!response.credential) {
-                  resolve({
-                    success: false,
-                    error: 'No credential received from Google'
-                  });
-                  return;
-                }
+      const isMobile = this.isMobileDevice();
+      console.log(`🔍 Device type: ${isMobile ? 'Mobile' : 'Desktop'}`);
 
-                const userInfo = this.parseJWT(response.credential);
-                const result = await this.processGoogleAuth(userInfo);
-                resolve(result);
-
-              } catch (error) {
-                console.error('❌ Error in Google callback:', error);
-                resolve({
-                  success: false,
-                  error: 'Failed to process Google authentication'
-                });
-              }
-            },
-            auto_select: false,
-            cancel_on_tap_outside: true
-          });
-
-          // Show the Google sign-in prompt
-          window.google!.accounts.id.prompt((notification) => {
-            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-              resolve({
-                success: false,
-                error: 'Google sign-in was cancelled'
-              });
-            }
-          });
-
-        } catch (error) {
-          console.error('❌ Error initializing Google sign-in:', error);
-          resolve({
-            success: false,
-            error: 'Failed to initialize Google sign-in'
-          });
-        }
-      });
+      if (isMobile) {
+        // For mobile devices, use a more direct approach with better popup handling
+        return this.signInWithMobileOptimizedPopup();
+      } else {
+        // For desktop, use the standard GIS popup
+        return this.signInWithGISPopup();
+      }
 
     } catch (error) {
       console.error('❌ Google sign-in error:', error);
@@ -311,6 +281,296 @@ class GoogleAuthService {
         success: false,
         error: error instanceof Error ? error.message : 'Google sign-in failed'
       };
+    }
+  }
+
+  /**
+   * Mobile-optimized sign-in with better mobile handling
+   */
+  private async signInWithMobileOptimizedPopup(): Promise<AuthResult> {
+    return new Promise<AuthResult>((resolve) => {
+      try {
+        // Initialize Google Identity Services with mobile-friendly settings
+        window.google!.accounts.id.initialize({
+          client_id: this.clientId,
+          callback: async (response) => {
+            try {
+              if (!response.credential) {
+                resolve({
+                  success: false,
+                  error: 'No credential received from Google'
+                });
+                return;
+              }
+
+              const userInfo = this.parseJWT(response.credential);
+              const result = await this.processGoogleAuth(userInfo);
+              resolve(result);
+
+            } catch (error) {
+              console.error('❌ Error in Google callback:', error);
+              resolve({
+                success: false,
+                error: 'Failed to process Google authentication'
+              });
+            }
+          },
+          auto_select: false,
+          cancel_on_tap_outside: false, // Don't cancel on tap outside for mobile
+          use_fedcm_for_prompt: true // Use FedCM if available for better mobile experience
+        });
+
+        // For mobile, create and click a temporary button to trigger the flow
+        const tempDiv = document.createElement('div');
+        tempDiv.style.position = 'fixed';
+        tempDiv.style.top = '-1000px';
+        tempDiv.style.left = '-1000px';
+        tempDiv.style.width = '1px';
+        tempDiv.style.height = '1px';
+        document.body.appendChild(tempDiv);
+
+        // Render the button with mobile-optimized settings
+        window.google!.accounts.id.renderButton(tempDiv, {
+          theme: 'outline',
+          size: 'large',
+          text: 'signin_with',
+          width: 300,
+          click_listener: () => {
+            console.log('🔘 Google button clicked on mobile');
+          }
+        });
+
+        // Remove the temporary div after a short delay
+        setTimeout(() => {
+          if (tempDiv.parentNode) {
+            document.body.removeChild(tempDiv);
+          }
+        }, 100);
+
+        // Show the Google sign-in prompt with mobile-optimized settings
+        window.google!.accounts.id.prompt((notification) => {
+          console.log('🔍 Google prompt notification on mobile:', notification.getMomentType());
+          
+          if (notification.isNotDisplayed()) {
+            console.log('🔄 Prompt not displayed on mobile, trying alternative method...');
+            // Try to trigger with a direct popup approach
+            this.fallbackToDirectPopup().then(resolve);
+          } else if (notification.isSkippedMoment()) {
+            resolve({
+              success: false,
+              error: 'Google sign-in was cancelled'
+            });
+          }
+        });
+
+      } catch (error) {
+        console.error('❌ Error in mobile Google sign-in:', error);
+        // Try the direct popup fallback
+        this.fallbackToDirectPopup().then(resolve);
+      }
+    });
+  }
+
+  /**
+   * Desktop GIS popup method
+   */
+  private async signInWithGISPopup(): Promise<AuthResult> {
+    return new Promise<AuthResult>((resolve) => {
+      try {
+        window.google!.accounts.id.initialize({
+          client_id: this.clientId,
+          callback: async (response) => {
+            try {
+              if (!response.credential) {
+                resolve({
+                  success: false,
+                  error: 'No credential received from Google'
+                });
+                return;
+              }
+
+              const userInfo = this.parseJWT(response.credential);
+              const result = await this.processGoogleAuth(userInfo);
+              resolve(result);
+
+            } catch (error) {
+              console.error('❌ Error in Google callback:', error);
+              resolve({
+                success: false,
+                error: 'Failed to process Google authentication'
+              });
+            }
+          },
+          auto_select: false,
+          cancel_on_tap_outside: true
+        });
+
+        // Show the Google sign-in prompt
+        window.google!.accounts.id.prompt((notification) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            resolve({
+              success: false,
+              error: 'Google sign-in was cancelled'
+            });
+          }
+        });
+
+      } catch (error) {
+        console.error('❌ Error initializing Google sign-in:', error);
+        resolve({
+          success: false,
+          error: 'Failed to initialize Google sign-in'
+        });
+      }
+    });
+  }
+
+  /**
+   * Fallback method for mobile devices when GIS popup fails
+   * Uses a direct popup window approach
+   */
+  private async fallbackToDirectPopup(): Promise<AuthResult> {
+    console.log('🔄 Using direct popup fallback for mobile authentication');
+    
+    const redirectUri = `${window.location.origin}${window.location.pathname}`;
+    const scope = 'openid profile email';
+    const responseType = 'token id_token';
+    const state = Math.random().toString(36).substring(2, 15);
+    const nonce = Math.random().toString(36).substring(2, 15);
+    
+    // Store state in sessionStorage for verification
+    sessionStorage.setItem('google_auth_state', state);
+    sessionStorage.setItem('google_auth_nonce', nonce);
+    
+    const googleAuthUrl = `https://accounts.google.com/oauth/authorize?` +
+      `client_id=${encodeURIComponent(this.clientId)}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `scope=${encodeURIComponent(scope)}&` +
+      `response_type=${responseType}&` +
+      `state=${state}&` +
+      `nonce=${nonce}&` +
+      `prompt=select_account`;
+
+    // For mobile, make the popup fullscreen on small devices
+    const isMobile = this.isMobileDevice();
+    let popupWidth, popupHeight, left, top;
+
+    if (isMobile && window.innerWidth < 600) {
+      // On small mobile screens, use most of the screen
+      popupWidth = window.screen.availWidth;
+      popupHeight = window.screen.availHeight;
+      left = 0;
+      top = 0;
+    } else {
+      // On larger screens or desktop, use a centered popup
+      popupWidth = Math.min(window.innerWidth - 40, 500);
+      popupHeight = Math.min(window.innerHeight - 40, 600);
+      left = (window.screen.availWidth - popupWidth) / 2;
+      top = (window.screen.availHeight - popupHeight) / 2;
+    }
+
+    const popupFeatures = [
+      `width=${popupWidth}`,
+      `height=${popupHeight}`,
+      `left=${left}`,
+      `top=${top}`,
+      'scrollbars=yes',
+      'resizable=yes',
+      'status=yes',
+      'toolbar=no',
+      'menubar=no',
+      'location=yes'
+    ].join(',');
+
+    const popup = window.open(
+      googleAuthUrl,
+      'google_auth_mobile',
+      popupFeatures
+    );
+
+    return new Promise<AuthResult>((resolve) => {
+      if (!popup) {
+        resolve({
+          success: false,
+          error: 'Failed to open Google authentication popup. Please allow popups for this site.'
+        });
+        return;
+      }
+
+      // Check if popup was closed
+      const checkClosed = setInterval(() => {
+        try {
+          if (popup.closed) {
+            clearInterval(checkClosed);
+            resolve({
+              success: false,
+              error: 'Google sign-in was cancelled'
+            });
+            return;
+          }
+
+          // Check for successful authentication by looking at the URL
+          if (popup.location && popup.location.hash) {
+            const hash = popup.location.hash;
+            if (hash.includes('id_token=')) {
+              clearInterval(checkClosed);
+              this.handlePopupSuccess(hash).then(result => {
+                popup.close();
+                resolve(result);
+              }).catch(error => {
+                popup.close();
+                resolve({
+                  success: false,
+                  error: error.message || 'Failed to process authentication'
+                });
+              });
+            }
+          }
+        } catch (e) {
+          // Cross-origin error, this is expected and normal
+          // We'll rely on the postMessage or polling
+        }
+      }, 1000);
+
+      // Timeout after 5 minutes
+      setTimeout(() => {
+        clearInterval(checkClosed);
+        if (popup && !popup.closed) {
+          popup.close();
+        }
+        resolve({
+          success: false,
+          error: 'Google sign-in timed out'
+        });
+      }, 300000);
+    });
+  }
+
+  /**
+   * Handle successful popup authentication
+   */
+  private async handlePopupSuccess(hash: string): Promise<AuthResult> {
+    try {
+      const params = new URLSearchParams(hash.substring(1));
+      const idToken = params.get('id_token');
+      const state = params.get('state');
+      
+      // Verify state
+      const storedState = sessionStorage.getItem('google_auth_state');
+      if (state !== storedState) {
+        throw new Error('Invalid state parameter');
+      }
+      
+      if (!idToken) {
+        throw new Error('No ID token received');
+      }
+
+      const userInfo = this.parseJWT(idToken);
+      return await this.processGoogleAuth(userInfo);
+
+    } catch (error) {
+      console.error('❌ Error handling popup success:', error);
+      throw error;
     }
   }
 

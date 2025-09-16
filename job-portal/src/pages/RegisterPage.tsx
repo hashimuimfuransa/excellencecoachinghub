@@ -252,16 +252,21 @@ const RegisterPage: React.FC = () => {
     } catch (error: any) {
       console.error('Google login error:', error);
       
-      if (error.message?.includes('cancelled')) {
-        setError('Google sign-in was cancelled. Please try again.');
-      } else if (error.message?.includes('not configured')) {
+      // Provide more specific error messages based on the error
+      if (error.message?.includes('cancelled') || error.message?.includes('not completed')) {
+        setError('Google sign-in was not completed. Please try again or use a different browser if the issue persists.');
+      } else if (error.message?.includes('not configured') || error.message?.includes('Client ID')) {
         setError('Google authentication is not properly configured. Please contact support.');
-      } else if (error.message?.includes('popup')) {
-        setError('Please allow popups for Google sign-in to work properly.');
-      } else if (error.message?.includes('not available')) {
-        setError('Google services are not available. Please try again later.');
+      } else if (error.message?.includes('popup') || error.message?.includes('blocked') || error.message?.includes('not displayed')) {
+        setError('Google sign-in popup was blocked. Please allow popups for this site and try again.');
+      } else if (error.message?.includes('not available') || error.message?.includes('timeout')) {
+        setError('Google services are temporarily unavailable. Please check your internet connection and try again.');
+      } else if (error.message?.includes('FedCM') || error.message?.includes('NetworkError')) {
+        setError('There was a network issue with Google sign-in. Please try refreshing the page and signing in again.');
+      } else if (error.message?.includes('script') || error.message?.includes('load')) {
+        setError('Failed to load Google sign-in. Please check your internet connection and try refreshing the page.');
       } else {
-        setError('Unable to sign in with Google. Please try again or use the form below.');
+        setError('Unable to sign in with Google. Please try refreshing the page or use the form below.');
       }
     } finally {
       setGoogleLoading(false);

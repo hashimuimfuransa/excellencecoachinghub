@@ -236,9 +236,154 @@ class GoogleAuthService {
   }
 
   /**
-   * Main sign-in method
+   * Sign in with Google using popup
    */
   public async signIn(): Promise<AuthResult> {
+    try {
+      if (!this.clientId) {
+        console.error('❌ Google Client ID not configured');
+        return {
+          success: false,
+          error: 'Google Client ID not configured'
+        };
+      }
+
+      console.log('🔄 Initializing Google sign-in...');
+      await this.initialize();
+
+      if (!window.google?.accounts?.id) {
+        console.error('❌ Google Identity Services not available after initialization');
+        return {
+          success: false,
+          error: 'Google Identity Services not available'
+        };
+      }
+
+      console.log('✅ Google services ready, starting sign-in flow');
+
+      return new Promise<AuthResult>((resolve, reject) => {
+        let resolved = false;
+        
+        const resolveOnce = (result: AuthResult) => {
+          if (!resolved) {
+            resolved = true;
+            resolve(result);
+          }
+        };
+
+        // Set a timeout to handle cases where Google doesn't respond
+        const timeout = setTimeout(() => {
+          resolveOnce({
+            success: false,
+            error: 'Google sign-in timeout. Please try again.'
+          });
+        }, 30000); // 30 seconds timeout
+
+        try {
+          window.google!.accounts.id.initialize({
+            client_id: this.clientId,
+            callback: async (response) => {
+              clearTimeout(timeout);
+              try {
+                console.log('📨 Received Google response');
+                
+                if (!response.credential) {
+                  console.error('❌ No credential in Google response');
+                  resolveOnce({
+                    success: false,
+                    error: 'No credential received from Google'
+                  });
+                  return;
+                }
+
+                const userInfo = this.parseJWT(response.credential);
+                console.log('👤 Parsed Google user info:', userInfo.email);
+                
+                const result = await this.processGoogleAuth(userInfo);
+                resolveOnce(result);
+
+              } catch (error) {
+                console.error('❌ Error in Google callback:', error);
+                resolveOnce({
+                  success: false,
+                  error: 'Failed to process Google authentication'
+                });
+              }
+            },
+            auto_select: false,
+            cancel_on_tap_outside: false,
+            use_fedcm_for_prompt: false // Disable FedCM to avoid network errors
+          });
+
+          console.log('🚀 Prompting Google sign-in...');
+          
+          // Show the Google sign-in prompt with better error handling
+          window.google!.accounts.id.prompt((notification) => {
+            console.log('📢 Google prompt notification:', {
+              isDisplayed: notification.isDisplayed?.(),
+              isNotDisplayed: notification.isNotDisplayed?.(),
+              isSkippedMoment: notification.isSkippedMoment?.(),
+              getDismissedReason: notification.getDismissedReason?.(),
+              getNotDisplayedReason: notification.getNotDisplayedReason?.(),
+              getSkippedReason: notification.getSkippedReason?.()
+            });
+            
+            // Handle various scenarios
+            if (notification.isNotDisplayed?.()) {
+              const reason = notification.getNotDisplayedReason?.();
+              console.warn('⚠️ Google prompt not displayed:', reason);
+              
+              // Don't immediately resolve as cancelled, give user a chance
+              setTimeout(() => {
+                if (!resolved) {
+                  resolveOnce({
+                    success: false,
+                    error: 'Google sign-in popup was blocked or not displayed. Please ensure popups are allowed and try again.'
+                  });
+                }
+              }, 2000);
+            } 
+            else if (notification.isSkippedMoment?.()) {
+              const reason = notification.getSkippedReason?.();
+              console.warn('⚠️ Google prompt skipped:', reason);
+              
+              // Don't immediately resolve, user might still interact
+              setTimeout(() => {
+                if (!resolved) {
+                  resolveOnce({
+                    success: false,
+                    error: 'Google sign-in was not completed. Please try again.'
+                  });
+                }
+              }, 2000);
+            }
+            // If displayed, let it run normally
+          });
+
+        } catch (error) {
+          clearTimeout(timeout);
+          console.error('❌ Error initializing Google sign-in:', error);
+          resolveOnce({
+            success: false,
+            error: 'Failed to initialize Google sign-in'
+          });
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ Google sign-in error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Google sign-in failed'
+      };
+    }
+  }
+
+  /**
+   * Alternative sign-in method using renderButton (fallback)
+   * Creates a Google sign-in button that can be clicked
+   */
+  public async signInWithButton(buttonElement: HTMLElement): Promise<AuthResult> {
     try {
       if (!this.clientId) {
         return {
@@ -257,13 +402,31 @@ class GoogleAuthService {
       }
 
       return new Promise<AuthResult>((resolve) => {
+        let resolved = false;
+        
+        const resolveOnce = (result: AuthResult) => {
+          if (!resolved) {
+            resolved = true;
+            resolve(result);
+          }
+        };
+
+        // Set a timeout
+        const timeout = setTimeout(() => {
+          resolveOnce({
+            success: false,
+            error: 'Google sign-in timeout. Please try again.'
+          });
+        }, 60000); // 60 seconds for button method
+
         try {
           window.google!.accounts.id.initialize({
             client_id: this.clientId,
             callback: async (response) => {
+              clearTimeout(timeout);
               try {
                 if (!response.credential) {
-                  resolve({
+                  resolveOnce({
                     success: false,
                     error: 'No credential received from Google'
                   });
@@ -272,41 +435,46 @@ class GoogleAuthService {
 
                 const userInfo = this.parseJWT(response.credential);
                 const result = await this.processGoogleAuth(userInfo);
-                resolve(result);
+                resolveOnce(result);
 
               } catch (error) {
-                console.error('❌ Error in Google callback:', error);
-                resolve({
+                console.error('❌ Error in Google button callback:', error);
+                resolveOnce({
                   success: false,
                   error: 'Failed to process Google authentication'
                 });
               }
             },
             auto_select: false,
-            cancel_on_tap_outside: true
+            cancel_on_tap_outside: false
           });
 
-          // Show the Google sign-in prompt
-          window.google!.accounts.id.prompt((notification) => {
-            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-              resolve({
-                success: false,
-                error: 'Google sign-in was cancelled'
-              });
-            }
+          // Render the Google button
+          window.google!.accounts.id.renderButton(buttonElement, {
+            theme: 'outline',
+            size: 'large',
+            text: 'continue_with',
+            shape: 'rectangular',
+            logo_alignment: 'left',
+            width: '100%'
           });
 
+          console.log('✅ Google sign-in button rendered');
+          
+          // Don't auto-resolve, wait for user to click the button
+          
         } catch (error) {
-          console.error('❌ Error initializing Google sign-in:', error);
-          resolve({
+          clearTimeout(timeout);
+          console.error('❌ Error rendering Google sign-in button:', error);
+          resolveOnce({
             success: false,
-            error: 'Failed to initialize Google sign-in'
+            error: 'Failed to render Google sign-in button'
           });
         }
       });
 
     } catch (error) {
-      console.error('❌ Google sign-in error:', error);
+      console.error('❌ Google button sign-in error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Google sign-in failed'

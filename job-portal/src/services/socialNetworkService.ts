@@ -126,7 +126,7 @@ class SocialNetworkService {
     
     // For Google OAuth users, return mock feed data to avoid 401 errors
     const token = localStorage.getItem('token');
-    const isGoogleUser = token?.startsWith('google_') || token?.includes('google');
+    const isGoogleUser = token?.startsWith('google_');
     
     if (isGoogleUser) {
       console.log('🔄 Returning mock feed for Google user');

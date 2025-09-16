@@ -101,31 +101,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loginWithGoogle = async (): Promise<{requiresRoleSelection?: boolean; userData?: any}> => {
     try {
       setIsLoading(true);
-      const { default: googleAuthService } = await import('../services/googleAuthService');
-      const result = await googleAuthService.authenticate();
+      const { default: newGoogleAuth } = await import('../services/newGoogleAuth');
+      const result = await newGoogleAuth.login();
       
       if (!result.success) {
         throw new Error(result.error || 'Google authentication failed');
       }
 
-      if (result.requiresRoleSelection && result.userData) {
-        // Return user data for role selection (new user)
-        return { requiresRoleSelection: true, userData: result.userData };
+      if (result.requiresRoleSelection && result.user) {
+        // New user needs role selection
+        return { requiresRoleSelection: true, userData: result.user };
       }
 
-      // User already exists and is registered - log them in directly
-      if (result.userData && !result.requiresRoleSelection) {
-        // For existing users, we should get user data and log them in
-        // But since we're using localStorage for development, we need to create an auth response
-        const existingUser = getExistingUserFromStorage(result.userData.email);
-        if (existingUser) {
-          setUser(existingUser);
-          return { requiresRoleSelection: false };
-        }
+      // User already exists and is logged in
+      if (result.user && result.token) {
+        setUser(result.user);
+        return { requiresRoleSelection: false };
       }
 
-      // Fallback for edge cases
-      return { requiresRoleSelection: true, userData: result.userData };
+      // Shouldn't reach here, but handle edge case
+      throw new Error('Unexpected Google login result');
     } catch (error) {
       console.error('❌ Google login error in AuthContext:', error);
       throw error;
@@ -148,61 +143,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Helper method to get existing user from localStorage - simplified like homepage
-  const getExistingUserFromStorage = (email: string): User | null => {
-    try {
-      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-      const existingUser = registeredUsers.find((user: any) => user.email === email);
-      if (existingUser && existingUser.registrationCompleted) {
-        // Simple token generation like homepage
-        const googleToken = `google_jwt_${Date.now()}`;
-        
-        // Simple user data without complex session management
-        const userData = {
-          ...existingUser,
-          provider: 'google',
-          lastLogin: new Date().toISOString()
-        };
-        
-        // Simple storage like homepage
-        localStorage.setItem('token', googleToken);
-        localStorage.setItem('user', JSON.stringify(userData));
-        
-        console.log('✅ Existing Google user logged in:', email);
-        return userData;
-      }
-      return null;
-    } catch (error) {
-      console.error('Error getting existing user from storage:', error);
-      return null;
-    }
-  };
+
 
   const registerWithGoogle = async (userData: any, role: string): Promise<void> => {
     try {
       setIsLoading(true);
-      const { default: authService } = await import('../services/authService');
+      const { default: newGoogleAuth } = await import('../services/newGoogleAuth');
       
-      // Use the same data structure as homepage for Google registration
-      const googleCompleteData = {
-        ...userData,
-        role: role,
-        provider: 'google',
-        isEmailVerified: true,
-        registrationCompleted: true,
-        platform: 'job-portal',
-        createdAt: new Date().toISOString()
-      };
+      // Complete registration with the new Google auth service
+      const result = await newGoogleAuth.completeRegistration(userData, role);
       
-      console.log('🔍 Sending Google complete registration data:', googleCompleteData);
-      
-      // Use dedicated Google registration completion endpoint
-      const authData = await authService.completeGoogleRegistration(googleCompleteData);
-      
+      if (!result.success) {
+        throw new Error(result.error || 'Google registration failed');
+      }
+
       // Set the user in context to log them in
-      if (authData.user) {
-        setUser(authData.user);
-        console.log('✅ User set in AuthContext after Google registration:', authData.user);
+      if (result.user) {
+        setUser(result.user);
+        console.log('✅ User set in AuthContext after Google registration:', result.user);
       } else {
         throw new Error('User data not returned from registration');
       }

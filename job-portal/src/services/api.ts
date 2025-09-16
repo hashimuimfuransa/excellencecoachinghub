@@ -94,10 +94,10 @@ api.interceptors.response.use(
       const isPublicPage = ['/', '/jobs', '/support', '/home'].includes(window.location.pathname) ||
                           window.location.pathname.startsWith('/jobs/');
       
-      // Check if this is a Google OAuth session - simplified check
+      // Check if this is a Google OAuth session - recognize new Google tokens
       const currentToken = localStorage.getItem('token');
-      const isGoogleToken = currentToken?.startsWith('google_') || currentToken?.includes('google');
-      const isGoogleOAuthSession = isGoogleToken; // Any Google token is considered an OAuth session
+      const isGoogleToken = currentToken?.startsWith('google_');
+      const isGoogleOAuthSession = isGoogleToken;
       
       console.log('🔍 401 Error Analysis:', { 
         isAuthRequest, 

@@ -30,6 +30,10 @@ import {
   FormGroup,
   Stack,
   Divider,
+  useMediaQuery,
+  Fade,
+  Grow,
+  Skeleton,
 } from '@mui/material';
 import { Grid } from '@mui/material';
 import {
@@ -48,6 +52,10 @@ import {
   School,
   Sort,
   Clear,
+  TrendingUp,
+  People,
+  NetworkCheck,
+  Handshake,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { SocialConnection, ConnectionRequest, SentRequest } from '../types/social';
@@ -73,6 +81,8 @@ const NetworkPage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { hasRole } = useAuth();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const [currentTab, setCurrentTab] = useState(0);
   const [connections, setConnections] = useState<SocialConnection[]>([]);
   const [pendingRequests, setPendingRequests] = useState<ConnectionRequest[]>([]);
@@ -83,6 +93,7 @@ const NetworkPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [requestingUsers, setRequestingUsers] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Filter states for Discover tab
   const [showFilters, setShowFilters] = useState(false);
@@ -414,9 +425,12 @@ const NetworkPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-          <CircularProgress />
+      <Container maxWidth="lg" sx={{ py: { xs: 2, md: 3 } }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', flexDirection: 'column', gap: 2 }}>
+          <CircularProgress size={60} thickness={4} />
+          <Typography variant="h6" color="text.secondary">
+            Loading your network...
+          </Typography>
         </Box>
       </Container>
     );
@@ -424,169 +438,421 @@ const NetworkPage: React.FC = () => {
 
   return (
     <>
-      <Container maxWidth="lg" sx={{ py: 3 }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 2, md: 3 } }}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
       >
-        {/* Header */}
-        <Box sx={{ mb: 3 }}>
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 700,
-              background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              mb: 1,
-            }}
-          >
-            My Network
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Manage your professional connections and discover new opportunities
-          </Typography>
-        </Box>
-
-        {/* Employer Quick Actions Banner */}
-        {hasRole(UserRole.EMPLOYER) && (
-          <Paper 
-            sx={{ 
-              mb: 3, 
-              p: 3, 
-              borderRadius: 3,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
-              position: 'relative',
-              overflow: 'hidden',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                right: 0,
-                width: '200px',
-                height: '200px',
-                background: 'rgba(255, 255, 255, 0.1)',
-                borderRadius: '50%',
-                transform: 'translate(50%, -50%)',
-              }
-            }}
-          >
-            <Box sx={{ position: 'relative', zIndex: 1 }}>
-              <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-                🚀 Expand Your Talent Network
-              </Typography>
-              <Typography variant="body1" sx={{ mb: 3, opacity: 0.9 }}>
-                Connect with top talent and grow your team. Post jobs and internships to attract the best candidates.
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <Button
-                  variant="contained"
+        {/* Modern Header */}
+        <Box sx={{ 
+          mb: { xs: 3, md: 4 }, 
+          textAlign: { xs: 'center', sm: 'left' },
+          position: 'relative',
+          overflow: 'hidden',
+          borderRadius: 3,
+          background: `linear-gradient(135deg, 
+            ${theme.palette.primary.main}15 0%, 
+            ${theme.palette.secondary.main}15 100%)`,
+          p: { xs: 3, md: 4 },
+          border: `1px solid ${theme.palette.divider}`,
+        }}>
+          <Box sx={{ position: 'relative', zIndex: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'center', sm: 'flex-start' }, gap: 2, mb: 2 }}>
+              <Box sx={{ 
+                p: 1.5,
+                borderRadius: 2,
+                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <NetworkCheck sx={{ fontSize: { xs: 24, md: 28 } }} />
+              </Box>
+              <Box>
+                <Typography
+                  variant={isMobile ? "h5" : "h4"}
                   sx={{
-                    bgcolor: 'rgba(255, 255, 255, 0.2)',
-                    color: 'white',
-                    fontWeight: 600,
-                    px: 3,
-                    py: 1,
-                    '&:hover': {
-                      bgcolor: 'rgba(255, 255, 255, 0.3)',
-                    },
+                    fontWeight: 800,
+                    background: 'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    letterSpacing: '-0.5px'
                   }}
-                  startIcon={<Work />}
-                  onClick={() => navigate('/app/jobs/create')}
                 >
-                  Post New Job
-                </Button>
-                <Button
-                  variant="outlined"
-                  sx={{
-                    borderColor: 'rgba(255, 255, 255, 0.3)',
-                    color: 'white',
-                    fontWeight: 600,
-                    px: 3,
-                    py: 1,
-                    '&:hover': {
-                      borderColor: 'rgba(255, 255, 255, 0.5)',
-                      bgcolor: 'rgba(255, 255, 255, 0.1)',
-                    },
-                  }}
-                  startIcon={<School />}
-                  onClick={() => navigate('/app/internships/create')}
-                >
-                  Post Internship
-                </Button>
-                <Button
-                  variant="text"
-                  sx={{
-                    color: 'rgba(255, 255, 255, 0.8)',
-                    fontWeight: 600,
-                    '&:hover': {
-                      color: 'white',
-                      bgcolor: 'rgba(255, 255, 255, 0.1)',
-                    },
-                  }}
-                  startIcon={<Business />}
-                  onClick={() => navigate('/app/employer/internships')}
-                >
-                  Manage Internships
-                </Button>
+                  My Network
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
+                  {isMobile ? 'Connect & Discover' : 'Build meaningful professional connections and discover new opportunities'}
+                </Typography>
               </Box>
             </Box>
-          </Paper>
+            
+            {/* Quick Stats */}
+            <Grid container spacing={2} sx={{ mt: 2 }}>
+              <Grid item xs={4}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                    {connections.length}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Connections
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={4}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, color: 'success.main' }}>
+                    {pendingRequests.length}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Requests
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={4}>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, color: 'info.main' }}>
+                    {suggestions.length}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Suggestions
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </Box>
+          
+          {/* Background decoration */}
+          <Box sx={{ 
+            position: 'absolute',
+            top: -20,
+            right: -20,
+            width: { xs: 100, md: 150 },
+            height: { xs: 100, md: 150 },
+            background: `linear-gradient(135deg, ${theme.palette.primary.main}20, ${theme.palette.secondary.main}20)`,
+            borderRadius: '50%',
+            zIndex: 1
+          }} />
+        </Box>
+
+        {/* Modern Employer Quick Actions Banner */}
+        {hasRole(UserRole.EMPLOYER) && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+          >
+            <Paper 
+              sx={{ 
+                mb: { xs: 3, md: 4 }, 
+                p: { xs: 2.5, md: 3.5 }, 
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                position: 'relative',
+                overflow: 'hidden',
+                boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  right: 0,
+                  width: { xs: '150px', md: '200px' },
+                  height: { xs: '150px', md: '200px' },
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: '50%',
+                  transform: 'translate(50%, -50%)',
+                }
+              }}
+            >
+              <Box sx={{ position: 'relative', zIndex: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                  <Box sx={{
+                    p: 1,
+                    borderRadius: 2,
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    display: { xs: 'none', sm: 'flex' },
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <TrendingUp sx={{ fontSize: 24 }} />
+                  </Box>
+                  <Typography variant={isMobile ? "h6" : "h5"} sx={{ fontWeight: 700 }}>
+                    🚀 Expand Your Talent Network
+                  </Typography>
+                </Box>
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    mb: 3, 
+                    opacity: 0.95, 
+                    fontSize: { xs: '0.9rem', md: '1rem' },
+                    lineHeight: 1.5
+                  }}
+                >
+                  {isMobile 
+                    ? 'Connect with top talent and grow your team.' 
+                    : 'Connect with top talent and grow your team. Post jobs and internships to attract the best candidates.'}
+                </Typography>
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: { xs: 1.5, md: 2 }, 
+                  flexWrap: 'wrap',
+                  justifyContent: { xs: 'center', sm: 'flex-start' }
+                }}>
+                  <Button
+                    variant="contained"
+                    size={isMobile ? "medium" : "large"}
+                    sx={{
+                      bgcolor: 'rgba(255, 255, 255, 0.2)',
+                      color: 'white',
+                      fontWeight: 600,
+                      px: { xs: 2, md: 3 },
+                      py: { xs: 0.8, md: 1 },
+                      borderRadius: 2,
+                      backdropFilter: 'blur(10px)',
+                      '&:hover': {
+                        bgcolor: 'rgba(255, 255, 255, 0.3)',
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 20px rgba(255, 255, 255, 0.3)'
+                      },
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                    startIcon={<Work />}
+                    onClick={() => navigate('/app/jobs/create')}
+                  >
+                    {isMobile ? 'Post Job' : 'Post New Job'}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size={isMobile ? "medium" : "large"}
+                    sx={{
+                      borderColor: 'rgba(255, 255, 255, 0.4)',
+                      color: 'white',
+                      fontWeight: 600,
+                      px: { xs: 2, md: 3 },
+                      py: { xs: 0.8, md: 1 },
+                      borderRadius: 2,
+                      backdropFilter: 'blur(10px)',
+                      '&:hover': {
+                        borderColor: 'rgba(255, 255, 255, 0.6)',
+                        bgcolor: 'rgba(255, 255, 255, 0.15)',
+                        transform: 'translateY(-1px)',
+                      },
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                    startIcon={<School />}
+                    onClick={() => navigate('/app/internships/create')}
+                  >
+                    {isMobile ? 'Internship' : 'Post Internship'}
+                  </Button>
+                  {!isMobile && (
+                    <Button
+                      variant="text"
+                      size="large"
+                      sx={{
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        fontWeight: 600,
+                        px: 3,
+                        py: 1,
+                        borderRadius: 2,
+                        '&:hover': {
+                          color: 'white',
+                          bgcolor: 'rgba(255, 255, 255, 0.15)',
+                          transform: 'translateY(-1px)',
+                        },
+                        transition: 'all 0.2s ease-in-out'
+                      }}
+                      startIcon={<Business />}
+                      onClick={() => navigate('/app/employer/internships')}
+                    >
+                      Manage Internships
+                    </Button>
+                  )}
+                </Box>
+              </Box>
+            </Paper>
+          </motion.div>
         )}
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
+          <Fade in={!!error}>
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 2,
+                borderRadius: 2,
+                '& .MuiAlert-icon': {
+                  fontSize: { xs: 20, md: 24 }
+                }
+              }}
+            >
+              {error}
+            </Alert>
+          </Fade>
         )}
 
         {successMessage && (
-          <Alert 
-            severity="success" 
-            sx={{ mb: 2 }}
-            icon={<CheckCircle />}
-          >
-            {successMessage}
-          </Alert>
+          <Grow in={!!successMessage}>
+            <Alert 
+              severity="success" 
+              sx={{ 
+                mb: 2,
+                borderRadius: 2,
+                '& .MuiAlert-icon': {
+                  fontSize: { xs: 20, md: 24 }
+                }
+              }}
+              icon={<CheckCircle />}
+            >
+              {successMessage}
+            </Alert>
+          </Grow>
         )}
 
-        {/* Navigation Tabs */}
-        <Paper sx={{ mb: 3, borderRadius: 2 }}>
+        {/* Modern Navigation Tabs */}
+        <Paper 
+          sx={{ 
+            mb: { xs: 3, md: 4 }, 
+            borderRadius: 3,
+            overflow: 'hidden',
+            background: theme.palette.mode === 'dark' 
+              ? 'rgba(255, 255, 255, 0.05)' 
+              : 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+            border: `1px solid ${theme.palette.divider}`
+          }}
+        >
           <Tabs
             value={currentTab}
             onChange={handleTabChange}
-            variant="fullWidth"
+            variant={isMobile ? "scrollable" : "fullWidth"}
+            scrollButtons={isMobile ? "auto" : false}
+            allowScrollButtonsMobile
             sx={{
               '& .MuiTab-root': {
                 textTransform: 'none',
                 fontWeight: 600,
+                py: { xs: 1.5, md: 2 },
+                px: { xs: 1, md: 2 },
+                minHeight: { xs: 60, md: 72 },
+                fontSize: { xs: '0.875rem', md: '1rem' },
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  bgcolor: 'rgba(25, 118, 210, 0.08)'
+                },
+                '&.Mui-selected': {
+                  color: theme.palette.primary.main,
+                  fontWeight: 700
+                }
               },
+              '& .MuiTabs-indicator': {
+                height: 3,
+                borderRadius: 2,
+                background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`
+              }
             }}
           >
             <Tab 
               label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Group />
-                  Connections ({connections.length})
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: { xs: 0.5, md: 1 },
+                  flexDirection: { xs: 'column', sm: 'row' }
+                }}>
+                  <People sx={{ fontSize: { xs: 18, md: 22 } }} />
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'inherit' }}>
+                      {isMobile ? 'Connections' : 'My Connections'}
+                    </Typography>
+                    <Chip 
+                      label={connections.length} 
+                      size="small" 
+                      color="primary"
+                      sx={{ 
+                        height: 18,
+                        fontSize: '0.7rem',
+                        mt: 0.5,
+                        display: { xs: 'inline-flex', sm: 'none' }
+                      }}
+                    />
+                    {!isMobile && (
+                      <Typography variant="caption" color="text.secondary">
+                        ({connections.length})
+                      </Typography>
+                    )}
+                  </Box>
                 </Box>
               } 
             />
             <Tab 
               label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <PersonAdd />
-                  Requests ({pendingRequests.length + sentRequests.length})
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: { xs: 0.5, md: 1 },
+                  flexDirection: { xs: 'column', sm: 'row' }
+                }}>
+                  <Handshake sx={{ fontSize: { xs: 18, md: 22 } }} />
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'inherit' }}>
+                      Requests
+                    </Typography>
+                    <Chip 
+                      label={pendingRequests.length + sentRequests.length} 
+                      size="small" 
+                      color="success"
+                      sx={{ 
+                        height: 18,
+                        fontSize: '0.7rem',
+                        mt: 0.5,
+                        display: { xs: 'inline-flex', sm: 'none' }
+                      }}
+                    />
+                    {!isMobile && (
+                      <Typography variant="caption" color="text.secondary">
+                        ({pendingRequests.length + sentRequests.length})
+                      </Typography>
+                    )}
+                  </Box>
                 </Box>
               } 
             />
             <Tab 
               label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Search />
-                  Discover
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: { xs: 0.5, md: 1 },
+                  flexDirection: { xs: 'column', sm: 'row' }
+                }}>
+                  <Search sx={{ fontSize: { xs: 18, md: 22 } }} />
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'inherit' }}>
+                      Discover
+                    </Typography>
+                    <Chip 
+                      label={filteredSuggestions.length} 
+                      size="small" 
+                      color="info"
+                      sx={{ 
+                        height: 18,
+                        fontSize: '0.7rem',
+                        mt: 0.5,
+                        display: { xs: 'inline-flex', sm: 'none' }
+                      }}
+                    />
+                    {!isMobile && (
+                      <Typography variant="caption" color="text.secondary">
+                        ({filteredSuggestions.length})
+                      </Typography>
+                    )}
+                  </Box>
                 </Box>
               } 
             />

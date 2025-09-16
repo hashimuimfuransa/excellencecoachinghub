@@ -106,12 +106,13 @@ class AuthService {
       // Generate a more robust token for Google OAuth sessions
       const googleToken = authData.token.startsWith('google_') 
         ? authData.token 
-        : `google_oauth_${Date.now()}_${authData.token}`;
+        : `google_oauth_new_${Date.now()}_${authData.token}`;
       
       localStorage.setItem('token', googleToken);
       localStorage.setItem('google_oauth_session', 'true');
+      localStorage.setItem('google_oauth_persistent', 'true');
       localStorage.setItem('session_timestamp', Date.now().toString());
-      console.log('✅ Google OAuth token stored:', googleToken.substring(0, 20) + '...');
+      console.log('✅ Google OAuth persistent token stored:', googleToken.substring(0, 20) + '...');
     }
     
     if (authData?.user) {
@@ -158,6 +159,7 @@ class AuthService {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('google_oauth_session');
+    localStorage.removeItem('google_oauth_persistent');
     localStorage.removeItem('session_timestamp');
     
     // Clear any Google Sign-In session if it exists
@@ -170,7 +172,7 @@ class AuthService {
       }
     }
     
-    console.log('✅ Logout completed successfully');
+    console.log('✅ Logout completed successfully with all session markers cleared');
     // Don't force redirect here - let the component handle navigation
     // This prevents refresh loops and gives better control to the calling component
   }
@@ -206,19 +208,36 @@ class AuthService {
       return false;
     }
     
-    // Enhanced validation for Google OAuth sessions
+    // Enhanced validation for Google OAuth sessions - very lenient for persistent sessions
     const isGoogleSession = localStorage.getItem('google_oauth_session') === 'true';
-    if (isGoogleSession) {
+    const isPersistentSession = localStorage.getItem('google_oauth_persistent') === 'true';
+    
+    if (isGoogleSession || isPersistentSession) {
       const sessionTimestamp = localStorage.getItem('session_timestamp');
       if (sessionTimestamp) {
         const sessionAge = Date.now() - parseInt(sessionTimestamp);
-        const sessionExpired = sessionAge > 24 * 60 * 60 * 1000; // 24 hours
+        // Persistent sessions last longer (30 days), regular Google sessions last 7 days
+        const maxSessionAge = isPersistentSession ? 30 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
         
-        if (sessionExpired) {
-          console.warn('🕒 Google OAuth session expired, clearing auth data');
+        if (sessionAge > maxSessionAge) {
+          const sessionType = isPersistentSession ? 'persistent' : 'regular';
+          const maxDays = isPersistentSession ? 30 : 7;
+          console.warn(`🕒 Google OAuth ${sessionType} session expired (${maxDays}+ days), clearing auth data`);
           this.logout();
           return false;
+        } else {
+          // Only refresh timestamp occasionally to reduce overhead (every 30 minutes max)
+          const shouldRefresh = sessionAge > 30 * 60 * 1000; // 30 minutes
+          if (shouldRefresh) {
+            localStorage.setItem('session_timestamp', Date.now().toString());
+          }
+          const sessionType = isPersistentSession ? 'persistent' : 'regular';
+          console.log(`✅ Google OAuth ${sessionType} session valid, age:`, Math.round(sessionAge / (60 * 60 * 1000)), 'hours');
         }
+      } else {
+        // If no session timestamp exists for Google OAuth, create one
+        localStorage.setItem('session_timestamp', Date.now().toString());
+        console.log('✅ Google OAuth session timestamp created');
       }
     }
     

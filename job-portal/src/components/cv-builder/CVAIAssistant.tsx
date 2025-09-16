@@ -26,6 +26,10 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  useTheme,
+  useMediaQuery,
+  Fade,
+  Zoom,
 } from '@mui/material';
 import {
   SmartToy,
@@ -45,6 +49,7 @@ import {
   ExpandMore,
   ContentCopy,
   Refresh,
+  Person,
 } from '@mui/icons-material';
 import { CVData, AIAnalysisResult } from '../../services/cvBuilderService';
 import cvBuilderService from '../../services/cvBuilderService';
@@ -64,6 +69,10 @@ const CVAIAssistant: React.FC<CVAIAssistantProps> = ({
   analysis,
   onUpdateCV,
 }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
   const [activeTab, setActiveTab] = useState(0);
   const [chatMessage, setChatMessage] = useState('');
   const [chatHistory, setChatHistory] = useState<Array<{ type: 'user' | 'ai'; message: string }>>([]);
@@ -165,104 +174,291 @@ const CVAIAssistant: React.FC<CVAIAssistantProps> = ({
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="lg"
-      fullWidth
+      maxWidth={isMobile ? false : "lg"}
+      fullWidth={!isMobile}
+      fullScreen={isMobile}
       sx={{
         '& .MuiDialog-paper': {
-          height: '90vh',
+          height: isMobile ? '100vh' : '90vh',
+          borderRadius: isMobile ? 0 : 3,
+          background: theme.palette.mode === 'dark' 
+            ? `linear-gradient(135deg, ${theme.palette.background.paper}, ${theme.palette.grey[900]})`
+            : `linear-gradient(135deg, ${theme.palette.background.paper}, ${theme.palette.grey[50]})`,
+          backdropFilter: 'blur(20px)',
         }
       }}
+      TransitionComponent={Fade}
+      transitionDuration={300}
     >
-      <DialogTitle>
-        <Box display="flex" alignItems="center" justifyContent="between">
-          <Box display="flex" alignItems="center" gap={1}>
-            <SmartToy color="primary" />
-            <Typography variant="h6">AI CV Assistant</Typography>
-          </Box>
-          <IconButton onClick={onClose}>
+      <DialogTitle 
+        sx={{ 
+          background: theme.palette.mode === 'dark'
+            ? `linear-gradient(135deg, ${theme.palette.primary.dark}20, ${theme.palette.secondary.dark}20)`
+            : `linear-gradient(135deg, ${theme.palette.primary.main}10, ${theme.palette.secondary.main}10)`,
+          borderBottom: `1px solid ${theme.palette.divider}`,
+          p: { xs: 2, md: 3 }
+        }}
+      >
+        <Box display="flex" alignItems="center" justifyContent="space-between">
+          <Zoom in={open}>
+            <Box display="flex" alignItems="center" gap={1.5}>
+              <Box 
+                sx={{
+                  p: 1,
+                  borderRadius: '50%',
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  boxShadow: `0 4px 12px ${theme.palette.primary.main}30`
+                }}
+              >
+                <SmartToy sx={{ color: 'white', fontSize: { xs: 20, md: 24 } }} />
+              </Box>
+              <Box>
+                <Typography variant={isMobile ? "h6" : "h5"} sx={{ fontWeight: 700 }}>
+                  AI CV Assistant
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Your intelligent career companion
+                </Typography>
+              </Box>
+            </Box>
+          </Zoom>
+          <IconButton 
+            onClick={onClose}
+            sx={{ 
+              bgcolor: theme.palette.action.hover,
+              '&:hover': {
+                bgcolor: theme.palette.action.selected,
+                transform: 'scale(1.1)'
+              },
+              transition: 'all 0.2s ease-in-out'
+            }}
+          >
             <Close />
           </IconButton>
         </Box>
       </DialogTitle>
 
-      <DialogContent sx={{ p: 0 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
-            <Tab label="Analysis" icon={<Psychology />} />
-            <Tab label="Job Optimization" icon={<TrendingUp />} />
-            <Tab label="AI Chat" icon={<SmartToy />} />
+      <DialogContent sx={{ p: 0, height: '100%' }}>
+        <Box sx={{ 
+          borderBottom: 1, 
+          borderColor: 'divider',
+          bgcolor: theme.palette.mode === 'dark' 
+            ? theme.palette.background.paper 
+            : theme.palette.background.default 
+        }}>
+          <Tabs 
+            value={activeTab} 
+            onChange={(_, newValue) => setActiveTab(newValue)}
+            variant={isMobile ? "fullWidth" : "standard"}
+            sx={{
+              '& .MuiTab-root': {
+                fontSize: { xs: '0.75rem', md: '0.875rem' },
+                minHeight: { xs: 48, md: 56 },
+                fontWeight: 600
+              }
+            }}
+          >
+            <Tab 
+              label={isSmallMobile ? "Analysis" : "Analysis"} 
+              icon={<Psychology sx={{ fontSize: { xs: 18, md: 24 } }} />} 
+              iconPosition={isSmallMobile ? "top" : "start"}
+            />
+            <Tab 
+              label={isSmallMobile ? "Optimize" : "Job Optimization"} 
+              icon={<TrendingUp sx={{ fontSize: { xs: 18, md: 24 } }} />} 
+              iconPosition={isSmallMobile ? "top" : "start"}
+            />
+            <Tab 
+              label={isSmallMobile ? "Chat" : "AI Chat"} 
+              icon={<SmartToy sx={{ fontSize: { xs: 18, md: 24 } }} />} 
+              iconPosition={isSmallMobile ? "top" : "start"}
+            />
           </Tabs>
         </Box>
 
-        <Box sx={{ p: 3, height: '60vh', overflow: 'auto' }}>
+        <Box sx={{ 
+          p: { xs: 2, md: 3 }, 
+          height: isMobile ? 'calc(100vh - 200px)' : '60vh', 
+          overflow: 'auto',
+          '&::-webkit-scrollbar': {
+            width: 8,
+          },
+          '&::-webkit-scrollbar-track': {
+            backgroundColor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : theme.palette.grey[200],
+            borderRadius: 4,
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: theme.palette.primary.main,
+            borderRadius: 4,
+            '&:hover': {
+              backgroundColor: theme.palette.primary.dark,
+            },
+          },
+        }}>
           {/* Analysis Tab */}
           {activeTab === 0 && (
             <Box>
               {analysis ? (
-                <Stack spacing={3}>
-                  {/* CV Score */}
-                  <Card>
-                    <CardContent>
-                      <Box display="flex" alignItems="center" justifyContent="center" mb={2}>
-                        <Box textAlign="center">
-                          <Typography variant="h2" color="primary" sx={{ fontWeight: 'bold' }}>
-                            {analysis.score}
-                          </Typography>
-                          <Typography variant="h6" color="textSecondary">
-                            CV Score
-                          </Typography>
+                <Stack spacing={{ xs: 2, md: 3 }}>
+                  {/* CV Score - Enhanced */}
+                  <Zoom in={activeTab === 0}>
+                    <Card
+                      elevation={0}
+                      sx={{
+                        border: `1px solid ${theme.palette.divider}`,
+                        borderRadius: 3,
+                        background: theme.palette.mode === 'dark'
+                          ? `linear-gradient(135deg, ${theme.palette.grey[900]}, ${theme.palette.grey[800]})`
+                          : `linear-gradient(135deg, ${theme.palette.background.paper}, ${theme.palette.grey[50]})`,
+                        backdropFilter: 'blur(10px)'
+                      }}
+                    >
+                      <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                        <Box display="flex" alignItems="center" justifyContent="center" mb={3}>
+                          <Box textAlign="center">
+                            <Box
+                              sx={{
+                                position: 'relative',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mb: 2
+                              }}
+                            >
+                              <CircularProgress
+                                variant="determinate"
+                                value={100}
+                                size={isMobile ? 100 : 120}
+                                thickness={3}
+                                sx={{ color: theme.palette.grey[300], position: 'absolute' }}
+                              />
+                              <CircularProgress
+                                variant="determinate"
+                                value={analysis.score}
+                                size={isMobile ? 100 : 120}
+                                thickness={3}
+                                color={analysis.score >= 80 ? 'success' : analysis.score >= 60 ? 'warning' : 'error'}
+                                sx={{
+                                  '& .MuiCircularProgress-circle': {
+                                    strokeLinecap: 'round',
+                                  },
+                                }}
+                              />
+                              <Box
+                                sx={{
+                                  position: 'absolute',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexDirection: 'column'
+                                }}
+                              >
+                                <Typography variant={isMobile ? "h3" : "h2"} color="primary" sx={{ fontWeight: 'bold', lineHeight: 1 }}>
+                                  {analysis.score}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                  SCORE
+                                </Typography>
+                              </Box>
+                            </Box>
+                            <Typography variant={isMobile ? "subtitle1" : "h6"} color="text.secondary" sx={{ fontWeight: 600 }}>
+                              {analysis.score >= 80 ? '🎉 Excellent CV!' : 
+                               analysis.score >= 60 ? '👍 Good CV with room for improvement' : 
+                               '🚀 Needs significant improvements'}
+                            </Typography>
+                          </Box>
                         </Box>
-                      </Box>
-                      <LinearProgress
-                        variant="determinate"
-                        value={analysis.score}
-                        sx={{ height: 8, borderRadius: 4 }}
-                        color={analysis.score >= 80 ? 'success' : analysis.score >= 60 ? 'warning' : 'error'}
-                      />
-                      <Box mt={1} textAlign="center">
-                        <Typography variant="body2" color="textSecondary">
-                          {analysis.score >= 80 ? 'Excellent CV!' : 
-                           analysis.score >= 60 ? 'Good CV with room for improvement' : 
-                           'Needs significant improvements'}
+                      </CardContent>
+                    </Card>
+                  </Zoom>
+
+                  {/* Improvements - Enhanced */}
+                  <Card
+                    elevation={0}
+                    sx={{
+                      border: `1px solid ${theme.palette.divider}`,
+                      borderRadius: 3,
+                      background: theme.palette.mode === 'dark'
+                        ? `linear-gradient(135deg, ${theme.palette.grey[900]}, ${theme.palette.grey[800]})`
+                        : `linear-gradient(135deg, ${theme.palette.background.paper}, ${theme.palette.grey[50]})`
+                    }}
+                  >
+                    <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                      <Box display="flex" alignItems="center" gap={2} mb={2}>
+                        <Box
+                          sx={{
+                            p: 1,
+                            borderRadius: 2,
+                            bgcolor: theme.palette.warning.main,
+                            color: 'white'
+                          }}
+                        >
+                          <TrendingUp sx={{ fontSize: { xs: 20, md: 24 } }} />
+                        </Box>
+                        <Typography variant={isMobile ? "subtitle1" : "h6"} sx={{ fontWeight: 700 }}>
+                          Priority Improvements
                         </Typography>
                       </Box>
-                    </CardContent>
-                  </Card>
-
-                  {/* Improvements */}
-                  <Card>
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom>
-                        Priority Improvements
-                      </Typography>
                       
-                      <Stack spacing={2}>
+                      <Stack spacing={1.5}>
                         {analysis.improvements.map((improvement, index) => (
-                          <Accordion key={index}>
-                            <AccordionSummary expandIcon={<ExpandMore />}>
-                              <Box display="flex" alignItems="center" gap={1} width="100%">
-                                {getPriorityIcon(improvement.priority)}
-                                <Typography sx={{ flexGrow: 1 }}>
+                          <Accordion 
+                            key={index}
+                            elevation={0}
+                            sx={{
+                              border: `1px solid ${theme.palette.divider}`,
+                              borderRadius: 2,
+                              '&:before': { display: 'none' },
+                              bgcolor: 'transparent'
+                            }}
+                          >
+                            <AccordionSummary 
+                              expandIcon={<ExpandMore />}
+                              sx={{ py: 1.5 }}
+                            >
+                              <Box display="flex" alignItems="center" gap={1.5} width="100%">
+                                <Box
+                                  sx={{
+                                    p: 0.5,
+                                    borderRadius: 1,
+                                    bgcolor: `${getPriorityColor(improvement.priority)}.main`,
+                                    color: 'white'
+                                  }}
+                                >
+                                  {getPriorityIcon(improvement.priority)}
+                                </Box>
+                                <Typography sx={{ flexGrow: 1, fontWeight: 600, fontSize: { xs: '0.875rem', md: '1rem' } }}>
                                   {improvement.section}
                                 </Typography>
                                 <Chip
-                                  label={improvement.priority}
+                                  label={improvement.priority.toUpperCase()}
                                   size="small"
                                   color={getPriorityColor(improvement.priority)}
+                                  sx={{ 
+                                    fontWeight: 700,
+                                    fontSize: '0.7rem',
+                                    height: { xs: 24, md: 28 }
+                                  }}
                                 />
                               </Box>
                             </AccordionSummary>
-                            <AccordionDetails>
-                              <Typography variant="body2" color="textSecondary" mb={2}>
+                            <AccordionDetails sx={{ pt: 0 }}>
+                              <Typography variant="body2" color="text.secondary" mb={2} sx={{ lineHeight: 1.6 }}>
                                 {improvement.suggestion}
                               </Typography>
                               <Button
-                                size="small"
+                                size={isMobile ? "small" : "medium"}
+                                variant="outlined"
                                 startIcon={<AutoFixHigh />}
                                 onClick={() => handleImproveSuggestion(improvement.suggestion, improvement.priority)}
                                 disabled={isLoading}
+                                sx={{ 
+                                  borderRadius: 2,
+                                  textTransform: 'none',
+                                  fontWeight: 600
+                                }}
                               >
-                                Get AI Suggestions
+                                {isLoading ? 'Generating...' : 'Get AI Suggestions'}
                               </Button>
                             </AccordionDetails>
                           </Accordion>
@@ -373,65 +569,170 @@ const CVAIAssistant: React.FC<CVAIAssistantProps> = ({
                 sx={{
                   flexGrow: 1,
                   overflow: 'auto',
-                  border: 1,
-                  borderColor: 'divider',
-                  borderRadius: 1,
-                  p: 2,
-                  bgcolor: 'background.default',
-                  maxHeight: '400px',
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: 3,
+                  p: { xs: 1.5, md: 2 },
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? theme.palette.grey[900] 
+                    : theme.palette.grey[50],
+                  maxHeight: isMobile ? '300px' : '400px',
+                  backgroundImage: theme.palette.mode === 'dark'
+                    ? 'none'
+                    : `radial-gradient(circle at 25px 25px, ${theme.palette.grey[200]} 2px, transparent 0), radial-gradient(circle at 75px 75px, ${theme.palette.grey[200]} 2px, transparent 0)`,
+                  backgroundSize: '100px 100px'
                 }}
               >
                 {chatHistory.length === 0 ? (
                   <Box textAlign="center" py={4}>
-                    <SmartToy sx={{ fontSize: 48, color: 'grey.400', mb: 2 }} />
-                    <Typography variant="body1" color="textSecondary" gutterBottom>
-                      Hi! I'm your AI CV assistant. Ask me anything about your CV!
+                    <Box
+                      sx={{
+                        width: { xs: 60, md: 80 },
+                        height: { xs: 60, md: 80 },
+                        borderRadius: '50%',
+                        bgcolor: theme.palette.primary.main,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mx: 'auto',
+                        mb: 2,
+                        boxShadow: `0 8px 32px ${theme.palette.primary.main}20`
+                      }}
+                    >
+                      <SmartToy sx={{ fontSize: { xs: 32, md: 40 }, color: 'white' }} />
+                    </Box>
+                    <Typography variant={isMobile ? "body1" : "h6"} color="text.primary" gutterBottom sx={{ fontWeight: 600 }}>
+                      Hi! I'm your AI CV assistant 👋
                     </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      Try asking: "How can I improve my professional summary?" or "What skills should I add for a tech role?"
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Ask me anything about improving your CV!
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Try: "How can I improve my professional summary?" or "What skills should I add?"
                     </Typography>
                   </Box>
                 ) : (
-                  <Stack spacing={2}>
+                  <Stack spacing={1.5}>
                     {chatHistory.map((chat, index) => (
-                      <Box
-                        key={index}
-                        sx={{
-                          display: 'flex',
-                          justifyContent: chat.type === 'user' ? 'flex-end' : 'flex-start',
-                        }}
-                      >
-                        <Card
+                      <Fade in={true} key={index} timeout={300 + index * 100}>
+                        <Box
                           sx={{
-                            maxWidth: '80%',
-                            bgcolor: chat.type === 'user' ? 'primary.main' : 'background.paper',
-                            color: chat.type === 'user' ? 'white' : 'text.primary',
+                            display: 'flex',
+                            justifyContent: chat.type === 'user' ? 'flex-end' : 'flex-start',
+                            alignItems: 'flex-end',
+                            gap: 1
                           }}
                         >
-                          <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                              {chat.message}
-                            </Typography>
-                            {chat.type === 'ai' && (
-                              <IconButton
-                                size="small"
-                                onClick={() => navigator.clipboard.writeText(chat.message)}
-                                sx={{ mt: 1, color: 'inherit', opacity: 0.7 }}
+                          {chat.type === 'ai' && (
+                            <Box
+                              sx={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: '50%',
+                                bgcolor: theme.palette.primary.main,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
+                              }}
+                            >
+                              <SmartToy sx={{ fontSize: 16, color: 'white' }} />
+                            </Box>
+                          )}
+                          <Card
+                            elevation={0}
+                            sx={{
+                              maxWidth: '85%',
+                              bgcolor: chat.type === 'user' 
+                                ? `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`
+                                : theme.palette.mode === 'dark' 
+                                  ? theme.palette.grey[800] 
+                                  : 'white',
+                              color: chat.type === 'user' ? 'white' : 'text.primary',
+                              border: chat.type === 'ai' ? `1px solid ${theme.palette.divider}` : 'none',
+                              borderRadius: chat.type === 'user' 
+                                ? '18px 18px 4px 18px' 
+                                : '18px 18px 18px 4px',
+                              boxShadow: chat.type === 'user' 
+                                ? `0 4px 12px ${theme.palette.primary.main}20`
+                                : theme.palette.mode === 'dark'
+                                  ? `0 2px 8px ${theme.palette.common.black}30`
+                                  : '0 2px 8px rgba(0,0,0,0.08)'
+                            }}
+                          >
+                            <CardContent sx={{ p: { xs: 1.5, md: 2 }, '&:last-child': { pb: { xs: 1.5, md: 2 } } }}>
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  whiteSpace: 'pre-wrap',
+                                  fontSize: { xs: '0.875rem', md: '0.9rem' },
+                                  lineHeight: 1.5
+                                }}
                               >
-                                <ContentCopy fontSize="small" />
-                              </IconButton>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </Box>
+                                {chat.message}
+                              </Typography>
+                              {chat.type === 'ai' && (
+                                <IconButton
+                                  size="small"
+                                  onClick={() => navigator.clipboard.writeText(chat.message)}
+                                  sx={{ 
+                                    mt: 1, 
+                                    color: 'inherit', 
+                                    opacity: 0.6,
+                                    '&:hover': { opacity: 1 },
+                                    transition: 'opacity 0.2s'
+                                  }}
+                                >
+                                  <ContentCopy fontSize="small" />
+                                </IconButton>
+                              )}
+                            </CardContent>
+                          </Card>
+                          {chat.type === 'user' && (
+                            <Box
+                              sx={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: '50%',
+                                bgcolor: theme.palette.grey[400],
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
+                              }}
+                            >
+                              <Person sx={{ fontSize: 16, color: 'white' }} />
+                            </Box>
+                          )}
+                        </Box>
+                      </Fade>
                     ))}
                     {isLoading && (
-                      <Box display="flex" justifyContent="flex-start">
-                        <Card sx={{ bgcolor: 'background.paper' }}>
+                      <Box display="flex" justifyContent="flex-start" alignItems="flex-end" gap={1}>
+                        <Box
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: '50%',
+                            bgcolor: theme.palette.primary.main,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <SmartToy sx={{ fontSize: 16, color: 'white' }} />
+                        </Box>
+                        <Card 
+                          elevation={0}
+                          sx={{ 
+                            bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[800] : 'white',
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: '18px 18px 18px 4px'
+                          }}
+                        >
                           <CardContent sx={{ p: 2 }}>
                             <Box display="flex" alignItems="center" gap={1}>
                               <CircularProgress size={16} />
-                              <Typography variant="body2">AI is typing...</Typography>
+                              <Typography variant="body2">AI is thinking...</Typography>
                             </Box>
                           </CardContent>
                         </Card>
@@ -441,8 +742,22 @@ const CVAIAssistant: React.FC<CVAIAssistantProps> = ({
                 )}
               </Box>
               
-              {/* Chat Input */}
-              <Box display="flex" gap={1}>
+              {/* Enhanced Chat Input */}
+              <Box 
+                display="flex" 
+                gap={1.5}
+                sx={{
+                  p: { xs: 1.5, md: 2 },
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? theme.palette.grey[800] 
+                    : theme.palette.background.paper,
+                  borderRadius: 3,
+                  border: `1px solid ${theme.palette.divider}`,
+                  boxShadow: theme.palette.mode === 'dark' 
+                    ? '0 4px 20px rgba(0,0,0,0.3)' 
+                    : '0 4px 20px rgba(0,0,0,0.08)'
+                }}
+              >
                 <TextField
                   fullWidth
                   placeholder="Ask me anything about your CV..."
@@ -450,22 +765,64 @@ const CVAIAssistant: React.FC<CVAIAssistantProps> = ({
                   onChange={(e) => setChatMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                   multiline
-                  maxRows={3}
+                  maxRows={isMobile ? 2 : 3}
+                  size={isMobile ? "small" : "medium"}
+                  variant="outlined"
+                  sx={{
+                    '& .MuiOutlineInput-root': {
+                      borderRadius: 2,
+                      bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[900] : theme.palette.background.default,
+                      '& fieldset': {
+                        borderColor: 'transparent',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: theme.palette.primary.light,
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: theme.palette.primary.main,
+                      },
+                    }
+                  }}
                 />
                 <Button
                   variant="contained"
                   onClick={handleSendMessage}
                   disabled={!chatMessage.trim() || isLoading}
-                  sx={{ minWidth: 48, px: 2 }}
+                  size={isMobile ? "small" : "medium"}
+                  sx={{ 
+                    minWidth: { xs: 44, md: 56 }, 
+                    height: { xs: 44, md: 56 },
+                    borderRadius: 2,
+                    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                    boxShadow: `0 4px 12px ${theme.palette.primary.main}30`,
+                    '&:hover': {
+                      background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
+                      transform: 'scale(1.05)',
+                    },
+                    '&:disabled': {
+                      background: theme.palette.action.disabledBackground,
+                      transform: 'none'
+                    },
+                    transition: 'all 0.2s ease-in-out'
+                  }}
                 >
-                  <Send />
+                  {isLoading ? (
+                    <CircularProgress size={16} sx={{ color: 'white' }} />
+                  ) : (
+                    <Send sx={{ fontSize: { xs: 18, md: 20 } }} />
+                  )}
                 </Button>
               </Box>
 
-              {/* Quick Questions */}
+              {/* Enhanced Quick Questions */}
               <Box>
-                <Typography variant="body2" color="textSecondary" gutterBottom>
-                  Quick questions:
+                <Typography 
+                  variant="body2" 
+                  color="text.secondary" 
+                  gutterBottom 
+                  sx={{ fontWeight: 600, mb: 1.5 }}
+                >
+                  💡 Try asking:
                 </Typography>
                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                   {[
@@ -480,7 +837,20 @@ const CVAIAssistant: React.FC<CVAIAssistantProps> = ({
                       size="small"
                       variant="outlined"
                       onClick={() => setChatMessage(question)}
-                      sx={{ cursor: 'pointer' }}
+                      sx={{ 
+                        cursor: 'pointer',
+                        fontSize: { xs: '0.7rem', md: '0.75rem' },
+                        height: { xs: 28, md: 32 },
+                        borderRadius: 2,
+                        '&:hover': {
+                          bgcolor: theme.palette.primary.light,
+                          color: theme.palette.primary.contrastText,
+                          borderColor: theme.palette.primary.main,
+                          transform: 'translateY(-2px)',
+                          boxShadow: `0 4px 8px ${theme.palette.primary.main}20`
+                        },
+                        transition: 'all 0.2s ease-in-out'
+                      }}
                     />
                   ))}
                 </Stack>
@@ -490,13 +860,44 @@ const CVAIAssistant: React.FC<CVAIAssistantProps> = ({
         </Box>
       </DialogContent>
 
-      <DialogActions>
-        <Button onClick={onClose}>Close</Button>
+      <DialogActions 
+        sx={{ 
+          p: { xs: 2, md: 3 },
+          gap: 1,
+          borderTop: `1px solid ${theme.palette.divider}`,
+          bgcolor: theme.palette.mode === 'dark' 
+            ? theme.palette.background.paper 
+            : theme.palette.background.default,
+          flexDirection: isMobile ? 'column' : 'row'
+        }}
+      >
+        <Button 
+          onClick={onClose}
+          variant="outlined"
+          fullWidth={isMobile}
+          sx={{ 
+            borderRadius: 2,
+            textTransform: 'none',
+            fontWeight: 600
+          }}
+        >
+          Close Assistant
+        </Button>
         {activeTab === 0 && (
           <Button 
             variant="contained" 
             startIcon={<Refresh />}
             onClick={() => window.location.reload()}
+            fullWidth={isMobile}
+            sx={{ 
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 600,
+              background: `linear-gradient(135deg, ${theme.palette.success.main}, ${theme.palette.success.dark})`,
+              '&:hover': {
+                background: `linear-gradient(135deg, ${theme.palette.success.dark}, ${theme.palette.success.main})`,
+              }
+            }}
           >
             Re-analyze CV
           </Button>

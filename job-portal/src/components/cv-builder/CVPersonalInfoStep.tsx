@@ -13,6 +13,9 @@ import {
   Divider,
   Stack,
   Chip,
+  useTheme,
+  useMediaQuery,
+  InputAdornment,
 } from '@mui/material';
 import {
   SmartToy,
@@ -38,6 +41,8 @@ const CVPersonalInfoStep: React.FC<CVPersonalInfoStepProps> = ({
   onGenerateAIContent,
 }) => {
   const [generating, setGenerating] = useState<string | null>(null);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const handleInputChange = (field: keyof PersonalInfo) => (
     event: React.ChangeEvent<HTMLInputElement>
@@ -65,19 +70,29 @@ const CVPersonalInfoStep: React.FC<CVPersonalInfoStepProps> = ({
   };
 
   return (
-    <Box>
-      <Grid container spacing={3}>
-        {/* Personal Information */}
-        <Grid item xs={12} md={6}>
-          <Card elevation={1}>
-            <CardContent>
+    <Box sx={{ maxWidth: '100%', overflow: 'hidden' }}>
+      <Grid container spacing={{ xs: 2, md: 3 }}>
+        {/* Personal Information - Optimized for Mobile */}
+        <Grid item xs={12} lg={6}>
+          <Card 
+            elevation={0}
+            sx={{ 
+              border: `1px solid ${theme.palette.divider}`,
+              borderRadius: 2,
+              height: 'fit-content'
+            }}
+          >
+            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
               <Box display="flex" alignItems="center" mb={2}>
-                <Person sx={{ mr: 1, color: 'primary.main' }} />
-                <Typography variant="h6">Personal Information</Typography>
+                <Person sx={{ mr: 1, color: 'primary.main', fontSize: { xs: 20, md: 24 } }} />
+                <Typography variant={isMobile ? "subtitle1" : "h6"} sx={{ fontWeight: 600 }}>
+                  Personal Details
+                </Typography>
               </Box>
               
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
+              <Grid container spacing={{ xs: 1.5, md: 2 }}>
+                {/* Compact Name Fields */}
+                <Grid item xs={6}>
                   <TextField
                     fullWidth
                     label="First Name"
@@ -85,10 +100,11 @@ const CVPersonalInfoStep: React.FC<CVPersonalInfoStepProps> = ({
                     onChange={handleInputChange('firstName')}
                     required
                     variant="outlined"
+                    size={isMobile ? "small" : "medium"}
                   />
                 </Grid>
                 
-                <Grid item xs={12} sm={6}>
+                <Grid item xs={6}>
                   <TextField
                     fullWidth
                     label="Last Name"
@@ -96,33 +112,46 @@ const CVPersonalInfoStep: React.FC<CVPersonalInfoStepProps> = ({
                     onChange={handleInputChange('lastName')}
                     required
                     variant="outlined"
+                    size={isMobile ? "small" : "medium"}
                   />
                 </Grid>
                 
+                {/* Email - Full Width */}
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label="Email Address"
+                    label="Email"
                     type="email"
                     value={data.email}
                     onChange={handleInputChange('email')}
                     required
                     variant="outlined"
+                    size={isMobile ? "small" : "medium"}
                     InputProps={{
-                      startAdornment: <Email sx={{ mr: 1, color: 'action.active' }} />,
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Email sx={{ fontSize: { xs: 18, md: 20 }, color: 'primary.main' }} />
+                        </InputAdornment>
+                      ),
                     }}
                   />
                 </Grid>
                 
+                {/* Phone and Location - Compact Row */}
                 <Grid item xs={12} sm={6}>
                   <TextField
                     fullWidth
-                    label="Phone Number"
+                    label="Phone"
                     value={data.phone}
                     onChange={handleInputChange('phone')}
                     variant="outlined"
+                    size={isMobile ? "small" : "medium"}
                     InputProps={{
-                      startAdornment: <Phone sx={{ mr: 1, color: 'action.active' }} />,
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Phone sx={{ fontSize: { xs: 18, md: 20 }, color: 'primary.main' }} />
+                        </InputAdornment>
+                      ),
                     }}
                   />
                 </Grid>
@@ -134,23 +163,34 @@ const CVPersonalInfoStep: React.FC<CVPersonalInfoStepProps> = ({
                     value={data.location}
                     onChange={handleInputChange('location')}
                     variant="outlined"
+                    size={isMobile ? "small" : "medium"}
                     placeholder="City, Country"
                     InputProps={{
-                      startAdornment: <LocationOn sx={{ mr: 1, color: 'action.active' }} />,
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <LocationOn sx={{ fontSize: { xs: 18, md: 20 }, color: 'primary.main' }} />
+                        </InputAdornment>
+                      ),
                     }}
                   />
                 </Grid>
                 
+                {/* Social Links - More Compact */}
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label="LinkedIn Profile"
+                    label="LinkedIn"
                     value={data.linkedIn || ''}
                     onChange={handleInputChange('linkedIn')}
                     variant="outlined"
-                    placeholder="https://linkedin.com/in/yourprofile"
+                    size={isMobile ? "small" : "medium"}
+                    placeholder="linkedin.com/in/yourprofile"
                     InputProps={{
-                      startAdornment: <LinkedIn sx={{ mr: 1, color: 'action.active' }} />,
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <LinkedIn sx={{ fontSize: { xs: 18, md: 20 }, color: '#0077B5' }} />
+                        </InputAdornment>
+                      ),
                     }}
                   />
                 </Grid>
@@ -158,13 +198,18 @@ const CVPersonalInfoStep: React.FC<CVPersonalInfoStepProps> = ({
                 <Grid item xs={12}>
                   <TextField
                     fullWidth
-                    label="Website/Portfolio"
+                    label="Website"
                     value={data.website || ''}
                     onChange={handleInputChange('website')}
                     variant="outlined"
-                    placeholder="https://yourwebsite.com"
+                    size={isMobile ? "small" : "medium"}
+                    placeholder="yourwebsite.com"
                     InputProps={{
-                      startAdornment: <Language sx={{ mr: 1, color: 'action.active' }} />,
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Language sx={{ fontSize: { xs: 18, md: 20 }, color: 'primary.main' }} />
+                        </InputAdornment>
+                      ),
                     }}
                   />
                 </Grid>
@@ -173,14 +218,28 @@ const CVPersonalInfoStep: React.FC<CVPersonalInfoStepProps> = ({
           </Card>
         </Grid>
 
-        {/* Professional Summary */}
-        <Grid item xs={12} md={6}>
-          <Card elevation={1}>
-            <CardContent>
-              <Box display="flex" alignItems="center" justifyContent="between" mb={2}>
+        {/* Professional Summary - Compact Version */}
+        <Grid item xs={12} lg={6}>
+          <Card 
+            elevation={0}
+            sx={{ 
+              border: `1px solid ${theme.palette.divider}`,
+              borderRadius: 2,
+              height: 'fit-content'
+            }}
+          >
+            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+              <Box 
+                display="flex" 
+                alignItems="center" 
+                justifyContent="space-between" 
+                mb={2}
+              >
                 <Box display="flex" alignItems="center">
-                  <AutoFixHigh sx={{ mr: 1, color: 'primary.main' }} />
-                  <Typography variant="h6">Professional Summary</Typography>
+                  <AutoFixHigh sx={{ mr: 1, color: 'primary.main', fontSize: { xs: 20, md: 24 } }} />
+                  <Typography variant={isMobile ? "subtitle1" : "h6"} sx={{ fontWeight: 600 }}>
+                    Professional Summary
+                  </Typography>
                 </Box>
                 
                 <Tooltip title="Generate with AI">
@@ -188,11 +247,12 @@ const CVPersonalInfoStep: React.FC<CVPersonalInfoStepProps> = ({
                     onClick={generateProfessionalSummary}
                     disabled={generating === 'summary'}
                     color="primary"
+                    size={isMobile ? "small" : "medium"}
                   >
                     {generating === 'summary' ? (
-                      <CircularProgress size={20} />
+                      <CircularProgress size={16} />
                     ) : (
-                      <SmartToy />
+                      <SmartToy sx={{ fontSize: { xs: 18, md: 20 } }} />
                     )}
                   </IconButton>
                 </Tooltip>
@@ -201,51 +261,74 @@ const CVPersonalInfoStep: React.FC<CVPersonalInfoStepProps> = ({
               <TextField
                 fullWidth
                 multiline
-                rows={6}
+                rows={isMobile ? 4 : 5}
                 label="Professional Summary"
                 value={data.professionalSummary}
                 onChange={handleInputChange('professionalSummary')}
                 variant="outlined"
-                placeholder="Write a compelling professional summary that highlights your key strengths, experience, and career objectives..."
-                helperText="A strong professional summary is 2-3 sentences that capture your most relevant qualifications and career goals."
+                size={isMobile ? "small" : "medium"}
+                placeholder="Compelling summary highlighting your key strengths and career objectives..."
+                helperText="2-3 sentences capturing your most relevant qualifications and goals."
               />
               
-              <Box mt={2}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Tips for a great professional summary:
-                </Typography>
+              {/* Compact Tips */}
+              <Box mt={1.5}>
                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  <Chip label="Highlight key achievements" size="small" variant="outlined" />
-                  <Chip label="Include relevant keywords" size="small" variant="outlined" />
-                  <Chip label="Show your value proposition" size="small" variant="outlined" />
-                  <Chip label="Keep it concise" size="small" variant="outlined" />
+                  <Chip 
+                    label="Key achievements" 
+                    size="small" 
+                    variant="outlined"
+                    sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}
+                  />
+                  <Chip 
+                    label="Relevant keywords" 
+                    size="small" 
+                    variant="outlined"
+                    sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}
+                  />
+                  <Chip 
+                    label="Value proposition" 
+                    size="small" 
+                    variant="outlined"
+                    sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' } }}
+                  />
                 </Stack>
               </Box>
             </CardContent>
           </Card>
 
-          {/* Summary Tips */}
-          <Card elevation={1} sx={{ mt: 2, bgcolor: 'background.default' }}>
-            <CardContent>
-              <Typography variant="subtitle2" gutterBottom color="primary">
-                💡 Professional Summary Examples
-              </Typography>
-              
-              <Box sx={{ mb: 1 }}>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Marketing Professional:</strong> "Results-driven marketing specialist with 5+ years of experience in digital campaigns and brand management. Proven track record of increasing brand awareness by 40% and driving $2M+ in revenue growth."
+          {/* Quick Examples - Only show on larger screens */}
+          {!isMobile && (
+            <Card 
+              elevation={0}
+              sx={{ 
+                mt: 2, 
+                bgcolor: theme.palette.grey[50],
+                border: `1px solid ${theme.palette.divider}`,
+                borderRadius: 2
+              }}
+            >
+              <CardContent sx={{ p: 2 }}>
+                <Typography variant="subtitle2" gutterBottom color="primary" sx={{ fontWeight: 600 }}>
+                  💡 Quick Examples
                 </Typography>
-              </Box>
-              
-              <Divider sx={{ my: 1 }} />
-              
-              <Box>
-                <Typography variant="body2" color="text.secondary">
-                  <strong>Software Developer:</strong> "Full-stack developer with expertise in React, Node.js, and cloud technologies. Passionate about creating scalable solutions and have successfully delivered 20+ projects for Fortune 500 companies."
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
+                
+                <Box sx={{ mb: 1 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.4 }}>
+                    <strong>Marketing:</strong> "Results-driven marketing specialist with 5+ years in digital campaigns and brand management..."
+                  </Typography>
+                </Box>
+                
+                <Divider sx={{ my: 1 }} />
+                
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.4 }}>
+                    <strong>Developer:</strong> "Full-stack developer with expertise in React, Node.js, and cloud technologies..."
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          )}
         </Grid>
       </Grid>
     </Box>

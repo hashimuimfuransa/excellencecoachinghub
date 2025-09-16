@@ -101,38 +101,32 @@ class AuthService {
     console.log('🔍 AuthData user:', authData?.user);
     console.log('🔍 AuthData token:', authData?.token);
     
-    // Enhanced token handling for Google OAuth
+    // Simple token handling like homepage
     if (authData?.token) {
-      // Generate a more robust token for Google OAuth sessions
       const googleToken = authData.token.startsWith('google_') 
         ? authData.token 
-        : `google_oauth_new_${Date.now()}_${authData.token}`;
+        : `google_jwt_${Date.now()}`;
       
       localStorage.setItem('token', googleToken);
-      localStorage.setItem('google_oauth_session', 'true');
-      localStorage.setItem('google_oauth_persistent', 'true');
-      localStorage.setItem('session_timestamp', Date.now().toString());
-      console.log('✅ Google OAuth persistent token stored:', googleToken.substring(0, 20) + '...');
+      console.log('✅ Google token stored:', googleToken.substring(0, 20) + '...');
     }
     
     if (authData?.user) {
-      // Store user data with additional Google OAuth metadata
-      const enhancedUser = {
+      // Simple user data storage like homepage
+      const userData = {
         ...authData.user,
-        provider: 'google',
-        sessionStarted: new Date().toISOString(),
-        sessionId: `google_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        provider: 'google'
       };
       
-      localStorage.setItem('user', JSON.stringify(enhancedUser));
+      localStorage.setItem('user', JSON.stringify(userData));
       
-      // Also save to registeredUsers array for future Google login detection
+      // Save to registeredUsers for future login detection
       try {
         const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
         const existingIndex = registeredUsers.findIndex((user: any) => user.email === authData.user.email);
         
         const userToSave = {
-          ...enhancedUser,
+          ...userData,
           registrationCompleted: true,
           lastLogin: new Date().toISOString()
         };
@@ -144,7 +138,7 @@ class AuthService {
         }
         
         localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
-        console.log('✅ User saved to registeredUsers for future Google login detection');
+        console.log('✅ User saved for future Google login detection');
       } catch (error) {
         console.error('Error saving user to registeredUsers:', error);
       }
@@ -153,16 +147,13 @@ class AuthService {
     return authData;
   }
 
-  // Logout user
+  // Logout user - simplified like homepage
   logout(): void {
     console.log('🚪 Logging out user...');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    localStorage.removeItem('google_oauth_session');
-    localStorage.removeItem('google_oauth_persistent');
-    localStorage.removeItem('session_timestamp');
     
-    // Clear any Google Sign-In session if it exists
+    // Clear Google Sign-In session if it exists
     if (window.google?.accounts?.id) {
       try {
         window.google.accounts.id.disableAutoSelect();
@@ -172,9 +163,7 @@ class AuthService {
       }
     }
     
-    console.log('✅ Logout completed successfully with all session markers cleared');
-    // Don't force redirect here - let the component handle navigation
-    // This prevents refresh loops and gives better control to the calling component
+    console.log('✅ Logout completed successfully');
   }
 
   // Get current user from localStorage
@@ -199,50 +188,13 @@ class AuthService {
     return localStorage.getItem('token');
   }
 
-  // Check if user is authenticated
+  // Check if user is authenticated - simplified like homepage
   isAuthenticated(): boolean {
     const token = this.getToken();
     const user = this.getCurrentUser();
     
-    if (!token || !user) {
-      return false;
-    }
-    
-    // Enhanced validation for Google OAuth sessions - very lenient for persistent sessions
-    const isGoogleSession = localStorage.getItem('google_oauth_session') === 'true';
-    const isPersistentSession = localStorage.getItem('google_oauth_persistent') === 'true';
-    
-    if (isGoogleSession || isPersistentSession) {
-      const sessionTimestamp = localStorage.getItem('session_timestamp');
-      if (sessionTimestamp) {
-        const sessionAge = Date.now() - parseInt(sessionTimestamp);
-        // Persistent sessions last longer (30 days), regular Google sessions last 7 days
-        const maxSessionAge = isPersistentSession ? 30 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
-        
-        if (sessionAge > maxSessionAge) {
-          const sessionType = isPersistentSession ? 'persistent' : 'regular';
-          const maxDays = isPersistentSession ? 30 : 7;
-          console.warn(`🕒 Google OAuth ${sessionType} session expired (${maxDays}+ days), clearing auth data`);
-          this.logout();
-          return false;
-        } else {
-          // Only refresh timestamp occasionally to reduce overhead (every 30 minutes max)
-          const shouldRefresh = sessionAge > 30 * 60 * 1000; // 30 minutes
-          if (shouldRefresh) {
-            localStorage.setItem('session_timestamp', Date.now().toString());
-          }
-          const sessionType = isPersistentSession ? 'persistent' : 'regular';
-          console.log(`✅ Google OAuth ${sessionType} session valid, age:`, Math.round(sessionAge / (60 * 60 * 1000)), 'hours');
-        }
-      } else {
-        // If no session timestamp exists for Google OAuth, create one
-        localStorage.setItem('session_timestamp', Date.now().toString());
-        console.log('✅ Google OAuth session timestamp created');
-      }
-    }
-    
-    console.log('✅ User is authenticated:', user.email);
-    return true;
+    // Simple validation like homepage - just check if token and user exist
+    return !!(token && user);
   }
 
   // Refresh user data

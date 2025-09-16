@@ -101,16 +101,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loginWithGoogle = async (): Promise<{requiresRoleSelection?: boolean; userData?: any}> => {
     try {
       setIsLoading(true);
-      const { default: newGoogleAuth } = await import('../services/newGoogleAuth');
-      const result = await newGoogleAuth.login();
+      const { default: googleAuthService } = await import('../services/googleAuthService');
+      const result = await googleAuthService.signIn();
       
       if (!result.success) {
         throw new Error(result.error || 'Google authentication failed');
       }
 
-      if (result.requiresRoleSelection && result.user) {
+      if (result.requiresRoleSelection && result.userData) {
         // New user needs role selection
-        return { requiresRoleSelection: true, userData: result.user };
+        return { requiresRoleSelection: true, userData: result.userData };
       }
 
       // User already exists and is logged in
@@ -148,10 +148,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const registerWithGoogle = async (userData: any, role: string): Promise<void> => {
     try {
       setIsLoading(true);
-      const { default: newGoogleAuth } = await import('../services/newGoogleAuth');
+      const { default: googleAuthService } = await import('../services/googleAuthService');
       
       // Complete registration with the new Google auth service
-      const result = await newGoogleAuth.completeRegistration(userData, role);
+      const result = await googleAuthService.completeRegistration(userData, role);
       
       if (!result.success) {
         throw new Error(result.error || 'Google registration failed');

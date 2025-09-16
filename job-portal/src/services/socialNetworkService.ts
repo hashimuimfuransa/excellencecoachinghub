@@ -308,7 +308,7 @@ class SocialNetworkService {
   }
 
   async getConnectionSuggestions(limit = 10) {
-    // Check for Google users using the new token format from newGoogleAuth
+    // Check for Google users using the token format from Google auth service
     const token = localStorage.getItem('token');
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     const isGoogleUser = token?.startsWith('google_') || currentUser.authProvider === 'google';

@@ -136,6 +136,59 @@ app.set('trust proxy', 1);
 // Disable ETag to prevent 304 responses for AI matched jobs
 app.set('etag', false);
 
+// CORS configuration - Apply EARLY before other middleware
+const corsOptions = {
+  origin: function (origin: any, callback: any) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:3002',
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'https://excellencecoachinghub.onrender.com',
+      'https://jobsexcellencecoachinghub.onrender.com',
+      'https://adminexcellencecoachinghub.onrender.com',
+      'https://ech-w16g.onrender.com',
+      'https://exjobnet.com', // Updated job portal domain
+      'https://excellencecoachinghub.com',       // Add root domain too
+      process.env['FRONTEND_URL'] || 'http://localhost:3000'
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(null, true); // Allow all origins for debugging
+    }
+  },
+  credentials: true,
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'],
+  allowedHeaders: [
+    'Origin',
+    'X-Requested-With',
+    'Content-Type',
+    'Accept',
+    'Authorization',
+    'Cache-Control',
+    'Pragma',
+    'X-Total-Count',
+    'Access-Control-Allow-Origin',
+    'Access-Control-Allow-Headers',
+    'Access-Control-Allow-Methods'
+  ],
+  exposedHeaders: ['X-Total-Count', 'Authorization']
+};
+
+// Apply CORS middleware FIRST
+app.use(cors(corsOptions));
+
+// Handle preflight requests for all routes
+app.options('*', cors(corsOptions));
+
 // Enhanced Security middleware with comprehensive headers
 app.use(helmet({
   // Cross-Origin Embedder Policy (disabled for WebRTC compatibility)
@@ -213,9 +266,9 @@ app.use((req, res, next) => {
   res.setHeader('X-Powered-By', 'Excellence Coaching Hub');
   res.setHeader('Server', 'ECH-Server');
   
-  // Cross-Origin headers for enhanced security
-  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-  res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+  // Cross-Origin headers for enhanced security (but not interfering with CORS)
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  // Removed Cross-Origin-Embedder-Policy to avoid CORS conflicts
   
   // Content Security headers
   res.setHeader('X-Download-Options', 'noopen');
@@ -281,58 +334,42 @@ app.use('/api/auth/forgot-password', passwordResetLimiter);
 app.use('/api/auth/reset-password', passwordResetLimiter);
 app.use('/api/email/', emailLimiter);
 
-// CORS configuration - More permissive for debugging
-const corsOptions = {
-  origin: function (origin: any, callback: any) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:3002',
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'https://excellencecoachinghub.onrender.com',
-      'https://jobsexcellencecoachinghub.onrender.com',
-      'https://adminexcellencecoachinghub.onrender.com',
-      'https://ech-w16g.onrender.com',
-      'https://exjobnet.com', // Updated job portal domain
-      'https://excellencecoachinghub.com',       // Add root domain too
-      process.env['FRONTEND_URL'] || 'http://localhost:3000'
-    ];
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log('CORS blocked origin:', origin);
-      callback(null, true); // Allow all origins for debugging
-    }
-  },
-  credentials: true,
-  optionsSuccessStatus: 200,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'],
-  allowedHeaders: [
-    'Origin',
-    'X-Requested-With',
-    'Content-Type',
-    'Accept',
-    'Authorization',
-    'Cache-Control',
-    'Pragma',
-    'X-Total-Count',
-    'Access-Control-Allow-Origin',
-    'Access-Control-Allow-Headers',
-    'Access-Control-Allow-Methods'
-  ],
-  exposedHeaders: ['X-Total-Count', 'Authorization']
-};
+// CORS middleware already applied earlier
 
-// Apply CORS middleware
-app.use(cors(corsOptions));
-
-// Handle preflight requests for all routes
-app.options('*', cors(corsOptions));
+// Additional CORS headers middleware to ensure proper headers are set
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:3002',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'https://excellencecoachinghub.onrender.com',
+    'https://jobsexcellencecoachinghub.onrender.com',
+    'https://adminexcellencecoachinghub.onrender.com',
+    'https://ech-w16g.onrender.com',
+    'https://exjobnet.com',
+    'https://excellencecoachinghub.com'
+  ];
+  
+  if (allowedOrigins.includes(origin as string) || !origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  }
+  
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, Pragma');
+  res.setHeader('Access-Control-Expose-Headers', 'X-Total-Count, Authorization');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
+  next();
+});
 
 // Debug middleware to log all requests
 app.use((req, res, next) => {

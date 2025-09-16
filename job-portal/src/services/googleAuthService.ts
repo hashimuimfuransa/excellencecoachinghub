@@ -5,7 +5,7 @@
  */
 
 import config from '../config/env';
-import { apiPost, handleApiResponse } from './api';
+import { apiPost } from './api';
 
 // Types that match local auth service
 export interface User {
@@ -187,30 +187,35 @@ class GoogleAuthService {
         platform: 'job-portal'
       });
       
-      const result = handleApiResponse(response);
-      console.log('🔍 Google auth result:', result);
-      console.log('🔍 Google auth result.data:', result.data);
-      console.log('🔍 Google auth result structure keys:', Object.keys(result));
+      // The response from apiPost is already the JSON data from the backend
+      console.log('🔍 Google auth response:', response);
+      console.log('🔍 Google auth response structure keys:', Object.keys(response));
       
-      if (result.data) {
-        if (result.data.requiresRoleSelection) {
+      // Log each key and its value to understand the structure
+      Object.keys(response).forEach(key => {
+        console.log(`🔍 response.${key}:`, response[key]);
+      });
+      
+      if (response.success && response.data) {
+        if (response.data.requiresRoleSelection) {
           // New user needs role selection
+          console.log('🔄 New user requires role selection');
           return {
             success: true,
             requiresRoleSelection: true,
-            userData: result.data.googleUserData
+            userData: response.data.googleUserData
           };
-        } else if (result.data.user && result.data.token) {
+        } else if (response.data.user && response.data.token) {
           // Existing user - they are logged in via sendTokenResponse
-          localStorage.setItem('token', result.data.token);
-          localStorage.setItem('user', JSON.stringify(result.data.user));
+          localStorage.setItem('token', response.data.token);
+          localStorage.setItem('user', JSON.stringify(response.data.user));
           
-          console.log('✅ Existing Google user logged in:', result.data.user.email);
+          console.log('✅ Existing Google user logged in:', response.data.user.email);
           
           return {
             success: true,
-            user: result.data.user,
-            token: result.data.token,
+            user: response.data.user,
+            token: response.data.token,
             requiresRoleSelection: false
           };
         }
@@ -329,38 +334,24 @@ class GoogleAuthService {
       };
 
       const response = await apiPost('/auth/google/complete-registration', registrationData);
-      const authData = handleApiResponse(response);
       
-      // Store token and user data (same as local auth)
-      // The response should have data.token and data.user structure
-      if (authData.data) {
-        localStorage.setItem('token', authData.data.token);
-        if (authData.data.user) {
-          localStorage.setItem('user', JSON.stringify(authData.data.user));
+      console.log('🔍 Google registration response:', response);
+      console.log('🔍 Google registration response structure keys:', Object.keys(response));
+      
+      // The response from apiPost is already the JSON data from the backend
+      if (response.success && response.data) {
+        localStorage.setItem('token', response.data.token);
+        if (response.data.user) {
+          localStorage.setItem('user', JSON.stringify(response.data.user));
         }
         
         // Welcome email is sent automatically by the backend
-        console.log('✅ Google registration completed:', authData.data.user?.email);
+        console.log('✅ Google registration completed:', response.data.user?.email);
 
         return {
           success: true,
-          user: authData.data.user,
-          token: authData.data.token,
-          requiresRoleSelection: false
-        };
-      } else {
-        // Fallback for direct token/user response
-        localStorage.setItem('token', authData.token);
-        if (authData.user) {
-          localStorage.setItem('user', JSON.stringify(authData.user));
-        }
-        
-        console.log('✅ Google registration completed:', authData.user?.email);
-
-        return {
-          success: true,
-          user: authData.user,
-          token: authData.token,
+          user: response.data.user,
+          token: response.data.token,
           requiresRoleSelection: false
         };
       }

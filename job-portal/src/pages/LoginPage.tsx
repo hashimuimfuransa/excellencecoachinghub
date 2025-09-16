@@ -176,17 +176,9 @@ const LoginPage: React.FC = () => {
       } else if (error.message?.includes('not configured')) {
         setError('Google authentication is not properly configured. Please contact support.');
       } else if (error.message?.includes('popup')) {
-        // Check if user is on mobile for better error message
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        if (isMobile) {
-          setError('Please allow popups in your mobile browser settings, or try refreshing the page and tapping the Google button again.');
-        } else {
-          setError('Please allow popups for Google sign-in to work properly.');
-        }
+        setError('Please allow popups for Google sign-in to work properly.');
       } else if (error.message?.includes('not available')) {
         setError('Google services are not available. Please try again later.');
-      } else if (error.message?.includes('timed out')) {
-        setError('Google sign-in timed out. Please try again.');
       } else {
         setError('Unable to sign in with Google. Please try again or use email/password.');
       }
@@ -505,7 +497,7 @@ const LoginPage: React.FC = () => {
                       </Typography>
                     </Divider>
                     
-                    {/* Google Sign In Button - Mobile Optimized */}
+                    {/* Google Sign In Button */}
                     <Button
                       fullWidth
                       variant="outlined"
@@ -514,40 +506,20 @@ const LoginPage: React.FC = () => {
                       onClick={handleGoogleLogin}
                       sx={{
                         mb: 2,
-                        py: { xs: 1.5, sm: 1 }, // Taller on mobile for easier touch
-                        px: { xs: 2, sm: 1.5 },
+                        py: 1,
                         borderRadius: 2,
                         borderColor: mode === 'dark' ? '#555555' : '#e0e0e0',
                         color: mode === 'dark' ? '#ffffff' : '#424242',
                         textTransform: 'none',
                         fontWeight: 600,
-                        fontSize: { xs: '1rem', sm: '0.875rem' }, // Larger font on mobile
                         backgroundColor: mode === 'dark' ? 'transparent' : 'white',
-                        minHeight: { xs: '48px', sm: '40px' }, // Minimum touch target size on mobile
-                        position: 'relative',
-                        cursor: 'pointer',
-                        // Mobile-specific optimizations
-                        WebkitTapHighlightColor: 'transparent',
-                        userSelect: 'none',
                         '&:hover': {
                           borderColor: '#DB4437',
                           backgroundColor: mode === 'dark' ? 'rgba(219, 68, 55, 0.1)' : '#fff8f8',
                         },
-                        '&:active': {
-                          transform: 'scale(0.98)', // Slight scale feedback on touch
-                          transition: 'transform 0.1s',
-                        },
                         '&:disabled': {
                           borderColor: mode === 'dark' ? '#333333' : '#e0e0e0',
-                          backgroundColor: mode === 'dark' ? '#1a1a1a' : '#f5f5f5',
-                          transform: 'none'
-                        },
-                        // Responsive touch behavior
-                        '@media (hover: none) and (pointer: coarse)': {
-                          '&:hover': {
-                            borderColor: mode === 'dark' ? '#555555' : '#e0e0e0',
-                            backgroundColor: mode === 'dark' ? 'transparent' : 'white',
-                          }
+                          backgroundColor: mode === 'dark' ? '#1a1a1a' : '#f5f5f5'
                         }
                       }}
                     >

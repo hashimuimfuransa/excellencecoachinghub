@@ -72,7 +72,14 @@ class GoogleAuthService {
   constructor() {
     this.clientId = config.googleClientId;
     // Dynamic redirect URI based on current environment
-    this.redirectUri = `${window.location.origin}/login`;
+    if (window.location.hostname === 'exjobnet.com' || window.location.hostname === 'www.exjobnet.com') {
+      // Production environment
+      this.redirectUri = 'https://exjobnet.com/login';
+    } else {
+      // Development environment
+      this.redirectUri = `${window.location.origin}/login`;
+    }
+    console.log('🔗 OAuth Redirect URI:', this.redirectUri);
   }
 
   /** Detect mobile devices */

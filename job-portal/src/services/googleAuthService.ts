@@ -67,18 +67,17 @@ class GoogleAuthService {
   private clientId: string;
   private isInitialized = false;
   private initPromise: Promise<void> | null = null;
-  private redirectUri = 'https://exjobnet.com/login'; // Must match Google Cloud console
+  private redirectUri: string;
 
   constructor() {
     this.clientId = config.googleClientId;
+    // Dynamic redirect URI based on current environment
+    this.redirectUri = `${window.location.origin}/login`;
   }
 
   /** Detect mobile devices */
   private isMobileDevice(): boolean {
-    const mobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(navigator.userAgent);
-    const touchAndSmallScreen = (window.innerWidth <= 1024 && 'ontouchstart' in window);
-    const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    return mobileUA || touchAndSmallScreen || (hasTouch && window.innerWidth <= 1200);
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   }
 
   /** Check popup support */

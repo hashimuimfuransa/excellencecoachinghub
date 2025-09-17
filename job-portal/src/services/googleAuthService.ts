@@ -134,20 +134,22 @@ class GoogleAuthService {
       });
 
       console.log('🔍 Backend response:', response);
+      console.log('🔍 Response success:', response.success);
       console.log('🔍 Response data:', response.data);
 
-      if (response.success && response.data) {
-        console.log('🔍 Has requiresRoleSelection:', !!response.data.requiresRoleSelection);
-        console.log('🔍 Has user:', !!response.data.user);
-        console.log('🔍 Has token:', !!response.data.token);
-        
-        if (response.data.requiresRoleSelection) {
+      if (response.success) {
+        // For new users requiring role selection
+        if (response.data && response.data.requiresRoleSelection) {
+          console.log('🆕 New user - role selection required');
           return { 
             success: true, 
             requiresRoleSelection: true, 
             userData: response.data.googleUserData 
           };
-        } else if (response.data.user && response.data.token) {
+        }
+        // For existing users (login)
+        else if (response.data && response.data.user && response.data.token) {
+          console.log('✅ Existing user - logging in');
           localStorage.setItem('token', response.data.token);
           localStorage.setItem('user', JSON.stringify(response.data.user));
           return { 

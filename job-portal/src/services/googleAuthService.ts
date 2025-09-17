@@ -67,39 +67,12 @@ class GoogleAuthService {
   private clientId: string;
   private isInitialized = false;
   private initPromise: Promise<void> | null = null;
-  private redirectUri: string;
 
   constructor() {
     this.clientId = config.googleClientId;
-    // Set redirect URI based on current environment and what's configured in Google Cloud Console
-    const hostname = window.location.hostname;
-    const origin = window.location.origin;
-    
-    if (hostname === 'exjobnet.com') {
-      // Production - use HTTPS without www
-      this.redirectUri = 'https://exjobnet.com/login';
-    } else if (hostname === 'www.exjobnet.com') {
-      // Production with www - redirect to www version
-      this.redirectUri = 'https://www.exjobnet.com/login';
-    } else if (hostname === 'jobsexcellencecoachinghamb.onrender.com') {
-      // Render subdomain for job portal
-      this.redirectUri = 'https://jobsexcellencecoachinghamb.onrender.com/login';
-    } else if (hostname === 'localhost') {
-      // Development environment - use exact port and protocol
-      const port = window.location.port;
-      if (port === '3000') {
-        this.redirectUri = 'http://localhost:3000/login';
-      } else if (port === '5173') {
-        this.redirectUri = 'http://localhost:5173/login';
-      } else {
-        this.redirectUri = `${origin}/login`;
-      }
-    } else {
-      // Fallback for other domains (including any other Render subdomains)
-      this.redirectUri = `${origin}/login`;
-    }
-    console.log('🔗 OAuth Redirect URI:', this.redirectUri);
-    console.log('🌍 Current hostname:', hostname);
+    // Using postmessage flow - no redirect URIs needed!
+    console.log('🚀 Using Google OAuth postmessage flow');
+    console.log('🌍 Current hostname:', window.location.hostname);
   }
 
   /** Detect mobile devices */
@@ -119,12 +92,12 @@ class GoogleAuthService {
   /** Load Google Identity Services script */
   private loadGoogleScript(): Promise<void> {
     return new Promise((resolve, reject) => {
-      if (window.google?.accounts?.id) return resolve();
+      if (window.google?.accounts?.oauth2 && window.google?.accounts?.id) return resolve();
 
       const existing = document.querySelector('script[src*="accounts.google.com/gsi/client"]');
       if (existing) {
         const waitForGoogle = () => {
-          if (window.google?.accounts?.id) resolve();
+          if (window.google?.accounts?.oauth2 && window.google?.accounts?.id) resolve();
           else setTimeout(waitForGoogle, 100);
         };
         waitForGoogle();
@@ -137,7 +110,7 @@ class GoogleAuthService {
       script.defer = true;
       script.onload = () => {
         const waitForGoogle = () => {
-          if (window.google?.accounts?.id) resolve();
+          if (window.google?.accounts?.oauth2 && window.google?.accounts?.id) resolve();
           else setTimeout(waitForGoogle, 100);
         };
         waitForGoogle();
@@ -174,6 +147,41 @@ class GoogleAuthService {
     }
   }
 
+  /** Exchange authorization code for tokens */
+  private async exchangeCodeForTokens(authorizationCode: string): Promise<AuthResult> {
+    try {
+      console.log('🔄 Exchanging authorization code for tokens...');
+      const response = await apiPost('/auth/google/exchange-code', {
+        code: authorizationCode,
+        platform: 'job-portal'
+      });
+
+      if (response.success && response.data) {
+        if (response.data.requiresRoleSelection) {
+          return { 
+            success: true, 
+            requiresRoleSelection: true, 
+            userData: response.data.googleUserData 
+          };
+        } else if (response.data.user && response.data.token) {
+          localStorage.setItem('token', response.data.token);
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+          return { 
+            success: true, 
+            user: response.data.user, 
+            token: response.data.token, 
+            requiresRoleSelection: false 
+          };
+        }
+      }
+
+      return { success: false, error: response.error || 'Token exchange failed' };
+    } catch (error: any) {
+      console.error('❌ Token exchange failed:', error);
+      return { success: false, error: error.message || 'Failed to exchange authorization code' };
+    }
+  }
+
   /** Send Google user info to backend */
   private async processGoogleAuth(userInfo: GoogleUserInfo): Promise<AuthResult> {
     try {
@@ -195,68 +203,56 @@ class GoogleAuthService {
     }
   }
 
-  /** Desktop sign-in (popup / One Tap) */
+  /** Google sign-in using postmessage flow (no redirects needed) */
   public async signIn(): Promise<AuthResult> {
-    await this.initialize();
-    if (!window.google?.accounts?.id) return { success: false, error: 'Google Identity Services not available' };
+    try {
+      await this.initialize();
+      
+      if (!window.google?.accounts?.oauth2) {
+        return { success: false, error: 'Google OAuth Services not available' };
+      }
 
-    const isMobile = this.isMobileDevice();
-    if (isMobile) return this.signInMobile();
-
-    return new Promise<AuthResult>((resolve) => {
-      try {
-        window.google!.accounts.id.initialize({
+      console.log('🔐 Starting Google OAuth postmessage flow...');
+      
+      return new Promise((resolve) => {
+        const client = window.google.accounts.oauth2.initCodeClient({
           client_id: this.clientId,
-          callback: async (response) => {
-            if (!response.credential) return resolve({ success: false, error: 'No credential received' });
-            const userInfo = this.parseJWT(response.credential);
-            const result = await this.processGoogleAuth(userInfo);
-            resolve(result);
-          },
-          auto_select: false,
-          cancel_on_tap_outside: false,
-          ux_mode: 'popup'
+          scope: 'openid email profile',
+          ux_mode: 'popup',
+          callback: async (response: any) => {
+            try {
+              if (response.code) {
+                console.log('✅ Authorization code received');
+                // Send the authorization code to backend
+                const result = await this.exchangeCodeForTokens(response.code);
+                resolve(result);
+              } else if (response.error) {
+                console.error('❌ OAuth error:', response.error);
+                resolve({ success: false, error: response.error });
+              } else {
+                resolve({ success: false, error: 'No authorization code received' });
+              }
+            } catch (error: any) {
+              console.error('❌ Token exchange error:', error);
+              resolve({ success: false, error: error.message || 'Authentication failed' });
+            }
+          }
         });
 
-        window.google!.accounts.id.prompt(); // Show One Tap / popup
-
-      } catch (error: any) {
-        resolve({ success: false, error: error.message || 'Failed to initialize Google sign-in' });
-      }
-    });
+        // Request the authorization code
+        client.requestCode();
+      });
+    } catch (error: any) {
+      console.error('❌ Authentication error:', error);
+      return { success: false, error: error.message || 'Authentication failed' };
+    }
   }
 
-  /** Mobile sign-in using redirect flow */
+  /** Mobile sign-in using postmessage flow (same as desktop now) */
   public async signInMobile(): Promise<AuthResult> {
-    await this.initialize();
-    if (!window.google?.accounts?.id) return { success: false, error: 'Google Identity Services not available' };
-
-    return new Promise<AuthResult>((resolve) => {
-      try {
-        // Store state for verification
-        const state = Math.random().toString(36).substring(2);
-        const nonce = Math.random().toString(36).substring(2);
-        localStorage.setItem('google_oauth_state', state);
-        localStorage.setItem('google_oauth_nonce', nonce);
-
-        const scope = encodeURIComponent('openid email profile');
-        const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-          `client_id=${encodeURIComponent(this.clientId)}` +
-          `&redirect_uri=${encodeURIComponent(this.redirectUri)}` +
-          `&response_type=code` +
-          `&scope=${scope}` +
-          `&state=${state}` +
-          `&nonce=${nonce}` +
-          `&access_type=online` +
-          `&include_granted_scopes=true`;
-
-        // Redirect to Google
-        window.location.href = googleAuthUrl;
-
-      } catch (error: any) {
-        resolve({ success: false, error: error.message || 'Failed to initiate mobile Google sign-in' });
-      }
-    });
+    console.log('📱 Using postmessage flow for mobile');
+    // Use the same postmessage flow for mobile - it works better than redirects
+    return this.signIn();
   }
 
   /** Handle callback after redirect (mobile flow) */

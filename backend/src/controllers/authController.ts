@@ -763,6 +763,98 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
 // @desc    Google OAuth callback handler
 // @route   POST /api/auth/google/callback
 // @access  Public
+// @desc    Google OAuth postmessage flow - exchange code for tokens
+// @route   POST /api/auth/google/exchange-code
+// @access  Public
+export const googleExchangeCode = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { code, platform } = req.body;
+
+    if (!code) {
+      res.status(400).json({
+        success: false,
+        error: 'Authorization code is required'
+      });
+      return;
+    }
+
+    console.log('🔄 Exchanging authorization code for tokens (postmessage flow)...');
+
+    // Exchange authorization code for access token (no redirect_uri needed for postmessage)
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        code,
+        grant_type: 'authorization_code'
+        // No redirect_uri needed for postmessage flow
+      })
+    });
+
+    if (!tokenResponse.ok) {
+      const errorData = await tokenResponse.json();
+      console.error('❌ Token exchange failed:', errorData);
+      throw new Error('Failed to exchange authorization code for access token');
+    }
+
+    const tokenData = await tokenResponse.json();
+    
+    if (!tokenData.access_token) {
+      throw new Error('No access token received');
+    }
+
+    // Get user info from Google
+    const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: {
+        'Authorization': `Bearer ${tokenData.access_token}`
+      }
+    });
+
+    if (!userResponse.ok) {
+      throw new Error('Failed to get user information from Google');
+    }
+
+    const userInfo = await userResponse.json();
+    
+    console.log('✅ Google user info received:', userInfo.email);
+
+    // Use the same logic as the existing googleAuth function
+    const email = userInfo.email;
+    let user = await User.findOne({ email });
+
+    if (user) {
+      // Existing user - log them in
+      console.log('✅ Existing user found, logging in');
+      sendTokenResponse(user, 200, res);
+    } else {
+      // New user - require role selection
+      console.log('🆕 New user detected, requiring role selection');
+      res.status(200).json({
+        success: true,
+        requiresRoleSelection: true,
+        googleUserData: {
+          email: userInfo.email,
+          firstName: userInfo.given_name || '',
+          lastName: userInfo.family_name || '',
+          googleId: userInfo.id,
+          profilePicture: userInfo.picture || '',
+          verified: userInfo.verified_email || false
+        }
+      });
+    }
+  } catch (error: any) {
+    console.error('❌ Google code exchange failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to exchange authorization code'
+    });
+  }
+};
+
 export const googleOAuthCallback = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { code, redirectUri, platform } = req.body;

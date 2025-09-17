@@ -71,15 +71,32 @@ class GoogleAuthService {
 
   constructor() {
     this.clientId = config.googleClientId;
-    // Dynamic redirect URI based on current environment
-    if (window.location.hostname === 'exjobnet.com' || window.location.hostname === 'www.exjobnet.com') {
-      // Production environment
+    // Set redirect URI based on current environment and what's configured in Google Cloud Console
+    const hostname = window.location.hostname;
+    const origin = window.location.origin;
+    
+    if (hostname === 'exjobnet.com') {
+      // Production - use HTTPS without www
       this.redirectUri = 'https://exjobnet.com/login';
+    } else if (hostname === 'www.exjobnet.com') {
+      // Production with www - redirect to non-www
+      this.redirectUri = 'https://www.exjobnet.com/login';
+    } else if (hostname === 'localhost') {
+      // Development environment - use exact port and protocol
+      const port = window.location.port;
+      if (port === '3000') {
+        this.redirectUri = 'http://localhost:3000/login';
+      } else if (port === '5173') {
+        this.redirectUri = 'http://localhost:5173/login';
+      } else {
+        this.redirectUri = `${origin}/login`;
+      }
     } else {
-      // Development environment
-      this.redirectUri = `${window.location.origin}/login`;
+      // Fallback for other domains
+      this.redirectUri = `${origin}/login`;
     }
     console.log('🔗 OAuth Redirect URI:', this.redirectUri);
+    console.log('🌍 Current hostname:', hostname);
   }
 
   /** Detect mobile devices */
@@ -304,6 +321,77 @@ class GoogleAuthService {
       logo_alignment: 'left',
       width: '100%'
     });
+  }
+
+  /** Create mobile sign-in button - alias for renderButton for backwards compatibility */
+  public async createMobileButton(element: HTMLElement): Promise<AuthResult> {
+    return new Promise(async (resolve) => {
+      try {
+        await this.initialize();
+        if (!window.google?.accounts?.id) {
+          resolve({ success: false, error: 'Google Identity Services not available' });
+          return;
+        }
+
+        element.innerHTML = '';
+        window.google.accounts.id.initialize({
+          client_id: this.clientId,
+          callback: async (response) => {
+            if (!response.credential) {
+              resolve({ success: false, error: 'No credential received' });
+              return;
+            }
+            const userInfo = this.parseJWT(response.credential);
+            const result = await this.processGoogleAuth(userInfo);
+            resolve(result);
+          },
+          auto_select: false,
+          cancel_on_tap_outside: false
+        });
+
+        window.google.accounts.id.renderButton(element, {
+          theme: 'outline',
+          size: 'large',
+          text: 'continue_with',
+          shape: 'rectangular',
+          logo_alignment: 'left',
+          width: '100%'
+        });
+      } catch (error: any) {
+        resolve({ success: false, error: error.message || 'Failed to create mobile button' });
+      }
+    });
+  }
+
+  /** Complete registration with role selection */
+  public async completeRegistration(userData: any, role: string): Promise<AuthResult> {
+    try {
+      const response = await apiPost('/auth/google/complete-registration', {
+        ...userData,
+        role,
+        platform: 'job-portal'
+      });
+
+      if (response.success && response.data) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        return { success: true, user: response.data.user, token: response.data.token };
+      }
+
+      return { success: false, error: response.error || 'Registration completion failed' };
+    } catch (error: any) {
+      return { success: false, error: error.message || 'Failed to complete registration' };
+    }
+  }
+
+  /** Get mobile popup instructions */
+  public getMobilePopupInstructions(): string {
+    return `📱 Enable Popups on Mobile:
+1. Open your browser settings
+2. Find "Site Settings" or "Permissions"  
+3. Look for "Pop-ups" or "Pop-ups and redirects"
+4. Set to "Allow" for this site
+5. Return here and try Google sign-in again`;
   }
 }
 

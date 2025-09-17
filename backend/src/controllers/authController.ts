@@ -779,6 +779,18 @@ export const googleExchangeCode = async (req: Request, res: Response, next: Next
     }
 
     console.log('🔄 Exchanging authorization code for tokens (postmessage flow)...');
+    console.log('🔧 Google Client ID:', process.env.GOOGLE_CLIENT_ID ? 'Present' : 'Missing');
+    console.log('🔧 Google Client Secret:', process.env.GOOGLE_CLIENT_SECRET ? 'Present' : 'Missing');
+
+    // Validate environment variables
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      console.error('❌ Missing Google OAuth environment variables');
+      res.status(500).json({
+        success: false,
+        error: 'Google OAuth not properly configured'
+      });
+      return;
+    }
 
     // Exchange authorization code for access token (no redirect_uri needed for postmessage)
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -787,8 +799,8 @@ export const googleExchangeCode = async (req: Request, res: Response, next: Next
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
-        client_id: process.env.GOOGLE_CLIENT_ID!,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
         code,
         grant_type: 'authorization_code'
         // No redirect_uri needed for postmessage flow
@@ -796,15 +808,26 @@ export const googleExchangeCode = async (req: Request, res: Response, next: Next
     });
 
     if (!tokenResponse.ok) {
-      const errorData = await tokenResponse.json();
-      console.error('❌ Token exchange failed:', errorData);
-      throw new Error('Failed to exchange authorization code for access token');
+      const errorData = await tokenResponse.json().catch(() => ({ error: 'Unknown error' }));
+      console.error('❌ Token exchange failed with status:', tokenResponse.status);
+      console.error('❌ Error response:', errorData);
+      res.status(400).json({
+        success: false,
+        error: 'Google token exchange failed',
+        details: errorData
+      });
+      return;
     }
 
     const tokenData = await tokenResponse.json();
     
     if (!tokenData.access_token) {
-      throw new Error('No access token received');
+      console.error('❌ No access token received from Google');
+      res.status(400).json({
+        success: false,
+        error: 'No access token received from Google'
+      });
+      return;
     }
 
     // Get user info from Google
@@ -815,11 +838,25 @@ export const googleExchangeCode = async (req: Request, res: Response, next: Next
     });
 
     if (!userResponse.ok) {
-      throw new Error('Failed to get user information from Google');
+      console.error('❌ Failed to get user info from Google:', userResponse.status);
+      res.status(400).json({
+        success: false,
+        error: 'Failed to get user information from Google'
+      });
+      return;
     }
 
     const userInfo = await userResponse.json();
     
+    if (!userInfo.email) {
+      console.error('❌ No email received from Google user info');
+      res.status(400).json({
+        success: false,
+        error: 'No email received from Google'
+      });
+      return;
+    }
+
     console.log('✅ Google user info received:', userInfo.email);
 
     // Use the same logic as the existing googleAuth function

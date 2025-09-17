@@ -23,7 +23,10 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
-import { LoginForm } from '../../shared/types';
+import { LoginForm, UserRole } from '../../shared/types';
+import GoogleAuthButton from '../../components/Auth/GoogleAuthButton';
+import RoleSelectionModal from '../../components/Auth/RoleSelectionModal';
+import { googleAuthService } from '../../services/googleAuthService';
 
 // Validation rules
 const validationRules = {
@@ -44,6 +47,9 @@ const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showRoleSelection, setShowRoleSelection] = useState(false);
+  const [googleUserData, setGoogleUserData] = useState<any>(null);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -116,6 +122,56 @@ const LoginPage: React.FC = () => {
 
   const handleTogglePasswordVisibility = () => {
     setShowPassword(!showPassword);
+  };
+
+  const handleGoogleAuthSuccess = async (result: any) => {
+    if (result.requiresRoleSelection && result.googleUserData) {
+      // New user - show role selection modal
+      setGoogleUserData(result.googleUserData);
+      setShowRoleSelection(true);
+    } else if (result.user && result.token) {
+      // Existing user - direct login success
+      toast.success(`Welcome back, ${result.user.firstName}!`);
+      navigate(from, { replace: true });
+      
+      // Trigger auth context update
+      window.location.reload();
+    }
+  };
+
+  const handleGoogleAuthError = (error: string) => {
+    setError(error);
+  };
+
+  const handleRoleSelectionSubmit = async (role: UserRole) => {
+    setIsGoogleLoading(true);
+    try {
+      const result = await googleAuthService.completeRegistration({
+        role,
+        platform: 'elearning',
+        googleUserData
+      });
+
+      if (result.user && result.token) {
+        toast.success(`Welcome to Excellence Coaching Hub, ${result.user.firstName}!`);
+        setShowRoleSelection(false);
+        navigate(from, { replace: true });
+        
+        // Trigger auth context update
+        window.location.reload();
+      }
+    } catch (error: any) {
+      const errorMessage = error.message || 'Registration completion failed';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const handleRoleSelectionClose = () => {
+    setShowRoleSelection(false);
+    setGoogleUserData(null);
   };
 
   return (
@@ -247,6 +303,20 @@ const LoginPage: React.FC = () => {
               {isLoading ? 'Signing In...' : 'Sign In'}
             </Button>
 
+            {/* Google Sign In */}
+            <Divider sx={{ my: 3 }}>
+              <Typography variant="body2" color="text.secondary">
+                OR
+              </Typography>
+            </Divider>
+
+            <GoogleAuthButton
+              onSuccess={handleGoogleAuthSuccess}
+              onError={handleGoogleAuthError}
+              disabled={isLoading}
+              variant="login"
+            />
+
             {/* Divider */}
             <Divider sx={{ my: 2 }}>
               <Typography variant="body2" color="text.secondary">
@@ -269,6 +339,17 @@ const LoginPage: React.FC = () => {
           </Box>
         </Paper>
       </Box>
+
+      {/* Role Selection Modal for new Google users */}
+      {googleUserData && (
+        <RoleSelectionModal
+          open={showRoleSelection}
+          onClose={handleRoleSelectionClose}
+          onSubmit={handleRoleSelectionSubmit}
+          googleUserData={googleUserData}
+          isLoading={isGoogleLoading}
+        />
+      )}
     </Container>
   );
 };

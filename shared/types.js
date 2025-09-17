@@ -1,11 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.BadgeType = exports.NotificationType = exports.ProctoringEventType = exports.ExamStatus = exports.QuizType = exports.CourseStatus = exports.UserRole = void 0;
+exports.CertificateType = exports.InterviewType = exports.PsychometricTestType = exports.ApplicationStatus = exports.EducationLevel = exports.ExperienceLevel = exports.JobType = exports.JobStatus = exports.BadgeType = exports.NotificationType = exports.ProctoringEventType = exports.ExamStatus = exports.QuizType = exports.CourseStatus = exports.UserRole = void 0;
 var UserRole;
 (function (UserRole) {
     UserRole["ADMIN"] = "admin";
+    UserRole["SUPER_ADMIN"] = "super_admin";
     UserRole["TEACHER"] = "teacher";
     UserRole["STUDENT"] = "student";
+    UserRole["PROFESSIONAL"] = "professional";
+    UserRole["EMPLOYER"] = "employer";
+    UserRole["JOB_SEEKER"] = "job_seeker";
 })(UserRole || (exports.UserRole = UserRole = {}));
 var CourseStatus;
 (function (CourseStatus) {
@@ -73,4 +77,69 @@ var BadgeType;
     BadgeType["EARLY_BIRD"] = "early_bird";
     BadgeType["STREAK_KEEPER"] = "streak_keeper";
 })(BadgeType || (exports.BadgeType = BadgeType = {}));
+var JobStatus;
+(function (JobStatus) {
+    JobStatus["DRAFT"] = "draft";
+    JobStatus["ACTIVE"] = "active";
+    JobStatus["PAUSED"] = "paused";
+    JobStatus["CLOSED"] = "closed";
+    JobStatus["EXPIRED"] = "expired";
+})(JobStatus || (exports.JobStatus = JobStatus = {}));
+var JobType;
+(function (JobType) {
+    JobType["FULL_TIME"] = "full_time";
+    JobType["PART_TIME"] = "part_time";
+    JobType["CONTRACT"] = "contract";
+    JobType["INTERNSHIP"] = "internship";
+    JobType["FREELANCE"] = "freelance";
+})(JobType || (exports.JobType = JobType = {}));
+var ExperienceLevel;
+(function (ExperienceLevel) {
+    ExperienceLevel["ENTRY_LEVEL"] = "entry_level";
+    ExperienceLevel["MID_LEVEL"] = "mid_level";
+    ExperienceLevel["SENIOR_LEVEL"] = "senior_level";
+    ExperienceLevel["EXECUTIVE"] = "executive";
+})(ExperienceLevel || (exports.ExperienceLevel = ExperienceLevel = {}));
+var EducationLevel;
+(function (EducationLevel) {
+    EducationLevel["HIGH_SCHOOL"] = "high_school";
+    EducationLevel["ASSOCIATE"] = "associate";
+    EducationLevel["BACHELOR"] = "bachelor";
+    EducationLevel["MASTER"] = "master";
+    EducationLevel["DOCTORATE"] = "doctorate";
+    EducationLevel["PROFESSIONAL"] = "professional";
+})(EducationLevel || (exports.EducationLevel = EducationLevel = {}));
+var ApplicationStatus;
+(function (ApplicationStatus) {
+    ApplicationStatus["APPLIED"] = "applied";
+    ApplicationStatus["UNDER_REVIEW"] = "under_review";
+    ApplicationStatus["SHORTLISTED"] = "shortlisted";
+    ApplicationStatus["INTERVIEW_SCHEDULED"] = "interview_scheduled";
+    ApplicationStatus["INTERVIEWED"] = "interviewed";
+    ApplicationStatus["OFFERED"] = "offered";
+    ApplicationStatus["REJECTED"] = "rejected";
+    ApplicationStatus["WITHDRAWN"] = "withdrawn";
+})(ApplicationStatus || (exports.ApplicationStatus = ApplicationStatus = {}));
+var PsychometricTestType;
+(function (PsychometricTestType) {
+    PsychometricTestType["PERSONALITY"] = "personality";
+    PsychometricTestType["COGNITIVE"] = "cognitive";
+    PsychometricTestType["APTITUDE"] = "aptitude";
+    PsychometricTestType["SKILLS"] = "skills";
+    PsychometricTestType["BEHAVIORAL"] = "behavioral";
+})(PsychometricTestType || (exports.PsychometricTestType = PsychometricTestType = {}));
+var InterviewType;
+(function (InterviewType) {
+    InterviewType["TECHNICAL"] = "technical";
+    InterviewType["BEHAVIORAL"] = "behavioral";
+    InterviewType["CASE_STUDY"] = "case_study";
+    InterviewType["GENERAL"] = "general";
+})(InterviewType || (exports.InterviewType = InterviewType = {}));
+var CertificateType;
+(function (CertificateType) {
+    CertificateType["JOB_PREPARATION"] = "job_preparation";
+    CertificateType["COURSE_COMPLETION"] = "course_completion";
+    CertificateType["SKILL_VERIFICATION"] = "skill_verification";
+    CertificateType["INTERVIEW_READINESS"] = "interview_readiness";
+})(CertificateType || (exports.CertificateType = CertificateType = {}));
 //# sourceMappingURL=types.js.map

@@ -1,7 +1,11 @@
 export declare enum UserRole {
     ADMIN = "admin",
+    SUPER_ADMIN = "super_admin",
     TEACHER = "teacher",
-    STUDENT = "student"
+    STUDENT = "student",
+    PROFESSIONAL = "professional",
+    EMPLOYER = "employer",
+    JOB_SEEKER = "job_seeker"
 }
 export declare enum CourseStatus {
     DRAFT = "draft",
@@ -70,6 +74,8 @@ export interface IUser {
     lastName: string;
     role: UserRole;
     avatar?: string;
+    idNumber?: string;
+    passport?: string;
     isEmailVerified: boolean;
     isActive: boolean;
     lastLogin?: Date;
@@ -254,5 +260,249 @@ export interface QuizForm {
     passingScore: number;
     isProctored: boolean;
     questions: Omit<IQuizQuestion, '_id'>[];
+}
+export declare enum JobStatus {
+    DRAFT = "draft",
+    ACTIVE = "active",
+    PAUSED = "paused",
+    CLOSED = "closed",
+    EXPIRED = "expired"
+}
+export declare enum JobType {
+    FULL_TIME = "full_time",
+    PART_TIME = "part_time",
+    CONTRACT = "contract",
+    INTERNSHIP = "internship",
+    FREELANCE = "freelance"
+}
+export declare enum ExperienceLevel {
+    ENTRY_LEVEL = "entry_level",
+    MID_LEVEL = "mid_level",
+    SENIOR_LEVEL = "senior_level",
+    EXECUTIVE = "executive"
+}
+export declare enum EducationLevel {
+    HIGH_SCHOOL = "high_school",
+    ASSOCIATE = "associate",
+    BACHELOR = "bachelor",
+    MASTER = "master",
+    DOCTORATE = "doctorate",
+    PROFESSIONAL = "professional"
+}
+export declare enum ApplicationStatus {
+    APPLIED = "applied",
+    UNDER_REVIEW = "under_review",
+    SHORTLISTED = "shortlisted",
+    INTERVIEW_SCHEDULED = "interview_scheduled",
+    INTERVIEWED = "interviewed",
+    OFFERED = "offered",
+    REJECTED = "rejected",
+    WITHDRAWN = "withdrawn"
+}
+export declare enum PsychometricTestType {
+    PERSONALITY = "personality",
+    COGNITIVE = "cognitive",
+    APTITUDE = "aptitude",
+    SKILLS = "skills",
+    BEHAVIORAL = "behavioral"
+}
+export declare enum InterviewType {
+    TECHNICAL = "technical",
+    BEHAVIORAL = "behavioral",
+    CASE_STUDY = "case_study",
+    GENERAL = "general"
+}
+export declare enum CertificateType {
+    JOB_PREPARATION = "job_preparation",
+    COURSE_COMPLETION = "course_completion",
+    SKILL_VERIFICATION = "skill_verification",
+    INTERVIEW_READINESS = "interview_readiness"
+}
+export interface IJob {
+    _id: string;
+    title: string;
+    description: string;
+    company: string;
+    employer: string;
+    location: string;
+    jobType: JobType;
+    experienceLevel: ExperienceLevel;
+    educationLevel: EducationLevel;
+    salary?: {
+        min: number;
+        max: number;
+        currency: string;
+    };
+    skills: string[];
+    requirements: string[];
+    benefits: string[];
+    applicationDeadline?: Date;
+    status: JobStatus;
+    isCurated: boolean;
+    curatedBy?: string;
+    relatedCourses: string[];
+    psychometricTestRequired: boolean;
+    psychometricTests: string[];
+    applicationsCount: number;
+    viewsCount: number;
+    createdAt: Date;
+    updatedAt: Date;
+}
+export interface IJobApplication {
+    _id: string;
+    job: string;
+    applicant: string;
+    resume: string;
+    coverLetter?: string;
+    status: ApplicationStatus;
+    appliedAt: Date;
+    psychometricTestResults: string[];
+    interviewResults: string[];
+    certificates: string[];
+    notes?: string;
+    updatedAt: Date;
+}
+export interface IPsychometricTest {
+    _id: string;
+    title: string;
+    description: string;
+    type: PsychometricTestType;
+    questions: IPsychometricQuestion[];
+    timeLimit: number;
+    industry?: string;
+    jobRole?: string;
+    createdBy: string;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+}
+export interface IPsychometricQuestion {
+    _id: string;
+    question: string;
+    type: 'multiple_choice' | 'scale' | 'text' | 'scenario';
+    options?: string[];
+    scaleRange?: {
+        min: number;
+        max: number;
+        labels: string[];
+    };
+    correctAnswer?: string | number;
+    traits?: string[];
+    weight: number;
+}
+export interface IPsychometricTestResult {
+    _id: string;
+    test: string;
+    user: string;
+    job?: string;
+    answers: Record<string, any>;
+    scores: Record<string, number>;
+    overallScore: number;
+    interpretation: string;
+    recommendations: string[];
+    completedAt: Date;
+    timeSpent: number;
+}
+export interface IAIInterview {
+    _id: string;
+    user: string;
+    job?: string;
+    type: InterviewType;
+    questions: IAIInterviewQuestion[];
+    responses: IAIInterviewResponse[];
+    overallScore: number;
+    feedback: string;
+    recommendations: string[];
+    strengths: string[];
+    areasForImprovement: string[];
+    completedAt: Date;
+    duration: number;
+}
+export interface IAIInterviewQuestion {
+    _id: string;
+    question: string;
+    type: InterviewType;
+    expectedKeywords: string[];
+    difficulty: 'easy' | 'medium' | 'hard';
+    timeLimit?: number;
+}
+export interface IAIInterviewResponse {
+    questionId: string;
+    response: string;
+    audioUrl?: string;
+    score: number;
+    feedback: string;
+    keywordsFound: string[];
+    responseTime: number;
+}
+export interface IJobCertificate {
+    _id: string;
+    user: string;
+    type: CertificateType;
+    title: string;
+    description: string;
+    skills: string[];
+    issuedBy: string;
+    issuedAt: Date;
+    expiresAt?: Date;
+    verificationCode: string;
+    isVerified: boolean;
+    relatedJob?: string;
+    relatedCourse?: string;
+    psychometricTestResults?: string[];
+    interviewResults?: string[];
+}
+export interface IJobSeekerProfile {
+    _id: string;
+    user: string;
+    resume: string;
+    skills: string[];
+    experience: {
+        company: string;
+        position: string;
+        duration: string;
+        description: string;
+    }[];
+    education: {
+        institution: string;
+        degree: string;
+        field: string;
+        year: number;
+    }[];
+    certifications: string[];
+    interests: string[];
+    preferredJobTypes: JobType[];
+    preferredLocations: string[];
+    salaryExpectation?: {
+        min: number;
+        max: number;
+        currency: string;
+    };
+    availability: Date;
+    linkedInProfile?: string;
+    portfolioUrl?: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+export interface IStudentProfile {
+    _id: string;
+    user: string;
+    age?: number;
+    educationLevel: EducationLevel;
+    completedCourses: string[];
+    certificates: string[];
+    jobInterests: string[];
+    careerGoals: string[];
+    createdAt: Date;
+    updatedAt: Date;
+}
+export interface IJobCourseMatch {
+    _id: string;
+    job: string;
+    course: string;
+    relevanceScore: number;
+    matchingSkills: string[];
+    createdBy: string;
+    createdAt: Date;
 }
 //# sourceMappingURL=types.d.ts.map

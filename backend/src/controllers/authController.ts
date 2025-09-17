@@ -763,28 +763,27 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
 // @desc    Google OAuth callback handler
 // @route   POST /api/auth/google/callback
 // @access  Public
-// @desc    Google OAuth postmessage flow - exchange code for tokens
+// @desc    Google OAuth ID token validation (improved method)
 // @route   POST /api/auth/google/exchange-code
 // @access  Public
 export const googleExchangeCode = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { code, platform } = req.body;
+    const { idToken, platform } = req.body;
 
-    if (!code) {
+    if (!idToken) {
       res.status(400).json({
         success: false,
-        error: 'Authorization code is required'
+        error: 'Google ID token is required'
       });
       return;
     }
 
-    console.log('🔄 Exchanging authorization code for tokens (postmessage flow)...');
+    console.log('🔄 Validating Google ID token...');
     console.log('🔧 Google Client ID:', process.env.GOOGLE_CLIENT_ID ? 'Present' : 'Missing');
-    console.log('🔧 Google Client Secret:', process.env.GOOGLE_CLIENT_SECRET ? 'Present' : 'Missing');
 
     // Validate environment variables
-    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-      console.error('❌ Missing Google OAuth environment variables');
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      console.error('❌ Missing Google Client ID');
       res.status(500).json({
         success: false,
         error: 'Google OAuth not properly configured'
@@ -792,75 +791,54 @@ export const googleExchangeCode = async (req: Request, res: Response, next: Next
       return;
     }
 
-    // Exchange authorization code for access token (no redirect_uri needed for postmessage)
-    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        client_id: process.env.GOOGLE_CLIENT_ID,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET,
-        code,
-        grant_type: 'authorization_code'
-        // No redirect_uri needed for postmessage flow
-      })
-    });
+    // Verify the ID token with Google
+    const verifyResponse = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
 
-    if (!tokenResponse.ok) {
-      const errorData = await tokenResponse.json().catch(() => ({ error: 'Unknown error' }));
-      console.error('❌ Token exchange failed with status:', tokenResponse.status);
-      console.error('❌ Error response:', errorData);
+    if (!verifyResponse.ok) {
+      console.error('❌ ID token verification failed with status:', verifyResponse.status);
       res.status(400).json({
         success: false,
-        error: 'Google token exchange failed',
-        details: errorData
+        error: 'Invalid Google ID token'
       });
       return;
     }
 
-    const tokenData = await tokenResponse.json();
+    const tokenData = await verifyResponse.json();
     
-    if (!tokenData.access_token) {
-      console.error('❌ No access token received from Google');
+    // Verify the token was issued for our client
+    if (tokenData.aud !== process.env.GOOGLE_CLIENT_ID) {
+      console.error('❌ ID token audience mismatch');
       res.status(400).json({
         success: false,
-        error: 'No access token received from Google'
+        error: 'Invalid token audience'
       });
       return;
     }
 
-    // Get user info from Google
-    const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: {
-        'Authorization': `Bearer ${tokenData.access_token}`
-      }
-    });
-
-    if (!userResponse.ok) {
-      console.error('❌ Failed to get user info from Google:', userResponse.status);
+    // Verify token is not expired
+    const now = Math.floor(Date.now() / 1000);
+    if (tokenData.exp < now) {
+      console.error('❌ ID token has expired');
       res.status(400).json({
         success: false,
-        error: 'Failed to get user information from Google'
+        error: 'Token has expired'
       });
       return;
     }
 
-    const userInfo = await userResponse.json();
-    
-    if (!userInfo.email) {
-      console.error('❌ No email received from Google user info');
+    if (!tokenData.email) {
+      console.error('❌ No email in ID token');
       res.status(400).json({
         success: false,
-        error: 'No email received from Google'
+        error: 'No email found in token'
       });
       return;
     }
 
-    console.log('✅ Google user info received:', userInfo.email);
+    console.log('✅ Google ID token validated successfully:', tokenData.email);
 
     // Use the same logic as the existing googleAuth function
-    const email = userInfo.email;
+    const email = tokenData.email;
     let user = await User.findOne({ email });
 
     if (user) {
@@ -874,20 +852,20 @@ export const googleExchangeCode = async (req: Request, res: Response, next: Next
         success: true,
         requiresRoleSelection: true,
         googleUserData: {
-          email: userInfo.email,
-          firstName: userInfo.given_name || '',
-          lastName: userInfo.family_name || '',
-          googleId: userInfo.id,
-          profilePicture: userInfo.picture || '',
-          verified: userInfo.verified_email || false
+          email: tokenData.email,
+          firstName: tokenData.given_name || '',
+          lastName: tokenData.family_name || '',
+          googleId: tokenData.sub,
+          profilePicture: tokenData.picture || '',
+          verified: tokenData.email_verified || false
         }
       });
     }
   } catch (error: any) {
-    console.error('❌ Google code exchange failed:', error);
+    console.error('❌ Google ID token validation failed:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to exchange authorization code'
+      error: error.message || 'Failed to validate Google ID token'
     });
   }
 };

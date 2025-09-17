@@ -412,8 +412,14 @@ const JobDetailsPage: React.FC = () => {
   const handleApplyForJob = async () => {
     if (!user || !job) return;
     
-    // Check if profile is complete enough
-    if (profileCompletion < 60) {
+    // Check if profile is complete enough - use backend-aligned validation
+    // Only require basic completion (40%) for regular applications
+    // Higher completion (60%) only if sending profile to external employer
+    const requiresHigherCompletion = job.isExternalJob && hasValidEmployerEmail(job);
+    const minimumRequired = requiresHigherCompletion ? 60 : 40;
+    
+    if (profileCompletion < minimumRequired) {
+      console.log(`🚫 Profile completion (${profileCompletion}%) below required threshold (${minimumRequired}%) for this job type`);
       setProfileIncompleteDialogOpen(true);
       return;
     }
@@ -1346,7 +1352,7 @@ const JobDetailsPage: React.FC = () => {
               </Button>
               
               {/* Profile Completion Warning - only for direct applications */}
-              {user && profileCompletion < 60 && hasValidEmployerEmail(job) && (
+              {user && profileCompletion < (job?.isExternalJob && hasValidEmployerEmail(job) ? 60 : 40) && (
                 <Alert 
                   severity="warning" 
                   sx={{ 
@@ -1366,7 +1372,7 @@ const JobDetailsPage: React.FC = () => {
                   }
                 >
                   <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    Complete your profile ({profileCompletion}%) to apply for jobs directly
+                    Complete your profile ({profileCompletion}%) to apply for this job type
                   </Typography>
                 </Alert>
               )}
@@ -2432,7 +2438,10 @@ const JobDetailsPage: React.FC = () => {
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Your profile is <strong>{profileCompletion}%</strong> complete. 
-            Complete at least 60% to access all features and improve job matching.
+            {job?.isExternalJob && hasValidEmployerEmail(job) 
+              ? "Complete at least 60% to apply to external jobs and share your profile with employers." 
+              : "Complete at least 40% to apply for jobs on the platform."
+            }
           </Typography>
           {profileValidationResult && (
             <>

@@ -32,15 +32,24 @@ export const applyForJob = async (req: AuthRequest, res: Response) => {
     // Check profile completion
     const profileValidation = validateProfile(user);
     
-    // If profile is not sufficiently complete and user wants to send profile to employer
-    if (sendProfileToEmployer && profileValidation.completionPercentage < 50) {
+    // Determine minimum profile completion based on job type and application method
+    let minimumCompletion = 40; // Basic applications to internal jobs
+    if (sendProfileToEmployer) {
+      minimumCompletion = 60; // External applications with profile sharing
+    }
+    
+    // Check if profile meets minimum requirements
+    if (profileValidation.completionPercentage < minimumCompletion) {
       return res.status(400).json({
         success: false,
         error: 'Profile not complete enough for application',
         details: {
           completionPercentage: profileValidation.completionPercentage,
+          minimumRequired: minimumCompletion,
           missingFields: profileValidation.missingFields,
-          suggestion: 'Please complete your profile with at least basic information, skills, and experience before applying.'
+          suggestion: sendProfileToEmployer 
+            ? 'Please complete your profile with at least 60% completion before sending to external employers.'
+            : 'Please complete your profile with at least basic information before applying.'
         }
       });
     }

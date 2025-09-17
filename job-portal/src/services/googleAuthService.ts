@@ -147,12 +147,12 @@ class GoogleAuthService {
     }
   }
 
-  /** Exchange authorization code for tokens */
-  private async exchangeCodeForTokens(authorizationCode: string): Promise<AuthResult> {
+  /** Validate Google ID token with backend */
+  private async validateGoogleIdToken(idToken: string): Promise<AuthResult> {
     try {
-      console.log('🔄 Exchanging authorization code for tokens...');
+      console.log('🔄 Validating Google ID token with backend...');
       const response = await apiPost('/auth/google/exchange-code', {
-        code: authorizationCode,
+        idToken: idToken,
         platform: 'job-portal'
       });
 
@@ -175,10 +175,10 @@ class GoogleAuthService {
         }
       }
 
-      return { success: false, error: response.error || 'Token exchange failed' };
+      return { success: false, error: response.error || 'ID token validation failed' };
     } catch (error: any) {
-      console.error('❌ Token exchange failed:', error);
-      return { success: false, error: error.message || 'Failed to exchange authorization code' };
+      console.error('❌ ID token validation failed:', error);
+      return { success: false, error: error.message || 'Failed to validate Google ID token' };
     }
   }
 
@@ -203,55 +203,61 @@ class GoogleAuthService {
     }
   }
 
-  /** Google sign-in using postmessage flow (no redirects needed) */
+  /** Google sign-in using ID token flow (no redirects needed) */
   public async signIn(): Promise<AuthResult> {
     try {
       await this.initialize();
       
-      if (!window.google?.accounts?.oauth2) {
-        return { success: false, error: 'Google OAuth Services not available' };
+      if (!window.google?.accounts?.id) {
+        return { success: false, error: 'Google Identity Services not available' };
       }
 
-      console.log('🔐 Starting Google OAuth postmessage flow...');
+      console.log('🔐 Starting Google ID token authentication...');
       
       return new Promise((resolve) => {
-        const client = window.google.accounts.oauth2.initCodeClient({
+        // Initialize Google Sign-In
+        window.google.accounts.id.initialize({
           client_id: this.clientId,
-          scope: 'openid email profile',
-          ux_mode: 'popup',
           callback: async (response: any) => {
             try {
-              if (response.code) {
-                console.log('✅ Authorization code received');
-                // Send the authorization code to backend
-                const result = await this.exchangeCodeForTokens(response.code);
+              if (response.credential) {
+                console.log('✅ Google ID token received');
+                // Validate the ID token with our backend
+                const result = await this.validateGoogleIdToken(response.credential);
                 resolve(result);
-              } else if (response.error) {
-                console.error('❌ OAuth error:', response.error);
-                resolve({ success: false, error: response.error });
               } else {
-                resolve({ success: false, error: 'No authorization code received' });
+                console.error('❌ No credential received from Google');
+                resolve({ success: false, error: 'No credential received from Google' });
               }
             } catch (error: any) {
-              console.error('❌ Token exchange error:', error);
+              console.error('❌ Authentication error:', error);
               resolve({ success: false, error: error.message || 'Authentication failed' });
             }
-          }
+          },
+          auto_select: false,
+          cancel_on_tap_outside: false
         });
 
-        // Request the authorization code
-        client.requestCode();
+        // Try One Tap first
+        window.google.accounts.id.prompt((notification: any) => {
+          console.log('One Tap notification:', notification);
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            // If One Tap fails, show manual button
+            console.log('One Tap not available, showing manual button');
+            this.renderSignInButton();
+          }
+        });
       });
     } catch (error: any) {
-      console.error('❌ Authentication error:', error);
-      return { success: false, error: error.message || 'Authentication failed' };
+      console.error('❌ Google Sign-In initialization error:', error);
+      return { success: false, error: error.message || 'Failed to initialize Google Sign-In' };
     }
   }
 
-  /** Mobile sign-in using postmessage flow (same as desktop now) */
+  /** Mobile sign-in using ID token flow (same as desktop now) */
   public async signInMobile(): Promise<AuthResult> {
-    console.log('📱 Using postmessage flow for mobile');
-    // Use the same postmessage flow for mobile - it works better than redirects
+    console.log('📱 Using ID token flow for mobile');
+    // Use the same ID token flow for mobile - it works better than redirects
     return this.signIn();
   }
 
@@ -293,6 +299,41 @@ class GoogleAuthService {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     if (window.google?.accounts?.id) window.google.accounts.id.disableAutoSelect();
+  }
+
+  /** Render a temporary sign-in button when One Tap is not available */
+  private renderSignInButton(): void {
+    // Create a temporary container for the sign-in button if not exists
+    let buttonContainer = document.getElementById('google-signin-button-temp');
+    if (!buttonContainer) {
+      buttonContainer = document.createElement('div');
+      buttonContainer.id = 'google-signin-button-temp';
+      buttonContainer.style.position = 'fixed';
+      buttonContainer.style.top = '50%';
+      buttonContainer.style.left = '50%';
+      buttonContainer.style.transform = 'translate(-50%, -50%)';
+      buttonContainer.style.zIndex = '10000';
+      buttonContainer.style.padding = '20px';
+      buttonContainer.style.backgroundColor = 'white';
+      buttonContainer.style.borderRadius = '8px';
+      buttonContainer.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+      document.body.appendChild(buttonContainer);
+    }
+
+    window.google.accounts.id.renderButton(buttonContainer, {
+      theme: 'outline',
+      size: 'large',
+      type: 'standard',
+      shape: 'rectangular',
+      text: 'signin_with',
+      width: '300'
+    });
+
+    // Auto-remove after 10 seconds
+    setTimeout(() => {
+      const container = document.getElementById('google-signin-button-temp');
+      if (container) container.remove();
+    }, 10000);
   }
 
   /** Render Google sign-in button in any container */

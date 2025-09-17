@@ -79,8 +79,11 @@ class GoogleAuthService {
       // Production - use HTTPS without www
       this.redirectUri = 'https://exjobnet.com/login';
     } else if (hostname === 'www.exjobnet.com') {
-      // Production with www - redirect to non-www
+      // Production with www - redirect to www version
       this.redirectUri = 'https://www.exjobnet.com/login';
+    } else if (hostname === 'jobsexcellencecoachinghamb.onrender.com') {
+      // Render subdomain for job portal
+      this.redirectUri = 'https://jobsexcellencecoachinghamb.onrender.com/login';
     } else if (hostname === 'localhost') {
       // Development environment - use exact port and protocol
       const port = window.location.port;
@@ -92,7 +95,7 @@ class GoogleAuthService {
         this.redirectUri = `${origin}/login`;
       }
     } else {
-      // Fallback for other domains
+      // Fallback for other domains (including any other Render subdomains)
       this.redirectUri = `${origin}/login`;
     }
     console.log('🔗 OAuth Redirect URI:', this.redirectUri);

@@ -780,7 +780,22 @@ export const googleExchangeCode = async (req: Request, res: Response, next: Next
     }
 
     console.log('🔄 Validating Google ID token...');
-    console.log('🔧 Google Client ID:', process.env.GOOGLE_CLIENT_ID ? 'Present' : 'Missing');
+    console.log('🔧 Google Client ID:', process.env.GOOGLE_CLIENT_ID ? `${process.env.GOOGLE_CLIENT_ID.substring(0, 20)}...` : 'Missing');
+    console.log('📝 Token length:', idToken?.length || 0);
+    console.log('📝 Platform:', platform);
+    
+    // Decode token header to check issuer (for debugging)
+    try {
+      const tokenParts = idToken.split('.');
+      if (tokenParts.length >= 2) {
+        const payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
+        console.log('🔍 Token audience from payload:', payload.aud);
+        console.log('🔍 Token issuer:', payload.iss);
+        console.log('🔍 Token expiry:', new Date(payload.exp * 1000));
+      }
+    } catch (decodeError) {
+      console.log('⚠️ Could not decode token for debugging');
+    }
 
     // Validate environment variables
     if (!process.env.GOOGLE_CLIENT_ID) {
@@ -800,7 +815,7 @@ export const googleExchangeCode = async (req: Request, res: Response, next: Next
     try {
       const ticket = await client.verifyIdToken({
         idToken: idToken,
-        audience: process.env.GOOGLE_CLIENT_ID,  // Specify the CLIENT_ID of the app that accesses the backend
+        audience: [process.env.GOOGLE_CLIENT_ID],  // Accept our client ID as valid audience
       });
       
       payload = ticket.getPayload();
@@ -814,9 +829,17 @@ export const googleExchangeCode = async (req: Request, res: Response, next: Next
       }
     } catch (verifyError: any) {
       console.error('❌ ID token verification failed:', verifyError.message);
+      console.error('🔍 Full error details:', verifyError);
+      
+      let errorMessage = 'Invalid Google ID token';
+      if (verifyError.message && verifyError.message.includes('audience')) {
+        errorMessage = 'Invalid token audience - Client ID mismatch';
+        console.error('🔧 Expected audience (Client ID):', process.env.GOOGLE_CLIENT_ID?.substring(0, 20) + '...');
+      }
+      
       res.status(400).json({
         success: false,
-        error: 'Invalid token audience'
+        error: errorMessage
       });
       return;
     }

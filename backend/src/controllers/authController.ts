@@ -5,6 +5,7 @@ import { User, IUserDocument } from '../models/User';
 import { UserRole } from '../types';
 import { sendEmail, sendWelcomeEmail, sendEmployerWelcomeEmail } from '../services/emailService';
 import * as simpleEmailService from '../services/simpleEmailService';
+import { OAuth2Client } from 'google-auth-library';
 
 // Generate JWT token
 const generateToken = (userId: string): string => {
@@ -791,23 +792,28 @@ export const googleExchangeCode = async (req: Request, res: Response, next: Next
       return;
     }
 
-    // Verify the ID token with Google
-    const verifyResponse = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+    // Initialize Google OAuth2 client
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-    if (!verifyResponse.ok) {
-      console.error('❌ ID token verification failed with status:', verifyResponse.status);
-      res.status(400).json({
-        success: false,
-        error: 'Invalid Google ID token'
+    // Verify the ID token with Google using official library
+    let payload;
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken: idToken,
+        audience: process.env.GOOGLE_CLIENT_ID,  // Specify the CLIENT_ID of the app that accesses the backend
       });
-      return;
-    }
-
-    const tokenData = await verifyResponse.json();
-    
-    // Verify the token was issued for our client
-    if (tokenData.aud !== process.env.GOOGLE_CLIENT_ID) {
-      console.error('❌ ID token audience mismatch');
+      
+      payload = ticket.getPayload();
+      if (!payload) {
+        console.error('❌ ID token verification failed - no payload');
+        res.status(400).json({
+          success: false,
+          error: 'Invalid Google ID token'
+        });
+        return;
+      }
+    } catch (verifyError: any) {
+      console.error('❌ ID token verification failed:', verifyError.message);
       res.status(400).json({
         success: false,
         error: 'Invalid token audience'
@@ -815,18 +821,10 @@ export const googleExchangeCode = async (req: Request, res: Response, next: Next
       return;
     }
 
-    // Verify token is not expired
-    const now = Math.floor(Date.now() / 1000);
-    if (tokenData.exp < now) {
-      console.error('❌ ID token has expired');
-      res.status(400).json({
-        success: false,
-        error: 'Token has expired'
-      });
-      return;
-    }
+    console.log('✅ ID token verified successfully');
+    console.log('📧 User email:', payload.email);
 
-    if (!tokenData.email) {
+    if (!payload.email) {
       console.error('❌ No email in ID token');
       res.status(400).json({
         success: false,
@@ -835,10 +833,10 @@ export const googleExchangeCode = async (req: Request, res: Response, next: Next
       return;
     }
 
-    console.log('✅ Google ID token validated successfully:', tokenData.email);
+    console.log('✅ Google ID token validated successfully:', payload.email);
 
     // Use the same logic as the existing googleAuth function
-    const email = tokenData.email;
+    const email = payload.email;
     let user = await User.findOne({ email });
 
     if (user) {
@@ -852,12 +850,13 @@ export const googleExchangeCode = async (req: Request, res: Response, next: Next
         success: true,
         requiresRoleSelection: true,
         googleUserData: {
-          email: tokenData.email,
-          firstName: tokenData.given_name || '',
-          lastName: tokenData.family_name || '',
-          googleId: tokenData.sub,
-          profilePicture: tokenData.picture || '',
-          verified: tokenData.email_verified || false
+          email: payload.email,
+          firstName: payload.given_name || '',
+          lastName: payload.family_name || '',
+          googleId: payload.sub,
+          profilePicture: payload.picture || '',
+          verified: payload.email_verified || false,
+          platform: platform || 'job-portal'
         }
       });
     }

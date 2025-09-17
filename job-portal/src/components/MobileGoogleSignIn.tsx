@@ -52,7 +52,13 @@ const MobileGoogleSignIn: React.FC<MobileGoogleSignInProps> = ({
       onSuccess?.(result);
     } catch (error: any) {
       console.error('Google sign-in error:', error);
-      onError?.(error.message);
+      
+      // Handle specific Google OAuth errors
+      if (error.message?.includes('origin is not allowed') || error.message?.includes('redirect_uri_mismatch')) {
+        onError?.('The given origin is not allowed for the given client ID. Please configure your Google OAuth settings.');
+      } else {
+        onError?.(error.message || 'Google sign-in failed');
+      }
     } finally {
       setLoading?.(false);
     }

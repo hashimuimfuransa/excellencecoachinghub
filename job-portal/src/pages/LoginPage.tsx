@@ -39,6 +39,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme as useCustomTheme } from '../contexts/ThemeContext';
 import FloatingContact from '../components/FloatingContact';
 import MobileGoogleSignIn from '../components/MobileGoogleSignIn';
+
 import AccountTypeModal from '../components/AccountTypeModal';
 import GoogleRoleSelectionModal from '../components/GoogleRoleSelectionModal';
 
@@ -177,6 +178,8 @@ const LoginPage: React.FC = () => {
         setError('Google sign-in was not completed. Please try again or use a different browser if the issue persists.');
       } else if (error.message?.includes('not configured') || error.message?.includes('Client ID')) {
         setError('Google authentication is not properly configured. Please contact support.');
+      } else if (error.message?.includes('origin is not allowed') || error.message?.includes('redirect_uri_mismatch')) {
+        setError('The given origin is not allowed for the given client ID. Please configure your Google OAuth settings.');
       } else if (error.message?.includes('popup') || error.message?.includes('blocked') || error.message?.includes('not displayed')) {
         setError('Google sign-in popup was blocked. Please allow popups for this site and try again.');
       } else if (error.message?.includes('not available') || error.message?.includes('timeout')) {
@@ -381,6 +384,8 @@ const LoginPage: React.FC = () => {
                     {error}
                   </Alert>
                 )}
+
+
 
                 <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
                   {/* Email Field */}

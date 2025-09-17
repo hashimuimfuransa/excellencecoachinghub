@@ -133,7 +133,14 @@ class GoogleAuthService {
         platform: 'job-portal'
       });
 
+      console.log('🔍 Backend response:', response);
+      console.log('🔍 Response data:', response.data);
+
       if (response.success && response.data) {
+        console.log('🔍 Has requiresRoleSelection:', !!response.data.requiresRoleSelection);
+        console.log('🔍 Has user:', !!response.data.user);
+        console.log('🔍 Has token:', !!response.data.token);
+        
         if (response.data.requiresRoleSelection) {
           return { 
             success: true, 

@@ -871,15 +871,17 @@ export const googleExchangeCode = async (req: Request, res: Response, next: Next
       console.log('🆕 New user detected, requiring role selection');
       res.status(200).json({
         success: true,
-        requiresRoleSelection: true,
-        googleUserData: {
-          email: payload.email,
-          firstName: payload.given_name || '',
-          lastName: payload.family_name || '',
-          googleId: payload.sub,
-          profilePicture: payload.picture || '',
-          verified: payload.email_verified || false,
-          platform: platform || 'job-portal'
+        data: {
+          requiresRoleSelection: true,
+          googleUserData: {
+            email: payload.email,
+            firstName: payload.given_name || '',
+            lastName: payload.family_name || '',
+            googleId: payload.sub,
+            profilePicture: payload.picture || '',
+            verified: payload.email_verified || false,
+            platform: platform || 'job-portal'
+          }
         }
       });
     }

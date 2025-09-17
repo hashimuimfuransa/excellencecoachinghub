@@ -9,7 +9,6 @@ import {
   resetPassword,
   testEmail,
   googleAuth,
-  googleOAuthCallback,
   googleExchangeCode,
   googleCompleteRegistration,
   updateProfile
@@ -132,8 +131,8 @@ router.get('/me', protect, getMe);
 router.post('/forgot-password', forgotPasswordValidation, validateRequest, forgotPassword);
 router.post('/reset-password', resetPasswordValidation, validateRequest, resetPassword);
 router.post('/google', googleAuth); // Main Google OAuth endpoint
-router.post('/google/callback', googleOAuthCallback); // OAuth callback endpoint for mobile
-router.post('/google/exchange-code', googleExchangeCode); // Exchange authorization code for tokens (postmessage flow)
+
+router.post('/google/exchange-code', googleExchangeCode); // Validate Google ID token (direct token flow)
 router.post('/google/complete-registration', googleRegistrationValidation, validateRequest, googleCompleteRegistration);
 router.post('/test-email', testEmail); // Test endpoint for email service
 router.post('/update-profile', protect, updateProfile); // Profile update endpoint

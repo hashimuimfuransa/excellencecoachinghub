@@ -22,15 +22,7 @@ export interface User {
   updatedAt: string;
 }
 
-export interface GoogleUserInfo {
-  sub: string;           // Google ID
-  name: string;
-  given_name: string;
-  family_name: string;
-  email: string;
-  picture: string;
-  email_verified: boolean;
-}
+
 
 export interface AuthResult {
   success: boolean;
@@ -130,22 +122,7 @@ class GoogleAuthService {
     this.isInitialized = true;
   }
 
-  /** Parse JWT from Google */
-  private parseJWT(token: string): GoogleUserInfo {
-    try {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split('')
-          .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-          .join('')
-      );
-      return JSON.parse(jsonPayload);
-    } catch {
-      throw new Error('Invalid Google token');
-    }
-  }
+
 
   /** Validate Google ID token with backend */
   private async validateGoogleIdToken(idToken: string): Promise<AuthResult> {
@@ -182,26 +159,7 @@ class GoogleAuthService {
     }
   }
 
-  /** Send Google user info to backend */
-  private async processGoogleAuth(userInfo: GoogleUserInfo): Promise<AuthResult> {
-    try {
-      const response = await apiPost('/auth/google', { userInfo, platform: 'job-portal' });
 
-      if (response.success && response.data) {
-        if (response.data.requiresRoleSelection) {
-          return { success: true, requiresRoleSelection: true, userData: response.data.googleUserData };
-        } else if (response.data.user && response.data.token) {
-          localStorage.setItem('token', response.data.token);
-          localStorage.setItem('user', JSON.stringify(response.data.user));
-          return { success: true, user: response.data.user, token: response.data.token, requiresRoleSelection: false };
-        }
-      }
-
-      return { success: false, error: 'Unexpected response from Google authentication' };
-    } catch (error: any) {
-      return { success: false, error: error.message || 'Failed to process Google authentication' };
-    }
-  }
 
   /** Google sign-in using ID token flow (no redirects needed) */
   public async signIn(): Promise<AuthResult> {
@@ -261,38 +219,7 @@ class GoogleAuthService {
     return this.signIn();
   }
 
-  /** Handle callback after redirect (mobile flow) */
-  public async handleOAuthCallback(): Promise<AuthResult | null> {
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
-    const state = urlParams.get('state');
-    const storedState = localStorage.getItem('google_oauth_state');
 
-    if (!code) return null;
-    if (!state || state !== storedState) return { success: false, error: 'Invalid OAuth state parameter' };
-
-    try {
-      const response = await apiPost('/auth/google/callback', { code, redirectUri: this.redirectUri, platform: 'job-portal' });
-
-      // Clean up state
-      localStorage.removeItem('google_oauth_state');
-      localStorage.removeItem('google_oauth_nonce');
-
-      if (response.success && response.data) {
-        if (response.data.requiresRoleSelection) {
-          return { success: true, requiresRoleSelection: true, userData: response.data.googleUserData };
-        } else if (response.data.user && response.data.token) {
-          localStorage.setItem('token', response.data.token);
-          localStorage.setItem('user', JSON.stringify(response.data.user));
-          return { success: true, user: response.data.user, token: response.data.token, requiresRoleSelection: false };
-        }
-      }
-
-      return { success: false, error: 'Invalid OAuth callback response' };
-    } catch (error: any) {
-      return { success: false, error: error.message || 'OAuth callback failed' };
-    }
-  }
 
   /** Sign out user */
   public signOut(): void {
@@ -346,8 +273,7 @@ class GoogleAuthService {
       client_id: this.clientId,
       callback: async (response) => {
         if (!response.credential) return;
-        const userInfo = this.parseJWT(response.credential);
-        await this.processGoogleAuth(userInfo);
+        await this.validateGoogleIdToken(response.credential);
       },
       auto_select: false,
       cancel_on_tap_outside: false
@@ -381,8 +307,7 @@ class GoogleAuthService {
               resolve({ success: false, error: 'No credential received' });
               return;
             }
-            const userInfo = this.parseJWT(response.credential);
-            const result = await this.processGoogleAuth(userInfo);
+            const result = await this.validateGoogleIdToken(response.credential);
             resolve(result);
           },
           auto_select: false,

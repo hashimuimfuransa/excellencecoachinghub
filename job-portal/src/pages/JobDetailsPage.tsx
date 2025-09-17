@@ -68,7 +68,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { jobService } from '../services/jobService';
 import { applicationService } from '../services/applicationService';
 import { profileService } from '../services/profileService';
-import { validateProfile } from '../utils/profileValidation';
+import { validateProfileSimple, SimpleProfileValidationResult } from '../utils/simpleProfileValidation';
 
 // Job types matching backend structure
 enum JobType {
@@ -170,7 +170,7 @@ const JobDetailsPage: React.FC = () => {
   const [profileCompletion, setProfileCompletion] = useState<number>(0);
   const [profileIncompleteDialogOpen, setProfileIncompleteDialogOpen] = useState(false);
   const [hasShownProfileDialog, setHasShownProfileDialog] = useState(false);
-  const [profileValidationResult, setProfileValidationResult] = useState<any>(null);
+  const [profileValidationResult, setProfileValidationResult] = useState<SimpleProfileValidationResult | null>(null);
 
   const [prepareDialogOpen, setPrepareDialogOpen] = useState(false);
   const [shareMenuAnchor, setShareMenuAnchor] = useState<null | HTMLElement>(null);
@@ -320,8 +320,8 @@ const JobDetailsPage: React.FC = () => {
       
       try {
         const profile = await profileService.getCurrentUserProfile();
-        // Use comprehensive profile validation
-        const validationResult = validateProfile(profile);
+        // Use simple profile validation that matches backend logic
+        const validationResult = validateProfileSimple(profile);
         const completion = validationResult.completionPercentage;
         
         setProfileCompletion(completion);
@@ -2449,9 +2449,9 @@ const JobDetailsPage: React.FC = () => {
                 Complete these sections to unlock job applications:
               </Typography>
               <Typography variant="body2" color="text.secondary" component="div" sx={{ textAlign: 'left', mb: 1 }}>
-                {!profileValidationResult.completedSections?.personal && "• Personal Information (Name, Phone, Date of Birth)\n"}
-                {!profileValidationResult.completedSections?.contact && "• Contact Details (Email, Phone)\n"}
-                {!profileValidationResult.completedSections?.professional && "• Professional Info (Job Title, Experience Level)\n"}
+                {!profileValidationResult.completedSections?.basic && "• Basic Information (Name, Email)\n"}
+                {!profileValidationResult.completedSections?.contact && "• Contact Details (Phone, Location)\n"}
+                {!profileValidationResult.completedSections?.professional && "• Professional Info (Job Title, Bio)\n"}
                 {!profileValidationResult.completedSections?.education && "• Education Background\n"}
                 {!profileValidationResult.completedSections?.experience && "• Work Experience\n"}
                 {!profileValidationResult.completedSections?.skills && "• Skills & Competencies\n"}

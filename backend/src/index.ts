@@ -1122,8 +1122,8 @@ const startServer = async () => {
       // Initialize continuous job scraping service (replaces scheduled scraping)
       ContinuousJobScrapingService.init();
       
-      // Keep the original scheduler as fallback (but reduce frequency)
-      // JobScrapingScheduler.start();
+      // Start the enhanced job scraping scheduler (includes internship.rw)
+      JobScrapingScheduler.start();
       
       // Start the job recommendation email scheduler
       JobRecommendationEmailService.start();

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { JobScrapingService } from '../services/jobScrapingService';
+import { JobScrapingScheduler } from '../services/jobScrapingScheduler';
 import { Job } from '../models/Job';
 
 /**
@@ -470,6 +471,102 @@ export class JobScrapingController {
         message: 'Connection test failed',
         error: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString()
+      });
+    }
+  }
+
+  /**
+   * Manually trigger internship.rw scraping
+   */
+  static async scrapeInternshipRw(req: Request, res: Response): Promise<void> {
+    try {
+      console.log('Manual internship.rw scraping triggered by admin');
+      
+      const result = await JobScrapingScheduler.runInternshipRwManually();
+      
+      res.status(result.success ? 200 : 500).json({
+        success: result.success,
+        message: result.message,
+        data: result.data,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error in manual internship.rw scraping:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internship.rw scraping failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Get internship.rw scraping status and statistics
+   */
+  static async getInternshipRwStatus(req: Request, res: Response): Promise<void> {
+    try {
+      // Get scheduler status
+      const schedulerStatus = JobScrapingScheduler.getStatus();
+      
+      // Get recent internship.rw jobs from database
+      const recentJobs = await Job.find({
+        source: 'internship.rw'
+      })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .select('title company location createdAt status externalJobId');
+
+      // Get count statistics
+      const totalInternshipJobs = await Job.countDocuments({ source: 'internship.rw' });
+      const activeInternshipJobs = await Job.countDocuments({ 
+        source: 'internship.rw',
+        status: 'active'
+      });
+      
+      // Get jobs from last 24 hours
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      const recentInternshipJobs = await Job.countDocuments({
+        source: 'internship.rw',
+        createdAt: { $gte: yesterday }
+      });
+
+      res.status(200).json({
+        success: true,
+        data: {
+          scheduler: schedulerStatus,
+          statistics: {
+            totalJobs: totalInternshipJobs,
+            activeJobs: activeInternshipJobs,
+            jobsLast24Hours: recentInternshipJobs
+          },
+          recentJobs: recentJobs.map(job => ({
+            id: job._id,
+            title: job.title,
+            company: job.company,
+            location: job.location,
+            status: job.status,
+            externalJobId: job.externalJobId,
+            createdAt: job.createdAt
+          })),
+          sourceInfo: {
+            name: 'Rwanda National Internship Programme Portal',
+            url: 'https://internship.rw',
+            type: 'Government Portal',
+            scrapingEnabled: true,
+            hourlySchedule: true,
+            lastScrapingTime: schedulerStatus.lastRunTime
+          }
+        },
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error getting internship.rw status:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get internship.rw status',
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   }

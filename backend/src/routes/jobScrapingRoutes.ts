@@ -127,6 +127,30 @@ router.get(
   JobScrapingController.testConnection
 );
 
+/**
+ * @route   POST /api/job-scraping/internship-rw/scrape
+ * @desc    Manually trigger internship.rw scraping
+ * @access  Private - Admin
+ */
+router.post(
+  '/internship-rw/scrape',
+  auth,
+  authorizeRoles(['super_admin', 'admin']),
+  JobScrapingController.scrapeInternshipRw
+);
+
+/**
+ * @route   GET /api/job-scraping/internship-rw/status
+ * @desc    Get internship.rw scraping status and statistics
+ * @access  Private - Admin
+ */
+router.get(
+  '/internship-rw/status',
+  auth,
+  authorizeRoles(['super_admin', 'admin']),
+  JobScrapingController.getInternshipRwStatus
+);
+
 // Continuous Job Scraping Routes
 
 /**

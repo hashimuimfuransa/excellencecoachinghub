@@ -322,6 +322,192 @@ export class OptimizedJobScrapingService {
       rateLimit: { delayMs: 3000, maxConcurrent: 1 }
     },
     {
+      name: 'internship.rw',
+      baseUrl: 'https://internship.rw',
+      paths: ['/', '/hire-alumni/', '/accounts/login/', '/api/', '/opportunities/', '/jobs/'],
+      priority: 4,
+      selectors: {
+        jobLink: [
+          'a[href*="/job/"]',
+          'a[href*="/internship/"]',
+          'a[href*="/opportunity/"]',
+          'a[href*="/position/"]',
+          'a[href*="/vacancy/"]',
+          '.job-item a',
+          '.internship-item a',
+          '.opportunity-item a',
+          '.vacancy-item a',
+          '.position-item a',
+          'h3 a',
+          'h4 a',
+          '.job-title a',
+          '.internship-title a',
+          '.opportunity-title a',
+          'article a',
+          '.card a'
+        ],
+        title: [
+          'h1',
+          '.job-title',
+          '.internship-title',
+          '.opportunity-title',
+          '.position-title',
+          '.vacancy-title',
+          'h3',
+          'h4',
+          '.title',
+          '.post-title',
+          '.entry-title'
+        ],
+        company: [
+          '.company',
+          '.employer',
+          '.organization',
+          '.hiring-company',
+          '.company-name',
+          '[data-company]',
+          '.employer-name'
+        ],
+        location: [
+          '.location',
+          '.job-location',
+          '.work-location',
+          '.company-location',
+          '.position-location',
+          '.duty-station'
+        ],
+        description: [
+          '.job-description',
+          '.internship-description',
+          '.opportunity-description',
+          '.role-details',
+          '.description',
+          '.content',
+          '.summary',
+          '.details',
+          'main',
+          'article'
+        ],
+        requirements: [
+          '.requirements',
+          '.qualifications',
+          '.required-qualification',
+          '.required-field-of-study',
+          '.skills',
+          '.eligibility',
+          '.criteria'
+        ],
+        responsibilities: [
+          '.responsibilities',
+          '.duties',
+          '.role-duties',
+          '.tasks',
+          '.job-duties'
+        ],
+        benefits: [
+          '.benefits',
+          '.perks',
+          '.compensation',
+          '.package'
+        ],
+        salary: [
+          '.salary',
+          '.compensation',
+          '.pay',
+          '.remuneration'
+        ],
+        deadline: [
+          '.deadline',
+          '.application-deadline',
+          '.closing-date',
+          '.expected-start-date',
+          '.expires'
+        ],
+        postedDate: [
+          '.posted-date',
+          '.date-posted',
+          '.publish-date',
+          '.created-date',
+          '.date'
+        ],
+        applicationInstructions: [
+          '.application-instructions',
+          '.how-to-apply',
+          '.application-procedure',
+          '.contact-info',
+          '.contact-email',
+          '.contact-phone-number',
+          '.representative-name'
+        ],
+        contactInfo: [
+          '.contact-information',
+          '.contact-details',
+          '.employer-contact',
+          '.company-contact',
+          '.hiring-contact',
+          '.representative-contact'
+        ]
+      },
+      pagination: {
+        type: 'query',
+        pattern: '?page=',
+        maxPages: 3
+      },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Connection': 'keep-alive',
+        'Referer': 'https://internship.rw/'
+      },
+      urlFilter: (url: string) => {
+        const jobPatterns = [
+          /\/job\/[a-z0-9-]+/,
+          /\/internship\/[a-z0-9-]+/,
+          /\/opportunity\/[a-z0-9-]+/,
+          /\/position\/[a-z0-9-]+/,
+          /\/vacancy\/[a-z0-9-]+/,
+          /\/jobs\/[a-z0-9-]+/,
+          /\/internships\/[a-z0-9-]+/,
+          /\/opportunities\/[a-z0-9-]+/,
+          /\/positions\/[a-z0-9-]+/,
+          /\/vacancies\/[a-z0-9-]+/
+        ];
+        const excludes = [
+          '/accounts/',
+          '/admin/',
+          '/login',
+          '/register',
+          '/signup',
+          '/static/',
+          '/media/',
+          '/css/',
+          '/js/',
+          '/api/auth',
+          '/password',
+          '/reset',
+          '/verify'
+        ];
+        
+        // Allow internship.rw URLs that match job patterns or are basic paths we want to monitor
+        const basicPaths = ['/', '/hire-alumni/', '/about/', '/guidelines'];
+        const isBasicPath = basicPaths.some(path => url.endsWith(path));
+        const matchesJobPattern = jobPatterns.some(p => p.test(url.toLowerCase()));
+        const isExcluded = excludes.some(e => url.toLowerCase().includes(e));
+        
+        return (isBasicPath || matchesJobPattern) && !isExcluded && url.length > 20;
+      },
+      requiresJS: true, // Enable JS rendering for better compatibility with portal
+      rateLimit: { delayMs: 8000, maxConcurrent: 1 } // Slower rate limit for government portal
+    },
+    {
       name: 'brightermonday',
       baseUrl: 'https://www.brightermonday.com',
       paths: ['/jobs-in-rwanda'],
@@ -1299,6 +1485,68 @@ export class OptimizedJobScrapingService {
   }
 
   /**
+   * Normalize job type to valid enum values
+   */
+  private static normalizeJobType(jobType: string): JobType {
+    if (!jobType) return JobType.FULL_TIME;
+    
+    const normalized = jobType.toLowerCase().replace(/[\s\-]/g, '_');
+    
+    const typeMapping: { [key: string]: JobType } = {
+      'full_time': JobType.FULL_TIME,
+      'fulltime': JobType.FULL_TIME,
+      'full': JobType.FULL_TIME,
+      'permanent': JobType.FULL_TIME,
+      'part_time': JobType.PART_TIME,
+      'parttime': JobType.PART_TIME,
+      'part': JobType.PART_TIME,
+      'contract': JobType.CONTRACT,
+      'contractor': JobType.CONTRACT,
+      'temporary': JobType.CONTRACT,
+      'temp': JobType.CONTRACT,
+      'freelance': JobType.FREELANCE,
+      'freelancer': JobType.FREELANCE,
+      'independent': JobType.FREELANCE,
+      'internship': JobType.INTERNSHIP,
+      'intern': JobType.INTERNSHIP,
+      'trainee': JobType.INTERNSHIP
+    };
+
+    return typeMapping[normalized] || JobType.FULL_TIME;
+  }
+
+  /**
+   * Normalize experience level to valid enum values
+   */
+  private static normalizeExperienceLevel(level: string): ExperienceLevel {
+    if (!level) return ExperienceLevel.ENTRY_LEVEL;
+    
+    const normalized = level.toLowerCase().replace(/[\s\-]/g, '_');
+    
+    const levelMapping: { [key: string]: ExperienceLevel } = {
+      'entry_level': ExperienceLevel.ENTRY_LEVEL,
+      'entry': ExperienceLevel.ENTRY_LEVEL,
+      'junior': ExperienceLevel.ENTRY_LEVEL,
+      'beginner': ExperienceLevel.ENTRY_LEVEL,
+      'graduate': ExperienceLevel.ENTRY_LEVEL,
+      'mid_level': ExperienceLevel.MID_LEVEL,
+      'mid': ExperienceLevel.MID_LEVEL,
+      'intermediate': ExperienceLevel.MID_LEVEL,
+      'experienced': ExperienceLevel.MID_LEVEL,
+      'senior_level': ExperienceLevel.SENIOR_LEVEL,
+      'senior': ExperienceLevel.SENIOR_LEVEL,
+      'lead': ExperienceLevel.SENIOR_LEVEL,
+      'principal': ExperienceLevel.SENIOR_LEVEL,
+      'executive': ExperienceLevel.EXECUTIVE,
+      'director': ExperienceLevel.EXECUTIVE,
+      'manager': ExperienceLevel.EXECUTIVE,
+      'head': ExperienceLevel.EXECUTIVE
+    };
+
+    return levelMapping[normalized] || ExperienceLevel.ENTRY_LEVEL;
+  }
+
+  /**
    * Save job to database
    */
   private static async saveJobToDatabase(
@@ -1362,14 +1610,25 @@ export class OptimizedJobScrapingService {
         };
       }
 
+      // Check for existing job to prevent duplicates
+      const existingJob = await Job.findOne({
+        externalJobSource: sourceName,
+        externalJobId: jobData.externalJobId
+      });
+
+      if (existingJob) {
+        console.log(`⚠️ Job already exists: ${jobData.title} (${sourceName}:${jobData.externalJobId})`);
+        return; // Skip saving this job
+      }
+
       const job = new Job({
         title: jobData.title,
         description: jobData.description,
         company: jobData.company,
         location: jobData.location,
-        jobType: jobData.jobType,
+        jobType: this.normalizeJobType(jobData.jobType.toString()),
         category: jobData.category,
-        experienceLevel: jobData.experienceLevel,
+        experienceLevel: this.normalizeExperienceLevel(jobData.experienceLevel.toString()),
         educationLevel: jobData.educationLevel,
         skills: jobData.skills,
         requirements: jobData.requirements,

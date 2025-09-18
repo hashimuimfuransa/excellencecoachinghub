@@ -97,12 +97,7 @@ const LoginPage: React.FC = () => {
       console.error('Google login error:', error);
       
       // Show specific error messages based on error type
-      if (error.message?.includes('Domain not authorized')) {
-        toast.error('Google OAuth domain configuration needed. Check console for setup instructions.', { 
-          autoClose: 8000 
-        });
-        console.error('🔧 CONFIGURATION REQUIRED:', error.message);
-      } else if (error.message?.includes('cancelled') || error.message?.includes('closed')) {
+      if (error.message?.includes('cancelled') || error.message?.includes('closed')) {
         toast.info('Google sign-in was cancelled.');
       } else if (error.message?.includes('configured') || error.message?.includes('Client ID')) {
         toast.error('Google authentication is not properly configured. Please contact support.');
@@ -114,7 +109,6 @@ const LoginPage: React.FC = () => {
         toast.error('Google services are not available. Please try again later.');
       } else {
         toast.error('Unable to sign in with Google. Please try again or use email/password.');
-        console.log('Full error details:', error.message);
       }
     } finally {
       setGoogleLoading(false);

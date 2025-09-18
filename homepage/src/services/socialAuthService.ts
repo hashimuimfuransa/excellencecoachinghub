@@ -1,5 +1,14 @@
 import type { AuthResponse, User } from '../types/auth';
 
+export interface AuthResult {
+  success: boolean;
+  user?: User;
+  token?: string;
+  requiresRoleSelection?: boolean;
+  userData?: any;
+  error?: string;
+}
+
 // Google Identity Services types
 declare global {
   interface Window {
@@ -18,18 +27,12 @@ declare global {
           disableAutoSelect: () => void;
           revoke: (accessToken: string, done: () => void) => void;
         };
+        oauth2?: {
+          initTokenClient: (config: any) => any;
+        };
       };
     };
   }
-}
-
-export interface AuthResult {
-  success: boolean;
-  user?: User;
-  token?: string;
-  requiresRoleSelection?: boolean;
-  userData?: any;
-  error?: string;
 }
 
 class SocialAuthService {
@@ -37,29 +40,61 @@ class SocialAuthService {
   private isInitialized = false;
   private initPromise: Promise<void> | null = null;
 
+  constructor() {
+    // Log current environment for debugging
+    console.log('🏗️ SocialAuthService initialized');
+    console.log('🌍 Current URL:', window.location.origin);
+    console.log('🔑 Google Client ID:', this.googleClientId ? this.googleClientId.substring(0, 20) + '...' : 'Not configured');
+    
+    // Check if running on production domain
+    const isProduction = window.location.hostname === 'www.excellencecoachinghub.com' || 
+                        window.location.hostname === 'excellencecoachinghub.com';
+    
+    if (isProduction) {
+      console.log('🌐 Running in production mode');
+      console.log('⚠️ Make sure the Google OAuth Client ID is configured for this domain');
+    } else {
+      console.log('💻 Running in development mode');
+    }
+  }
+
+  /** Detect mobile devices */
+  private isMobileDevice(): boolean {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  }
+
   /** Load Google Identity Services script */
   private loadGoogleScript(): Promise<void> {
     return new Promise((resolve, reject) => {
-      if (window.google?.accounts?.id) return resolve();
+      // Check for both oauth2 and id APIs like the job portal
+      if (window.google?.accounts?.oauth2 && window.google?.accounts?.id) return resolve();
 
       const existing = document.querySelector('script[src*="accounts.google.com/gsi/client"]');
       if (existing) {
         const waitForGoogle = () => {
-          if (window.google?.accounts?.id) resolve();
+          if (window.google?.accounts?.oauth2 && window.google?.accounts?.id) resolve();
           else setTimeout(waitForGoogle, 100);
         };
         waitForGoogle();
         return;
       }
 
+      console.log('📥 Loading Google Identity Services...');
+      console.log('🌍 Current hostname:', window.location.hostname);
+      
       const script = document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client';
       script.async = true;
       script.defer = true;
       script.onload = () => {
+        console.log('✅ Google script loaded, waiting for APIs...');
         const waitForGoogle = () => {
-          if (window.google?.accounts?.id) resolve();
-          else setTimeout(waitForGoogle, 100);
+          if (window.google?.accounts?.oauth2 && window.google?.accounts?.id) {
+            console.log('✅ All Google APIs available');
+            resolve();
+          } else {
+            setTimeout(waitForGoogle, 100);
+          }
         };
         waitForGoogle();
       };
@@ -147,7 +182,10 @@ class SocialAuthService {
         throw new Error('Google Client ID not configured. Please add VITE_GOOGLE_CLIENT_ID to your .env file');
       }
 
+      // Check if domain is authorized
+      const currentDomain = window.location.origin;
       console.log('🔐 Starting Google ID token authentication...');
+      console.log('🌍 Current domain:', currentDomain);
       
       return new Promise((resolve, reject) => {
         if (!window.google?.accounts?.id) {
@@ -194,11 +232,36 @@ class SocialAuthService {
         // Try One Tap first
         window.google.accounts.id.prompt((notification: any) => {
           console.log('One Tap notification:', notification);
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            // If One Tap fails, show manual button
-            console.log('One Tap not available, showing manual button');
-            this.renderSignInButton(resolve, reject);
+          
+          // Handle specific error cases
+          if (notification.isNotDisplayed()) {
+            console.log('❌ One Tap not displayed - possible domain authorization issue');
+            if (window.location.hostname.includes('excellencecoachinghub.com')) {
+              console.error('⚠️ DOMAIN AUTHORIZATION ISSUE: Add https://www.excellencecoachinghub.com to Google OAuth authorized origins');
+              const errorMsg = `Domain not authorized for Google OAuth. 
+
+SOLUTION: Add the following to your Google OAuth Client ID authorized origins:
+- https://www.excellencecoachinghub.com
+- https://excellencecoachinghub.com
+
+Steps:
+1. Go to Google Cloud Console
+2. Navigate to APIs & Services > Credentials
+3. Find your OAuth 2.0 Client ID
+4. Add the domains above to "Authorized JavaScript origins"`;
+              
+              reject(new Error(errorMsg));
+              return;
+            }
           }
+          
+          if (notification.isSkippedMoment()) {
+            console.log('⏭️ One Tap skipped, trying manual button');
+          }
+          
+          // Show manual button as fallback
+          console.log('🔘 Showing manual sign-in button');
+          this.renderSignInButton(resolve, reject);
         });
       });
     } catch (error: any) {

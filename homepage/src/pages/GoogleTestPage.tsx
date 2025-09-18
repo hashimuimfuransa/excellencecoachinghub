@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import { Google, CheckCircle, Error } from '@mui/icons-material';
 import { motion } from 'framer-motion';
-import { simpleGoogleAuth } from '../services/googleAuthSimple';
+import { socialAuthService } from '../services/socialAuthService';
 
 const GoogleTestPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -27,7 +27,7 @@ const GoogleTestPage: React.FC = () => {
       setResult(null);
 
       console.log('Starting Google authentication test...');
-      const authResponse = await simpleGoogleAuth.signInWithGSI();
+      const authResponse = await socialAuthService.signInWithGoogle();
       
       console.log('Authentication successful:', authResponse);
       setResult(authResponse);

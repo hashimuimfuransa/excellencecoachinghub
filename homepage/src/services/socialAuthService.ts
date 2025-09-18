@@ -1,30 +1,6 @@
-import type { AuthResponse } from '../types/auth';
+import type { AuthResponse, User } from '../types/auth';
 
-export interface User {
-  _id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: string;
-  avatar?: string;
-  company?: string;
-  jobTitle?: string;
-  isActive: boolean;
-  authProvider?: 'google' | 'local';
-  registrationCompleted?: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface AuthResult {
-  success: boolean;
-  user?: User;
-  token?: string;
-  requiresRoleSelection?: boolean;
-  userData?: any;
-  error?: string;
-}
-
+// Google Identity Services types
 declare global {
   interface Window {
     google?: {
@@ -47,9 +23,17 @@ declare global {
   }
 }
 
+export interface AuthResult {
+  success: boolean;
+  user?: User;
+  token?: string;
+  requiresRoleSelection?: boolean;
+  userData?: any;
+  error?: string;
+}
+
 class SocialAuthService {
   private googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-  private isGoogleLoaded = false;
   private isInitialized = false;
   private initPromise: Promise<void> | null = null;
 
@@ -79,7 +63,7 @@ class SocialAuthService {
         };
         waitForGoogle();
       };
-      script.onerror = (e) => reject(new Error('Failed to load Google Identity Services'));
+      script.onerror = () => reject(new Error('Failed to load Google Identity Services'));
       document.head.appendChild(script);
     });
   }
@@ -166,6 +150,11 @@ class SocialAuthService {
       console.log('🔐 Starting Google ID token authentication...');
       
       return new Promise((resolve, reject) => {
+        if (!window.google?.accounts?.id) {
+          reject(new Error('Google Identity Services not available'));
+          return;
+        }
+        
         // Initialize Google Sign-In
         window.google.accounts.id.initialize({
           client_id: this.googleClientId,
@@ -219,7 +208,7 @@ class SocialAuthService {
   }
 
   /** Render a temporary sign-in button when One Tap is not available */
-  private renderSignInButton(resolve: (value: AuthResponse) => void, reject: (reason?: any) => void): void {
+  private renderSignInButton(_resolve: (value: AuthResponse) => void, reject: (reason?: any) => void): void {
     // Create a temporary container for the sign-in button if not exists
     let buttonContainer = document.getElementById('google-signin-button-temp');
     if (!buttonContainer) {
@@ -259,6 +248,11 @@ class SocialAuthService {
       title.style.fontWeight = 'bold';
       title.style.textAlign = 'center';
       buttonContainer.appendChild(title);
+    }
+
+    if (!window.google?.accounts?.id) {
+      reject(new Error('Google Identity Services not available'));
+      return;
     }
 
     window.google.accounts.id.renderButton(buttonContainer, {

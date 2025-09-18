@@ -1,14 +1,5 @@
 import type { AuthResponse, User } from '../types/auth';
 
-export interface AuthResult {
-  success: boolean;
-  user?: User;
-  token?: string;
-  requiresRoleSelection?: boolean;
-  userData?: any;
-  error?: string;
-}
-
 // Google Identity Services types
 declare global {
   interface Window {
@@ -27,12 +18,18 @@ declare global {
           disableAutoSelect: () => void;
           revoke: (accessToken: string, done: () => void) => void;
         };
-        oauth2?: {
-          initTokenClient: (config: any) => any;
-        };
       };
     };
   }
+}
+
+export interface AuthResult {
+  success: boolean;
+  user?: User;
+  token?: string;
+  requiresRoleSelection?: boolean;
+  userData?: any;
+  error?: string;
 }
 
 class SocialAuthService {
@@ -40,43 +37,29 @@ class SocialAuthService {
   private isInitialized = false;
   private initPromise: Promise<void> | null = null;
 
-  /** Detect mobile devices */
-  private isMobileDevice(): boolean {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  }
-
   /** Load Google Identity Services script */
   private loadGoogleScript(): Promise<void> {
     return new Promise((resolve, reject) => {
-      // Check for both oauth2 and id APIs like the job portal
-      if (window.google?.accounts?.oauth2 && window.google?.accounts?.id) return resolve();
+      if (window.google?.accounts?.id) return resolve();
 
       const existing = document.querySelector('script[src*="accounts.google.com/gsi/client"]');
       if (existing) {
         const waitForGoogle = () => {
-          if (window.google?.accounts?.oauth2 && window.google?.accounts?.id) resolve();
+          if (window.google?.accounts?.id) resolve();
           else setTimeout(waitForGoogle, 100);
         };
         waitForGoogle();
         return;
       }
 
-      console.log('📥 Loading Google Identity Services...');
-      console.log('🌍 Current hostname:', window.location.hostname);
-      
       const script = document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client';
       script.async = true;
       script.defer = true;
       script.onload = () => {
-        console.log('✅ Google script loaded, waiting for APIs...');
         const waitForGoogle = () => {
-          if (window.google?.accounts?.oauth2 && window.google?.accounts?.id) {
-            console.log('✅ All Google APIs available');
-            resolve();
-          } else {
-            setTimeout(waitForGoogle, 100);
-          }
+          if (window.google?.accounts?.id) resolve();
+          else setTimeout(waitForGoogle, 100);
         };
         waitForGoogle();
       };

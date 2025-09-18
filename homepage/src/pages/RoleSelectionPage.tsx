@@ -24,8 +24,6 @@ import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
-import { apiService } from '../services/api';
-import { simpleGoogleAuth } from '../services/googleAuthSimple';
 
 interface RoleOption {
   id: string;
@@ -39,7 +37,7 @@ interface RoleOption {
 const RoleSelectionPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { updateUser } = useAuth();
+  const { completeGoogleRegistration } = useAuth();
   
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -121,56 +119,8 @@ const RoleSelectionPage: React.FC = () => {
     try {
       setLoading(true);
 
-      // Complete user registration with selected role
-      const userData = {
-        ...googleUserData,
-        role: selectedRole,
-        provider: 'google',
-        isEmailVerified: true,
-        registrationCompleted: true,
-        createdAt: new Date().toISOString()
-      };
-
-      try {
-        // Try to send to backend first
-        const response = await apiService.post('/auth/google/complete-registration', userData);
-
-        if (response.success && response.data) {
-          // Update user context
-          updateUser((response.data as any).user);
-          
-          // Store updated tokens
-          localStorage.setItem('token', (response.data as any).token);
-          localStorage.setItem('user', JSON.stringify((response.data as any).user));
-          if ((response.data as any).refreshToken) {
-            localStorage.setItem('refreshToken', (response.data as any).refreshToken);
-          }
-
-          toast.success(`Welcome to Excellence Coaching Hub! Your ${selectedRole} account has been created.`);
-          navigate('/dashboard');
-          return;
-        }
-      } catch (backendError: any) {
-        console.log('Backend not available, using local storage:', backendError);
-        // Continue with local storage approach
-      }
-
-      // Fallback: Save user locally and create mock tokens
-      simpleGoogleAuth.saveUser(userData);
-
-      // Create mock authentication response
-      const authTokens = {
-        token: 'google_complete_' + Date.now(),
-        refreshToken: 'google_refresh_complete_' + Date.now()
-      };
-
-      // Update user context
-      updateUser(userData);
-      
-      // Store authentication data
-      localStorage.setItem('token', authTokens.token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('refreshToken', authTokens.refreshToken);
+      // Use the new completeGoogleRegistration method from AuthContext
+      await completeGoogleRegistration(googleUserData, selectedRole);
 
       toast.success(`Welcome to Excellence Coaching Hub! Your ${selectedRole} account has been created.`);
       navigate('/dashboard');

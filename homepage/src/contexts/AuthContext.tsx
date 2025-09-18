@@ -11,6 +11,7 @@ interface AuthContextType {
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<AuthResponse>;
+  completeGoogleRegistration: (userData: any, role: string) => Promise<void>;
   updateUser: (user: User) => void;
   isAuthenticated: boolean;
 }
@@ -152,6 +153,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const completeGoogleRegistration = async (userData: any, role: string): Promise<void> => {
+    try {
+      setLoading(true);
+      const result = await socialAuthService.completeRegistration(userData, role);
+      
+      if (result.success && result.user) {
+        setUser(result.user);
+      } else {
+        throw new Error(result.error || 'Failed to complete registration');
+      }
+    } catch (error) {
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const updateUser = (newUser: User): void => {
     setUser(newUser);
   };
@@ -165,6 +183,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     forgotPassword,
     resetPassword,
     loginWithGoogle,
+    completeGoogleRegistration,
     updateUser,
     isAuthenticated: !!user,
   };

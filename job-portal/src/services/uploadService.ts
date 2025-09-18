@@ -1,44 +1,118 @@
-import { api } from './api';
+import axios from 'axios';
+
+// Create a separate axios instance for file uploads with longer timeout
+const uploadApi = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  timeout: 300000, // 5 minutes for file uploads
+  headers: {
+    'Content-Type': 'multipart/form-data',
+  },
+});
+
+// Add auth token to upload requests
+uploadApi.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 export interface UploadResponse {
-  success: boolean;
-  data: {
-    url: string;
-    fileName: string;
-    fileSize: number;
-    mimeType: string;
-  };
+  url: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  type: string;
+  thumbnail?: string;
 }
 
 class UploadService {
-  async uploadFile(file: File, type: 'avatar' | 'post' | 'chat' = 'post'): Promise<UploadResponse> {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('type', type);
-
+  async uploadFile(formData: FormData, onProgress?: (progress: number) => void): Promise<UploadResponse> {
     try {
-      const response = await api.post<UploadResponse>('/upload/media', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        // You can add upload progress tracking here if needed
+      const response = await uploadApi.post('/upload/media', formData, {
         onUploadProgress: (progressEvent) => {
           const progress = progressEvent.total
             ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
             : 0;
           console.log(`Upload progress: ${progress}%`);
+          onProgress?.(progress);
         },
       });
 
-      return response.data;
+      // Extract data from backend response structure
+      return response.data.data;
     } catch (error) {
       console.error('Upload failed:', error);
       throw error;
     }
   }
 
+  // Legacy method for backward compatibility
+  async uploadFileSimple(file: File, type: 'avatar' | 'post' | 'chat' = 'post'): Promise<UploadResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', type);
+
+    return this.uploadFile(formData);
+  }
+
+  // Add file compression method
+  async compressImage(file: File, quality: number = 0.8, maxWidth: number = 1920, maxHeight: number = 1080): Promise<File> {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      img.onload = () => {
+        // Calculate new dimensions while maintaining aspect ratio
+        let { width, height } = img;
+        
+        if (width > maxWidth || height > maxHeight) {
+          const aspectRatio = width / height;
+          if (width > height) {
+            width = maxWidth;
+            height = maxWidth / aspectRatio;
+          } else {
+            height = maxHeight;
+            width = maxHeight * aspectRatio;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        // Draw and compress
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            } else {
+              resolve(file);
+            }
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
   async uploadMultipleFiles(files: File[], type: 'post' | 'chat' = 'post'): Promise<UploadResponse[]> {
-    const uploadPromises = files.map(file => this.uploadFile(file, type));
+    const uploadPromises = files.map(file => this.uploadFileSimple(file, type));
     return Promise.all(uploadPromises);
   }
 

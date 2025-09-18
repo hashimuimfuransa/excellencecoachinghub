@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import { v2 as cloudinary } from 'cloudinary';
 import { protect } from '../middleware/auth';
-import { uploadDocumentToCloudinary, uploadToCloudinary } from '../config/cloudinary';
+import { uploadDocumentToCloudinary, uploadToCloudinary, uploadMediaToCloudinary } from '../config/cloudinary';
 import { User } from '../models/User';
 import { profileCompletionService } from '../services/profileCompletionService';
 
@@ -44,7 +44,7 @@ const upload = multer({
 const mediaUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB limit for media files
+    fileSize: 100 * 1024 * 1024, // 100MB limit for media files
   },
   fileFilter: (req, file, cb) => {
     // Allow media types
@@ -161,12 +161,13 @@ router.post('/media', protect, mediaUpload.single('file'), async (req, res) => {
     const mediaType = isVideo ? 'videos' : 'images';
     const folder = `excellence-coaching-hub/media/${type}/${mediaType}/${userId}`;
 
-    // Upload to Cloudinary
-    const result = await uploadToCloudinary(
+    // Upload to Cloudinary using optimized media upload function
+    const result = await uploadMediaToCloudinary(
       file.buffer,
       userId,
       file.originalname,
-      folder
+      folder,
+      file.mimetype
     );
 
     res.status(200).json({

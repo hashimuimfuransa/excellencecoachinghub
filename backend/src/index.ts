@@ -98,6 +98,7 @@ import connectionRoutes from '@/routes/connectionRoutes';
 import companyRoutes from '@/routes/companyRoutes';
 import eventRoutes from '@/routes/eventRoutes';
 import careerInsightRoutes from '@/routes/careerInsightRoutes';
+import storyRoutes from '@/routes/storyRoutes';
 
 // Chat routes
 import chatRoutes from '@/routes/chatRoutes';
@@ -955,6 +956,7 @@ app.use('/api/connections', connectionRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/insights', careerInsightRoutes);
+app.use('/api/social/stories', storyRoutes);
 
 // Chat routes
 app.use('/api/chat', chatRoutes);

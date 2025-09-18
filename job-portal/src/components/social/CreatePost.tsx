@@ -124,7 +124,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated, onCancel }) => {
         m.url === mediaFile.url ? { ...m, uploading: true, uploadProgress: 0 } : m
       ));
 
-      const response = await uploadService.uploadFile(mediaFile.file, 'post');
+      const response = await uploadService.uploadFileSimple(mediaFile.file, 'post');
       
       setMediaFiles(prev => prev.map(m => 
         m.url === mediaFile.url ? { ...m, uploading: false, uploadProgress: 100 } : m
@@ -132,7 +132,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated, onCancel }) => {
 
       return {
         type: mediaFile.type,
-        url: response.data.url,
+        url: response.url,
         thumbnail: mediaFile.thumbnail,
       };
     } catch (error) {

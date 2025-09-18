@@ -64,11 +64,17 @@ import {
   BookmarkBorder,
   PersonAdd,
   AccountCircle,
+  Image,
+  VideoLibrary,
+  Event,
+  Close,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import PostCard from '../components/social/PostCard';
 import CreatePost from '../components/social/CreatePost';
+import CreateStory from '../components/social/CreateStory';
+import StoryViewer from '../components/social/StoryViewer';
 import FeedSidebar from '../components/social/FeedSidebar';
 import { SocialPost } from '../types/social';
 import { socialNetworkService, FeedOptions } from '../services/socialNetworkService';
@@ -109,6 +115,13 @@ const SocialNetworkPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [showWelcomeHeader, setShowWelcomeHeader] = useState(true);
   const [showMobileConnections, setShowMobileConnections] = useState(false);
+  const [showStoryModal, setShowStoryModal] = useState(false);
+  const [activeStoryUser, setActiveStoryUser] = useState<any>(null);
+  const [showCreateStory, setShowCreateStory] = useState(false);
+  const [userStories, setUserStories] = useState<any[]>([]);
+  const [allStories, setAllStories] = useState<any[]>([]);
+  const [showStoryViewer, setShowStoryViewer] = useState(false);
+  const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
   
   // Notification state
   const [unreadNotifications, setUnreadNotifications] = useState(0);
@@ -140,7 +153,20 @@ const SocialNetworkPage: React.FC = () => {
   // Load profile completion and validation on mount
   useEffect(() => {
     loadProfileData();
+    loadUserStories();
   }, [user]);
+
+  const loadUserStories = async () => {
+    try {
+      const response = await socialNetworkService.getUserStories();
+      if (response.success && response.data) {
+        setUserStories(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading user stories:', error);
+      // Keep stories empty on error
+    }
+  };
 
   // Load notifications and messages
   useEffect(() => {
@@ -223,6 +249,19 @@ const SocialNetworkPage: React.FC = () => {
   const handlePostCreated = (newPost: SocialPost) => {
     setPosts(prev => [newPost, ...prev]);
     setShowCreatePost(false);
+  };
+
+  const handleStoryCreated = (newStory: any) => {
+    console.log('Story created successfully!', newStory);
+    // Reload user stories to get fresh data
+    loadUserStories();
+    setShowCreateStory(false);
+  };
+
+  const handleOpenStoryViewer = (storyIndex: number, stories: any[]) => {
+    setAllStories(stories);
+    setCurrentStoryIndex(storyIndex);
+    setShowStoryViewer(true);
   };
 
   const handlePostUpdate = (updatedPost: SocialPost) => {
@@ -1115,6 +1154,256 @@ const SocialNetworkPage: React.FC = () => {
                   </Tabs>
                 </Card>
 
+                {/* Stories Section - Instagram-like */}
+                <Card
+                  sx={{
+                    mb: 3,
+                    borderRadius: 3,
+                    overflow: 'hidden',
+                    background: theme.palette.mode === 'dark'
+                      ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
+                      : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                    backdropFilter: 'blur(20px)',
+                    boxShadow: theme.palette.mode === 'dark'
+                      ? '0 4px 20px rgba(0,0,0,0.3)'
+                      : '0 4px 20px rgba(102, 126, 234, 0.08)',
+                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(102, 126, 234, 0.08)'}`,
+                  }}
+                >
+                  <CardContent sx={{ p: 2 }}>
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 700, fontSize: '1.1rem' }}>
+                      📚 Professional Stories
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 1 }}>
+                      {/* Your Story */}
+                      <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            cursor: 'pointer',
+                            minWidth: 70,
+                          }}
+                          onClick={() => {
+                            if (userStories.length > 0) {
+                              handleOpenStoryViewer(0, userStories);
+                            } else {
+                              setShowCreateStory(true);
+                            }
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width: 56,
+                              height: 56,
+                              borderRadius: '50%',
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              mb: 1,
+                              position: 'relative',
+                              '&::after': {
+                                content: '"+"',
+                                position: 'absolute',
+                                bottom: -2,
+                                right: -2,
+                                width: 20,
+                                height: 20,
+                                backgroundColor: theme.palette.primary.main,
+                                borderRadius: '50%',
+                                color: 'white',
+                                fontSize: '12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 'bold',
+                              }
+                            }}
+                          >
+                            <Avatar
+                              src={user?.profilePicture}
+                              sx={{ width: 52, height: 52 }}
+                            >
+                              {user?.firstName?.[0]?.toUpperCase()}
+                            </Avatar>
+                          </Box>
+                          <Typography variant="caption" sx={{ textAlign: 'center', fontWeight: 600 }}>
+                            {userStories.length > 0 ? `My Stories (${userStories.length})` : 'Add Story'}
+                          </Typography>
+                        </Box>
+                      </motion.div>
+                      
+                      {/* Other Users' Stories */}
+                      {suggestedUsers.slice(0, 8).map((storyUser, index) => (
+                        <motion.div
+                          key={index}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              cursor: 'pointer',
+                              minWidth: 70,
+                            }}
+                            onClick={() => {
+                              // Create a mock story for this user
+                              const mockStory = {
+                                _id: `story_${storyUser._id}`,
+                                type: 'achievement',
+                                title: `${storyUser.firstName}'s Professional Update`,
+                                content: `Check out my latest professional achievements and milestones!`,
+                                author: storyUser,
+                                visibility: 'connections',
+                                createdAt: new Date().toISOString(),
+                                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                                viewers: [],
+                                likes: [],
+                                shares: 0,
+                                tags: ['professional', 'achievement']
+                              };
+                              handleOpenStoryViewer(0, [mockStory]);
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: 56,
+                                height: 56,
+                                borderRadius: '50%',
+                                background: 'linear-gradient(45deg, #ff6b6b, #ee5a24, #00d2d3)',
+                                p: '2px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mb: 1,
+                              }}
+                            >
+                              <Avatar
+                                src={storyUser.profilePicture || storyUser.avatar}
+                                sx={{ width: 52, height: 52 }}
+                              >
+                                {storyUser.firstName?.[0]?.toUpperCase() || storyUser.name?.[0]?.toUpperCase()}
+                              </Avatar>
+                            </Box>
+                            <Typography 
+                              variant="caption" 
+                              sx={{ 
+                                textAlign: 'center', 
+                                fontWeight: 500,
+                                maxWidth: 60,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              {storyUser.firstName || storyUser.name?.split(' ')[0] || 'User'}
+                            </Typography>
+                          </Box>
+                        </motion.div>
+                      ))}
+                    </Box>
+                  </CardContent>
+                </Card>
+
+                {/* Quick Actions Bar - Modern social media style */}
+                <Card
+                  sx={{
+                    mb: 3,
+                    borderRadius: 3,
+                    overflow: 'hidden',
+                    background: theme.palette.mode === 'dark'
+                      ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
+                      : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                    backdropFilter: 'blur(20px)',
+                    boxShadow: theme.palette.mode === 'dark'
+                      ? '0 4px 20px rgba(0,0,0,0.3)'
+                      : '0 4px 20px rgba(102, 126, 234, 0.08)',
+                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(102, 126, 234, 0.08)'}`,
+                  }}
+                >
+                  <CardContent sx={{ p: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Avatar
+                        src={user?.profilePicture}
+                        sx={{ width: 48, height: 48 }}
+                      >
+                        {user?.firstName?.[0]?.toUpperCase()}
+                      </Avatar>
+                      <Button
+                        fullWidth
+                        variant="outlined"
+                        onClick={() => setShowCreatePost(true)}
+                        sx={{
+                          borderRadius: 6,
+                          textTransform: 'none',
+                          py: 1.5,
+                          textAlign: 'left',
+                          justifyContent: 'flex-start',
+                          color: 'text.secondary',
+                          borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.12)',
+                          '&:hover': {
+                            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(102, 126, 234, 0.04)',
+                            borderColor: theme.palette.primary.main,
+                          },
+                        }}
+                      >
+                        What's on your mind, {user?.firstName}?
+                      </Button>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-around', mt: 2, pt: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
+                      <Button
+                        startIcon={<VideoLibrary sx={{ color: '#ff4569' }} />}
+                        onClick={() => setShowCreatePost(true)}
+                        sx={{
+                          textTransform: 'none',
+                          fontWeight: 600,
+                          color: 'text.secondary',
+                          '&:hover': {
+                            backgroundColor: 'rgba(255, 69, 105, 0.1)',
+                          },
+                        }}
+                      >
+                        Video
+                      </Button>
+                      <Button
+                        startIcon={<Image sx={{ color: '#45bd62' }} />}
+                        onClick={() => setShowCreatePost(true)}
+                        sx={{
+                          textTransform: 'none',
+                          fontWeight: 600,
+                          color: 'text.secondary',
+                          '&:hover': {
+                            backgroundColor: 'rgba(69, 189, 98, 0.1)',
+                          },
+                        }}
+                      >
+                        Photo
+                      </Button>
+                      <Button
+                        startIcon={<Event sx={{ color: '#f7b928' }} />}
+                        onClick={() => setShowCreatePost(true)}
+                        sx={{
+                          textTransform: 'none',
+                          fontWeight: 600,
+                          color: 'text.secondary',
+                          '&:hover': {
+                            backgroundColor: 'rgba(247, 185, 40, 0.1)',
+                          },
+                        }}
+                      >
+                        Event
+                      </Button>
+                    </Box>
+                  </CardContent>
+                </Card>
+
                 {/* Create Post Section - Responsive */}
                 {(showCreatePost || !isMobile) && (
                   <Box sx={{ mb: { xs: 2, sm: 2, md: 3 }, mx: { xs: 0, sm: 'auto' } }}>
@@ -1771,6 +2060,22 @@ const SocialNetworkPage: React.FC = () => {
               </Button>
             </DialogActions>
           </Dialog>
+
+          {/* Story Viewer */}
+          <StoryViewer
+            open={showStoryViewer}
+            onClose={() => setShowStoryViewer(false)}
+            stories={allStories}
+            initialStoryIndex={currentStoryIndex}
+            currentUserId={user?._id}
+          />
+
+          {/* Create Story Modal */}
+          <CreateStory
+            open={showCreateStory}
+            onClose={() => setShowCreateStory(false)}
+            onStoryCreated={handleStoryCreated}
+          />
       </Container>
 
       {/* Floating Contact - Fixed position, always visible like the message icon */}

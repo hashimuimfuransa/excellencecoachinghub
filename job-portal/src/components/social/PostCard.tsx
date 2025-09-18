@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -33,6 +33,7 @@ import {
   Work,
   Person,
   PlayArrow,
+  Pause,
   Fullscreen,
   VolumeOff,
   VolumeUp,
@@ -67,8 +68,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<number | null>(null);
-  const [videoStates, setVideoStates] = useState<{ [key: number]: { playing: boolean; muted: boolean } }>({});
+  const [videoStates, setVideoStates] = useState<{ [key: number]: { playing: boolean; muted: boolean; error?: string | null } }>({});
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'connected' | 'loading'>('none');
+  const cardRef = useRef<HTMLDivElement>(null);
+  const videoRefs = useRef<{ [key: number]: HTMLVideoElement | null }>({});
 
   // Precompute authorId to avoid undefined access
   const authorId = post?.author?._id;
@@ -97,6 +100,51 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
 
     checkConnectionStatus();
   }, [user?._id, authorId]);
+
+  // Intersection Observer for auto-playing videos when in view
+  useEffect(() => {
+    const cardElement = cardRef.current;
+    if (!cardElement || !post.media?.some(media => media.type === 'video')) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // Card is in view, auto-play videos
+            post.media?.forEach((media, index) => {
+              if (media.type === 'video') {
+                const videoElement = videoRefs.current[index];
+                if (videoElement && videoElement.paused) {
+                  playVideo(videoElement, index);
+                }
+              }
+            });
+          } else {
+            // Card is out of view, pause videos
+            post.media?.forEach((media, index) => {
+              if (media.type === 'video') {
+                const videoElement = videoRefs.current[index];
+                if (videoElement && !videoElement.paused) {
+                  pauseVideo(videoElement, index);
+                }
+              }
+            });
+          }
+        });
+      },
+      {
+        root: null, // Use viewport as root
+        rootMargin: '-50px 0px -50px 0px', // Trigger when 50px visible
+        threshold: 0.5 // Trigger when 50% of card is visible
+      }
+    );
+
+    observer.observe(cardElement);
+
+    return () => {
+      observer.unobserve(cardElement);
+    };
+  }, [post.media]);
 
   const handleLike = async () => {
     try {
@@ -183,13 +231,147 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     }
   };
 
-  const handleVideoToggle = (index: number, action: 'play' | 'mute') => {
+  const handleVideoToggle = (index: number, action: 'play' | 'mute', videoRef?: HTMLVideoElement) => {
+    // Use the passed videoRef or find by data-index
+    const videoElement = videoRef || document.querySelector(`video[data-index="${index}"][data-post="${post._id}"]`) as HTMLVideoElement;
+    
+    if (!videoElement) {
+      console.error('Video element not found');
+      return;
+    }
+
+    const currentState = videoStates[index] || { playing: false, muted: true };
+    
+    if (action === 'play') {
+      if (currentState.playing) {
+        pauseVideo(videoElement, index);
+      } else {
+        playVideo(videoElement, index);
+      }
+    } else if (action === 'mute') {
+      const newMuted = !currentState.muted;
+      videoElement.muted = newMuted;
+      setVideoStates(prev => ({
+        ...prev,
+        [index]: { ...prev[index], muted: newMuted }
+      }));
+    }
+  };
+
+  const handleVideoClick = (index: number, videoRef: HTMLVideoElement) => {
+    const currentState = videoStates[index] || { playing: false, muted: true };
+    // Toggle play/pause
+    handleVideoToggle(index, 'play', videoRef);
+  };
+
+  // Helper function to validate and clean video URLs
+  const validateVideoUrl = (url: string): string | null => {
+    try {
+      // Check if it's a valid URL
+      const urlObj = new URL(url);
+      
+      // Check if it's a reasonable length (Cloudinary URLs shouldn't be extremely long)
+      if (url.length > 2000) {
+        console.error('Video URL is suspiciously long:', url.length, 'characters');
+        return null;
+      }
+      
+      // Check if it contains expected patterns for video URLs
+      if (url.includes('cloudinary.com') || url.includes('blob:') || url.includes('data:')) {
+        return url;
+      }
+      
+      return url; // Return as-is for other valid URLs
+    } catch (error) {
+      console.error('Invalid video URL:', error);
+      return null;
+    }
+  };
+
+  // Enhanced video play function with better error handling
+  const playVideo = async (videoElement: HTMLVideoElement, index: number) => {
+    try {
+      console.log(`Attempting to play video ${index}`, videoElement);
+      
+      // Validate video source URL
+      const videoSrc = videoElement.src;
+      if (!validateVideoUrl(videoSrc)) {
+        console.error(`Invalid video URL for video ${index}:`, videoSrc);
+        setVideoStates(prev => ({
+          ...prev,
+          [index]: { ...prev[index], playing: false, error: 'Invalid video URL' }
+        }));
+        return;
+      }
+      
+      // Ensure video is loaded
+      if (videoElement.readyState >= 2) {
+        videoElement.currentTime = 0; // Start from beginning
+        await videoElement.play();
+        setVideoStates(prev => ({
+          ...prev,
+          [index]: { ...prev[index], playing: true, error: null }
+        }));
+        console.log(`Video ${index} started playing`);
+      } else {
+        console.log(`Video ${index} not ready, waiting for load...`);
+        // Wait for video to load
+        const loadHandler = async () => {
+          try {
+            videoElement.currentTime = 0;
+            await videoElement.play();
+            setVideoStates(prev => ({
+              ...prev,
+              [index]: { ...prev[index], playing: true, error: null }
+            }));
+            console.log(`Video ${index} started playing after load`);
+          } catch (error) {
+            console.error(`Error playing video ${index} after load:`, error);
+            setVideoStates(prev => ({
+              ...prev,
+              [index]: { ...prev[index], playing: false, error: 'Failed to play video' }
+            }));
+          }
+        };
+        
+        const errorHandler = () => {
+          console.error(`Video ${index} failed to load`);
+          setVideoStates(prev => ({
+            ...prev,
+            [index]: { ...prev[index], playing: false, error: 'Failed to load video' }
+          }));
+        };
+        
+        videoElement.addEventListener('loadeddata', loadHandler, { once: true });
+        videoElement.addEventListener('error', errorHandler, { once: true });
+        
+        // Set a timeout for loading
+        setTimeout(() => {
+          if (videoElement.readyState < 2) {
+            console.warn(`Video ${index} loading timeout`);
+            setVideoStates(prev => ({
+              ...prev,
+              [index]: { ...prev[index], playing: false, error: 'Video loading timeout' }
+            }));
+          }
+        }, 10000); // 10 second timeout
+      }
+    } catch (error) {
+      console.error(`Error playing video ${index}:`, error);
+      // If autoplay is blocked, update state anyway for UI feedback
+      setVideoStates(prev => ({
+        ...prev,
+        [index]: { ...prev[index], playing: false, error: 'Autoplay blocked or error occurred' }
+      }));
+    }
+  };
+
+  const pauseVideo = (videoElement: HTMLVideoElement, index: number) => {
+    console.log(`Pausing video ${index}`);
+    videoElement.pause();
     setVideoStates(prev => ({
       ...prev,
-      [index]: {
-        playing: action === 'play' ? !prev[index]?.playing : (prev[index]?.playing || false),
-        muted: action === 'mute' ? !prev[index]?.muted : (prev[index]?.muted || true),
-      }
+      [index]: { ...prev[index], playing: false }
     }));
   };
 
@@ -239,6 +421,21 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     }
   };
 
+  const getVideoAspectRatio = (media: any) => {
+    // Check if video dimensions are available
+    if (media.width && media.height) {
+      const ratio = media.width / media.height;
+      // If video is taller than it is wide (portrait), use 9/16 aspect ratio
+      if (ratio < 1) {
+        return '9/16';
+      }
+      // If video is wider than it is tall (landscape), use 16/9 aspect ratio
+      return '16/9';
+    }
+    // Default to 16/9 for unknown dimensions
+    return '16/9';
+  };
+
   const renderMediaGallery = () => {
     if (!post.media || post.media.length === 0) return null;
 
@@ -254,8 +451,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
               borderRadius: 2,
               overflow: 'hidden',
               backgroundColor: theme.palette.grey[100],
-              aspectRatio: post.media[0].type === 'video' ? '16/9' : 'auto',
+              aspectRatio: post.media[0].type === 'video' ? getVideoAspectRatio(post.media[0]) : 'auto',
               maxHeight: { xs: 360, sm: 420, md: 600 },
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
             }}
           >
             {post.media[0].type === 'image' ? (
@@ -272,18 +472,162 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                 onClick={() => setSelectedMedia(0)}
               />
             ) : (
-              <Box sx={{ position: 'relative' }}>
-                <video
-                  src={post.media[0].url}
-                  poster={post.media[0].thumbnail}
-                  controls
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
+              <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+                <Box sx={{ position: 'relative', height: '100%' }}>
+                  <video
+                    ref={(el) => {
+                      videoRefs.current[0] = el;
+                    }}
+                    src={post.media[0].url}
+                    poster={post.media[0].thumbnail}
+                    playsInline
+                    preload="metadata"
+                    data-index="0"
+                    data-post={post._id}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                      backgroundColor: '#000',
+                      cursor: 'pointer',
+                    }}
+                    muted={videoStates[0]?.muted !== false}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleVideoClick(0, e.target as HTMLVideoElement);
+                    }}
+                    onLoadedMetadata={(e) => {
+                      const video = e.target as HTMLVideoElement;
+                      // Update video dimensions for better aspect ratio handling
+                      if (post.media && post.media[0]) {
+                        post.media[0].width = video.videoWidth;
+                        post.media[0].height = video.videoHeight;
+                      }
+                    }}
+                    onPlay={() => {
+                      setVideoStates(prev => ({
+                        ...prev,
+                        [0]: { ...prev[0], playing: true }
+                      }));
+                    }}
+                    onPause={() => {
+                      setVideoStates(prev => ({
+                        ...prev,
+                        [0]: { ...prev[0], playing: false }
+                      }));
+                    }}
+                    onEnded={() => {
+                      setVideoStates(prev => ({
+                        ...prev,
+                        [0]: { ...prev[0], playing: false }
+                      }));
+                    }}
+                  />
+                  
+                  {/* Play/Pause Overlay */}
+                  <IconButton
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleVideoToggle(0, 'play');
+                    }}
+                    sx={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                      color: 'white',
+                      opacity: videoStates[0]?.playing ? 0 : 1,
+                      transition: 'opacity 0.3s ease',
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        opacity: 1,
+                      },
+                    }}
+                  >
+                    {videoStates[0]?.playing ? <Pause fontSize="large" /> : <PlayArrow fontSize="large" />}
+                  </IconButton>
+
+                  {/* Video Controls Overlay */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      background: 'linear-gradient(transparent, rgba(0,0,0,0.6))',
+                      padding: 1,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      opacity: 0,
+                      transition: 'opacity 0.3s ease',
+                      '&:hover': {
+                        opacity: 1,
+                      },
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleVideoToggle(0, 'mute');
+                        }}
+                        sx={{ color: 'white' }}
+                      >
+                        {videoStates[0]?.muted !== false ? <VolumeOff /> : <VolumeUp />}
+                      </IconButton>
+                    </Box>
+                    <IconButton
+                      size="small"
+                      onClick={() => setSelectedMedia(0)}
+                      sx={{ color: 'white' }}
+                    >
+                      <Fullscreen />
+                    </IconButton>
+                  </Box>
+                </Box>
+                {/* Enhanced video controls overlay */}
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    bottom: 8,
+                    right: 8,
+                    display: 'flex',
+                    gap: 1,
                   }}
-                  muted={videoStates[0]?.muted !== false}
-                />
+                >
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleVideoToggle(0, 'mute');
+                    }}
+                    sx={{
+                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                      color: 'white',
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                      },
+                    }}
+                  >
+                    {videoStates[0]?.muted !== false ? <VolumeOff /> : <VolumeUp />}
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={() => setSelectedMedia(0)}
+                    sx={{
+                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                      color: 'white',
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                      },
+                    }}
+                  >
+                    <Fullscreen />
+                  </IconButton>
+                </Box>
               </Box>
             )}
           </Box>
@@ -318,19 +662,84 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                       />
                     ) : (
                       <Box sx={{ position: 'relative', height: '100%' }}>
-                        <video
-                          src={media.url}
-                          poster={media.thumbnail}
-                          muted
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'contain',
-                            backgroundColor: '#000',
-                          }}
-                        />
+                        {validateVideoUrl(media.url) ? (
+                          <video
+                            src={media.url}
+                            poster={media.thumbnail}
+                            muted
+                            playsInline
+                            preload="metadata"
+                            data-index={index}
+                            data-post={post._id}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain',
+                              backgroundColor: '#000',
+                              cursor: 'pointer',
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleVideoClick(index, e.target as HTMLVideoElement);
+                            }}
+                            onLoadedMetadata={(e) => {
+                              const video = e.target as HTMLVideoElement;
+                              if (media) {
+                                media.width = video.videoWidth;
+                                media.height = video.videoHeight;
+                              }
+                            }}
+                            onPlay={() => {
+                              setVideoStates(prev => ({
+                                ...prev,
+                                [index]: { ...prev[index], playing: true, error: null }
+                              }));
+                            }}
+                            onPause={() => {
+                              setVideoStates(prev => ({
+                                ...prev,
+                                [index]: { ...prev[index], playing: false }
+                              }));
+                            }}
+                            onEnded={() => {
+                              setVideoStates(prev => ({
+                                ...prev,
+                                [index]: { ...prev[index], playing: false }
+                              }));
+                            }}
+                            onError={(e) => {
+                              console.error(`Video ${index} error:`, e);
+                              setVideoStates(prev => ({
+                                ...prev,
+                                [index]: { ...prev[index], playing: false, error: 'Failed to load video' }
+                              }));
+                            }}
+                          />
+                        ) : (
+                          <Box
+                            sx={{
+                              width: '100%',
+                              height: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              backgroundColor: '#000',
+                              color: 'white',
+                              flexDirection: 'column',
+                              gap: 1
+                            }}
+                          >
+                            <Typography variant="body2">Video unavailable</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Invalid video URL
+                            </Typography>
+                          </Box>
+                        )}
                         <IconButton
-                          onClick={() => setSelectedMedia(index)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleVideoToggle(index, 'play');
+                          }}
                           sx={{
                             position: 'absolute',
                             top: '50%',
@@ -338,12 +747,54 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                             transform: 'translate(-50%, -50%)',
                             backgroundColor: 'rgba(0, 0, 0, 0.6)',
                             color: 'white',
+                            opacity: videoStates[index]?.playing ? 0 : 1,
+                            transition: 'opacity 0.3s ease',
+                            '&:hover': {
+                              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                              opacity: 1,
+                            },
+                          }}
+                        >
+                          {videoStates[index]?.playing ? <Pause fontSize="large" /> : <PlayArrow fontSize="large" />}
+                        </IconButton>
+                        
+                        {/* Error overlay */}
+                        {videoStates[index]?.error && (
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              bottom: 8,
+                              left: 8,
+                              backgroundColor: 'rgba(255, 0, 0, 0.8)',
+                              color: 'white',
+                              padding: '4px 8px',
+                              borderRadius: 1,
+                              fontSize: '0.75rem',
+                            }}
+                          >
+                            {videoStates[index]?.error}
+                          </Box>
+                        )}
+                        
+                        {/* Mute/Unmute button for grid videos */}
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleVideoToggle(index, 'mute');
+                          }}
+                          sx={{
+                            position: 'absolute',
+                            bottom: 8,
+                            right: 8,
+                            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                            color: 'white',
                             '&:hover': {
                               backgroundColor: 'rgba(0, 0, 0, 0.8)',
                             },
                           }}
                         >
-                          <PlayArrow fontSize="large" />
+                          {videoStates[index]?.muted !== false ? <VolumeOff /> : <VolumeUp />}
                         </IconButton>
                       </Box>
                     )}
@@ -382,14 +833,52 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                         src={post.media[0].url}
                         poster={post.media[0].thumbnail}
                         muted
+                        playsInline
+                        preload="metadata"
+                        data-index="0"
+                        data-post={post._id}
                         style={{
                           width: '100%',
                           height: '100%',
-                          objectFit: 'cover',
+                          objectFit: 'contain',
+                          backgroundColor: '#000',
+                          cursor: 'pointer',
+                        }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleVideoClick(0, e.target as HTMLVideoElement);
+                        }}
+                        onLoadedMetadata={(e) => {
+                          const video = e.target as HTMLVideoElement;
+                          if (post.media && post.media[0]) {
+                            post.media[0].width = video.videoWidth;
+                            post.media[0].height = video.videoHeight;
+                          }
+                        }}
+                        onPlay={() => {
+                          setVideoStates(prev => ({
+                            ...prev,
+                            [0]: { ...prev[0], playing: true }
+                          }));
+                        }}
+                        onPause={() => {
+                          setVideoStates(prev => ({
+                            ...prev,
+                            [0]: { ...prev[0], playing: false }
+                          }));
+                        }}
+                        onEnded={() => {
+                          setVideoStates(prev => ({
+                            ...prev,
+                            [0]: { ...prev[0], playing: false }
+                          }));
                         }}
                       />
                       <IconButton
-                        onClick={() => setSelectedMedia(0)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleVideoToggle(0, 'play');
+                        }}
                         sx={{
                           position: 'absolute',
                           top: '50%',
@@ -397,9 +886,15 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                           transform: 'translate(-50%, -50%)',
                           backgroundColor: 'rgba(0, 0, 0, 0.6)',
                           color: 'white',
+                          opacity: videoStates[0]?.playing ? 0 : 1,
+                          transition: 'opacity 0.3s ease',
+                          '&:hover': {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            opacity: 1,
+                          },
                         }}
                       >
-                        <PlayArrow fontSize="large" />
+                        {videoStates[0]?.playing ? <Pause fontSize="large" /> : <PlayArrow fontSize="large" />}
                       </IconButton>
                     </Box>
                   )}
@@ -494,6 +989,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
 
   return (
     <Card
+      ref={cardRef}
       component={motion.div}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -835,10 +1331,20 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                   src={post.media[selectedMedia].url}
                   controls
                   autoPlay
+                  playsInline
+                  preload="metadata"
                   style={{
                     maxWidth: '100%',
                     maxHeight: '90vh',
                     objectFit: 'contain',
+                    backgroundColor: '#000',
+                  }}
+                  onLoadedMetadata={(e) => {
+                    const video = e.target as HTMLVideoElement;
+                    if (post.media && post.media[selectedMedia]) {
+                      post.media[selectedMedia].width = video.videoWidth;
+                      post.media[selectedMedia].height = video.videoHeight;
+                    }
                   }}
                 />
               )}

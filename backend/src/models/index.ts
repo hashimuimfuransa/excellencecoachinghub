@@ -52,6 +52,7 @@ export { Connection, IConnectionDocument, IConnectionModel } from './Connection'
 export { Company, ICompanyDocument, ICompanyModel } from './Company';
 export { Event, IEventDocument, IEventModel } from './Event';
 export { CareerInsight, ICareerInsightDocument, ICareerInsightModel } from './CareerInsight';
+export { Story, IStory } from './Story';
 
 // Chat Models
 export { Chat, ChatMessage, IChat, IChatMessage } from './Chat';

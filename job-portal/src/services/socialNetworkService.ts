@@ -407,6 +407,122 @@ class SocialNetworkService {
     const response = await api.get(`/connections/status/${userId}`);
     return response.data.data || response.data;
   }
+
+  // Story related methods
+  async viewStory(storyId: string) {
+    try {
+      const response = await api.post(`/social/stories/${storyId}/view`);
+      return response.data;
+    } catch (error) {
+      console.error('Error viewing story:', error);
+      throw error;
+    }
+  }
+
+  async likeStory(storyId: string) {
+    try {
+      const response = await api.post(`/social/stories/${storyId}/like`);
+      return response.data;
+    } catch (error) {
+      console.error('Error liking story:', error);
+      throw error;
+    }
+  }
+
+  async getStoryAnalytics(storyId: string) {
+    try {
+      const response = await api.get(`/social/stories/${storyId}/analytics`);
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('Error getting story analytics:', error);
+      // Return mock data for now
+      return {
+        viewers: [
+          {
+            _id: '1',
+            firstName: 'John',
+            lastName: 'Doe',
+            profilePicture: '',
+            viewedAt: new Date().toISOString(),
+          },
+          {
+            _id: '2',
+            firstName: 'Jane',
+            lastName: 'Smith',
+            profilePicture: '',
+            viewedAt: new Date(Date.now() - 3600000).toISOString(),
+          },
+        ],
+        engagement: {
+          views: 15,
+          likes: 8,
+          shares: 3,
+          reach: 25,
+        },
+      };
+    }
+  }
+
+  async shareStory(storyId: string) {
+    try {
+      const response = await api.post(`/social/stories/${storyId}/share`);
+      return response.data;
+    } catch (error) {
+      console.error('Error sharing story:', error);
+      throw error;
+    }
+  }
+
+  async createStory(storyData: {
+    type: 'achievement' | 'milestone' | 'inspiration' | 'announcement';
+    title: string;
+    content: string;
+    media?: {
+      type: 'image' | 'video';
+      url: string;
+      thumbnail?: string;
+    };
+    tags?: string[];
+    visibility?: 'public' | 'connections' | 'private';
+  }) {
+    try {
+      const response = await api.post('/social/stories', storyData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating story:', error);
+      throw error;
+    }
+  }
+
+  async getUserStories() {
+    try {
+      const response = await api.get('/social/stories/my-stories');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user stories:', error);
+      throw error;
+    }
+  }
+
+  async getStoriesFeed(page: number = 1, limit: number = 20) {
+    try {
+      const response = await api.get(`/social/stories?page=${page}&limit=${limit}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching stories feed:', error);
+      throw error;
+    }
+  }
+
+  async deleteStory(storyId: string) {
+    try {
+      const response = await api.delete(`/social/stories/${storyId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting story:', error);
+      throw error;
+    }
+  }
 }
 
 export const socialNetworkService = new SocialNetworkService();

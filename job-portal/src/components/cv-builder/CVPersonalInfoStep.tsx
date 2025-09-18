@@ -218,26 +218,47 @@ const CVPersonalInfoStep: React.FC<CVPersonalInfoStepProps> = ({
           </Card>
         </Grid>
 
-        {/* Professional Summary - Compact Version */}
+        {/* Professional Summary - Mobile Responsive */}
         <Grid item xs={12} lg={6}>
           <Card 
             elevation={0}
             sx={{ 
               border: `1px solid ${theme.palette.divider}`,
               borderRadius: 2,
-              height: 'fit-content'
+              height: 'fit-content',
+              minHeight: { xs: 'auto', md: '320px' },
+              display: 'flex',
+              flexDirection: 'column'
             }}
           >
-            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+            <CardContent sx={{ 
+              p: { xs: 2, sm: 2.5, md: 3 },
+              flex: 1,
+              '&:last-child': { 
+                paddingBottom: { xs: 2, sm: 2.5, md: 3 } 
+              }
+            }}>
               <Box 
                 display="flex" 
                 alignItems="center" 
                 justifyContent="space-between" 
-                mb={2}
+                mb={{ xs: 1.5, md: 2 }}
+                flexWrap="wrap"
+                gap={{ xs: 1, md: 0 }}
               >
-                <Box display="flex" alignItems="center">
-                  <AutoFixHigh sx={{ mr: 1, color: 'primary.main', fontSize: { xs: 20, md: 24 } }} />
-                  <Typography variant={isMobile ? "subtitle1" : "h6"} sx={{ fontWeight: 600 }}>
+                <Box display="flex" alignItems="center" flex={1} minWidth="fit-content">
+                  <AutoFixHigh sx={{ 
+                    mr: { xs: 0.75, md: 1 }, 
+                    color: 'primary.main', 
+                    fontSize: { xs: 18, sm: 20, md: 24 } 
+                  }} />
+                  <Typography 
+                    variant={isMobile ? "subtitle1" : "h6"} 
+                    sx={{ 
+                      fontWeight: 600,
+                      fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' }
+                    }}
+                  >
                     Professional Summary
                   </Typography>
                 </Box>
@@ -248,11 +269,25 @@ const CVPersonalInfoStep: React.FC<CVPersonalInfoStepProps> = ({
                     disabled={generating === 'summary'}
                     color="primary"
                     size={isMobile ? "small" : "medium"}
+                    sx={{
+                      padding: { xs: '6px', sm: '8px', md: '8px' },
+                      borderRadius: 2,
+                      '&:hover': {
+                        backgroundColor: 'primary.main',
+                        color: 'white',
+                        '& .MuiSvgIcon-root': {
+                          color: 'white'
+                        }
+                      }
+                    }}
                   >
                     {generating === 'summary' ? (
-                      <CircularProgress size={16} />
+                      <CircularProgress 
+                        size={isMobile ? 14 : 16} 
+                        sx={{ color: 'inherit' }}
+                      />
                     ) : (
-                      <SmartToy sx={{ fontSize: { xs: 18, md: 20 } }} />
+                      <SmartToy sx={{ fontSize: { xs: 16, sm: 18, md: 20 } }} />
                     )}
                   </IconButton>
                 </Tooltip>
@@ -261,7 +296,7 @@ const CVPersonalInfoStep: React.FC<CVPersonalInfoStepProps> = ({
               <TextField
                 fullWidth
                 multiline
-                rows={isMobile ? 4 : 5}
+                rows={isMobile ? 5 : 6}
                 label="Professional Summary"
                 value={data.professionalSummary}
                 onChange={handleInputChange('professionalSummary')}
@@ -269,6 +304,28 @@ const CVPersonalInfoStep: React.FC<CVPersonalInfoStepProps> = ({
                 size={isMobile ? "small" : "medium"}
                 placeholder="Compelling summary highlighting your key strengths and career objectives..."
                 helperText="2-3 sentences capturing your most relevant qualifications and goals."
+                sx={{ 
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: { xs: '0.875rem', md: '1rem' },
+                    padding: { xs: '8px', md: '14px' }
+                  },
+                  '& .MuiInputLabel-root': {
+                    fontSize: { xs: '0.875rem', md: '1rem' }
+                  },
+                  '& .MuiOutlinedInput-input': {
+                    lineHeight: { xs: 1.4, md: 1.5 },
+                    padding: { xs: '12px 14px', md: '16px 14px' }
+                  },
+                  '& .MuiFormHelperText-root': {
+                    fontSize: { xs: '0.75rem', md: '0.8rem' },
+                    marginTop: { xs: 1, md: 1.5 }
+                  }
+                }}
+                inputProps={{
+                  style: {
+                    minHeight: isMobile ? '100px' : '120px'
+                  }
+                }}
               />
               
               {/* Compact Tips */}

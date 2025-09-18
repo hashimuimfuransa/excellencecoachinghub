@@ -14,10 +14,9 @@ export interface PersonalInfo {
   email: string;
   phone: string;
   location: string;
-  linkedIn?: string;
-  website?: string;
-  github?: string;
-  portfolio?: string;
+  linkedinUrl?: string;
+  portfolioUrl?: string;
+  githubUrl?: string;
   professionalSummary: string;
   photo?: string; // Base64 encoded image or file path
   title?: string; // Professional title/headline
@@ -34,7 +33,8 @@ export interface Experience {
   location: string;
   startDate: string;
   endDate?: string;
-  isCurrentJob: boolean;
+  isOngoing: boolean;
+  description: string;
   responsibilities: string[];
   achievements: string[];
 }
@@ -44,9 +44,12 @@ export interface Education {
   degree: string;
   institution: string;
   location: string;
-  graduationDate: string;
+  startDate: string;
+  endDate?: string;
+  isOngoing?: boolean;
   gpa?: string;
   relevantCourses?: string[];
+  achievements?: string[];
 }
 
 export interface Skill {
@@ -62,6 +65,24 @@ export interface Language {
   language: string;
   proficiency: 'Native' | 'Fluent' | 'Advanced' | 'Intermediate' | 'Beginner';
   certification?: string;
+}
+
+export interface Skills {
+  technical: Array<{
+    name: string;
+    level: number; // 1-10
+    category?: string;
+  }>;
+  soft: Array<{
+    name: string;
+    level: number; // 1-10
+    category?: string;
+  }>;
+  languages: Array<{
+    name: string;
+    proficiency: string;
+    certification?: string;
+  }>;
 }
 
 export interface Project {
@@ -146,17 +167,17 @@ export interface Reference {
 
 export interface CVData {
   personalInfo: PersonalInfo;
-  experiences: Experience[];
+  experience: Experience[];
   education: Education[];
-  skills: Skill[];
-  languages: Language[];
+  skills: Skills;
   projects: Project[];
   certifications: Certification[];
-  awards: Award[];
-  volunteerExperience: VolunteerExperience[];
-  publications: Publication[];
-  professionalMemberships: ProfessionalMembership[];
   references: Reference[];
+  volunteerExperience: VolunteerExperience[];
+  // Optional advanced sections
+  awards?: Award[];
+  publications?: Publication[];
+  professionalMemberships?: ProfessionalMembership[];
   customSections?: CVSection[];
 }
 
@@ -345,6 +366,64 @@ class CVBuilderService {
     const response = await api.get(`/cv-builder/analytics/${cvId}`);
     return response.data;
   }
+
+  // Convenience methods for the enhanced CV builder
+  async saveCVData(cvData: CVData): Promise<{ success: boolean; id: string }> {
+    // Always save to localStorage first as primary storage
+    try {
+      localStorage.setItem('cv_builder_data', JSON.stringify(cvData));
+      localStorage.setItem('cv_builder_data_timestamp', new Date().toISOString());
+    } catch (error) {
+      console.error('Failed to save to localStorage:', error);
+    }
+
+    // Try to save to server as backup, but don't fail if it doesn't work
+    try {
+      const result = await this.saveDraft(cvData);
+      return { success: true, id: result.id };
+    } catch (error) {
+      // Silently fail for server save, localStorage is primary
+      console.log('Server save not available, using local storage');
+      return { success: true, id: 'local' };
+    }
+  }
+
+  async getCVData(): Promise<CVData | null> {
+    // Try localStorage first (faster and more reliable)
+    const localData = localStorage.getItem('cv_builder_data');
+    if (localData) {
+      try {
+        return JSON.parse(localData);
+      } catch (error) {
+        console.error('Failed to parse local CV data:', error);
+      }
+    }
+
+    // Only try server if no local data exists
+    try {
+      const drafts = await this.getDrafts();
+      if (drafts.length > 0) {
+        // Return the most recently modified draft
+        const serverData = drafts.sort((a, b) => 
+          new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime()
+        )[0].cvData;
+        
+        // Save to localStorage for next time
+        localStorage.setItem('cv_builder_data', JSON.stringify(serverData));
+        return serverData;
+      }
+    } catch (error) {
+      // Server not available, that's fine - we'll use localStorage only
+      console.log('Server data not available, using local storage only');
+    }
+
+    return null;
+  }
+
+  async generateCV(cvData: CVData, templateId: string = 'modern'): Promise<Blob> {
+    return await this.exportToPDF(cvData, templateId);
+  }
 }
 
-export default new CVBuilderService();
+export const cvBuilderService = new CVBuilderService();
+export default cvBuilderService;

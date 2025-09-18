@@ -16,7 +16,6 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@hookform/resolvers": "^5.2.1",
@@ -29,7 +28,7 @@
     "@types/recharts": "^1.8.29",
     "axios": "^1.11.0",
     "date-fns": "^3.6.0",
-    "dayjs": "^1.11.13",
+    "dayjs": "^1.11.18",
     "framer-motion": "^12.23.12",
     "lodash": "^4.17.21",
     "react": "^19.1.1",

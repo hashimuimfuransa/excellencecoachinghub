@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -77,11 +77,46 @@ const CVAIAssistant: React.FC<CVAIAssistantProps> = ({
   const [chatMessage, setChatMessage] = useState('');
   const [chatHistory, setChatHistory] = useState<Array<{ type: 'user' | 'ai'; message: string }>>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasShownGreeting, setHasShownGreeting] = useState(false);
+  const [chatScrollElement, setChatScrollElement] = useState<HTMLElement | null>(null);
   const [optimizationJob, setOptimizationJob] = useState({
     title: '',
     description: '',
     requirements: [''],
   });
+
+  // Show personalized greeting when chat tab is opened
+  useEffect(() => {
+    if (activeTab === 2 && !hasShownGreeting && chatHistory.length === 0) {
+      setHasShownGreeting(true);
+      
+      const experiences = cvData.experience || cvData.experiences || [];
+      const userName = cvData.personalInfo.firstName || 'there';
+      
+      let greeting = `Hello ${userName}! 👋 I'm here to help you create an outstanding CV. `;
+      
+      if (experiences.length === 0) {
+        greeting += "I notice you haven't added any work experience yet. Would you like help writing compelling experience entries, or do you have questions about what to include if you're just starting your career?";
+      } else if (!cvData.personalInfo.professionalSummary) {
+        greeting += "I see you have work experience listed. Would you like me to help you create a powerful professional summary that highlights your key strengths?";
+      } else {
+        greeting += "I can see you've made good progress on your CV! I'm here to help you optimize it further. What specific aspect would you like to improve?";
+      }
+      
+      setTimeout(() => {
+        setChatHistory([{ type: 'ai', message: greeting }]);
+      }, 500);
+    }
+  }, [activeTab, hasShownGreeting, chatHistory.length, cvData]);
+
+  // Auto-scroll to bottom when new messages are added
+  useEffect(() => {
+    if (chatScrollElement && chatHistory.length > 0) {
+      setTimeout(() => {
+        chatScrollElement.scrollTop = chatScrollElement.scrollHeight;
+      }, 100);
+    }
+  }, [chatHistory, chatScrollElement]);
 
   const handleSendMessage = async () => {
     if (!chatMessage.trim()) return;
@@ -92,19 +127,112 @@ const CVAIAssistant: React.FC<CVAIAssistantProps> = ({
     
     setIsLoading(true);
     try {
+      // Create a better context-aware prompt
+      const contextPrompt = createContextualPrompt(cvData, userMessage);
+      
       const response = await cvBuilderService.generateAIContent(
-        `Based on the user's CV data: ${JSON.stringify(cvData)}, please answer this question: ${userMessage}`,
+        contextPrompt,
         'chat'
       );
       setChatHistory(prev => [...prev, { type: 'ai', message: response }]);
     } catch (error) {
+      console.error('AI Chat Error:', error);
       setChatHistory(prev => [...prev, { 
         type: 'ai', 
-        message: 'Sorry, I encountered an error. Please try again.' 
+        message: 'I apologize, but I encountered an issue while processing your request. This might be due to network connectivity or AI service limitations. Please try again in a few moments, or try rephrasing your question.' 
       }]);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Create contextual prompts based on CV data
+  const createContextualPrompt = (cvData: CVData, userQuestion: string): string => {
+    const experiences = cvData.experience || cvData.experiences || [];
+    const skillsArray = Array.isArray(cvData.skills) 
+      ? cvData.skills 
+      : [
+          ...(cvData.skills?.technical || []),
+          ...(cvData.skills?.soft || []),
+          ...(cvData.skills?.languages || [])
+        ];
+
+    const context = {
+      name: `${cvData.personalInfo.firstName} ${cvData.personalInfo.lastName}`.trim(),
+      experienceCount: experiences.length,
+      hasExperience: experiences.length > 0,
+      latestJob: experiences[0]?.jobTitle || 'No experience listed',
+      skillsCount: skillsArray.length,
+      hasEducation: cvData.education && cvData.education.length > 0,
+      hasSummary: !!cvData.personalInfo.professionalSummary,
+      hasProjects: cvData.projects && cvData.projects.length > 0
+    };
+
+    return `You are an expert CV/Resume consultant helping ${context.name || 'a job seeker'}. 
+
+CURRENT CV PROFILE:
+- Experience: ${context.experienceCount} positions listed${context.hasExperience ? `, most recent: ${context.latestJob}` : ' (needs work experience)'}
+- Skills: ${context.skillsCount} skills listed${context.skillsCount < 5 ? ' (consider adding more)' : ''}
+- Education: ${context.hasEducation ? 'Provided' : 'Missing (needs education background)'}
+- Professional Summary: ${context.hasSummary ? 'Included' : 'Missing (highly recommended)'}
+- Projects: ${context.hasProjects ? 'Included' : 'None listed (consider adding relevant projects)'}
+
+USER QUESTION: "${userQuestion}"
+
+INSTRUCTIONS:
+1. Provide specific, actionable advice tailored to their profile
+2. If they ask about improvements, focus on the weakest areas first
+3. Give concrete examples and specific wording suggestions
+4. Keep responses concise but comprehensive (2-4 paragraphs max)
+5. If asking about skills/experience, suggest industry-relevant additions
+6. Always encourage and be constructive
+
+Respond as a friendly, knowledgeable CV expert:`;
+  };
+
+  // Generate smart quick questions based on CV content
+  const getSmartQuickQuestions = (cvData: CVData): string[] => {
+    const experiences = cvData.experience || cvData.experiences || [];
+    const skillsArray = Array.isArray(cvData.skills) 
+      ? cvData.skills 
+      : [
+          ...(cvData.skills?.technical || []),
+          ...(cvData.skills?.soft || []),
+          ...(cvData.skills?.languages || [])
+        ];
+
+    const questions = [];
+
+    // Personalized questions based on CV gaps
+    if (!cvData.personalInfo.professionalSummary) {
+      questions.push('Help me write a compelling professional summary');
+    } else if (cvData.personalInfo.professionalSummary.length < 100) {
+      questions.push('How can I improve my professional summary?');
+    }
+
+    if (experiences.length === 0) {
+      questions.push('I have no work experience - what should I include?');
+    } else if (experiences.length > 0 && experiences.some(exp => !exp.achievements || exp.achievements.length === 0)) {
+      questions.push('How can I make my work experience more impactful?');
+    }
+
+    if (skillsArray.length < 5) {
+      questions.push('What skills should I add to my CV?');
+    } else {
+      questions.push('How should I organize my skills section?');
+    }
+
+    if (!cvData.projects || cvData.projects.length === 0) {
+      questions.push('Should I include personal projects?');
+    }
+
+    // Always include some general helpful questions
+    questions.push('Tips for ATS optimization');
+    questions.push('What are common CV mistakes to avoid?');
+    questions.push('How long should my CV be?');
+
+    // Return first 4 questions to fit the UI
+    return questions.slice(0, 4);
   };
 
   const handleOptimizeForJob = async () => {
@@ -566,6 +694,7 @@ const CVAIAssistant: React.FC<CVAIAssistantProps> = ({
             <Stack spacing={2} height="100%">
               {/* Chat History */}
               <Box
+                ref={(el) => setChatScrollElement(el)}
                 sx={{
                   flexGrow: 1,
                   overflow: 'auto',
@@ -579,7 +708,8 @@ const CVAIAssistant: React.FC<CVAIAssistantProps> = ({
                   backgroundImage: theme.palette.mode === 'dark'
                     ? 'none'
                     : `radial-gradient(circle at 25px 25px, ${theme.palette.grey[200]} 2px, transparent 0), radial-gradient(circle at 75px 75px, ${theme.palette.grey[200]} 2px, transparent 0)`,
-                  backgroundSize: '100px 100px'
+                  backgroundSize: '100px 100px',
+                  scrollBehavior: 'smooth'
                 }}
               >
                 {chatHistory.length === 0 ? (
@@ -825,12 +955,7 @@ const CVAIAssistant: React.FC<CVAIAssistantProps> = ({
                   💡 Try asking:
                 </Typography>
                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  {[
-                    'How can I improve my professional summary?',
-                    'What skills are missing for tech roles?',
-                    'How to make my experience more impactful?',
-                    'Tips for ATS optimization?',
-                  ].map((question, index) => (
+                  {getSmartQuickQuestions(cvData).map((question, index) => (
                     <Chip
                       key={index}
                       label={question}

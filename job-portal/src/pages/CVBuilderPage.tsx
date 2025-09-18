@@ -183,9 +183,18 @@ const CVBuilderPage: React.FC = () => {
 
     try {
       setLoading(true);
+      
+      // Map the data to ensure backend compatibility 
+      const exportData = {
+        ...cvData,
+        // Ensure both experience and experiences are available for backend compatibility
+        experiences: cvData.experiences || [],
+        experience: cvData.experiences || []
+      };
+      
       const blob = format === 'pdf' 
-        ? await cvBuilderService.exportToPDF(cvData, selectedTemplate.id)
-        : await cvBuilderService.exportToWord(cvData, selectedTemplate.id);
+        ? await cvBuilderService.exportToPDF(exportData, selectedTemplate.id)
+        : await cvBuilderService.exportToWord(exportData, selectedTemplate.id);
       
       // Create download link
       const url = window.URL.createObjectURL(blob);

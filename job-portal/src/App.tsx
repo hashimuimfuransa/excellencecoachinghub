@@ -70,7 +70,9 @@ import SmartTestPage from './pages/SmartTestPage';
 import TakeSmartTestPage from './pages/TakeSmartTestPage';
 import SmartTestResultsPage from './pages/SmartTestResultsPage';
 import QuickApplyPage from './pages/QuickApplyPage';
-import CVBuilderPage from './pages/CVBuilderPage';
+import EnhancedCVBuilderPage from './pages/EnhancedCVBuilderPage';
+import SimpleCVBuilderPage from './pages/SimpleCVBuilderPage';
+import OptimizedCVBuilderPage from './pages/OptimizedCVBuilderPage';
 
 // Smart Home component
 import SmartHome from './components/SmartHome';
@@ -249,7 +251,9 @@ function App() {
               <Route path="tests" element={<PsychometricTestsPage />} />
               <Route path="tests/saved" element={<SavedCardsManager />} />
               <Route path="test-results" element={<PsychometricResultsPage />} />
-              <Route path="cv-builder" element={<CVBuilderPage />} />
+              <Route path="cv-builder" element={<OptimizedCVBuilderPage />} />
+              <Route path="cv-builder-enhanced" element={<EnhancedCVBuilderPage />} />
+              <Route path="cv-builder-simple" element={<SimpleCVBuilderPage />} />
               
               {/* Social Network */}
               <Route path="network" element={<SocialNetworkPage />} />

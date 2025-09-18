@@ -145,12 +145,26 @@ router.post('/ai/generate-content', auth, [
 
     const { prompt, section } = req.body;
     
-    const content = await aiService.generateContent(prompt);
+    // Enhanced prompt processing for chat section
+    let enhancedPrompt = prompt;
+    if (section === 'chat') {
+      enhancedPrompt = `${prompt}
+
+RESPONSE GUIDELINES:
+- Be conversational and encouraging
+- Provide specific, actionable advice
+- Use examples when helpful
+- Keep responses focused and concise (2-4 paragraphs)
+- Use emojis sparingly for a friendly tone
+- If suggesting content, provide exact wording they can use`;
+    }
+    
+    const content = await aiService.generateContent(enhancedPrompt);
     
     res.json({ content });
   } catch (error) {
     console.error('Error generating AI content:', error);
-    res.status(500).json({ message: 'Failed to generate AI content' });
+    res.status(500).json({ message: 'Failed to generate AI content. Please try again in a moment.' });
   }
 });
 
@@ -169,9 +183,9 @@ router.post('/ai/professional-summary', auth, [
     const prompt = `Create a compelling professional summary for a job seeker with the following profile:
     
     Name: ${cvData.personalInfo?.firstName} ${cvData.personalInfo?.lastName}
-    Experience: ${cvData.experiences?.length || 0} positions
+    Experience: ${(cvData.experiences || cvData.experience || []).length} positions
     Education: ${cvData.education?.map((e: any) => e.degree).join(', ') || 'Not specified'}
-    Skills: ${cvData.skills?.map((s: any) => s.name).join(', ') || 'Various skills'}
+    Skills: ${Array.isArray(cvData.skills) ? cvData.skills.map((s: any) => s.name).join(', ') : (cvData.skills ? [...(cvData.skills.technical || []), ...(cvData.skills.soft || [])].map((s: any) => s.name).join(', ') : 'Various skills')}
     
     Create a 2-3 sentence professional summary that highlights their key strengths, experience, and value proposition. Make it compelling and tailored to their background.`;
     
@@ -199,7 +213,7 @@ router.post('/ai/analyze', auth, [
     const prompt = `Analyze this CV and provide a comprehensive assessment:
     
     Personal Info: ${JSON.stringify(cvData.personalInfo)}
-    Experience: ${JSON.stringify(cvData.experiences)}
+    Experience: ${JSON.stringify(cvData.experiences || cvData.experience)}
     Education: ${JSON.stringify(cvData.education)}
     Skills: ${JSON.stringify(cvData.skills)}
     
@@ -559,6 +573,9 @@ Return a JSON object with this structure:
 
 // Generate Word document for CV
 const generateCVWordDocument = (cvData: any, template: any) => {
+  // Optional debugging (remove in production)
+  // console.log('Word Generation - Experience data available:', !!(cvData?.experience || cvData?.experiences));
+  
   const primaryColor = template.color === 'blue' ? '1976d2' : 
                       template.color === 'gray' ? '757575' :
                       template.color === 'purple' ? '9c27b0' :
@@ -652,7 +669,11 @@ const generateCVWordDocument = (cvData: any, template: any) => {
   }
 
   // Professional Experience
-  if (cvData.experiences && cvData.experiences.length > 0) {
+  const experiences = cvData.experiences || cvData.experience || [];
+  // Optional debugging (remove in production)
+  // console.log('Processing experiences:', experiences.length);
+  
+  if (experiences.length > 0) {
     children.push(
       new Paragraph({
         children: [
@@ -668,7 +689,7 @@ const generateCVWordDocument = (cvData: any, template: any) => {
       })
     );
 
-    cvData.experiences.forEach((exp: any) => {
+    experiences.forEach((exp: any, index: number) => {
       // Job title and company
       children.push(
         new Paragraph({
@@ -857,45 +878,117 @@ const generateCVWordDocument = (cvData: any, template: any) => {
     });
   }
 
-  // Skills
-  if (cvData.skills && cvData.skills.length > 0) {
-    children.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: 'CORE COMPETENCIES',
-            bold: true,
-            size: 24,
-            color: primaryColor,
-            underline: { type: UnderlineType.SINGLE },
-          }),
-        ],
-        spacing: { after: 120 },
-      })
-    );
+  // Skills - Handle both array and nested object structures
+  if (cvData.skills) {
+    let hasSkills = false;
+    
+    // Check if skills is an array (old structure) or object (new structure)
+    if (Array.isArray(cvData.skills) && cvData.skills.length > 0) {
+      hasSkills = true;
+    } else if (cvData.skills.technical?.length > 0 || cvData.skills.soft?.length > 0 || cvData.skills.languages?.length > 0) {
+      hasSkills = true;
+    }
 
-    const skillCategories = ['Technical', 'Soft', 'Language', 'Other'];
-    skillCategories.forEach(category => {
-      const categorySkills = cvData.skills.filter((skill: any) => skill.category === category);
-      if (categorySkills.length > 0) {
-        children.push(
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: `${category} Skills: `,
-                bold: true,
-                size: 20,
-              }),
-              new TextRun({
-                text: categorySkills.map((skill: any) => skill.name).join(' • '),
-                size: 20,
-              }),
-            ],
-            spacing: { after: 120 },
-          })
-        );
+    if (hasSkills) {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: 'CORE COMPETENCIES',
+              bold: true,
+              size: 24,
+              color: primaryColor,
+              underline: { type: UnderlineType.SINGLE },
+            }),
+          ],
+          spacing: { after: 120 },
+        })
+      );
+
+      if (Array.isArray(cvData.skills)) {
+        // Handle old array structure
+        const skillCategories = ['Technical', 'Soft', 'Language', 'Other'];
+        skillCategories.forEach(category => {
+          const categorySkills = cvData.skills.filter((skill: any) => skill.category === category);
+          if (categorySkills.length > 0) {
+            children.push(
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: `${category} Skills: `,
+                    bold: true,
+                    size: 20,
+                  }),
+                  new TextRun({
+                    text: categorySkills.map((skill: any) => skill.name).join(' • '),
+                    size: 20,
+                  }),
+                ],
+                spacing: { after: 120 },
+              })
+            );
+          }
+        });
+      } else {
+        // Handle new nested object structure
+        if (cvData.skills.technical?.length > 0) {
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: 'Technical Skills: ',
+                  bold: true,
+                  size: 20,
+                }),
+                new TextRun({
+                  text: cvData.skills.technical.map((skill: any) => skill.name).join(' • '),
+                  size: 20,
+                }),
+              ],
+              spacing: { after: 120 },
+            })
+          );
+        }
+
+        if (cvData.skills.soft?.length > 0) {
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: 'Soft Skills: ',
+                  bold: true,
+                  size: 20,
+                }),
+                new TextRun({
+                  text: cvData.skills.soft.map((skill: any) => skill.name).join(' • '),
+                  size: 20,
+                }),
+              ],
+              spacing: { after: 120 },
+            })
+          );
+        }
+
+        if (cvData.skills.languages?.length > 0) {
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: 'Languages: ',
+                  bold: true,
+                  size: 20,
+                }),
+                new TextRun({
+                  text: cvData.skills.languages.map((lang: any) => `${lang.name || lang.language} (${lang.proficiency || lang.level || 'Proficient'})`).join(' • '),
+                  size: 20,
+                }),
+              ],
+              spacing: { after: 120 },
+            })
+          );
+        }
       }
-    });
+    }
   }
 
   // Projects
@@ -1122,8 +1215,8 @@ const generateCVWordDocument = (cvData: any, template: any) => {
     });
   }
 
-  // Languages
-  if (cvData.languages && cvData.languages.length > 0) {
+  // Languages - Only if not already included in skills
+  if (cvData.languages && cvData.languages.length > 0 && (!cvData.skills?.languages || cvData.skills.languages.length === 0)) {
     children.push(
       new Paragraph({
         children: [
@@ -1318,6 +1411,9 @@ const generateCVWordDocument = (cvData: any, template: any) => {
       }
     });
   }
+
+  // Optional debugging (remove in production)
+  // console.log('Word document sections:', children.length);
 
   const doc = new Document({
     sections: [{
@@ -1518,9 +1614,11 @@ const generateCVHTML = (cvData: any, template: any) => {
     <div class="summary">${cvData.personalInfo.professionalSummary}</div>
     ` : ''}
 
-    ${cvData.experiences && cvData.experiences.length > 0 ? `
+    ${(() => {
+      const experiences = cvData.experiences || cvData.experience || [];
+      return experiences.length > 0 ? `
     <div class="section-title">PROFESSIONAL EXPERIENCE</div>
-    ${cvData.experiences.map((exp: any) => `
+    ${experiences.map((exp: any) => `
         <div class="experience-item">
             <div class="clearfix">
                 <div class="job-title">${exp.jobTitle}</div>
@@ -1545,7 +1643,8 @@ const generateCVHTML = (cvData: any, template: any) => {
             ` : ''}
         </div>
     `).join('')}
-    ` : ''}
+    ` : '';
+    })()}
 
     ${cvData.education && cvData.education.length > 0 ? `
     <div class="section-title">EDUCATION</div>
@@ -1563,10 +1662,23 @@ const generateCVHTML = (cvData: any, template: any) => {
     `).join('')}
     ` : ''}
 
-    ${cvData.skills && cvData.skills.length > 0 ? `
-    <div class="section-title">CORE COMPETENCIES</div>
-    <div class="skills-grid">
-        ${['Technical', 'Soft', 'Language', 'Other'].map(category => {
+    ${cvData.skills ? (() => {
+      let hasSkills = false;
+      
+      // Check if skills is an array (old structure) or object (new structure)
+      if (Array.isArray(cvData.skills) && cvData.skills.length > 0) {
+        hasSkills = true;
+      } else if (cvData.skills.technical?.length > 0 || cvData.skills.soft?.length > 0 || cvData.skills.languages?.length > 0) {
+        hasSkills = true;
+      }
+
+      if (!hasSkills) return '';
+
+      let skillsHTML = '<div class="section-title">CORE COMPETENCIES</div><div class="skills-grid">';
+
+      if (Array.isArray(cvData.skills)) {
+        // Handle old array structure
+        skillsHTML += ['Technical', 'Soft', 'Language', 'Other'].map(category => {
           const categorySkills = cvData.skills.filter((skill: any) => skill.category === category);
           return categorySkills.length > 0 ? `
             <div class="skills-category">
@@ -1574,9 +1686,40 @@ const generateCVHTML = (cvData: any, template: any) => {
                 <div>${categorySkills.map((skill: any) => skill.name).join(' • ')}</div>
             </div>
           ` : '';
-        }).join('')}
-    </div>
-    ` : ''}
+        }).join('');
+      } else {
+        // Handle new nested object structure
+        if (cvData.skills.technical?.length > 0) {
+          skillsHTML += `
+            <div class="skills-category">
+                <div class="skills-title">Technical Skills:</div>
+                <div>${cvData.skills.technical.map((skill: any) => skill.name).join(' • ')}</div>
+            </div>
+          `;
+        }
+        
+        if (cvData.skills.soft?.length > 0) {
+          skillsHTML += `
+            <div class="skills-category">
+                <div class="skills-title">Soft Skills:</div>
+                <div>${cvData.skills.soft.map((skill: any) => skill.name).join(' • ')}</div>
+            </div>
+          `;
+        }
+        
+        if (cvData.skills.languages?.length > 0) {
+          skillsHTML += `
+            <div class="skills-category">
+                <div class="skills-title">Languages:</div>
+                <div>${cvData.skills.languages.map((lang: any) => `${lang.name || lang.language} (${lang.proficiency || lang.level || 'Proficient'})`).join(' • ')}</div>
+            </div>
+          `;
+        }
+      }
+
+      skillsHTML += '</div>';
+      return skillsHTML;
+    })() : ''}
 
     ${cvData.projects && cvData.projects.length > 0 ? `
     <div class="section-title">PROJECTS</div>
@@ -1629,7 +1772,7 @@ const generateCVHTML = (cvData: any, template: any) => {
     `).join('')}
     ` : ''}
 
-    ${cvData.languages && cvData.languages.length > 0 ? `
+    ${cvData.languages && cvData.languages.length > 0 && (!cvData.skills?.languages || cvData.skills.languages.length === 0) ? `
     <div class="section-title">LANGUAGES</div>
     <div style="margin-bottom: 20px;">
         ${cvData.languages.map((lang: any) => `
@@ -1765,6 +1908,9 @@ router.post('/export/word', auth, [
     if (!cvData.personalInfo?.firstName || !cvData.personalInfo?.lastName) {
       return res.status(400).json({ message: 'First name and last name are required' });
     }
+
+    // Optional debugging (remove in production)
+    // console.log('CV Export - Experience count:', (cvData?.experience || cvData?.experiences || []).length);
 
     const doc = generateCVWordDocument(cvData, template);
     const buffer = await Packer.toBuffer(doc);

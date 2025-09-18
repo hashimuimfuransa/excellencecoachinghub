@@ -298,10 +298,10 @@ const createRateLimiter = (windowMs: number, max: number, message: string) => {
   });
 };
 
-// General API rate limiting
+// General API rate limiting - More lenient for development
 const generalLimiter = createRateLimiter(
   parseInt(process.env['RATE_LIMIT_WINDOW_MS'] || '900000'), // 15 minutes
-  parseInt(process.env['RATE_LIMIT_MAX_REQUESTS'] || '100'), // 100 requests per 15 minutes
+  parseInt(process.env['RATE_LIMIT_MAX_REQUESTS'] || '1000'), // 1000 requests per 15 minutes (increased for dev)
   'Too many requests from this IP, please try again later.'
 );
 
@@ -326,6 +326,13 @@ const emailLimiter = createRateLimiter(
   'Too many email requests. Please try again later.'
 );
 
+// CV Builder rate limiting - More lenient for template loading and exports
+const cvBuilderLimiter = createRateLimiter(
+  5 * 60 * 1000, // 5 minutes
+  200, // 200 requests per 5 minutes
+  'Too many CV builder requests. Please try again later.'
+);
+
 // Apply rate limiters
 app.use('/api/', generalLimiter);
 app.use('/api/auth/login', authLimiter);
@@ -333,6 +340,7 @@ app.use('/api/auth/register', authLimiter);
 app.use('/api/auth/forgot-password', passwordResetLimiter);
 app.use('/api/auth/reset-password', passwordResetLimiter);
 app.use('/api/email/', emailLimiter);
+app.use('/api/cv-builder/', cvBuilderLimiter);
 
 // CORS middleware already applied earlier
 

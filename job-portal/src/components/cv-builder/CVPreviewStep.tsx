@@ -242,13 +242,15 @@ const CVPreviewStep: React.FC<CVPreviewStepProps> = ({
             )}
 
             {/* Experience Section */}
-            {cvData.experiences && cvData.experiences.length > 0 && (
-              <Box mb={4}>
-                <Typography variant="h5" sx={{ color: styles.primary, mb: 2, fontWeight: 'bold' }}>
-                  PROFESSIONAL EXPERIENCE
-                </Typography>
-                
-                {cvData.experiences.map((exp, index) => (
+            {(() => {
+              const experiences = cvData.experiences || cvData.experience || [];
+              return experiences.length > 0 && (
+                <Box mb={4}>
+                  <Typography variant="h5" sx={{ color: styles.primary, mb: 2, fontWeight: 'bold' }}>
+                    PROFESSIONAL EXPERIENCE
+                  </Typography>
+                  
+                  {experiences.map((exp, index) => (
                   <Box key={exp.id} mb={3}>
                     <Box display="flex" justifyContent="between" alignItems="start" mb={1}>
                       <Box>
@@ -294,11 +296,12 @@ const CVPreviewStep: React.FC<CVPreviewStepProps> = ({
                       </Box>
                     )}
                     
-                    {index < cvData.experiences.length - 1 && <Divider sx={{ mt: 2 }} />}
+                    {index < experiences.length - 1 && <Divider sx={{ mt: 2 }} />}
                   </Box>
                 ))}
               </Box>
-            )}
+              );
+            })()}
 
             {/* Education Section */}
             {cvData.education && cvData.education.length > 0 && (
@@ -342,34 +345,82 @@ const CVPreviewStep: React.FC<CVPreviewStepProps> = ({
             )}
 
             {/* Skills Section */}
-            {cvData.skills && cvData.skills.length > 0 && (
-              <Box mb={4}>
-                <Typography variant="h5" sx={{ color: styles.primary, mb: 2, fontWeight: 'bold' }}>
-                  CORE COMPETENCIES
-                </Typography>
-                
-                <Grid container spacing={2}>
-                  {['Technical', 'Soft', 'Language', 'Other'].map(category => {
-                    const categorySkills = cvData.skills.filter(skill => skill.category === category);
-                    if (categorySkills.length === 0) return null;
-                    
-                    return (
-                      <Grid item xs={12} sm={6} key={category}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, color: styles.primary }}>
-                          {category} Skills:
-                        </Typography>
-                        <Typography variant="body2" sx={{ lineHeight: 1.4 }}>
-                          {categorySkills.map(skill => skill.name).join(' • ')}
-                        </Typography>
-                      </Grid>
-                    );
-                  })}
-                </Grid>
-              </Box>
-            )}
+            {(() => {
+              const hasSkills = cvData.skills && (
+                (Array.isArray(cvData.skills) && cvData.skills.length > 0) ||
+                (cvData.skills.technical?.length > 0 || cvData.skills.soft?.length > 0 || cvData.skills.languages?.length > 0)
+              );
+              
+              if (!hasSkills) return null;
+              
+              return (
+                <Box mb={4}>
+                  <Typography variant="h5" sx={{ color: styles.primary, mb: 2, fontWeight: 'bold' }}>
+                    CORE COMPETENCIES
+                  </Typography>
+                  
+                  <Grid container spacing={2}>
+                    {Array.isArray(cvData.skills) ? (
+                      // Old array structure
+                      ['Technical', 'Soft', 'Language', 'Other'].map(category => {
+                        const categorySkills = cvData.skills.filter(skill => skill.category === category);
+                        if (categorySkills.length === 0) return null;
+                        
+                        return (
+                          <Grid item xs={12} sm={6} key={category}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, color: styles.primary }}>
+                              {category} Skills:
+                            </Typography>
+                            <Typography variant="body2" sx={{ lineHeight: 1.4 }}>
+                              {categorySkills.map(skill => skill.name).join(' • ')}
+                            </Typography>
+                          </Grid>
+                        );
+                      })
+                    ) : (
+                      // New nested object structure
+                      <>
+                        {cvData.skills.technical?.length > 0 && (
+                          <Grid item xs={12} sm={6}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, color: styles.primary }}>
+                              Technical Skills:
+                            </Typography>
+                            <Typography variant="body2" sx={{ lineHeight: 1.4 }}>
+                              {cvData.skills.technical.map(skill => skill.name).join(' • ')}
+                            </Typography>
+                          </Grid>
+                        )}
+                        
+                        {cvData.skills.soft?.length > 0 && (
+                          <Grid item xs={12} sm={6}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, color: styles.primary }}>
+                              Soft Skills:
+                            </Typography>
+                            <Typography variant="body2" sx={{ lineHeight: 1.4 }}>
+                              {cvData.skills.soft.map(skill => skill.name).join(' • ')}
+                            </Typography>
+                          </Grid>
+                        )}
+                        
+                        {cvData.skills.languages?.length > 0 && (
+                          <Grid item xs={12} sm={6}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, color: styles.primary }}>
+                              Languages:
+                            </Typography>
+                            <Typography variant="body2" sx={{ lineHeight: 1.4 }}>
+                              {cvData.skills.languages.map(lang => `${lang.name || lang.language} (${lang.proficiency || lang.level || 'Proficient'})`).join(' • ')}
+                            </Typography>
+                          </Grid>
+                        )}
+                      </>
+                    )}
+                  </Grid>
+                </Box>
+              );
+            })()}
 
-            {/* Languages Section */}
-            {cvData.languages && cvData.languages.length > 0 && (
+            {/* Languages Section - Only if not already included in skills */}
+            {cvData.languages && cvData.languages.length > 0 && (!cvData.skills?.languages || cvData.skills.languages.length === 0) && (
               <Box mb={4}>
                 <Typography variant="h5" sx={{ color: styles.primary, mb: 2, fontWeight: 'bold' }}>
                   LANGUAGES

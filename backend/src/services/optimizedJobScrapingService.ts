@@ -665,22 +665,33 @@ export class OptimizedJobScrapingService {
     {
       name: 'rwandajob',
       baseUrl: 'https://www.rwandajob.com',
-      paths: ['/job-vacancies-search-rwanda'],
+      paths: ['/job-vacancies-search-rwanda', '/jobs', '/vacancies', '/'],
       priority: 9,
       selectors: {
         jobLink: [
           'a[href*="/job/"]',
           'a[href*="/vacancy/"]',
           'a[href*="/position/"]',
+          'a[href*="/jobs/"]',
+          'a[href*="/vacancies/"]',
+          'a[href*="/employment/"]',
           '.job-item a',
           '.job-card a',
           '.job-title a',
           '.vacancy-title a',
+          '.job-listing a',
+          '.post-title a',
+          '.entry-title a',
           'h3 a',
           'h4 a',
           'article a',
-          '.job-listing a',
-          '.post-title a'
+          '.job a',
+          '.vacancy a',
+          'a[title*="job"]',
+          'a[title*="vacancy"]',
+          'a[title*="position"]',
+          '.job-link',
+          '.vacancy-link'
         ],
         title: [
           'h1',
@@ -804,12 +815,29 @@ export class OptimizedJobScrapingService {
           /\/vacancy\/[a-z0-9-]+/,
           /\/position\/[a-z0-9-]+/,
           /\/jobs\/[a-z0-9-]+/,
-          /\/vacancies\/[a-z0-9-]+/
+          /\/vacancies\/[a-z0-9-]+/,
+          /\/employment\/[a-z0-9-]+/,
+          /\/job-vacancies-[a-z]+\/[a-z0-9-]+/,
+          /\/recruitment-[a-z]+\/[a-z0-9-]+/
         ];
-        const excludes = ['/search', '/filter', '/category', '/page', '/login', '/register', '/admin'];
-        return patterns.some(p => p.test(url.toLowerCase())) && 
-               !excludes.some(e => url.toLowerCase().includes(e)) && 
-               url.length > 25;
+        const excludes = [
+          '/search', '/filter', '/category', '/page', '/login', '/register', '/admin',
+          '/employments/jobs/', '/employments/by/', '/employments/types', '/employments/categories',
+          '/jobs/by/', '/jobs/types', '/jobs/categories', '/jobs/search', '/jobs/filter',
+          '/recruitment-rwanda-cv/', '/cv/', '/profile/', '/sign-in', '/my-profile'
+        ];
+        
+        // Must match a job pattern and not be excluded
+        const matchesPattern = patterns.some(p => p.test(url.toLowerCase()));
+        const isExcluded = excludes.some(e => url.toLowerCase().includes(e));
+        const hasMinLength = url.length > 30;
+        
+        // Additional validation: URL should contain specific job-related segments
+        const hasJobSegment = url.includes('/job/') || url.includes('/vacancy/') || 
+                             url.includes('/position/') || url.includes('/employment/') ||
+                             url.includes('/job-vacancies-') || url.includes('/recruitment-');
+        
+        return matchesPattern && !isExcluded && hasMinLength && hasJobSegment;
       },
       requiresJS: false,
       rateLimit: { delayMs: 4000, maxConcurrent: 1 }
@@ -817,25 +845,107 @@ export class OptimizedJobScrapingService {
     {
       name: 'mifotra-recruitment',
       baseUrl: 'https://recruitment.mifotra.gov.rw',
-      paths: ['/'],
+      paths: ['/', '/vacancies', '/jobs', '/recruitment', '/announcements'],
       priority: 10,
       selectors: {
         jobLink: [
+          // Direct mifotra job links
           'a[href*="/recruitment/"]',
           'a[href*="/vacancy/"]',
           'a[href*="/position/"]',
           'a[href*="/job/"]',
           'a[href*="/announcement/"]',
+          'a[href*="/vacancies/"]',
+          'a[href*="/jobs/"]',
+          'a[href*="/positions/"]',
+          'a[href*="/announcements/"]',
+          
+          // External job portal links (AU, ILO, etc.)
+          'a[href*="jobs.au.int"]',
+          'a[href*="jobs.ilo.org"]',
+          'a[href*="jobs.un.org"]',
+          'a[href*="jobs.undp.org"]',
+          'a[href*="jobs.who.int"]',
+          'a[href*="jobs.worldbank.org"]',
+          'a[href*="jobs.fao.org"]',
+          'a[href*="jobs.unicef.org"]',
+          
+          // Generic job portal patterns
+          'a[href*="/jobs/"]',
+          'a[href*="/job/"]',
+          'a[href*="/vacancy/"]',
+          'a[href*="/position/"]',
+          'a[href*="/career/"]',
+          'a[href*="/employment/"]',
+          
+          // Common class-based selectors
           '.recruitment-item a',
           '.vacancy-item a',
           '.job-item a',
           '.announcement-item a',
           '.position-item a',
+          '.job-card a',
+          '.vacancy-card a',
+          '.recruitment-card a',
+          '.announcement-card a',
+          '.job-listing a',
+          '.vacancy-listing a',
+          '.position-listing a',
+          
+          // Generic link patterns
           'h3 a',
           'h4 a',
+          'h2 a',
+          'h1 a',
           'article a',
           '.job-title a',
-          '.vacancy-title a'
+          '.vacancy-title a',
+          '.announcement-title a',
+          '.position-title a',
+          '.post-title a',
+          '.entry-title a',
+          '.title a',
+          
+          // Title-based patterns
+          'a[title*="job"]',
+          'a[title*="vacancy"]',
+          'a[title*="position"]',
+          'a[href*="recruitment"]',
+          'a[title*="announcement"]',
+          'a[title*="career"]',
+          'a[title*="employment"]',
+          
+          // Class-based patterns
+          '.job-link',
+          '.vacancy-link',
+          '.recruitment-link',
+          '.announcement-link',
+          '.position-link',
+          '.career-link',
+          '.employment-link',
+          
+          // Government-specific patterns
+          'a[href*="/public-service/"]',
+          'a[href*="/civil-service/"]',
+          'a[href*="/government/"]',
+          'a[href*="/ministry/"]',
+          'a[href*="/department/"]',
+          'a[href*="/agency/"]',
+          '.public-service a',
+          '.civil-service a',
+          '.government-job a',
+          '.ministry-job a',
+          
+          // List item patterns
+          'li a',
+          '.list-item a',
+          '.menu-item a',
+          '.nav-item a',
+          
+          // Generic patterns for any links that might be jobs
+          'a[href*="search"]',
+          'a[href*="list"]',
+          'a[href*="view"]'
         ],
         title: [
           'h1',
@@ -969,7 +1079,16 @@ export class OptimizedJobScrapingService {
           /\/position\/[a-z0-9-]+/,
           /\/job\/[a-z0-9-]+/,
           /\/announcement\/[a-z0-9-]+/,
-          /mifotra\.gov\.rw.*\/[a-z0-9-]+$/
+          /mifotra\.gov\.rw.*\/[a-z0-9-]+$/,
+          // External job portal patterns
+          /jobs\.au\.int/,
+          /jobs\.ilo\.org/,
+          /jobs\.un\.org/,
+          /jobs\.undp\.org/,
+          /jobs\.who\.int/,
+          /jobs\.worldbank\.org/,
+          /jobs\.fao\.org/,
+          /jobs\.unicef\.org/
         ];
         const excludes = [
           '/search',
@@ -981,11 +1100,24 @@ export class OptimizedJobScrapingService {
           '/css',
           '/js',
           '/images',
-          '/media'
+          '/media',
+          '#main-content', '#top', '#bottom', 'javascript:', 'mailto:', 'tel:'
         ];
-        return patterns.some(p => p.test(url.toLowerCase())) && 
-               !excludes.some(e => url.toLowerCase().includes(e)) && 
-               url.length > 30;
+        
+        const matchesPattern = patterns.some(p => p.test(url.toLowerCase()));
+        const isExcluded = excludes.some(e => url.toLowerCase().includes(e));
+        const hasMinLength = url.length > 20;
+        
+        // Additional validation: URL should contain specific job-related segments
+        const hasJobSegment = url.includes('/recruitment/') || url.includes('/vacancy/') || 
+                             url.includes('/position/') || url.includes('/job/') ||
+                             url.includes('/announcement/') || url.includes('jobs.au.int') ||
+                             url.includes('jobs.ilo.org') || url.includes('jobs.un.org') ||
+                             url.includes('jobs.undp.org') || url.includes('jobs.who.int') ||
+                             url.includes('jobs.worldbank.org') || url.includes('jobs.fao.org') ||
+                             url.includes('jobs.unicef.org');
+        
+        return matchesPattern && !isExcluded && hasMinLength && hasJobSegment;
       },
       requiresJS: true, // Government sites often use JavaScript
       rateLimit: { delayMs: 8000, maxConcurrent: 1 } // Respectful rate limiting for government site
@@ -1417,6 +1549,54 @@ export class OptimizedJobScrapingService {
   }
 
   /**
+   * Validate if scraped content represents a real job posting
+   */
+  private static isValidJobContent(jobData: any): boolean {
+    if (!jobData || !jobData.title || !jobData.description) {
+      return false;
+    }
+
+    const title = jobData.title.toLowerCase();
+    const description = jobData.description.toLowerCase();
+    
+    // Exclude navigation/category pages
+    const excludePatterns = [
+      'employment types', 'employment by', 'jobs by', 'jobs types',
+      'categories', 'sectors', 'business sectors', 'cities',
+      'not specified', 'remote/not specified', 'other employments',
+      'employment links', 'job categories', 'vacancy types'
+    ];
+    
+    const hasExcludePattern = excludePatterns.some(pattern => 
+      title.includes(pattern) || description.includes(pattern)
+    );
+    
+    if (hasExcludePattern) {
+      return false;
+    }
+    
+    // Must have meaningful content
+    const hasMinDescription = jobData.description.length > 50;
+    const hasRealCompany = jobData.company && 
+                          !jobData.company.toLowerCase().includes('not specified') &&
+                          jobData.company.length > 2;
+    
+    // Must contain job-related keywords
+    const jobKeywords = [
+      'responsibilities', 'requirements', 'qualifications', 'skills',
+      'experience', 'education', 'degree', 'apply', 'application',
+      'salary', 'benefits', 'full-time', 'part-time', 'contract',
+      'deadline', 'start date', 'location', 'duties', 'role'
+    ];
+    
+    const hasJobKeywords = jobKeywords.some(keyword => 
+      description.includes(keyword) || title.includes(keyword)
+    );
+    
+    return hasMinDescription && hasRealCompany && hasJobKeywords;
+  }
+
+  /**
    * Extract job URLs from a source page
    */
   private static async scrapeJobUrlsFromSource(source: JobSourceConfig, limit: number): Promise<string[]> {
@@ -1502,9 +1682,12 @@ export class OptimizedJobScrapingService {
                   foundUrls.push(fullUrl);
                   selectorUrlCount++;
                   
-                  if (source.urlFilter(fullUrl) && !pageJobUrls.includes(fullUrl)) {
-                    pageJobUrls.push(fullUrl);
-                  }
+                if (source.urlFilter(fullUrl) && !pageJobUrls.includes(fullUrl)) {
+                  pageJobUrls.push(fullUrl);
+                  console.log(`✅ Valid job URL found: ${fullUrl}`);
+                } else if (!source.urlFilter(fullUrl)) {
+                  console.log(`❌ URL filtered out: ${fullUrl}`);
+                }
                 }
               }
             });
@@ -1512,8 +1695,8 @@ export class OptimizedJobScrapingService {
             selectorResults[selector] = selectorUrlCount;
           }
           
-          // Debug selector performance for workingnomads and unjobnet
-          if (source.name === 'workingnomads' || source.name === 'unjobnet') {
+          // Debug selector performance for workingnomads, unjobnet, and mifotra
+          if (source.name === 'workingnomads' || source.name === 'unjobnet' || source.name === 'mifotra-recruitment') {
             console.log(`🔍 Selector Results for ${source.name} on path ${path}:`);
             Object.entries(selectorResults).forEach(([selector, count]) => {
               if (count > 0) {
@@ -1522,6 +1705,33 @@ export class OptimizedJobScrapingService {
                 console.log(`   ❌ ${selector}: ${count} URLs`);
               }
             });
+            
+            // Additional debugging for mifotra
+            if (source.name === 'mifotra-recruitment' && pageJobUrls.length === 0) {
+              console.log(`🔍 Debugging mifotra page content...`);
+              console.log(`📄 Page HTML length: ${html.length}`);
+              console.log(`🔍 Contains 'recruitment': ${html.toLowerCase().includes('recruitment')}`);
+              console.log(`🔍 Contains 'vacancy': ${html.toLowerCase().includes('vacancy')}`);
+              console.log(`🔍 Contains 'job': ${html.toLowerCase().includes('job')}`);
+              console.log(`🔍 Contains 'announcement': ${html.toLowerCase().includes('announcement')}`);
+              
+              // Check for any links at all
+              const allLinks = $('a[href]').length;
+              console.log(`🔗 Total links found: ${allLinks}`);
+              
+              // Show sample links
+              const sampleLinks = $('a[href]').slice(0, 10).map((_, el) => $(el).attr('href')).get();
+              console.log(`🔗 Sample links: ${sampleLinks.join(', ')}`);
+              
+              // Test URL filtering on sample links
+              console.log(`🔍 Testing URL filtering on sample links:`);
+              sampleLinks.forEach(link => {
+                if (link) {
+                  const filtered = source.urlFilter(link);
+                  console.log(`   ${filtered ? '✅' : '❌'} ${link}`);
+                }
+              });
+            }
           }
           
           // Debug logging for workingnomads and unjobnet
@@ -2181,6 +2391,12 @@ export class OptimizedJobScrapingService {
               console.log(`📄 Processing job ${i + 1}/${jobUrls.length}: ${jobUrl}`);
               
               const jobData = await this.scrapeAndParseJob(jobUrl, source.name);
+              
+              // Validate that this is a real job posting, not navigation/category content
+              if (jobData && !this.isValidJobContent(jobData)) {
+                console.log(`⚠️ Skipping non-job content: ${jobData.title} at ${jobData.company}`);
+                continue;
+              }
               
               if (jobData && systemUser) {
                 // For workingnomads, check if job is within 72 hours

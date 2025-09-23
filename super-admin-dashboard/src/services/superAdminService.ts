@@ -774,6 +774,21 @@ class SuperAdminService {
     }
   }
 
+  async bulkJobAction(jobIds: string[], action: 'activate' | 'pause' | 'archive' | 'delete'): Promise<void> {
+    try {
+      console.log('🔍 SuperAdminService: Performing bulk job action via API...');
+      console.log(`📊 Action: ${action}, Job IDs: ${jobIds.length} jobs`);
+      
+      const response = await apiPost('/admin/jobs/bulk-action', { jobIds, action });
+      console.log('✅ SuperAdminService: Successfully performed bulk job action');
+      
+      return response;
+    } catch (error) {
+      console.error('❌ SuperAdminService: Failed to perform bulk job action:', error);
+      throw error;
+    }
+  }
+
   async getJobStats(): Promise<{
     totalJobs: number;
     activeJobs: number;

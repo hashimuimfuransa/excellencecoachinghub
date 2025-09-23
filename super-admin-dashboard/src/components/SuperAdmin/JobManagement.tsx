@@ -400,31 +400,23 @@ const JobManagement: React.FC<JobManagementProps> = ({ onJobSelect }) => {
       switch (action) {
         case 'activate':
           console.log('Bulk activating jobs:', selectedJobIds);
-          await Promise.all(selectedJobIds.map(id => 
-            superAdminService.updateJob(id, { status: JobStatus.ACTIVE })
-          ));
+          await superAdminService.bulkJobAction(selectedJobIds, 'activate');
           console.log('✅ Bulk activation completed');
           break;
         case 'pause':
           console.log('Bulk pausing jobs:', selectedJobIds);
-          await Promise.all(selectedJobIds.map(id => 
-            superAdminService.updateJob(id, { status: JobStatus.PAUSED })
-          ));
+          await superAdminService.bulkJobAction(selectedJobIds, 'pause');
           console.log('✅ Bulk pause completed');
           break;
         case 'archive':
           console.log('Bulk archiving jobs:', selectedJobIds);
-          await Promise.all(selectedJobIds.map(id => 
-            superAdminService.updateJob(id, { status: JobStatus.CLOSED })
-          ));
+          await superAdminService.bulkJobAction(selectedJobIds, 'archive');
           console.log('✅ Bulk archive completed');
           break;
         case 'delete':
-          if (window.confirm(`Delete ${selectedJobIds.length} selected jobs?`)) {
+          if (window.confirm(`Delete ${selectedJobIds.length} selected jobs? This action cannot be undone.`)) {
             console.log('Bulk deleting jobs:', selectedJobIds);
-            await Promise.all(selectedJobIds.map(id => 
-              superAdminService.deleteJob(id)
-            ));
+            await superAdminService.bulkJobAction(selectedJobIds, 'delete');
             console.log('✅ Bulk deletion completed');
           }
           break;

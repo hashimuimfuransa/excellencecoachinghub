@@ -8,7 +8,6 @@ import * as cheerio from 'cheerio';
 import puppeteer, { Page } from 'puppeteer';
 import { Job, IJobDocument } from '../models/Job';
 import { JobStatus, JobType, ExperienceLevel, EducationLevel, JobCategory } from '../types';
-import { centralAIManager } from './centralAIManager';
 
 export interface InternshipRwJobData {
   title: string;
@@ -31,7 +30,7 @@ export interface InternshipRwJobData {
     representativeName?: string;
     applicationInstructions?: string;
   };
-  applicationDeadline?: Date;
+  applicationDeadline?: Date | undefined;
   postedDate?: Date;
   externalApplicationUrl: string;
   externalJobId: string;
@@ -46,12 +45,12 @@ export interface InternshipRwJobData {
 export interface EmployerJobRequest {
   jobTitle: string;
   numberOfPositions: number;
-  expectedStartDate?: Date;
+  expectedStartDate?: Date | undefined;
   requiredQualification: string;
   requiredFieldOfStudy: string;
   hiringCompanyName: string;
-  hiringCompanyAddress?: string;
-  hiringCompanyWebsite?: string;
+  hiringCompanyAddress?: string | undefined;
+  hiringCompanyWebsite?: string | undefined;
   companyLocation: string;
   representativeName: string;
   contactEmail: string;
@@ -63,25 +62,17 @@ export interface EmployerJobRequest {
 
 export class InternshipRwScrapingService {
   private static readonly BASE_URL = 'https://internship.rw';
-  private static readonly MAX_RETRIES = 3;
   private static readonly RATE_LIMIT_DELAY = 8000; // 8 seconds between requests
   private static readonly JOBS_PER_CYCLE = 10; // Maximum jobs to scrape per cycle
 
   /**
    * Cross-version compatibility helper for waiting
    */
-  private static async waitForDelay(page: Page, ms: number): Promise<void> {
+  private static async waitForDelay(ms: number): Promise<void> {
     try {
       console.log(`⏰ Waiting ${ms}ms...`);
-      // Try different Puppeteer wait methods based on version
-      if (page && typeof page.waitForTimeout === 'function') {
-        await page.waitForTimeout(ms);
-      } else if (page && typeof (page as any).waitFor === 'function') {
-        await (page as any).waitFor(ms);
-      } else {
-        // Fallback to native setTimeout
-        await new Promise(resolve => setTimeout(resolve, ms));
-      }
+      // Use native setTimeout for better compatibility across Puppeteer versions
+      await new Promise(resolve => setTimeout(resolve, ms));
     } catch (error) {
       console.warn(`⚠️ waitForDelay error, using fallback:`, error);
       // Always fall back to native setTimeout if Puppeteer methods fail
@@ -162,7 +153,7 @@ export class InternshipRwScrapingService {
           timeout: 30000 
         });
         
-        await this.waitForDelay(page, 2000);
+        await this.waitForDelay(2000);
         
         // Check if already logged in by looking for user indicators
         const isAlreadyLoggedIn = await page.$('.user-profile, .logout, .dashboard, .my-account, [href*="logout"]');
@@ -178,7 +169,14 @@ export class InternshipRwScrapingService {
         const loginForm = await page.$('form');
         if (loginForm) {
           // Check if this is a registration page or login page
-          const isRegisterPage = await page.$('[name="register"], input[value*="register"], button[type="submit"]:contains("Register")');
+          // Use evaluate to check for register-related elements since :contains() is not valid CSS
+          const isRegisterPage = await page.evaluate(() => {
+            const registerElements = document.querySelectorAll('[name="register"], input[value*="register"]');
+            const registerButtons = Array.from(document.querySelectorAll('button[type="submit"]')).filter((btn: any) => 
+              btn.textContent && btn.textContent.toLowerCase().includes('register')
+            );
+            return registerElements.length > 0 || registerButtons.length > 0;
+          });
           
           if (isRegisterPage) {
             // Handle registration
@@ -259,7 +257,7 @@ export class InternshipRwScrapingService {
       await page.click('button[type="submit"], input[type="submit"], .submit-btn');
       
       // Wait for response
-      await page.waitForTimeout(3000);
+      await this.waitForDelay(3000);
       
       // Check if registration was successful
       const currentUrl = page.url();
@@ -317,7 +315,7 @@ export class InternshipRwScrapingService {
           await page.click('button[type="submit"], input[type="submit"], .login-btn');
           
           // Wait for response
-          await this.waitForDelay(page, 3000);
+          await this.waitForDelay(3000);
           
           // Check if login was successful
           const currentUrl = page.url();
@@ -495,7 +493,7 @@ export class InternshipRwScrapingService {
       });
 
       // Wait for content to load
-      await page.waitForTimeout(3000);
+      await this.waitForDelay(3000);
 
       // Check if we're redirected to login (indicates auth is required but failed)
       if (page.url().includes('login') && !url.includes('login')) {
@@ -504,7 +502,7 @@ export class InternshipRwScrapingService {
         if (authRetry) {
           // Try navigating to original URL again
           await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
-          await this.waitForDelay(page, 2000);
+          await this.waitForDelay(2000);
         }
       }
 
@@ -538,6 +536,24 @@ export class InternshipRwScrapingService {
 
       // Extract job links with enhanced detection
       const jobLinks = this.extractJobLinks($, url);
+      console.log(`📋 Found ${jobLinks.length} job links on ${path}`);
+      
+      if (jobLinks.length === 0) {
+        // Debug: log some page content to understand structure
+        const pageText = $.text().substring(0, 500);
+        console.log(`🔍 Page text sample: ${pageText}`);
+        
+        // Check for common elements that might indicate job listings
+        const hasJobKeywords = content.toLowerCase().includes('job') || 
+                              content.toLowerCase().includes('internship') ||
+                              content.toLowerCase().includes('opportunity') ||
+                              content.toLowerCase().includes('vacancy');
+        console.log(`🔍 Contains job keywords: ${hasJobKeywords}`);
+        
+        // Check for common HTML patterns
+        const hasJobElements = $('a[href*="job"], a[href*="internship"], a[href*="opportunity"]').length > 0;
+        console.log(`🔍 Has job-related links: ${hasJobElements}`);
+      }
       
       // If no direct job links found but we have authenticated access, try alternative paths
       if (jobLinks.length === 0 && (hasLoginIndicators || path === '/dashboard/')) {
@@ -766,7 +782,12 @@ export class InternshipRwScrapingService {
       /\/internships\/[a-z0-9-]+/,
       /\/opportunities\/[a-z0-9-]+/,
       /\/positions\/[a-z0-9-]+/,
-      /\/vacancies\/[a-z0-9-]+/
+      /\/vacancies\/[a-z0-9-]+/,
+      // More specific patterns for actual job postings
+      /\/recruitment\/[a-z0-9-]+/,
+      /\/career\/[a-z0-9-]+/,
+      /\/employment\/[a-z0-9-]+/,
+      /\/hiring\/[a-z0-9-]+/
     ];
     
     const excludes = [
@@ -782,13 +803,47 @@ export class InternshipRwScrapingService {
       '/api/auth',
       '/password',
       '/reset',
-      '/verify'
+      '/verify',
+      // Exclude generic portal pages
+      '/about',
+      '/contact',
+      '/help',
+      '/faq',
+      '/terms',
+      '/privacy',
+      '/policy',
+      '/program',
+      '/programs',
+      '/portal',
+      '/home',
+      '/index',
+      '/main',
+      '/overview',
+      '/introduction',
+      '/welcome',
+      '/getting-started',
+      '/how-it-works',
+      '/benefits',
+      '/features',
+      '/services',
+      '/information',
+      '/guidelines',
+      '/instructions',
+      '/tutorial',
+      '/guide'
     ];
 
     const matchesJobPattern = jobPatterns.some(p => p.test(url.toLowerCase()));
     const isExcluded = excludes.some(e => url.toLowerCase().includes(e));
+    
+    // Additional validation: URL should have meaningful segments
+    const urlSegments = url.split('/').filter(segment => segment.length > 0);
+    const hasMeaningfulSegments = urlSegments.length >= 3; // Should have domain/path/identifier
+    
+    // Check for specific job identifiers in URL
+    const hasJobIdentifier = /\/[a-z0-9-]{3,}\/[a-z0-9-]{3,}/.test(url.toLowerCase());
 
-    return matchesJobPattern && !isExcluded && url.length > 20;
+    return matchesJobPattern && !isExcluded && url.length > 20 && hasMeaningfulSegments && hasJobIdentifier;
   }
 
   /**
@@ -807,7 +862,7 @@ export class InternshipRwScrapingService {
         timeout: 30000 
       });
 
-      await page.waitForTimeout(2000);
+      await this.waitForDelay(2000);
 
       const content = await page.content();
       const $ = cheerio.load(content);
@@ -832,11 +887,11 @@ export class InternshipRwScrapingService {
   }
 
   /**
-   * Extract job data from page content
+   * Extract job data from page content with enhanced validation
    */
-  private static extractJobData($: cheerio.CheerioAPI, url: string): InternshipRwJobData | null {
-    // Extract title
-    const title = this.extractText($, [
+  private static extractJobData($: any, url: string): InternshipRwJobData | null {
+    // Extract title with validation
+    const rawTitle = this.extractText($, [
       'h1',
       '.job-title',
       '.internship-title',
@@ -850,8 +905,8 @@ export class InternshipRwScrapingService {
       '.entry-title'
     ]);
 
-    // Extract company
-    const company = this.extractText($, [
+    // Extract company with validation
+    const rawCompany = this.extractText($, [
       '.company',
       '.employer',
       '.organization',
@@ -861,8 +916,8 @@ export class InternshipRwScrapingService {
       '.employer-name'
     ]);
 
-    // Extract location
-    const location = this.extractText($, [
+    // Extract location with validation
+    const rawLocation = this.extractText($, [
       '.location',
       '.job-location',
       '.work-location',
@@ -871,8 +926,8 @@ export class InternshipRwScrapingService {
       '.duty-station'
     ]);
 
-    // Extract description
-    const description = this.extractText($, [
+    // Extract description with validation
+    const rawDescription = this.extractText($, [
       '.job-description',
       '.internship-description',
       '.opportunity-description',
@@ -885,9 +940,50 @@ export class InternshipRwScrapingService {
       'article'
     ]);
 
-    if (!title) {
-      console.log(`⚠️ No title found for ${url}`);
+    // Clean and validate extracted data
+    const title = this.cleanText(rawTitle);
+    const company = this.cleanText(rawCompany);
+    const location = this.cleanText(rawLocation);
+    const description = this.cleanText(rawDescription);
+
+    // Validate extracted data
+    if (!title || title.length < 5) {
+      console.log(`⚠️ Invalid title found for ${url}: "${title}"`);
       return null;
+    }
+
+    if (!company || company.length < 2) {
+      console.log(`⚠️ Invalid company found for ${url}: "${company}"`);
+      return null;
+    }
+
+    if (!description || description.length < 20) {
+      console.log(`⚠️ Invalid description found for ${url}: "${description}"`);
+      return null;
+    }
+
+    // Check for JavaScript code fragments in extracted data
+    const invalidPatterns = [
+      /getFullYear\(\)/i,
+      /javascript:/i,
+      /function\s*\(/i,
+      /console\.log/i,
+      /document\./i,
+      /window\./i,
+      /\.innerHTML/i,
+      /\.textContent/i,
+      /undefined/i,
+      /null/i,
+      /NaN/i,
+      /\[object\s+Object\]/i
+    ];
+
+    const contentToCheck = `${title} ${company} ${description}`;
+    for (const pattern of invalidPatterns) {
+      if (pattern.test(contentToCheck)) {
+        console.log(`⚠️ JavaScript code detected in scraped content for ${url}: ${pattern.source}`);
+        return null;
+      }
     }
 
     // Extract requirements and other details
@@ -945,7 +1041,7 @@ export class InternshipRwScrapingService {
       jobType,
       category: this.categorizeJob(title, description),
       experienceLevel: isInternship ? ExperienceLevel.ENTRY_LEVEL : ExperienceLevel.MID_LEVEL,
-      educationLevel: EducationLevel.BACHELORS,
+        educationLevel: EducationLevel.BACHELOR,
       requirements,
       responsibilities,
       benefits,
@@ -968,7 +1064,7 @@ export class InternshipRwScrapingService {
   /**
    * Extract employer job request from hire-alumni page
    */
-  private static extractEmployerJobRequest($: cheerio.CheerioAPI, url: string): EmployerJobRequest | null {
+  private static extractEmployerJobRequest($: any, url: string): EmployerJobRequest | null {
     // Look for the job request form on hire-alumni page
     const form = $('form').first();
     if (form.length === 0) return null;
@@ -1012,7 +1108,7 @@ export class InternshipRwScrapingService {
       });
 
       if (response && response.ok()) {
-        const text = await page.evaluate(() => document.body.textContent);
+        const text = await page.evaluate(() => document.body?.textContent || '');
         
         // Try to parse as JSON
         try {
@@ -1060,7 +1156,7 @@ export class InternshipRwScrapingService {
       jobType: JobType.INTERNSHIP,
       category: this.categorizeJob(title, item.description || ''),
       experienceLevel: ExperienceLevel.ENTRY_LEVEL,
-      educationLevel: EducationLevel.BACHELORS,
+        educationLevel: EducationLevel.BACHELOR,
       requirements: this.parseStringArray(item.requirements),
       responsibilities: this.parseStringArray(item.responsibilities),
       benefits: this.parseStringArray(item.benefits),
@@ -1163,48 +1259,82 @@ export class InternshipRwScrapingService {
   }
 
   /**
-   * Save scraped jobs to database
+   * Save scraped jobs to database with enhanced validation and duplicate prevention
    */
   public static async saveScrapedJobs(jobs: InternshipRwJobData[]): Promise<number> {
     let savedCount = 0;
+    let skippedCount = 0;
+    let invalidCount = 0;
     
-    for (const jobData of jobs) {
+    // Get or create system employer user for internship.rw jobs
+    const { User } = await import('../models/User');
+    let systemEmployer = await User.findOne({ email: 'system@internship.rw' });
+    
+    if (!systemEmployer) {
+      systemEmployer = new User({
+        firstName: 'Internship',
+        lastName: 'Portal',
+        email: 'system@internship.rw',
+        password: 'system-generated',
+        role: 'employer',
+        company: 'Rwanda National Internship Programme',
+        isVerified: true
+      });
+      await systemEmployer.save();
+    }
+    
+    // Filter out invalid jobs first
+    const validJobs = jobs.filter(jobData => this.isValidJobData(jobData));
+    invalidCount = jobs.length - validJobs.length;
+    
+    if (invalidCount > 0) {
+      console.log(`⚠️ Filtered out ${invalidCount} invalid job entries`);
+    }
+    
+    for (const jobData of validJobs) {
       try {
-        // Check if job already exists
-        const existingJob = await Job.findOne({ 
-          externalJobId: jobData.externalJobId 
-        });
+        // Enhanced duplicate detection - check multiple criteria
+        const existingJob = await this.findDuplicateJob(jobData);
 
         if (!existingJob) {
+          // Additional validation before saving
+          const cleanedJobData = this.cleanJobData(jobData);
+          
           const newJob = new Job({
-            title: jobData.title,
-            description: jobData.description,
-            company: jobData.company,
-            location: jobData.location,
-            jobType: jobData.jobType,
-            category: jobData.category,
-            experienceLevel: jobData.experienceLevel,
-            educationLevel: jobData.educationLevel,
-            skills: jobData.skills,
-            requirements: jobData.requirements,
-            responsibilities: jobData.responsibilities,
-            benefits: jobData.benefits,
-            applicationDeadline: jobData.applicationDeadline,
-            postedDate: jobData.postedDate,
+            title: cleanedJobData.title,
+            description: cleanedJobData.description,
+            company: cleanedJobData.company,
+            location: cleanedJobData.location,
+            jobType: cleanedJobData.jobType,
+            category: cleanedJobData.category,
+            experienceLevel: cleanedJobData.experienceLevel,
+            educationLevel: cleanedJobData.educationLevel,
+            skills: cleanedJobData.skills,
+            requirements: cleanedJobData.requirements,
+            responsibilities: cleanedJobData.responsibilities,
+            benefits: cleanedJobData.benefits,
+            applicationDeadline: cleanedJobData.applicationDeadline,
+            postedDate: cleanedJobData.postedDate,
             status: JobStatus.ACTIVE,
-            externalApplicationUrl: jobData.externalApplicationUrl,
-            externalJobId: jobData.externalJobId,
-            contactInfo: jobData.contactInfo,
+            externalApplicationUrl: cleanedJobData.externalApplicationUrl,
+            externalJobId: cleanedJobData.externalJobId,
+            contactInfo: cleanedJobData.contactInfo,
             isRemote: false,
-            employerEmail: jobData.contactInfo.email || 'internship@mifotra.gov.rw',
-            source: 'internship.rw'
+            employerEmail: cleanedJobData.contactInfo.email || 'internship@mifotra.gov.rw',
+            source: 'internship.rw',
+            employer: systemEmployer._id,
+            isExternalJob: true,
+            externalJobSource: 'internship.rw'
           });
 
           await newJob.save();
           savedCount++;
           
-          console.log(`💾 Saved job: ${jobData.title} at ${jobData.company}`);
+          console.log(`💾 Saved job: ${cleanedJobData.title} at ${cleanedJobData.company}`);
         } else {
+          skippedCount++;
+          console.log(`⚠️ Skipped duplicate job: ${jobData.title} (already exists)`);
+          
           // Update existing job if needed
           const updatedFields: Partial<IJobDocument> = {};
           let hasUpdates = false;
@@ -1230,11 +1360,313 @@ export class InternshipRwScrapingService {
       }
     }
 
+    console.log(`📊 Scraping results: ${savedCount} saved, ${skippedCount} duplicates skipped, ${invalidCount} invalid entries filtered`);
     return savedCount;
   }
 
+  /**
+   * Enhanced duplicate detection using multiple criteria
+   */
+  private static async findDuplicateJob(jobData: InternshipRwJobData): Promise<IJobDocument | null> {
+    // First check by externalJobId (most reliable)
+    let existingJob = await Job.findOne({ 
+      externalJobId: jobData.externalJobId 
+    });
+    
+    if (existingJob) {
+      return existingJob;
+    }
+    
+    // Check by title + company combination (for cases where externalJobId changes)
+    existingJob = await Job.findOne({
+      title: { $regex: new RegExp(jobData.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
+      company: { $regex: new RegExp(jobData.company.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
+      externalJobSource: 'internship.rw'
+    });
+    
+    if (existingJob) {
+      return existingJob;
+    }
+    
+    // Check by description similarity (for very similar content)
+    const descriptionHash = this.generateContentHash(jobData.description);
+    const existingJobs = await Job.find({
+      externalJobSource: 'internship.rw',
+      $or: [
+        { description: { $regex: new RegExp(jobData.description.substring(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') } },
+        { title: { $regex: new RegExp(jobData.title.substring(0, 50).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') } }
+      ]
+    });
+    
+    // Check for high similarity
+    for (const job of existingJobs) {
+      const similarity = this.calculateSimilarity(jobData.description, job.description);
+      if (similarity > 0.85) { // 85% similarity threshold
+        return job;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Validate job data before saving
+   */
+  private static isValidJobData(jobData: InternshipRwJobData): boolean {
+    // Check for required fields
+    if (!jobData.title || !jobData.company || !jobData.description) {
+      return false;
+    }
+    
+    // Check for invalid content patterns
+    const invalidPatterns = [
+      /getFullYear\(\)/i,
+      /javascript:/i,
+      /function\s*\(/i,
+      /console\.log/i,
+      /document\./i,
+      /window\./i,
+      /\.innerHTML/i,
+      /\.textContent/i,
+      /undefined/i,
+      /null/i,
+      /NaN/i,
+      /\[object\s+Object\]/i,
+      /<script/i,
+      /<iframe/i,
+      /eval\(/i,
+      /setTimeout\(/i,
+      /setInterval\(/i
+    ];
+    
+    const contentToCheck = `${jobData.title} ${jobData.company} ${jobData.description}`;
+    
+    for (const pattern of invalidPatterns) {
+      if (pattern.test(contentToCheck)) {
+        console.log(`⚠️ Invalid content detected: ${pattern.source} in "${jobData.title}"`);
+        return false;
+      }
+    }
+    
+    // Check for minimum content length
+    if (jobData.title.length < 5 || jobData.description.length < 20) {
+      return false;
+    }
+    
+    // Check for repetitive content (like the duplicate entries you showed)
+    const titleWords = jobData.title.toLowerCase().split(/\s+/);
+    const uniqueWords = new Set(titleWords);
+    if (titleWords.length > 3 && uniqueWords.size < titleWords.length * 0.6) {
+      console.log(`⚠️ Repetitive title detected: "${jobData.title}"`);
+      return false;
+    }
+    
+    // ENHANCED VALIDATION: Filter out generic portal content
+    const genericPortalPatterns = [
+      // Generic portal titles
+      /now hiring.*apply.*gain.*hands.*on.*experience/i,
+      /internship.*program.*objectives/i,
+      /national.*internship.*portal/i,
+      /internship.*portal/i,
+      /rwanda.*national.*internship.*programme/i,
+      /collaborative.*dynamic.*platform/i,
+      /career.*development.*success/i,
+      /unique.*opportunity.*students.*employers/i,
+      /connect.*collaborate/i,
+      
+      // Generic descriptions
+      /with.*national.*internship.*portal.*students.*employers.*alike/i,
+      /benefit.*collaborative.*dynamic.*platform/i,
+      /supports.*career.*development.*success/i,
+      /provides.*unique.*opportunity.*students.*employers/i,
+      /connect.*collaborate/i,
+      
+      // Portal navigation content
+      /internship.*entry.*level/i,
+      /rwanda.*national.*internship.*programme/i,
+      /internship.*portal/i,
+      /active.*0.*0.*views/i,
+      /sep.*23.*2025/i
+    ];
+    
+    const titleLower = jobData.title.toLowerCase();
+    const descLower = jobData.description.toLowerCase();
+    const companyLower = jobData.company.toLowerCase();
+    
+    for (const pattern of genericPortalPatterns) {
+      if (pattern.test(titleLower) || pattern.test(descLower) || pattern.test(companyLower)) {
+        console.log(`⚠️ Generic portal content detected: "${jobData.title}"`);
+        return false;
+      }
+    }
+    
+    // Check for specific job posting indicators
+    const jobPostingIndicators = [
+      /position.*title/i,
+      /job.*title/i,
+      /vacancy.*title/i,
+      /internship.*title/i,
+      /specific.*role/i,
+      /specific.*position/i,
+      /specific.*job/i,
+      /specific.*internship/i,
+      /department.*of/i,
+      /ministry.*of/i,
+      /organization.*seeks/i,
+      /looking.*for/i,
+      /seeking.*candidate/i,
+      /applications.*invited/i,
+      /deadline.*application/i,
+      /application.*deadline/i,
+      /submit.*application/i,
+      /send.*cv/i,
+      /email.*cv/i,
+      /contact.*person/i,
+      /hr.*department/i,
+      /recruitment.*team/i
+    ];
+    
+    const hasJobIndicators = jobPostingIndicators.some(indicator => 
+      indicator.test(titleLower) || indicator.test(descLower)
+    );
+    
+    if (!hasJobIndicators) {
+      console.log(`⚠️ No specific job posting indicators found: "${jobData.title}"`);
+      return false;
+    }
+    
+    // Check for meaningful company names (not generic portal names)
+    const genericCompanyNames = [
+      'internship portal',
+      'rwanda national internship programme',
+      'national internship portal',
+      'internship programme',
+      'portal',
+      'programme'
+    ];
+    
+    const isGenericCompany = genericCompanyNames.some(name => 
+      companyLower.includes(name.toLowerCase())
+    );
+    
+    if (isGenericCompany) {
+      console.log(`⚠️ Generic company name detected: "${jobData.company}"`);
+      return false;
+    }
+    
+    return true;
+  }
+
+  /**
+   * Clean and normalize job data
+   */
+  private static cleanJobData(jobData: InternshipRwJobData): InternshipRwJobData {
+    return {
+      ...jobData,
+      title: this.cleanText(jobData.title),
+      company: this.cleanText(jobData.company),
+      location: this.cleanText(jobData.location),
+      description: this.cleanText(jobData.description),
+      requirements: jobData.requirements.map(req => this.cleanText(req)).filter(req => req.length > 0),
+      responsibilities: jobData.responsibilities.map(resp => this.cleanText(resp)).filter(resp => resp.length > 0),
+      benefits: jobData.benefits.map(benefit => this.cleanText(benefit)).filter(benefit => benefit.length > 0),
+      skills: jobData.skills.map(skill => this.cleanText(skill)).filter(skill => skill.length > 0),
+      contactInfo: {
+        email: jobData.contactInfo.email ? this.cleanText(jobData.contactInfo.email) : undefined,
+        phone: jobData.contactInfo.phone ? this.cleanText(jobData.contactInfo.phone) : undefined,
+        website: jobData.contactInfo.website,
+        address: jobData.contactInfo.address,
+        representativeName: jobData.contactInfo.representativeName ? this.cleanText(jobData.contactInfo.representativeName) : undefined,
+        applicationInstructions: jobData.contactInfo.applicationInstructions ? this.cleanText(jobData.contactInfo.applicationInstructions) : undefined
+      }
+    };
+  }
+
+  /**
+   * Clean text content by removing invalid characters and patterns
+   */
+  private static cleanText(text: string): string {
+    if (!text) return '';
+    
+    return text
+      .replace(/getFullYear\(\)/gi, '') // Remove JavaScript code fragments
+      .replace(/javascript:/gi, '')
+      .replace(/function\s*\(/gi, '')
+      .replace(/console\.log/gi, '')
+      .replace(/document\./gi, '')
+      .replace(/window\./gi, '')
+      .replace(/\.innerHTML/gi, '')
+      .replace(/\.textContent/gi, '')
+      .replace(/undefined/gi, '')
+      .replace(/null/gi, '')
+      .replace(/NaN/gi, '')
+      .replace(/\[object\s+Object\]/gi, '')
+      .replace(/<script[^>]*>.*?<\/script>/gi, '') // Remove script tags
+      .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '') // Remove iframe tags
+      .replace(/eval\(/gi, '')
+      .replace(/setTimeout\(/gi, '')
+      .replace(/setInterval\(/gi, '')
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .replace(/^\s+|\s+$/g, '') // Trim
+      .substring(0, 5000); // Limit length
+  }
+
+  /**
+   * Generate content hash for similarity comparison
+   */
+  private static generateContentHash(content: string): string {
+    const crypto = require('crypto');
+    return crypto.createHash('md5').update(content.toLowerCase().trim()).digest('hex');
+  }
+
+  /**
+   * Calculate similarity between two strings using Levenshtein distance
+   */
+  private static calculateSimilarity(str1: string, str2: string): number {
+    const longer = str1.length > str2.length ? str1 : str2;
+    const shorter = str1.length > str2.length ? str2 : str1;
+    
+    if (longer.length === 0) {
+      return 1.0;
+    }
+    
+    const distance = this.levenshteinDistance(longer, shorter);
+    return (longer.length - distance) / longer.length;
+  }
+
+  /**
+   * Calculate Levenshtein distance between two strings
+   */
+  private static levenshteinDistance(str1: string, str2: string): number {
+    const matrix = [];
+    
+    for (let i = 0; i <= str2.length; i++) {
+      matrix[i] = [i];
+    }
+    
+    for (let j = 0; j <= str1.length; j++) {
+      matrix[0][j] = j;
+    }
+    
+    for (let i = 1; i <= str2.length; i++) {
+      for (let j = 1; j <= str1.length; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          );
+        }
+      }
+    }
+    
+    return matrix[str2.length][str1.length];
+  }
+
   // Helper methods
-  private static extractText($: cheerio.CheerioAPI, selectors: string[]): string {
+  private static extractText($: any, selectors: string[]): string {
     for (const selector of selectors) {
       const text = $(selector).first().text().trim();
       if (text) return text;
@@ -1242,7 +1674,7 @@ export class InternshipRwScrapingService {
     return '';
   }
 
-  private static extractList($: cheerio.CheerioAPI, selectors: string[]): string[] {
+  private static extractList($: any, selectors: string[]): string[] {
     for (const selector of selectors) {
       const element = $(selector).first();
       if (element.length > 0) {
@@ -1255,7 +1687,7 @@ export class InternshipRwScrapingService {
     return [];
   }
 
-  private static extractDeadline($: cheerio.CheerioAPI): Date | undefined {
+  private static extractDeadline($: any): Date | undefined {
     const selectors = [
       '.deadline',
       '.application-deadline',
@@ -1280,19 +1712,19 @@ export class InternshipRwScrapingService {
     const text = `${title} ${description}`.toLowerCase();
     
     if (text.includes('tech') || text.includes('software') || text.includes('IT') || text.includes('computer')) {
-      return JobCategory.TECHNOLOGY;
+      return JobCategory.JOBS;
     } else if (text.includes('market') || text.includes('sales') || text.includes('business')) {
-      return JobCategory.SALES_MARKETING;
+      return JobCategory.JOBS;
     } else if (text.includes('finance') || text.includes('accounting') || text.includes('bank')) {
-      return JobCategory.FINANCE;
+      return JobCategory.JOBS;
     } else if (text.includes('health') || text.includes('medical') || text.includes('nurse')) {
-      return JobCategory.HEALTHCARE;
+      return JobCategory.JOBS;
     } else if (text.includes('teach') || text.includes('education') || text.includes('training')) {
-      return JobCategory.EDUCATION;
+      return JobCategory.JOBS;
     } else if (text.includes('engineer')) {
-      return JobCategory.ENGINEERING;
+      return JobCategory.JOBS;
     } else {
-      return JobCategory.GENERAL;
+      return JobCategory.JOBS;
     }
   }
 
@@ -1393,99 +1825,6 @@ export class InternshipRwScrapingService {
     return levelMapping[normalized] || ExperienceLevel.ENTRY_LEVEL;
   }
 
-  /**
-   * Save scraped jobs to database
-   */
-  public static async saveScrapedJobs(jobs: InternshipRwJobData[]): Promise<number> {
-    if (!jobs || jobs.length === 0) {
-      return 0;
-    }
-
-    let savedCount = 0;
-    
-    for (const jobData of jobs) {
-      try {
-        // Check if job already exists
-        const existingJob = await Job.findOne({
-          externalJobId: jobData.externalJobId,
-          source: 'internship.rw'
-        });
-
-        if (existingJob) {
-          console.log(`⚠️ Job already exists: ${jobData.title} (${jobData.externalJobId})`);
-          continue;
-        }
-
-        // Normalize enum values to prevent validation errors
-        const normalizedJobType = this.normalizeJobType(jobData.jobType?.toString() || 'internship');
-        const normalizedExperienceLevel = this.normalizeExperienceLevel(jobData.experienceLevel?.toString() || 'entry_level');
-
-        // Create new job document
-        const job = new Job({
-          title: jobData.title,
-          company: jobData.company,
-          location: jobData.location,
-          description: jobData.description,
-          jobType: normalizedJobType,
-          category: jobData.category || JobCategory.INTERNSHIPS,
-          experienceLevel: normalizedExperienceLevel,
-          educationLevel: jobData.educationLevel,
-          requirements: jobData.requirements || [],
-          responsibilities: jobData.responsibilities || [],
-          benefits: jobData.benefits || [],
-          skills: jobData.skills || [],
-          contactInfo: jobData.contactInfo,
-          applicationDeadline: jobData.applicationDeadline,
-          postedDate: jobData.postedDate || new Date(),
-          status: JobStatus.ACTIVE,
-          externalApplicationUrl: jobData.externalApplicationUrl,
-          externalJobId: jobData.externalJobId,
-          source: 'internship.rw',
-          isInternship: jobData.isInternship || true,
-          // Additional internship-specific fields
-          requiredQualification: jobData.requiredQualification,
-          requiredFieldOfStudy: jobData.requiredFieldOfStudy,
-          numberOfPositions: jobData.numberOfPositions,
-          expectedStartDate: jobData.expectedStartDate
-        });
-
-        // Use AI to enhance and categorize the job
-        try {
-          const aiEnhancements = await centralAIManager.enhanceJobPosting({
-            title: jobData.title,
-            company: jobData.company,
-            description: jobData.description,
-            requirements: jobData.requirements?.join(', ') || '',
-            location: jobData.location
-          });
-
-          if (aiEnhancements) {
-            // Apply AI enhancements
-            if (aiEnhancements.category && aiEnhancements.category !== 'OTHER') {
-              job.category = aiEnhancements.category as JobCategory;
-            }
-            if (aiEnhancements.skills && aiEnhancements.skills.length > 0) {
-              job.skills = [...new Set([...job.skills, ...aiEnhancements.skills])];
-            }
-            if (aiEnhancements.enhancedDescription) {
-              job.aiEnhancedDescription = aiEnhancements.enhancedDescription;
-            }
-          }
-        } catch (aiError) {
-          console.warn(`⚠️ AI enhancement failed for ${jobData.title}:`, aiError);
-        }
-
-        await job.save();
-        savedCount++;
-        console.log(`✅ Saved internship job: ${jobData.title} at ${jobData.company}`);
-
-      } catch (error) {
-        console.error(`❌ Failed to save job ${jobData.title}:`, error);
-      }
-    }
-
-    return savedCount;
-  }
 
   /**
    * Dedicated method to scrape hire-alumni page for employer requests
@@ -1518,7 +1857,7 @@ export class InternshipRwScrapingService {
         timeout: 30000 
       });
 
-      await page.waitForTimeout(3000);
+      await this.waitForDelay(3000);
       const content = await page.content();
       const $ = cheerio.load(content);
 
@@ -1588,7 +1927,7 @@ export class InternshipRwScrapingService {
   /**
    * Extract static job information from general pages (announcements, news, etc.)
    */
-  private static extractStaticJobInfo($: cheerio.CheerioAPI, url: string): InternshipRwJobData[] {
+  private static extractStaticJobInfo($: any, url: string): InternshipRwJobData[] {
     const results: InternshipRwJobData[] = [];
     
     // Look for job-related announcements in various content areas
@@ -1640,43 +1979,69 @@ export class InternshipRwScrapingService {
   }
 
   /**
-   * Parse job announcement text to extract structured job data
+   * Parse job announcement text to extract structured job data with enhanced validation
    */
   private static parseJobAnnouncement(text: string, sourceUrl: string): InternshipRwJobData | null {
-    const lowerText = text.toLowerCase();
+    // Clean the text first
+    const cleanedText = this.cleanText(text);
+    const lowerText = cleanedText.toLowerCase();
     
-    // Extract title
+    // Skip if text is too short or contains invalid patterns
+    if (cleanedText.length < 50) {
+      return null;
+    }
+    
+    // Check for repetitive content patterns (like the duplicates you showed)
+    const words = cleanedText.toLowerCase().split(/\s+/);
+    const uniqueWords = new Set(words);
+    const repetitionRatio = uniqueWords.size / words.length;
+    
+    if (words.length > 10 && repetitionRatio < 0.4) {
+      console.log(`⚠️ Skipping repetitive content: repetition ratio ${repetitionRatio.toFixed(2)}`);
+      return null;
+    }
+    
+    // Extract title with better validation
     let title = 'Internship Opportunity';
     const titlePatterns = [
       /(?:position|job|role|vacancy|internship):\s*([^\n.!?]+)/i,
-      /([^\n.!?]*?(?:internship|position|vacancy|role)[^\n.!?]*)/i
+      /([^\n.!?]*?(?:internship|position|vacancy|role)[^\n.!?]*)/i,
+      /([A-Z][^\n.!?]*?(?:internship|position|vacancy|role)[^\n.!?]*)/i
     ];
     
     for (const pattern of titlePatterns) {
-      const match = text.match(pattern);
-      if (match && match[1] && match[1].trim().length > 5) {
-        title = match[1].trim();
-        break;
+      const match = cleanedText.match(pattern);
+      if (match && match[1] && match[1].trim().length > 5 && match[1].trim().length < 100) {
+        const candidateTitle = match[1].trim();
+        // Validate title doesn't contain JavaScript code
+        if (!this.containsInvalidPatterns(candidateTitle)) {
+          title = candidateTitle;
+          break;
+        }
       }
     }
 
-    // Extract company
+    // Extract company with validation
     let company = 'Rwanda National Internship Programme';
     const companyPatterns = [
       /(?:company|organization|employer):\s*([^\n.!?]+)/i,
       /at\s+([A-Z][^\n.!?]*?(?:ltd|limited|corp|corporation|inc|company))/i,
-      /([A-Z][^\n.!?]*?(?:ministry|government|institution|agency))/i
+      /([A-Z][^\n.!?]*?(?:ministry|government|institution|agency))/i,
+      /([A-Z][^\n.!?]*?(?:programme|program|portal))/i
     ];
     
     for (const pattern of companyPatterns) {
-      const match = text.match(pattern);
-      if (match && match[1] && match[1].trim().length > 3) {
-        company = match[1].trim();
-        break;
+      const match = cleanedText.match(pattern);
+      if (match && match[1] && match[1].trim().length > 3 && match[1].trim().length < 100) {
+        const candidateCompany = match[1].trim();
+        if (!this.containsInvalidPatterns(candidateCompany)) {
+          company = candidateCompany;
+          break;
+        }
       }
     }
 
-    // Extract location
+    // Extract location with validation
     let location = 'Rwanda';
     const locationPatterns = [
       /(?:location|based in|situated in):\s*([^\n.!?]+)/i,
@@ -1684,29 +2049,39 @@ export class InternshipRwScrapingService {
     ];
     
     for (const pattern of locationPatterns) {
-      const match = text.match(pattern);
+      const match = cleanedText.match(pattern);
       if (match) {
-        location = match[1] ? match[1].trim() : match[0].trim();
-        break;
+        const candidateLocation = match[1] ? match[1].trim() : match[0].trim();
+        if (!this.containsInvalidPatterns(candidateLocation)) {
+          location = candidateLocation;
+          break;
+        }
       }
     }
 
-    // Generate external job ID
-    const externalJobId = `static_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Generate unique external job ID based on content hash
+    const contentHash = this.generateContentHash(cleanedText);
+    const externalJobId = `static_${contentHash.substring(0, 8)}_${Date.now()}`;
+
+    // Final validation before returning
+    if (this.containsInvalidPatterns(`${title} ${company} ${cleanedText}`)) {
+      console.log(`⚠️ Invalid patterns detected in parsed announcement`);
+      return null;
+    }
 
     return {
       title: title.substring(0, 200),
       company: company.substring(0, 100),
       location: location.substring(0, 100),
-      description: text.substring(0, 1500),
+      description: cleanedText.substring(0, 1500),
       jobType: JobType.INTERNSHIP,
-      category: JobCategory.OTHER,
+      category: JobCategory.JOBS,
       experienceLevel: ExperienceLevel.ENTRY_LEVEL,
       educationLevel: EducationLevel.BACHELOR,
-      requirements: this.extractRequirementsFromText(text),
-      responsibilities: this.extractResponsibilitiesFromText(text),
+      requirements: this.extractRequirementsFromText(cleanedText),
+      responsibilities: this.extractResponsibilitiesFromText(cleanedText),
       benefits: ['Professional Development', 'Work Experience', 'Networking Opportunities'],
-      skills: this.extractSkills(title, text),
+      skills: this.extractSkills(title, cleanedText),
       contactInfo: {
         email: 'internship@mifotra.gov.rw',
         applicationInstructions: 'Apply through the national internship portal'
@@ -1718,6 +2093,33 @@ export class InternshipRwScrapingService {
       source: 'internship.rw',
       isInternship: true
     };
+  }
+
+  /**
+   * Check if text contains invalid patterns
+   */
+  private static containsInvalidPatterns(text: string): boolean {
+    const invalidPatterns = [
+      /getFullYear\(\)/i,
+      /javascript:/i,
+      /function\s*\(/i,
+      /console\.log/i,
+      /document\./i,
+      /window\./i,
+      /\.innerHTML/i,
+      /\.textContent/i,
+      /undefined/i,
+      /null/i,
+      /NaN/i,
+      /\[object\s+Object\]/i,
+      /<script/i,
+      /<iframe/i,
+      /eval\(/i,
+      /setTimeout\(/i,
+      /setInterval\(/i
+    ];
+
+    return invalidPatterns.some(pattern => pattern.test(text));
   }
 
   /**
@@ -1759,6 +2161,56 @@ export class InternshipRwScrapingService {
     if (lowerText.includes('research')) responsibilities.push('Conduct research activities');
     
     return responsibilities.length > 0 ? responsibilities : ['Gain practical work experience', 'Support organizational objectives'];
+  }
+
+  /**
+   * Clean up existing invalid internship data from database
+   */
+  public static async cleanupInvalidInternshipData(): Promise<number> {
+    try {
+      console.log('🧹 Starting cleanup of invalid internship data...');
+      
+      const { Job } = await import('../models/Job');
+      
+      // Find all internship.rw jobs
+      const allInternshipJobs = await Job.find({ 
+        externalJobSource: 'internship.rw' 
+      });
+      
+      console.log(`📊 Found ${allInternshipJobs.length} internship.rw jobs to check`);
+      
+      let deletedCount = 0;
+      const invalidJobIds: string[] = [];
+      
+      for (const job of allInternshipJobs) {
+        // Check if this job matches the invalid patterns
+        const jobData = {
+          title: job.title,
+          company: job.company,
+          description: job.description
+        };
+        
+        if (!this.isValidJobData(jobData)) {
+          invalidJobIds.push(job._id.toString());
+          console.log(`🗑️ Marking for deletion: "${job.title}"`);
+        }
+      }
+      
+      if (invalidJobIds.length > 0) {
+        const deleteResult = await Job.deleteMany({ 
+          _id: { $in: invalidJobIds } 
+        });
+        deletedCount = deleteResult.deletedCount;
+        console.log(`✅ Deleted ${deletedCount} invalid internship jobs`);
+      } else {
+        console.log('✅ No invalid internship jobs found');
+      }
+      
+      return deletedCount;
+    } catch (error) {
+      console.error('❌ Error cleaning up invalid internship data:', error);
+      throw error;
+    }
   }
 }
 

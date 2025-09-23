@@ -661,6 +661,334 @@ export class OptimizedJobScrapingService {
       },
       requiresJS: true, // Oracle HCM uses heavy JavaScript
       rateLimit: { delayMs: 6000, maxConcurrent: 1 }
+    },
+    {
+      name: 'rwandajob',
+      baseUrl: 'https://www.rwandajob.com',
+      paths: ['/job-vacancies-search-rwanda'],
+      priority: 9,
+      selectors: {
+        jobLink: [
+          'a[href*="/job/"]',
+          'a[href*="/vacancy/"]',
+          'a[href*="/position/"]',
+          '.job-item a',
+          '.job-card a',
+          '.job-title a',
+          '.vacancy-title a',
+          'h3 a',
+          'h4 a',
+          'article a',
+          '.job-listing a',
+          '.post-title a'
+        ],
+        title: [
+          'h1',
+          '.job-title',
+          '.vacancy-title',
+          '.position-title',
+          '.post-title',
+          '.entry-title',
+          'h3',
+          'h4',
+          '.title'
+        ],
+        company: [
+          '.company',
+          '.employer',
+          '.organization',
+          '.company-name',
+          '.hiring-company',
+          '.job-company',
+          '.employer-name'
+        ],
+        location: [
+          '.location',
+          '.job-location',
+          '.work-location',
+          '.position-location',
+          '.duty-station',
+          '.workplace'
+        ],
+        description: [
+          '.job-description',
+          '.vacancy-description',
+          '.description',
+          '.content',
+          '.job-details',
+          '.post-content',
+          '.entry-content',
+          'main',
+          'article'
+        ],
+        requirements: [
+          '.requirements',
+          '.qualifications',
+          '.required-qualifications',
+          '.skills',
+          '.criteria',
+          '.minimum-requirements'
+        ],
+        responsibilities: [
+          '.responsibilities',
+          '.duties',
+          '.job-duties',
+          '.role-responsibilities',
+          '.tasks'
+        ],
+        benefits: [
+          '.benefits',
+          '.perks',
+          '.compensation-benefits',
+          '.package'
+        ],
+        salary: [
+          '.salary',
+          '.compensation',
+          '.pay',
+          '.remuneration',
+          '.wage'
+        ],
+        deadline: [
+          '.deadline',
+          '.application-deadline',
+          '.closing-date',
+          '.expires',
+          '.due-date'
+        ],
+        postedDate: [
+          '.posted-date',
+          '.date-posted',
+          '.publish-date',
+          '.job-date',
+          '.date',
+          '.created-date'
+        ],
+        applicationInstructions: [
+          '.application-instructions',
+          '.how-to-apply',
+          '.application-procedure',
+          '.apply-process',
+          '.contact-info'
+        ],
+        contactInfo: [
+          '.contact-information',
+          '.contact-details',
+          '.employer-contact',
+          '.company-contact',
+          '.hiring-contact'
+        ]
+      },
+      pagination: {
+        type: 'query',
+        pattern: '?page=',
+        maxPages: 3
+      },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Connection': 'keep-alive',
+        'Referer': 'https://www.rwandajob.com/'
+      },
+      urlFilter: (url: string) => {
+        const patterns = [
+          /\/job\/[a-z0-9-]+/,
+          /\/vacancy\/[a-z0-9-]+/,
+          /\/position\/[a-z0-9-]+/,
+          /\/jobs\/[a-z0-9-]+/,
+          /\/vacancies\/[a-z0-9-]+/
+        ];
+        const excludes = ['/search', '/filter', '/category', '/page', '/login', '/register', '/admin'];
+        return patterns.some(p => p.test(url.toLowerCase())) && 
+               !excludes.some(e => url.toLowerCase().includes(e)) && 
+               url.length > 25;
+      },
+      requiresJS: false,
+      rateLimit: { delayMs: 4000, maxConcurrent: 1 }
+    },
+    {
+      name: 'mifotra-recruitment',
+      baseUrl: 'https://recruitment.mifotra.gov.rw',
+      paths: ['/'],
+      priority: 10,
+      selectors: {
+        jobLink: [
+          'a[href*="/recruitment/"]',
+          'a[href*="/vacancy/"]',
+          'a[href*="/position/"]',
+          'a[href*="/job/"]',
+          'a[href*="/announcement/"]',
+          '.recruitment-item a',
+          '.vacancy-item a',
+          '.job-item a',
+          '.announcement-item a',
+          '.position-item a',
+          'h3 a',
+          'h4 a',
+          'article a',
+          '.job-title a',
+          '.vacancy-title a'
+        ],
+        title: [
+          'h1',
+          '.job-title',
+          '.vacancy-title',
+          '.position-title',
+          '.recruitment-title',
+          '.announcement-title',
+          'h3',
+          'h4',
+          '.title',
+          '.post-title'
+        ],
+        company: [
+          '.company',
+          '.employer',
+          '.organization',
+          '.ministry',
+          '.department',
+          '.agency',
+          '.institution',
+          '.government-entity'
+        ],
+        location: [
+          '.location',
+          '.work-location',
+          '.duty-station',
+          '.workplace',
+          '.position-location',
+          '.office-location'
+        ],
+        description: [
+          '.job-description',
+          '.vacancy-description',
+          '.recruitment-description',
+          '.announcement-description',
+          '.description',
+          '.content',
+          '.details',
+          '.job-details',
+          'main',
+          'article'
+        ],
+        requirements: [
+          '.requirements',
+          '.qualifications',
+          '.required-qualifications',
+          '.minimum-qualifications',
+          '.eligibility-criteria',
+          '.skills',
+          '.competencies'
+        ],
+        responsibilities: [
+          '.responsibilities',
+          '.duties',
+          '.job-duties',
+          '.key-responsibilities',
+          '.role-duties',
+          '.functions'
+        ],
+        benefits: [
+          '.benefits',
+          '.compensation',
+          '.package',
+          '.remuneration-package',
+          '.employment-terms'
+        ],
+        salary: [
+          '.salary',
+          '.compensation',
+          '.pay',
+          '.remuneration',
+          '.salary-scale',
+          '.grade'
+        ],
+        deadline: [
+          '.deadline',
+          '.application-deadline',
+          '.closing-date',
+          '.submission-deadline',
+          '.due-date',
+          '.expires'
+        ],
+        postedDate: [
+          '.posted-date',
+          '.publication-date',
+          '.announcement-date',
+          '.date-posted',
+          '.publish-date',
+          '.date'
+        ],
+        applicationInstructions: [
+          '.application-instructions',
+          '.application-procedure',
+          '.how-to-apply',
+          '.submission-process',
+          '.application-process',
+          '.contact-info'
+        ],
+        contactInfo: [
+          '.contact-information',
+          '.contact-details',
+          '.ministry-contact',
+          '.department-contact',
+          '.hr-contact'
+        ]
+      },
+      pagination: {
+        type: 'query',
+        pattern: '?page=',
+        maxPages: 2
+      },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Connection': 'keep-alive',
+        'Referer': 'https://recruitment.mifotra.gov.rw/'
+      },
+      urlFilter: (url: string) => {
+        const patterns = [
+          /\/recruitment\/[a-z0-9-]+/,
+          /\/vacancy\/[a-z0-9-]+/,
+          /\/position\/[a-z0-9-]+/,
+          /\/job\/[a-z0-9-]+/,
+          /\/announcement\/[a-z0-9-]+/,
+          /mifotra\.gov\.rw.*\/[a-z0-9-]+$/
+        ];
+        const excludes = [
+          '/search',
+          '/filter',
+          '/login',
+          '/register',
+          '/admin',
+          '/static',
+          '/css',
+          '/js',
+          '/images',
+          '/media'
+        ];
+        return patterns.some(p => p.test(url.toLowerCase())) && 
+               !excludes.some(e => url.toLowerCase().includes(e)) && 
+               url.length > 30;
+      },
+      requiresJS: true, // Government sites often use JavaScript
+      rateLimit: { delayMs: 8000, maxConcurrent: 1 } // Respectful rate limiting for government site
     }
   ];
 
@@ -896,12 +1224,23 @@ export class OptimizedJobScrapingService {
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',
-            '--disable-gpu'
-          ]
+            '--disable-gpu',
+            '--disable-background-timer-throttling',
+            '--disable-backgrounding-occluded-windows',
+            '--disable-renderer-backgrounding',
+            '--disable-features=TranslateUI',
+            '--disable-ipc-flooding-protection'
+          ],
+          defaultViewport: null
         });
         
+        let page: any = null;
         try {
-          const page = await browser.newPage();
+          page = await browser.newPage();
+          
+          // Increase timeouts for slow-loading sites
+          page.setDefaultNavigationTimeout(60000);
+          page.setDefaultTimeout(60000);
           
           // Set user agent and viewport
           await page.setUserAgent(config.headers['User-Agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
@@ -918,31 +1257,104 @@ export class OptimizedJobScrapingService {
             await page.setExtraHTTPHeaders(headersToSet);
           }
           
-          // Navigate and wait for content
-          await page.goto(url, { 
-            waitUntil: 'networkidle2',
-            timeout: 30000 
+          // Block unnecessary resources to speed up loading
+          await page.setRequestInterception(true);
+          page.on('request', (req: any) => {
+            const resourceType = req.resourceType();
+            if (['image', 'stylesheet', 'font', 'media'].includes(resourceType)) {
+              req.abort();
+            } else {
+              req.continue();
+            }
           });
           
-          // Wait a bit more for dynamic content to load, longer for unjobs.org
-          const waitTime = url.includes('unjobs.org') ? 5000 : 3000;
-          await new Promise(resolve => setTimeout(resolve, waitTime));
+          // Use multiple fallback strategies for navigation
+          let html = '';
+          let navigationSuccess = false;
           
-          const html = await page.content();
+          // Strategy 1: Try with networkidle2
+          try {
+            await page.goto(url, { 
+              waitUntil: 'networkidle2',
+              timeout: 45000 
+            });
+            navigationSuccess = true;
+          } catch (navError) {
+            console.log(`⚠️ NetworkIdle2 failed for ${url}, trying domcontentloaded...`);
+            
+            // Strategy 2: Try with domcontentloaded
+            try {
+              await page.goto(url, { 
+                waitUntil: 'domcontentloaded',
+                timeout: 30000 
+              });
+              navigationSuccess = true;
+            } catch (domError) {
+              console.log(`⚠️ DOMContentLoaded failed for ${url}, trying load event...`);
+              
+              // Strategy 3: Try with load event only
+              try {
+                await page.goto(url, { 
+                  waitUntil: 'load',
+                  timeout: 20000 
+                });
+                navigationSuccess = true;
+              } catch (loadError) {
+                throw new Error(`All navigation strategies failed: ${loadError.message}`);
+              }
+            }
+          }
+          
+          if (navigationSuccess) {
+            // Wait for dynamic content with progressive waiting
+            const waitTime = url.includes('unjobs.org') ? 8000 : 
+                             url.includes('mifotra.gov.rw') ? 6000 : 
+                             url.includes('oracle') ? 10000 : 4000;
+            
+            console.log(`⏳ Waiting ${waitTime}ms for dynamic content on ${url}...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            
+            // Try to wait for specific selectors that indicate content is loaded
+            try {
+              await Promise.race([
+                page.waitForSelector('body', { timeout: 5000 }),
+                page.waitForSelector('[class*="job"], [class*="vacancy"], [class*="position"]', { timeout: 10000 }),
+                new Promise(resolve => setTimeout(resolve, 5000))
+              ]);
+            } catch (selectorError) {
+              console.log(`⚠️ Selector wait failed for ${url}, proceeding anyway...`);
+            }
+            
+            html = await page.content();
+          }
+          
           await browser.close();
           
-          console.log(`✅ Puppeteer successfully loaded ${url}`);
-          return html;
+          if (html && html.length > 1000) {
+            console.log(`✅ Puppeteer successfully loaded ${url} (${html.length} chars)`);
+            return html;
+          } else {
+            throw new Error('Page content too small or empty');
+          }
           
         } catch (error) {
-          await browser.close();
+          // Ensure browser is always closed
+          try {
+            if (page) {
+              await page.close();
+            }
+            await browser.close();
+          } catch (closeError) {
+            console.log(`⚠️ Error closing browser for ${url}:`, closeError);
+          }
+          
           console.error(`❌ Puppeteer error for ${url}:`, error instanceof Error ? error.message : 'Unknown error');
           
           // If Puppeteer fails, try fallback to axios
           if (retryCount < maxRetries) {
             console.log(`🔄 Falling back to axios for ${url}...`);
-            config.requiresJS = false; // Temporarily disable JS for this request
-            return this.fetchWebpage(url, config, retryCount + 1);
+            const fallbackConfig = { ...config, requiresJS: false }; // Create new config without modifying original
+            return this.fetchWebpage(url, fallbackConfig, retryCount + 1);
           }
           
           throw error;

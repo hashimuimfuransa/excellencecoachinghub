@@ -19,6 +19,9 @@ import {
   LinearProgress,
   Alert,
   Grid,
+  Snackbar,
+  Collapse,
+  Slide,
 } from '@mui/material';
 import {
   Close,
@@ -35,8 +38,11 @@ import {
   Work,
   TrendingUp,
   Psychology,
+  Minimize,
+  CheckCircle,
+  Warning,
 } from '@mui/icons-material';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { uploadService } from '../../services/uploadService';
 import { socialNetworkService } from '../../services/socialNetworkService';
@@ -116,8 +122,18 @@ const CreateStory: React.FC<CreateStoryProps> = ({ open, onClose, onStoryCreated
   const [uploadProgress, setUploadProgress] = useState(0);
   const [currentTag, setCurrentTag] = useState('');
   const [preview, setPreview] = useState<string | null>(null);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [uploadComplete, setUploadComplete] = useState(false);
+  const [backgroundUpload, setBackgroundUpload] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const handleClose = () => {
+    // Don't close if uploading in background
+    if (backgroundUpload && uploading) {
+      return;
+    }
+    
     setStoryData({
       type: 'achievement',
       title: '',
@@ -128,7 +144,19 @@ const CreateStory: React.FC<CreateStoryProps> = ({ open, onClose, onStoryCreated
     setSelectedFile(null);
     setPreview(null);
     setCurrentTag('');
+    setIsMinimized(false);
+    setUploadComplete(false);
+    setBackgroundUpload(false);
+    setUploadSuccess(false);
+    setUploadError(null);
     onClose();
+  };
+
+  const handleMinimize = () => {
+    if (uploading) {
+      setBackgroundUpload(true);
+      setIsMinimized(true);
+    }
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -185,7 +213,40 @@ const CreateStory: React.FC<CreateStoryProps> = ({ open, onClose, onStoryCreated
 
   const handleCreateStory = async () => {
     if (!storyData.title.trim() || !storyData.content.trim()) {
+      alert('Please provide both a title and content for your story.');
       return;
+    }
+
+    if (storyData.title.length > 100) {
+      alert('Title must be 100 characters or less.');
+      return;
+    }
+
+    if (storyData.content.length > 500) {
+      alert('Content must be 500 characters or less for better readability.');
+      return;
+    }
+
+    // Check if user already has a story in the last 24 hours
+    try {
+      const userStoriesResponse = await socialNetworkService.getUserStories();
+      if (userStoriesResponse.success && userStoriesResponse.data) {
+        const now = new Date();
+        const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        
+        const recentStories = userStoriesResponse.data.filter((story: any) => {
+          const createdAt = new Date(story.createdAt);
+          return createdAt > last24Hours;
+        });
+
+        if (recentStories.length > 0) {
+          alert('You can only create one story per day. Please wait for your current story to expire.');
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn('Could not check existing stories:', error);
+      // Continue with creation attempt
     }
 
     try {
@@ -270,14 +331,33 @@ const CreateStory: React.FC<CreateStoryProps> = ({ open, onClose, onStoryCreated
       
       if (response.success && response.data) {
         console.log('Story created successfully:', response.data);
+        setUploadSuccess(true);
+        setUploadComplete(true);
+        
+        // Show success notification immediately
+        setIsMinimized(false); // Ensure notifications show even if minimized
+        setBackgroundUpload(false); // Clear background upload state
+        
+        // Call the callback to update the parent component
         onStoryCreated?.(response.data);
-        handleClose();
+        
+        // Show success message for longer to ensure user sees it, then close
+        setTimeout(() => {
+          setUploadSuccess(false);
+          handleClose();
+        }, 3000);
       } else {
         throw new Error(response.error || 'Failed to create story');
       }
       
     } catch (error) {
       console.error('Error creating story:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create story';
+      setUploadError(errorMessage);
+      
+      // Reset background upload state on error
+      setBackgroundUpload(false);
+      setIsMinimized(false);
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -287,21 +367,97 @@ const CreateStory: React.FC<CreateStoryProps> = ({ open, onClose, onStoryCreated
   const selectedStoryType = storyTypes.find(type => type.type === storyData.type);
 
   return (
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      maxWidth="md"
-      fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 3,
-          maxHeight: '90vh',
-          background: theme.palette.mode === 'dark'
-            ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
-            : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-        }
-      }}
-    >
+    <>
+      <AnimatePresence>
+        {isMinimized && backgroundUpload && (
+          <motion.div
+            initial={{ opacity: 0, y: 100 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 100 }}
+            style={{
+              position: 'fixed',
+              bottom: 20,
+              right: 20,
+              zIndex: 9999,
+            }}
+          >
+            <Box
+              sx={{
+                background: theme.palette.mode === 'dark'
+                  ? 'linear-gradient(135deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.8) 100%)'
+                  : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                borderRadius: 3,
+                p: 2,
+                minWidth: 280,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <Avatar src={user?.profilePicture} sx={{ width: 32, height: 32 }}>
+                  {user?.firstName?.[0]?.toUpperCase()}
+                </Avatar>
+                <Typography variant="body2" fontWeight={600}>
+                  Creating Story...
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    setIsMinimized(false);
+                    setBackgroundUpload(false);
+                  }}
+                >
+                  <Close fontSize="small" />
+                </IconButton>
+              </Box>
+              
+              {uploadSuccess ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CheckCircle color="success" fontSize="small" />
+                  <Typography variant="body2" color="success.main">
+                    Story uploaded successfully!
+                  </Typography>
+                </Box>
+              ) : uploadError ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Warning color="error" fontSize="small" />
+                  <Typography variant="body2" color="error.main">
+                    Upload failed. Please try again.
+                  </Typography>
+                </Box>
+              ) : (
+                <Box>
+                  <LinearProgress variant="determinate" value={uploadProgress} sx={{ mb: 1 }} />
+                  <Typography variant="caption" color="text.secondary">
+                    {uploadProgress < 10 && selectedFile?.type.startsWith('image/') ? 
+                      'Compressing image...' : 
+                      uploadProgress < 100 ? 
+                        `Uploading... ${Math.round(uploadProgress)}%` : 
+                        'Processing story...'
+                    }
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <Dialog
+        open={open && !isMinimized}
+        onClose={handleClose}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            maxHeight: '90vh',
+            background: theme.palette.mode === 'dark'
+              ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
+              : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+          }
+        }}
+      >
       <DialogTitle sx={{ 
         pb: 1,
         background: `linear-gradient(135deg, ${selectedStoryType?.color}20 0%, ${selectedStoryType?.color}10 100%)`,
@@ -325,9 +481,24 @@ const CreateStory: React.FC<CreateStoryProps> = ({ open, onClose, onStoryCreated
             </Typography>
           </Box>
         </Box>
-        <IconButton onClick={handleClose}>
-          <Close />
-        </IconButton>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {uploading && (
+            <IconButton 
+              onClick={handleMinimize}
+              sx={{ 
+                color: selectedStoryType?.color,
+                '&:hover': {
+                  backgroundColor: `${selectedStoryType?.color}20`,
+                }
+              }}
+            >
+              <Minimize />
+            </IconButton>
+          )}
+          <IconButton onClick={handleClose}>
+            <Close />
+          </IconButton>
+        </Box>
       </DialogTitle>
 
       <DialogContent sx={{ p: 3 }}>
@@ -381,6 +552,8 @@ const CreateStory: React.FC<CreateStoryProps> = ({ open, onClose, onStoryCreated
           value={storyData.title}
           onChange={(e) => setStoryData(prev => ({ ...prev, title: e.target.value }))}
           placeholder="Give your story a compelling title..."
+          inputProps={{ maxLength: 100 }}
+          helperText={`${storyData.title.length}/100 characters`}
           sx={{ mb: 2 }}
         />
 
@@ -393,6 +566,8 @@ const CreateStory: React.FC<CreateStoryProps> = ({ open, onClose, onStoryCreated
           value={storyData.content}
           onChange={(e) => setStoryData(prev => ({ ...prev, content: e.target.value }))}
           placeholder="Share your experience, learnings, or insights..."
+          inputProps={{ maxLength: 500 }}
+          helperText={`${storyData.content.length}/500 characters`}
           sx={{ mb: 2 }}
         />
 
@@ -541,6 +716,63 @@ const CreateStory: React.FC<CreateStoryProps> = ({ open, onClose, onStoryCreated
         </Button>
       </DialogActions>
     </Dialog>
+
+    {/* Success Notification */}
+    <Snackbar
+      open={uploadSuccess && !uploading}
+      autoHideDuration={3500}
+      onClose={() => setUploadSuccess(false)}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+    >
+      <Alert 
+        onClose={() => setUploadSuccess(false)} 
+        severity="success" 
+        variant="filled"
+        sx={{ 
+          borderRadius: 2,
+          boxShadow: '0 8px 32px rgba(76, 175, 80, 0.3)',
+          '& .MuiAlert-icon': {
+            fontSize: '1.2rem'
+          }
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <CheckCircle fontSize="small" />
+          <Typography variant="body2" fontWeight={600}>
+            🎉 Story uploaded successfully! Your story is now live.
+          </Typography>
+        </Box>
+      </Alert>
+    </Snackbar>
+
+    {/* Error Notification */}
+    <Snackbar
+      open={!!uploadError && !uploading}
+      autoHideDuration={6000}
+      onClose={() => setUploadError(null)}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+    >
+      <Alert 
+        onClose={() => setUploadError(null)} 
+        severity="error" 
+        variant="filled"
+        sx={{ 
+          borderRadius: 2,
+          boxShadow: '0 8px 32px rgba(244, 67, 54, 0.3)',
+          '& .MuiAlert-icon': {
+            fontSize: '1.2rem'
+          }
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Warning fontSize="small" />
+          <Typography variant="body2" fontWeight={600}>
+            ❌ {uploadError || 'Failed to upload story. Please try again.'}
+          </Typography>
+        </Box>
+      </Alert>
+    </Snackbar>
+  </>
   );
 };
 

@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, UserRole } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { GlobalVideoProvider } from './contexts/GlobalVideoContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import MainLayout from './layouts/MainLayout';
 // EmailJS removed - now using backend SendGrid service
@@ -89,6 +90,9 @@ import CareerInsightsPage from './pages/CareerInsightsPage';
 import FloatingChatButton from './components/chat/FloatingChatButton';
 import MessagesPage from './pages/MessagesPage';
 
+// Debug components
+import StoryDebugger from './components/debug/StoryDebugger';
+
 function App() {
   // Initialize services on app start
   useEffect(() => {
@@ -111,8 +115,9 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <EmailApiHandler isActive={true} />
-        <Router>
+        <GlobalVideoProvider>
+          <EmailApiHandler isActive={true} />
+          <Router>
           <Routes>
             {/* Smart Home Route - redirects authenticated users to network */}
             <Route path="/" element={<SmartHome />} />
@@ -261,6 +266,9 @@ function App() {
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="messages" element={<MessagesPage />} />
               
+              {/* Debug Routes (Development only) */}
+              <Route path="debug/stories" element={<StoryDebugger />} />
+              
               {/* Career Insights */}
               <Route path="career-insights" element={<CareerInsightsPage />} />
               
@@ -402,6 +410,9 @@ function App() {
             {/* Legacy dashboard route redirect - redirect to network page for general users */}
             <Route path="/dashboard" element={<Navigate to="/app/network" replace />} />
             
+            {/* Debug Routes (Development only) - Outside authentication */}
+            <Route path="/debug/stories" element={<StoryDebugger />} />
+            
             {/* Catch-all redirect */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
@@ -423,6 +434,7 @@ function App() {
             theme="light"
           />
         </Router>
+        </GlobalVideoProvider>
       </AuthProvider>
     </ThemeProvider>
   );

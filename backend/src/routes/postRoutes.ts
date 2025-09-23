@@ -153,8 +153,11 @@ router.get('/:id', protect, asyncHandler(async (req: Request, res: Response) => 
 // @route   POST /api/posts/:id/like
 // @access  Private
 router.post('/:id/like', protect, asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user!._id.toString();
+  
+  // First check if user already liked the post
   const post = await Post.findById(req.params.id);
-
+  
   if (!post) {
     res.status(404).json({
       success: false,
@@ -162,29 +165,57 @@ router.post('/:id/like', protect, asyncHandler(async (req: Request, res: Respons
     });
     return;
   }
-
-  const userId = req.user!._id.toString();
-  const likeIndex = post.likes.indexOf(userId);
-
-  if (likeIndex > -1) {
-    // Unlike the post
-    post.likes.splice(likeIndex, 1);
-    post.likesCount = Math.max(0, post.likesCount - 1);
+  
+  const isLiked = post.likes.includes(userId);
+  let updatedPost;
+  
+  if (isLiked) {
+    // Unlike the post using atomic operations
+    updatedPost = await Post.findByIdAndUpdate(
+      req.params.id,
+      {
+        $pull: { likes: userId },
+        $inc: { likesCount: -1 }
+      },
+      { new: true, runValidators: true }
+    );
+    
+    // Ensure likesCount doesn't go below 0
+    if (updatedPost && updatedPost.likesCount < 0) {
+      await Post.findByIdAndUpdate(
+        req.params.id,
+        { $set: { likesCount: 0 } },
+        { new: true }
+      );
+      updatedPost.likesCount = 0;
+    }
   } else {
-    // Like the post
-    post.likes.push(userId);
-    post.likesCount += 1;
+    // Like the post using atomic operations
+    updatedPost = await Post.findByIdAndUpdate(
+      req.params.id,
+      {
+        $addToSet: { likes: userId },
+        $inc: { likesCount: 1 }
+      },
+      { new: true, runValidators: true }
+    );
   }
 
-  await post.save();
+  if (!updatedPost) {
+    res.status(404).json({
+      success: false,
+      error: 'Post not found'
+    });
+    return;
+  }
 
   res.status(200).json({
     success: true,
     data: {
-      liked: likeIndex === -1,
-      likesCount: post.likesCount
+      liked: !isLiked,
+      likesCount: updatedPost.likesCount
     },
-    message: likeIndex === -1 ? 'Post liked' : 'Post unliked'
+    message: !isLiked ? 'Post liked' : 'Post unliked'
   });
 }));
 
@@ -233,9 +264,10 @@ router.post('/:id/comment', protect, asyncHandler(async (req: Request, res: Resp
 
   await comment.populate('author', 'firstName lastName profilePicture');
 
-  // Update post comments count
-  post.commentsCount += 1;
-  await post.save();
+  // Update post comments count using atomic operation
+  await Post.findByIdAndUpdate(post._id, {
+    $inc: { commentsCount: 1 }
+  });
 
   // If this is a reply, update parent comment replies count
   if (parentComment) {

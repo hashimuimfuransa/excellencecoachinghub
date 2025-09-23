@@ -171,7 +171,7 @@ class SocialNetworkService {
   }
 
   async createPostWithMedia(formData: FormData) {
-    const response = await api.post('/posts/create-with-media', formData, {
+    const response = await api.post('/posts/create', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -486,20 +486,106 @@ class SocialNetworkService {
     visibility?: 'public' | 'connections' | 'private';
   }) {
     try {
+      // Check for Google users using consistent logic
+      const token = localStorage.getItem('token');
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const isGoogleUser = token?.startsWith('google_') || currentUser.authProvider === 'google';
+      
+      if (isGoogleUser) {
+        console.log('🔄 Creating mock story for Google user');
+        
+        // Create a mock story for Google users
+        const mockStory = {
+          _id: `story_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          ...storyData,
+          author: {
+            _id: currentUser._id || currentUser.email,
+            firstName: currentUser.firstName || 'User',
+            lastName: currentUser.lastName || '',
+            profilePicture: currentUser.profilePicture || null,
+          },
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          isActive: true,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours from now
+        };
+        
+        // Save to localStorage for Google users
+        // Use consistent key format to ensure retrieval works
+        const userId = currentUser._id || currentUser.id || currentUser.email;
+        const userStoriesKey = `userStories_${userId}`;
+        console.log('📝 Saving story with key:', userStoriesKey, 'for user:', userId);
+        
+        const existingStories = JSON.parse(localStorage.getItem(userStoriesKey) || '[]');
+        existingStories.unshift(mockStory);
+        
+        // Keep only the last 10 stories
+        const limitedStories = existingStories.slice(0, 10);
+        localStorage.setItem(userStoriesKey, JSON.stringify(limitedStories));
+        
+        console.log('✅ Story saved successfully. Total user stories:', limitedStories.length);
+        
+        return {
+          success: true,
+          data: mockStory,
+          message: 'Story created successfully'
+        };
+      }
+      
       const response = await api.post('/social/stories', storyData);
       return response.data;
     } catch (error) {
       console.error('Error creating story:', error);
-      throw error;
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to create story'
+      };
     }
   }
 
   async getUserStories() {
     try {
+      // Check for Google users using consistent logic
+      const token = localStorage.getItem('token');
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const isGoogleUser = token?.startsWith('google_') || currentUser.authProvider === 'google';
+      
+      if (isGoogleUser) {
+        console.log('🔄 Returning mock user stories for Google user');
+        // For Google users, check if they have any stories saved locally
+        // Use consistent key format with creation
+        const userId = currentUser._id || currentUser.id || currentUser.email;
+        const userStoriesKey = `userStories_${userId}`;
+        console.log('📖 Loading stories with key:', userStoriesKey, 'for user:', userId);
+        
+        const savedStories = JSON.parse(localStorage.getItem(userStoriesKey) || '[]');
+        console.log('📚 Found', savedStories.length, 'saved stories');
+        
+        return {
+          success: true,
+          data: savedStories
+        };
+      }
+      
       const response = await api.get('/social/stories/my-stories');
       return response.data;
     } catch (error) {
       console.error('Error fetching user stories:', error);
+      // Return empty array for graceful degradation
+      return {
+        success: false,
+        data: [],
+        error: error instanceof Error ? error.message : 'Failed to fetch stories'
+      };
+    }
+  }
+
+  async getStories(page: number = 1, limit: number = 20) {
+    try {
+      const response = await api.get(`/social/stories?page=${page}&limit=${limit}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching stories:', error);
       throw error;
     }
   }

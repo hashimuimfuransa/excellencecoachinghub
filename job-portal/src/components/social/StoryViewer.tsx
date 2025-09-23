@@ -33,6 +33,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '../../contexts/AuthContext';
 import { socialNetworkService } from '../../services/socialNetworkService';
+import { enhancedStoryService } from '../../services/enhancedStoryService';
 
 interface Story {
   _id: string;
@@ -105,6 +106,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
   const [videoMuted, setVideoMuted] = useState(true);
   const [storyViewers, setStoryViewers] = useState<any[]>([]);
   const [storyEngagement, setStoryEngagement] = useState<any>({});
+  const [autoUnmuted, setAutoUnmuted] = useState(false);
   const progressRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -139,12 +141,22 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
     };
   }, [open, currentStoryIndex, currentStory]);
 
-  // Update video mute state when videoMuted changes
+  // Update video mute state when videoMuted changes and handle auto-unmuting
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.muted = videoMuted;
+      
+      // Auto-unmute after 2 seconds if user hasn't manually interacted
+      if (currentStory?.media?.type === 'video' && videoMuted && !autoUnmuted) {
+        const autoUnmuteTimer = setTimeout(() => {
+          setVideoMuted(false);
+          setAutoUnmuted(true);
+        }, 2000);
+        
+        return () => clearTimeout(autoUnmuteTimer);
+      }
     }
-  }, [videoMuted]);
+  }, [videoMuted, currentStory, autoUnmuted]);
 
   const markStoryAsViewed = async (storyId: string) => {
     try {
@@ -188,6 +200,8 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
   const nextStory = () => {
     if (currentStoryIndex < stories.length - 1) {
       setCurrentStoryIndex(prev => prev + 1);
+      setProgress(0);
+      setAutoUnmuted(false); // Reset auto-unmute for next story
     } else {
       onClose();
     }
@@ -196,6 +210,8 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
   const previousStory = () => {
     if (currentStoryIndex > 0) {
       setCurrentStoryIndex(prev => prev - 1);
+      setProgress(0);
+      setAutoUnmuted(false); // Reset auto-unmute for previous story
     }
   };
 
@@ -466,11 +482,27 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
               onClick={(e) => {
                 e.stopPropagation();
                 setVideoMuted(!videoMuted);
+                setAutoUnmuted(true); // Mark as manually interacted
               }}
               sx={{ 
                 backgroundColor: 'rgba(0, 0, 0, 0.6)', 
                 color: 'white',
-                '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.8)' }
+                '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
+                position: 'relative',
+                '&::after': autoUnmuted && videoMuted ? {
+                  content: '"Tap to unmute"',
+                  position: 'absolute',
+                  top: -35,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  color: 'white',
+                  padding: '4px 8px',
+                  borderRadius: 1,
+                  fontSize: '12px',
+                  whiteSpace: 'nowrap',
+                  pointerEvents: 'none'
+                } : {}
               }}
             >
               {videoMuted ? <VolumeOff /> : <VolumeUp />}

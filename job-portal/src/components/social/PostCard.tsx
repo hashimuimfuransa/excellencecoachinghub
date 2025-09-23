@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useGlobalVideo } from '../../contexts/GlobalVideoContext';
 import {
   Card,
   CardContent,
@@ -15,6 +16,7 @@ import {
   MenuItem,
   Divider,
   useTheme,
+  useMediaQuery,
   Dialog,
   DialogContent,
 } from '@mui/material';
@@ -59,6 +61,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   const theme = useTheme();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const globalVideo = useGlobalVideo();
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likesCount);
   const [sharesCount, setSharesCount] = useState(post.sharesCount);
@@ -68,7 +72,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<number | null>(null);
-  const [videoStates, setVideoStates] = useState<{ [key: number]: { playing: boolean; muted: boolean; error?: string | null } }>({});
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'connected' | 'loading'>('none');
   const cardRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<{ [key: number]: HTMLVideoElement | null }>({});
@@ -101,7 +104,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     checkConnectionStatus();
   }, [user?._id, authorId]);
 
-  // Intersection Observer for auto-playing videos when in view
+  // Enhanced Intersection Observer for auto-playing videos when scrolled to middle/above
   useEffect(() => {
     const cardElement = cardRef.current;
     if (!cardElement || !post.media?.some(media => media.type === 'video')) return;
@@ -109,23 +112,42 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            // Card is in view, auto-play videos
-            post.media?.forEach((media, index) => {
-              if (media.type === 'video') {
-                const videoElement = videoRefs.current[index];
-                if (videoElement && videoElement.paused) {
-                  playVideo(videoElement, index);
-                }
+          const { isIntersecting, intersectionRatio, boundingClientRect } = entry;
+          const viewportHeight = window.innerHeight;
+          const cardTop = boundingClientRect.top;
+          const cardHeight = boundingClientRect.height;
+          const cardCenter = cardTop + (cardHeight / 2);
+          const viewportMiddle = viewportHeight / 2;
+          
+          // Only auto-play when the card's center is at or above the viewport middle
+          // and when the card is sufficiently visible (at least 60% intersecting)
+          const shouldAutoPlay = isIntersecting && 
+                                 intersectionRatio >= 0.6 && 
+                                 cardCenter <= viewportMiddle;
+
+          if (shouldAutoPlay) {
+            // Card is properly positioned and visible, auto-play first video
+            const firstVideoIndex = post.media?.findIndex(media => media.type === 'video');
+            if (firstVideoIndex !== -1 && firstVideoIndex !== undefined) {
+              const videoElement = videoRefs.current[firstVideoIndex];
+              const videoId = `${post._id}-${firstVideoIndex}`;
+              if (videoElement && videoElement.paused) {
+                // Add slight delay to avoid conflicts during rapid scrolling
+                setTimeout(() => {
+                  if (cardRef.current && isElementInOptimalPosition(cardRef.current)) {
+                    globalVideo.autoPlayVideo(videoId);
+                  }
+                }, 200);
               }
-            });
-          } else {
-            // Card is out of view, pause videos
+            }
+          } else if (!isIntersecting || intersectionRatio < 0.3) {
+            // Card is out of view or barely visible, pause videos
             post.media?.forEach((media, index) => {
               if (media.type === 'video') {
                 const videoElement = videoRefs.current[index];
+                const videoId = `${post._id}-${index}`;
                 if (videoElement && !videoElement.paused) {
-                  pauseVideo(videoElement, index);
+                  pauseVideo(videoElement, videoId);
                 }
               }
             });
@@ -134,8 +156,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
       },
       {
         root: null, // Use viewport as root
-        rootMargin: '-50px 0px -50px 0px', // Trigger when 50px visible
-        threshold: 0.5 // Trigger when 50% of card is visible
+        rootMargin: '-10% 0px -10% 0px', // More restrictive margins for better control
+        threshold: [0.3, 0.6, 0.8] // Multiple thresholds for better precision
       }
     );
 
@@ -144,7 +166,19 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     return () => {
       observer.unobserve(cardElement);
     };
-  }, [post.media]);
+  }, [post.media, globalVideo]);
+
+  // Helper function to check if element is in optimal position for autoplay
+  const isElementInOptimalPosition = (element: HTMLElement): boolean => {
+    const rect = element.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const cardCenter = rect.top + (rect.height / 2);
+    const viewportMiddle = viewportHeight / 2;
+    
+    return rect.top >= 0 && 
+           rect.bottom <= viewportHeight && 
+           cardCenter <= viewportMiddle;
+  };
 
   const handleLike = async () => {
     try {
@@ -232,34 +266,40 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   };
 
   const handleVideoToggle = (index: number, action: 'play' | 'mute', videoRef?: HTMLVideoElement) => {
-    // Use the passed videoRef or find by data-index
-    const videoElement = videoRef || document.querySelector(`video[data-index="${index}"][data-post="${post._id}"]`) as HTMLVideoElement;
+    const videoId = `${post._id}-${index}`;
+    const videoElement = videoRef || document.querySelector(`video[data-video-id="${videoId}"]`) as HTMLVideoElement;
     
     if (!videoElement) {
       console.error('Video element not found');
       return;
     }
 
-    const currentState = videoStates[index] || { playing: false, muted: true };
+    const currentState = globalVideo.videoStates[videoId] || { playing: false, muted: true };
     
     if (action === 'play') {
       if (currentState.playing) {
-        pauseVideo(videoElement, index);
+        pauseVideo(videoElement, videoId);
       } else {
-        playVideo(videoElement, index);
+        playVideo(videoElement, videoId);
       }
     } else if (action === 'mute') {
       const newMuted = !currentState.muted;
       videoElement.muted = newMuted;
-      setVideoStates(prev => ({
-        ...prev,
-        [index]: { ...prev[index], muted: newMuted }
-      }));
+      globalVideo.updateVideoState(videoId, { muted: newMuted });
+      
+      // If unmuting this video, mute all other videos
+      if (!newMuted) {
+        globalVideo.muteAllVideos();
+        // Then unmute this specific video
+        videoElement.muted = false;
+        globalVideo.updateVideoState(videoId, { muted: false });
+      }
     }
   };
 
   const handleVideoClick = (index: number, videoRef: HTMLVideoElement) => {
-    const currentState = videoStates[index] || { playing: false, muted: true };
+    const videoId = `${post._id}-${index}`;
+    const currentState = globalVideo.videoStates[videoId] || { playing: false, muted: true };
     // Toggle play/pause
     handleVideoToggle(index, 'play', videoRef);
   };
@@ -289,57 +329,45 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   };
 
   // Enhanced video play function with better error handling
-  const playVideo = async (videoElement: HTMLVideoElement, index: number) => {
+  const playVideo = async (videoElement: HTMLVideoElement, videoId: string) => {
     try {
-      console.log(`Attempting to play video ${index}`, videoElement);
+      console.log(`Attempting to play video ${videoId}`, videoElement);
       
       // Validate video source URL
       const videoSrc = videoElement.src;
       if (!validateVideoUrl(videoSrc)) {
-        console.error(`Invalid video URL for video ${index}:`, videoSrc);
-        setVideoStates(prev => ({
-          ...prev,
-          [index]: { ...prev[index], playing: false, error: 'Invalid video URL' }
-        }));
+        console.error(`Invalid video URL for video ${videoId}:`, videoSrc);
+        globalVideo.updateVideoState(videoId, { playing: false, error: 'Invalid video URL' });
         return;
       }
+      
+      // Pause all other videos first
+      globalVideo.pauseAllExcept(videoId);
       
       // Ensure video is loaded
       if (videoElement.readyState >= 2) {
         videoElement.currentTime = 0; // Start from beginning
         await videoElement.play();
-        setVideoStates(prev => ({
-          ...prev,
-          [index]: { ...prev[index], playing: true, error: null }
-        }));
-        console.log(`Video ${index} started playing`);
+        globalVideo.updateVideoState(videoId, { playing: true, error: null });
+        console.log(`Video ${videoId} started playing`);
       } else {
-        console.log(`Video ${index} not ready, waiting for load...`);
+        console.log(`Video ${videoId} not ready, waiting for load...`);
         // Wait for video to load
         const loadHandler = async () => {
           try {
             videoElement.currentTime = 0;
             await videoElement.play();
-            setVideoStates(prev => ({
-              ...prev,
-              [index]: { ...prev[index], playing: true, error: null }
-            }));
-            console.log(`Video ${index} started playing after load`);
+            globalVideo.updateVideoState(videoId, { playing: true, error: null });
+            console.log(`Video ${videoId} started playing after load`);
           } catch (error) {
-            console.error(`Error playing video ${index} after load:`, error);
-            setVideoStates(prev => ({
-              ...prev,
-              [index]: { ...prev[index], playing: false, error: 'Failed to play video' }
-            }));
+            console.error(`Error playing video ${videoId} after load:`, error);
+            globalVideo.updateVideoState(videoId, { playing: false, error: 'Failed to play video' });
           }
         };
         
         const errorHandler = () => {
-          console.error(`Video ${index} failed to load`);
-          setVideoStates(prev => ({
-            ...prev,
-            [index]: { ...prev[index], playing: false, error: 'Failed to load video' }
-          }));
+          console.error(`Video ${videoId} failed to load`);
+          globalVideo.updateVideoState(videoId, { playing: false, error: 'Failed to load video' });
         };
         
         videoElement.addEventListener('loadeddata', loadHandler, { once: true });
@@ -348,31 +376,22 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
         // Set a timeout for loading
         setTimeout(() => {
           if (videoElement.readyState < 2) {
-            console.warn(`Video ${index} loading timeout`);
-            setVideoStates(prev => ({
-              ...prev,
-              [index]: { ...prev[index], playing: false, error: 'Video loading timeout' }
-            }));
+            console.warn(`Video ${videoId} loading timeout`);
+            globalVideo.updateVideoState(videoId, { playing: false, error: 'Video loading timeout' });
           }
         }, 10000); // 10 second timeout
       }
     } catch (error) {
-      console.error(`Error playing video ${index}:`, error);
+      console.error(`Error playing video ${videoId}:`, error);
       // If autoplay is blocked, update state anyway for UI feedback
-      setVideoStates(prev => ({
-        ...prev,
-        [index]: { ...prev[index], playing: false, error: 'Autoplay blocked or error occurred' }
-      }));
+      globalVideo.updateVideoState(videoId, { playing: false, error: 'Autoplay blocked or error occurred' });
     }
   };
 
-  const pauseVideo = (videoElement: HTMLVideoElement, index: number) => {
-    console.log(`Pausing video ${index}`);
+  const pauseVideo = (videoElement: HTMLVideoElement, videoId: string) => {
+    console.log(`Pausing video ${videoId}`);
     videoElement.pause();
-    setVideoStates(prev => ({
-      ...prev,
-      [index]: { ...prev[index], playing: false }
-    }));
+    globalVideo.updateVideoState(videoId, { playing: false });
   };
 
   const handleViewProfile = () => {
@@ -442,7 +461,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     const mediaCount = post.media.length;
     
     return (
-      <Box sx={{ mb: 2 }}>
+      <Box sx={{ 
+        mb: 2,
+        width: '100%',
+        maxWidth: '100%',
+        overflow: 'hidden'
+      }}>
         {mediaCount === 1 ? (
           // Single media - full width
           <Box
@@ -452,7 +476,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
               overflow: 'hidden',
               backgroundColor: theme.palette.grey[100],
               aspectRatio: post.media[0].type === 'video' ? getVideoAspectRatio(post.media[0]) : 'auto',
-              maxHeight: { xs: 360, sm: 420, md: 600 },
+              maxHeight: { xs: 200, sm: 220, md: 180, lg: 200 }, // Significantly reduced max heights for very compact layout
+              width: '100%',
+              maxWidth: '100%',
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
@@ -482,8 +508,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                     poster={post.media[0].thumbnail}
                     playsInline
                     preload="metadata"
-                    data-index="0"
-                    data-post={post._id}
+                    data-video-id={`${post._id}-0`}
                     style={{
                       width: '100%',
                       height: '100%',
@@ -491,7 +516,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                       backgroundColor: '#000',
                       cursor: 'pointer',
                     }}
-                    muted={videoStates[0]?.muted !== false}
+                    muted={globalVideo.videoStates[`${post._id}-0`]?.muted !== false}
                     onClick={(e) => {
                       e.preventDefault();
                       handleVideoClick(0, e.target as HTMLVideoElement);
@@ -505,22 +530,21 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                       }
                     }}
                     onPlay={() => {
-                      setVideoStates(prev => ({
-                        ...prev,
-                        [0]: { ...prev[0], playing: true }
-                      }));
+                      const videoId = `${post._id}-0`;
+                      globalVideo.updateVideoState(videoId, { playing: true, error: null });
                     }}
                     onPause={() => {
-                      setVideoStates(prev => ({
-                        ...prev,
-                        [0]: { ...prev[0], playing: false }
-                      }));
+                      const videoId = `${post._id}-0`;
+                      globalVideo.updateVideoState(videoId, { playing: false });
                     }}
                     onEnded={() => {
-                      setVideoStates(prev => ({
-                        ...prev,
-                        [0]: { ...prev[0], playing: false }
-                      }));
+                      const videoId = `${post._id}-0`;
+                      globalVideo.updateVideoState(videoId, { playing: false });
+                    }}
+                    onError={(e) => {
+                      console.error(`Video 0 error:`, e);
+                      const videoId = `${post._id}-0`;
+                      globalVideo.updateVideoState(videoId, { playing: false, error: 'Failed to load video' });
                     }}
                   />
                   
@@ -537,7 +561,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                       transform: 'translate(-50%, -50%)',
                       backgroundColor: 'rgba(0, 0, 0, 0.6)',
                       color: 'white',
-                      opacity: videoStates[0]?.playing ? 0 : 1,
+                      opacity: globalVideo.videoStates[`${post._id}-0`]?.playing ? 0 : 1,
                       transition: 'opacity 0.3s ease',
                       '&:hover': {
                         backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -545,7 +569,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                       },
                     }}
                   >
-                    {videoStates[0]?.playing ? <Pause fontSize="large" /> : <PlayArrow fontSize="large" />}
+                    {globalVideo.videoStates[`${post._id}-0`]?.playing ? <Pause fontSize="large" /> : <PlayArrow fontSize="large" />}
                   </IconButton>
 
                   {/* Video Controls Overlay */}
@@ -576,7 +600,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                         }}
                         sx={{ color: 'white' }}
                       >
-                        {videoStates[0]?.muted !== false ? <VolumeOff /> : <VolumeUp />}
+                        {globalVideo.videoStates[`${post._id}-0`]?.muted !== false ? <VolumeOff /> : <VolumeUp />}
                       </IconButton>
                     </Box>
                     <IconButton
@@ -612,7 +636,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                       },
                     }}
                   >
-                    {videoStates[0]?.muted !== false ? <VolumeOff /> : <VolumeUp />}
+                    {globalVideo.videoStates[`${post._id}-0`]?.muted !== false ? <VolumeOff /> : <VolumeUp />}
                   </IconButton>
                   <IconButton
                     size="small"
@@ -633,7 +657,13 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
           </Box>
         ) : (
           // Multiple media - grid layout
-          <Box sx={{ display: 'grid', gap: 1, borderRadius: 2, overflow: 'hidden' }}>
+          <Box sx={{ 
+            display: 'grid', 
+            gap: 1, 
+            borderRadius: 2, 
+            overflow: 'hidden',
+            maxHeight: { xs: 200, sm: 220, md: 150, lg: 180 }, // Constrain gallery height
+          }}>
             {mediaCount === 2 && (
               <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
                 {post.media.slice(0, 2).map((media, index) => (
@@ -664,13 +694,13 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                       <Box sx={{ position: 'relative', height: '100%' }}>
                         {validateVideoUrl(media.url) ? (
                           <video
+                            ref={(el) => { videoRefs.current[index] = el; }}
                             src={media.url}
                             poster={media.thumbnail}
                             muted
                             playsInline
                             preload="metadata"
-                            data-index={index}
-                            data-post={post._id}
+                            data-video-id={`${post._id}-${index}`}
                             style={{
                               width: '100%',
                               height: '100%',
@@ -690,29 +720,21 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                               }
                             }}
                             onPlay={() => {
-                              setVideoStates(prev => ({
-                                ...prev,
-                                [index]: { ...prev[index], playing: true, error: null }
-                              }));
+                              const videoId = `${post._id}-${index}`;
+                              globalVideo.updateVideoState(videoId, { playing: true, error: null });
                             }}
                             onPause={() => {
-                              setVideoStates(prev => ({
-                                ...prev,
-                                [index]: { ...prev[index], playing: false }
-                              }));
+                              const videoId = `${post._id}-${index}`;
+                              globalVideo.updateVideoState(videoId, { playing: false });
                             }}
                             onEnded={() => {
-                              setVideoStates(prev => ({
-                                ...prev,
-                                [index]: { ...prev[index], playing: false }
-                              }));
+                              const videoId = `${post._id}-${index}`;
+                              globalVideo.updateVideoState(videoId, { playing: false });
                             }}
                             onError={(e) => {
                               console.error(`Video ${index} error:`, e);
-                              setVideoStates(prev => ({
-                                ...prev,
-                                [index]: { ...prev[index], playing: false, error: 'Failed to load video' }
-                              }));
+                              const videoId = `${post._id}-${index}`;
+                              globalVideo.updateVideoState(videoId, { playing: false, error: 'Failed to load video' });
                             }}
                           />
                         ) : (
@@ -747,7 +769,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                             transform: 'translate(-50%, -50%)',
                             backgroundColor: 'rgba(0, 0, 0, 0.6)',
                             color: 'white',
-                            opacity: videoStates[index]?.playing ? 0 : 1,
+                            opacity: globalVideo.videoStates[`${post._id}-${index}`]?.playing ? 0 : 1,
                             transition: 'opacity 0.3s ease',
                             '&:hover': {
                               backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -755,11 +777,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                             },
                           }}
                         >
-                          {videoStates[index]?.playing ? <Pause fontSize="large" /> : <PlayArrow fontSize="large" />}
+                          {globalVideo.videoStates[`${post._id}-${index}`]?.playing ? <Pause fontSize="large" /> : <PlayArrow fontSize="large" />}
                         </IconButton>
                         
                         {/* Error overlay */}
-                        {videoStates[index]?.error && (
+                        {globalVideo.videoStates[`${post._id}-${index}`]?.error && (
                           <Box
                             sx={{
                               position: 'absolute',
@@ -772,7 +794,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                               fontSize: '0.75rem',
                             }}
                           >
-                            {videoStates[index]?.error}
+                            {globalVideo.videoStates[`${post._id}-${index}`]?.error}
                           </Box>
                         )}
                         
@@ -794,7 +816,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                             },
                           }}
                         >
-                          {videoStates[index]?.muted !== false ? <VolumeOff /> : <VolumeUp />}
+                          {globalVideo.videoStates[`${post._id}-${index}`]?.muted !== false ? <VolumeOff /> : <VolumeUp />}
                         </IconButton>
                       </Box>
                     )}
@@ -830,13 +852,13 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                   ) : (
                     <Box sx={{ position: 'relative', height: '100%' }}>
                       <video
+                        ref={(el) => { videoRefs.current[0] = el; }}
                         src={post.media[0].url}
                         poster={post.media[0].thumbnail}
                         muted
                         playsInline
                         preload="metadata"
-                        data-index="0"
-                        data-post={post._id}
+                        data-video-id={`${post._id}-0`}
                         style={{
                           width: '100%',
                           height: '100%',
@@ -856,22 +878,21 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                           }
                         }}
                         onPlay={() => {
-                          setVideoStates(prev => ({
-                            ...prev,
-                            [0]: { ...prev[0], playing: true }
-                          }));
+                          const videoId = `${post._id}-0`;
+                          globalVideo.updateVideoState(videoId, { playing: true, error: null });
                         }}
                         onPause={() => {
-                          setVideoStates(prev => ({
-                            ...prev,
-                            [0]: { ...prev[0], playing: false }
-                          }));
+                          const videoId = `${post._id}-0`;
+                          globalVideo.updateVideoState(videoId, { playing: false });
                         }}
                         onEnded={() => {
-                          setVideoStates(prev => ({
-                            ...prev,
-                            [0]: { ...prev[0], playing: false }
-                          }));
+                          const videoId = `${post._id}-0`;
+                          globalVideo.updateVideoState(videoId, { playing: false });
+                        }}
+                        onError={(e) => {
+                          console.error(`Video 0 error:`, e);
+                          const videoId = `${post._id}-0`;
+                          globalVideo.updateVideoState(videoId, { playing: false, error: 'Failed to load video' });
                         }}
                       />
                       <IconButton
@@ -886,7 +907,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                           transform: 'translate(-50%, -50%)',
                           backgroundColor: 'rgba(0, 0, 0, 0.6)',
                           color: 'white',
-                          opacity: videoStates[0]?.playing ? 0 : 1,
+                          opacity: globalVideo.videoStates[`${post._id}-0`]?.playing ? 0 : 1,
                           transition: 'opacity 0.3s ease',
                           '&:hover': {
                             backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -894,7 +915,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                           },
                         }}
                       >
-                        {videoStates[0]?.playing ? <Pause fontSize="large" /> : <PlayArrow fontSize="large" />}
+                        {globalVideo.videoStates[`${post._id}-0`]?.playing ? <Pause fontSize="large" /> : <PlayArrow fontSize="large" />}
                       </IconButton>
                     </Box>
                   )}
@@ -928,13 +949,39 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                       ) : (
                         <Box sx={{ position: 'relative', height: '100%' }}>
                           <video
+                            ref={(el) => { videoRefs.current[index + 1] = el; }}
                             src={media.url}
                             poster={media.thumbnail}
                             muted
+                            playsInline
+                            preload="metadata"
+                            data-video-id={`${post._id}-${index + 1}`}
                             style={{
                               width: '100%',
                               height: '100%',
                               objectFit: 'cover',
+                              cursor: 'pointer',
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleVideoClick(index + 1, e.target as HTMLVideoElement);
+                            }}
+                            onPlay={() => {
+                              const videoId = `${post._id}-${index + 1}`;
+                              globalVideo.updateVideoState(videoId, { playing: true, error: null });
+                            }}
+                            onPause={() => {
+                              const videoId = `${post._id}-${index + 1}`;
+                              globalVideo.updateVideoState(videoId, { playing: false });
+                            }}
+                            onEnded={() => {
+                              const videoId = `${post._id}-${index + 1}`;
+                              globalVideo.updateVideoState(videoId, { playing: false });
+                            }}
+                            onError={(e) => {
+                              console.error(`Video ${index + 1} error:`, e);
+                              const videoId = `${post._id}-${index + 1}`;
+                              globalVideo.updateVideoState(videoId, { playing: false, error: 'Failed to load video' });
                             }}
                           />
                           <IconButton
@@ -993,27 +1040,85 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
       component={motion.div}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      sx={{
-        mb: 2,
-        borderRadius: 2,
+      whileHover={{ 
+        y: -2,
         boxShadow: theme.palette.mode === 'dark' 
-          ? '0 4px 20px rgba(0,0,0,0.3)' 
-          : '0 2px 10px rgba(0,0,0,0.1)',
+          ? '0 12px 40px rgba(0,0,0,0.4)' 
+          : '0 12px 40px rgba(102, 126, 234, 0.15)',
+        transition: { duration: 0.3 }
+      }}
+      sx={{
+        mb: { xs: 3, sm: 3.5, md: 4, lg: 4.5 }, // Enhanced spacing for larger posts
+        borderRadius: { xs: 3, sm: 4, md: 4, lg: 5 }, // More rounded corners
+        background: theme.palette.mode === 'dark' 
+          ? 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.02) 100%)'
+          : 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(248,250,252,1) 50%, rgba(240,244,248,1) 100%)',
+        border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(102, 126, 234, 0.08)'}`,
+        boxShadow: theme.palette.mode === 'dark' 
+          ? '0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)' 
+          : '0 8px 32px rgba(102, 126, 234, 0.1), 0 0 0 1px rgba(102, 126, 234, 0.05)',
+        width: '100%',
+        maxWidth: '100%', // Full width to take advantage of larger grid space
+        minWidth: 0,
+        overflow: 'hidden',
+        position: 'relative',
+        // Remove height restrictions to let content flow naturally
+        minHeight: { 
+          xs: '320px', // Larger minimum height for better content display
+          sm: '350px', 
+          md: '400px', 
+          lg: '420px', 
+          xl: '450px'
+        },
+        // No scale transforms - let posts be full size
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 3,
+          background: 'linear-gradient(90deg, #667eea 0%, #764ba2 50%, #4facfe 100%)',
+          borderRadius: '5px 5px 0 0',
+          opacity: 0.8,
+        },
+        '&:hover': {
+          '&::before': {
+            opacity: 1,
+          }
+        }
       }}
     >
       {/* Post Header */}
-      <CardContent sx={{ pb: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+      <CardContent sx={{ 
+        pb: { xs: 2, sm: 2.5, md: 3 }, // Enhanced bottom padding
+        pt: { xs: 2.5, sm: 3, md: 3.5 }, // More generous top padding
+        px: { xs: 2, sm: 2.5, md: 3, lg: 3.5 }, // Enhanced horizontal padding progression
+        maxWidth: '100%',
+        width: '100%',
+        boxSizing: 'border-box',
+        position: 'relative',
+        zIndex: 1,
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: { xs: 2.5, sm: 2.5, md: 3 } }}>
           <Avatar
             src={post?.author?.profilePicture || undefined}
             sx={{ 
-              width: 48, 
-              height: 48, 
-              mr: 2,
+              width: { xs: 48, sm: 52, md: 56, lg: 60 }, // Larger, more prominent avatars
+              height: { xs: 48, sm: 52, md: 56, lg: 60 }, 
+              mr: { xs: 2, sm: 2.2, md: 2.5, lg: 3 }, // Enhanced margin progression
               cursor: 'pointer',
+              boxShadow: theme.palette.mode === 'dark'
+                ? '0 4px 16px rgba(0,0,0,0.3)'
+                : '0 4px 16px rgba(102, 126, 234, 0.2)',
+              border: `2px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(102, 126, 234, 0.1)'}`,
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:hover': {
-                transform: 'scale(1.05)',
-                transition: 'transform 0.2s ease-in-out'
+                transform: 'scale(1.08) translateY(-2px)',
+                boxShadow: theme.palette.mode === 'dark'
+                  ? '0 6px 20px rgba(0,0,0,0.4)'
+                  : '0 6px 20px rgba(102, 126, 234, 0.25)',
               }
             }}
             onClick={handleViewProfile}
@@ -1021,16 +1126,19 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
             {(post?.author?.firstName?.[0] || '')}{(post?.author?.lastName?.[0] || '')}
           </Avatar>
           
-          <Box sx={{ flexGrow: 1 }}>
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
             <Typography 
               variant="h6" 
               sx={{ 
-                fontWeight: 600, 
-                fontSize: '1rem',
+                fontWeight: 700, 
+                fontSize: { xs: '1rem', sm: '1.1rem', md: '1.15rem', lg: '1.2rem' }, // Larger, more prominent text
                 cursor: 'pointer',
+                lineHeight: 1.3,
+                color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,0,0.87)',
+                transition: 'all 0.2s ease-in-out',
                 '&:hover': {
                   color: 'primary.main',
-                  textDecoration: 'underline'
+                  transform: 'translateX(2px)',
                 }
               }}
               onClick={handleViewProfile}
@@ -1038,11 +1146,30 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
               {(post?.author?.firstName || '')} {(post?.author?.lastName || '')}
             </Typography>
             {post?.author?.jobTitle && (
-              <Typography variant="body2" color="text.secondary">
+              <Typography 
+                variant="body2" 
+                color="text.secondary"
+                sx={{ 
+                  fontSize: { xs: '0.875rem', sm: '0.9rem', md: '0.95rem' },
+                  fontWeight: 500,
+                  mt: 0.5,
+                  lineHeight: 1.4,
+                }}
+              >
                 {post?.author?.jobTitle} {post?.author?.company && `at ${post?.author?.company}`}
               </Typography>
             )}
-            <Typography variant="caption" color="text.secondary">
+            <Typography 
+              variant="caption" 
+              color="text.secondary"
+              sx={{
+                fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                fontWeight: 500,
+                mt: 0.5,
+                display: 'block',
+                opacity: 0.8,
+              }}
+            >
               {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
             </Typography>
           </Box>
@@ -1069,10 +1196,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
             )}
             
             <Chip
-              label={post.postType.replace('_', ' ').toUpperCase()}
+              label={post.postType ? post.postType.replace('_', ' ').toUpperCase() : 'TEXT'}
               size="small"
               sx={{
-                backgroundColor: getPostTypeColor(post.postType),
+                backgroundColor: getPostTypeColor(post.postType || 'text'),
                 color: 'white',
                 fontWeight: 600,
                 fontSize: '0.75rem'
@@ -1088,7 +1215,15 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
         </Box>
 
         {/* Post Content */}
-        <Typography variant="body1" sx={{ mb: 2, lineHeight: 1.6 }}>
+        <Typography variant="body1" sx={{ 
+          mb: { xs: 1, sm: 1, md: 1 }, // More compact margins on very small tablets
+          lineHeight: { xs: 1.3, sm: 1.4, md: 1.5 }, // Much tighter on very small tablets
+          fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.9rem' }, // Much smaller on very small tablets
+          wordWrap: 'break-word',
+          overflowWrap: 'break-word',
+          hyphens: 'auto',
+          maxWidth: '100%'
+        }}>
           {post.content}
         </Typography>
 
@@ -1171,23 +1306,39 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
       </CardContent>
 
       {/* Post Actions */}
-      <CardActions sx={{ px: 2, pb: 2, pt: 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
-          <IconButton onClick={handleLike} color={liked ? 'error' : 'default'}>
+      <CardActions sx={{ px: { xs: 2, sm: 2.5, md: 2 }, pb: { xs: 1.5, sm: 1.8, md: 1 }, pt: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 1.2, md: 1 }, flexGrow: 1 }}>
+          <IconButton 
+            onClick={handleLike} 
+            color={liked ? 'error' : 'default'}
+            sx={{ 
+              p: { xs: 1.2, sm: 1, md: 1 } // Larger touch target for small tablets
+            }}
+          >
             {liked ? <Favorite /> : <FavoriteBorder />}
           </IconButton>
           <Typography variant="body2" color="text.secondary">
             {likesCount}
           </Typography>
 
-          <IconButton onClick={handleCommentToggle}>
+          <IconButton 
+            onClick={handleCommentToggle}
+            sx={{ 
+              p: { xs: 1.2, sm: 1, md: 1 } // Larger touch target for small tablets
+            }}
+          >
             <Comment />
           </IconButton>
           <Typography variant="body2" color="text.secondary">
             {post.commentsCount}
           </Typography>
 
-          <IconButton onClick={handleShare}>
+          <IconButton 
+            onClick={handleShare}
+            sx={{ 
+              p: { xs: 1.2, sm: 1, md: 1 } // Larger touch target for small tablets
+            }}
+          >
             <Share />
           </IconButton>
           <Typography variant="body2" color="text.secondary">
@@ -1198,7 +1349,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
           {user && authorId && authorId !== user._id && (
             <IconButton 
               onClick={handleStartChat}
-              sx={{ ml: 'auto' }}
+              sx={{ 
+                ml: 'auto',
+                p: { xs: 1.2, sm: 1, md: 1 } // Larger touch target for small tablets
+              }}
               color="primary"
             >
               <Chat />

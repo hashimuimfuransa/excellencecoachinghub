@@ -3,12 +3,9 @@ import {
   Box,
   Container,
   Typography,
-  Tab,
-  Tabs,
   Paper,
   CircularProgress,
   Alert,
-  Fab,
   useTheme,
   useMediaQuery,
   Grid,
@@ -16,2070 +13,3036 @@ import {
   CardContent,
   Button,
   Avatar,
-  Chip,
   IconButton,
   Divider,
   Stack,
-  Badge,
   alpha,
+  Chip,
+  Fab,
+  AvatarGroup,
+  styled,
+  CardMedia,
+  CardActions,
+  TextField,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   List,
   ListItem,
-  ListItemAvatar,
   ListItemText,
-  ListItemButton,
-  CardActions,
-  LinearProgress,
-  Tooltip,
+  ListItemAvatar,
+  Skeleton,
 } from '@mui/material';
-import { 
-  Add, 
-  Chat,
-  Search,
-  Work,
-  School,
-  Assignment,
-  MenuBook,
-  TrendingUp,
+import {
+  Add,
+  Home,
   People,
-  Notifications,
   Bookmark,
-  Settings,
-  Star,
-  ArrowForward,
-  Timeline,
-  Psychology,
-  Business,
-  Groups,
-  CompareArrows,
-  SmartToy,
-  Quiz,
-  RecordVoiceOver,
-  LocationOn,
-  AttachMoney,
-  Schedule,
-  BookmarkBorder,
-  PersonAdd,
-  AccountCircle,
-  Image,
-  VideoLibrary,
+  TrendingUp,
+  Camera,
+  VideoCall,
+  Photo,
+  Article,
+  Poll,
   Event,
+  LocationOn,
+  MoreVert,
+  Share,
+  Comment,
+  ThumbUp,
+  Send,
   Close,
+  Groups,
+  PersonAdd,
+  CameraAlt,
+  VideoLibrary,
+  EmojiEmotions,
+  AttachFile,
+  Public,
+  AccessTime,
+  Star,
+  Verified,
+  FavoriteBorder,
+  Favorite,
+  ShareOutlined,
+  ChatBubbleOutline,
+  MoreHoriz,
+  AddCircleOutline,
+  PlayCircleOutline,
+  AccountCircle,
+  Settings,
+  Logout,
+  WorkOutline,
+  SchoolOutlined,
+  PlaceOutlined,
+  CalendarTodayOutlined,
+  LinkOutlined,
+  ExpandMore,
+  ExpandLess,
+  BusinessCenter,
+  Assessment,
+  QuestionAnswer,
+  EmojiEvents,
+  Psychology,
+  Assignment,
+  Build,
+  TrendingUpOutlined,
+  VolumeOff,
+  VolumeUp,
 } from '@mui/icons-material';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import PostCard from '../components/social/PostCard';
-import CreatePost from '../components/social/CreatePost';
+import { useAuth } from '../contexts/AuthContext';
+import { SocialPost } from '../types/social';
+import { formatDistanceToNow } from 'date-fns';
+import { socialNetworkService } from '../services/socialNetworkService';
 import CreateStory from '../components/social/CreateStory';
 import StoryViewer from '../components/social/StoryViewer';
-import FeedSidebar from '../components/social/FeedSidebar';
-import { SocialPost } from '../types/social';
-import { socialNetworkService, FeedOptions } from '../services/socialNetworkService';
-import { useAuth, UserRole } from '../contexts/AuthContext';
-import { jobService } from '../services/jobService';
-import { profileService } from '../services/profileService';
-import { userService } from '../services/userService';
-import { notificationService } from '../services/notificationService';
-import { chatService } from '../services/chatService';
-import { User } from '../types/user';
-import MobileFooterNavbar from '../components/MobileFooterNavbar';
-import FloatingContact from '../components/FloatingContact';
+import { enhancedStoryService } from '../services/enhancedStoryService';
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
+// Modern Instagram-like Post Card with improved sizing and layout
 
-const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
-  <div role="tabpanel" hidden={value !== index}>
-    {value === index && <Box>{children}</Box>}
-  </div>
-);
+const InstagramPostCard = styled(Card)(({ theme }) => ({
+  marginBottom: theme.spacing(2),
+  borderRadius: 12,
+  backgroundColor: theme.palette.background.paper,
+  boxShadow: theme.palette.mode === 'dark' 
+    ? '0 2px 8px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.2)' 
+    : '0 2px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.1)',
+  border: theme.palette.mode === 'dark' 
+    ? `1px solid ${alpha(theme.palette.divider, 0.08)}`
+    : `1px solid ${alpha(theme.palette.divider, 0.05)}`,
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  overflow: 'hidden',
+  width: '100%',
+  maxWidth: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+  
+  '&:hover': {
+    transform: 'translateY(-2px)',
+    boxShadow: theme.palette.mode === 'dark' 
+      ? '0 8px 25px rgba(0,0,0,0.25), 0 4px 10px rgba(0,0,0,0.3)' 
+      : '0 8px 25px rgba(0,0,0,0.12), 0 4px 10px rgba(0,0,0,0.15)',
+  },
+  
+  '& .MuiCardContent-root': {
+    padding: 0,
+    '&:last-child': {
+      paddingBottom: 0,
+    },
+  },
+}));
 
-const SocialNetworkPage: React.FC = () => {
+// Instagram-like content container
+const PostContentContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  width: '100%',
+}));
+
+// Post header styling
+const PostHeader = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: theme.spacing(1.5, 2),
+  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
+  
+  [theme.breakpoints.up('md')]: {
+    padding: theme.spacing(2, 2.5),
+  },
+}));
+
+// Post media container
+const PostMediaContainer = styled(Box)(({ theme }) => ({
+  position: 'relative',
+  width: '100%',
+  maxHeight: '500px',
+  overflow: 'hidden',
+  backgroundColor: theme.palette.mode === 'dark' ? '#0a0a0a' : '#fafafa',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  
+  [theme.breakpoints.up('md')]: {
+    maxHeight: '600px',
+  },
+}));
+
+// Post text content
+const PostTextContent = styled(Box)(({ theme }) => ({
+  padding: theme.spacing(1.5, 2),
+  
+  [theme.breakpoints.up('md')]: {
+    padding: theme.spacing(2, 2.5),
+  },
+  
+  '& .MuiTypography-body1': {
+    fontSize: '0.9rem',
+    lineHeight: 1.5,
+  },
+}));
+
+// Post actions (like, comment, share)
+const PostActions = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: theme.spacing(1, 2),
+  borderTop: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
+  
+  [theme.breakpoints.up('md')]: {
+    padding: theme.spacing(1.5, 2.5),
+  },
+}));
+
+// Legacy support - keeping UniversalPostCard for backwards compatibility
+const UniversalPostCard = InstagramPostCard;
+
+// Content wrapper for ensuring uniform content display
+const PostContentWrapper = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  flex: 1,
+  minHeight: 0, // Allow flex shrinking
+  
+  '& .post-media-section': {
+    flex: '0 0 auto', // Don't grow/shrink, but allow wrapping
+    minHeight: '200px', // Minimum height for media section
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    
+    [theme.breakpoints.down('md')]: {
+      minHeight: '180px',
+    },
+    [theme.breakpoints.down('sm')]: {
+      minHeight: '160px',
+    },
+  },
+  
+  '& .post-text-section': {
+    flex: '1 1 auto', // Grow to fill available space
+    minHeight: '120px', // Minimum height for text content
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
+    
+    [theme.breakpoints.down('md')]: {
+      minHeight: '100px',
+    },
+    [theme.breakpoints.down('sm')]: {
+      minHeight: '80px',
+    },
+  },
+}));
+
+const SidebarCard = styled(Card)(({ theme }) => ({
+  marginBottom: theme.spacing(1.2),
+  borderRadius: 16,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${alpha(theme.palette.divider, 0.06)}`,
+  position: 'sticky',
+  top: theme.spacing(8),
+  boxShadow: theme.palette.mode === 'dark' 
+    ? '0 4px 12px rgba(0,0,0,0.15)' 
+    : '0 2px 8px rgba(0,0,0,0.08)',
+  backdropFilter: 'blur(10px)',
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    transform: 'translateY(-2px)',
+    boxShadow: theme.palette.mode === 'dark' 
+      ? '0 6px 16px rgba(0,0,0,0.2)' 
+      : '0 4px 12px rgba(0,0,0,0.12)',
+  },
+  '& .MuiCardContent-root': {
+    padding: `${theme.spacing(1.2)} ${theme.spacing(1.5)}`,
+    '&:last-child': {
+      paddingBottom: theme.spacing(1.2),
+    },
+  },
+}));
+
+const StoryContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  gap: theme.spacing(1),
+  padding: theme.spacing(2, 2, 1.5, 2),
+  overflowX: 'auto',
+  scrollBehavior: 'smooth',
+  '&::-webkit-scrollbar': {
+    height: 3,
+  },
+  '&::-webkit-scrollbar-thumb': {
+    backgroundColor: alpha(theme.palette.divider, 0.3),
+    borderRadius: 2,
+  },
+  '&::-webkit-scrollbar-track': {
+    backgroundColor: 'transparent',
+  },
+}));
+
+const StoryCircle = styled(Box)(({ theme }) => ({
+  width: 60,
+  height: 60,
+  borderRadius: '50%',
+  background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)',
+  padding: 2,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  flexShrink: 0,
+  transition: 'transform 0.15s ease-in-out',
+  '&:hover': {
+    transform: 'scale(1.05)',
+  },
+  '&.viewed': {
+    background: `linear-gradient(45deg, ${alpha(theme.palette.text.secondary, 0.3)}, ${alpha(theme.palette.text.secondary, 0.5)})`,
+  },
+}));
+
+const CreatePostButton = styled(Button)(({ theme }) => ({
+  justifyContent: 'flex-start',
+  borderRadius: 25,
+  padding: '12px 20px',
+  color: theme.palette.text.secondary,
+  textTransform: 'none',
+  fontSize: '1rem',
+  backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : '#f0f2f5',
+  border: 'none',
+  position: 'relative',
+  overflow: 'hidden',
+  '&:hover': {
+    backgroundColor: theme.palette.mode === 'dark' ? '#333' : '#e4e6ea',
+    border: 'none',
+  },
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: '-100%',
+    width: '100%',
+    height: '100%',
+    background: `linear-gradient(90deg, transparent, ${alpha(theme.palette.primary.main, 0.1)}, transparent)`,
+    transition: 'left 0.5s ease',
+  },
+  '&:hover::before': {
+    left: '100%',
+  },
+}));
+
+const FloatingCreateButton = styled(Fab)(({ theme }) => ({
+  position: 'fixed',
+  bottom: theme.spacing(10),
+  right: theme.spacing(3),
+  zIndex: 1000,
+  background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+  '&:hover': {
+    background: `linear-gradient(45deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
+    transform: 'scale(1.05)',
+  },
+}));
+
+const EngagementButton = styled(IconButton)(({ theme }) => ({
+  borderRadius: 12,
+  padding: theme.spacing(1, 2),
+  transition: 'all 0.2s ease-in-out',
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.primary.main, 0.1),
+    transform: 'scale(1.02)',
+  },
+}));
+
+const QuickActionCard = styled(Card)(({ theme }) => ({
+  borderRadius: 20,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+  cursor: 'pointer',
+  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+  position: 'relative',
+  overflow: 'hidden',
+  backdropFilter: 'blur(10px)',
+  '&:hover': {
+    transform: 'translateY(-6px) scale(1.02)',
+    boxShadow: theme.palette.mode === 'dark' 
+      ? '0 12px 35px rgba(0,0,0,0.3), 0 4px 15px rgba(0,0,0,0.2)' 
+      : '0 8px 30px rgba(0,0,0,0.12), 0 4px 15px rgba(0,0,0,0.08)',
+    '& .action-icon': {
+      transform: 'scale(1.15) rotate(5deg)',
+    },
+    '& .action-glow': {
+      opacity: 0.1,
+    },
+  },
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+    borderRadius: '20px 20px 0 0',
+  },
+  '&::after': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.02)}, ${alpha(theme.palette.secondary.main, 0.02)})`,
+    opacity: 0,
+    transition: 'opacity 0.3s ease',
+    borderRadius: 20,
+  },
+  '&:hover::after': {
+    opacity: 1,
+  },
+}));
+
+const ActionButton = styled(Button)(({ theme }) => ({
+  borderRadius: 12,
+  padding: theme.spacing(1.5, 2),
+  textTransform: 'none',
+  fontSize: '0.875rem',
+  fontWeight: 600,
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+  background: alpha(theme.palette.background.paper, 0.8),
+  backdropFilter: 'blur(10px)',
+  position: 'relative',
+  overflow: 'hidden',
+  '&:hover': {
+    transform: 'translateY(-2px)',
+    boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.25)}`,
+    borderColor: theme.palette.primary.main,
+    '& .MuiButton-startIcon': {
+      transform: 'scale(1.2)',
+    },
+  },
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: '-100%',
+    width: '100%',
+    height: '100%',
+    background: `linear-gradient(90deg, transparent, ${alpha(theme.palette.primary.main, 0.1)}, transparent)`,
+    transition: 'left 0.5s ease',
+  },
+  '&:hover::before': {
+    left: '100%',
+  },
+}));
+
+interface SocialNetworkPageProps {}
+
+const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { user, hasRole } = useAuth();
+  const { user } = useAuth();
+  
+  // Responsive breakpoints
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
-  const [currentTab, setCurrentTab] = useState(0);
+  const isSmallTablet = useMediaQuery(theme.breakpoints.between('md', 'lg')); // 768px to 1200px
+  const isLargeTablet = useMediaQuery(theme.breakpoints.between('lg', 'xl')); // 1200px to 1536px
+  const isDesktop = useMediaQuery(theme.breakpoints.up('xl')); // 1536px+
+
+  // State management
   const [posts, setPosts] = useState<SocialPost[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [stories, setStories] = useState<any[]>([]);
+  const [suggestedConnections, setSuggestedConnections] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [storiesLoading, setStoriesLoading] = useState(false);
+  const [connectionsLoading, setConnectionsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [page, setPage] = useState(1);
-  const [showWelcomeHeader, setShowWelcomeHeader] = useState(true);
-  const [showMobileConnections, setShowMobileConnections] = useState(false);
-  const [showStoryModal, setShowStoryModal] = useState(false);
-  const [activeStoryUser, setActiveStoryUser] = useState<any>(null);
+  const [selectedTab, setSelectedTab] = useState('home');
+  const [expandedPost, setExpandedPost] = useState<string | null>(null);
+  
+  // Video modal state
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<{ url: string; title?: string } | null>(null);
+  
+  // Video playback state - Initialize all videos as muted for auto-play compatibility
+  const [mutedVideos, setMutedVideos] = useState<Set<string>>(new Set());
+  const [playingVideos, setPlayingVideos] = useState<Set<string>>(new Set());
+  
+  // Create post form state
+  const [postContent, setPostContent] = useState('');
+  const [postMedia, setPostMedia] = useState<File[]>([]);
+  const [postTags, setPostTags] = useState<string>('');
+  const [isPosting, setIsPosting] = useState(false);
+  
+  // Comment state
+  const [showCommentDialog, setShowCommentDialog] = useState(false);
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [commentContent, setCommentContent] = useState('');
+  const [isCommenting, setIsCommenting] = useState(false);
+  
+  // Story state
   const [showCreateStory, setShowCreateStory] = useState(false);
-  const [userStories, setUserStories] = useState<any[]>([]);
-  const [allStories, setAllStories] = useState<any[]>([]);
   const [showStoryViewer, setShowStoryViewer] = useState(false);
-  const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
-  
-  // Notification state
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const [unreadMessages, setUnreadMessages] = useState(0);
-  
-  // Suggested connections state
-  const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
-  const [connectingUsers, setConnectingUsers] = useState<string[]>([]);
-  const [suggestionsLoading, setSuggestionsLoading] = useState(true);
+  const [selectedStoryIndex, setSelectedStoryIndex] = useState(0);
+  const [storyViewerStories, setStoryViewerStories] = useState<any[]>([]);
 
-  // Jobs state
-  const [matchedJobs, setMatchedJobs] = useState<any[]>([]);
-  const [jobsLoading, setJobsLoading] = useState(false);
-  const [profileCompletion, setProfileCompletion] = useState<any>(null);
-  const [profileValidation, setProfileValidation] = useState<any>(null);
-  const [bookmarkedJobs, setBookmarkedJobs] = useState<Set<string>>(new Set());
-
-  // Load posts on component mount and when filter changes
-  useEffect(() => {
-    // For non-employers: Job Posts tab is at index 1
-    // For employers: Job Posts tab doesn't exist
-    if (!hasRole(UserRole.EMPLOYER) && currentTab === 1) { 
-      loadMatchedJobs();
-    } else {
-      loadPosts(true);
-    }
-  }, [currentTab, hasRole]);
-
-  // Load profile completion and validation on mount
-  useEffect(() => {
-    loadProfileData();
-    loadUserStories();
-  }, [user]);
-
-  const loadUserStories = async () => {
-    try {
-      const response = await socialNetworkService.getUserStories();
-      if (response.success && response.data) {
-        setUserStories(response.data);
-      }
-    } catch (error) {
-      console.error('Error loading user stories:', error);
-      // Keep stories empty on error
-    }
-  };
-
-  // Load notifications and messages
-  useEffect(() => {
-    const loadCounts = async () => {
-      if (!user) return;
-      
-      try {
-        // Load notifications
-        const notificationResponse = await notificationService.getUnreadCount();
-        setUnreadNotifications(notificationResponse.data?.count || 0);
-        
-        // Load unread messages
-        const unreadMessagesCount = await chatService.getTotalUnreadCount();
-        setUnreadMessages(unreadMessagesCount);
-      } catch (error) {
-        console.error('Error loading counts:', error);
-        setUnreadNotifications(0);
-        setUnreadMessages(0);
-      }
-    };
-
-    loadCounts();
-    
-    // Set up periodic refresh
-    const interval = setInterval(loadCounts, 30000);
-    
-    return () => clearInterval(interval);
-  }, [user]);
-
-  const loadPosts = async (reset = false) => {
-    if (!user) return;
-    
-    setLoading(reset);
-    setError(null);
-
-    try {
-      const currentPage = reset ? 1 : page;
-      const filter = feedFilters[currentTab];
-      
-      const response = await socialNetworkService.getFeed({
-        page: currentPage,
-        limit: 10,
-        filter
-      });
-
-      // Handle different response formats more robustly
-      let newPosts = [];
-      if (response && response.success !== false) {
-        // Try to extract posts from various possible response structures
-        newPosts = response.data?.posts || response.data || response.posts || response || [];
-        // Ensure newPosts is an array
-        if (!Array.isArray(newPosts)) {
-          newPosts = [];
+  // Sample modern posts data
+  const samplePosts: SocialPost[] = [
+    {
+      _id: '1',
+      author: {
+        _id: '1',
+        firstName: 'Alexandra',
+        lastName: 'Thompson',
+        profilePicture: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
+        jobTitle: 'Senior Product Designer at Meta',
+      },
+      content: '🎉 Thrilled to share that our design system update has improved user engagement by 40%! Here\'s what we learned:\n\n✨ Consistency builds trust\n🎯 User feedback is gold\n🚀 Iterate fast, learn faster\n\nSpecial thanks to our amazing team who made this possible. The future of design is collaborative! 💙\n\n#ProductDesign #DesignSystem #UserExperience #Meta #TeamWork',
+      tags: ['ProductDesign', 'DesignSystem', 'UserExperience', 'Meta', 'TeamWork'],
+      postType: 'text',
+      media: [
+        {
+          type: 'video',
+          url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
+          thumbnail: 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=280&h=720&fit=crop'
         }
-      } else if (response && response.success === false) {
-        throw new Error(response.message || 'Failed to load posts');
-      }
-      
-      if (reset) {
-        setPosts(newPosts);
-        setPage(2);
-      } else {
-        setPosts(prev => [...prev, ...newPosts]);
-        setPage(prev => prev + 1);
-      }
-      
-      setHasMore(newPosts.length === 10);
-    } catch (err: any) {
-      console.error('Error loading posts:', err);
-      setError(err.response?.data?.error || err.message || 'Failed to load posts');
-      // Set empty posts to prevent UI from breaking
-      if (reset) {
-        setPosts([]);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePostCreated = (newPost: SocialPost) => {
-    setPosts(prev => [newPost, ...prev]);
-    setShowCreatePost(false);
-  };
-
-  const handleStoryCreated = (newStory: any) => {
-    console.log('Story created successfully!', newStory);
-    // Reload user stories to get fresh data
-    loadUserStories();
-    setShowCreateStory(false);
-  };
-
-  const handleOpenStoryViewer = (storyIndex: number, stories: any[]) => {
-    setAllStories(stories);
-    setCurrentStoryIndex(storyIndex);
-    setShowStoryViewer(true);
-  };
-
-  const handlePostUpdate = (updatedPost: SocialPost) => {
-    setPosts(prev => prev.map(post => 
-      post._id === updatedPost._id ? updatedPost : post
-    ));
-  };
-
-  const handlePostDelete = (postId: string) => {
-    setPosts(prev => prev.filter(post => post._id !== postId));
-  };
-
-  // Load profile completion and validation data
-  const loadProfileData = async () => {
-    if (!user?._id) return;
-
-    try {
-      console.log('🔍 SocialNetworkPage fetching fresh user data for:', user._id);
-      // Fetch fresh user data from the server to get the most up-to-date profile
-      const freshUser = await userService.getUserProfile(user._id);
-      console.log('📋 SocialNetworkPage received fresh user data:', freshUser);
-      
-      // Use fresh user data for validation
-      const validation = await profileService.validateUserProfile(freshUser as User);
-      console.log('✅ Profile validation result:', validation);
-      setProfileValidation(validation);
-
-      const completion = await profileService.getProfileCompletionStatus();
-      console.log('📊 Profile completion status:', completion);
-      setProfileCompletion(completion);
-    } catch (error) {
-      console.error('❌ Error loading profile data:', error);
-      // Fallback to using auth context user data
-      try {
-        const validation = await profileService.validateUserProfile(user as User);
-        setProfileValidation(validation);
-        
-        const completion = await profileService.getProfileCompletionStatus();
-        setProfileCompletion(completion);
-      } catch (fallbackError) {
-        console.error('❌ Fallback profile validation also failed:', fallbackError);
-      }
-    }
-  };
-
-  // Load AI-matched jobs based on user skills and profile
-  const loadMatchedJobs = async () => {
-    if (!user?._id) return;
-
-    setJobsLoading(true);
-    setError(null);
-
-    try {
-      console.log('🤖 Loading AI-matched jobs for user:', user._id);
-      
-      // Fetch fresh user data to get the most up-to-date profile
-      const freshUser = await userService.getUserProfile(user._id);
-      console.log('📋 Fresh user data for job matching:', freshUser);
-
-      // Validate the fresh profile data
-      const validation = await profileService.validateUserProfile(freshUser as User);
-      console.log('✅ Profile validation for job matching:', validation);
-
-      // Check if profile is complete enough for job matching
-      if (!validation || validation.completionPercentage < 30) {
-        console.log('⚠️ Profile not complete enough for job matching. Completion:', validation?.completionPercentage || 0, '%');
-        setMatchedJobs([]);
-        setJobsLoading(false);
-        return;
-      }
-
-      // Get user skills for basic validation
-      const userSkills = (freshUser as User).skills || [];
-      const experienceSkills = ((freshUser as User).experience || [])
-        .flatMap(exp => exp.technologies || [])
-        .filter(tech => tech && tech.trim());
-      const allSkills = [...userSkills, ...experienceSkills];
-
-      console.log('🎯 User skills for matching:', allSkills);
-
-      if (allSkills.length === 0) {
-        console.log('⚠️ No skills found for job matching');
-        setMatchedJobs([]);
-        setJobsLoading(false);
-        return;
-      }
-
-      // Use enhanced AI-powered job matching service
-      console.log('🤖 Calling enhanced AI-powered job matching service...');
-      const response = await jobService.getAIMatchedJobs();
-
-      console.log('📋 Enhanced AI Job matching response:', response);
-      console.log('✅ AI found', response.data?.length || 0, 'matched jobs');
-      console.log('📊 Matching stats:', response.meta);
-
-      setMatchedJobs(response.data);
-    } catch (err: any) {
-      console.error('❌ Error loading AI-matched jobs:', err);
-      
-      // If AI matching fails, fall back to basic skill matching
-      console.log('🔄 Falling back to basic skill matching...');
-      try {
-        const freshUser = await userService.getUserProfile(user._id);
-        const userSkills = (freshUser as User).skills || [];
-        const technicalSkills = ((freshUser as User).technicalSkills || []).map(ts => ts.skill);
-        const allSkills = [...userSkills, ...technicalSkills];
-
-        if (allSkills.length > 0) {
-          const fallbackResponse = await jobService.getJobs({
-            skills: allSkills.slice(0, 10),
-            status: 'active' as any
-          }, 1, 15);
-
-          if (fallbackResponse.success) {
-            console.log('✅ Fallback found', fallbackResponse.data.length, 'matched jobs');
-            setMatchedJobs(fallbackResponse.data);
-          } else {
-            throw new Error('Failed to load jobs with fallback method');
-          }
-        } else {
-          setMatchedJobs([]);
+      ],
+      likes: ['1', '2', '3'],
+      likesCount: 127,
+      commentsCount: 23,
+      sharesCount: 15,
+      visibility: 'public',
+      isPinned: false,
+      isPromoted: false,
+      createdAt: new Date(Date.now() - 3600000).toISOString(),
+      updatedAt: new Date(Date.now() - 3600000).toISOString(),
+    },
+    {
+      _id: '2',
+      author: {
+        _id: '2',
+        firstName: 'Marcus',
+        lastName: 'Rodriguez',
+        profilePicture: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+        jobTitle: 'Full Stack Developer at Google',
+      },
+      content: '🚀 Just deployed our new AI-powered recommendation engine! After 6 months of development, we\'ve achieved:\n\n📈 35% increase in user retention\n⚡ 50% faster response times\n🎯 90% accuracy in recommendations\n\nThe power of machine learning never ceases to amaze me. Excited to see how this impacts our users! 🔥\n\n#AI #MachineLearning #WebDevelopment #Google #Innovation',
+      tags: ['AI', 'MachineLearning', 'WebDevelopment', 'Google', 'Innovation'],
+      postType: 'text',
+      media: [
+        {
+          type: 'video',
+          url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+          thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=280&h=720&fit=crop'
+        },
+        {
+          type: 'image',
+          url: 'https://images.unsplash.com/photo-1555421689-491a97ff2040?w=280&h=360&fit=crop'
+        },
+        {
+          type: 'video',
+          url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_2mb.mp4',
+          thumbnail: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=280&h=720&fit=crop'
         }
-      } catch (fallbackErr: any) {
-        console.error('❌ Fallback job matching also failed:', fallbackErr);
-        setError(fallbackErr.response?.data?.error || fallbackErr.message || 'Failed to load matched jobs');
-        setMatchedJobs([]);
-      }
-    } finally {
-      setJobsLoading(false);
-    }
-  };
-
-  // Handle job bookmark toggle
-  const handleJobBookmark = async (jobId: string) => {
-    const newBookmarks = new Set(bookmarkedJobs);
-    if (bookmarkedJobs.has(jobId)) {
-      newBookmarks.delete(jobId);
-    } else {
-      newBookmarks.add(jobId);
-    }
-    setBookmarkedJobs(newBookmarks);
-    // Here you could add API call to save bookmark
-  };
-
-  // Handle job application
-  const handleJobApply = (jobId: string) => {
-    navigate(`/app/jobs/${jobId}`);
-  };
-
-  // Load suggested connections
-  useEffect(() => {
-    const loadSuggestedConnections = async () => {
-      if (!user) return;
-      
-      setSuggestionsLoading(true);
-      try {
-        const response = await socialNetworkService.getConnectionSuggestions();
-        // The service already returns the data or empty array
-        setSuggestedUsers(Array.isArray(response) ? response : []);
-      } catch (error) {
-        console.error('Error loading suggested connections:', error);
-      } finally {
-        setSuggestionsLoading(false);
-      }
-    };
-
-    loadSuggestedConnections();
-  }, [user]);
-
-  // Handle connection request
-  const handleConnect = async (userId: string) => {
-    if (!user || connectingUsers.includes(userId)) return;
-
-    setConnectingUsers(prev => [...prev, userId]);
-    try {
-      const response = await socialNetworkService.sendConnectionRequest(userId);
-      if (response.success) {
-        // Remove the connected user from suggestions
-        setSuggestedUsers(prev => prev.filter(u => u._id !== userId));
-      }
-    } catch (error) {
-      console.error('Error sending connection request:', error);
-    } finally {
-      setConnectingUsers(prev => prev.filter(id => id !== userId));
-    }
-  };
-
-  const feedFilters: FeedOptions['filter'][] = hasRole(UserRole.EMPLOYER) 
-    ? ['all', 'people', 'training'] 
-    : ['all', 'jobs', 'people', 'training'];
-  const tabLabels = hasRole(UserRole.EMPLOYER) 
-    ? ['All Posts', 'People', 'Training', 'Suggestions']
-    : ['All Posts', 'Job Posts', 'People', 'Training', 'Suggestions'];
-
-  // Quick Action Buttons Data
-  const quickActions = [
-    {
-      title: 'Search Jobs',
-      subtitle: 'Find your dream career',
-      icon: <Search sx={{ fontSize: 28 }} />,
-      color: '#4CAF50',
-      gradient: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
-      path: '/app/jobs',
-      stats: '500+ Active',
+      ],
+      likes: ['1', '2', '3', '4', '5'],
+      likesCount: 89,
+      commentsCount: 31,
+      sharesCount: 22,
+      visibility: 'public',
+      isPinned: true,
+      isPromoted: false,
+      createdAt: new Date(Date.now() - 7200000).toISOString(),
+      updatedAt: new Date(Date.now() - 7200000).toISOString(),
     },
     {
-      title: 'Get Prepared',
-      subtitle: 'Interviews • Smart Exams • Psychometric tests',
-      icon: <Psychology sx={{ fontSize: 28 }} />,
-      color: '#FF9800',
-      gradient: 'linear-gradient(135deg, #FF9800 0%, #f57c00 100%)',
-      path: '/app/job-preparation',
-      stats: '4+ Services',
-      services: [ 'Interviews • Smart Exams • Psychometric tests '],
+      _id: '3',
+      author: {
+        _id: '3',
+        firstName: 'Priya',
+        lastName: 'Patel',
+        profilePicture: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
+        jobTitle: 'Data Scientist at Netflix',
+      },
+      content: '📊 Fascinating insights from our latest user behavior analysis! Did you know that 73% of users prefer personalized content over generic recommendations?\n\nKey findings:\n• Personalization increases engagement by 2.5x\n• Users spend 40% more time on personalized feeds\n• Satisfaction scores jumped from 3.2 to 4.7\n\nData truly tells a story! 📈\n\n#DataScience #Analytics #Netflix #UserBehavior #Insights',
+      tags: ['DataScience', 'Analytics', 'Netflix', 'UserBehavior', 'Insights'],
+      postType: 'text',
+      likes: ['1', '2'],
+      likesCount: 156,
+      commentsCount: 42,
+      sharesCount: 38,
+      visibility: 'public',
+      isPinned: false,
+      isPromoted: true,
+      createdAt: new Date(Date.now() - 86400000).toISOString(),
+      updatedAt: new Date(Date.now() - 86400000).toISOString(),
     },
     {
-      title: 'Generate CV',
-      subtitle: 'Professional resume builder',
-      icon: <Assignment sx={{ fontSize: 28 }} />,
-      color: '#2196F3',
-      gradient: 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)',
-      path: '/app/cv-builder',
-      stats: 'Free Templates',
+      _id: '4',
+      author: {
+        _id: '4',
+        firstName: 'David',
+        lastName: 'Kim',
+        profilePicture: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
+        jobTitle: 'UI/UX Designer at Adobe',
+      },
+      content: '🎨 Just finished designing a new mobile app interface! Love how clean and intuitive it turned out. Here\'s a sneak peek at the onboarding screens.\n\n#UIDesign #MobileApp #UserExperience',
+      tags: ['UIDesign', 'MobileApp', 'UserExperience'],
+      postType: 'text',
+      media: [
+        {
+          type: 'image',
+          url: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=480&h=300&fit=crop',
+          thumbnail: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=150&h=100&fit=crop'
+        }
+      ],
+      likes: ['2', '3'],
+      likesCount: 67,
+      commentsCount: 18,
+      sharesCount: 12,
+      visibility: 'public',
+      isPinned: false,
+      isPromoted: false,
+      createdAt: new Date(Date.now() - 7200000).toISOString(),
+      updatedAt: new Date(Date.now() - 7200000).toISOString(),
     },
     {
-      title: 'Courses',
-      subtitle: 'Skill development programs',
-      icon: <MenuBook sx={{ fontSize: 28 }} />,
-      color: '#9C27B0',
-      gradient: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
-      path: '/app/courses',
-      stats: '100+ Available',
+      _id: '5',
+      author: {
+        _id: '5',
+        firstName: 'Lisa',
+        lastName: 'Wang',
+        profilePicture: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
+        jobTitle: 'Marketing Director at Spotify',
+      },
+      content: '🚀 Our team presentation went amazing today! Here are some highlights from our quarterly review. Exciting things ahead! 📈✨\n\n#TeamWork #Marketing #Growth',
+      tags: ['TeamWork', 'Marketing', 'Growth'],
+      postType: 'text',
+      media: [
+        {
+          type: 'image',
+          url: 'https://images.unsplash.com/photo-1553484771-371a605b060b?w=480&h=300&fit=crop',
+          thumbnail: 'https://images.unsplash.com/photo-1553484771-371a605b060b?w=150&h=100&fit=crop'
+        },
+        {
+          type: 'image',
+          url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=480&h=300&fit=crop',
+          thumbnail: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=150&h=100&fit=crop'
+        },
+        {
+          type: 'image',
+          url: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=480&h=300&fit=crop',
+          thumbnail: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=150&h=100&fit=crop'
+        }
+      ],
+      likes: ['1', '3', '4'],
+      likesCount: 94,
+      commentsCount: 27,
+      sharesCount: 19,
+      visibility: 'public',
+      isPinned: false,
+      isPromoted: true,
+      createdAt: new Date(Date.now() - 10800000).toISOString(),
+      updatedAt: new Date(Date.now() - 10800000).toISOString(),
     },
   ];
 
-  useEffect(() => {
-    loadFeed(1, true);
-  }, [currentTab]);
+  // Sample stories
+  const sampleStories = [
+    { id: 'add', type: 'add', user: user },
+    { id: '1', type: 'story', user: { name: 'Alex Chen', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' }, hasViewed: false },
+    { id: '2', type: 'story', user: { name: 'Sarah Kim', avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150' }, hasViewed: true },
+    { id: '3', type: 'story', user: { name: 'David Lee', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150' }, hasViewed: false },
+    { id: '4', type: 'story', user: { name: 'Emma Wilson', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150' }, hasViewed: false },
+  ];
 
-  // Auto-hide welcome header after 5 seconds
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowWelcomeHeader(false);
-    }, 5000); // 5 seconds
+  // Sample trending topics
+  const trendingTopics = [
+    { topic: '#AI', posts: 12400, growth: '+15%' },
+    { topic: '#WebDevelopment', posts: 8900, growth: '+8%' },
+    { topic: '#DesignSystem', posts: 6540, growth: '+22%' },
+    { topic: '#RemoteWork', posts: 4320, growth: '+5%' },
+    { topic: '#TechCareers', posts: 3210, growth: '+12%' },
+  ];
 
-    return () => clearTimeout(timer);
+  useEffect(() => {
+    loadFeed();
+    loadStories();
+    loadSuggestedConnections();
   }, []);
 
-  const loadFeed = async (pageNum = 1, reset = false) => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    
+  const loadFeed = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-
-      const options: FeedOptions = {
-        page: pageNum,
-        limit: 10,
-        filter: feedFilters[currentTab],
-      };
-
-      const response = await socialNetworkService.getFeed(options);
+      console.log('🔄 Loading social network feed...');
+      const feedData = await socialNetworkService.getFeed({
+        page: 1,
+        limit: 20,
+        filter: selectedTab === 'home' ? 'all' : 'all'
+      });
       
-      // Ensure response.data exists and is an array
-      const feedData = response?.data || response || [];
-      const feedPosts = Array.isArray(feedData) ? feedData : feedData?.posts || [];
+      console.log('✅ Feed loaded:', feedData);
       
-      if (reset) {
-        setPosts(feedPosts);
+      // Handle different response formats
+      const postsData = Array.isArray(feedData) ? feedData : feedData.data || [];
+      
+      // If no real posts from backend, fall back to sample data for better UX
+      if (postsData.length === 0) {
+        console.log('📝 No posts from backend, showing sample posts');
+        setPosts(samplePosts);
       } else {
-        setPosts(prev => [...prev, ...feedPosts]);
+        setPosts(postsData);
       }
       
-      setHasMore(feedPosts.length === 10);
-      setPage(pageNum);
-    } catch (err) {
-      setError('Failed to load feed. Please try again.');
-      console.error('Error loading feed:', err);
+    } catch (error) {
+      console.error('❌ Error loading feed:', error);
+      setError('Failed to load feed. Showing sample content.');
+      // Fallback to sample posts in case of error
+      setPosts(samplePosts);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setCurrentTab(newValue);
-  };
-
-  const loadMorePosts = () => {
-    if (!loading && hasMore) {
-      loadFeed(page + 1, false);
+  const loadStories = async () => {
+    setStoriesLoading(true);
+    try {
+      console.log('🔄 Loading stories...');
+      const storiesData = await socialNetworkService.getStoriesFeed(1, 10);
+      
+      console.log('✅ Stories loaded:', storiesData);
+      
+      // Handle different response formats
+      const storiesArray = Array.isArray(storiesData) ? storiesData : storiesData.data || [];
+      
+      // Combine with user's "Add story" option
+      const storiesWithAdd = [
+        { id: 'add', type: 'add', user: user },
+        ...storiesArray.map((story: any) => ({
+          id: story._id,
+          type: 'story',
+          user: {
+            name: `${story.author?.firstName || 'User'} ${story.author?.lastName || ''}`.trim(),
+            avatar: story.author?.profilePicture || null
+          },
+          hasViewed: false, // TODO: Track viewed stories
+          story: story
+        }))
+      ];
+      
+      setStories(storiesWithAdd);
+      
+    } catch (error) {
+      console.error('❌ Error loading stories:', error);
+      // Fallback to sample stories
+      setStories(sampleStories);
+    } finally {
+      setStoriesLoading(false);
     }
   };
 
-  return (
-    <Box 
-      sx={{ 
-        minHeight: '100vh', 
-        background: theme.palette.mode === 'dark'
-          ? 'linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%)'
-          : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%)',
-        position: 'relative',
-        overflowX: 'hidden',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '300px',
-          background: theme.palette.mode === 'dark'
-            ? 'radial-gradient(ellipse at top, rgba(102, 126, 234, 0.1) 0%, transparent 70%)'
-            : 'radial-gradient(ellipse at top, rgba(102, 126, 234, 0.05) 0%, transparent 70%)',
-          zIndex: 0,
+  const loadSuggestedConnections = async () => {
+    setConnectionsLoading(true);
+    try {
+      console.log('🔄 Loading suggested connections...');
+      const connectionsData = await socialNetworkService.getConnectionSuggestions(5);
+      
+      console.log('✅ Suggested connections loaded:', connectionsData);
+      
+      // Handle different response formats
+      const connections = Array.isArray(connectionsData) ? connectionsData : connectionsData.data || [];
+      
+      setSuggestedConnections(connections.map((conn: any) => ({
+        id: conn._id,
+        name: `${conn.firstName} ${conn.lastName}`,
+        title: conn.jobTitle || conn.company || 'Professional',
+        avatar: conn.profilePicture,
+        mutualConnections: conn.mutualConnections || 0
+      })));
+      
+    } catch (error) {
+      console.error('❌ Error loading suggested connections:', error);
+      // Fallback to sample connections - Remove the const keyword
+      setSuggestedConnections([
+        { id: '1', name: 'Emily Chen', title: 'Senior Designer at Apple', avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150', mutualConnections: 12 },
+        { id: '2', name: 'James Wilson', title: 'Product Manager at Microsoft', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150', mutualConnections: 8 },
+        { id: '3', name: 'Sofia Rodriguez', title: 'UX Researcher at Spotify', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150', mutualConnections: 15 },
+      ]);
+    } finally {
+      setConnectionsLoading(false);
+    }
+  };
+
+  const handlePostLike = async (postId: string) => {
+    try {
+      // Optimistically update UI first
+      const currentPost = posts.find(post => post._id === postId);
+      const isLiked = currentPost?.likes.includes(user?._id || '');
+      
+      setPosts(prev => prev.map(post => {
+        if (post._id === postId) {
+          return {
+            ...post,
+            likes: isLiked 
+              ? post.likes.filter(id => id !== user?._id)
+              : [...post.likes, user?._id || ''],
+            likesCount: isLiked ? post.likesCount - 1 : post.likesCount + 1,
+          };
         }
-      }}
-    >
-      <Container 
-        maxWidth={false} 
-        sx={{ 
-          py: { xs: 2, sm: 3, md: 3, lg: 4 },
-          px: { xs: 1, sm: 2, md: 2, lg: 3, xl: 4 },
-          pb: { xs: 2, sm: 3, md: 3, lg: 4 },
-          maxWidth: { 
-            xs: '100%', 
-            sm: '100%', 
-            md: '1200px', 
-            lg: '1500px',
-            xl: '1700px' 
-          },
-          mx: 'auto',
-          position: 'relative', // This is important for absolute positioning of child components
-          zIndex: 1,
-        }}
-      >
-        {/* Enhanced Modern Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ 
-            opacity: showWelcomeHeader ? 1 : 0, 
-            y: showWelcomeHeader ? 0 : -50,
-            height: showWelcomeHeader ? 'auto' : 0,
-          }}
-          transition={{ duration: 0.8, ease: "easeInOut" }}
-          style={{ overflow: 'hidden' }}
-        >
-          <Box 
-            sx={{ 
-              mb: showWelcomeHeader ? 10 : 0,
-              position: 'relative',
-              overflow: 'hidden',
-              borderRadius: 4,
-              background: theme.palette.mode === 'dark'
-                ? 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)'
-                : 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
-              backdropFilter: 'blur(20px)',
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
-              p: { xs: 3, md: 4 },
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: -2,
-                left: -2,
-                right: -2,
-                bottom: -2,
-                background: 'linear-gradient(135deg, #667eea, #764ba2, #f093fb)',
-                borderRadius: 'inherit',
-                zIndex: -1,
-                opacity: 0.1,
-              }
-            }}
-          >
-            {/* Floating elements */}
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 20,
-                right: 20,
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                background: 'linear-gradient(45deg, #4facfe, #00f2fe)',
-                opacity: 0.3,
-                animation: 'float 6s ease-in-out infinite',
-                '@keyframes float': {
-                  '0%, 100%': { transform: 'translateY(0px)' },
-                  '50%': { transform: 'translateY(-20px)' }
-                }
-              }}
-            />
-            <Box
-              sx={{
-                position: 'absolute',
-                bottom: 30,
-                left: 30,
-                width: 20,
-                height: 20,
-                borderRadius: '50%',
-                background: 'linear-gradient(45deg, #f093fb, #f5576c)',
-                opacity: 0.4,
-                animation: 'float 4s ease-in-out infinite reverse',
-              }}
-            />
+        return post;
+      }));
 
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <motion.div
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ duration: 1, ease: "backOut" }}
-                >
-                  <Box
-                    sx={{
-                      width: { xs: 70, md: 80 },
-                      height: { xs: 70, md: 80 },
-                      mr: 3,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #fff 0%, #f8fafc 100%)',
-                      boxShadow: '0 10px 30px rgba(102, 126, 234, 0.2), 0 0 0 3px rgba(102, 126, 234, 0.1)',
-                      position: 'relative',
-                      '&::after': {
-                        content: '""',
-                        position: 'absolute',
-                        top: -3,
-                        left: -3,
-                        right: -3,
-                        bottom: -3,
-                        borderRadius: '50%',
-                        background: 'linear-gradient(45deg, #667eea, #764ba2)',
-                        zIndex: -1,
-                        animation: 'spin 20s linear infinite',
-                        '@keyframes spin': {
-                          '0%': { transform: 'rotate(0deg)' },
-                          '100%': { transform: 'rotate(360deg)' }
-                        }
-                      }
-                    }}
-                  >
-                    <img 
-                      src="/exjobnetlogo.png" 
-                      alt="ExJobNet Logo"
-                      style={{ width: '75%', height: '75%', objectFit: 'contain' }}
-                    />
-                  </Box>
-                </motion.div>
-                <Box sx={{ flex: 1 }}>
-                  <motion.div
-                    initial={{ opacity: 0, x: -50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.8, delay: 0.2 }}
-                  >
-                    <Typography
-                      variant={isMobile ? "h4" : "h3"}
-                      sx={{
-                        fontWeight: 900,
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 30%, #f093fb 60%, #4facfe 100%)',
-                        backgroundSize: '200% 100%',
-                        backgroundClip: 'text',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        lineHeight: 1.1,
-                        mb: 1,
-                        animation: 'gradient 3s ease infinite',
-                        '@keyframes gradient': {
-                          '0%, 100%': { backgroundPosition: '0% 50%' },
-                          '50%': { backgroundPosition: '100% 50%' }
-                        }
-                      }}
-                    >
-                      Professional Network
-                    </Typography>
-                  </motion.div>
-                  <motion.div
-                    initial={{ opacity: 0, x: -30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.8, delay: 0.4 }}
-                  >
-                    <Typography 
-                      variant={isMobile ? "h6" : "h5"}
-                      sx={{ 
-                        fontWeight: 700,
-                        background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-                        backgroundClip: 'text',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        mb: 1,
-                      }}
-                    >
-                      Welcome back, {user?.firstName || 'Professional'}! 👋
-                    </Typography>
-                  </motion.div>
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.6 }}
-                  >
-                    <Typography 
-                      variant="body1" 
-                      sx={{ 
-                        fontWeight: 600,
-                        color: 'text.secondary',
-                        fontStyle: 'italic',
-                        letterSpacing: '0.5px',
-                      }}
-                    >
-                      🚀 Connect • 💡 Share • 🌱 Grow Together
-                    </Typography>
-                  </motion.div>
-                  
-                  {/* Action Buttons for Employers */}
-                  {hasRole(UserRole.EMPLOYER) && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.8, delay: 0.8 }}
-                      style={{ marginTop: '16px' }}
-                    >
-                      <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: 2 }}>
-                        <Button
-                          variant="contained"
-                          size="large"
-                          startIcon={<Add />}
-                          onClick={() => navigate('/app/jobs/create')}
-                          sx={{
-                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            borderRadius: 2,
-                            px: 3,
-                            py: 1.5,
-                            textTransform: 'none',
-                            fontWeight: 600,
-                            fontSize: '1.1rem',
-                            boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
-                            '&:hover': {
-                              background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-                              boxShadow: '0 12px 35px rgba(102, 126, 234, 0.4)',
-                              transform: 'translateY(-2px)',
-                            },
-                          }}
-                        >
-                          Create Job Post
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          size="large"
-                          startIcon={<People />}
-                          onClick={() => navigate('/app/employer/candidates')}
-                          sx={{
-                            borderColor: '#667eea',
-                            color: '#667eea',
-                            borderWidth: 2,
-                            borderRadius: 2,
-                            px: 3,
-                            py: 1.5,
-                            textTransform: 'none',
-                            fontWeight: 600,
-                            fontSize: '1.1rem',
-                            '&:hover': {
-                              borderColor: '#5a6fd8',
-                              color: '#5a6fd8',
-                              backgroundColor: 'rgba(102, 126, 234, 0.05)',
-                              transform: 'translateY(-2px)',
-                              boxShadow: '0 8px 25px rgba(102, 126, 234, 0.2)',
-                            },
-                          }}
-                        >
-                          View Applicants
-                        </Button>
-                      </Stack>
-                    </motion.div>
-                  )}
-                </Box>
-              </Box>
-            </motion.div>
-          </Box>
-        </motion.div>
+      // Make API call
+      console.log(`🔄 ${isLiked ? 'Unliking' : 'Liking'} post ${postId}...`);
+      const result = await socialNetworkService.likePost(postId);
+      console.log('✅ Like action result:', result);
+      
+    } catch (error) {
+      console.error('❌ Error toggling like:', error);
+      
+      // Revert optimistic update on error
+      const isLiked = posts.find(post => post._id === postId)?.likes.includes(user?._id || '');
+      setPosts(prev => prev.map(post => {
+        if (post._id === postId) {
+          return {
+            ...post,
+            likes: isLiked 
+              ? [...post.likes, user?._id || '']
+              : post.likes.filter(id => id !== user?._id),
+            likesCount: isLiked ? post.likesCount + 1 : post.likesCount - 1,
+          };
+        }
+        return post;
+      }));
+      
+      // Show error message
+      setError('Failed to update post like. Please try again.');
+      setTimeout(() => setError(null), 3000);
+    }
+  };
 
-        {/* Quick Actions Section - Hidden for Employers */}
-        {!hasRole(UserRole.EMPLOYER) && (
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-          >
-            <Box sx={{ mb: 8 }}>
-              <Typography 
-                variant="h6" 
-                fontWeight="700" 
-                sx={{ mb: 4, color: 'text.primary' }}
-              >
-                Quick Actions
-              </Typography>
-              <Grid container spacing={{ xs: 2, sm: 3, md: 2, lg: 3, xl: 4 }}>
-                  {quickActions.map((action, index) => (
-                  <Grid size={{ xs: 6, sm: 4, md: 3, lg: 3, xl: 3 }} key={action.title}>
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.4, delay: 0.1 * index }}
-                      whileHover={{ y: -5 }}
-                    >
-                      <Card
-                        sx={{
-                          height: '100%',
-                          minHeight: { xs: '140px', sm: '160px', md: isTablet ? '140px' : '180px' },
-                          borderRadius: { xs: 2, sm: 3, md: isTablet ? 2 : 3 },
-                          background: action.gradient,
-                          color: 'white',
-                          cursor: 'pointer',
-                          transition: 'all 0.3s ease',
-                          position: 'relative',
-                          overflow: 'hidden',
-                          '&:hover': {
-                            boxShadow: `0 12px 30px ${alpha(action.color, 0.4)}`,
-                            '& .action-arrow': {
-                              transform: 'translateX(5px)',
-                            },
-                          },
-                          '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            right: 0,
-                            width: { xs: 40, sm: 60, md: isTablet ? 40 : 60 },
-                            height: { xs: 40, sm: 60, md: isTablet ? 40 : 60 },
-                            background: `radial-gradient(circle, ${alpha('#fff', 0.2)} 0%, transparent 70%)`,
-                            transform: { xs: 'translate(15px, -15px)', sm: 'translate(20px, -20px)', md: isTablet ? 'translate(15px, -15px)' : 'translate(20px, -20px)' },
-                          },
-                        }}
-                        onClick={() => window.location.href = action.path}
-                      >
-                        <CardContent sx={{ 
-                          p: { xs: 1.5, sm: 2.5, md: isTablet ? 2 : 3 }, 
-                          height: '100%', 
-                          display: 'flex', 
-                          flexDirection: 'column' 
-                        }}>
-                          <Box sx={{ 
-                            display: 'flex', 
-                            justifyContent: 'space-between', 
-                            alignItems: 'flex-start', 
-                            mb: { xs: 1, sm: 1.5, md: isTablet ? 1 : 1.5 } 
-                          }}>
-                            <Box
-                              sx={{
-                                background: alpha('#fff', 0.2),
-                                borderRadius: { xs: 1.5, sm: 2, md: isTablet ? 1.5 : 2 },
-                                p: { xs: 0.75, sm: 1, md: isTablet ? 0.75 : 1 },
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}
-                            >
-                              {React.cloneElement(action.icon, { 
-                                sx: { fontSize: { xs: 24, sm: 28, md: isTablet ? 22 : 28 } } 
-                              })}
-                            </Box>
-                            <ArrowForward 
-                              className="action-arrow"
-                              sx={{ 
-                                fontSize: { xs: 18, sm: 20, md: isTablet ? 16 : 20 },
-                                transition: 'transform 0.3s ease',
-                                opacity: 0.8,
-                              }} 
-                            />
-                          </Box>
-                          <Box sx={{ flexGrow: 1 }}>
-                            <Typography 
-                              variant="h6" 
-                              fontWeight="700" 
-                              sx={{ 
-                                mb: isTablet ? 0.25 : 0.5, 
-                                fontSize: { xs: '1rem', sm: '1.1rem', md: isTablet ? '0.95rem' : '1.25rem' },
-                                lineHeight: isTablet ? 1.2 : 1.3
-                              }}
-                            >
-                              {action.title}
-                            </Typography>
-                            {action.title === 'Get Prepared' ? (
-                              <Box sx={{ mb: { xs: 1, sm: 1.5, md: isTablet ? 1 : 2 } }}>
-                                <Typography 
-                                  variant="body2" 
-                                  sx={{ 
-                                    opacity: 0.9, 
-                                    fontSize: { xs: '0.7rem', sm: '0.75rem', md: isTablet ? '0.7rem' : '0.8rem' },
-                                    lineHeight: 1.4,
-                                    textAlign: 'center',
-                                    fontWeight: 500,
-                                  }}
-                                >
-                                  🎯 AI Interviews • 🧠 Smart Tests<br/>
-                                  📊 Psychometric • 🎤 Mock Prep
-                                </Typography>
-                              </Box>
-                            ) : (
-                              <Typography 
-                                variant="body2" 
-                                sx={{ 
-                                  opacity: 0.9, 
-                                  mb: { xs: 1, sm: 1.5, md: isTablet ? 1 : 2 },
-                                  fontSize: { xs: '0.8rem', sm: '0.875rem', md: isTablet ? '0.75rem' : '0.875rem' },
-                                  lineHeight: isTablet ? 1.2 : 1.4
-                                }}
-                              >
-                                {action.subtitle}
-                              </Typography>
-                            )}
-                            <Chip
-                              label={action.stats}
-                              size={isMobile ? "small" : "small"}
-                              sx={{
-                                bgcolor: alpha('#fff', 0.2),
-                                color: 'white',
-                                border: `1px solid ${alpha('#fff', 0.3)}`,
-                                fontWeight: 600,
-                                fontSize: { xs: '0.7rem', sm: '0.75rem', md: isTablet ? '0.65rem' : '0.75rem' },
-                                height: { xs: 24, sm: 28, md: isTablet ? 22 : 28 },
-                              }}
-                            />
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-          </motion.div>
-        )}
+  const handlePostShare = async (postId: string) => {
+    try {
+      // Optimistically update UI first
+      setPosts(prev => prev.map(post => {
+        if (post._id === postId) {
+          return {
+            ...post,
+            sharesCount: post.sharesCount + 1,
+          };
+        }
+        return post;
+      }));
 
-        {/* Main Content Grid - Balanced Layout */}
-          <Grid container spacing={{ xs: 2, sm: 3, md: 2, lg: 3, xl: 4 }}>
-            {/* Left Sidebar - Hide only on mobile */}
-            {!isMobile && (
-              <Grid size={{ xl: 3, lg: 3, md: 3 }}>
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: 0.4 }}
-                >
-                  <Stack spacing={isTablet ? 2 : 3}>
-                    {/* Profile Quick View */}
-                    <Card sx={{ borderRadius: isTablet ? 2 : 3 }}>
-                      <CardContent sx={{ p: isTablet ? 3 : 5 }}>
-                        <Box sx={{ textAlign: 'center', mb: 2 }}>
-                          <Avatar
-                            sx={{
-                              width: isTablet ? 50 : 60,
-                              height: isTablet ? 50 : 60,
-                              mx: 'auto',
-                              mb: 1,
-                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                            }}
-                          >
-                            {user?.firstName?.[0] || 'U'}
-                          </Avatar>
-                          <Typography variant={isTablet ? "subtitle1" : "h6"} fontWeight="600">
-                            {user?.firstName} {user?.lastName}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: isTablet ? '0.8rem' : '0.875rem' }}>
-                            {user?.profession || 'Professional'}
-                          </Typography>
-                        </Box>
-                        <Button
-                          fullWidth
-                          variant="outlined"
-                          onClick={() => navigate(hasRole(UserRole.EMPLOYER) ? '/app/employer/profile' : '/app/profile')}
-                          sx={{ borderRadius: 2, fontSize: isTablet ? '0.75rem' : '0.875rem' }}
-                          size={isTablet ? "small" : "medium"}
-                        >
-                          View Profile
-                        </Button>
-                      </CardContent>
-                    </Card>
+      // Make API call
+      console.log(`🔄 Sharing post ${postId}...`);
+      const result = await socialNetworkService.sharePost(postId);
+      console.log('✅ Share result:', result);
+      
+    } catch (error) {
+      console.error('❌ Error sharing post:', error);
+      
+      // Revert optimistic update on error
+      setPosts(prev => prev.map(post => {
+        if (post._id === postId) {
+          return {
+            ...post,
+            sharesCount: post.sharesCount - 1,
+          };
+        }
+        return post;
+      }));
+      
+      // Show error message
+      setError('Failed to share post. Please try again.');
+      setTimeout(() => setError(null), 3000);
+    }
+  };
 
-                    {/* Trending Topics */}
-                    <Card sx={{ borderRadius: isTablet ? 2 : 3 }}>
-                      <CardContent sx={{ p: isTablet ? 3 : 5 }}>
-                        <Typography variant={isTablet ? "subtitle1" : "h6"} fontWeight="600" sx={{ mb: isTablet ? 2 : 3 }}>
-                          Trending Today
-                        </Typography>
-                        <Stack spacing={isTablet ? 2 : 3}>
-                          {[
-                            { topic: '#RemoteWork', posts: '2.4k posts' },
-                            { topic: '#AI Jobs', posts: '1.8k posts' },
-                            { topic: '#SkillDevelopment', posts: '956 posts' },
-                            { topic: '#Networking', posts: '743 posts' },
-                          ].map((trend, index) => (
-                            <Box key={trend.topic} sx={{ cursor: 'pointer' }}>
-                              <Typography variant="body2" fontWeight="600" color="primary" sx={{ fontSize: isTablet ? '0.8rem' : '0.875rem' }}>
-                                {trend.topic}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: isTablet ? '0.7rem' : '0.75rem' }}>
-                                {trend.posts}
-                              </Typography>
-                            </Box>
-                          ))}
-                        </Stack>
-                      </CardContent>
-                    </Card>
-                  </Stack>
-                </motion.div>
-              </Grid>
-            )}
+  const togglePostExpansion = (postId: string) => {
+    setExpandedPost(expandedPost === postId ? null : postId);
+  };
 
-            {/* Center Feed - Optimized sizing for better post viewing */}
-            <Grid size={{ 
-              xs: 12, 
-              sm: 12, 
-              md: 6, 
-              lg: 5, 
-              xl: 6 
+  const handleVideoClick = (videoUrl: string, title?: string) => {
+    setSelectedVideo({ url: videoUrl, title });
+    setShowVideoModal(true);
+  };
+
+  const handleCloseVideoModal = () => {
+    setShowVideoModal(false);
+    setSelectedVideo(null);
+  };
+
+  // Story handlers
+  const handleStoryClick = (story: any, index: number) => {
+    if (story.type === 'add') {
+      setShowCreateStory(true);
+    } else {
+      // Filter out the "add story" option for viewer
+      const actualStories = stories.filter(s => s.type !== 'add').map(s => s.story);
+      setStoryViewerStories(actualStories);
+      setSelectedStoryIndex(index - 1); // Adjust index since we're removing the "add" story
+      setShowStoryViewer(true);
+    }
+  };
+
+  const handleStoryCreated = (newStory: any) => {
+    console.log('New story created:', newStory);
+    // Reload stories to include the new one
+    loadStories();
+  };
+
+  const handleCloseStoryViewer = () => {
+    setShowStoryViewer(false);
+    setStoryViewerStories([]);
+    setSelectedStoryIndex(0);
+  };
+
+  const handleCommentClick = (postId: string) => {
+    setSelectedPostId(postId);
+    setShowCommentDialog(true);
+  };
+
+  const handleCloseCommentDialog = () => {
+    setShowCommentDialog(false);
+    setSelectedPostId(null);
+    setCommentContent('');
+  };
+
+  const handleAddComment = async () => {
+    if (!commentContent.trim() || !selectedPostId || !user) return;
+
+    setIsCommenting(true);
+    try {
+      // Optimistically update UI first
+      setPosts(prev => prev.map(post => {
+        if (post._id === selectedPostId) {
+          return {
+            ...post,
+            commentsCount: post.commentsCount + 1,
+          };
+        }
+        return post;
+      }));
+
+      // Make API call
+      console.log(`🔄 Adding comment to post ${selectedPostId}...`);
+      const result = await socialNetworkService.addComment(selectedPostId, commentContent.trim());
+      console.log('✅ Comment added:', result);
+      
+      // Close dialog and reset
+      handleCloseCommentDialog();
+      
+    } catch (error) {
+      console.error('❌ Error adding comment:', error);
+      
+      // Revert optimistic update on error
+      setPosts(prev => prev.map(post => {
+        if (post._id === selectedPostId) {
+          return {
+            ...post,
+            commentsCount: post.commentsCount - 1,
+          };
+        }
+        return post;
+      }));
+      
+      // Show error message
+      setError('Failed to add comment. Please try again.');
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setIsCommenting(false);
+    }
+  };
+
+  const handleTabChange = (newTab: string) => {
+    setSelectedTab(newTab);
+    // Reload feed when tab changes to apply filter
+    loadFeed();
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    setPostMedia(prevFiles => [...prevFiles, ...files]);
+  };
+
+  const removeMedia = (index: number) => {
+    setPostMedia(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Video control functions
+  const toggleVideoMute = (videoId: string) => {
+    const videoElement = document.querySelector(`video[data-video-id="${videoId}"]`) as HTMLVideoElement;
+    
+    setMutedVideos(prev => {
+      const newSet = new Set(prev);
+      const willBeMuted = !newSet.has(videoId);
+      
+      if (newSet.has(videoId)) {
+        newSet.delete(videoId);
+      } else {
+        newSet.add(videoId);
+      }
+      
+      // Update the actual video element
+      if (videoElement) {
+        videoElement.muted = willBeMuted;
+      }
+      
+      return newSet;
+    });
+  };
+
+  const handleVideoIntersection = (entries: IntersectionObserverEntry[]) => {
+    entries.forEach((entry) => {
+      const videoElement = entry.target as HTMLVideoElement;
+      const videoId = videoElement.dataset.videoId;
+      
+      if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+        // Video is in view, start playing
+        if (videoId) {
+          setPlayingVideos(prev => new Set(prev).add(videoId));
+          
+          // Ensure video is muted for auto-play (browsers require this)
+          const shouldBeMuted = mutedVideos.has(videoId);
+          videoElement.muted = shouldBeMuted;
+          
+          videoElement.play().catch((error) => {
+            console.log('Auto-play failed for video:', videoId, error);
+            // If auto-play fails, try with muted
+            if (!videoElement.muted) {
+              videoElement.muted = true;
+              setMutedVideos(prev => new Set(prev).add(videoId));
+              videoElement.play().catch(() => {
+                console.log('Auto-play failed even with mute for video:', videoId);
+              });
+            }
+          });
+        }
+      } else {
+        // Video is out of view, pause it
+        if (videoId) {
+          setPlayingVideos(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(videoId);
+            return newSet;
+          });
+          videoElement.pause();
+        }
+      }
+    });
+  };
+
+  // Initialize video muting when posts change (but preserve existing mute states)
+  useEffect(() => {
+    const allVideoIds = new Set<string>();
+    posts.forEach(post => {
+      post.media?.forEach((media, index) => {
+        if (media.type === 'video') {
+          allVideoIds.add(`${post._id}-${index}`);
+        }
+      });
+    });
+    
+    // Only add new video IDs to mutedVideos, don't reset existing ones
+    setMutedVideos(prevMuted => {
+      const updatedMuted = new Set(prevMuted);
+      allVideoIds.forEach(videoId => {
+        // Only add if it's not already in the set (new videos should be muted by default)
+        if (!prevMuted.has(videoId)) {
+          updatedMuted.add(videoId);
+        }
+      });
+      
+      // Remove video IDs that no longer exist in posts
+      const currentVideoIds = Array.from(updatedMuted).filter(videoId => allVideoIds.has(videoId));
+      return new Set(currentVideoIds);
+    });
+  }, [posts]);
+
+  // Set up intersection observer for auto-play
+  useEffect(() => {
+    const observer = new IntersectionObserver(handleVideoIntersection, {
+      threshold: 0.5, // Trigger when 50% of video is visible
+      rootMargin: '0px 0px -10% 0px' // Start slightly before coming into view
+    });
+
+    // Observe all video elements
+    const videoElements = document.querySelectorAll('video[data-video-id]');
+    videoElements.forEach(video => observer.observe(video));
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [posts]); // Re-run when posts change
+
+  const handleCreatePost = async () => {
+    if (!postContent.trim() && postMedia.length === 0) {
+      setError('Please add content or media to your post.');
+      return;
+    }
+
+    setIsPosting(true);
+    try {
+      console.log('🔄 Creating new post...', {
+        content: postContent,
+        mediaCount: postMedia.length,
+        tags: postTags
+      });
+
+      // Create FormData for file uploads
+      const formData = new FormData();
+      formData.append('content', postContent);
+      formData.append('postType', 'text');
+      formData.append('visibility', 'public');
+      
+      // Add tags if provided
+      if (postTags.trim()) {
+        const tagArray = postTags.split(',').map(tag => tag.trim()).filter(tag => tag);
+        tagArray.forEach(tag => formData.append('tags[]', tag));
+      }
+
+      // Add media files
+      postMedia.forEach((file) => {
+        formData.append('media', file);
+      });
+
+      const newPost = await socialNetworkService.createPostWithMedia(formData);
+      console.log('✅ Post created successfully:', newPost);
+
+      // Add the new post to the beginning of the feed
+      setPosts(prev => [newPost, ...prev]);
+
+      // Reset form state
+      setPostContent('');
+      setPostMedia([]);
+      setPostTags('');
+      setShowCreatePost(false);
+
+      // Show success message
+      setError(null);
+
+    } catch (error) {
+      console.error('❌ Error creating post:', error);
+      setError('Failed to create post. Please try again.');
+      setTimeout(() => setError(null), 5000);
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
+
+
+  // Enhanced Quick Actions
+  const quickActionsData = [
+    {
+      id: 'find-jobs',
+      title: 'Find Jobs',
+      description: 'Discover opportunities',
+      icon: BusinessCenter,
+      color: '#1976d2',
+      gradient: 'linear-gradient(135deg, #1976d2, #42a5f5)',
+      route: '/jobs',
+    },
+    {
+      id: 'interview',
+      title: 'Interview Prep',
+      description: 'Practice & improve',
+      icon: QuestionAnswer,
+      color: '#9c27b0',
+      gradient: 'linear-gradient(135deg, #9c27b0, #ba68c8)',
+      route: '/interview-prep',
+    },
+    {
+      id: 'smart-exams',
+      title: 'Smart Exams',
+      description: 'Test your skills',
+      icon: Psychology,
+      color: '#f57c00',
+      gradient: 'linear-gradient(135deg, #f57c00, #ffb74d)',
+      route: '/exams',
+    },
+    {
+      id: 'cv-builder',
+      title: 'CV Builder',
+      description: 'Create stunning CV',
+      icon: Assignment,
+      color: '#388e3c',
+      gradient: 'linear-gradient(135deg, #388e3c, #66bb6a)',
+      route: '/cv-builder',
+    },
+    {
+      id: 'skill-assessment',
+      title: 'Skills Test',
+      description: 'Evaluate abilities',
+      icon: Assessment,
+      color: '#d32f2f',
+      gradient: 'linear-gradient(135deg, #d32f2f, #f44336)',
+      route: '/skills-assessment',
+    },
+    {
+      id: 'achievements',
+      title: 'Achievements',
+      description: 'Track progress',
+      icon: EmojiEvents,
+      color: '#f9a825',
+      gradient: 'linear-gradient(135deg, #f9a825, #fdd835)',
+      route: '/achievements',
+    },
+  ];
+
+  const renderEnhancedQuickActions = () => (
+    <UniversalPostCard sx={{ mb: 2 }}>
+      <CardContent sx={{ p: 3 }}>
+        {/* Enhanced Header */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box sx={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+            }} />
+            <Typography variant="h5" fontWeight={700} sx={{ 
+              background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              fontSize: '1.4rem',
             }}>
+              Quick Actions
+            </Typography>
+          </Box>
+          <Box sx={{
+            px: 1.5,
+            py: 0.5,
+            borderRadius: 2,
+            background: alpha(theme.palette.primary.main, 0.1),
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5,
+          }}>
+            <TrendingUpOutlined sx={{ color: 'primary.main', fontSize: 18 }} />
+            <Typography variant="caption" fontWeight={600} color="primary.main">
+              Popular
+            </Typography>
+          </Box>
+        </Box>
+        
+        {/* Enhanced Grid Layout */}
+        <Box sx={{ 
+          display: 'grid', 
+          gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)' },
+          gap: 2 
+        }}>
+          {quickActionsData.map((action, index) => (
+            <Box key={action.id}>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
+                transition={{ delay: index * 0.1, duration: 0.4 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                {/* Enhanced Navigation Tabs - Responsive */}
-                <Card 
+                <QuickActionCard
+                  onClick={() => navigate(action.route)}
                   sx={{ 
-                    mb: { xs: 2, sm: 2, md: 3, lg: 4 }, 
-                    borderRadius: { xs: 2, md: 3 },
-                    background: theme.palette.mode === 'dark'
-                      ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
-                      : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                    backdropFilter: 'blur(20px)',
-                    boxShadow: theme.palette.mode === 'dark'
-                      ? '0 4px 16px rgba(0,0,0,0.3)'
-                      : '0 4px 16px rgba(102, 126, 234, 0.1)',
-                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(102, 126, 234, 0.1)'}`,
-                    overflow: 'hidden',
+                    height: '100%',
+                    minHeight: 120,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     position: 'relative',
-                    mx: { xs: 0, sm: 'auto' },
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: '2px',
-                      background: 'linear-gradient(90deg, #667eea 0%, #764ba2 50%, #4facfe 100%)',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      '& .action-icon': {
+                        transform: 'scale(1.1) rotate(5deg)',
+                      },
+                      '& .action-glow': {
+                        opacity: 1,
+                      }
                     }
                   }}
                 >
-                  <Tabs
-                    value={currentTab}
-                    onChange={handleTabChange}
-                    variant="scrollable"
-                    scrollButtons="auto"
-                    allowScrollButtonsMobile
-                    sx={{
-                      '& .MuiTab-root': {
-                        textTransform: 'none',
-                        fontWeight: 600,
-                        py: { xs: 1.5, md: 2 },
-                        px: { xs: 1, md: 2 },
-                        fontSize: { xs: '0.85rem', md: '0.95rem' },
-                        minWidth: { xs: 'auto', md: 90 },
-                        transition: 'all 0.3s ease',
-                        '&.Mui-selected': {
-                          background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
-                          color: theme.palette.primary.main,
-                        },
-                        '&:hover': {
-                          background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
-                        }
-                      },
-                      '& .MuiTabs-indicator': {
-                        height: 3,
-                        borderRadius: '3px 3px 0 0',
-                        background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
-                      },
-                      '& .MuiTabs-scrollButtons': {
-                        color: theme.palette.primary.main,
-                      },
-                    }}
-                  >
-                    {tabLabels.map((label, index) => (
-                      <Tab key={index} label={label} />
-                    ))}
-                  </Tabs>
-                </Card>
-
-                {/* Stories Section - Instagram-like */}
-                <Card
-                  sx={{
-                    mb: 3,
-                    borderRadius: 3,
-                    overflow: 'hidden',
-                    background: theme.palette.mode === 'dark'
-                      ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
-                      : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                    backdropFilter: 'blur(20px)',
-                    boxShadow: theme.palette.mode === 'dark'
-                      ? '0 4px 20px rgba(0,0,0,0.3)'
-                      : '0 4px 20px rgba(102, 126, 234, 0.08)',
-                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(102, 126, 234, 0.08)'}`,
-                  }}
-                >
-                  <CardContent sx={{ p: 2 }}>
-                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 700, fontSize: '1.1rem' }}>
-                      📚 Professional Stories
+                  {/* Background Glow Effect */}
+                  <Box className="action-glow" sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: action.gradient,
+                    opacity: 0,
+                    transition: 'opacity 0.3s ease',
+                    zIndex: 0,
+                  }} />
+                  
+                  <CardContent sx={{ 
+                    textAlign: 'center', 
+                    p: 2, 
+                    position: 'relative',
+                    zIndex: 1,
+                    '&:last-child': { pb: 2 } 
+                  }}>
+                    <Box
+                      className="action-icon"
+                      sx={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: '50%',
+                        background: action.gradient,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mx: 'auto',
+                        mb: 1.5,
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        boxShadow: `0 4px 12px ${alpha(action.color, 0.3)}`,
+                      }}
+                    >
+                      <action.icon sx={{ fontSize: 24, color: 'white' }} />
+                    </Box>
+                    <Typography variant="body2" fontWeight={700} sx={{ 
+                      fontSize: '0.85rem', 
+                      mb: 0.5,
+                      color: 'text.primary',
+                      lineHeight: 1.2,
+                    }}>
+                      {action.title}
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 1 }}>
-                      {/* Your Story */}
-                      <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            cursor: 'pointer',
-                            minWidth: 70,
-                          }}
-                          onClick={() => {
-                            if (userStories.length > 0) {
-                              handleOpenStoryViewer(0, userStories);
-                            } else {
-                              setShowCreateStory(true);
-                            }
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              width: 56,
-                              height: 56,
-                              borderRadius: '50%',
-                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              mb: 1,
-                              position: 'relative',
-                              '&::after': {
-                                content: '"+"',
-                                position: 'absolute',
-                                bottom: -2,
-                                right: -2,
-                                width: 20,
-                                height: 20,
-                                backgroundColor: theme.palette.primary.main,
-                                borderRadius: '50%',
-                                color: 'white',
-                                fontSize: '12px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontWeight: 'bold',
-                              }
-                            }}
-                          >
-                            <Avatar
-                              src={user?.profilePicture}
-                              sx={{ width: 52, height: 52 }}
-                            >
-                              {user?.firstName?.[0]?.toUpperCase()}
-                            </Avatar>
-                          </Box>
-                          <Typography variant="caption" sx={{ textAlign: 'center', fontWeight: 600 }}>
-                            {userStories.length > 0 ? `My Stories (${userStories.length})` : 'Add Story'}
-                          </Typography>
-                        </Box>
-                      </motion.div>
-                      
-                      {/* Other Users' Stories */}
-                      {suggestedUsers.slice(0, 8).map((storyUser, index) => (
-                        <motion.div
-                          key={index}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              cursor: 'pointer',
-                              minWidth: 70,
-                            }}
-                            onClick={() => {
-                              // Create a mock story for this user
-                              const mockStory = {
-                                _id: `story_${storyUser._id}`,
-                                type: 'achievement',
-                                title: `${storyUser.firstName}'s Professional Update`,
-                                content: `Check out my latest professional achievements and milestones!`,
-                                author: storyUser,
-                                visibility: 'connections',
-                                createdAt: new Date().toISOString(),
-                                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-                                viewers: [],
-                                likes: [],
-                                shares: 0,
-                                tags: ['professional', 'achievement']
-                              };
-                              handleOpenStoryViewer(0, [mockStory]);
-                            }}
-                          >
-                            <Box
-                              sx={{
-                                width: 56,
-                                height: 56,
-                                borderRadius: '50%',
-                                background: 'linear-gradient(45deg, #ff6b6b, #ee5a24, #00d2d3)',
-                                p: '2px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                mb: 1,
-                              }}
-                            >
-                              <Avatar
-                                src={storyUser.profilePicture || storyUser.avatar}
-                                sx={{ width: 52, height: 52 }}
-                              >
-                                {storyUser.firstName?.[0]?.toUpperCase() || storyUser.name?.[0]?.toUpperCase()}
-                              </Avatar>
-                            </Box>
-                            <Typography 
-                              variant="caption" 
-                              sx={{ 
-                                textAlign: 'center', 
-                                fontWeight: 500,
-                                maxWidth: 60,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap'
-                              }}
-                            >
-                              {storyUser.firstName || storyUser.name?.split(' ')[0] || 'User'}
-                            </Typography>
-                          </Box>
-                        </motion.div>
-                      ))}
-                    </Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ 
+                      fontSize: '0.7rem',
+                      lineHeight: 1.3,
+                      display: 'block',
+                    }}>
+                      {action.description}
+                    </Typography>
                   </CardContent>
-                </Card>
-
-                {/* Quick Actions Bar - Modern social media style */}
-                <Card
-                  sx={{
-                    mb: 3,
-                    borderRadius: 3,
-                    overflow: 'hidden',
-                    background: theme.palette.mode === 'dark'
-                      ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
-                      : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                    backdropFilter: 'blur(20px)',
-                    boxShadow: theme.palette.mode === 'dark'
-                      ? '0 4px 20px rgba(0,0,0,0.3)'
-                      : '0 4px 20px rgba(102, 126, 234, 0.08)',
-                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(102, 126, 234, 0.08)'}`,
-                  }}
-                >
-                  <CardContent sx={{ p: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar
-                        src={user?.profilePicture}
-                        sx={{ width: 48, height: 48 }}
-                      >
-                        {user?.firstName?.[0]?.toUpperCase()}
-                      </Avatar>
-                      <Button
-                        fullWidth
-                        variant="outlined"
-                        onClick={() => setShowCreatePost(true)}
-                        sx={{
-                          borderRadius: 6,
-                          textTransform: 'none',
-                          py: 1.5,
-                          textAlign: 'left',
-                          justifyContent: 'flex-start',
-                          color: 'text.secondary',
-                          borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.12)',
-                          '&:hover': {
-                            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(102, 126, 234, 0.04)',
-                            borderColor: theme.palette.primary.main,
-                          },
-                        }}
-                      >
-                        What's on your mind, {user?.firstName}?
-                      </Button>
-                    </Box>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-around', mt: 2, pt: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
-                      <Button
-                        startIcon={<VideoLibrary sx={{ color: '#ff4569' }} />}
-                        onClick={() => setShowCreatePost(true)}
-                        sx={{
-                          textTransform: 'none',
-                          fontWeight: 600,
-                          color: 'text.secondary',
-                          '&:hover': {
-                            backgroundColor: 'rgba(255, 69, 105, 0.1)',
-                          },
-                        }}
-                      >
-                        Video
-                      </Button>
-                      <Button
-                        startIcon={<Image sx={{ color: '#45bd62' }} />}
-                        onClick={() => setShowCreatePost(true)}
-                        sx={{
-                          textTransform: 'none',
-                          fontWeight: 600,
-                          color: 'text.secondary',
-                          '&:hover': {
-                            backgroundColor: 'rgba(69, 189, 98, 0.1)',
-                          },
-                        }}
-                      >
-                        Photo
-                      </Button>
-                      <Button
-                        startIcon={<Event sx={{ color: '#f7b928' }} />}
-                        onClick={() => setShowCreatePost(true)}
-                        sx={{
-                          textTransform: 'none',
-                          fontWeight: 600,
-                          color: 'text.secondary',
-                          '&:hover': {
-                            backgroundColor: 'rgba(247, 185, 40, 0.1)',
-                          },
-                        }}
-                      >
-                        Event
-                      </Button>
-                    </Box>
-                  </CardContent>
-                </Card>
-
-                {/* Create Post Section - Responsive */}
-                {(showCreatePost || !isMobile) && (
-                  <Box sx={{ mb: { xs: 2, sm: 2, md: 3 }, mx: { xs: 0, sm: 'auto' } }}>
-                    <CreatePost
-                      onPostCreated={handlePostCreated}
-                      onCancel={isMobile ? () => setShowCreatePost(false) : undefined}
-                    />
-                  </Box>
-                )}
-
-                {/* Feed Content */}
-                {tabLabels.map((_, index) => (
-                  <TabPanel key={index} value={currentTab} index={index}>
-                    {error && (
-                      <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
-                        {error}
-                      </Alert>
-                    )}
-
-                    {(!hasRole(UserRole.EMPLOYER) && index === 1) ? (
-                      // Job Posts Tab - Show matched jobs (only for non-employers)
-                      <>
-                        {!profileValidation || profileValidation.completionPercentage < 30 ? (
-                          <Card sx={{ 
-                            p: 4, 
-                            textAlign: 'center', 
-                            borderRadius: 3,
-                            background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.05) 0%, rgba(255, 193, 7, 0.05) 100%)',
-                            border: '1px solid rgba(255, 152, 0, 0.2)'
-                          }}>
-                            <Avatar sx={{ 
-                              width: 64, 
-                              height: 64, 
-                              mx: 'auto', 
-                              mb: 2,
-                              bgcolor: 'warning.main'
-                            }}>
-                              <AccountCircle sx={{ fontSize: 40 }} />
-                            </Avatar>
-                            <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-                              Complete Your Profile to See Matched Jobs
-                            </Typography>
-                            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                              We need to know more about your skills and experience to show you jobs that fit your profile perfectly.
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                              Profile Completion: {profileValidation?.completionPercentage || 0}% 
-                              (Minimum 30% required)
-                            </Typography>
-                            <Button 
-                              variant="contained" 
-                              startIcon={<PersonAdd />}
-                              onClick={() => navigate(hasRole(UserRole.EMPLOYER) ? '/app/employer/profile' : '/app/profile')}
-                              sx={{
-                                borderRadius: 3,
-                                px: 4,
-                                py: 1.5,
-                                textTransform: 'none',
-                                fontWeight: 'bold',
-                                background: 'linear-gradient(135deg, #FF9800 0%, #FF5722 100%)',
-                                '&:hover': {
-                                  background: 'linear-gradient(135deg, #F57C00 0%, #E64A19 100%)',
-                                  transform: 'translateY(-2px)',
-                                  boxShadow: '0 8px 25px rgba(255, 152, 0, 0.3)'
-                                }
-                              }}
-                            >
-                              Complete Profile
-                            </Button>
-                          </Card>
-                        ) : jobsLoading ? (
-                          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                            <CircularProgress />
-                          </Box>
-                        ) : !matchedJobs || matchedJobs.length === 0 ? (
-                          <Card sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
-                            <Work sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                            <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
-                              No Matched Jobs Found
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                              We couldn't find jobs that match your current skills. Try updating your profile with more skills.
-                            </Typography>
-                            <Stack direction="row" spacing={2} justifyContent="center">
-                              <Button 
-                                variant="outlined" 
-                                startIcon={<PersonAdd />}
-                                onClick={() => navigate(hasRole(UserRole.EMPLOYER) ? '/app/employer/profile' : '/app/profile')}
-                                sx={{ borderRadius: 2, textTransform: 'none' }}
-                              >
-                                Update Profile
-                              </Button>
-                              <Button 
-                                variant="contained" 
-                                startIcon={<Search />}
-                                onClick={() => navigate('/app/jobs')}
-                                sx={{ 
-                                  borderRadius: 2, 
-                                  textTransform: 'none',
-                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                }}
-                              >
-                                Browse All Jobs
-                              </Button>
-                            </Stack>
-                          </Card>
-                        ) : (
-                          <Stack spacing={{ xs: 2, sm: 2.5, md: 3, lg: 3.5 }}>
-                            {/* AI-powered job matching header */}
-                            <Card sx={{ 
-                              p: 2, 
-                              borderRadius: 3,
-                              background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
-                              border: '1px solid rgba(102, 126, 234, 0.2)'
-                            }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                <SmartToy color="primary" sx={{ fontSize: 20 }} />
-                                <Typography variant="body2" color="primary" sx={{ fontWeight: 'bold' }}>
-                                  AI-Powered Job Matching
-                                </Typography>
-                              </Box>
-                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                                Showing {matchedJobs?.length || 0} jobs intelligently matched to your profile using advanced AI analysis
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                Your skills: {((user as User)?.skills || []).slice(0, 3).join(', ')}
-                                {((user as User)?.skills?.length || 0) > 3 && ` +${((user as User)?.skills?.length || 0) - 3} more`}
-                              </Typography>
-                            </Card>
-
-                            {matchedJobs.map((job, index) => (
-                              <motion.div
-                                key={job._id}
-                                initial={{ opacity: 0, y: 30 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ 
-                                  duration: 0.5, 
-                                  delay: index * 0.1,
-                                  ease: [0.25, 0.46, 0.45, 0.94]
-                                }}
-                                whileHover={{ 
-                                  y: -2,
-                                  transition: { duration: 0.2 }
-                                }}
-                              >
-                                <Card
-                                  sx={{
-                                    borderRadius: { xs: 2, sm: 3, md: 3, lg: 4 },
-                                    overflow: 'hidden',
-                                    background: theme.palette.mode === 'dark'
-                                      ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
-                                      : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                                    backdropFilter: 'blur(20px)',
-                                    boxShadow: theme.palette.mode === 'dark'
-                                      ? { xs: '0 4px 16px rgba(0,0,0,0.2)', sm: '0 6px 24px rgba(0,0,0,0.25)', md: '0 8px 32px rgba(0,0,0,0.3)' }
-                                      : { xs: '0 4px 16px rgba(102, 126, 234, 0.06)', sm: '0 6px 24px rgba(102, 126, 234, 0.07)', md: '0 8px 32px rgba(102, 126, 234, 0.08)' },
-                                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(102, 126, 234, 0.08)'}`,
-                                    position: 'relative',
-                                    cursor: 'pointer',
-                                    '&:hover': {
-                                      boxShadow: theme.palette.mode === 'dark'
-                                        ? '0 12px 40px rgba(0,0,0,0.4)'
-                                        : '0 12px 40px rgba(102, 126, 234, 0.12)',
-                                      transform: 'translateY(-2px)',
-                                      transition: 'all 0.3s ease',
-                                    }
-                                  }}
-                                  onClick={() => handleJobApply(job._id)}
-                                >
-                                  {/* AI Job match indicator */}
-                                  <Box sx={{ position: 'relative' }}>
-                                    <LinearProgress 
-                                      variant="determinate" 
-                                      value={job.matchPercentage || 75} 
-                                      sx={{ 
-                                        height: 4,
-                                        backgroundColor: 'rgba(0,0,0,0.1)',
-                                        '& .MuiLinearProgress-bar': {
-                                          backgroundColor: job.matchPercentage >= 90 ? '#4CAF50' : 
-                                                         job.matchPercentage >= 75 ? '#FF9800' : '#2196F3'
-                                        }
-                                      }}
-                                    />
-                                    <Typography 
-                                      variant="caption" 
-                                      sx={{ 
-                                        position: 'absolute',
-                                        right: 8,
-                                        top: -20,
-                                        fontSize: '0.7rem',
-                                        fontWeight: 'bold',
-                                        color: job.matchPercentage >= 90 ? 'success.main' : 
-                                               job.matchPercentage >= 75 ? 'warning.main' : 'primary.main'
-                                      }}
-                                    >
-                                      🤖 {job.matchPercentage || 75}% AI Match
-                                    </Typography>
-                                  </Box>
-                                  
-                                  <CardContent sx={{ p: 3 }}>
-                                    {/* Header with company and bookmark */}
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
-                                        <Avatar 
-                                          sx={{ 
-                                            width: 48, 
-                                            height: 48, 
-                                            bgcolor: 'primary.main',
-                                            fontSize: '1.2rem',
-                                            fontWeight: 'bold'
-                                          }}
-                                        >
-                                          {job.company?.charAt(0) || 'J'}
-                                        </Avatar>
-                                        <Box sx={{ minWidth: 0, flex: 1 }}>
-                                          <Typography variant="h6" sx={{ 
-                                            fontWeight: 'bold',
-                                            fontSize: '1.1rem',
-                                            lineHeight: 1.2,
-                                            display: '-webkit-box',
-                                            WebkitLineClamp: 2,
-                                            WebkitBoxOrient: 'vertical',
-                                            overflow: 'hidden'
-                                          }}>
-                                            {job.title}
-                                          </Typography>
-                                          <Typography variant="body2" color="text.secondary">
-                                            {job.company}
-                                          </Typography>
-                                        </Box>
-                                      </Box>
-                                      <Tooltip title={bookmarkedJobs.has(job._id) ? 'Remove bookmark' : 'Bookmark job'}>
-                                        <IconButton
-                                          size="small"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleJobBookmark(job._id);
-                                          }}
-                                        >
-                                          {bookmarkedJobs.has(job._id) ? <Bookmark color="primary" /> : <BookmarkBorder />}
-                                        </IconButton>
-                                      </Tooltip>
-                                    </Box>
-
-                                    {/* Job details */}
-                                    <Stack spacing={1} sx={{ mb: 2 }}>
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <LocationOn fontSize="small" color="action" />
-                                        <Typography variant="body2" color="text.secondary">
-                                          {job.location || 'Remote'}
-                                        </Typography>
-                                      </Box>
-                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Schedule fontSize="small" color="action" />
-                                        <Typography variant="body2" color="text.secondary">
-                                          {job.type || 'Full-time'}
-                                        </Typography>
-                                      </Box>
-                                      {job.salary && (
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                          <AttachMoney fontSize="small" color="action" />
-                                          <Typography variant="body2" color="text.secondary">
-                                            {typeof job.salary === 'object' 
-                                              ? `$${job.salary.min?.toLocaleString()} - $${job.salary.max?.toLocaleString()}`
-                                              : `$${job.salary.toLocaleString()}`
-                                            }
-                                          </Typography>
-                                        </Box>
-                                      )}
-                                    </Stack>
-
-                                    {/* AI-powered Skills match */}
-                                    <Box sx={{ mb: 2 }}>
-                                      <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-                                        🤖 AI Skills Analysis:
-                                      </Typography>
-                                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
-                                        {/* Show AI-matched skills if available */}
-                                        {(job.matchingSkills && job.matchingSkills.length > 0) ? (
-                                          job.matchingSkills.slice(0, 4).map((skill: string, skillIndex: number) => (
-                                            <Chip
-                                              key={skillIndex}
-                                              label={skill}
-                                              size="small"
-                                              color="success"
-                                              variant="filled"
-                                              icon={<SmartToy sx={{ fontSize: 14 }} />}
-                                              sx={{ 
-                                                fontSize: '0.7rem',
-                                                height: 24,
-                                                '& .MuiChip-label': {
-                                                  px: 1
-                                                },
-                                                '& .MuiChip-icon': {
-                                                  fontSize: 14,
-                                                  marginLeft: 1
-                                                }
-                                              }}
-                                            />
-                                          ))
-                                        ) : (
-                                          // Fallback to required skills with basic matching
-                                          job.requiredSkills?.slice(0, 3).map((skill: string, skillIndex: number) => {
-                                            const userSkills = [...((user as User)?.skills || []), ...((user as User)?.technicalSkills?.map(ts => ts.skill) || [])];
-                                            const isMatch = userSkills.some(userSkill => 
-                                              userSkill.toLowerCase().includes(skill.toLowerCase()) ||
-                                              skill.toLowerCase().includes(userSkill.toLowerCase())
-                                            );
-                                            
-                                            return (
-                                              <Chip
-                                                key={skillIndex}
-                                                label={skill}
-                                                size="small"
-                                                color={isMatch ? "primary" : "default"}
-                                                variant={isMatch ? "filled" : "outlined"}
-                                                sx={{ 
-                                                  fontSize: '0.7rem',
-                                                  height: 24,
-                                                  '& .MuiChip-label': {
-                                                    px: 1
-                                                  }
-                                                }}
-                                              />
-                                            );
-                                          })
-                                        )}
-                                        {((job.matchingSkills?.length || job.requiredSkills?.length || 0) > 3) && (
-                                          <Chip
-                                            label={`+${((job.matchingSkills?.length || job.requiredSkills?.length || 0) - 3)} more`}
-                                            size="small"
-                                            variant="outlined"
-                                            sx={{ fontSize: '0.7rem', height: 24 }}
-                                          />
-                                        )}
-                                      </Box>
-                                      {/* AI recommendation reason */}
-                                      {job.recommendationReason && (
-                                        <Typography variant="caption" color="success.main" sx={{ fontStyle: 'italic' }}>
-                                          ✨ {job.recommendationReason}
-                                        </Typography>
-                                      )}
-                                    </Box>
-                                  </CardContent>
-
-                                  <CardActions sx={{ px: 3, pb: 2, pt: 0 }}>
-                                    <Button
-                                      variant="contained"
-                                      startIcon={<ArrowForward />}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleJobApply(job._id);
-                                      }}
-                                      sx={{
-                                        borderRadius: 2,
-                                        textTransform: 'none',
-                                        fontWeight: 'bold',
-                                        flex: 1,
-                                        background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
-                                        '&:hover': {
-                                          background: 'linear-gradient(135deg, #45a049 0%, #4CAF50 100%)',
-                                          transform: 'translateY(-1px)',
-                                          boxShadow: '0 6px 20px rgba(76, 175, 80, 0.3)'
-                                        }
-                                      }}
-                                    >
-                                      Apply Now
-                                    </Button>
-                                    <Button
-                                      variant="outlined"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate(`/app/jobs/${job._id}`);
-                                      }}
-                                      sx={{
-                                        borderRadius: 2,
-                                        textTransform: 'none',
-                                        borderColor: 'primary.main',
-                                        color: 'primary.main'
-                                      }}
-                                    >
-                                      View Details
-                                    </Button>
-                                  </CardActions>
-                                </Card>
-                              </motion.div>
-                            ))}
-                          </Stack>
-                        )}
-                      </>
-                    ) : (
-                      // Regular posts for other tabs
-                      <>
-                        {(loading && posts.length === 0) || (index === 1 && jobsLoading) ? (
-                          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                            <CircularProgress />
-                          </Box>
-                        ) : posts.length === 0 ? (
-                          <Card sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
-                            <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
-                              No posts found
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              Be the first to share something in this category! 🚀
-                            </Typography>
-                          </Card>
-                        ) : (
-                          <Stack spacing={{ xs: 2, sm: 2.5, md: 3, lg: 3.5 }}>
-                            {posts.filter((p: any) => p && p._id).map((post, postIndex) => (
-                              <motion.div
-                                key={post._id}
-                                initial={{ opacity: 0, y: 30 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ 
-                                  duration: 0.5, 
-                                  delay: postIndex * 0.1,
-                                  ease: [0.25, 0.46, 0.45, 0.94]
-                                }}
-                                whileHover={{ 
-                                  y: -2,
-                                  transition: { duration: 0.2 }
-                                }}
-                              >
-                                <Box
-                                  sx={{
-                                    borderRadius: { xs: 2, sm: 3, md: 3, lg: 4 },
-                                    overflow: 'hidden',
-                                    background: theme.palette.mode === 'dark'
-                                      ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
-                                      : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                                    backdropFilter: 'blur(20px)',
-                                    boxShadow: theme.palette.mode === 'dark'
-                                      ? { xs: '0 4px 16px rgba(0,0,0,0.2)', sm: '0 6px 24px rgba(0,0,0,0.25)', md: '0 8px 32px rgba(0,0,0,0.3)' }
-                                      : { xs: '0 4px 16px rgba(102, 126, 234, 0.06)', sm: '0 6px 24px rgba(102, 126, 234, 0.07)', md: '0 8px 32px rgba(102, 126, 234, 0.08)' },
-                                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(102, 126, 234, 0.08)'}`,
-                                    position: 'relative',
-                                    mx: { xs: 0, sm: 'auto' },
-                                    maxWidth: '100%',
-                                    '&::before': {
-                                      content: '""',
-                                      position: 'absolute',
-                                      top: 0,
-                                      left: 0,
-                                      right: 0,
-                                      height: '2px',
-                                      background: 'linear-gradient(90deg, transparent 0%, rgba(102, 126, 234, 0.5) 50%, transparent 100%)',
-                                    },
-                                    '&:hover': {
-                                      boxShadow: theme.palette.mode === 'dark'
-                                        ? '0 12px 40px rgba(0,0,0,0.4)'
-                                        : '0 12px 40px rgba(102, 126, 234, 0.12)',
-                                      transform: 'translateY(-2px)',
-                                      transition: 'all 0.3s ease',
-                                    }
-                                  }}
-                                >
-                                  <PostCard
-                                    post={post}
-                                    onPostUpdate={handlePostUpdate}
-                                    onPostDelete={handlePostDelete}
-                                  />
-                                </Box>
-                              </motion.div>
-                            ))}
-
-                            {/* Enhanced Load More Button */}
-                            {hasMore && index !== 1 && (
-                              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-                                <motion.div
-                                  whileHover={{ scale: 1.05 }}
-                                  whileTap={{ scale: 0.95 }}
-                                >
-                                  <Button
-                                    variant="contained"
-                                    onClick={loadMorePosts}
-                                    disabled={loading}
-                                    sx={{
-                                      borderRadius: 4,
-                                      px: 6,
-                                      py: 2,
-                                      textTransform: 'none',
-                                      fontWeight: 700,
-                                      fontSize: '1rem',
-                                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                      boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
-                                      border: 'none',
-                                      '&:hover': {
-                                        background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
-                                        boxShadow: '0 12px 35px rgba(102, 126, 234, 0.4)',
-                                        transform: 'translateY(-2px)',
-                                      },
-                                      '&:disabled': {
-                                        background: 'linear-gradient(135deg, #ccc 0%, #999 100%)',
-                                        boxShadow: 'none',
-                                      }
-                                    }}
-                                  >
-                                    {loading ? '🔄 Loading...' : '📜 Load More Posts'}
-                                  </Button>
-                                </motion.div>
-                              </Box>
-                            )}
-                          </Stack>
-                        )}
-                      </>
-                    )}
-                  </TabPanel>
-                ))}
+                </QuickActionCard>
               </motion.div>
-            </Grid>
+            </Box>
+          ))}
+        </Box>
 
-            {/* Right Sidebar - Balanced for connections display */}
-            {!isMobile && (
-              <Grid size={{ xl: 3, lg: 4, md: 3 }}>
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: 0.5 }}
-                >
-                  <FeedSidebar />
-                </motion.div>
-              </Grid>
-            )}
-          </Grid>
-
-          {/* Mobile Footer Navbar */}
-          {isMobile && (
-            <MobileFooterNavbar
-              unreadNotifications={unreadNotifications}
-              unreadMessages={unreadMessages}
-              onCreatePost={() => setShowCreatePost(true)}
-              onShowConnections={() => setShowMobileConnections(true)}
-            />
-          )}
-
-          {/* Mobile Suggested Connections Modal */}
-          <Dialog
-            open={showMobileConnections}
-            onClose={() => setShowMobileConnections(false)}
-            maxWidth="sm"
-            fullWidth
-            PaperProps={{
-              sx: {
-                borderRadius: { xs: 0, sm: 3 },
-                maxHeight: '80vh',
-                margin: { xs: 0, sm: 2 },
-                width: { xs: '100%', sm: 'auto' },
+        {/* Enhanced Divider */}
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          my: 3,
+          '&::before, &::after': {
+            content: '""',
+            flex: 1,
+            height: 1,
+            background: `linear-gradient(90deg, transparent, ${alpha(theme.palette.divider, 0.3)}, transparent)`,
+          }
+        }}>
+          <Typography variant="caption" sx={{ 
+            px: 2, 
+            color: 'text.secondary',
+            fontWeight: 500,
+            fontSize: '0.75rem',
+          }}>
+            More Tools
+          </Typography>
+        </Box>
+        
+        {/* Enhanced Action Buttons */}
+        <Stack direction="row" spacing={2} sx={{ justifyContent: 'center' }}>
+          <ActionButton
+            size="medium"
+            startIcon={<Build sx={{ fontSize: 20 }} />}
+            onClick={() => navigate('/tools')}
+            sx={{ 
+              flex: 1, 
+              minWidth: 140,
+              py: 1.5,
+              borderRadius: 3,
+              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+              color: 'white',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
+              '&:hover': {
+                background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
+                boxShadow: `0 6px 16px ${alpha(theme.palette.primary.main, 0.4)}`,
+                transform: 'translateY(-2px)',
               }
             }}
           >
-            <DialogTitle sx={{ 
-              pb: 1,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            Career Tools
+          </ActionButton>
+          <ActionButton
+            size="medium"
+            startIcon={<Groups sx={{ fontSize: 20 }} />}
+            onClick={() => navigate('/networking')}
+            sx={{ 
+              flex: 1, 
+              minWidth: 140,
+              py: 1.5,
+              borderRadius: 3,
+              background: `linear-gradient(135deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`,
               color: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              boxShadow: `0 4px 12px ${alpha(theme.palette.secondary.main, 0.3)}`,
+              '&:hover': {
+                background: `linear-gradient(135deg, ${theme.palette.secondary.dark}, ${theme.palette.secondary.main})`,
+                boxShadow: `0 6px 16px ${alpha(theme.palette.secondary.main, 0.4)}`,
+                transform: 'translateY(-2px)',
+              }
+            }}
+          >
+            Network
+          </ActionButton>
+        </Stack>
+      </CardContent>
+    </UniversalPostCard>
+  );
+
+  const renderStories = () => (
+    <UniversalPostCard sx={{ mb: 2 }}>
+      <CardContent sx={{ p: 3 }}>
+        {/* Enhanced Stories Header */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box sx={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)',
+            }} />
+            <Typography variant="h6" fontWeight={700} sx={{ 
+              background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              fontSize: '1.2rem',
             }}>
-              <People />
-              Suggested Connections
-            </DialogTitle>
-            <DialogContent sx={{ p: 0 }}>
-              <List>
-                {/* Show real suggested connections */}
-                {suggestedUsers.slice(0, 5).map((connection, index) => (
-                  <ListItem key={index} disablePadding>
-                    <ListItemButton 
-                      sx={{ 
-                        py: 2,
+              Stories
+            </Typography>
+          </Box>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+            {stories.length - 1} stories
+          </Typography>
+        </Box>
+        
+        <StoryContainer sx={{ px: 0 }}>
+          {storiesLoading ? (
+            // Enhanced loading skeleton for stories
+            Array.from({ length: 5 }).map((_, index) => (
+              <Box key={`skeleton-${index}`} sx={{ textAlign: 'center' }}>
+                <Skeleton 
+                  variant="circular" 
+                  width={80} 
+                  height={80} 
+                  sx={{ 
+                    borderRadius: '50%',
+                    background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)',
+                    padding: 2,
+                  }} 
+                />
+                <Skeleton variant="text" width={60} height={16} sx={{ mt: 0.5 }} />
+              </Box>
+            ))
+          ) : (
+            stories.map((story, index) => (
+              <motion.div
+                key={story.id}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.1, duration: 0.3 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Box sx={{ textAlign: 'center', cursor: 'pointer' }} onClick={() => handleStoryClick(story, index)}>
+                  <StoryCircle className={story.hasViewed ? 'viewed' : ''}>
+                    {story.type === 'add' ? (
+                      <Avatar sx={{ 
+                        width: 56, 
+                        height: 56, 
+                        bgcolor: 'background.paper',
+                        border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                        transition: 'all 0.3s ease',
                         '&:hover': {
-                          backgroundColor: alpha(theme.palette.primary.main, 0.04)
+                          transform: 'scale(1.1)',
+                          borderColor: theme.palette.primary.main,
+                        }
+                      }}>
+                        <Add sx={{ color: 'primary.main', fontSize: 24 }} />
+                      </Avatar>
+                    ) : (
+                      <Avatar 
+                        src={story.user.avatar}
+                        sx={{ 
+                          width: 56, 
+                          height: 56,
+                          opacity: story.hasViewed ? 0.6 : 1,
+                          border: story.hasViewed ? 'none' : `2px solid ${alpha('#f09433', 0.3)}`,
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            transform: 'scale(1.1)',
+                            opacity: 1,
+                          }
+                        }}
+                      >
+                        {story.user.name ? story.user.name.charAt(0).toUpperCase() : 'U'}
+                      </Avatar>
+                    )}
+                  </StoryCircle>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      mt: 0.5, 
+                      display: 'block',
+                      fontWeight: story.type === 'add' ? 600 : 500,
+                      color: story.type === 'add' ? 'primary.main' : 'text.secondary',
+                      fontSize: '0.75rem',
+                    }}
+                  >
+                    {story.type === 'add' ? 'Your story' : (story.user.name ? story.user.name.split(' ')[0] : 'User')}
+                  </Typography>
+                </Box>
+              </motion.div>
+            ))
+          )}
+        </StoryContainer>
+      </CardContent>
+    </UniversalPostCard>
+  );
+
+  const renderCreatePost = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay: 0.2 }}
+    >
+      <UniversalPostCard sx={{ mb: 2 }}>
+        <CardContent sx={{ 
+          p: { xs: 2, sm: 2.5, md: 3 },
+          background: theme.palette.mode === 'dark' 
+            ? 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)'
+            : 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+          borderRadius: 3,
+          border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 4px 20px rgba(0,0,0,0.15)' 
+            : '0 2px 12px rgba(0,0,0,0.08)',
+        }}>
+          {/* Enhanced Post Composer Header */}
+          <Box sx={{ 
+            display: 'flex', 
+            gap: { xs: 1.5, sm: 2 }, 
+            alignItems: 'center', 
+            mb: { xs: 2, sm: 2.5 } 
+          }}>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Avatar 
+                src={(user as any)?.profilePicture || undefined}
+                sx={{ 
+                  width: { xs: 40, sm: 44, md: 48 }, 
+                  height: { xs: 40, sm: 44, md: 48 },
+                  border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                  boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.15)}`,
+                  cursor: 'pointer',
+                }}
+              >
+                {user?.firstName?.charAt(0)}
+              </Avatar>
+            </motion.div>
+            <Box sx={{ flex: 1 }}>
+              <CreatePostButton
+                variant="outlined"
+                fullWidth
+                onClick={() => setShowCreatePost(true)}
+                sx={{
+                  borderRadius: { xs: 2.5, sm: 3 },
+                  py: { xs: 1.2, sm: 1.5 },
+                  px: { xs: 1.5, sm: 2 },
+                  backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : '#f8f9fa',
+                  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                  fontSize: { xs: '0.9rem', sm: '1rem' },
+                  fontWeight: 500,
+                  color: 'text.secondary',
+                  textAlign: 'left',
+                  justifyContent: 'flex-start',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    backgroundColor: theme.palette.mode === 'dark' ? '#333' : '#e9ecef',
+                    borderColor: alpha(theme.palette.primary.main, 0.3),
+                    transform: 'translateY(-2px)',
+                    boxShadow: `0 6px 16px ${alpha(theme.palette.primary.main, 0.15)}`,
+                  },
+                  '&:active': {
+                    transform: 'translateY(0px)',
+                  }
+                }}
+              >
+                What's on your mind, {user?.firstName}?
+              </CreatePostButton>
+            </Box>
+          </Box>
+          
+          {/* Enhanced Divider */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            my: { xs: 2, sm: 2.5 },
+            '&::before, &::after': {
+              content: '""',
+              flex: 1,
+              height: 1,
+              background: `linear-gradient(90deg, transparent, ${alpha(theme.palette.divider, 0.2)}, transparent)`,
+            }
+          }}>
+            <Typography variant="caption" sx={{ 
+              px: 2, 
+              color: 'text.secondary',
+              fontWeight: 600,
+              fontSize: { xs: '0.7rem', sm: '0.75rem' },
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}>
+              Share
+            </Typography>
+          </Box>
+          
+          {/* Enhanced Responsive Action Buttons */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: { xs: 'space-between', sm: 'space-around' },
+            gap: { xs: 0.5, sm: 1 },
+            flexWrap: { xs: 'wrap', sm: 'nowrap' },
+          }}>
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Button 
+                startIcon={<VideoLibrary sx={{ fontSize: { xs: 18, sm: 20 } }} />} 
+                sx={{ 
+                  textTransform: 'none', 
+                  color: 'text.secondary', 
+                  borderRadius: { xs: 2.5, sm: 3 },
+                  px: { xs: 1, sm: 2 },
+                  py: { xs: 0.8, sm: 1 },
+                  fontWeight: 600,
+                  fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                  backgroundColor: alpha('#f02849', 0.05),
+                  border: `1px solid ${alpha('#f02849', 0.1)}`,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  width: { xs: '100%', sm: 'auto' },
+                  minWidth: { xs: 'auto', sm: 120 },
+                  '&:hover': {
+                    backgroundColor: alpha('#f02849', 0.1),
+                    borderColor: alpha('#f02849', 0.2),
+                    transform: 'translateY(-2px)',
+                    color: '#f02849',
+                    boxShadow: `0 4px 12px ${alpha('#f02849', 0.2)}`,
+                  },
+                  '&:active': {
+                    transform: 'translateY(0px)',
+                  }
+                }}
+                onClick={() => setShowCreatePost(true)}
+              >
+                <Box sx={{ display: { xs: 'none', sm: 'inline' } }}>Live video</Box>
+                <Box sx={{ display: { xs: 'inline', sm: 'none' } }}>Live</Box>
+              </Button>
+            </motion.div>
+            
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Button 
+                startIcon={<Photo sx={{ fontSize: { xs: 18, sm: 20 } }} />} 
+                sx={{ 
+                  textTransform: 'none', 
+                  color: 'text.secondary', 
+                  borderRadius: { xs: 2.5, sm: 3 },
+                  px: { xs: 1, sm: 2 },
+                  py: { xs: 0.8, sm: 1 },
+                  fontWeight: 600,
+                  fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                  backgroundColor: alpha('#45bd62', 0.05),
+                  border: `1px solid ${alpha('#45bd62', 0.1)}`,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  width: { xs: '100%', sm: 'auto' },
+                  minWidth: { xs: 'auto', sm: 120 },
+                  '&:hover': {
+                    backgroundColor: alpha('#45bd62', 0.1),
+                    borderColor: alpha('#45bd62', 0.2),
+                    transform: 'translateY(-2px)',
+                    color: '#45bd62',
+                    boxShadow: `0 4px 12px ${alpha('#45bd62', 0.2)}`,
+                  },
+                  '&:active': {
+                    transform: 'translateY(0px)',
+                  }
+                }}
+                onClick={() => setShowCreatePost(true)}
+              >
+                <Box sx={{ display: { xs: 'none', sm: 'inline' } }}>Photo/video</Box>
+                <Box sx={{ display: { xs: 'inline', sm: 'none' } }}>Photo</Box>
+              </Button>
+            </motion.div>
+            
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Button 
+                startIcon={<EmojiEmotions sx={{ fontSize: { xs: 18, sm: 20 } }} />} 
+                sx={{ 
+                  textTransform: 'none', 
+                  color: 'text.secondary', 
+                  borderRadius: { xs: 2.5, sm: 3 },
+                  px: { xs: 1, sm: 2 },
+                  py: { xs: 0.8, sm: 1 },
+                  fontWeight: 600,
+                  fontSize: { xs: '0.8rem', sm: '0.9rem' },
+                  backgroundColor: alpha('#f7b928', 0.05),
+                  border: `1px solid ${alpha('#f7b928', 0.1)}`,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  width: { xs: '100%', sm: 'auto' },
+                  minWidth: { xs: 'auto', sm: 120 },
+                  '&:hover': {
+                    backgroundColor: alpha('#f7b928', 0.1),
+                    borderColor: alpha('#f7b928', 0.2),
+                    transform: 'translateY(-2px)',
+                    color: '#f7b928',
+                    boxShadow: `0 4px 12px ${alpha('#f7b928', 0.2)}`,
+                  },
+                  '&:active': {
+                    transform: 'translateY(0px)',
+                  }
+                }}
+                onClick={() => setShowCreatePost(true)}
+              >
+                <Box sx={{ display: { xs: 'none', sm: 'inline' } }}>Feeling/activity</Box>
+                <Box sx={{ display: { xs: 'inline', sm: 'none' } }}>Feeling</Box>
+              </Button>
+            </motion.div>
+          </Box>
+        </CardContent>
+      </UniversalPostCard>
+    </motion.div>
+  );
+
+  // Helper function to check if post contains video content
+  const hasVideoContent = (post: SocialPost): boolean => {
+    return post.media && post.media.some(media => media.type === 'video');
+  };
+
+  const renderPost = (post: SocialPost) => {
+    const isLiked = post.likes.includes(user?._id || '');
+    const isExpanded = expandedPost === post._id;
+    const shouldTruncate = post.content.length > 280; // Instagram-like truncation length
+    const displayContent = isExpanded || !shouldTruncate 
+      ? post.content 
+      : post.content.substring(0, 280) + '...';
+
+    const isVideoPost = hasVideoContent(post);
+
+    return (
+      <motion.div
+        key={post._id}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+      >
+        <InstagramPostCard data-testid="post-card">
+          <PostContentContainer>
+            {/* Post Header - Modern Instagram style */}
+            <PostHeader>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Avatar 
+                  src={(post.author as any)?.profilePicture}
+                  sx={{ 
+                    width: 40,
+                    height: 40,
+                    border: post.isPinned || post.isPromoted 
+                      ? '2px solid #f09433'
+                      : '2px solid transparent',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s ease',
+                    '&:hover': {
+                      transform: 'scale(1.05)',
+                    }
+                  }}
+                >
+                  {post.author.firstName.charAt(0)}
+                </Avatar>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Typography 
+                      variant="body2" 
+                      fontWeight={600}
+                      sx={{
+                        fontSize: '0.95rem',
+                        color: 'text.primary',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          color: 'primary.main',
                         }
                       }}
                     >
-                      <ListItemAvatar>
-                        <Avatar 
-                          src={connection.profilePicture || connection.avatar}
-                          sx={{ 
-                            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                            width: 48,
-                            height: 48
-                          }}
-                        >
-                          {connection.firstName?.[0]}{connection.lastName?.[0]}
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={
-                          <Typography variant="subtitle1" fontWeight="600">
-                            {connection.firstName} {connection.lastName}
-                          </Typography>
-                        }
-                        secondary={
-                          <Stack spacing={0.5}>
-                            <Typography variant="body2" color="text.secondary">
-                              {(connection.jobTitle || connection.profession) && 
-                                `${connection.jobTitle || connection.profession}${connection.company ? ` at ${connection.company}` : ''}`
-                              }
-                            </Typography>
-                            {connection.mutualConnections > 0 && (
-                              <Typography variant="caption" color="primary">
-                                {connection.mutualConnections} mutual connections
-                              </Typography>
-                            )}
-                          </Stack>
-                        }
+                      {post.author.firstName} {post.author.lastName}
+                    </Typography>
+                    {post.isPinned && <Star sx={{ color: '#FFD700', fontSize: 16 }} />}
+                    {post.isPromoted && <TrendingUp sx={{ color: 'primary.main', fontSize: 16 }} />}
+                  </Box>
+                  <Typography 
+                    variant="caption" 
+                    color="text.secondary" 
+                    sx={{ 
+                      fontSize: '0.8rem',
+                      fontWeight: 500,
+                    }}
+                  >
+                    {post.author.jobTitle}
+                  </Typography>
+                </Box>
+              </Box>
+              <IconButton size="small" sx={{ borderRadius: '50%' }}>
+                <MoreHoriz />
+              </IconButton>
+            </PostHeader>
+
+            {/* Post Media - Instagram style (media first, then text) */}
+            {post.media && post.media.length > 0 && (
+              <PostMediaContainer>
+                {post.media.length === 1 ? (
+                  // Single media item
+                  <Box sx={{ position: 'relative', width: '200%', maxHeight: 400, overflow: 'hidden' }}>
+                    {post.media[0].type === 'image' ? (
+                      <CardMedia
+                        component="img"
+                        image={post.media[0].url}
+                        alt="Post media"
+                        sx={{
+                          width: '100%',
+                          height: 'auto',
+                          maxHeight: 400,
+                          objectFit: 'cover',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => window.open(post.media[0].url, '_blank')}
                       />
-                      <Button 
-                        variant="outlined" 
-                        size="small"
-                        onClick={() => handleConnect(connection._id)}
-                        disabled={connectingUsers.includes(connection._id)}
+                    ) : (
+                      <Box 
                         sx={{ 
-                          borderRadius: 2,
-                          textTransform: 'none',
-                          minWidth: 'auto',
-                          px: 2
+                          position: 'relative', 
+                          width: '100%', 
+                          height: 320,
+                          aspectRatio: '16/9',
+                          overflow: 'hidden',
+                          backgroundColor: 'black'
                         }}
                       >
-                        {connectingUsers.includes(connection._id) ? 'Connecting...' : 'Connect'}
-                      </Button>
-                    </ListItemButton>
-                  </ListItem>
-                ))}
-              </List>
-            </DialogContent>
-            <DialogActions sx={{ p: 2, pt: 1, gap: 1 }}>
-              <Button 
-                onClick={() => {
-                  setShowMobileConnections(false);
-                  navigate('/app/connections');
-                }}
-                variant="contained"
+                        {/* Auto-playing Video */}
+                        <video
+                          data-video-id={`${post._id}-0`}
+                          loop
+                          muted={mutedVideos.has(`${post._id}-0`)}
+                          playsInline
+                          preload="metadata"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            cursor: 'pointer'
+                          }}
+                          poster={post.media[0].thumbnail}
+                          onClick={() => handleVideoClick(post.media[0].url, `${post.author.firstName} ${post.author.lastName}'s video`)}
+                        >
+                          <source src={post.media[0].url} type="video/mp4" />
+                          Your browser does not support the video tag.
+                        </video>
+
+                        {/* Video Controls Overlay */}
+                        <Box sx={{
+                          position: 'absolute',
+                          top: 12,
+                          right: 12,
+                          display: 'flex',
+                          gap: 1,
+                          zIndex: 2
+                        }}>
+                          {/* Mute/Unmute Button */}
+                          <IconButton
+                            data-testid="volume-button"
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleVideoMute(`${post._id}-0`);
+                            }}
+                            sx={{
+                              backgroundColor: 'rgba(0,0,0,0.6)',
+                              color: 'white',
+                              width: 36,
+                              height: 36,
+                              '&:hover': {
+                                backgroundColor: 'rgba(0,0,0,0.8)',
+                              }
+                            }}
+                          >
+                            {mutedVideos.has(`${post._id}-0`) ? (
+                              <VolumeOff sx={{ fontSize: 18 }} />
+                            ) : (
+                              <VolumeUp sx={{ fontSize: 18 }} />
+                            )}
+                          </IconButton>
+                        </Box>
+
+                        {/* Video duration badge */}
+                        <Box sx={{
+                          position: 'absolute',
+                          bottom: 12,
+                          right: 12,
+                          backgroundColor: 'rgba(0,0,0,0.8)',
+                          color: 'white',
+                          px: 1,
+                          py: 0.5,
+                          borderRadius: 1,
+                          fontSize: '0.75rem',
+                          fontWeight: 'bold'
+                        }}>
+                          {'0:30'}
+                        </Box>
+
+                        {/* Play indicator when paused */}
+                        {!playingVideos.has(`${post._id}-0`) && (
+                          <Box sx={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            backgroundColor: 'rgba(0,0,0,0.7)',
+                            borderRadius: '50%',
+                            width: 80,
+                            height: 80,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            pointerEvents: 'none'
+                          }}>
+                            <PlayCircleOutline sx={{ fontSize: 48, color: 'white' }} />
+                          </Box>
+                        )}
+                      </Box>
+                    )}
+                  </Box>
+                ) : (
+                  // Multiple media items - grid layout
+                  <Box 
+                    data-testid="video-grid"
+                    sx={{ 
+                      display: 'grid', 
+                      gap: 1,
+                      gridTemplateColumns: post.media.length === 2 ? '1fr 1fr' : hasVideoContent(post) ? 'repeat(auto-fit, minmax(180px, 1fr))' : 'repeat(auto-fit, minmax(220px, 1fr))',
+                      maxHeight: hasVideoContent(post) ? 400 : 420, // Increased from 300/320 for better space utilization
+                      overflow: 'hidden'
+                    }}>
+                    {post.media.slice(0, 4).map((media, index) => (
+                      <Box key={index} sx={{ position: 'relative', height: hasVideoContent(post) ? 190 : 200, overflow: 'hidden', backgroundColor: 'black', borderRadius: 1 }}> {/* Increased from 140px/160px to 190px/200px */}
+                        {media.type === 'image' ? (
+                          <CardMedia
+                            component="img"
+                            image={media.url}
+                            alt={`Post media ${index + 1}`}
+                            sx={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              borderRadius: 0.5,
+                              cursor: 'pointer'
+                            }}
+                            onClick={() => window.open(media.url, '_blank')}
+                          />
+                        ) : (
+                          <>
+                            {/* Auto-playing Video */}
+                            <video
+                              data-video-id={`${post._id}-${index}`}
+                              loop
+                              muted={mutedVideos.has(`${post._id}-${index}`)}
+                              playsInline
+                              preload="metadata"
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                borderRadius: 4,
+                                cursor: 'pointer'
+                              }}
+                              poster={media.thumbnail}
+                              onClick={() => handleVideoClick(media.url, `${post.author.firstName} ${post.author.lastName}'s video ${index + 1}`)}
+                            >
+                              <source src={media.url} type="video/mp4" />
+                              Your browser does not support the video tag.
+                            </video>
+
+                            {/* Video Controls Overlay */}
+                            <Box sx={{
+                              position: 'absolute',
+                              top: 4,
+                              right: 4,
+                              zIndex: 2
+                            }}>
+                              {/* Mute/Unmute Button */}
+                              <IconButton
+                                data-testid="volume-button"
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleVideoMute(`${post._id}-${index}`);
+                                }}
+                                sx={{
+                                  backgroundColor: 'rgba(0,0,0,0.6)',
+                                  color: 'white',
+                                  width: 24,
+                                  height: 24,
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(0,0,0,0.8)',
+                                  }
+                                }}
+                              >
+                                {mutedVideos.has(`${post._id}-${index}`) ? (
+                                  <VolumeOff sx={{ fontSize: 14 }} />
+                                ) : (
+                                  <VolumeUp sx={{ fontSize: 14 }} />
+                                )}
+                              </IconButton>
+                            </Box>
+
+                            {/* Play indicator when paused */}
+                            {!playingVideos.has(`${post._id}-${index}`) && (
+                              <Box sx={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                backgroundColor: 'rgba(0,0,0,0.6)',
+                                borderRadius: '50%',
+                                width: 32,
+                                height: 32,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                pointerEvents: 'none'
+                              }}>
+                                <PlayCircleOutline sx={{ fontSize: 24, color: 'white' }} />
+                              </Box>
+                            )}
+                          </>
+                        )}
+                        {/* Show +X more overlay for last item if there are more than 4 items */}
+                        {index === 3 && post.media.length > 4 && (
+                          <Box sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: 'rgba(0,0,0,0.6)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: 0.5,
+                            cursor: 'pointer'
+                          }}>
+                            <Typography variant="body2" color="white" fontWeight={600}>
+                              +{post.media.length - 4}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </PostMediaContainer>
+            )}
+
+            {/* Instagram-style Action Buttons */}
+            <PostActions>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <IconButton
+                  data-testid="like-button"
+                  onClick={() => handlePostLike(post._id)}
+                  sx={{ 
+                    color: isLiked ? '#ed4956' : 'text.primary',
+                    p: 0.5,
+                    '&:hover': {
+                      color: isLiked ? '#c73641' : 'text.secondary',
+                      backgroundColor: 'transparent',
+                    }
+                  }}
+                >
+                  {isLiked ? <Favorite sx={{ fontSize: 24 }} /> : <FavoriteBorder sx={{ fontSize: 24 }} />}
+                </IconButton>
+                
+                <IconButton 
+                  data-testid="comment-button"
+                  onClick={() => handleCommentClick(post._id)}
+                  sx={{ 
+                    color: 'text.primary', 
+                    p: 0.5,
+                    '&:hover': {
+                      color: 'text.secondary',
+                      backgroundColor: 'transparent',
+                    }
+                  }}
+                >
+                  <ChatBubbleOutline sx={{ fontSize: 24 }} />
+                </IconButton>
+                
+                <IconButton 
+                  onClick={() => handlePostShare(post._id)}
+                  sx={{ 
+                    color: 'text.primary', 
+                    p: 0.5,
+                    '&:hover': {
+                      color: 'text.secondary',
+                      backgroundColor: 'transparent',
+                    }
+                  }}
+                >
+                  <ShareOutlined sx={{ fontSize: 24 }} />
+                </IconButton>
+              </Box>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <AccessTime sx={{ fontSize: 12, color: 'text.secondary' }} />
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                  {formatDistanceToNow(new Date(post.createdAt))} ago
+                </Typography>
+              </Box>
+            </PostActions>
+
+            {/* Instagram-style Text Content */}
+            <PostTextContent>
+              {/* Likes count */}
+              {post.likesCount > 0 && (
+                <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5, fontSize: '0.875rem' }}>
+                  {post.likesCount.toLocaleString()} likes
+                </Typography>
+              )}
+
+              {/* Post content */}
+              <Typography 
+                variant="body2" 
                 sx={{ 
-                  borderRadius: 2,
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  flex: 1
+                  lineHeight: 1.4,
+                  fontSize: '0.875rem',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                  whiteSpace: 'pre-wrap',
+                  mb: 1,
                 }}
               >
-                View All Connections
-              </Button>
-              <Button 
-                onClick={() => setShowMobileConnections(false)}
-                variant="outlined"
+                <Typography component="span" fontWeight={600} sx={{ mr: 1 }}>
+                  {post.author.firstName.toLowerCase()}{post.author.lastName.toLowerCase()}
+                </Typography>
+                {displayContent}
+              </Typography>
+
+              {/* Show more/less button */}
+              {shouldTruncate && (
+                <Button
+                  onClick={() => togglePostExpansion(post._id)}
+                  sx={{ 
+                    textTransform: 'none', 
+                    p: 0, 
+                    mb: 1,
+                    fontWeight: 400,
+                    minHeight: 'auto',
+                    fontSize: '0.875rem',
+                    color: 'text.secondary',
+                  }}
+                >
+                  {isExpanded ? 'Show less' : 'more'}
+                </Button>
+              )}
+
+              {/* Tags - Instagram style */}
+              {post.tags && post.tags.length > 0 && (
+                <Box sx={{ mb: 1 }}>
+                  {post.tags.slice(0, 5).map((tag, index) => (
+                    <Typography
+                      key={tag}
+                      component="span"
+                      variant="body2"
+                      sx={{
+                        color: '#00376b',
+                        fontSize: '0.875rem',
+                        mr: 0.5,
+                        cursor: 'pointer',
+                        '&:hover': {
+                          textDecoration: 'underline',
+                        }
+                      }}
+                    >
+                      #{tag}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
+
+              {/* Comments preview */}
+              {post.commentsCount > 0 && (
+                <Button
+                  onClick={() => handleCommentClick(post._id)}
+                  sx={{
+                    textTransform: 'none',
+                    p: 0,
+                    fontSize: '0.875rem',
+                    color: 'text.secondary',
+                    fontWeight: 400,
+                    justifyContent: 'flex-start',
+                  }}
+                >
+                  View all {post.commentsCount} comments
+                </Button>
+              )}
+            </PostTextContent>
+          </PostContentContainer>
+        </InstagramPostCard>
+      </motion.div>
+    );
+  };
+
+  const renderSidebar = () => (
+    <Box>
+      {/* Ultra-Compact Profile Summary */}
+      <SidebarCard>
+        <CardContent>
+          <Box sx={{ textAlign: 'center' }}>
+            <Avatar
+              src={(user as any)?.profilePicture || undefined}
+              sx={{ 
+                width: 40, 
+                height: 40, 
+                mx: 'auto', 
+                mb: 1,
+                border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.15)}`,
+              }}
+            >
+              {user?.firstName?.charAt(0)}
+            </Avatar>
+            <Typography variant="body2" fontWeight={700} sx={{ fontSize: '0.8rem', mb: 0.5 }}>
+              {user?.firstName} {user?.lastName}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontSize: '0.7rem' }}>
+              Full Stack Developer
+            </Typography>
+            {/* Compact stats in single row */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1.2, textAlign: 'center' }}>
+              <Box>
+                <Typography variant="caption" fontWeight={700} color="primary.main" sx={{ fontSize: '0.7rem' }}>1.9K</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.6rem' }}>
+                  Connect
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" fontWeight={700} color="primary.main" sx={{ fontSize: '0.7rem' }}>224</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.6rem' }}>
+                  Posts
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        </CardContent>
+      </SidebarCard>
+
+      {/* Ultra-Compact Career Hub */}
+      <SidebarCard>
+        <CardContent>
+          <Typography variant="body2" fontWeight={700} sx={{ 
+            mb: 1.2, 
+            textAlign: 'center',
+            background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            fontSize: '0.85rem',
+          }}>
+            Career Hub
+          </Typography>
+          <Stack spacing={0.8}>
+            <IconButton 
+              size="small" 
+              onClick={() => navigate('/jobs')}
+              sx={{ 
+                borderRadius: 2.5, 
+                p: 0.8,
+                background: 'linear-gradient(135deg, #1976d2, #42a5f5)',
+                color: 'white',
+                width: '100%',
+                height: 36,
+                '&:hover': { 
+                  background: 'linear-gradient(135deg, #1565c0, #1976d2)',
+                  transform: 'scale(1.02)'
+                }
+              }}
+            >
+              <BusinessCenter fontSize="small" />
+            </IconButton>
+            <IconButton 
+              size="small" 
+              onClick={() => navigate('/interview-prep')}
+              sx={{ 
+                borderRadius: 2.5, 
+                p: 0.8,
+                background: 'linear-gradient(135deg, #9c27b0, #ba68c8)',
+                color: 'white',
+                width: '100%',
+                height: 36,
+                '&:hover': { 
+                  background: 'linear-gradient(135deg, #7b1fa2, #9c27b0)',
+                  transform: 'scale(1.02)'
+                }
+              }}
+            >
+              <QuestionAnswer fontSize="small" />
+            </IconButton>
+            <IconButton 
+              size="small" 
+              onClick={() => navigate('/cv-builder')}
+              sx={{ 
+                borderRadius: 2.5, 
+                p: 0.8,
+                background: 'linear-gradient(135deg, #388e3c, #66bb6a)',
+                color: 'white',
+                width: '100%',
+                height: 36,
+                '&:hover': { 
+                  background: 'linear-gradient(135deg, #2e7d32, #388e3c)',
+                  transform: 'scale(1.02)'
+                }
+              }}
+            >
+              <Assignment fontSize="small" />
+            </IconButton>
+            <IconButton 
+              size="small" 
+              onClick={() => navigate('/skills-assessment')}
+              sx={{ 
+                borderRadius: 2.5, 
+                p: 0.8,
+                background: 'linear-gradient(135deg, #d32f2f, #f44336)',
+                color: 'white',
+                width: '100%',
+                height: 36,
+                '&:hover': { 
+                  background: 'linear-gradient(135deg, #c62828, #d32f2f)',
+                  transform: 'scale(1.02)'
+                }
+              }}
+            >
+              <Assessment fontSize="small" />
+            </IconButton>
+          </Stack>
+        </CardContent>
+      </SidebarCard>
+
+      {/* Ultra-Compact Trending */}
+      <SidebarCard>
+        <CardContent>
+          <Typography variant="body2" fontWeight={700} sx={{ 
+            mb: 1.2, 
+            textAlign: 'center',
+            fontSize: '0.85rem',
+            color: 'text.primary',
+          }}>
+            Trending
+          </Typography>
+          <Stack spacing={0.6}>
+            {trendingTopics.slice(0, 3).map((topic, index) => (
+              <Box 
+                key={index} 
                 sx={{ 
-                  borderRadius: 2,
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  minWidth: 80
+                  p: 0.8, 
+                  borderRadius: 1.5, 
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                  '&:hover': { 
+                    backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                    borderColor: alpha(theme.palette.primary.main, 0.2),
+                    transform: 'translateY(-1px)',
+                  }
                 }}
               >
-                Close
-              </Button>
-            </DialogActions>
-          </Dialog>
+                <Typography variant="caption" fontWeight={700} color="primary.main" sx={{ fontSize: '0.7rem', display: 'block' }}>
+                  {topic.topic}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+                  {topic.posts > 1000 ? `${Math.round(topic.posts/1000)}k` : topic.posts} • {topic.growth}
+                </Typography>
+              </Box>
+            ))}
+          </Stack>
+        </CardContent>
+      </SidebarCard>
+    </Box>
+  );
 
-          {/* Story Viewer */}
-          <StoryViewer
-            open={showStoryViewer}
-            onClose={() => setShowStoryViewer(false)}
-            stories={allStories}
-            initialStoryIndex={currentStoryIndex}
-            currentUserId={user?._id}
-          />
+  if (error) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <Alert severity="error" sx={{ borderRadius: 2 }}>
+          {error}
+          <Button onClick={loadFeed} sx={{ ml: 2 }}>
+            Try Again
+          </Button>
+        </Alert>
+      </Container>
+    );
+  }
 
-          {/* Create Story Modal */}
-          <CreateStory
-            open={showCreateStory}
-            onClose={() => setShowCreateStory(false)}
-            onStoryCreated={handleStoryCreated}
-          />
+  return (
+    <Box sx={{ 
+      minHeight: '100vh', 
+      bgcolor: 'background.default',
+      background: theme.palette.mode === 'dark' 
+        ? 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%)'
+        : 'linear-gradient(135deg, #f8fafc 0%, #ffffff 50%, #f1f5f9 100%)'
+    }}>
+      <Container maxWidth="xl" sx={{ py: 2 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 3, 
+          justifyContent: 'center',
+          flexWrap: 'wrap'
+        }}>
+          {/* Left Sidebar - Desktop only */}
+          {isDesktop && (
+            <Box sx={{ 
+              flex: '0 0 240px',
+              maxWidth: '240px',
+              minWidth: '200px'
+            }}>
+              {renderSidebar()}
+            </Box>
+          )}
+          
+          {/* Main Content - Modern Instagram-like centered feed */}
+          <Box sx={{ 
+            flex: isDesktop ? '0 0 680px' : '1 1 100%',
+            maxWidth: isDesktop ? '680px' : '100%',
+            minWidth: 0
+          }}>
+            <Box sx={{ 
+              width: '100%', 
+              maxWidth: { xs: '100%', sm: '600px', md: '650px', lg: '680px' },
+              margin: '0 auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: { xs: 1.5, sm: 2, md: 2.5 },
+              px: { xs: 1, sm: 1.5, md: 2 },
+            }}>
+              {/* Stories Section */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                {renderStories()}
+              </motion.div>
+              
+              {/* Quick Actions */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+              >
+                {renderEnhancedQuickActions()}
+              </motion.div>
+              
+              {/* Create Post */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                {renderCreatePost()}
+              </motion.div>
+              
+              {/* Posts Feed */}
+              {loading ? (
+                <Stack spacing={3}>
+                  {[1, 2, 3].map((i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: i * 0.1 }}
+                    >
+                      <Card sx={{ 
+                        borderRadius: 3,
+                        boxShadow: theme.palette.mode === 'dark' 
+                          ? '0 4px 20px rgba(0,0,0,0.3)' 
+                          : '0 4px 20px rgba(0,0,0,0.08)',
+                        border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
+                      }}>
+                        <CardContent sx={{ p: 3 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                            <Skeleton variant="circular" width={48} height={48} />
+                            <Box sx={{ ml: 2, flex: 1 }}>
+                              <Skeleton variant="text" width="60%" height={24} />
+                              <Skeleton variant="text" width="40%" height={20} />
+                            </Box>
+                          </Box>
+                          <Skeleton variant="text" height={20} />
+                          <Skeleton variant="text" height={20} />
+                          <Skeleton variant="text" width="80%" height={20} />
+                          <Skeleton variant="rectangular" height={200} sx={{ mt: 2, borderRadius: 2 }} />
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </Stack>
+              ) : (
+                <AnimatePresence>
+                  {posts.map((post, index) => (
+                    <motion.div
+                      key={post._id}
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -30 }}
+                      transition={{ 
+                        duration: 0.4, 
+                        delay: index * 0.1,
+                        ease: "easeOut"
+                      }}
+                    >
+                      {renderPost(post)}
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              )}
+            </Box>
+          </Box>
+          
+          {/* Right Sidebar - Desktop only */}
+          {isDesktop && (
+            <Box sx={{ 
+              flex: '0 0 240px',
+              maxWidth: '240px',
+              minWidth: '200px'
+            }}>
+              <Box sx={{ position: 'sticky', top: 20 }}>
+                <SidebarCard>
+                  <CardContent>
+                    <Typography variant="body2" fontWeight={700} sx={{ 
+                      mb: 1.5,
+                      textAlign: 'center',
+                      background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                      backgroundClip: 'text',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      fontSize: '0.9rem',
+                    }}>
+                      Career Tools
+                    </Typography>
+                    <Stack spacing={1}>
+                      <ActionButton 
+                        variant="outlined" 
+                        startIcon={<BusinessCenter sx={{ fontSize: 18 }} />} 
+                        fullWidth 
+                        onClick={() => navigate('/jobs')}
+                        sx={{ 
+                          justifyContent: 'flex-start', 
+                          borderRadius: 2.5,
+                          py: 1,
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                        }}
+                      >
+                        Find Jobs
+                      </ActionButton>
+                      <ActionButton 
+                        variant="outlined" 
+                        startIcon={<QuestionAnswer sx={{ fontSize: 18 }} />} 
+                        fullWidth 
+                        onClick={() => navigate('/interview-prep')}
+                        sx={{ 
+                          justifyContent: 'flex-start', 
+                          borderRadius: 2.5,
+                          py: 1,
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                        }}
+                      >
+                        Interview Prep
+                      </ActionButton>
+                      <ActionButton 
+                        variant="outlined" 
+                        startIcon={<Assignment sx={{ fontSize: 18 }} />} 
+                        fullWidth 
+                        onClick={() => navigate('/cv-builder')}
+                        sx={{ 
+                          justifyContent: 'flex-start', 
+                          borderRadius: 2.5,
+                          py: 1,
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                        }}
+                      >
+                        CV Builder
+                      </ActionButton>
+                      <ActionButton 
+                        variant="outlined" 
+                        startIcon={<Assessment sx={{ fontSize: 18 }} />} 
+                        fullWidth 
+                        onClick={() => navigate('/skills-assessment')}
+                        sx={{ 
+                          justifyContent: 'flex-start', 
+                          borderRadius: 2.5,
+                          py: 1,
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                        }}
+                      >
+                        Skills Test
+                      </ActionButton>
+                      <ActionButton 
+                        variant="outlined" 
+                        startIcon={<Psychology sx={{ fontSize: 18 }} />} 
+                        fullWidth 
+                        onClick={() => navigate('/exams')}
+                        sx={{ 
+                          justifyContent: 'flex-start', 
+                          borderRadius: 2.5,
+                          py: 1,
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                        }}
+                      >
+                        Smart Exams
+                      </ActionButton>
+                      <ActionButton 
+                        variant="outlined" 
+                        startIcon={<EmojiEvents sx={{ fontSize: 18 }} />} 
+                        fullWidth 
+                        onClick={() => navigate('/achievements')}
+                        sx={{ 
+                          justifyContent: 'flex-start', 
+                          borderRadius: 2.5,
+                          py: 1,
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                        }}
+                      >
+                        Achievements
+                      </ActionButton>
+                    </Stack>
+                  </CardContent>
+                </SidebarCard>
+              </Box>
+            </Box>
+          )}
+        </Box>
       </Container>
 
-      {/* Floating Contact - Fixed position, always visible like the message icon */}
-      <FloatingContact />
+      {/* Floating Create Button - Mobile and Small Tablets */}
+      {(isMobile || isSmallTablet) && (
+        <FloatingCreateButton onClick={() => setShowCreatePost(true)}>
+          <Add />
+        </FloatingCreateButton>
+      )}
+
+      {/* Create Post Dialog */}
+      <Dialog
+        open={showCreatePost}
+        onClose={() => setShowCreatePost(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 3 }
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          Create post
+          <IconButton onClick={() => setShowCreatePost(false)} disabled={isPosting}>
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <Avatar src={(user as any)?.profilePicture}>
+              {user?.firstName?.charAt(0)}
+            </Avatar>
+            <Box>
+              <Typography variant="subtitle2" fontWeight={600}>
+                {user?.firstName} {user?.lastName}
+              </Typography>
+              <Button size="small" startIcon={<Public />} sx={{ textTransform: 'none', minHeight: 'auto', p: 0 }}>
+                Public
+              </Button>
+            </Box>
+          </Box>
+          
+          <TextField
+            multiline
+            rows={4}
+            placeholder="What's on your mind?"
+            variant="outlined"
+            fullWidth
+            value={postContent}
+            onChange={(e) => setPostContent(e.target.value)}
+            sx={{ mb: 2, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+          />
+
+          {/* Tags Input */}
+          <TextField
+            placeholder="Add tags (comma separated, e.g., technology, career, innovation)"
+            variant="outlined"
+            fullWidth
+            value={postTags}
+            onChange={(e) => setPostTags(e.target.value)}
+            sx={{ mb: 2, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+          />
+
+          {/* Media Preview */}
+          {postMedia.length > 0 && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Attached Media ({postMedia.length})
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {postMedia.map((file, index) => (
+                  <Box key={index} sx={{ position: 'relative', width: 100, height: 80 }}>
+                    <Box
+                      sx={{
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: 1,
+                        overflow: 'hidden',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: 'background.paper'
+                      }}
+                    >
+                      {file.type.startsWith('image/') ? (
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={`Preview ${index + 1}`}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover'
+                          }}
+                        />
+                      ) : file.type.startsWith('video/') ? (
+                        <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+                          <video
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover'
+                            }}
+                          >
+                            <source src={URL.createObjectURL(file)} type={file.type} />
+                          </video>
+                          <Box sx={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            color: 'white',
+                            opacity: 0.8
+                          }}>
+                            <PlayCircleOutline sx={{ fontSize: 24 }} />
+                          </Box>
+                        </Box>
+                      ) : (
+                        <AttachFile sx={{ color: 'text.secondary' }} />
+                      )}
+                    </Box>
+                    <IconButton
+                      size="small"
+                      onClick={() => removeMedia(index)}
+                      sx={{
+                        position: 'absolute',
+                        top: -8,
+                        right: -8,
+                        bgcolor: 'error.main',
+                        color: 'white',
+                        width: 20,
+                        height: 20,
+                        '&:hover': {
+                          bgcolor: 'error.dark',
+                        }
+                      }}
+                    >
+                      <Close sx={{ fontSize: 14 }} />
+                    </IconButton>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          )}
+          
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            <input
+              accept="image/*,video/*"
+              style={{ display: 'none' }}
+              id="media-upload"
+              multiple
+              type="file"
+              onChange={handleFileUpload}
+            />
+            <label htmlFor="media-upload">
+              <Button 
+                component="span"
+                startIcon={<Photo sx={{ color: '#45bd62' }} />} 
+                sx={{ textTransform: 'none', borderRadius: 2 }}
+                disabled={isPosting}
+              >
+                Photo/Video
+              </Button>
+            </label>
+            <Button 
+              startIcon={<EmojiEmotions sx={{ color: '#f7b928' }} />} 
+              sx={{ textTransform: 'none', borderRadius: 2 }}
+              disabled={isPosting}
+            >
+              Feeling
+            </Button>
+            <Button 
+              startIcon={<LocationOn sx={{ color: '#1877f2' }} />} 
+              sx={{ textTransform: 'none', borderRadius: 2 }}
+              disabled={isPosting}
+            >
+              Check in
+            </Button>
+          </Box>
+
+          {/* Error Display */}
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            variant="contained"
+            fullWidth
+            onClick={handleCreatePost}
+            disabled={isPosting || (!postContent.trim() && postMedia.length === 0)}
+            sx={{ 
+              borderRadius: 2, 
+              py: 1.5,
+              background: isPosting 
+                ? 'rgba(0,0,0,0.12)' 
+                : `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+            }}
+          >
+            {isPosting ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CircularProgress size={20} color="inherit" />
+                Posting...
+              </Box>
+            ) : (
+              'Post'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Comment Dialog */}
+      <Dialog
+        open={showCommentDialog}
+        onClose={handleCloseCommentDialog}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            maxHeight: '80vh',
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          pb: 2
+        }}>
+          <Typography variant="h6" fontWeight={600}>
+            Add Comment
+          </Typography>
+          <IconButton 
+            onClick={handleCloseCommentDialog}
+            size="small"
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 0 }}>
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            placeholder="What do you think about this post?"
+            value={commentContent}
+            onChange={(e) => setCommentContent(e.target.value)}
+            variant="outlined"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+                backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : '#f8f9fa',
+              }
+            }}
+          />
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1, 
+            mt: 2,
+            color: 'text.secondary'
+          }}>
+            <Avatar
+              src={(user as any)?.profilePicture || undefined}
+              sx={{ width: 32, height: 32 }}
+            >
+              {user?.firstName?.charAt(0)}
+            </Avatar>
+            <Typography variant="body2">
+              Commenting as {user?.firstName} {user?.lastName}
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 2 }}>
+          <Button 
+            onClick={handleCloseCommentDialog}
+            color="inherit"
+            sx={{ borderRadius: 2 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleAddComment}
+            variant="contained"
+            disabled={!commentContent.trim() || isCommenting}
+            sx={{
+              borderRadius: 2,
+              background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              px: 3,
+              '&:hover': {
+                background: `linear-gradient(45deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
+              }
+            }}
+          >
+            {isCommenting ? (
+              <>
+                <CircularProgress size={18} sx={{ mr: 1 }} />
+                Posting...
+              </>
+            ) : (
+              'Post Comment'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Video Modal */}
+      <Dialog
+        open={showVideoModal}
+        onClose={handleCloseVideoModal}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            backgroundColor: 'black',
+            borderRadius: 2,
+            maxHeight: '90vh',
+          }
+        }}
+      >
+        <DialogTitle 
+          sx={{ 
+            color: 'white', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            pb: 1
+          }}
+        >
+          <Typography variant="h6" sx={{ color: 'white' }}>
+            {selectedVideo?.title || 'Video'}
+          </Typography>
+          <IconButton 
+            onClick={handleCloseVideoModal}
+            sx={{ color: 'white' }}
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0, backgroundColor: 'black' }}>
+          {selectedVideo && (
+            <Box sx={{ 
+              position: 'relative',
+              width: '100%',
+              height: 'auto',
+              minHeight: '60vh',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <video
+                controls
+                autoPlay // Auto-play when modal opens
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  maxHeight: '70vh',
+                  objectFit: 'contain'
+                }}
+                onLoadStart={() => console.log('Video loading started')}
+                onCanPlay={() => console.log('Video can play')}
+                onError={(e) => console.error('Video error:', e)}
+              >
+                <source src={selectedVideo.url} type="video/mp4" />
+                <source src={selectedVideo.url} type="video/webm" />
+                <source src={selectedVideo.url} type="video/ogg" />
+                Your browser does not support the video tag.
+              </video>
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Story Dialog */}
+      <CreateStory
+        open={showCreateStory}
+        onClose={() => setShowCreateStory(false)}
+        onStoryCreated={handleStoryCreated}
+      />
+
+      {/* Story Viewer */}
+      <StoryViewer
+        open={showStoryViewer}
+        onClose={handleCloseStoryViewer}
+        stories={storyViewerStories}
+        initialStoryIndex={selectedStoryIndex}
+        currentUserId={user?._id}
+      />
     </Box>
   );
 };

@@ -1,0 +1,2679 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Container,
+  Typography,
+  Tab,
+  Tabs,
+  Paper,
+  CircularProgress,
+  Alert,
+  Fab,
+  useTheme,
+  useMediaQuery,
+  Grid,
+  Card,
+  CardContent,
+  Button,
+  Avatar,
+  Chip,
+  IconButton,
+  Divider,
+  Stack,
+  Badge,
+  alpha,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  ListItemButton,
+  CardActions,
+  LinearProgress,
+  Tooltip,
+} from '@mui/material';
+import { 
+  Add, 
+  Chat,
+  Search,
+  Work,
+  School,
+  Assignment,
+  MenuBook,
+  TrendingUp,
+  People,
+  Notifications,
+  Bookmark,
+  Settings,
+  Star,
+  ArrowForward,
+  Timeline,
+  Psychology,
+  Business,
+  Groups,
+  CompareArrows,
+  SmartToy,
+  Quiz,
+  RecordVoiceOver,
+  LocationOn,
+  AttachMoney,
+  Schedule,
+  BookmarkBorder,
+  PersonAdd,
+  AccountCircle,
+  Image,
+  VideoLibrary,
+  Event,
+  Close,
+} from '@mui/icons-material';
+import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import PostCard from '../components/social/PostCard';
+import CreatePost from '../components/social/CreatePost';
+import CreateStory from '../components/social/CreateStory';
+import EnhancedCreateStory from '../components/social/EnhancedCreateStory';
+import StoryViewer from '../components/social/StoryViewer';
+import EnhancedStoryViewer from '../components/social/EnhancedStoryViewer';
+import FeedSidebar from '../components/social/FeedSidebar';
+import { SocialPost } from '../types/social';
+import { socialNetworkService, FeedOptions } from '../services/socialNetworkService';
+import { enhancedStoryService } from '../services/enhancedStoryService';
+import { useAuth, UserRole } from '../contexts/AuthContext';
+import { jobService } from '../services/jobService';
+import { profileService } from '../services/profileService';
+import { userService } from '../services/userService';
+import { notificationService } from '../services/notificationService';
+import { chatService } from '../services/chatService';
+import { User } from '../types/user';
+import MobileFooterNavbar from '../components/MobileFooterNavbar';
+import FloatingContact from '../components/FloatingContact';
+import { GlobalVideoProvider } from '../contexts/GlobalVideoContext';
+
+// Add pulse animation styles
+const styles = `
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1.05);
+      opacity: 0.8;
+    }
+  }
+`;
+
+// Inject styles
+const styleSheet = document.createElement("style");
+styleSheet.type = "text/css";
+styleSheet.innerText = styles;
+document.head.appendChild(styleSheet);
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
+  <div role="tabpanel" hidden={value !== index}>
+    {value === index && <Box>{children}</Box>}
+  </div>
+);
+
+const SocialNetworkPage: React.FC = () => {
+  const theme = useTheme();
+  const navigate = useNavigate();
+  const { user, hasRole } = useAuth();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('lg'));
+  const isSmallTablet = useMediaQuery(theme.breakpoints.down('lg')) && useMediaQuery(theme.breakpoints.up('md'));
+  // Combine mobile and small tablet for single-column layout
+  const isMobileOrSmallTablet = useMediaQuery(theme.breakpoints.down('lg'));
+  const [currentTab, setCurrentTab] = useState(0);
+  const [posts, setPosts] = useState<SocialPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showCreatePost, setShowCreatePost] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
+  const [showWelcomeHeader, setShowWelcomeHeader] = useState(true);
+  const [showMobileConnections, setShowMobileConnections] = useState(false);
+  const [showStoryModal, setShowStoryModal] = useState(false);
+  const [activeStoryUser, setActiveStoryUser] = useState<any>(null);
+  const [showCreateStory, setShowCreateStory] = useState(false);
+  const [userStories, setUserStories] = useState<any[]>([]);
+  const [allStories, setAllStories] = useState<any[]>([]);
+  const [showStoryViewer, setShowStoryViewer] = useState(false);
+  const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
+  
+  // Notification state
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+  
+  // Suggested connections state
+  const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
+  const [connectingUsers, setConnectingUsers] = useState<string[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(true);
+
+  // Jobs state
+  const [matchedJobs, setMatchedJobs] = useState<any[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(false);
+  const [profileCompletion, setProfileCompletion] = useState<any>(null);
+  const [profileValidation, setProfileValidation] = useState<any>(null);
+  const [bookmarkedJobs, setBookmarkedJobs] = useState<Set<string>>(new Set());
+
+  // Load posts on component mount and when filter changes
+  useEffect(() => {
+    // Always load posts since we removed the Job Posts tab
+    loadPosts(true);
+  }, [currentTab, hasRole]);
+
+  // Load profile completion and validation on mount
+  useEffect(() => {
+    loadProfileData();
+    loadUserStories();
+  }, [user]);
+
+  const loadUserStories = async () => {
+    try {
+      console.log('🔄 Loading enhanced user stories...');
+      
+      // Repair storage consistency first (for existing users with stories in different formats)
+      enhancedStoryService.repairStorageConsistency();
+      
+      // Clean up expired stories
+      enhancedStoryService.cleanupExpiredStories();
+      
+      // Load user's own stories using enhanced service
+      const userStoriesResponse = await enhancedStoryService.getUserStories();
+      if (userStoriesResponse.success && userStoriesResponse.data) {
+        const stories = Array.isArray(userStoriesResponse.data) ? userStoriesResponse.data : [userStoriesResponse.data];
+        setUserStories(stories.filter(story => story && story._id));
+        console.log('✅ Loaded', stories.length, 'user stories');
+      } else {
+        console.log('⚠️ No user stories found or failed to load');
+        setUserStories([]);
+      }
+
+      // Load all active stories for the feed using enhanced service
+      const allStoriesResponse = await enhancedStoryService.getStoriesFeed();
+      if (allStoriesResponse.success && allStoriesResponse.data) {
+        const stories = Array.isArray(allStoriesResponse.data) ? allStoriesResponse.data : [allStoriesResponse.data];
+        setAllStories(stories.filter(story => story && story._id));
+        console.log('✅ Loaded', stories.length, 'feed stories');
+      } else {
+        console.log('⚠️ No feed stories found or failed to load');
+        setAllStories([]);
+      }
+    } catch (error) {
+      console.error('❌ Error loading enhanced stories:', error);
+      // Keep stories empty on error but don't crash the app
+      setUserStories([]);
+      setAllStories([]);
+    }
+  };
+
+  // Load notifications and messages
+  useEffect(() => {
+    const loadCounts = async () => {
+      if (!user) return;
+      
+      try {
+        // Load notifications
+        const notificationResponse = await notificationService.getUnreadCount();
+        setUnreadNotifications(notificationResponse.data?.count || 0);
+        
+        // Load unread messages
+        const unreadMessagesCount = await chatService.getTotalUnreadCount();
+        setUnreadMessages(unreadMessagesCount);
+      } catch (error) {
+        console.error('Error loading counts:', error);
+        setUnreadNotifications(0);
+        setUnreadMessages(0);
+      }
+    };
+
+    loadCounts();
+    
+    // Set up periodic refresh
+    const interval = setInterval(loadCounts, 30000);
+    
+    return () => clearInterval(interval);
+  }, [user]);
+
+  const loadPosts = async (reset = false) => {
+    if (!user) return;
+    
+    setLoading(reset);
+    setError(null);
+
+    try {
+      const currentPage = reset ? 1 : page;
+      const filter = feedFilters[currentTab];
+      
+      const response = await socialNetworkService.getFeed({
+        page: currentPage,
+        limit: 10,
+        filter
+      });
+
+      // Handle different response formats more robustly
+      let newPosts = [];
+      if (response && response.success !== false) {
+        // Try to extract posts from various possible response structures
+        newPosts = response.data?.posts || response.data || response.posts || response || [];
+        // Ensure newPosts is an array
+        if (!Array.isArray(newPosts)) {
+          newPosts = [];
+        }
+      } else if (response && response.success === false) {
+        throw new Error(response.message || 'Failed to load posts');
+      }
+      
+      if (reset) {
+        setPosts(newPosts);
+        setPage(2);
+      } else {
+        setPosts(prev => [...prev, ...newPosts]);
+        setPage(prev => prev + 1);
+      }
+      
+      setHasMore(newPosts.length === 10);
+    } catch (err: any) {
+      console.error('Error loading posts:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to load posts');
+      // Set empty posts to prevent UI from breaking
+      if (reset) {
+        setPosts([]);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePostCreated = (newPost: SocialPost) => {
+    setPosts(prev => [newPost, ...prev]);
+    setShowCreatePost(false);
+  };
+
+  const handleStoryCreated = (newStory: any) => {
+    console.log('✅ Enhanced story created successfully!', newStory);
+    
+    // Immediate UI update for better user experience
+    if (newStory) {
+      setUserStories(prev => {
+        // Remove any existing story with the same ID and add new one at the beginning
+        const filtered = prev.filter(story => story._id !== newStory._id);
+        return [newStory, ...filtered];
+      });
+      
+      setAllStories(prev => {
+        const filtered = prev.filter(story => story._id !== newStory._id);
+        return [newStory, ...filtered];
+      });
+    }
+    
+    // Force reload stories to ensure consistency (happens in background)
+    setTimeout(() => {
+      console.log('🔄 Background reload of enhanced stories...');
+      loadUserStories();
+    }, 1000);
+    
+    // Close the create story modal
+    setShowCreateStory(false);
+    
+    console.log('🎉 Enhanced story creation process complete!');
+  };
+
+  const handleOpenStoryViewer = (storyIndex: number, stories: any[]) => {
+    setAllStories(stories);
+    setCurrentStoryIndex(storyIndex);
+    setShowStoryViewer(true);
+  };
+
+  const handlePostUpdate = (updatedPost: SocialPost) => {
+    setPosts(prev => prev.map(post => 
+      post._id === updatedPost._id ? updatedPost : post
+    ));
+  };
+
+  const handlePostDelete = (postId: string) => {
+    setPosts(prev => prev.filter(post => post._id !== postId));
+  };
+
+  // Load profile completion and validation data
+  const loadProfileData = async () => {
+    if (!user?._id) return;
+
+    try {
+      console.log('🔍 SocialNetworkPage fetching fresh user data for:', user._id);
+      // Fetch fresh user data from the server to get the most up-to-date profile
+      const freshUser = await userService.getUserProfile(user._id);
+      console.log('📋 SocialNetworkPage received fresh user data:', freshUser);
+      
+      // Use fresh user data for validation
+      const validation = await profileService.validateUserProfile(freshUser as User);
+      console.log('✅ Profile validation result:', validation);
+      setProfileValidation(validation);
+
+      const completion = await profileService.getProfileCompletionStatus();
+      console.log('📊 Profile completion status:', completion);
+      setProfileCompletion(completion);
+    } catch (error) {
+      console.error('❌ Error loading profile data:', error);
+      // Fallback to using auth context user data
+      try {
+        const validation = await profileService.validateUserProfile(user as User);
+        setProfileValidation(validation);
+        
+        const completion = await profileService.getProfileCompletionStatus();
+        setProfileCompletion(completion);
+      } catch (fallbackError) {
+        console.error('❌ Fallback profile validation also failed:', fallbackError);
+      }
+    }
+  };
+
+  // Load AI-matched jobs based on user skills and profile
+  const loadMatchedJobs = async () => {
+    if (!user?._id) return;
+
+    setJobsLoading(true);
+    setError(null);
+
+    try {
+      console.log('🤖 Loading AI-matched jobs for user:', user._id);
+      
+      // Fetch fresh user data to get the most up-to-date profile
+      const freshUser = await userService.getUserProfile(user._id);
+      console.log('📋 Fresh user data for job matching:', freshUser);
+
+      // Validate the fresh profile data
+      const validation = await profileService.validateUserProfile(freshUser as User);
+      console.log('✅ Profile validation for job matching:', validation);
+
+      // Check if profile is complete enough for job matching
+      if (!validation || validation.completionPercentage < 30) {
+        console.log('⚠️ Profile not complete enough for job matching. Completion:', validation?.completionPercentage || 0, '%');
+        setMatchedJobs([]);
+        setJobsLoading(false);
+        return;
+      }
+
+      // Get user skills for basic validation
+      const userSkills = (freshUser as User).skills || [];
+      const experienceSkills = ((freshUser as User).experience || [])
+        .flatMap(exp => exp.technologies || [])
+        .filter(tech => tech && tech.trim());
+      const allSkills = [...userSkills, ...experienceSkills];
+
+      console.log('🎯 User skills for matching:', allSkills);
+
+      if (allSkills.length === 0) {
+        console.log('⚠️ No skills found for job matching');
+        setMatchedJobs([]);
+        setJobsLoading(false);
+        return;
+      }
+
+      // Use enhanced AI-powered job matching service
+      console.log('🤖 Calling enhanced AI-powered job matching service...');
+      const response = await jobService.getAIMatchedJobs();
+
+      console.log('📋 Enhanced AI Job matching response:', response);
+      console.log('✅ AI found', response.data?.length || 0, 'matched jobs');
+      console.log('📊 Matching stats:', response.meta);
+
+      setMatchedJobs(response.data);
+    } catch (err: any) {
+      console.error('❌ Error loading AI-matched jobs:', err);
+      
+      // If AI matching fails, fall back to basic skill matching
+      console.log('🔄 Falling back to basic skill matching...');
+      try {
+        const freshUser = await userService.getUserProfile(user._id);
+        const userSkills = (freshUser as User).skills || [];
+        const technicalSkills = ((freshUser as User).technicalSkills || []).map(ts => ts.skill);
+        const allSkills = [...userSkills, ...technicalSkills];
+
+        if (allSkills.length > 0) {
+          const fallbackResponse = await jobService.getJobs({
+            skills: allSkills.slice(0, 10),
+            status: 'active' as any
+          }, 1, 15);
+
+          if (fallbackResponse.success) {
+            console.log('✅ Fallback found', fallbackResponse.data.length, 'matched jobs');
+            setMatchedJobs(fallbackResponse.data);
+          } else {
+            throw new Error('Failed to load jobs with fallback method');
+          }
+        } else {
+          setMatchedJobs([]);
+        }
+      } catch (fallbackErr: any) {
+        console.error('❌ Fallback job matching also failed:', fallbackErr);
+        setError(fallbackErr.response?.data?.error || fallbackErr.message || 'Failed to load matched jobs');
+        setMatchedJobs([]);
+      }
+    } finally {
+      setJobsLoading(false);
+    }
+  };
+
+  // Handle job bookmark toggle
+  const handleJobBookmark = async (jobId: string) => {
+    const newBookmarks = new Set(bookmarkedJobs);
+    if (bookmarkedJobs.has(jobId)) {
+      newBookmarks.delete(jobId);
+    } else {
+      newBookmarks.add(jobId);
+    }
+    setBookmarkedJobs(newBookmarks);
+    // Here you could add API call to save bookmark
+  };
+
+  // Handle job application
+  const handleJobApply = (jobId: string) => {
+    navigate(`/app/jobs/${jobId}`);
+  };
+
+  // Load suggested connections
+  useEffect(() => {
+    const loadSuggestedConnections = async () => {
+      if (!user) return;
+      
+      setSuggestionsLoading(true);
+      try {
+        const response = await socialNetworkService.getConnectionSuggestions();
+        // The service already returns the data or empty array
+        setSuggestedUsers(Array.isArray(response) ? response : []);
+      } catch (error) {
+        console.error('Error loading suggested connections:', error);
+      } finally {
+        setSuggestionsLoading(false);
+      }
+    };
+
+    loadSuggestedConnections();
+  }, [user]);
+
+  // Handle connection request
+  const handleConnect = async (userId: string) => {
+    if (!user || connectingUsers.includes(userId)) return;
+
+    setConnectingUsers(prev => [...prev, userId]);
+    try {
+      const response = await socialNetworkService.sendConnectionRequest(userId);
+      if (response.success) {
+        // Remove the connected user from suggestions
+        setSuggestedUsers(prev => prev.filter(u => u._id !== userId));
+      }
+    } catch (error) {
+      console.error('Error sending connection request:', error);
+    } finally {
+      setConnectingUsers(prev => prev.filter(id => id !== userId));
+    }
+  };
+
+  const feedFilters: FeedOptions['filter'][] = hasRole(UserRole.EMPLOYER) 
+    ? ['all', 'people', 'training'] 
+    : ['all', 'people', 'training']; // Removed 'jobs' filter
+  const tabLabels = hasRole(UserRole.EMPLOYER) 
+    ? ['All Posts', 'People', 'Training', 'Suggestions']
+    : ['All Posts', 'People', 'Training', 'Suggestions']; // Removed 'Job Posts' tab
+
+  // Enhanced Quick Action Buttons Data with better organization
+  const quickActions = [
+    {
+      title: 'Find Jobs',
+      subtitle: 'Discover opportunities',
+      description: 'Browse 500+ active jobs',
+      icon: <Search sx={{ fontSize: { xs: 20, sm: 24 } }} />,
+      color: '#059669',
+      gradient: 'linear-gradient(135deg, #10B981 0%, #059669 50%, #047857 100%)',
+      shadowColor: 'rgba(16, 185, 129, 0.35)',
+      path: '/app/jobs',
+      stats: '500+ Active',
+      category: 'Jobs',
+      bgPattern: '🎯'
+    },
+    {
+      title: 'Job Prep',
+      subtitle: 'Interview & Test Prep',
+      description: 'AI-powered preparation',
+      icon: <Psychology sx={{ fontSize: { xs: 20, sm: 24 } }} />,
+      color: '#DC2626', 
+      gradient: 'linear-gradient(135deg, #EF4444 0%, #DC2626 50%, #B91C1C 100%)',
+      shadowColor: 'rgba(239, 68, 68, 0.35)',
+      path: '/app/job-preparation',
+      stats: '4+ Tools',
+      category: 'Preparation',
+      bgPattern: '🧠'
+    },
+    {
+      title: 'CV Builder',
+      subtitle: 'Professional resumes',
+      description: 'ATS-optimized templates',
+      icon: <Assignment sx={{ fontSize: { xs: 20, sm: 24 } }} />,
+      color: '#2563EB',
+      gradient: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 50%, #1D4ED8 100%)',
+      shadowColor: 'rgba(59, 130, 246, 0.35)',
+      path: '/app/cv-builder',
+      stats: '15+ Templates',
+      category: 'Tools',
+      bgPattern: '📋'
+    },
+    {
+      title: 'Learn',
+      subtitle: 'Skill courses',
+      description: 'Expert-led content',
+      icon: <MenuBook sx={{ fontSize: { xs: 20, sm: 24 } }} />,
+      color: '#7C3AED',
+      gradient: 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 50%, #6D28D9 100%)',
+      shadowColor: 'rgba(139, 92, 246, 0.35)',
+      path: '/app/courses',
+      stats: '100+ Courses',
+      category: 'Learning',
+      bgPattern: '📚'
+    },
+    {
+      title: 'Network',
+      subtitle: 'Connect with pros',
+      description: 'Grow your network',
+      icon: <People sx={{ fontSize: { xs: 20, sm: 24 } }} />,
+      color: '#EA580C',
+      gradient: 'linear-gradient(135deg, #F97316 0%, #EA580C 50%, #DC2626 100%)',
+      shadowColor: 'rgba(249, 115, 22, 0.35)',
+      path: '/app/connections',
+      stats: `${suggestedUsers.length}+ People`,
+      category: 'Social',
+      bgPattern: '🤝'
+    },
+    {
+      title: 'Messages',
+      subtitle: 'Chat with contacts',
+      description: 'Stay connected',
+      icon: <Chat sx={{ fontSize: { xs: 20, sm: 24 } }} />,
+      color: '#0891B2',
+      gradient: 'linear-gradient(135deg, #06B6D4 0%, #0891B2 50%, #0E7490 100%)',
+      shadowColor: 'rgba(6, 182, 212, 0.35)',
+      path: '/app/messages',
+      stats: unreadMessages > 0 ? `${unreadMessages} New` : 'No New',
+      category: 'Communication',
+      badge: unreadMessages,
+      bgPattern: '💬'
+    }
+  ];
+
+  useEffect(() => {
+    loadFeed(1, true);
+  }, [currentTab]);
+
+  // Auto-hide welcome header after 5 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowWelcomeHeader(false);
+    }, 5000); // 5 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const loadFeed = async (pageNum = 1, reset = false) => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      setError(null);
+
+      const options: FeedOptions = {
+        page: pageNum,
+        limit: 10,
+        filter: feedFilters[currentTab],
+      };
+
+      const response = await socialNetworkService.getFeed(options);
+      
+      // Ensure response.data exists and is an array
+      const feedData = response?.data || response || [];
+      const feedPosts = Array.isArray(feedData) ? feedData : feedData?.posts || [];
+      
+      if (reset) {
+        setPosts(feedPosts);
+      } else {
+        setPosts(prev => [...prev, ...feedPosts]);
+      }
+      
+      setHasMore(feedPosts.length === 10);
+      setPage(pageNum);
+    } catch (err) {
+      setError('Failed to load feed. Please try again.');
+      console.error('Error loading feed:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setCurrentTab(newValue);
+  };
+
+  const loadMorePosts = () => {
+    if (!loading && hasMore) {
+      loadFeed(page + 1, false);
+    }
+  };
+
+  return (
+    <GlobalVideoProvider>
+      <Box 
+        sx={{ 
+          minHeight: '100vh', 
+          background: theme.palette.mode === 'dark'
+            ? 'linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%)'
+            : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%)',
+          position: 'relative',
+          overflowX: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '300px',
+            background: theme.palette.mode === 'dark'
+              ? 'radial-gradient(ellipse at top, rgba(102, 126, 234, 0.1) 0%, transparent 70%)'
+              : 'radial-gradient(ellipse at top, rgba(102, 126, 234, 0.05) 0%, transparent 70%)',
+            zIndex: 0,
+          }
+        }}
+      >
+      <Container 
+        maxWidth={false} 
+        sx={{ 
+          py: { xs: 2, sm: 3, md: 3, lg: 4 },
+          pt: isMobile ? { xs: 16 } : { xs: 2, sm: 3, md: 3, lg: 4 }, // Only mobile needs top padding for horizontal quick actions
+          px: { xs: 1, sm: 2, md: 3, lg: 4, xl: 5 },
+          pb: { xs: 2, sm: 3, md: 3, lg: 4 },
+          ml: isSmallTablet ? '80px' : 0, // Add left margin for small tablet sidebar
+          maxWidth: { 
+            xs: '100%', 
+            sm: '100%', 
+            md: '1300px', 
+            lg: '1600px',
+            xl: '1800px' 
+          },
+          mx: 'auto',
+          position: 'relative', // This is important for absolute positioning of child components
+          zIndex: 1,
+        }}
+      >
+        {/* Enhanced Modern Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ 
+            opacity: showWelcomeHeader ? 1 : 0, 
+            y: showWelcomeHeader ? 0 : -50,
+            height: showWelcomeHeader ? 'auto' : 0,
+          }}
+          transition={{ duration: 0.8, ease: "easeInOut" }}
+          style={{ overflow: 'hidden' }}
+        >
+          <Box 
+            sx={{ 
+              mb: showWelcomeHeader ? 10 : 0,
+              position: 'relative',
+              overflow: 'hidden',
+              borderRadius: 4,
+              background: theme.palette.mode === 'dark'
+                ? 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)'
+                : 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
+              backdropFilter: 'blur(20px)',
+              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`,
+              p: { xs: 3, md: 4 },
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: -2,
+                left: -2,
+                right: -2,
+                bottom: -2,
+                background: 'linear-gradient(135deg, #667eea, #764ba2, #f093fb)',
+                borderRadius: 'inherit',
+                zIndex: -1,
+                opacity: 0.1,
+              }
+            }}
+          >
+            {/* Floating elements */}
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 20,
+                right: 20,
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                background: 'linear-gradient(45deg, #4facfe, #00f2fe)',
+                opacity: 0.3,
+                animation: 'float 6s ease-in-out infinite',
+                '@keyframes float': {
+                  '0%, 100%': { transform: 'translateY(0px)' },
+                  '50%': { transform: 'translateY(-20px)' }
+                }
+              }}
+            />
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: 30,
+                left: 30,
+                width: 20,
+                height: 20,
+                borderRadius: '50%',
+                background: 'linear-gradient(45deg, #f093fb, #f5576c)',
+                opacity: 0.4,
+                animation: 'float 4s ease-in-out infinite reverse',
+              }}
+            />
+
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <motion.div
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ duration: 1, ease: "backOut" }}
+                >
+                  <Box
+                    sx={{
+                      width: { xs: 70, md: 80 },
+                      height: { xs: 70, md: 80 },
+                      mr: 3,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #fff 0%, #f8fafc 100%)',
+                      boxShadow: '0 10px 30px rgba(102, 126, 234, 0.2), 0 0 0 3px rgba(102, 126, 234, 0.1)',
+                      position: 'relative',
+                      '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        top: -3,
+                        left: -3,
+                        right: -3,
+                        bottom: -3,
+                        borderRadius: '50%',
+                        background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                        zIndex: -1,
+                        animation: 'spin 20s linear infinite',
+                        '@keyframes spin': {
+                          '0%': { transform: 'rotate(0deg)' },
+                          '100%': { transform: 'rotate(360deg)' }
+                        }
+                      }
+                    }}
+                  >
+                    <img 
+                      src="/exjobnetlogo.png" 
+                      alt="ExJobNet Logo"
+                      style={{ width: '75%', height: '75%', objectFit: 'contain' }}
+                    />
+                  </Box>
+                </motion.div>
+                <Box sx={{ flex: 1 }}>
+                  <motion.div
+                    initial={{ opacity: 0, x: -50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.8, delay: 0.2 }}
+                  >
+                    <Typography
+                      variant={isMobileOrSmallTablet ? "h4" : "h3"}
+                      sx={{
+                        fontWeight: 900,
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 30%, #f093fb 60%, #4facfe 100%)',
+                        backgroundSize: '200% 100%',
+                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        lineHeight: 1.1,
+                        mb: 1,
+                        animation: 'gradient 3s ease infinite',
+                        '@keyframes gradient': {
+                          '0%, 100%': { backgroundPosition: '0% 50%' },
+                          '50%': { backgroundPosition: '100% 50%' }
+                        }
+                      }}
+                    >
+                      Professional Network
+                    </Typography>
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, x: -30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.8, delay: 0.4 }}
+                  >
+                    <Typography 
+                      variant={isMobileOrSmallTablet ? "h6" : "h5"}
+                      sx={{ 
+                        fontWeight: 700,
+                        background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        mb: 1,
+                      }}
+                    >
+                      Welcome back, {user?.firstName || 'Professional'}! 👋
+                    </Typography>
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, delay: 0.6 }}
+                  >
+                    <Typography 
+                      variant="body1" 
+                      sx={{ 
+                        fontWeight: 600,
+                        color: 'text.secondary',
+                        fontStyle: 'italic',
+                        letterSpacing: '0.5px',
+                      }}
+                    >
+                      🚀 Connect • 💡 Share • 🌱 Grow Together
+                    </Typography>
+                  </motion.div>
+                  
+                  {/* Action Buttons for Employers */}
+                  {hasRole(UserRole.EMPLOYER) && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.8, delay: 0.8 }}
+                      style={{ marginTop: '16px' }}
+                    >
+                      <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', gap: 2 }}>
+                        <Button
+                          variant="contained"
+                          size="large"
+                          startIcon={<Add />}
+                          onClick={() => navigate('/app/jobs/create')}
+                          sx={{
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            borderRadius: 2,
+                            px: 3,
+                            py: 1.5,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            fontSize: '1.1rem',
+                            boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                              boxShadow: '0 12px 35px rgba(102, 126, 234, 0.4)',
+                              transform: 'translateY(-2px)',
+                            },
+                          }}
+                        >
+                          Create Job Post
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="large"
+                          startIcon={<People />}
+                          onClick={() => navigate('/app/employer/candidates')}
+                          sx={{
+                            borderColor: '#667eea',
+                            color: '#667eea',
+                            borderWidth: 2,
+                            borderRadius: 2,
+                            px: 3,
+                            py: 1.5,
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            fontSize: '1.1rem',
+                            '&:hover': {
+                              borderColor: '#5a6fd8',
+                              color: '#5a6fd8',
+                              backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                              transform: 'translateY(-2px)',
+                              boxShadow: '0 8px 25px rgba(102, 126, 234, 0.2)',
+                            },
+                          }}
+                        >
+                          View Applicants
+                        </Button>
+                      </Stack>
+                    </motion.div>
+                  )}
+                </Box>
+              </Box>
+            </motion.div>
+          </Box>
+        </motion.div>
+
+        {/* Mobile & Small Tablet Horizontal Quick Actions - Connected to App Bar */}
+        {isMobile && !hasRole(UserRole.EMPLOYER) && (
+          <Box sx={{ 
+            position: 'fixed',
+            top: 64, // Exactly at app bar bottom - NO gap
+            left: 0,
+            right: 0,
+            zIndex: 1600, // Higher than app bar to ensure always visible
+            backgroundColor: theme.palette.background.paper,
+            // Connected styling - no top border to merge with app bar
+            borderTop: 'none', // No top border to connect seamlessly
+            borderBottom: `1px solid ${theme.palette.divider}`,
+            py: { xs: 1, sm: 1.5 }, // Better vertical padding for small tablets
+            px: 0,
+            // Shadow only on bottom to show connection to app bar
+            boxShadow: `0 2px 8px ${alpha(theme.palette.common.black, 0.1)}`,
+            // Ensure it looks connected to the app bar above
+            background: theme.palette.background.paper,
+            // Add a subtle top border that matches app bar bottom
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '1px',
+              backgroundColor: theme.palette.divider,
+              opacity: 0.3
+            }
+          }}>
+            <Container maxWidth="lg" sx={{ px: { xs: 1.5, sm: 2.5 } }}>
+              <Box sx={{
+                display: 'flex',
+                overflowX: 'auto',
+                gap: { xs: 1.5, sm: 2 }, // Responsive gap
+                '&::-webkit-scrollbar': {
+                  display: 'none'
+                },
+                scrollbarWidth: 'none',
+                py: 0,
+                alignItems: 'center',
+                // Add padding to ensure first/last items aren't cut off
+                paddingLeft: { xs: '2px', sm: '4px' },
+                paddingRight: { xs: '2px', sm: '4px' },
+              }}>
+                {[
+                  { 
+                    label: 'All Posts', 
+                    icon: <Timeline sx={{ fontSize: { xs: 16, sm: 18 } }} />, 
+                    path: '/app/social',
+                    isActive: currentTab === 0,
+                    gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                  },
+                  { 
+                    label: 'Interview', 
+                    icon: <RecordVoiceOver sx={{ fontSize: { xs: 16, sm: 18 } }} />, 
+                    path: '/app/interview',
+                    gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+                  },
+                  { 
+                    label: 'Smart Exams', 
+                    icon: <Quiz sx={{ fontSize: { xs: 16, sm: 18 } }} />, 
+                    path: '/app/exams',
+                    gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+                  },
+                  { 
+                    label: 'CV Builder', 
+                    icon: <Assignment sx={{ fontSize: { xs: 16, sm: 18 } }} />, 
+                    path: '/app/cv-builder',
+                    gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+                  },
+                  { 
+                    label: 'Search Jobs', 
+                    icon: <Search sx={{ fontSize: { xs: 16, sm: 18 } }} />, 
+                    path: '/app/jobs',
+                    gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
+                  },
+                  { 
+                    label: 'Chat', 
+                    icon: <Chat sx={{ fontSize: { xs: 16, sm: 18 } }} />, 
+                    path: '/app/chat',
+                    gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+                    badge: unreadMessages
+                  },
+                  { 
+                    label: 'Profile', 
+                    icon: <AccountCircle sx={{ fontSize: { xs: 16, sm: 18 } }} />, 
+                    path: '/app/profile',
+                    gradient: 'linear-gradient(135deg, #d299c2 0%, #fef9d7 100%)'
+                  }
+                ].map((action, index) => (
+                  <Box
+                    key={index}
+                    onClick={() => {
+                      if (action.path) {
+                        navigate(action.path);
+                      } else if (action.label === 'All Posts') {
+                        setCurrentTab(0);
+                      }
+                    }}
+                    sx={{
+                      minWidth: 'fit-content',
+                      height: { xs: 40, sm: 44 }, // Better height for small tablets
+                      px: { xs: 2, sm: 2.5 }, // Responsive padding
+                      borderRadius: { xs: 18, sm: 20 }, // Slightly different radius for mobile
+                      background: action.isActive 
+                        ? '#4caf50' // Green color like in screenshot
+                        : alpha(theme.palette.text.primary, 0.05),
+                      border: action.isActive 
+                        ? 'none'
+                        : `1px solid ${alpha(theme.palette.text.primary, 0.1)}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: { xs: 0.8, sm: 1 }, // Responsive gap
+                      cursor: 'pointer',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      transition: 'all 0.2s ease-in-out',
+                      flexShrink: 0, // Prevent shrinking in flex container
+                      '&:hover': {
+                        background: action.isActive 
+                          ? '#45a049' // Darker green on hover
+                          : alpha(theme.palette.text.primary, 0.08),
+                        transform: 'translateY(-1px)',
+                        boxShadow: action.isActive 
+                          ? `0 4px 12px ${alpha('#4caf50', 0.3)}`
+                          : `0 2px 8px ${alpha(theme.palette.common.black, 0.1)}`
+                      },
+                      '&:active': {
+                        transform: 'translateY(0px)',
+                      },
+                    }}
+                  >
+                    <Box sx={{ 
+                      color: action.isActive ? 'white' : theme.palette.text.secondary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      position: 'relative'
+                    }}>
+                      {React.cloneElement(action.icon)}
+                      {/* Badge for messages */}
+                      {action.badge && action.badge > 0 && (
+                        <Box sx={{
+                          position: 'absolute',
+                          top: -6,
+                          right: -6,
+                          background: 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)',
+                          borderRadius: '50%',
+                          minWidth: { xs: 14, sm: 16 },
+                          height: { xs: 14, sm: 16 },
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: { xs: '0.6rem', sm: '0.65rem' },
+                          fontWeight: 600,
+                          color: 'white',
+                          border: `2px solid ${theme.palette.background.paper}`,
+                          boxShadow: '0 2px 4px rgba(244, 67, 54, 0.4)'
+                        }}>
+                          {action.badge > 99 ? '99+' : action.badge}
+                        </Box>
+                      )}
+                    </Box>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: action.isActive ? 600 : 500,
+                        fontSize: { xs: '0.75rem', sm: '0.8rem' }, // Better responsive font sizes
+                        color: action.isActive ? 'white' : theme.palette.text.secondary,
+                        whiteSpace: 'nowrap',
+                        letterSpacing: '0.2px'
+                      }}
+                    >
+                      {action.label}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Container>
+          </Box>
+        )}
+
+        {/* Small Tablet Left Sidebar Quick Actions */}
+        {isSmallTablet && !hasRole(UserRole.EMPLOYER) && (
+          <Box sx={{
+            position: 'fixed',
+            top: 64, // Below app bar
+            left: 0,
+            width: 80,
+            height: 'calc(100vh - 64px)',
+            backgroundColor: theme.palette.background.paper,
+            borderRight: `1px solid ${theme.palette.divider}`,
+            zIndex: 1500,
+            py: 2,
+            px: 1,
+            overflowY: 'auto',
+            '&::-webkit-scrollbar': {
+              width: 4,
+            },
+            '&::-webkit-scrollbar-track': {
+              background: 'transparent',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: alpha(theme.palette.primary.main, 0.3),
+              borderRadius: 2,
+            },
+          }}>
+            <Box sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1.5,
+              alignItems: 'center',
+            }}>
+              {[
+                { 
+                  label: 'All Posts', 
+                  icon: <Timeline />, 
+                  path: '/app/social',
+                  isActive: currentTab === 0,
+                  gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                },
+                { 
+                  label: 'Interview', 
+                  icon: <RecordVoiceOver />, 
+                  path: '/app/interview',
+                  gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+                },
+                { 
+                  label: 'Smart Exams', 
+                  icon: <Quiz />, 
+                  path: '/app/exams',
+                  gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+                },
+                { 
+                  label: 'CV Builder', 
+                  icon: <Assignment />, 
+                  path: '/app/cv-builder',
+                  gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+                },
+                { 
+                  label: 'Search Jobs', 
+                  icon: <Search />, 
+                  path: '/app/jobs',
+                  gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
+                },
+                { 
+                  label: 'Chat', 
+                  icon: <Chat />, 
+                  path: '/app/chat',
+                  gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+                  badge: unreadMessages
+                },
+                { 
+                  label: 'Profile', 
+                  icon: <AccountCircle />, 
+                  path: '/app/profile',
+                  gradient: 'linear-gradient(135deg, #d299c2 0%, #fef9d7 100%)'
+                }
+              ].map((action, index) => (
+                <Tooltip 
+                  key={index} 
+                  title={action.label} 
+                  placement="right"
+                  arrow
+                >
+                  <Box
+                    onClick={() => {
+                      if (action.path) {
+                        navigate(action.path);
+                      }
+                    }}
+                    sx={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: 3,
+                      background: action.isActive ? action.gradient : alpha(theme.palette.text.primary, 0.05),
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      transition: 'all 0.3s ease-in-out',
+                      border: action.isActive ? 'none' : `1px solid ${alpha(theme.palette.text.primary, 0.1)}`,
+                      '&:hover': {
+                        background: action.isActive ? action.gradient : alpha(theme.palette.primary.main, 0.1),
+                        transform: 'translateY(-2px)',
+                        boxShadow: `0 8px 25px ${alpha(theme.palette.primary.main, 0.3)}`,
+                      },
+                      '&:active': {
+                        transform: 'translateY(0)',
+                      },
+                    }}
+                  >
+                    <Box sx={{ 
+                      color: action.isActive ? 'white' : theme.palette.text.secondary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'relative'
+                    }}>
+                      {React.cloneElement(action.icon, { 
+                        sx: { fontSize: 24 } 
+                      })}
+                      {/* Badge for messages */}
+                      {action.badge && action.badge > 0 && (
+                        <Box sx={{
+                          position: 'absolute',
+                          top: -8,
+                          right: -8,
+                          background: 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)',
+                          borderRadius: '50%',
+                          minWidth: 18,
+                          height: 18,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.65rem',
+                          fontWeight: 600,
+                          color: 'white',
+                          border: `2px solid ${theme.palette.background.paper}`,
+                          boxShadow: '0 2px 8px rgba(244, 67, 54, 0.5)'
+                        }}>
+                          {action.badge > 99 ? '99+' : action.badge}
+                        </Box>
+                      )}
+                    </Box>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontSize: '0.5rem',
+                        fontWeight: 600,
+                        color: action.isActive ? 'white' : theme.palette.text.secondary,
+                        textAlign: 'center',
+                        mt: 0.5,
+                        lineHeight: 1,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        maxWidth: '100%',
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap',
+                        textOverflow: 'ellipsis'
+                      }}
+                    >
+                      {action.label.split(' ')[0]} {/* Show only first word */}
+                    </Typography>
+                  </Box>
+                </Tooltip>
+              ))}
+            </Box>
+          </Box>
+        )}
+
+        {/* Desktop Quick Actions - User friendly for desktop mode */}
+        {!isMobileOrSmallTablet && !hasRole(UserRole.EMPLOYER) && (
+          <Container 
+            maxWidth="lg" 
+            sx={{ 
+              px: { xs: 1, sm: 2, md: 3 },
+              mb: 3,
+              maxWidth: { sm: '95%', md: '90%' }
+            }}
+          >
+            <Card
+              sx={{
+                borderRadius: 3,
+                overflow: 'hidden',
+                position: 'relative',
+                background: theme.palette.mode === 'dark'
+                  ? 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.02) 100%)'
+                  : 'linear-gradient(135deg, #ffffff 0%, #fafbff 50%, #f0f4f8 100%)',
+                backdropFilter: 'blur(25px)',
+                boxShadow: theme.palette.mode === 'dark'
+                  ? '0 8px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)'
+                  : '0 8px 24px rgba(102, 126, 234, 0.12), 0 0 0 1px rgba(102, 126, 234, 0.08)',
+                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(102, 126, 234, 0.08)'}`,
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 2,
+                  background: 'linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%)',
+                  zIndex: 1,
+                },
+              }}
+            >
+              <CardContent sx={{ p: { sm: 1.5, md: 2, lg: 2.5 } }}> {/* Better responsive padding */}
+                {/* Header */}
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: { sm: 1.5, md: 2, lg: 2.5 }, position: 'relative' }}>
+                  <Box
+                    sx={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      borderRadius: { sm: 1.5, md: 2 }, // Responsive border radius
+                      p: { sm: 0.8, md: 1 }, // Responsive padding
+                      mr: { sm: 1.2, md: 1.5 }, // Responsive margin
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                    }}
+                  >
+                    <TrendingUp sx={{ fontSize: { sm: 18, md: 20 }, color: 'white' }} />
+                  </Box>
+                  
+                  <Box>
+                    <Typography 
+                      variant="subtitle1" 
+                      fontWeight="700"
+                      sx={{ 
+                        fontSize: { sm: '0.9rem', md: '1rem' }, // Better responsive font sizes
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        backgroundClip: 'text',
+                        textFillColor: 'transparent',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                      }}
+                    >
+                      ⚡ Quick Actions
+                    </Typography>
+                    <Typography 
+                      variant="caption" 
+                      color="text.secondary"
+                      sx={{ 
+                        fontSize: { sm: '0.7rem', md: '0.75rem' }, // Better responsive caption size
+                        fontWeight: 500,
+                        opacity: 0.7,
+                      }}
+                    >
+                      Career tools
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* Horizontal Layout for Actions on Tablets */}
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { 
+                      sm: 'repeat(auto-fit, minmax(70px, 85px))', // Better sizing for small tablets
+                      md: 'repeat(auto-fit, minmax(75px, 90px))', // Optimized for larger tablets
+                      lg: 'repeat(auto-fit, minmax(80px, 95px))', // Larger for desktop tablets
+                    },
+                    gap: { sm: 0.6, md: 0.8, lg: 1 }, // Better responsive gaps
+                    justifyContent: 'start',
+                    width: '100%',
+                    // Ensure proper alignment on smaller tablets
+                    justifyItems: 'start',
+                  }}
+                >
+                  {quickActions.slice(0, 8).map((action, index) => (
+                    <motion.div
+                      key={action.title}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3, delay: 0.05 * index }}
+                      whileHover={{ 
+                        scale: 1.02,
+                        transition: { duration: 0.2 }
+                      }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Card
+                        sx={{
+                          height: { sm: '64px', md: '68px', lg: '72px' }, // Better heights for different screen sizes
+                          width: { sm: '78px', md: '82px', lg: '86px' }, // Better widths for different screen sizes
+                          maxWidth: { sm: '85px', md: '90px', lg: '95px' },
+                          minWidth: { sm: '70px', md: '75px', lg: '80px' },
+                          borderRadius: { sm: 2.5, md: 3, lg: 3.5 }, // More refined border radius
+                          background: action.gradient,
+                          color: 'white',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          border: 'none',
+                          boxShadow: `0 4px 16px ${action.shadowColor}`,
+                          '&:hover': {
+                            transform: 'translateY(-2px)',
+                            boxShadow: `0 8px 24px ${action.shadowColor}`,
+                            '& .card-icon': {
+                              transform: 'scale(1.1)',
+                            },
+                          },
+                          '&:active': {
+                            transform: 'translateY(-1px)',
+                          },
+                          '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            right: 0,
+                            width: '40%',
+                            height: '40%',
+                            background: `radial-gradient(circle at top right, ${alpha('#fff', 0.2)} 0%, transparent 70%)`,
+                            opacity: 0.15,
+                          },
+                        }}
+                        onClick={() => navigate(action.path)}
+                      >
+                        <CardContent sx={{ 
+                          p: { sm: 0.5, md: 0.6, lg: 0.7 }, // Better padding for different sizes
+                          height: '100%', 
+                          display: 'flex', 
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: { sm: 0.3, md: 0.4, lg: 0.5 }, // Better responsive gaps
+                          position: 'relative',
+                          zIndex: 1,
+                          textAlign: 'center',
+                          '&:last-child': { pb: { sm: 0.5, md: 0.6, lg: 0.7 } }
+                        }}>
+                          {/* Icon */}
+                          <Box
+                            className="card-icon"
+                            sx={{
+                              background: `linear-gradient(135deg, ${alpha('#fff', 0.25)} 0%, ${alpha('#fff', 0.15)} 100%)`,
+                              borderRadius: { sm: 1.2, md: 1.5, lg: 1.8 }, // Better border radius progression
+                              p: { sm: 0.4, md: 0.5, lg: 0.6 }, // Better padding for icons
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              backdropFilter: 'blur(10px)',
+                              border: `1px solid ${alpha('#fff', 0.2)}`,
+                              transition: 'transform 0.3s ease',
+                              flexShrink: 0,
+                              minWidth: { sm: '24px', md: '26px', lg: '28px' }, // Better icon container sizes
+                              minHeight: { sm: '24px', md: '26px', lg: '28px' },
+                            }}
+                          >
+                            {React.cloneElement(action.icon, { 
+                              sx: { fontSize: { sm: 14, md: 16, lg: 18 } } // Better icon sizes for readability
+                            })}
+                          </Box>
+
+                          {/* Label */}
+                          <Typography 
+                            variant="caption"
+                            sx={{ 
+                              fontSize: { sm: '0.55rem', md: '0.6rem', lg: '0.65rem' }, // Better font sizes for readability
+                              fontWeight: 600, // Slightly reduced font weight for better readability
+                              lineHeight: 1.1,
+                              textAlign: 'center',
+                              color: 'inherit',
+                              textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                              textTransform: 'uppercase',
+                              letterSpacing: { sm: '0.3px', md: '0.4px', lg: '0.5px' }, // Responsive letter spacing
+                              maxWidth: '100%',
+                              overflow: 'hidden',
+                              whiteSpace: 'nowrap',
+                              textOverflow: 'ellipsis',
+                              // Better text wrapping for smaller screens
+                              '@supports (display: -webkit-box)': {
+                                whiteSpace: 'normal',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                              }
+                            }}
+                          >
+                            {action.title}
+                          </Typography>
+
+                          {/* Badge for actions with counts */}
+                          {(action.title === 'Messages' && unreadMessages > 0) && (
+                            <Badge 
+                              badgeContent={unreadMessages > 99 ? '99+' : unreadMessages} 
+                              color="error"
+                              sx={{
+                                '& .MuiBadge-badge': {
+                                  background: 'rgba(255,255,255,0.9)',
+                                  color: action.color,
+                                  fontWeight: '700',
+                                  fontSize: '0.6rem',
+                                  minWidth: '16px',
+                                  height: '16px',
+                                },
+                              }}
+                            />
+                          )}
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </Box>
+              </CardContent>
+            </Card>
+          </Container>
+        )}
+
+        {/* Main Content Grid - Reduced width for tablets */}
+        <Container 
+          maxWidth="xl" 
+          sx={{ 
+            px: { xs: 1, sm: 2, md: 3 },
+            pt: isMobileOrSmallTablet ? { xs: 8, sm: 8 } : 0, // Account for app bar (64px) + navigation bar (~56px)
+            maxWidth: {
+              xs: '100%',
+              sm: '98%', // Increased width for small tablets
+              md: '80%', // Reduced width for smaller tablets  
+              lg: '1200px', // Reduced width for large screens
+              xl: '1400px'  // Reduced maximum width for extra large screens
+            }
+          }}
+        >
+          <Grid 
+            container 
+            spacing={{ xs: 2.5, sm: 2, md: 1.5, lg: 3, xl: 4 }} // Reduced spacing for tablets
+            sx={{
+              maxWidth: '100%',
+              justifyContent: 'center',
+              mx: 'auto',
+              '& .MuiGrid-item': {
+                // Ensure grid items don't exceed their allocated space
+                minWidth: 0,
+                maxWidth: '100%',
+              }
+            }}
+          >
+            {/* Left Sidebar - Suggestions (moved from right) */}
+            {!isMobileOrSmallTablet && (
+              <Grid item xl={3} lg={3} md={2} sm={12}>
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.4 }}
+                >
+                  <Stack spacing={isSmallTablet ? 1.5 : (isTablet ? 2 : 3)}>
+                    {/* Suggested Connections */}
+                    <Card
+                      sx={{
+                        borderRadius: { xs: 2, md: 3 },
+                        overflow: 'hidden',
+                        position: 'relative',
+                        background: theme.palette.mode === 'dark'
+                          ? 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.02) 100%)'
+                          : 'linear-gradient(135deg, #ffffff 0%, #fafbff 50%, #f0f4f8 100%)',
+                        backdropFilter: 'blur(25px)',
+                        boxShadow: theme.palette.mode === 'dark'
+                          ? '0 8px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)'
+                          : '0 8px 24px rgba(102, 126, 234, 0.12), 0 0 0 1px rgba(102, 126, 234, 0.08)',
+                        border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(102, 126, 234, 0.08)'}`,
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: 2,
+                          background: 'linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%)',
+                          zIndex: 1,
+                        },
+                      }}
+                    >
+                      <CardContent sx={{ p: { xs: 2.5, sm: 2, md: 1.5 } }}>
+                        {/* Header */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 2.5, sm: 2, md: 1.5 }, position: 'relative' }}>
+                          <Box
+                            sx={{
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              borderRadius: 2,
+                              p: 1,
+                              mr: 1.5,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                            }}
+                          >
+                            <Groups sx={{ fontSize: 20, color: 'white' }} />
+                          </Box>
+                          
+                          <Box>
+                            <Typography 
+                              variant="subtitle1" 
+                              fontWeight="700"
+                              sx={{ 
+                                fontSize: '1rem',
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                backgroundClip: 'text',
+                                textFillColor: 'transparent',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                              }}
+                            >
+                              👥 Suggestions
+                            </Typography>
+                            <Typography 
+                              variant="body2" 
+                              color="text.secondary"
+                              sx={{ 
+                                mt: 1,
+                                cursor: 'pointer',
+                                '&:hover': {
+                                  color: 'primary.main',
+                                  textDecoration: 'underline',
+                                },
+                              }}
+                              onClick={() => navigate('/connections')}
+                            >
+                              View All Suggestions
+                            </Typography>
+                          </Box>
+                        </Box>
+
+                        {/* Suggestions List */}
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {suggestionsLoading ? (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                              <CircularProgress size={24} />
+                            </Box>
+                          ) : suggestedUsers.length > 0 ? (
+                            suggestedUsers.slice(0, 4).map((suggestedUser) => (
+                              <Box
+                                key={suggestedUser._id}
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  p: 1.5,
+                                  borderRadius: 2,
+                                  border: theme.palette.mode === 'dark'
+                                    ? '1px solid rgba(255,255,255,0.1)'
+                                    : '1px solid rgba(0,0,0,0.1)',
+                                  background: theme.palette.mode === 'dark'
+                                    ? 'rgba(255,255,255,0.05)'
+                                    : 'rgba(255,255,255,0.8)',
+                                  transition: 'all 0.2s ease-in-out',
+                                  '&:hover': {
+                                    transform: 'translateY(-1px)',
+                                    boxShadow: theme.palette.mode === 'dark'
+                                      ? '0 4px 12px rgba(0,0,0,0.3)'
+                                      : '0 4px 12px rgba(102, 126, 234, 0.15)',
+                                  }
+                                }}
+                              >
+                                <Avatar
+                                  src={suggestedUser.profilePicture}
+                                  sx={{ 
+                                    width: 40, 
+                                    height: 40, 
+                                    mr: 1.5,
+                                    border: '2px solid',
+                                    borderColor: 'primary.main',
+                                  }}
+                                >
+                                  {suggestedUser.firstName?.[0]?.toUpperCase()}
+                                </Avatar>
+                                
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                  <Typography 
+                                    variant="subtitle2" 
+                                    fontWeight="600"
+                                    sx={{ 
+                                      fontSize: '0.875rem',
+                                      color: 'text.primary',
+                                      lineHeight: 1.2,
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    {suggestedUser.firstName} {suggestedUser.lastName}
+                                  </Typography>
+                                  <Typography 
+                                    variant="caption" 
+                                    color="text.secondary"
+                                    sx={{ 
+                                      fontSize: '0.75rem',
+                                      lineHeight: 1.1,
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    {suggestedUser.jobTitle || 'Professional'}
+                                  </Typography>
+                                </Box>
+                                
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  disabled={connectingUsers.includes(suggestedUser._id)}
+                                  onClick={() => handleConnect(suggestedUser._id)}
+                                  sx={{
+                                    minWidth: 'auto',
+                                    px: 1.5,
+                                    py: 0.5,
+                                    fontSize: '0.75rem',
+                                    borderRadius: 1.5,
+                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                    '&:hover': {
+                                      background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                                    }
+                                  }}
+                                >
+                                  {connectingUsers.includes(suggestedUser._id) ? (
+                                    <CircularProgress size={12} color="inherit" />
+                                  ) : (
+                                    <PersonAdd sx={{ fontSize: 14 }} />
+                                  )}
+                                </Button>
+                              </Box>
+                            ))
+                          ) : (
+                            <Box sx={{ textAlign: 'center', py: 2 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                No suggestions available
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
+                      </CardContent>
+                    </Card>
+                    {/* All FeedSidebar Content - Enhanced */}
+                    <FeedSidebar />
+                  </Stack>
+                </motion.div>
+              </Grid>
+            )}
+
+            {/* Center Feed - Enhanced sizing without sidebars */}
+            <Grid item xs={12} sm={12} md={isMobileOrSmallTablet ? 12 : 9} lg={isMobileOrSmallTablet ? 12 : 10} xl={isMobileOrSmallTablet ? 12 : 10}>
+                                    border: 'none',
+                                    boxShadow: `0 4px 16px ${action.shadowColor}`,
+                                    '&:hover': {
+                                      transform: 'translateY(-2px)',
+                                      boxShadow: `0 8px 24px ${action.shadowColor}`,
+                                      '& .card-icon': {
+                                        transform: 'scale(1.1)',
+                                      },
+                                    },
+                                    '&::before': {
+                                      content: '""',
+                                      position: 'absolute',
+                                      top: 0,
+                                      right: 0,
+                                      width: '40%',
+                                      height: '40%',
+                                      background: `radial-gradient(circle at top right, ${alpha('#fff', 0.2)} 0%, transparent 70%)`,
+                                      opacity: 0.15,
+                                    },
+                                  }}
+                                  onClick={() => navigate(action.path)}
+                                >
+                                  <CardContent sx={{ 
+                                    p: { xs: 1, sm: 1.2, md: 1, lg: 1.8 },
+                                    height: '100%', 
+                                    display: 'flex', 
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'flex-start',
+                                    gap: { xs: 0.8, sm: 1, md: 0.8, lg: 1.5 },
+                                    position: 'relative',
+                                    zIndex: 1,
+                                    textAlign: 'left',
+                                    '&:last-child': { pb: { xs: 1, sm: 1.2, md: 1, lg: 1.8 } }
+                                  }}>
+                                    {/* Icon */}
+                                    <Box
+                                      className="card-icon"
+                                      sx={{
+                                        background: `linear-gradient(135deg, ${alpha('#fff', 0.25)} 0%, ${alpha('#fff', 0.15)} 100%)`,
+                                        borderRadius: { xs: 1.2, sm: 1.4, lg: 1.6 },
+                                        p: { xs: 0.5, sm: 0.6, md: 0.5, lg: 0.8 },
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        backdropFilter: 'blur(10px)',
+                                        border: `1px solid ${alpha('#fff', 0.2)}`,
+                                        transition: 'transform 0.3s ease',
+                                        flexShrink: 0,
+                                      }}
+                                    >
+                                      {React.cloneElement(action.icon, { 
+                                        sx: { fontSize: { xs: 14, sm: 16, md: 14, lg: 20 } } 
+                                      })}
+                                    </Box>
+
+                                    {/* Content */}
+                                    <Box sx={{ 
+                                      minWidth: 0, 
+                                      flex: 1,
+                                      textAlign: 'left',
+                                      overflow: 'hidden'
+                                    }}>
+                                      <Typography 
+                                        variant="caption" 
+                                        fontWeight="700" 
+                                        sx={{ 
+                                          fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.65rem', lg: '0.8rem' },
+                                          lineHeight: 1.1,
+                                          display: 'block',
+                                          mb: 0.2,
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                          whiteSpace: 'nowrap',
+                                        }}
+                                      >
+                                        {action.title}
+                                      </Typography>
+                                      <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                          opacity: 0.8, 
+                                          fontSize: { xs: '0.5rem', sm: '0.55rem', md: '0.6rem', lg: '0.65rem' },
+                                          fontWeight: 600,
+                                          textTransform: 'uppercase',
+                                          letterSpacing: '0.3px',
+                                          display: 'block',
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                          whiteSpace: 'nowrap',
+                                        }}
+                                      >
+                                        {action.stats}
+                                      </Typography>
+                                    </Box>
+
+                                    {/* Badge */}
+                                    {action.badge && action.badge > 0 && (
+                                      <Badge
+                                        badgeContent={action.badge > 9 ? '9+' : action.badge}
+                                        sx={{
+                                          '& .MuiBadge-badge': {
+                                            background: 'rgba(255,255,255,0.9)',
+                                            color: action.color,
+                                            fontWeight: '700',
+                                            fontSize: '0.6rem',
+                                            minWidth: '16px',
+                                            height: '16px',
+                                          },
+                                        }}
+                                      />
+                                    )}
+                                  </CardContent>
+                                </Card>
+                              </motion.div>
+                            ))}
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    )}
+                    {/* All FeedSidebar Content - Enhanced */}
+                    <FeedSidebar />
+                  </Stack>
+                </motion.div>
+              </Grid>
+            )}
+
+            {/* Center Feed - Enhanced sizing without sidebars */}
+            <Grid item xs={12} sm={12} md={isMobileOrSmallTablet ? 12 : 9} lg={isMobileOrSmallTablet ? 12 : 10} xl={isMobileOrSmallTablet ? 12 : 10}>
+              <Box
+                sx={{
+                  maxWidth: { 
+                    xs: '100%', 
+                    sm: '100%', 
+                    md: '800px', // Increased max width for tablets without sidebars
+                    lg: '1000px', // Increased max width for large screens without sidebars
+                    xl: '1200px'  // Increased max width for extra large screens without sidebars
+                  },
+                  width: '100%',
+                  overflow: 'hidden',
+                  minHeight: '60vh',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  mx: 'auto', // Center the content within the grid column
+                  px: { xs: 1, sm: 1.5, md: 2, lg: 3 }, // Enhanced padding progression
+                }}
+              >
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
+              >
+                {/* Enhanced Navigation Tabs - Responsive */}
+                <Card 
+                  sx={{ 
+                    mb: { xs: 2, sm: 2, md: 3, lg: 4 }, 
+                    borderRadius: { xs: 2, md: 3 },
+                    background: theme.palette.mode === 'dark'
+                      ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
+                      : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                    backdropFilter: 'blur(20px)',
+                    boxShadow: theme.palette.mode === 'dark'
+                      ? '0 4px 16px rgba(0,0,0,0.3)'
+                      : '0 4px 16px rgba(102, 126, 234, 0.1)',
+                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(102, 126, 234, 0.1)'}`,
+                    overflow: 'hidden',
+                    position: 'relative',
+                    mx: { xs: 0, sm: 'auto' },
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: '2px',
+                      background: 'linear-gradient(90deg, #667eea 0%, #764ba2 50%, #4facfe 100%)',
+                    }
+                  }}
+                >
+                  <Tabs
+                    value={currentTab}
+                    onChange={handleTabChange}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    allowScrollButtonsMobile
+                    sx={{
+                      '& .MuiTab-root': {
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        py: { xs: 1.5, md: 2 },
+                        px: { xs: 1, md: 2 },
+                        fontSize: { xs: '0.85rem', md: '0.95rem' },
+                        minWidth: { xs: 'auto', md: 90 },
+                        transition: 'all 0.3s ease',
+                        '&.Mui-selected': {
+                          background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
+                          color: theme.palette.primary.main,
+                        },
+                        '&:hover': {
+                          background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
+                        }
+                      },
+                      '& .MuiTabs-indicator': {
+                        height: 3,
+                        borderRadius: '3px 3px 0 0',
+                        background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+                      },
+                      '& .MuiTabs-scrollButtons': {
+                        color: theme.palette.primary.main,
+                      },
+                    }}
+                  >
+                    {tabLabels.map((label, index) => (
+                      <Tab key={index} label={label} />
+                    ))}
+                  </Tabs>
+                </Card>
+
+
+
+
+
+                {/* Create Post Section - Responsive */}
+                {(showCreatePost || !isMobileOrSmallTablet) && (
+                  <Box sx={{ mb: { xs: 2, sm: 2, md: 3 }, mx: { xs: 0, sm: 'auto' } }}>
+                    <CreatePost
+                      onPostCreated={handlePostCreated}
+                      onCancel={isMobileOrSmallTablet ? () => setShowCreatePost(false) : undefined}
+                    />
+                  </Box>
+                )}
+
+                {/* Feed Content */}
+                {tabLabels.map((_, index) => (
+                  <TabPanel key={index} value={currentTab} index={index}>
+                    {error && (
+                      <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+                        {error}
+                      </Alert>
+                    )}
+
+                    {(!hasRole(UserRole.EMPLOYER) && index === 1) ? (
+                      // Job Posts Tab - Show matched jobs (only for non-employers)
+                      <>
+                        {!profileValidation || profileValidation.completionPercentage < 30 ? (
+                          <Card sx={{ 
+                            p: 4, 
+                            textAlign: 'center', 
+                            borderRadius: 3,
+                            background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.05) 0%, rgba(255, 193, 7, 0.05) 100%)',
+                            border: '1px solid rgba(255, 152, 0, 0.2)'
+                          }}>
+                            <Avatar sx={{ 
+                              width: 64, 
+                              height: 64, 
+                              mx: 'auto', 
+                              mb: 2,
+                              bgcolor: 'warning.main'
+                            }}>
+                              <AccountCircle sx={{ fontSize: 40 }} />
+                            </Avatar>
+                            <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+                              Complete Your Profile to See Matched Jobs
+                            </Typography>
+                            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                              We need to know more about your skills and experience to show you jobs that fit your profile perfectly.
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                              Profile Completion: {profileValidation?.completionPercentage || 0}% 
+                              (Minimum 30% required)
+                            </Typography>
+                            <Button 
+                              variant="contained" 
+                              startIcon={<PersonAdd />}
+                              onClick={() => navigate(hasRole(UserRole.EMPLOYER) ? '/app/employer/profile' : '/app/profile')}
+                              sx={{
+                                borderRadius: 3,
+                                px: 4,
+                                py: 1.5,
+                                textTransform: 'none',
+                                fontWeight: 'bold',
+                                background: 'linear-gradient(135deg, #FF9800 0%, #FF5722 100%)',
+                                '&:hover': {
+                                  background: 'linear-gradient(135deg, #F57C00 0%, #E64A19 100%)',
+                                  transform: 'translateY(-2px)',
+                                  boxShadow: '0 8px 25px rgba(255, 152, 0, 0.3)'
+                                }
+                              }}
+                            >
+                              Complete Profile
+                            </Button>
+                          </Card>
+                        ) : jobsLoading ? (
+                          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                            <CircularProgress />
+                          </Box>
+                        ) : !matchedJobs || matchedJobs.length === 0 ? (
+                          <Card sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
+                            <Work sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                            <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+                              No Matched Jobs Found
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                              We couldn't find jobs that match your current skills. Try updating your profile with more skills.
+                            </Typography>
+                            <Stack direction="row" spacing={2} justifyContent="center">
+                              <Button 
+                                variant="outlined" 
+                                startIcon={<PersonAdd />}
+                                onClick={() => navigate(hasRole(UserRole.EMPLOYER) ? '/app/employer/profile' : '/app/profile')}
+                                sx={{ borderRadius: 2, textTransform: 'none' }}
+                              >
+                                Update Profile
+                              </Button>
+                              <Button 
+                                variant="contained" 
+                                startIcon={<Search />}
+                                onClick={() => navigate('/app/jobs')}
+                                sx={{ 
+                                  borderRadius: 2, 
+                                  textTransform: 'none',
+                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                }}
+                              >
+                                Browse All Jobs
+                              </Button>
+                            </Stack>
+                          </Card>
+                        ) : (
+                          <Stack spacing={{ xs: 2, sm: 2.5, md: 2, lg: 3.5 }}>
+                            {/* AI-powered job matching header */}
+                            <Card sx={{ 
+                              p: 2, 
+                              borderRadius: 3,
+                              background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
+                              border: '1px solid rgba(102, 126, 234, 0.2)'
+                            }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                <SmartToy color="primary" sx={{ fontSize: 20 }} />
+                                <Typography variant="body2" color="primary" sx={{ fontWeight: 'bold' }}>
+                                  AI-Powered Job Matching
+                                </Typography>
+                              </Box>
+                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                                Showing {matchedJobs?.length || 0} jobs intelligently matched to your profile using advanced AI analysis
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Your skills: {((user as User)?.skills || []).slice(0, 3).join(', ')}
+                                {((user as User)?.skills?.length || 0) > 3 && ` +${((user as User)?.skills?.length || 0) - 3} more`}
+                              </Typography>
+                            </Card>
+
+                            {matchedJobs.map((job, index) => (
+                              <motion.div
+                                key={job._id}
+                                initial={{ opacity: 0, y: 30 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ 
+                                  duration: 0.5, 
+                                  delay: index * 0.1,
+                                  ease: [0.25, 0.46, 0.45, 0.94]
+                                }}
+                                whileHover={{ 
+                                  y: -2,
+                                  transition: { duration: 0.2 }
+                                }}
+                              >
+                                <Card
+                                  sx={{
+                                    borderRadius: { xs: 2, sm: 3, md: 3, lg: 4 },
+                                    overflow: 'hidden',
+                                    background: theme.palette.mode === 'dark'
+                                      ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
+                                      : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                                    backdropFilter: 'blur(20px)',
+                                    boxShadow: theme.palette.mode === 'dark'
+                                      ? { xs: '0 4px 16px rgba(0,0,0,0.2)', sm: '0 6px 24px rgba(0,0,0,0.25)', md: '0 8px 32px rgba(0,0,0,0.3)' }
+                                      : { xs: '0 4px 16px rgba(102, 126, 234, 0.06)', sm: '0 6px 24px rgba(102, 126, 234, 0.07)', md: '0 8px 32px rgba(102, 126, 234, 0.08)' },
+                                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(102, 126, 234, 0.08)'}`,
+                                    position: 'relative',
+                                    cursor: 'pointer',
+                                    '&:hover': {
+                                      boxShadow: theme.palette.mode === 'dark'
+                                        ? '0 12px 40px rgba(0,0,0,0.4)'
+                                        : '0 12px 40px rgba(102, 126, 234, 0.12)',
+                                      transform: 'translateY(-2px)',
+                                      transition: 'all 0.3s ease',
+                                    }
+                                  }}
+                                  onClick={() => handleJobApply(job._id)}
+                                >
+                                  {/* AI Job match indicator */}
+                                  <Box sx={{ position: 'relative' }}>
+                                    <LinearProgress 
+                                      variant="determinate" 
+                                      value={job.matchPercentage || 75} 
+                                      sx={{ 
+                                        height: 4,
+                                        backgroundColor: 'rgba(0,0,0,0.1)',
+                                        '& .MuiLinearProgress-bar': {
+                                          backgroundColor: job.matchPercentage >= 90 ? '#4CAF50' : 
+                                                         job.matchPercentage >= 75 ? '#FF9800' : '#2196F3'
+                                        }
+                                      }}
+                                    />
+                                    <Typography 
+                                      variant="caption" 
+                                      sx={{ 
+                                        position: 'absolute',
+                                        right: 8,
+                                        top: -20,
+                                        fontSize: '0.7rem',
+                                        fontWeight: 'bold',
+                                        color: job.matchPercentage >= 90 ? 'success.main' : 
+                                               job.matchPercentage >= 75 ? 'warning.main' : 'primary.main'
+                                      }}
+                                    >
+                                      🤖 {job.matchPercentage || 75}% AI Match
+                                    </Typography>
+                                  </Box>
+                                  
+                                  <CardContent sx={{ p: 3 }}>
+                                    {/* Header with company and bookmark */}
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
+                                        <Avatar 
+                                          sx={{ 
+                                            width: 48, 
+                                            height: 48, 
+                                            bgcolor: 'primary.main',
+                                            fontSize: '1.2rem',
+                                            fontWeight: 'bold'
+                                          }}
+                                        >
+                                          {job.company?.charAt(0) || 'J'}
+                                        </Avatar>
+                                        <Box sx={{ minWidth: 0, flex: 1 }}>
+                                          <Typography variant="h6" sx={{ 
+                                            fontWeight: 'bold',
+                                            fontSize: '1.1rem',
+                                            lineHeight: 1.2,
+                                            display: '-webkit-box',
+                                            WebkitLineClamp: 2,
+                                            WebkitBoxOrient: 'vertical',
+                                            overflow: 'hidden'
+                                          }}>
+                                            {job.title}
+                                          </Typography>
+                                          <Typography variant="body2" color="text.secondary">
+                                            {job.company}
+                                          </Typography>
+                                        </Box>
+                                      </Box>
+                                      <Tooltip title={bookmarkedJobs.has(job._id) ? 'Remove bookmark' : 'Bookmark job'}>
+                                        <IconButton
+                                          size="small"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleJobBookmark(job._id);
+                                          }}
+                                        >
+                                          {bookmarkedJobs.has(job._id) ? <Bookmark color="primary" /> : <BookmarkBorder />}
+                                        </IconButton>
+                                      </Tooltip>
+                                    </Box>
+
+                                    {/* Job details */}
+                                    <Stack spacing={1} sx={{ mb: 2 }}>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <LocationOn fontSize="small" color="action" />
+                                        <Typography variant="body2" color="text.secondary">
+                                          {job.location || 'Remote'}
+                                        </Typography>
+                                      </Box>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Schedule fontSize="small" color="action" />
+                                        <Typography variant="body2" color="text.secondary">
+                                          {job.type || 'Full-time'}
+                                        </Typography>
+                                      </Box>
+                                      {job.salary && (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                          <AttachMoney fontSize="small" color="action" />
+                                          <Typography variant="body2" color="text.secondary">
+                                            {typeof job.salary === 'object' 
+                                              ? `$${job.salary.min?.toLocaleString()} - $${job.salary.max?.toLocaleString()}`
+                                              : `$${job.salary.toLocaleString()}`
+                                            }
+                                          </Typography>
+                                        </Box>
+                                      )}
+                                    </Stack>
+
+                                    {/* AI-powered Skills match */}
+                                    <Box sx={{ mb: 2 }}>
+                                      <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+                                        🤖 AI Skills Analysis:
+                                      </Typography>
+                                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
+                                        {/* Show AI-matched skills if available */}
+                                        {(job.matchingSkills && job.matchingSkills.length > 0) ? (
+                                          job.matchingSkills.slice(0, 4).map((skill: string, skillIndex: number) => (
+                                            <Chip
+                                              key={skillIndex}
+                                              label={skill}
+                                              size="small"
+                                              color="success"
+                                              variant="filled"
+                                              icon={<SmartToy sx={{ fontSize: 14 }} />}
+                                              sx={{ 
+                                                fontSize: '0.7rem',
+                                                height: 24,
+                                                '& .MuiChip-label': {
+                                                  px: 1
+                                                },
+                                                '& .MuiChip-icon': {
+                                                  fontSize: 14,
+                                                  marginLeft: 1
+                                                }
+                                              }}
+                                            />
+                                          ))
+                                        ) : (
+                                          // Fallback to required skills with basic matching
+                                          job.requiredSkills?.slice(0, 3).map((skill: string, skillIndex: number) => {
+                                            const userSkills = [...((user as User)?.skills || []), ...((user as User)?.technicalSkills?.map(ts => ts.skill) || [])];
+                                            const isMatch = userSkills.some(userSkill => 
+                                              userSkill.toLowerCase().includes(skill.toLowerCase()) ||
+                                              skill.toLowerCase().includes(userSkill.toLowerCase())
+                                            );
+                                            
+                                            return (
+                                              <Chip
+                                                key={skillIndex}
+                                                label={skill}
+                                                size="small"
+                                                color={isMatch ? "primary" : "default"}
+                                                variant={isMatch ? "filled" : "outlined"}
+                                                sx={{ 
+                                                  fontSize: '0.7rem',
+                                                  height: 24,
+                                                  '& .MuiChip-label': {
+                                                    px: 1
+                                                  }
+                                                }}
+                                              />
+                                            );
+                                          })
+                                        )}
+                                        {((job.matchingSkills?.length || job.requiredSkills?.length || 0) > 3) && (
+                                          <Chip
+                                            label={`+${((job.matchingSkills?.length || job.requiredSkills?.length || 0) - 3)} more`}
+                                            size="small"
+                                            variant="outlined"
+                                            sx={{ fontSize: '0.7rem', height: 24 }}
+                                          />
+                                        )}
+                                      </Box>
+                                      {/* AI recommendation reason */}
+                                      {job.recommendationReason && (
+                                        <Typography variant="caption" color="success.main" sx={{ fontStyle: 'italic' }}>
+                                          ✨ {job.recommendationReason}
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  </CardContent>
+
+                                  <CardActions sx={{ px: 3, pb: 2, pt: 0 }}>
+                                    <Button
+                                      variant="contained"
+                                      startIcon={<ArrowForward />}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleJobApply(job._id);
+                                      }}
+                                      sx={{
+                                        borderRadius: 2,
+                                        textTransform: 'none',
+                                        fontWeight: 'bold',
+                                        flex: 1,
+                                        background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
+                                        '&:hover': {
+                                          background: 'linear-gradient(135deg, #45a049 0%, #4CAF50 100%)',
+                                          transform: 'translateY(-1px)',
+                                          boxShadow: '0 6px 20px rgba(76, 175, 80, 0.3)'
+                                        }
+                                      }}
+                                    >
+                                      Apply Now
+                                    </Button>
+                                    <Button
+                                      variant="outlined"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/app/jobs/${job._id}`);
+                                      }}
+                                      sx={{
+                                        borderRadius: 2,
+                                        textTransform: 'none',
+                                        borderColor: 'primary.main',
+                                        color: 'primary.main'
+                                      }}
+                                    >
+                                      View Details
+                                    </Button>
+                                  </CardActions>
+                                </Card>
+                              </motion.div>
+                            ))}
+                          </Stack>
+                        )}
+                      </>
+                    ) : (
+                      // Regular posts for other tabs
+                      <>
+                        {(loading && posts.length === 0) || (index === 1 && jobsLoading) ? (
+                          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                            <CircularProgress />
+                          </Box>
+                        ) : posts.length === 0 ? (
+                          <Card sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
+                            <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+                              No posts found
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Be the first to share something in this category! 🚀
+                            </Typography>
+                          </Card>
+                        ) : (
+                          <Stack 
+                            spacing={{ xs: 3, sm: 3.5, md: 2, lg: 2.5 }} // Increased spacing for better visual hierarchy on small tablets
+                            sx={{
+                              width: '100%',
+                              maxWidth: '100%',
+                              minWidth: 0
+                            }}
+                          >
+                            {posts.filter((p: any) => p && p._id).map((post, postIndex) => (
+                              <motion.div
+                                key={post._id}
+                                initial={{ opacity: 0, y: 30 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ 
+                                  duration: 0.5, 
+                                  delay: postIndex * 0.08, // Slightly faster stagger
+                                  ease: [0.25, 0.46, 0.45, 0.94]
+                                }}
+                                whileHover={{ 
+                                  y: -0.5, // Very subtle hover movement  
+                                  transition: { duration: 0.2 }
+                                }}
+                              >
+                                <Box
+                                  sx={{
+                                    borderRadius: { xs: 3, sm: 4, md: 3, lg: 3 }, // Larger border radius for small tablets
+                                    overflow: 'hidden',
+                                    background: theme.palette.mode === 'dark'
+                                      ? 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)'
+                                      : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                                    backdropFilter: 'blur(20px)',
+                                    boxShadow: theme.palette.mode === 'dark'
+                                      ? { xs: '0 4px 12px rgba(0,0,0,0.15)', sm: '0 6px 20px rgba(0,0,0,0.2)', md: '0 4px 16px rgba(0,0,0,0.2)' }
+                                      : { xs: '0 4px 12px rgba(102, 126, 234, 0.08)', sm: '0 6px 20px rgba(102, 126, 234, 0.1)', md: '0 4px 16px rgba(102, 126, 234, 0.05)' },
+                                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(102, 126, 234, 0.08)'}`,
+                                    position: 'relative',
+                                    mx: 0, // Remove auto margin to prevent width expansion
+                                    width: '100%', // Ensure full width within container
+                                    maxWidth: '100%', // Prevent overflow
+                                    '&::before': {
+                                      content: '""',
+                                      position: 'absolute',
+                                      top: 0,
+                                      left: 0,
+                                      right: 0,
+                                      height: '2px',
+                                      background: 'linear-gradient(90deg, transparent 0%, rgba(102, 126, 234, 0.5) 50%, transparent 100%)',
+                                    },
+                                    '&:hover': {
+                                      boxShadow: theme.palette.mode === 'dark'
+                                        ? '0 8px 32px rgba(0,0,0,0.35)'
+                                        : '0 8px 32px rgba(102, 126, 234, 0.1)',
+                                      transform: 'translateY(-0.5px)', // Very subtle hover transform
+                                      transition: 'all 0.3s ease',
+                                    }
+                                  }}
+                                >
+                                  <PostCard
+                                    post={post}
+                                    onPostUpdate={handlePostUpdate}
+                                    onPostDelete={handlePostDelete}
+                                  />
+                                </Box>
+                              </motion.div>
+                            ))}
+
+                            {/* Enhanced Load More Button */}
+                            {hasMore && index !== 1 && (
+                              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                                <motion.div
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                >
+                                  <Button
+                                    variant="contained"
+                                    onClick={loadMorePosts}
+                                    disabled={loading}
+                                    sx={{
+                                      borderRadius: 4,
+                                      px: 6,
+                                      py: 2,
+                                      textTransform: 'none',
+                                      fontWeight: 700,
+                                      fontSize: '1rem',
+                                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                      boxShadow: '0 8px 25px rgba(102, 126, 234, 0.3)',
+                                      border: 'none',
+                                      '&:hover': {
+                                        background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                                        boxShadow: '0 12px 35px rgba(102, 126, 234, 0.4)',
+                                        transform: 'translateY(-2px)',
+                                      },
+                                      '&:disabled': {
+                                        background: 'linear-gradient(135deg, #ccc 0%, #999 100%)',
+                                        boxShadow: 'none',
+                                      }
+                                    }}
+                                  >
+                                    {loading ? '🔄 Loading...' : '📜 Load More Posts'}
+                                  </Button>
+                                </motion.div>
+                              </Box>
+                            )}
+                          </Stack>
+                        )}
+                      </>
+                    )}
+                  </TabPanel>
+                ))}
+              </motion.div>
+              </Box>
+            </Grid>
+
+            {/* Right Sidebar - Suggestions - Removed for desktop mode */}
+            {false && (
+              <Grid item xl={3} lg={3} md={2} sm={12}>
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.6 }}
+                >
+                  <Stack spacing={isSmallTablet ? 1.5 : (isTablet ? 2 : 3)}>
+                    {/* Suggested Connections */}
+                    <Card
+                      sx={{
+                        borderRadius: { xs: 2, md: 3 },
+                        overflow: 'hidden',
+                        position: 'relative',
+                        background: theme.palette.mode === 'dark'
+                          ? 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.02) 100%)'
+                          : 'linear-gradient(135deg, #ffffff 0%, #fafbff 50%, #f0f4f8 100%)',
+                        backdropFilter: 'blur(25px)',
+                        boxShadow: theme.palette.mode === 'dark'
+                          ? '0 8px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)'
+                          : '0 8px 24px rgba(102, 126, 234, 0.12), 0 0 0 1px rgba(102, 126, 234, 0.08)',
+                        border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(102, 126, 234, 0.08)'}`,
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: 2,
+                          background: 'linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%)',
+                          zIndex: 1,
+                        },
+                      }}
+                    >
+                      <CardContent sx={{ p: { xs: 2.5, sm: 2, md: 1.5 } }}>
+                        {/* Header */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 2.5, sm: 2, md: 1.5 }, position: 'relative' }}>
+                          <Box
+                            sx={{
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              borderRadius: 2,
+                              p: 1,
+                              mr: 1.5,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxShadow: '0 4px 16px rgba(102, 126, 234, 0.3)',
+                            }}
+                          >
+                            <People sx={{ fontSize: { xs: 16, md: 14 }, color: 'white' }} />
+                          </Box>
+                          <Box>
+                            <Typography 
+                              variant="subtitle2" 
+                              fontWeight="700"
+                              sx={{ 
+                                fontSize: { xs: '0.9rem', md: '0.8rem' },
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                backgroundClip: 'text',
+                                textFillColor: 'transparent',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                              }}
+                            >
+                              Suggestions
+                            </Typography>
+                          </Box>
+                        </Box>
+
+                        {/* Suggestions List */}
+                        <Stack spacing={1}>
+                          {suggestedUsers.slice(0, isSmallTablet ? 3 : 4).map((connection, index) => (
+                            <Box
+                              key={index}
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                p: { xs: 1.5, md: 1 },
+                                borderRadius: 2,
+                                backgroundColor: alpha(theme.palette.primary.main, 0.02),
+                                border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}`,
+                                '&:hover': {
+                                  backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                                  boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.1)}`,
+                                }
+                              }}
+                            >
+                              <Avatar 
+                                src={connection.profilePicture || connection.avatar}
+                                sx={{ 
+                                  width: { xs: 40, md: 32 },
+                                  height: { xs: 40, md: 32 },
+                                  mr: 1.5,
+                                  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                                }}
+                              >
+                                {connection.firstName?.[0]}{connection.lastName?.[0]}
+                              </Avatar>
+                              <Box sx={{ minWidth: 0, flex: 1 }}>
+                                <Typography 
+                                  variant="body2" 
+                                  fontWeight="600"
+                                  sx={{ 
+                                    fontSize: { xs: '0.8rem', md: '0.75rem' },
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                >
+                                  {connection.firstName} {connection.lastName}
+                                </Typography>
+                                <Typography 
+                                  variant="caption" 
+                                  color="text.secondary"
+                                  sx={{ 
+                                    fontSize: { xs: '0.7rem', md: '0.65rem' },
+                                    display: 'block',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                >
+                                  {connection.jobTitle || connection.profession}
+                                </Typography>
+                              </Box>
+                              <IconButton 
+                                size="small"
+                                onClick={() => handleConnect(connection._id)}
+                                disabled={connectingUsers.includes(connection._id)}
+                                sx={{ 
+                                  ml: 1,
+                                  p: 0.5,
+                                  width: { xs: 28, md: 24 },
+                                  height: { xs: 28, md: 24 },
+                                  borderRadius: 1,
+                                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                                  '&:hover': {
+                                    backgroundColor: alpha(theme.palette.primary.main, 0.2),
+                                  }
+                                }}
+                              >
+                                <PersonAdd sx={{ fontSize: { xs: 14, md: 12 }, color: theme.palette.primary.main }} />
+                  

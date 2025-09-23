@@ -92,9 +92,9 @@ const FeedSidebar: React.FC = () => {
 
   return (
     <Box sx={{ 
-      width: isTablet ? '100%' : 300, 
-      display: { xs: 'none', md: 'block' },
-      maxWidth: isTablet ? 'none' : '300px'
+      width: '100%', 
+      display: { xs: 'none', sm: 'block' },
+      maxWidth: 'none'
     }}>
       {/* Suggested Connections */}
       <motion.div
@@ -102,7 +102,7 @@ const FeedSidebar: React.FC = () => {
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.1 }}
       >
-        <Box sx={{ mb: isTablet ? 2 : 3 }}>
+        <Box sx={{ mb: { xs: 2, sm: 2.5, md: 3, lg: 3 } }}>
           <SuggestedConnections />
         </Box>
       </motion.div>

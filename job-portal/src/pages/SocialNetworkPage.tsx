@@ -99,6 +99,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { socialNetworkService } from '../services/socialNetworkService';
 import CreateStory from '../components/social/CreateStory';
 import StoryViewer from '../components/social/StoryViewer';
+import StoryReviewInterface from '../components/social/StoryReviewInterface';
 import { enhancedStoryService } from '../services/enhancedStoryService';
 
 // Modern Instagram-like Post Card with improved sizing and layout
@@ -488,6 +489,7 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
   const [showStoryViewer, setShowStoryViewer] = useState(false);
   const [selectedStoryIndex, setSelectedStoryIndex] = useState(0);
   const [storyViewerStories, setStoryViewerStories] = useState<any[]>([]);
+  const [showStoryReview, setShowStoryReview] = useState(false);
 
   // Sample modern posts data
   const samplePosts: SocialPost[] = [
@@ -712,29 +714,107 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
     setStoriesLoading(true);
     try {
       console.log('🔄 Loading stories...');
-      const storiesData = await socialNetworkService.getStoriesFeed(1, 10);
+      const storiesResponse = await enhancedStoryService.getStoriesFeed(1, 10);
       
-      console.log('✅ Stories loaded:', storiesData);
+      console.log('✅ Stories loaded:', storiesResponse);
       
-      // Handle different response formats
-      const storiesArray = Array.isArray(storiesData) ? storiesData : storiesData.data || [];
+      // Handle enhanced story service response format
+      const storiesArray = storiesResponse.success && storiesResponse.data 
+        ? (Array.isArray(storiesResponse.data) ? storiesResponse.data : [storiesResponse.data])
+        : [];
       
-      // Combine with user's "Add story" option
-      const storiesWithAdd = [
-        { id: 'add', type: 'add', user: user },
-        ...storiesArray.map((story: any) => ({
-          id: story._id,
-          type: 'story',
-          user: {
-            name: `${story.author?.firstName || 'User'} ${story.author?.lastName || ''}`.trim(),
-            avatar: story.author?.profilePicture || null
+      // Check if user has an active story (created within last 24 hours)
+      const now = new Date();
+      const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      
+      console.log('🔍 Frontend - Checking for user active story:', {
+        userId: user?._id,
+        userEmail: user?.email,
+        storiesArrayLength: storiesArray.length,
+        last24Hours: last24Hours.toISOString()
+      });
+      
+      const userActiveStory = storiesArray.find((story: any) => {
+        const createdAt = new Date(story.createdAt);
+        const storyAuthorId = story.author?._id?.toString();
+        const userId = user?._id?.toString();
+        const userEmail = user?.email;
+        
+        // More robust user story detection
+        const isUserStory = storyAuthorId === userId || 
+                           storyAuthorId === userEmail ||
+                           story.author?._id === userId ||
+                           story.author?._id === userEmail;
+        
+        // Check if story is still active (not expired)
+        const isActive = !story.expiresAt || new Date(story.expiresAt) > now;
+        
+        console.log('🔍 Frontend - Checking story:', {
+          storyId: story._id,
+          storyAuthor: story.author?._id,
+          storyAuthorId,
+          userId,
+          userEmail,
+          storyCreatedAt: story.createdAt,
+          storyExpiresAt: story.expiresAt,
+          isUserStory,
+          isActive,
+          isWithin24Hours: createdAt > last24Hours
+        });
+        
+        // Return true if it's the user's story and it's still active
+        return isUserStory && isActive;
+      });
+      
+      console.log('🔍 Frontend - User active story found:', userActiveStory ? 'Yes' : 'No');
+      
+      let storiesWithUserStory;
+      
+      if (userActiveStory) {
+        // User has an active story - show it instead of "Add Story"
+        console.log('👤 User has active story, showing it instead of Add Story option');
+        storiesWithUserStory = [
+          {
+            id: userActiveStory._id,
+            type: 'story',
+            user: {
+              name: `${userActiveStory.author?.firstName || 'User'} ${userActiveStory.author?.lastName || ''}`.trim(),
+              avatar: userActiveStory.author?.profilePicture || null
+            },
+            hasViewed: false,
+            story: userActiveStory,
+            isOwnStory: true
           },
-          hasViewed: false, // TODO: Track viewed stories
-          story: story
-        }))
-      ];
+          ...storiesArray.filter((story: any) => story._id !== userActiveStory._id).map((story: any) => ({
+            id: story._id,
+            type: 'story',
+            user: {
+              name: `${story.author?.firstName || 'User'} ${story.author?.lastName || ''}`.trim(),
+              avatar: story.author?.profilePicture || null
+            },
+            hasViewed: false,
+            story: story
+          }))
+        ];
+      } else {
+        // User doesn't have an active story - show "Add Story" option
+        console.log('➕ User can create new story, showing Add Story option');
+        storiesWithUserStory = [
+          { id: 'add', type: 'add', user: user },
+          ...storiesArray.map((story: any) => ({
+            id: story._id,
+            type: 'story',
+            user: {
+              name: `${story.author?.firstName || 'User'} ${story.author?.lastName || ''}`.trim(),
+              avatar: story.author?.profilePicture || null
+            },
+            hasViewed: false,
+            story: story
+          }))
+        ];
+      }
       
-      setStories(storiesWithAdd);
+      setStories(storiesWithUserStory);
       
     } catch (error) {
       console.error('❌ Error loading stories:', error);
@@ -879,13 +959,41 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
 
   // Story handlers
   const handleStoryClick = (story: any, index: number) => {
+    console.log('🖱️ Story clicked:', {
+      storyType: story.type,
+      storyId: story.id,
+      isOwnStory: story.isOwnStory,
+      storyData: story.story,
+      allStories: stories.map(s => ({ id: s.id, type: s.type, isOwnStory: s.isOwnStory }))
+    });
+    
     if (story.type === 'add') {
+      // User clicked on "Add Story" - show creation dialog
+      console.log('➕ Showing create story dialog');
       setShowCreateStory(true);
-    } else {
-      // Filter out the "add story" option for viewer
+    } else if (story.isOwnStory) {
+      // User clicked on their own story - show it in the viewer
+      console.log('👤 User clicked on their own story:', story);
       const actualStories = stories.filter(s => s.type !== 'add').map(s => s.story);
       setStoryViewerStories(actualStories);
-      setSelectedStoryIndex(index - 1); // Adjust index since we're removing the "add" story
+      
+      // Find the index of the user's story in the filtered list
+      const userStoryIndex = actualStories.findIndex(s => s._id === story.story._id);
+      setSelectedStoryIndex(userStoryIndex >= 0 ? userStoryIndex : 0);
+      setShowStoryViewer(true);
+    } else {
+      // User clicked on someone else's story - show it in the viewer
+      console.log('👥 User clicked on someone else\'s story:', story);
+      const actualStories = stories.filter(s => s.type !== 'add').map(s => s.story);
+      setStoryViewerStories(actualStories);
+      
+      // Calculate correct index for story viewer
+      let viewerIndex = index;
+      if (stories[0]?.type === 'add') {
+        viewerIndex = index - 1; // Adjust if "add story" is first
+      }
+      
+      setSelectedStoryIndex(viewerIndex);
       setShowStoryViewer(true);
     }
   };
@@ -894,6 +1002,12 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
     console.log('New story created:', newStory);
     // Reload stories to include the new one
     loadStories();
+    
+    // Also add a small delay and reload again to ensure the story is visible
+    setTimeout(() => {
+      console.log('🔄 Refreshing stories after delay to ensure new story is visible');
+      loadStories();
+    }, 2000);
   };
 
   const handleCloseStoryViewer = () => {
@@ -1007,20 +1121,22 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
         if (videoId) {
           setPlayingVideos(prev => new Set(prev).add(videoId));
           
-          // Ensure video is muted for auto-play (browsers require this)
-          const shouldBeMuted = mutedVideos.has(videoId);
-          videoElement.muted = shouldBeMuted;
+          // Automatically unmute the video when it starts playing
+          videoElement.muted = false;
+          setMutedVideos(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(videoId);
+            return newSet;
+          });
           
           videoElement.play().catch((error) => {
             console.log('Auto-play failed for video:', videoId, error);
             // If auto-play fails, try with muted
-            if (!videoElement.muted) {
-              videoElement.muted = true;
-              setMutedVideos(prev => new Set(prev).add(videoId));
-              videoElement.play().catch(() => {
-                console.log('Auto-play failed even with mute for video:', videoId);
-              });
-            }
+            videoElement.muted = true;
+            setMutedVideos(prev => new Set(prev).add(videoId));
+            videoElement.play().catch(() => {
+              console.log('Auto-play failed even with mute for video:', videoId);
+            });
           });
         }
       } else {
@@ -1432,6 +1548,27 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
         </Box>
         
         <StoryContainer sx={{ px: 0 }}>
+          {/* Story Review Button */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, px: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="h6" fontWeight="bold">
+              Stories
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {stories.filter(s => s.type !== 'add').length} stories
+            </Typography>
+          </Box>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<Assessment />}
+            onClick={() => setShowStoryReview(true)}
+            sx={{ borderRadius: 2 }}
+          >
+            Review Performance
+          </Button>
+        </Box>
+          
           {storiesLoading ? (
             // Enhanced loading skeleton for stories
             Array.from({ length: 5 }).map((_, index) => (
@@ -1465,15 +1602,16 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
                       <Avatar sx={{ 
                         width: 56, 
                         height: 56, 
-                        bgcolor: 'background.paper',
-                        border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                        background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                        border: `2px solid ${alpha(theme.palette.primary.main, 0.3)}`,
                         transition: 'all 0.3s ease',
                         '&:hover': {
                           transform: 'scale(1.1)',
-                          borderColor: theme.palette.primary.main,
+                          border: `2px solid ${alpha(theme.palette.primary.main, 0.6)}`,
+                          boxShadow: `0 0 20px ${alpha(theme.palette.primary.main, 0.3)}`,
                         }
                       }}>
-                        <Add sx={{ color: 'primary.main', fontSize: 24 }} />
+                        <Add sx={{ color: 'white', fontSize: 24 }} />
                       </Avatar>
                     ) : (
                       <Avatar 
@@ -1482,11 +1620,16 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
                           width: 56, 
                           height: 56,
                           opacity: story.hasViewed ? 0.6 : 1,
-                          border: story.hasViewed ? 'none' : `2px solid ${alpha('#f09433', 0.3)}`,
+                          border: story.hasViewed ? 'none' : 
+                                 story.isOwnStory ? `2px solid ${alpha(theme.palette.primary.main, 0.6)}` :
+                                 `2px solid ${alpha('#f09433', 0.4)}`,
                           transition: 'all 0.3s ease',
                           '&:hover': {
                             transform: 'scale(1.1)',
                             opacity: 1,
+                            boxShadow: story.isOwnStory ? 
+                              `0 0 20px ${alpha(theme.palette.primary.main, 0.3)}` :
+                              `0 0 20px ${alpha('#f09433', 0.3)}`,
                           }
                         }}
                       >
@@ -1499,12 +1642,14 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
                     sx={{ 
                       mt: 0.5, 
                       display: 'block',
-                      fontWeight: story.type === 'add' ? 600 : 500,
-                      color: story.type === 'add' ? 'primary.main' : 'text.secondary',
+                      fontWeight: story.type === 'add' || story.isOwnStory ? 600 : 500,
+                      color: story.type === 'add' || story.isOwnStory ? 'primary.main' : 'text.secondary',
                       fontSize: '0.75rem',
                     }}
                   >
-                    {story.type === 'add' ? 'Your story' : (story.user.name ? story.user.name.split(' ')[0] : 'User')}
+                    {story.type === 'add' ? 'Your story' : 
+                     story.isOwnStory ? 'Your story' : 
+                     (story.user.name ? story.user.name.split(' ')[0] : 'User')}
                   </Typography>
                 </Box>
               </motion.div>
@@ -3042,6 +3187,12 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
         stories={storyViewerStories}
         initialStoryIndex={selectedStoryIndex}
         currentUserId={user?._id}
+      />
+
+      {/* Story Review Interface */}
+      <StoryReviewInterface
+        open={showStoryReview}
+        onClose={() => setShowStoryReview(false)}
       />
     </Box>
   );

@@ -46,6 +46,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { uploadService } from '../../services/uploadService';
 import { socialNetworkService } from '../../services/socialNetworkService';
+import { enhancedStoryService } from '../../services/enhancedStoryService';
 
 interface CreateStoryProps {
   open: boolean;
@@ -229,7 +230,9 @@ const CreateStory: React.FC<CreateStoryProps> = ({ open, onClose, onStoryCreated
 
     // Check if user already has a story in the last 24 hours
     try {
-      const userStoriesResponse = await socialNetworkService.getUserStories();
+      const userStoriesResponse = await enhancedStoryService.getUserStories(); // Get user stories
+      console.log('🧪 TEST - User stories response:', userStoriesResponse);
+      
       if (userStoriesResponse.success && userStoriesResponse.data) {
         const now = new Date();
         const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -240,6 +243,7 @@ const CreateStory: React.FC<CreateStoryProps> = ({ open, onClose, onStoryCreated
         });
 
         if (recentStories.length > 0) {
+          console.log('🧪 TEST - Found recent stories:', recentStories);
           alert('You can only create one story per day. Please wait for your current story to expire.');
           return;
         }
@@ -327,7 +331,7 @@ const CreateStory: React.FC<CreateStoryProps> = ({ open, onClose, onStoryCreated
 
       console.log('Creating story with payload:', storyPayload);
       
-      const response = await socialNetworkService.createStory(storyPayload);
+      const response = await enhancedStoryService.createStory(storyPayload);
       
       if (response.success && response.data) {
         console.log('Story created successfully:', response.data);

@@ -11,6 +11,10 @@ const router = Router();
 // @access  Private
 router.post('/', protect, asyncHandler(async (req: Request, res: Response) => {
   const { type, title, content, media, tags, visibility = 'connections' } = req.body;
+  const userId = req.user!._id.toString();
+  
+  console.log('📝 Backend - Creating story for userId:', userId);
+  console.log('📝 Backend - Story data:', { type, title, content, media, tags, visibility });
 
   // Validate required fields
   if (!title || title.trim().length === 0) {
@@ -39,6 +43,10 @@ router.post('/', protect, asyncHandler(async (req: Request, res: Response) => {
     visibility
   });
 
+  console.log('📝 Backend - Story created with ID:', story._id);
+  console.log('📝 Backend - Story author:', story.author);
+  console.log('📝 Backend - Story expiresAt:', story.expiresAt);
+
   await story.populate('author', 'firstName lastName profilePicture');
 
   res.status(201).json({
@@ -62,10 +70,20 @@ router.get('/', protect, asyncHandler(async (req: Request, res: Response) => {
     .limit(limit);
 
   const totalStories = await Story.countDocuments({
-    expiresAt: { $gt: new Date() },
-    $or: [
-      { visibility: 'public' },
-      { author: req.user!._id }
+    $and: [
+      {
+        $or: [
+          { expiresAt: { $gt: new Date() } },
+          { expiresAt: { $exists: false } },
+          { expiresAt: null }
+        ]
+      },
+      {
+        $or: [
+          { visibility: 'public' },
+          { author: req.user!._id }
+        ]
+      }
     ]
   });
 
@@ -85,7 +103,86 @@ router.get('/', protect, asyncHandler(async (req: Request, res: Response) => {
 // @route   GET /api/social/stories/my-stories
 // @access  Private
 router.get('/my-stories', protect, asyncHandler(async (req: Request, res: Response) => {
-  const stories = await (Story as any).findUserStories(req.user!._id.toString());
+  const userId = req.user!._id.toString();
+  console.log('📚 Backend - Getting user stories for userId:', userId);
+  
+  // Debug: Check total stories in database
+  const totalStories = await Story.countDocuments();
+  console.log('📚 Backend - Total stories in database:', totalStories);
+  
+  // Debug: Check stories for this specific user (without expiration filter)
+  const userStoriesAll = await Story.find({ author: userId });
+  console.log('📚 Backend - User stories (all, including expired):', userStoriesAll.length);
+  
+  // Debug: Check the actual stories data
+  if (userStoriesAll.length > 0) {
+    console.log('📚 Backend - User stories details:', userStoriesAll.map(s => ({
+      id: s._id,
+      title: s.title,
+      author: s.author,
+      expiresAt: s.expiresAt,
+      createdAt: s.createdAt,
+      isExpired: s.expiresAt < new Date()
+    })));
+  }
+  
+  // Debug: Try a manual query to see what's happening
+  const mongoose = require('mongoose');
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+  const currentTime = new Date();
+  
+  const debugQuery = {
+    author: userObjectId,
+    $or: [
+      { expiresAt: { $gt: currentTime } },
+      { expiresAt: { $exists: false } },
+      { expiresAt: null }
+    ]
+  };
+  
+  console.log('📚 Backend - Manual query debug:', {
+    userObjectId,
+    currentTime,
+    query: debugQuery
+  });
+  
+  const manualQuery = await Story.find(debugQuery);
+  console.log('📚 Backend - Manual query result:', manualQuery.length);
+  
+  const stories = await (Story as any).findUserStories(userId);
+  console.log('📚 Backend - Found stories:', stories.length);
+  console.log('📚 Backend - Stories details:', stories.map(s => ({ id: s._id, title: s.title, author: s.author, expiresAt: s.expiresAt })));
+
+  res.status(200).json({
+    success: true,
+    data: stories
+  });
+}));
+
+// @desc    Get user's own stories (TEST - without expiration filter)
+// @route   GET /api/social/stories/my-stories-test
+// @access  Private
+router.get('/my-stories-test', protect, asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user!._id.toString();
+  console.log('🧪 TEST - Getting user stories without expiration filter for userId:', userId);
+  
+  const mongoose = require('mongoose');
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+  
+  // Get stories without expiration filter
+  const stories = await Story.find({ author: userObjectId })
+    .populate('author', 'firstName lastName profilePicture')
+    .sort({ createdAt: -1 });
+  
+  console.log('🧪 TEST - Found stories (no expiration filter):', stories.length);
+  console.log('🧪 TEST - Stories details:', stories.map(s => ({
+    id: s._id,
+    title: s.title,
+    author: s.author,
+    expiresAt: s.expiresAt,
+    createdAt: s.createdAt,
+    isExpired: s.expiresAt < new Date()
+  })));
 
   res.status(200).json({
     success: true,

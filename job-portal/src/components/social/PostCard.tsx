@@ -344,6 +344,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
       // Pause all other videos first
       globalVideo.pauseAllExcept(videoId);
       
+      // Automatically unmute the video when it starts playing
+      videoElement.muted = false;
+      globalVideo.updateVideoState(videoId, { muted: false });
+      
       // Ensure video is loaded
       if (videoElement.readyState >= 2) {
         videoElement.currentTime = 0; // Start from beginning
@@ -383,8 +387,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
       }
     } catch (error) {
       console.error(`Error playing video ${videoId}:`, error);
-      // If autoplay is blocked, update state anyway for UI feedback
-      globalVideo.updateVideoState(videoId, { playing: false, error: 'Autoplay blocked or error occurred' });
+      // If autoplay is blocked, try with muted
+      videoElement.muted = true;
+      globalVideo.updateVideoState(videoId, { playing: false, muted: true, error: 'Autoplay blocked or error occurred' });
     }
   };
 

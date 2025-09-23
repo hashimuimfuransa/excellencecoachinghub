@@ -156,7 +156,9 @@ class EnhancedStoryService {
         
         // Save to localStorage with enhanced key management
         const storageKey = this.getStorageKey();
+        console.log('💾 Saving story with storage key:', storageKey);
         const existingStories = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        console.log('💾 Existing stories before adding new one:', existingStories.length);
         
         // Add new story at the beginning
         existingStories.unshift(mockStory);
@@ -164,6 +166,7 @@ class EnhancedStoryService {
         // Keep only the last 20 stories for performance
         const limitedStories = existingStories.slice(0, 20);
         localStorage.setItem(storageKey, JSON.stringify(limitedStories));
+        console.log('💾 Stories saved to localStorage. Total stories now:', limitedStories.length);
         
         // Also save to a global stories feed for cross-user visibility
         const globalStoriesKey = 'globalStoryFeed';
@@ -181,13 +184,53 @@ class EnhancedStoryService {
       }
       
       // For regular users, use API
-      const response = await api.post('/social/stories', storyData);
-      
-      return {
-        success: true,
-        data: response.data.data,
-        message: response.data.message || 'Story created successfully!'
-      };
+      console.log('🌐 Using API for regular user story creation');
+      try {
+        const response = await api.post('/social/stories', storyData);
+        console.log('🌐 API response for story creation:', response.data);
+        
+        if (response.data && response.data.success && response.data.data) {
+          // Also save to localStorage as backup for better UX
+          const story = response.data.data;
+          const globalStoriesKey = 'globalStoryFeed';
+          const globalStories = JSON.parse(localStorage.getItem(globalStoriesKey) || '[]');
+          globalStories.unshift(story);
+          localStorage.setItem(globalStoriesKey, JSON.stringify(globalStories.slice(0, 100)));
+          console.log('💾 Story also saved to localStorage as backup');
+          
+          return {
+            success: true,
+            data: story,
+            message: response.data.message || 'Story created successfully!'
+          };
+        } else {
+          throw new Error('API returned invalid response');
+        }
+      } catch (apiError) {
+        console.warn('⚠️ API story creation failed, trying localStorage fallback:', apiError);
+        
+        // Fallback to localStorage if API fails
+        const mockStory = this.generateMockStory(storyData);
+        
+        const storageKey = this.getStorageKey();
+        const existingStories = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        existingStories.unshift(mockStory);
+        localStorage.setItem(storageKey, JSON.stringify(existingStories.slice(0, 20)));
+        
+        // Also save to global feed
+        const globalStoriesKey = 'globalStoryFeed';
+        const globalStories = JSON.parse(localStorage.getItem(globalStoriesKey) || '[]');
+        globalStories.unshift(mockStory);
+        localStorage.setItem(globalStoriesKey, JSON.stringify(globalStories.slice(0, 100)));
+        
+        console.log('💾 Story saved to localStorage as fallback');
+        
+        return {
+          success: true,
+          data: mockStory,
+          message: 'Story created successfully (saved locally)!'
+        };
+      }
       
     } catch (error: any) {
       console.error('❌ Error creating story:', error);
@@ -266,6 +309,7 @@ class EnhancedStoryService {
       // For regular users, use API
       console.log('📚 Using API for regular user stories');
       const response = await api.get('/social/stories/my-stories');
+      console.log('📚 API response for user stories:', response.data);
       
       return {
         success: true,
@@ -283,6 +327,29 @@ class EnhancedStoryService {
     }
   }
 
+  // Test method to get stories without expiration filter
+  async getUserStoriesTest(): Promise<StoryResponse> {
+    console.log('🧪 TEST - Enhanced Story Service - getUserStoriesTest called:', { userId: this.getUserKey() });
+    
+    if (this.isGoogleUser()) {
+      console.log('🧪 TEST - Using localStorage for Google user stories');
+      const storageKey = this.getStorageKey();
+      const stories = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      
+      return {
+        success: true,
+        data: stories
+      };
+    }
+    
+    // For regular users, use API test endpoint
+    console.log('🧪 TEST - Using API test endpoint for regular user stories');
+    const response = await api.get('/social/stories/my-stories-test');
+    console.log('🧪 TEST - API response for user stories:', response.data);
+    
+    return response.data;
+  }
+
   async getStoriesFeed(page: number = 1, limit: number = 20): Promise<StoryResponse> {
     try {
       if (this.isGoogleUser()) {
@@ -291,10 +358,64 @@ class EnhancedStoryService {
         // Get stories from global feed and user's own stories
         const globalStoriesKey = 'globalStoryFeed';
         const globalStories = JSON.parse(localStorage.getItem(globalStoriesKey) || '[]');
+        console.log('🌐 Global stories from localStorage:', globalStories.length);
         
         // Also include stories from localStorage users simulation
         const mockNetworkStories = this.generateMockNetworkStories();
+        console.log('🌐 Mock network stories:', mockNetworkStories.length);
         
+        const allStories = [...globalStories, ...mockNetworkStories];
+        console.log('🌐 Total stories before filtering:', allStories.length);
+        
+        // Filter active stories only
+        const now = new Date();
+        const activeStories = allStories.filter((story: StoryData) => {
+          if (!story.expiresAt) return false;
+          const expiresAt = new Date(story.expiresAt);
+          return expiresAt > now;
+        });
+        console.log('🌐 Active stories after filtering:', activeStories.length);
+        
+        // Sort by creation date (newest first)
+        activeStories.sort((a, b) => 
+          new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime()
+        );
+        
+        // Paginate results
+        const start = (page - 1) * limit;
+        const paginatedStories = activeStories.slice(start, start + limit);
+        
+        console.log(`📊 Returning ${paginatedStories.length} stories from enhanced feed`);
+        
+        return {
+          success: true,
+          data: paginatedStories
+        };
+      }
+      
+      // For regular users, try API first, then fallback to localStorage if needed
+      console.log('🌐 Using API for regular user stories feed');
+      try {
+        const response = await api.get(`/social/stories?page=${page}&limit=${limit}`);
+        console.log('🌐 API response for stories feed:', response.data);
+        
+        if (response.data && response.data.success && response.data.data) {
+          return {
+            success: true,
+            data: response.data.data || []
+          };
+        } else {
+          console.warn('⚠️ API returned empty or invalid data, trying localStorage fallback');
+          throw new Error('API returned empty data');
+        }
+      } catch (apiError) {
+        console.warn('⚠️ API call failed, trying localStorage fallback:', apiError);
+        
+        // Fallback to localStorage if API fails
+        const globalStoriesKey = 'globalStoryFeed';
+        const globalStories = JSON.parse(localStorage.getItem(globalStoriesKey) || '[]');
+        
+        const mockNetworkStories = this.generateMockNetworkStories();
         const allStories = [...globalStories, ...mockNetworkStories];
         
         // Filter active stories only
@@ -314,21 +435,13 @@ class EnhancedStoryService {
         const start = (page - 1) * limit;
         const paginatedStories = activeStories.slice(start, start + limit);
         
-        console.log(`📊 Returning ${paginatedStories.length} stories from enhanced feed`);
+        console.log(`📊 Fallback: Returning ${paginatedStories.length} stories from localStorage`);
         
         return {
           success: true,
           data: paginatedStories
         };
       }
-      
-      // For regular users, use API
-      const response = await api.get(`/social/stories?page=${page}&limit=${limit}`);
-      
-      return {
-        success: true,
-        data: response.data.data || []
-      };
       
     } catch (error: any) {
       console.error('❌ Error fetching stories feed:', error);
@@ -397,6 +510,33 @@ class EnhancedStoryService {
 
   async likeStory(storyId: string): Promise<StoryResponse> {
     try {
+      // Check if this is a mock story ID (for Google users)
+      if (storyId.startsWith('mock_story_') || storyId.startsWith('story_')) {
+        console.log('👍 Liking mock story (local):', storyId);
+        
+        // Update in user's stories
+        const storageKey = this.getStorageKey();
+        const userStories = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        
+        const userStoryIndex = userStories.findIndex((s: StoryData) => s._id === storyId);
+        if (userStoryIndex !== -1) {
+          const currentUserId = this.getUserKey();
+          const likes = userStories[userStoryIndex].likes || [];
+          
+          if (!likes.includes(currentUserId)) {
+            likes.push(currentUserId);
+            userStories[userStoryIndex].likes = likes;
+            localStorage.setItem(storageKey, JSON.stringify(userStories));
+          }
+        }
+        
+        return {
+          success: true,
+          data: userStories[userStoryIndex] || null,
+          message: 'Story liked successfully'
+        };
+      }
+      
       if (this.isGoogleUser()) {
         console.log('👍 Liking story (local):', storyId);
         
@@ -459,6 +599,33 @@ class EnhancedStoryService {
 
   async viewStory(storyId: string): Promise<StoryResponse> {
     try {
+      // Check if this is a mock story ID (for Google users)
+      if (storyId.startsWith('mock_story_') || storyId.startsWith('story_')) {
+        console.log('👁️ Viewing mock story (local):', storyId);
+        
+        // For mock stories, handle locally without API call
+        const storageKey = this.getStorageKey();
+        const userStories = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        
+        const storyIndex = userStories.findIndex((s: StoryData) => s._id === storyId);
+        if (storyIndex !== -1) {
+          const currentUserId = this.getUserKey();
+          const viewers = userStories[storyIndex].viewers || [];
+          
+          if (!viewers.includes(currentUserId)) {
+            viewers.push(currentUserId);
+            userStories[storyIndex].viewers = viewers;
+            localStorage.setItem(storageKey, JSON.stringify(userStories));
+          }
+        }
+        
+        return {
+          success: true,
+          data: userStories[storyIndex] || null,
+          message: 'Story viewed successfully'
+        };
+      }
+      
       if (this.isGoogleUser()) {
         console.log('👁️ Viewing story (local):', storyId);
         

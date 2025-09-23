@@ -16,6 +16,8 @@ import {
   Tab,
   Badge,
   Fade,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import {
   Close,
@@ -104,9 +106,11 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
   const [showViewers, setShowViewers] = useState(false);
   const [tabValue, setTabValue] = useState(0);
   const [videoMuted, setVideoMuted] = useState(true);
+  const [showShareSuccess, setShowShareSuccess] = useState(false);
+  const [showShareError, setShowShareError] = useState(false);
+  const [autoUnmuted, setAutoUnmuted] = useState(false);
   const [storyViewers, setStoryViewers] = useState<any[]>([]);
   const [storyEngagement, setStoryEngagement] = useState<any>({});
-  const [autoUnmuted, setAutoUnmuted] = useState(false);
   const progressRef = useRef<NodeJS.Timeout | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -160,19 +164,44 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
 
   const markStoryAsViewed = async (storyId: string) => {
     try {
-      await socialNetworkService.viewStory(storyId);
+      console.log('👁️ Marking story as viewed:', storyId);
+      await enhancedStoryService.viewStory(storyId);
+      console.log('✅ Story marked as viewed');
     } catch (error) {
-      console.error('Error marking story as viewed:', error);
+      console.error('❌ Error marking story as viewed:', error);
     }
   };
 
   const loadStoryAnalytics = async (storyId: string) => {
     try {
-      const analytics = await socialNetworkService.getStoryAnalytics(storyId);
-      setStoryViewers(analytics.viewers || []);
-      setStoryEngagement(analytics.engagement || {});
+      console.log('📊 Loading story analytics for:', storyId);
+      const result = await enhancedStoryService.getStoryAnalytics(storyId);
+      
+      if (result.success && result.data) {
+        console.log('✅ Story analytics loaded:', result.data);
+        setStoryViewers(result.data.viewers || []);
+        setStoryEngagement(result.data.engagement || {});
+      } else {
+        console.warn('⚠️ Failed to load story analytics:', result.error);
+        // Fallback to basic engagement data
+        setStoryViewers([]);
+        setStoryEngagement({
+          views: 0,
+          likes: 0,
+          shares: 0,
+          reach: 0
+        });
+      }
     } catch (error) {
-      console.error('Error loading story analytics:', error);
+      console.error('❌ Error loading story analytics:', error);
+      // Fallback to basic engagement data
+      setStoryViewers([]);
+      setStoryEngagement({
+        views: 0,
+        likes: 0,
+        shares: 0,
+        reach: 0
+      });
     }
   };
 
@@ -237,19 +266,33 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
 
   const handleShareStory = async () => {
     try {
+      console.log('📤 Sharing story:', currentStory.title);
+      
+      // First, record the share in our system
+      await enhancedStoryService.shareStory(currentStory._id);
+      
+      // Then attempt native sharing
       if (navigator.share) {
         await navigator.share({
           title: currentStory.title,
           text: currentStory.content,
           url: window.location.href,
         });
+        console.log('✅ Story shared via native share');
       } else {
         // Fallback to copy to clipboard
-        await navigator.clipboard.writeText(window.location.href);
-        // Show success message
+        const shareText = `${currentStory.title}\n\n${currentStory.content}\n\nView on Excellence Coaching Hub: ${window.location.href}`;
+        await navigator.clipboard.writeText(shareText);
+        console.log('✅ Story link copied to clipboard');
       }
+      
+      setShowShareSuccess(true);
+      setTimeout(() => setShowShareSuccess(false), 3000);
+      
     } catch (error) {
-      console.error('Error sharing story:', error);
+      console.error('❌ Error sharing story:', error);
+      setShowShareError(true);
+      setTimeout(() => setShowShareError(false), 3000);
     }
   };
 
@@ -581,38 +624,144 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
           </TabPanel>
 
           <TabPanel value={tabValue} index={1}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="body2" color="text.secondary">Views</Typography>
-                <Typography variant="body2" fontWeight="bold">
-                  {storyEngagement.views || 0}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {/* Engagement Overview */}
+              <Box sx={{ 
+                p: 2, 
+                borderRadius: 2, 
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                textAlign: 'center'
+              }}>
+                <Typography variant="h6" gutterBottom>
+                  Story Performance
                 </Typography>
-              </Box>
-              <Divider />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="body2" color="text.secondary">Likes</Typography>
-                <Typography variant="body2" fontWeight="bold">
-                  {storyEngagement.likes || 0}
-                </Typography>
-              </Box>
-              <Divider />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="body2" color="text.secondary">Shares</Typography>
-                <Typography variant="body2" fontWeight="bold">
-                  {storyEngagement.shares || 0}
-                </Typography>
-              </Box>
-              <Divider />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="body2" color="text.secondary">Reach</Typography>
-                <Typography variant="body2" fontWeight="bold">
+                <Typography variant="h4" fontWeight="bold">
                   {storyEngagement.reach || 0}
                 </Typography>
+                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  Total Reach
+                </Typography>
               </Box>
+
+              {/* Detailed Metrics */}
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                <Box sx={{ 
+                  p: 2, 
+                  borderRadius: 2, 
+                  border: '1px solid #e0e0e0',
+                  textAlign: 'center',
+                  background: '#f8f9fa'
+                }}>
+                  <Typography variant="h5" fontWeight="bold" color="primary">
+                    {storyEngagement.views || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Views
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ 
+                  p: 2, 
+                  borderRadius: 2, 
+                  border: '1px solid #e0e0e0',
+                  textAlign: 'center',
+                  background: '#f8f9fa'
+                }}>
+                  <Typography variant="h5" fontWeight="bold" color="secondary">
+                    {storyEngagement.likes || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Likes
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ 
+                  p: 2, 
+                  borderRadius: 2, 
+                  border: '1px solid #e0e0e0',
+                  textAlign: 'center',
+                  background: '#f8f9fa'
+                }}>
+                  <Typography variant="h5" fontWeight="bold" color="success.main">
+                    {storyEngagement.shares || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Shares
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ 
+                  p: 2, 
+                  borderRadius: 2, 
+                  border: '1px solid #e0e0e0',
+                  textAlign: 'center',
+                  background: '#f8f9fa'
+                }}>
+                  <Typography variant="h5" fontWeight="bold" color="warning.main">
+                    {storyEngagement.reach || 0}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Reach
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Engagement Rate */}
+              {(storyEngagement.views || 0) > 0 && (
+                <Box sx={{ 
+                  p: 2, 
+                  borderRadius: 2, 
+                  background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                  color: 'white',
+                  textAlign: 'center'
+                }}>
+                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                    Engagement Rate
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {Math.round(((storyEngagement.likes || 0) + (storyEngagement.shares || 0)) / (storyEngagement.views || 1) * 100)}%
+                  </Typography>
+                </Box>
+              )}
             </Box>
           </TabPanel>
         </Box>
       </Dialog>
+
+      {/* Share Success Notification */}
+      <Snackbar
+        open={showShareSuccess}
+        autoHideDuration={3000}
+        onClose={() => setShowShareSuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setShowShareSuccess(false)} 
+          severity="success" 
+          variant="filled"
+          sx={{ borderRadius: 2 }}
+        >
+          ✅ Story shared successfully!
+        </Alert>
+      </Snackbar>
+
+      {/* Share Error Notification */}
+      <Snackbar
+        open={showShareError}
+        autoHideDuration={3000}
+        onClose={() => setShowShareError(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setShowShareError(false)} 
+          severity="error" 
+          variant="filled"
+          sx={{ borderRadius: 2 }}
+        >
+          ❌ Failed to share story. Please try again.
+        </Alert>
+      </Snackbar>
     </Dialog>
   );
 };

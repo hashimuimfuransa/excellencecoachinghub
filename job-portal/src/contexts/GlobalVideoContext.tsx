@@ -108,8 +108,7 @@ export const GlobalVideoProvider: React.FC<GlobalVideoProviderProps> = ({ childr
       return;
     }
 
-    // Mute all other videos and unmute this one
-    muteAllVideos();
+    // Automatically unmute the video when it starts playing
     videoElement.muted = false;
     
     // Update state for this video
@@ -122,9 +121,11 @@ export const GlobalVideoProvider: React.FC<GlobalVideoProviderProps> = ({ childr
     videoElement.currentTime = 0;
     videoElement.play().catch(error => {
       console.error(`Error auto-playing video ${videoId}:`, error);
+      // If autoplay fails, try with muted
+      videoElement.muted = true;
       setVideoStates(prev => ({
         ...prev,
-        [videoId]: { ...prev[videoId], playing: false, error: 'Autoplay failed' }
+        [videoId]: { ...prev[videoId], playing: false, muted: true, error: 'Autoplay failed' }
       }));
     });
     

@@ -411,6 +411,34 @@ class SocialNetworkService {
   // Story related methods
   async viewStory(storyId: string) {
     try {
+      // Check if this is a mock story ID (for Google users)
+      if (storyId.startsWith('mock_story_') || storyId.startsWith('story_')) {
+        console.log('👁️ Viewing mock story (local):', storyId);
+        
+        // For mock stories, handle locally without API call
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const userId = currentUser._id || currentUser.id || currentUser.email;
+        const userStoriesKey = `userStories_${userId}`;
+        const userStories = JSON.parse(localStorage.getItem(userStoriesKey) || '[]');
+        
+        const storyIndex = userStories.findIndex((s: any) => s._id === storyId);
+        if (storyIndex !== -1) {
+          const viewers = userStories[storyIndex].viewers || [];
+          
+          if (!viewers.includes(userId)) {
+            viewers.push(userId);
+            userStories[storyIndex].viewers = viewers;
+            localStorage.setItem(userStoriesKey, JSON.stringify(userStories));
+          }
+        }
+        
+        return {
+          success: true,
+          data: userStories[storyIndex] || null,
+          message: 'Story viewed successfully'
+        };
+      }
+      
       const response = await api.post(`/social/stories/${storyId}/view`);
       return response.data;
     } catch (error) {
@@ -421,6 +449,34 @@ class SocialNetworkService {
 
   async likeStory(storyId: string) {
     try {
+      // Check if this is a mock story ID (for Google users)
+      if (storyId.startsWith('mock_story_') || storyId.startsWith('story_')) {
+        console.log('👍 Liking mock story (local):', storyId);
+        
+        // For mock stories, handle locally without API call
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const userId = currentUser._id || currentUser.id || currentUser.email;
+        const userStoriesKey = `userStories_${userId}`;
+        const userStories = JSON.parse(localStorage.getItem(userStoriesKey) || '[]');
+        
+        const storyIndex = userStories.findIndex((s: any) => s._id === storyId);
+        if (storyIndex !== -1) {
+          const likes = userStories[storyIndex].likes || [];
+          
+          if (!likes.includes(userId)) {
+            likes.push(userId);
+            userStories[storyIndex].likes = likes;
+            localStorage.setItem(userStoriesKey, JSON.stringify(userStories));
+          }
+        }
+        
+        return {
+          success: true,
+          data: userStories[storyIndex] || null,
+          message: 'Story liked successfully'
+        };
+      }
+      
       const response = await api.post(`/social/stories/${storyId}/like`);
       return response.data;
     } catch (error) {

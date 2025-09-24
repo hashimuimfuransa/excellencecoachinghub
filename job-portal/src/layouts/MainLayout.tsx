@@ -138,6 +138,10 @@ const MainLayout: React.FC = () => {
   const { mode, toggleTheme } = useTheme();
   const muiTheme = useMuiTheme();
   const isMobile = useMediaQuery(muiTheme.breakpoints.down('sm'));
+  const isSmallTablet = useMediaQuery(muiTheme.breakpoints.between('sm', 'md'));
+  const isTablet = useMediaQuery(muiTheme.breakpoints.between('md', 'lg'));
+  const isLargeTablet = useMediaQuery(muiTheme.breakpoints.between('lg', 'xl'));
+  const isDesktop = useMediaQuery(muiTheme.breakpoints.up('xl'));
   
   // Calculate current drawer width
   const currentDrawerWidth = isMobile 
@@ -673,18 +677,37 @@ const MainLayout: React.FC = () => {
         background: mode === 'dark' 
           ? `linear-gradient(135deg, ${muiTheme.palette.background.paper} 0%, ${alpha(muiTheme.palette.background.paper, 0.95)} 100%)`
           : `linear-gradient(135deg, ${muiTheme.palette.background.paper} 0%, ${alpha(muiTheme.palette.primary.main, 0.02)} 100%)`,
+        position: 'relative',
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: mode === 'dark'
+            ? 'radial-gradient(circle at 20% 20%, rgba(76, 175, 80, 0.03) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(33, 150, 243, 0.02) 0%, transparent 50%)'
+            : 'radial-gradient(circle at 20% 20%, rgba(76, 175, 80, 0.01) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(33, 150, 243, 0.005) 0%, transparent 50%)',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }
       }}
       onMouseEnter={() => !isMobile && setHovered(true)}
       onMouseLeave={() => !isMobile && setHovered(false)}
     >
-      {/* Header with toggle button */}
+      {/* Enhanced Header */}
       <Toolbar sx={{ 
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: (isMobile || desktopOpen || hovered) ? 'space-between' : 'center',
         borderBottom: `1px solid ${alpha(muiTheme.palette.divider, 0.08)}`,
-        px: (isMobile || desktopOpen || hovered) ? 2 : 1.5,
+        px: (isMobile || desktopOpen || hovered) ? { xs: 2, sm: 2.5 } : 1.5,
+        py: { xs: 1.5, sm: 2 },
         background: `linear-gradient(135deg, ${alpha(muiTheme.palette.primary.main, 0.08)} 0%, ${alpha(muiTheme.palette.secondary.main, 0.04)} 100%)`,
+        position: 'relative',
+        zIndex: 1,
+        minHeight: { xs: 70, sm: 75 },
       }}>
         {(isMobile || desktopOpen || hovered) && (
           <Box 
@@ -694,31 +717,72 @@ const MainLayout: React.FC = () => {
               display: 'flex', 
               alignItems: 'center', 
               textDecoration: 'none', 
-              color: 'text.primary' 
+              color: 'text.primary',
+              gap: { xs: 1.5, sm: 2 },
+              p: { xs: 1, sm: 1.5 },
+              borderRadius: '16px',
+              background: mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.05)'
+                : 'rgba(255, 255, 255, 0.7)',
+              backdropFilter: 'blur(10px)',
+              border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.1)}`,
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 6px 25px rgba(0, 0, 0, 0.1)',
+                background: mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.08)'
+                  : 'rgba(255, 255, 255, 0.9)',
+              }
             }}
           >
             <Box
               sx={{
-                width: 32,
-                height: 32,
-                mr: 1,
+                width: { xs: 36, sm: 40 },
+                height: { xs: 36, sm: 40 },
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderRadius: '50%',
+                borderRadius: '12px',
                 background: '#fff',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                border: `2px solid ${alpha(muiTheme.palette.primary.main, 0.1)}`,
               }}
             >
               <img 
                 src="/exjobnetlogo.png" 
                 alt="ExJobNet Logo"
-                style={{ width: '80%', height: '80%', objectFit: 'contain' }}
+                style={{ width: '75%', height: '75%', objectFit: 'contain' }}
               />
             </Box>
-            <Typography variant="h6" fontWeight="bold" noWrap component="div">
-              ExJobNet
-            </Typography>
+            <Box>
+              <Typography 
+                variant="h6" 
+                fontWeight="bold" 
+                noWrap 
+                component="div"
+                sx={{
+                  fontSize: { xs: '1.1rem', sm: '1.2rem' },
+                  color: 'text.primary',
+                  lineHeight: 1.2
+                }}
+              >
+                ExJobNet
+              </Typography>
+              <Typography 
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                  fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                  fontWeight: 500,
+                  display: 'block',
+                  mt: 0.25
+                }}
+              >
+                Career Hub
+              </Typography>
+            </Box>
           </Box>
         )}
         
@@ -727,20 +791,21 @@ const MainLayout: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Box
               sx={{
-                width: 28,
-                height: 28,
+                width: 32,
+                height: 32,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderRadius: '50%',
+                borderRadius: '12px',
                 background: '#fff',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                border: `2px solid ${alpha(muiTheme.palette.primary.main, 0.1)}`,
               }}
             >
               <img 
                 src="/exjobnetlogo.png" 
                 alt="ExJobNet Logo"
-                style={{ width: '80%', height: '80%', objectFit: 'contain' }}
+                style={{ width: '75%', height: '75%', objectFit: 'contain' }}
               />
             </Box>
           </Box>
@@ -752,21 +817,31 @@ const MainLayout: React.FC = () => {
             onClick={handleDesktopDrawerToggle}
             sx={{
               color: 'primary.main',
+              p: { xs: 1.5, sm: 2 },
+              borderRadius: '12px',
+              background: alpha(muiTheme.palette.primary.main, 0.1),
+              border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.2)}`,
               '&:hover': {
-                bgcolor: alpha(muiTheme.palette.primary.main, 0.1),
-              }
+                bgcolor: alpha(muiTheme.palette.primary.main, 0.15),
+                transform: 'scale(1.05)',
+                boxShadow: `0 4px 15px ${alpha(muiTheme.palette.primary.main, 0.2)}`,
+              },
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
             }}
           >
-            {desktopOpen ? <ChevronLeft /> : <ChevronRight />}
+            {desktopOpen ? <ChevronLeft sx={{ fontSize: { xs: '1.2rem', sm: '1.4rem' } }} /> : <ChevronRight sx={{ fontSize: { xs: '1.2rem', sm: '1.4rem' } }} />}
           </IconButton>
         )}
       </Toolbar>
       
+      {/* Enhanced Navigation Content */}
       <Box sx={{ 
         overflow: 'auto', 
         flexGrow: 1, 
-        px: 0.5, 
-        py: 2,
+        px: { xs: 1, sm: 1.5 }, 
+        py: { xs: 1.5, sm: 2 },
+        position: 'relative',
+        zIndex: 1,
         '&::-webkit-scrollbar': {
           width: '4px',
         },
@@ -777,33 +852,38 @@ const MainLayout: React.FC = () => {
           background: alpha(muiTheme.palette.primary.main, 0.3),
           borderRadius: '2px',
         },
+        '&::-webkit-scrollbar-thumb:hover': {
+          background: alpha(muiTheme.palette.primary.main, 0.5),
+        },
       }}>
         <List sx={{ py: 0 }}>
           {renderNavItems(navigationItems)}
         </List>
       </Box>
       
-      {/* User profile section */}
+      {/* Enhanced User profile section */}
       {(isMobile || desktopOpen || hovered) && (
         <Box sx={{ 
-          p: 1.5, 
+          p: { xs: 1.5, sm: 2 }, 
           borderTop: `1px solid ${alpha(muiTheme.palette.divider, 0.08)}`,
           background: `linear-gradient(135deg, ${alpha(muiTheme.palette.primary.main, 0.05)} 0%, ${alpha(muiTheme.palette.secondary.main, 0.02)} 100%)`,
+          position: 'relative',
+          zIndex: 1,
         }}>
           <Box 
             sx={{ 
               display: 'flex', 
               alignItems: 'center',
-              p: 1.5,
-              borderRadius: '12px',
+              p: { xs: 1.5, sm: 2 },
+              borderRadius: '16px',
               bgcolor: alpha(muiTheme.palette.primary.main, 0.1),
               border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.15)}`,
               cursor: 'pointer',
-              transition: 'all 0.2s ease',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:hover': {
                 bgcolor: alpha(muiTheme.palette.primary.main, 0.15),
-                transform: 'translateY(-1px)',
-                boxShadow: `0 4px 12px ${alpha(muiTheme.palette.primary.main, 0.15)}`,
+                transform: 'translateY(-2px)',
+                boxShadow: `0 6px 20px ${alpha(muiTheme.palette.primary.main, 0.2)}`,
               }
             }}
             onClick={handleProfileMenuOpen}
@@ -812,20 +892,40 @@ const MainLayout: React.FC = () => {
               alt={user?.firstName}
               src={user?.avatar}
               sx={{ 
-                width: 36, 
-                height: 36, 
-                mr: 1.5,
+                width: { xs: 40, sm: 44 }, 
+                height: { xs: 40, sm: 44 }, 
+                mr: { xs: 1.5, sm: 2 },
                 border: `2px solid ${muiTheme.palette.primary.main}`,
-                boxShadow: `0 2px 8px ${alpha(muiTheme.palette.primary.main, 0.3)}`
+                boxShadow: `0 4px 12px ${alpha(muiTheme.palette.primary.main, 0.3)}`,
+                fontSize: { xs: '1rem', sm: '1.1rem' },
+                fontWeight: 'bold'
               }}
             >
               {user?.firstName?.charAt(0)}
             </Avatar>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="subtitle2" fontWeight="600" noWrap>
+              <Typography 
+                variant="subtitle2" 
+                fontWeight="600" 
+                noWrap
+                sx={{
+                  fontSize: { xs: '0.95rem', sm: '1rem' },
+                  color: 'text.primary',
+                  lineHeight: 1.2
+                }}
+              >
                 {user?.firstName} {user?.lastName}
               </Typography>
-              <Typography variant="caption" color="primary.main" fontWeight="500">
+              <Typography 
+                variant="caption" 
+                color="primary.main" 
+                fontWeight="500"
+                sx={{
+                  fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                  display: 'block',
+                  mt: 0.25
+                }}
+              >
                 {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}
               </Typography>
             </Box>
@@ -835,15 +935,31 @@ const MainLayout: React.FC = () => {
       
       {/* Collapsed user avatar */}
       {!isMobile && !desktopOpen && !hovered && (
-        <Box sx={{ p: 1, display: 'flex', justifyContent: 'center' }}>
-          <IconButton onClick={handleProfileMenuOpen}>
+        <Box sx={{ p: { xs: 1, sm: 1.5 }, display: 'flex', justifyContent: 'center' }}>
+          <IconButton 
+            onClick={handleProfileMenuOpen}
+            sx={{
+              p: 1.5,
+              borderRadius: '16px',
+              background: alpha(muiTheme.palette.primary.main, 0.1),
+              border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.2)}`,
+              '&:hover': {
+                background: alpha(muiTheme.palette.primary.main, 0.15),
+                transform: 'scale(1.05)',
+                boxShadow: `0 4px 15px ${alpha(muiTheme.palette.primary.main, 0.2)}`,
+              },
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+            }}
+          >
             <Avatar
               alt={user?.firstName}
               src={user?.avatar}
               sx={{ 
-                width: 32, 
-                height: 32,
+                width: { xs: 32, sm: 36 }, 
+                height: { xs: 32, sm: 36 },
                 border: `2px solid ${muiTheme.palette.primary.main}`,
+                fontSize: { xs: '0.9rem', sm: '1rem' },
+                fontWeight: 'bold'
               }}
             >
               {user?.firstName?.charAt(0)}
@@ -880,13 +996,13 @@ const MainLayout: React.FC = () => {
         }}
       >
         <Toolbar sx={{ 
-          minHeight: { xs: '64px !important', sm: '70px !important' },
-          px: { xs: 1, sm: 2, md: 3 },
+          minHeight: { xs: '64px !important', sm: '68px !important', md: '72px !important', lg: '75px !important', xl: '78px !important' },
+          px: { xs: 1, sm: 1.5, md: 2.5, lg: 3, xl: 3.5 },
           justifyContent: 'space-between',
           position: 'relative'
         }}>
           {/* Left Section - Logo & Mobile Menu */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 2, md: 2.5, lg: 3, xl: 3.5 } }}>
             {/* Mobile Menu Button */}
             <IconButton
               color="inherit"
@@ -895,7 +1011,7 @@ const MainLayout: React.FC = () => {
               onClick={handleDrawerToggle}
               sx={{ 
                 display: { sm: 'none' },
-                p: 1.5,
+                p: { xs: 1.5, sm: 1.8 },
                 borderRadius: '16px',
                 bgcolor: alpha(muiTheme.palette.primary.main, 0.08),
                 border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.12)}`,
@@ -965,11 +1081,11 @@ const MainLayout: React.FC = () => {
               component={Link} 
               to="/app/network"
               sx={{ 
-                display: { xs: 'none', md: 'flex' },
+                display: { xs: 'none', sm: 'flex' },
                 alignItems: 'center', 
                 textDecoration: 'none',
-                gap: 1.5,
-                p: 1,
+                gap: { sm: 1.2, md: 1.5, lg: 1.8, xl: 2 },
+                p: { sm: 0.8, md: 1, lg: 1.2, xl: 1.5 },
                 borderRadius: '20px',
                 '&:hover': {
                   bgcolor: alpha(muiTheme.palette.primary.main, 0.04),
@@ -984,8 +1100,8 @@ const MainLayout: React.FC = () => {
                 src="/exjobnetlogo.png"
                 alt="ExJobNet Logo"
                 sx={{
-                  width: { md: 45, lg: 50 },
-                  height: { md: 45, lg: 50 },
+                  width: { sm: 40, md: 45, lg: 48, xl: 50 },
+                  height: { sm: 40, md: 45, lg: 48, xl: 50 },
                   borderRadius: '14px',
                   boxShadow: `0 4px 20px ${alpha(muiTheme.palette.primary.main, 0.2)}`,
                   border: `1px solid ${alpha(muiTheme.palette.primary.main, 0.1)}`,
@@ -1007,7 +1123,7 @@ const MainLayout: React.FC = () => {
                     backgroundSize: '200% 100%',
                     letterSpacing: '-0.8px',
                     lineHeight: 1.1,
-                    fontSize: { md: '1.1rem', lg: '1.25rem' },
+                    fontSize: { sm: '1rem', md: '1.1rem', lg: '1.2rem', xl: '1.25rem' },
                     fontFamily: '"Inter", "Roboto", sans-serif',
                     '&:hover': {
                       backgroundPosition: '100% 0',
@@ -1037,10 +1153,10 @@ const MainLayout: React.FC = () => {
 
           {/* Center Section - Enhanced Search Bar */}
           <Box sx={{ 
-            display: { xs: 'none', md: 'flex' },
+            display: { xs: 'none', sm: 'flex' },
             flexGrow: 1,
-            maxWidth: { md: '350px', lg: '450px' },
-            mx: { md: 2, lg: 3 }
+            maxWidth: { sm: '280px', md: '350px', lg: '400px', xl: '450px' },
+            mx: { sm: 1.5, md: 2, lg: 2.5, xl: 3 }
           }}>
             <Paper
               component="form"
@@ -1077,9 +1193,9 @@ const MainLayout: React.FC = () => {
                 placeholder="Search jobs, companies, skills..."
                 sx={{
                   width: '100%',
-                  px: 2.5,
-                  py: 1.5,
-                  fontSize: '0.9rem',
+                  px: { sm: 2.2, md: 2.5, lg: 2.8, xl: 3 },
+                  py: { sm: 1.3, md: 1.5, lg: 1.7, xl: 1.8 },
+                  fontSize: { sm: '0.85rem', md: '0.9rem', lg: '0.95rem', xl: '1rem' },
                   fontWeight: '400',
                   color: 'text.primary',
                   '& .MuiInputBase-input': {
@@ -1147,9 +1263,9 @@ const MainLayout: React.FC = () => {
           </Box>
 
           {/* Right Section - Essential Actions & Profile */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, md: 1 } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 0.8, md: 1, lg: 1.2, xl: 1.5 } }}>
             {/* Mobile Search Icon */}
-            <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+            <Box sx={{ display: { xs: 'block', sm: 'none' } }}>
               <Tooltip title="Search Jobs">
                 <IconButton 
                   onClick={() => navigate('/app/jobs')}
@@ -1169,7 +1285,7 @@ const MainLayout: React.FC = () => {
 
             {/* Employer Quick Actions */}
             {hasRole(UserRole.EMPLOYER) && (
-              <Box sx={{ display: { xs: 'none', lg: 'flex' }, gap: 1, mr: 1 }}>
+              <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: { md: 0.8, lg: 1, xl: 1.2 }, mr: { md: 0.8, lg: 1, xl: 1.2 } }}>
                 <Tooltip title="Post New Job">
                   <IconButton
                     onClick={() => navigate('/app/jobs/create')}
@@ -1308,8 +1424,8 @@ const MainLayout: React.FC = () => {
               </IconButton>
             </Tooltip>
 
-            {/* Enhanced Theme Toggle - Desktop Only */}
-            <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+            {/* Enhanced Theme Toggle - Tablet and Desktop */}
+            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
               <Tooltip title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}>
                 <IconButton 
                   onClick={toggleTheme}
@@ -1373,13 +1489,13 @@ const MainLayout: React.FC = () => {
                   startIcon={<Add />}
                   onClick={() => navigate('/app/jobs/create')}
                   sx={{
-                    ml: { xs: 1, md: 2 },
-                    mr: { xs: 0.5, md: 1 },
-                    px: { xs: 2, md: 3 },
-                    py: { xs: 1, md: 1.2 },
+                    ml: { xs: 1, sm: 1.2, md: 1.5, lg: 1.8, xl: 2 },
+                    mr: { xs: 0.5, sm: 0.7, md: 0.8, lg: 1, xl: 1.2 },
+                    px: { xs: 2, sm: 2.2, md: 2.5, lg: 2.8, xl: 3 },
+                    py: { xs: 1, sm: 1.1, md: 1.2, lg: 1.3, xl: 1.4 },
                     borderRadius: '16px',
                     fontWeight: '700',
-                    fontSize: { xs: '0.8rem', md: '0.9rem' },
+                    fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.9rem', lg: '0.95rem', xl: '1rem' },
                     textTransform: 'none',
                     background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)',
                     boxShadow: '0 6px 20px rgba(76, 175, 80, 0.25)',
@@ -1428,8 +1544,8 @@ const MainLayout: React.FC = () => {
                 onClick={handleProfileMenuOpen}
                 size="small"
                 sx={{ 
-                  p: 0.5,
-                  ml: { xs: 0.5, md: 1.5 },
+                  p: { xs: 0.5, sm: 0.6, md: 0.7, lg: 0.8, xl: 0.9 },
+                  ml: { xs: 0.5, sm: 0.8, md: 1.2, lg: 1.5, xl: 1.8 },
                   position: 'relative',
                   borderRadius: '50%',
                   '&:hover': {
@@ -1457,8 +1573,8 @@ const MainLayout: React.FC = () => {
                   alt={user?.firstName}
                   src={user?.avatar}
                   sx={{ 
-                    width: { xs: 34, md: 40 }, 
-                    height: { xs: 34, md: 40 },
+                    width: { xs: 32, sm: 34, md: 36, lg: 38, xl: 40 }, 
+                    height: { xs: 32, sm: 34, md: 36, lg: 38, xl: 40 },
                     border: `3px solid ${muiTheme.palette.background.paper}`,
                     boxShadow: `0 4px 15px ${alpha(muiTheme.palette.common.black, 0.1)}`,
                     background: user?.avatar ? 'transparent' : `linear-gradient(135deg, ${muiTheme.palette.primary.main}, ${muiTheme.palette.secondary.main})`,
@@ -1713,10 +1829,41 @@ const MainLayout: React.FC = () => {
             display: { xs: 'block', sm: 'none' },
             '& .MuiDrawer-paper': { 
               boxSizing: 'border-box', 
-              width: drawerWidth,
+              width: { xs: '100vw', sm: 320 },
               borderRight: `1px solid ${alpha(muiTheme.palette.divider, 0.08)}`,
-              boxShadow: `0 8px 32px ${alpha(muiTheme.palette.common.black, 0.1)}`,
-              bgcolor: 'background.paper',
+              background: mode === 'dark' 
+                ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)'
+                : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%)',
+              boxShadow: mode === 'dark'
+                ? '0 20px 60px rgba(0, 0, 0, 0.5)'
+                : '0 20px 60px rgba(0, 0, 0, 0.15)',
+              backdropFilter: 'blur(20px)',
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: mode === 'dark'
+                  ? 'radial-gradient(circle at 20% 20%, rgba(76, 175, 80, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(33, 150, 243, 0.03) 0%, transparent 50%)'
+                  : 'radial-gradient(circle at 20% 20%, rgba(76, 175, 80, 0.02) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(33, 150, 243, 0.01) 0%, transparent 50%)',
+                pointerEvents: 'none',
+                zIndex: 0,
+              }
+            },
+          }}
+          slotProps={{
+            backdrop: {
+              timeout: 500,
+              sx: {
+                backgroundColor: mode === 'dark' 
+                  ? 'rgba(0, 0, 0, 0.7)' 
+                  : 'rgba(0, 0, 0, 0.5)',
+                backdropFilter: 'blur(8px)',
+              }
             },
           }}
         >

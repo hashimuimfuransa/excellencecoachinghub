@@ -87,9 +87,11 @@ const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
   const { mode, toggleTheme } = useCustomTheme();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isSmallTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
   const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
-  const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
+  const isLargeTablet = useMediaQuery(theme.breakpoints.between('lg', 'xl'));
+  const isDesktop = useMediaQuery(theme.breakpoints.up('xl'));
   
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -186,7 +188,7 @@ const Navbar: React.FC = () => {
     { text: 'Other Opportunities', icon: <CategoryIcon />, isDropdown: true, protected: true },
     { text: 'Support', icon: <Support />, path: '/support' },
     { text: 'Contact Us', icon: <ContactSupport />, action: handleContactOpen, isContactDialog: true },
-  ];
+  ] as any[];
 
   // Separate menu items for logged-in employers
   const employerMenuItems = [
@@ -199,7 +201,7 @@ const Navbar: React.FC = () => {
     { text: 'Post Internship', icon: <School />, path: '/app/internships/create', highlight: true, protected: true },
     { text: 'Support', icon: <Support />, path: '/support' },
     { text: 'Contact Us', icon: <ContactSupport />, action: handleContactOpen, isContactDialog: true },
-  ];
+  ] as any[];
 
   // For non-logged in users, show public menu
   const publicMenuItems = [
@@ -208,7 +210,7 @@ const Navbar: React.FC = () => {
     { text: 'Other Opportunities', icon: <CategoryIcon />, isDropdown: true },
     { text: 'Support', icon: <Support />, path: '/support' },
     { text: 'Contact Us', icon: <ContactSupport />, action: handleContactOpen, isContactDialog: true },
-  ];
+  ] as any[];
 
   // Choose which menu to show based on user authentication and role
   const currentMenuItems = user 
@@ -216,219 +218,639 @@ const Navbar: React.FC = () => {
     : publicMenuItems;
 
   const drawer = (
-    <Box sx={{ width: { xs: 280, sm: 300, md: 320 } }}>
+    <Box sx={{ 
+      width: { xs: '100vw', sm: 320, md: 360 },
+      height: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      background: mode === 'dark' 
+        ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)'
+        : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%)',
+      position: 'relative',
+      overflow: 'hidden'
+    }}>
+      {/* Enhanced Header */}
       <Box sx={{ 
-        p: 3, 
+        p: { xs: 2.5, sm: 3 },
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        background: 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)',
-        color: 'white'
+        background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 50%, #1b5e20 100%)',
+        color: 'white',
+        position: 'relative',
+        minHeight: { xs: 80, sm: 90 },
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+          zIndex: 1,
+        },
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'radial-gradient(circle at 20% 50%, rgba(76, 175, 80, 0.2) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(33, 150, 243, 0.1) 0%, transparent 50%)',
+          zIndex: 2,
+        }
       }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <img 
-            src="/exjobnetlogo.png" 
-            alt="ExJobNet" 
-            style={{ height: 40, width: 'auto' }}
-          />
-          <Typography variant="h6" fontWeight="bold">
-            ExJobNet
-          </Typography>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: { xs: 1.5, sm: 2 },
+          position: 'relative',
+          zIndex: 3
+        }}>
+          <Box
+            sx={{
+              width: { xs: 44, sm: 48 },
+              height: { xs: 44, sm: 48 },
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '16px',
+              background: 'rgba(255, 255, 255, 0.15)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+            }}
+          >
+            <img 
+              src="/exjobnetlogo.png" 
+              alt="ExJobNet" 
+              style={{ 
+                height: '70%', 
+                width: '70%',
+                objectFit: 'contain',
+                filter: 'brightness(0) invert(1)'
+              }}
+            />
+          </Box>
+          <Box>
+            <Typography 
+              variant="h6" 
+              fontWeight="bold"
+              sx={{
+                fontSize: { xs: '1.1rem', sm: '1.2rem' },
+                textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                letterSpacing: '-0.02em'
+              }}
+            >
+              ExJobNet
+            </Typography>
+            <Typography 
+              variant="caption"
+              sx={{
+                opacity: 0.9,
+                fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                fontWeight: 500,
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.1)'
+              }}
+            >
+              Career Hub
+            </Typography>
+          </Box>
         </Box>
         <IconButton 
           onClick={handleDrawerToggle}
-          sx={{ color: 'white' }}
+          sx={{ 
+            color: 'white',
+            position: 'relative',
+            zIndex: 3,
+            p: { xs: 1.5, sm: 2 },
+            borderRadius: '12px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            '&:hover': {
+              background: 'rgba(255, 255, 255, 0.2)',
+              transform: 'scale(1.05)',
+            },
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+          }}
         >
-          <Close />
+          <Close sx={{ fontSize: { xs: '1.2rem', sm: '1.4rem' } }} />
         </IconButton>
       </Box>
-      <Divider />
-      <List>
-        {currentMenuItems.filter(item => !item.protected || user).map((item) => {
-          // If it's the dropdown item, render the opportunities as sub-items
-          if (item.isDropdown) {
-            return (
-              <React.Fragment key={item.text}>
-                {/* Dropdown header */}
-                <ListItem sx={{ px: 3, py: 1.5 }}>
-                  <ListItemIcon sx={{ color: 'primary.main', minWidth: 40 }}>
-                    {item.icon}
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary={item.text} 
-                    sx={{ 
-                      '& .MuiListItemText-primary': { 
-                        fontWeight: 'bold',
-                        color: 'primary.main',
-                        fontSize: '1rem'
-                      } 
-                    }}
-                  />
-                </ListItem>
-                {/* Render opportunity categories as sub-items */}
-                {opportunityCategories.map((opportunity) => (
+      
+      {/* User Info Section */}
+      {user && (
+        <Box sx={{
+          p: { xs: 2, sm: 2.5 },
+          background: mode === 'dark' 
+            ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(46, 125, 50, 0.05) 100%)'
+            : 'linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(46, 125, 50, 0.02) 100%)',
+          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+          position: 'relative'
+        }}>
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: { xs: 1.5, sm: 2 },
+            p: { xs: 1.5, sm: 2 },
+            borderRadius: '16px',
+            background: mode === 'dark' 
+              ? 'rgba(255, 255, 255, 0.05)'
+              : 'rgba(255, 255, 255, 0.7)',
+            backdropFilter: 'blur(10px)',
+            border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
+          }}>
+            <Avatar
+              sx={{
+                width: { xs: 40, sm: 44 },
+                height: { xs: 40, sm: 44 },
+                background: 'linear-gradient(135deg, #4caf50, #2e7d32)',
+                border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+                fontSize: { xs: '1rem', sm: '1.1rem' },
+                fontWeight: 'bold'
+              }}
+            >
+              {user.firstName?.charAt(0) || user.email?.charAt(0)}
+            </Avatar>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography 
+                variant="subtitle1" 
+                fontWeight="bold"
+                sx={{
+                  fontSize: { xs: '0.95rem', sm: '1rem' },
+                  color: 'text.primary',
+                  lineHeight: 1.2
+                }}
+                noWrap
+              >
+                {user.firstName} {user.lastName}
+              </Typography>
+              <Typography 
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                  fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                  display: 'block',
+                  mt: 0.25
+                }}
+                noWrap
+              >
+                {user.email}
+              </Typography>
+              <Box sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.5,
+                mt: 0.5,
+                px: 1,
+                py: 0.25,
+                borderRadius: '8px',
+                background: alpha(theme.palette.primary.main, 0.1),
+                border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`
+              }}>
+                <Typography 
+                  variant="caption"
+                  sx={{
+                    color: 'primary.main',
+                    fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                    fontWeight: 600,
+                    textTransform: 'capitalize'
+                  }}
+                >
+                  {user.role}
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+      )}
+      
+      {/* Scrollable Content */}
+      <Box sx={{
+        flex: 1,
+        overflow: 'auto',
+        '&::-webkit-scrollbar': {
+          width: '4px',
+        },
+        '&::-webkit-scrollbar-track': {
+          background: 'transparent',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          background: alpha(theme.palette.primary.main, 0.3),
+          borderRadius: '2px',
+        },
+        '&::-webkit-scrollbar-thumb:hover': {
+          background: alpha(theme.palette.primary.main, 0.5),
+        },
+      }}>
+        <Box sx={{ p: { xs: 1.5, sm: 2 } }}>
+          {/* Main Navigation */}
+          <Box sx={{ mb: 2 }}>
+            <Typography 
+              variant="subtitle2" 
+              sx={{ 
+                px: { xs: 2, sm: 2.5 },
+                py: 1,
+                color: 'text.secondary',
+                fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}
+            >
+              Navigation
+            </Typography>
+            <List sx={{ py: 0 }}>
+              {currentMenuItems.filter(item => !item.protected || user).map((item) => {
+                // If it's the dropdown item, render the opportunities as sub-items
+                if (item.isDropdown) {
+                  return (
+                    <React.Fragment key={item.text}>
+                      {/* Dropdown header */}
+                      <ListItem sx={{ 
+                        px: { xs: 2, sm: 2.5 },
+                        py: { xs: 1.5, sm: 2 },
+                        mb: 1,
+                        borderRadius: '16px',
+                        background: mode === 'dark' 
+                          ? 'rgba(255, 255, 255, 0.05)'
+                          : 'rgba(0, 0, 0, 0.02)',
+                        border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+                      }}>
+                        <ListItemIcon sx={{ 
+                          color: 'primary.main', 
+                          minWidth: { xs: 36, sm: 40 },
+                          mr: { xs: 1.5, sm: 2 }
+                        }}>
+                          <Box sx={{
+                            p: 1,
+                            borderRadius: '12px',
+                            background: alpha(theme.palette.primary.main, 0.1),
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            {item.icon}
+                          </Box>
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={item.text} 
+                          sx={{ 
+                            '& .MuiListItemText-primary': { 
+                              fontWeight: 'bold',
+                              color: 'primary.main',
+                              fontSize: { xs: '0.95rem', sm: '1rem' }
+                            } 
+                          }}
+                        />
+                      </ListItem>
+                      {/* Render opportunity categories as sub-items */}
+                      <Box sx={{ pl: { xs: 2, sm: 2.5 }, pr: { xs: 1.5, sm: 2 } }}>
+                        {opportunityCategories.map((opportunity) => (
+                          <ListItem
+                            component="button"
+                            key={opportunity.id}
+                            onClick={() => {
+                              console.log('Navigating to:', opportunity.path);
+                              window.location.href = opportunity.path;
+                              setMobileOpen(false);
+                            }}
+                            sx={{
+                              backgroundColor: location.pathname === opportunity.path 
+                                ? alpha(theme.palette.primary.main, 0.12) 
+                                : 'transparent',
+                              '&:hover': {
+                                backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                                transform: 'translateX(4px)',
+                              },
+                              borderRadius: '12px',
+                              mb: 0.5,
+                              pl: { xs: 3, sm: 3.5 },
+                              py: { xs: 1.2, sm: 1.5 },
+                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                              border: location.pathname === opportunity.path 
+                                ? `1px solid ${alpha(theme.palette.primary.main, 0.2)}`
+                                : '1px solid transparent',
+                              boxShadow: location.pathname === opportunity.path 
+                                ? '0 2px 8px rgba(76, 175, 80, 0.15)'
+                                : 'none',
+                            }}
+                          >
+                            <ListItemIcon sx={{ 
+                              color: location.pathname === opportunity.path ? 'primary.main' : 'inherit',
+                              minWidth: { xs: 32, sm: 36 }
+                            }}>
+                              <Box sx={{
+                                p: 0.5,
+                                borderRadius: '8px',
+                                background: location.pathname === opportunity.path 
+                                  ? alpha(theme.palette.primary.main, 0.1)
+                                  : 'transparent',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}>
+                                {opportunity.icon}
+                              </Box>
+                            </ListItemIcon>
+                            <ListItemText 
+                              primary={opportunity.label}
+                              secondary={opportunity.description}
+                              sx={{ 
+                                '& .MuiListItemText-primary': { 
+                                  fontWeight: location.pathname === opportunity.path ? 'bold' : 'normal',
+                                  color: location.pathname === opportunity.path ? 'primary.main' : 'inherit',
+                                  fontSize: { xs: '0.9rem', sm: '0.95rem' }
+                                },
+                                '& .MuiListItemText-secondary': {
+                                  fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                                  color: 'text.secondary',
+                                  mt: 0.25,
+                                  lineHeight: 1.3
+                                }
+                              }}
+                            />
+                          </ListItem>
+                        ))}
+                      </Box>
+                    </React.Fragment>
+                  );
+                }
+
+                // Regular menu item
+                return (
                   <ListItem
                     component="button"
-                    key={opportunity.id}
+                    key={item.text}
                     onClick={() => {
-                      console.log('Navigating to:', opportunity.path);
-                      window.location.href = opportunity.path;
-                      setMobileOpen(false);
+                      if (item.isContactDialog) {
+                        item.action();
+                      } else if (item.requiresAuth && !user) {
+                        navigate('/register?role=employer');
+                        setMobileOpen(false);
+                      } else {
+                        navigate(item.path);
+                        setMobileOpen(false);
+                      }
                     }}
                     sx={{
-                      backgroundColor: location.pathname === opportunity.path 
-                        ? alpha(theme.palette.primary.main, 0.1) 
-                        : 'transparent',
+                      backgroundColor: item.highlight 
+                        ? alpha(theme.palette.primary.main, 0.9)
+                        : ('special' in item && item.special)
+                          ? alpha(theme.palette.primary.main, 0.05)
+                          : (location.pathname === item.path ? alpha(theme.palette.primary.main, 0.1) : 'transparent'),
                       '&:hover': {
-                        backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                        backgroundColor: item.highlight 
+                          ? alpha(theme.palette.primary.main, 1)
+                          : ('special' in item && item.special)
+                            ? alpha(theme.palette.primary.main, 0.1)
+                            : alpha(theme.palette.primary.main, 0.08),
+                        transform: 'translateX(4px)',
                       },
-                      mx: 3,
-                      borderRadius: 3,
+                      mx: { xs: 1.5, sm: 2 },
+                      borderRadius: '16px',
                       mb: 1,
-                      pl: 5,
-                      py: 1.5,
-                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                      py: { xs: 1.5, sm: 2 },
+                      px: { xs: 2, sm: 2.5 },
+                      border: item.highlight 
+                        ? `2px solid ${theme.palette.primary.main}` 
+                        : ('special' in item && item.special)
+                          ? `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
+                          : (location.pathname === item.path ? `1px solid ${alpha(theme.palette.primary.main, 0.2)}` : '1px solid transparent'),
+                      boxShadow: item.highlight 
+                        ? '0 4px 12px rgba(76, 175, 80, 0.3)' 
+                        : ('special' in item && item.special)
+                          ? '0 2px 8px rgba(76, 175, 80, 0.1)'
+                          : (location.pathname === item.path ? '0 2px 8px rgba(76, 175, 80, 0.15)' : 'none'),
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: item.highlight 
+                          ? 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)'
+                          : 'transparent',
+                        zIndex: 1,
+                      }
                     }}
                   >
                     <ListItemIcon sx={{ 
-                      color: location.pathname === opportunity.path ? 'primary.main' : 'inherit',
-                      minWidth: 40
+                      color: item.highlight 
+                        ? 'white' 
+                        : ('special' in item && item.special)
+                          ? 'primary.main'
+                          : (location.pathname === item.path ? 'primary.main' : 'inherit'),
+                      minWidth: { xs: 36, sm: 40 },
+                      mr: { xs: 1.5, sm: 2 },
+                      position: 'relative',
+                      zIndex: 2
                     }}>
-                      {opportunity.icon}
+                      <Box sx={{
+                        p: 1,
+                        borderRadius: '12px',
+                        background: item.highlight 
+                          ? 'rgba(255, 255, 255, 0.2)'
+                          : ('special' in item && item.special)
+                            ? alpha(theme.palette.primary.main, 0.1)
+                            : (location.pathname === item.path ? alpha(theme.palette.primary.main, 0.1) : 'transparent'),
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backdropFilter: item.highlight ? 'blur(10px)' : 'none',
+                        border: item.highlight ? '1px solid rgba(255, 255, 255, 0.2)' : 'none'
+                      }}>
+                        {item.icon}
+                      </Box>
                     </ListItemIcon>
                     <ListItemText 
-                      primary={opportunity.label}
-                      secondary={opportunity.description}
+                      primary={item.text} 
                       sx={{ 
                         '& .MuiListItemText-primary': { 
-                          fontWeight: location.pathname === opportunity.path ? 'bold' : 'normal',
-                          color: location.pathname === opportunity.path ? 'primary.main' : 'inherit',
-                          fontSize: '0.95rem'
-                        },
-                        '& .MuiListItemText-secondary': {
-                          fontSize: '0.8rem',
-                          color: 'text.secondary',
-                          mt: 0.5
-                        }
+                          fontWeight: (item.highlight || ('special' in item && item.special) || location.pathname === item.path) ? 'bold' : 'normal',
+                          color: item.highlight 
+                            ? 'white' 
+                            : ('special' in item && item.special)
+                              ? 'primary.main'
+                              : (location.pathname === item.path ? 'primary.main' : 'inherit'),
+                          fontSize: { xs: '0.95rem', sm: '1rem' },
+                          position: 'relative',
+                          zIndex: 2
+                        } 
                       }}
                     />
                   </ListItem>
-                ))}
-              </React.Fragment>
-            );
-          }
-
-          // Regular menu item
-          return (
-            <ListItem
-              component="button"
-              key={item.text}
-              onClick={() => {
-                if (item.isContactDialog) {
-                  item.action();
-                } else if (item.requiresAuth && !user) {
-                  navigate('/register?role=employer');
-                  setMobileOpen(false);
-                } else {
-                  navigate(item.path);
-                  setMobileOpen(false);
-                }
-              }}
-              sx={{
-                backgroundColor: item.highlight 
-                  ? alpha(theme.palette.primary.main, 0.9)
-                  : ('special' in item && item.special)
-                    ? alpha(theme.palette.primary.main, 0.05)
-                    : (location.pathname === item.path ? alpha(theme.palette.primary.main, 0.1) : 'transparent'),
-                '&:hover': {
-                  backgroundColor: item.highlight 
-                    ? alpha(theme.palette.primary.main, 1)
-                    : ('special' in item && item.special)
-                      ? alpha(theme.palette.primary.main, 0.1)
-                      : alpha(theme.palette.primary.main, 0.08),
-                },
-                mx: 2,
-                borderRadius: 3,
-                mb: 1,
-                py: 1.5,
-                border: item.highlight 
-                  ? `2px solid ${theme.palette.primary.main}` 
-                  : ('special' in item && item.special)
-                    ? `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
-                    : 'none',
-                boxShadow: item.highlight 
-                  ? '0 4px 12px rgba(76, 175, 80, 0.3)' 
-                  : ('special' in item && item.special)
-                    ? '0 2px 8px rgba(76, 175, 80, 0.1)'
-                    : 'none',
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                );
+              })}
+            </List>
+          </Box>
+          {/* Theme Toggle Section */}
+          <Box sx={{ 
+            px: { xs: 2, sm: 2.5 },
+            py: { xs: 1.5, sm: 2 },
+            mb: 2,
+            borderRadius: '16px',
+            background: mode === 'dark' 
+              ? 'rgba(255, 255, 255, 0.05)'
+              : 'rgba(0, 0, 0, 0.02)',
+            border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+          }}>
+            <Typography 
+              variant="subtitle2" 
+              sx={{ 
+                mb: 1.5,
+                color: 'text.secondary',
+                fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
               }}
             >
-              <ListItemIcon sx={{ 
-                color: item.highlight 
-                  ? 'white' 
-                  : ('special' in item && item.special)
-                    ? 'primary.main'
-                    : (location.pathname === item.path ? 'primary.main' : 'inherit') 
-              }}>
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText 
-                primary={item.text} 
+              Appearance
+            </Typography>
+            <FormControlLabel
+              control={
+                <Switch 
+                  checked={mode === 'dark'} 
+                  onChange={toggleTheme}
+                  sx={{
+                    '& .MuiSwitch-switchBase.Mui-checked': {
+                      color: theme.palette.primary.main,
+                      '& + .MuiSwitch-track': {
+                        backgroundColor: theme.palette.primary.main,
+                      },
+                    },
+                    '& .MuiSwitch-track': {
+                      backgroundColor: alpha(theme.palette.text.primary, 0.2),
+                    },
+                  }}
+                />
+              }
+              label={
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1.5,
+                  ml: 1
+                }}>
+                  <Box sx={{
+                    p: 1,
+                    borderRadius: '10px',
+                    background: alpha(theme.palette.primary.main, 0.1),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    {mode === 'dark' ? 
+                      <Brightness7 sx={{ fontSize: { xs: '1rem', sm: '1.1rem' }, color: 'primary.main' }} /> : 
+                      <Brightness4 sx={{ fontSize: { xs: '1rem', sm: '1.1rem' }, color: 'primary.main' }} />
+                    }
+                  </Box>
+                  <Typography 
+                    variant="body2"
+                    sx={{
+                      fontSize: { xs: '0.9rem', sm: '0.95rem' },
+                      fontWeight: 500,
+                      color: 'text.primary'
+                    }}
+                  >
+                    {mode === 'dark' ? 'Dark Mode' : 'Light Mode'}
+                  </Typography>
+                </Box>
+              }
+            />
+          </Box>
+          
+          {/* Authentication Section */}
+          {!user && (
+            <Box sx={{ 
+              px: { xs: 2, sm: 2.5 },
+              py: { xs: 1.5, sm: 2 },
+              mb: 2,
+              borderRadius: '16px',
+              background: mode === 'dark' 
+                ? 'rgba(76, 175, 80, 0.05)'
+                : 'rgba(76, 175, 80, 0.02)',
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+            }}>
+              <Typography 
+                variant="subtitle2" 
                 sx={{ 
-                  '& .MuiListItemText-primary': { 
-                    fontWeight: (item.highlight || ('special' in item && item.special) || location.pathname === item.path) ? 'bold' : 'normal',
-                    color: item.highlight 
-                      ? 'white' 
-                      : ('special' in item && item.special)
-                        ? 'primary.main'
-                        : (location.pathname === item.path ? 'primary.main' : 'inherit')
-                  } 
+                  mb: 1.5,
+                  color: 'text.secondary',
+                  fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
                 }}
-              />
-            </ListItem>
-          );
-        })}
-      </List>
-      <Divider sx={{ my: 2 }} />
-      <Box sx={{ px: 2 }}>
-        <FormControlLabel
-          control={<Switch checked={mode === 'dark'} onChange={toggleTheme} />}
-          label={
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {mode === 'dark' ? <Brightness7 /> : <Brightness4 />}
-              Dark Mode
+              >
+                Account
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  startIcon={<Login sx={{ fontSize: { xs: '1rem', sm: '1.1rem' } }} />}
+                  onClick={() => {
+                    navigate('/login');
+                    setMobileOpen(false);
+                  }}
+                  sx={{ 
+                    py: { xs: 1.5, sm: 2 },
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)',
+                    boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 6px 16px rgba(76, 175, 80, 0.4)',
+                    },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    fontSize: { xs: '0.9rem', sm: '0.95rem' },
+                    fontWeight: 600
+                  }}
+                >
+                  Login
+                </Button>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<PersonAdd sx={{ fontSize: { xs: '1rem', sm: '1.1rem' } }} />}
+                  onClick={() => {
+                    navigate('/register');
+                    setMobileOpen(false);
+                  }}
+                  sx={{ 
+                    py: { xs: 1.5, sm: 2 },
+                    borderRadius: '12px',
+                    border: `2px solid ${theme.palette.primary.main}`,
+                    color: 'primary.main',
+                    background: 'transparent',
+                    '&:hover': {
+                      background: alpha(theme.palette.primary.main, 0.05),
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 4px 12px rgba(76, 175, 80, 0.2)',
+                    },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    fontSize: { xs: '0.9rem', sm: '0.95rem' },
+                    fontWeight: 600
+                  }}
+                >
+                  Sign Up Free
+                </Button>
+              </Box>
             </Box>
-          }
-        />
-      </Box>
-      {!user && (
-        <Box sx={{ p: 2, mt: 2 }}>
-          <Button
-            fullWidth
-            variant="contained"
-            startIcon={<Login />}
-            onClick={() => {
-              navigate('/login');
-              setMobileOpen(false);
-            }}
-            sx={{ mb: 1 }}
-          >
-            Login
-          </Button>
-          <Button
-            fullWidth
-            variant="outlined"
-            startIcon={<PersonAdd />}
-            onClick={() => {
-              navigate('/register');
-              setMobileOpen(false);
-            }}
-          >
-            Sign Up
-          </Button>
+          )}
         </Box>
-      )}
+      </Box>
     </Box>
   );
 
@@ -527,15 +949,15 @@ const Navbar: React.FC = () => {
         }}
       >
         <Toolbar sx={{ 
-          px: { xs: 2, md: 4, lg: 6 }, 
-          minHeight: { xs: 70, md: 80, lg: 88 },
-          py: { xs: 1.5, md: 2, lg: 2.5 },
+          px: { xs: 2, sm: 3, md: 4, lg: 5, xl: 6 }, 
+          minHeight: { xs: 70, sm: 75, md: 80, lg: 85, xl: 88 },
+          py: { xs: 1.5, sm: 1.8, md: 2, lg: 2.2, xl: 2.5 },
           justifyContent: 'space-between',
           alignItems: 'center',
           fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
           fontWeight: 500
         }}>
-          {isMobile && (
+          {(isMobile || isSmallTablet) && (
             <IconButton
               color="inherit"
               aria-label="open drawer"
@@ -543,7 +965,7 @@ const Navbar: React.FC = () => {
               onClick={handleDrawerToggle}
               sx={{ 
                 mr: 2,
-                p: 1.5,
+                p: { xs: 1.5, sm: 1.8 },
                 borderRadius: '12px',
                 backgroundColor: alpha(theme.palette.primary.main, 0.08),
                 '&:hover': {
@@ -574,8 +996,8 @@ const Navbar: React.FC = () => {
           >
             <Box
               sx={{
-                width: { xs: 44, md: 52, lg: 60 },
-                height: { xs: 44, md: 52, lg: 60 },
+                width: { xs: 44, sm: 48, md: 52, lg: 56, xl: 60 },
+                height: { xs: 44, sm: 48, md: 52, lg: 56, xl: 60 },
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -617,7 +1039,7 @@ const Navbar: React.FC = () => {
               sx={{ 
                 flexGrow: 0, 
                 fontWeight: 700,
-                fontSize: { xs: '0.9rem', md: '1rem', lg: '1.1rem' },
+                fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1rem', lg: '1.05rem', xl: '1.1rem' },
                 background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)',
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
@@ -639,13 +1061,13 @@ const Navbar: React.FC = () => {
             flex: 1,
             justifyContent: 'center',
           }}>
-            {!isMobile && (
+            {!(isMobile || isSmallTablet) && (
               <Box sx={{ 
                 display: 'flex', 
                 alignItems: 'center', 
-                gap: { xs: 1.5, md: 2, lg: 3 }
+                gap: { sm: 1.8, md: 2.2, lg: 2.8, xl: 3 }
               }}>
-              {currentMenuItems.filter(item => !('protected' in item) || !item.protected || user).map((item) => {
+              {currentMenuItems.filter(item => !('protected' in item) || !(item as any).protected || user).map((item) => {
                 // Handle dropdown menu item
                 if (item.isDropdown) {
                   return (
@@ -653,7 +1075,7 @@ const Navbar: React.FC = () => {
                       <Button
                         ref={opportunitiesRef}
                         color="inherit"
-                        startIcon={isTablet ? undefined : item.icon}
+                        startIcon={(isTablet || isSmallTablet) ? undefined : item.icon}
                         endIcon={<KeyboardArrowDown sx={{ 
                           fontSize: 16, 
                           transform: opportunitiesOpen ? 'rotate(180deg)' : 'rotate(0deg)',
@@ -666,11 +1088,11 @@ const Navbar: React.FC = () => {
                           color: opportunitiesOpen ? 'primary.main' : 'text.primary',
                           backgroundColor: opportunitiesOpen ? alpha(theme.palette.primary.main, 0.12) : 'transparent',
                           borderRadius: 3,
-                          px: { xs: 2, md: 2.5, lg: 3 },
-                          py: { xs: 1, md: 1.25, lg: 1.5 },
-                          minWidth: isTablet ? 'auto' : undefined,
-                          fontSize: { xs: '0.8rem', md: '0.85rem', lg: '0.9rem' },
-                          height: { xs: 40, md: 44, lg: 48 },
+                          px: { sm: 2.2, md: 2.5, lg: 2.8, xl: 3 },
+                          py: { sm: 1.2, md: 1.25, lg: 1.4, xl: 1.5 },
+                          minWidth: (isTablet || isSmallTablet) ? 'auto' : undefined,
+                          fontSize: { sm: '0.82rem', md: '0.85rem', lg: '0.88rem', xl: '0.9rem' },
+                          height: { sm: 42, md: 44, lg: 46, xl: 48 },
                           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                           fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
                           letterSpacing: '-0.01em',
@@ -789,90 +1211,56 @@ const Navbar: React.FC = () => {
                   <Button
                     key={item.text}
                     color="inherit"
-                    startIcon={isTablet ? undefined : item.icon}
+                    startIcon={(isTablet || isSmallTablet) ? undefined : item.icon}
                     onClick={() => {
                       if (item.isContactDialog && 'action' in item) {
                         item.action();
-                      } else if ('requiresAuth' in item && item.requiresAuth && !user) {
+                      } else if ('requiresAuth' in item && (item as any).requiresAuth && !user) {
                         navigate('/register?role=employer');
                       } else if ('path' in item) {
                         navigate(item.path);
                       }
                     }}
-                    variant={('highlight' in item && item.highlight) ? 'contained' : 'text'}
+                    variant={('highlight' in item && (item as any).highlight) ? 'contained' : 'text'}
                     sx={{
                       fontWeight: ('path' in item && location.pathname === item.path) 
                         ? 'bold' 
-                        : (('highlight' in item && item.highlight) || ('special' in item && item.special)) 
+                        : (('highlight' in item && (item as any).highlight) || ('special' in item && (item as any).special)) 
                           ? 'bold' 
                           : 'normal',
-                      color: ('highlight' in item && item.highlight) 
+                      color: ('highlight' in item && (item as any).highlight) 
                         ? 'white' 
-                        : ('special' in item && item.special)
+                        : ('special' in item && (item as any).special)
                           ? 'primary.main'
                           : (('path' in item && location.pathname === item.path) ? 'primary.main' : 'text.primary'),
-                      backgroundColor: ('highlight' in item && item.highlight)
+                      backgroundColor: ('highlight' in item && (item as any).highlight)
                         ? 'primary.main' 
                         : (('path' in item && location.pathname === item.path) ? alpha(theme.palette.primary.main, 0.1) : 'transparent'),
-                      border: ('special' in item && item.special) 
-                        ? `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
-                        : 'none',
-                      '&:hover': {
-                        backgroundColor: ('highlight' in item && item.highlight)
-                          ? 'primary.dark' 
-                          : ('special' in item && item.special)
-                            ? alpha(theme.palette.primary.main, 0.08)
-                            : alpha(theme.palette.primary.main, 0.04),
-                        transform: (('highlight' in item && item.highlight) || ('special' in item && item.special)) 
-                          ? 'translateY(-1px)' 
-                          : 'none',
-                        boxShadow: ('highlight' in item && item.highlight) 
-                          ? '0 4px 12px rgba(76, 175, 80, 0.3)' 
-                          : ('special' in item && item.special)
-                            ? '0 2px 8px rgba(76, 175, 80, 0.2)'
-                            : 'none',
-                        border: ('special' in item && item.special) 
-                          ? `1px solid ${alpha(theme.palette.primary.main, 0.5)}`
-                          : undefined,
-                      },
-                      fontWeight: ('path' in item && location.pathname === item.path) 
-                        ? 700 
-                        : (('highlight' in item && item.highlight) || ('special' in item && item.special)) 
-                          ? 700 
-                          : 500,
-                      color: ('highlight' in item && item.highlight) 
-                        ? 'white' 
-                        : ('special' in item && item.special)
-                          ? 'primary.main'
-                          : (('path' in item && location.pathname === item.path) ? 'primary.main' : 'text.primary'),
-                      backgroundColor: ('highlight' in item && item.highlight)
-                        ? 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)' 
-                        : (('path' in item && location.pathname === item.path) ? alpha(theme.palette.primary.main, 0.12) : 'transparent'),
-                      border: ('special' in item && item.special) 
+                      border: ('special' in item && (item as any).special) 
                         ? `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
                         : 'none',
                       borderRadius: 3,
-                      px: { xs: 2, md: 2.5, lg: 3 },
-                      py: { xs: 1, md: 1.25, lg: 1.5 },
-                      minWidth: isTablet ? 'auto' : undefined,
-                      fontSize: { xs: '0.8rem', md: '0.85rem', lg: '0.9rem' },
-                      height: { xs: 40, md: 44, lg: 48 },
+                      px: { sm: 2.2, md: 2.5, lg: 2.8, xl: 3 },
+                      py: { sm: 1.2, md: 1.25, lg: 1.4, xl: 1.5 },
+                      minWidth: (isTablet || isSmallTablet) ? 'auto' : undefined,
+                      fontSize: { sm: '0.82rem', md: '0.85rem', lg: '0.88rem', xl: '0.9rem' },
+                      height: { sm: 42, md: 44, lg: 46, xl: 48 },
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                       fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
                       letterSpacing: '-0.01em',
                       '&:hover': {
-                        backgroundColor: ('highlight' in item && item.highlight)
+                        backgroundColor: ('highlight' in item && (item as any).highlight)
                           ? 'linear-gradient(135deg, #45a049 0%, #1b5e20 100%)' 
-                          : ('special' in item && item.special)
+                          : ('special' in item && (item as any).special)
                             ? alpha(theme.palette.primary.main, 0.1)
                             : alpha(theme.palette.primary.main, 0.08),
                         transform: 'translateY(-2px)',
-                        boxShadow: ('highlight' in item && item.highlight) 
+                        boxShadow: ('highlight' in item && (item as any).highlight) 
                           ? '0 8px 24px rgba(76, 175, 80, 0.3)' 
-                          : ('special' in item && item.special)
+                          : ('special' in item && (item as any).special)
                             ? '0 4px 16px rgba(76, 175, 80, 0.2)'
                             : '0 4px 16px rgba(76, 175, 80, 0.1)',
-                        border: ('special' in item && item.special) 
+                        border: ('special' in item && (item as any).special) 
                           ? `1px solid ${alpha(theme.palette.primary.main, 0.5)}`
                           : undefined,
                       },
@@ -895,61 +1283,61 @@ const Navbar: React.FC = () => {
           <Box sx={{ 
             display: 'flex', 
             alignItems: 'center', 
-            gap: { xs: 1, md: 1.5, lg: 2 },
+            gap: { xs: 1, sm: 1.2, md: 1.5, lg: 1.8, xl: 2 },
             minWidth: 'fit-content'
           }}>
-          {!isMobile && (
+          {!(isMobile || isSmallTablet) && (
             <Tooltip title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}>
               <IconButton 
                 onClick={toggleTheme} 
                 color="inherit" 
                 sx={{ 
-                  p: { xs: 1, md: 1.5, lg: 1.8 },
-                  width: { xs: 36, md: 40, lg: 44 },
-                  height: { xs: 36, md: 40, lg: 44 },
+                  p: { sm: 1.2, md: 1.5, lg: 1.7, xl: 1.8 },
+                  width: { sm: 38, md: 40, lg: 42, xl: 44 },
+                  height: { sm: 38, md: 40, lg: 42, xl: 44 },
                   borderRadius: 3,
                   '&:hover': {
                     backgroundColor: alpha(theme.palette.primary.main, 0.1),
                     transform: 'scale(1.05)',
-                    boxShadow: isDesktop ? '0 6px 20px rgba(76, 175, 80, 0.3)' : '0 4px 12px rgba(76, 175, 80, 0.2)',
+                    boxShadow: (isLargeTablet || isDesktop) ? '0 6px 20px rgba(76, 175, 80, 0.3)' : '0 4px 12px rgba(76, 175, 80, 0.2)',
                   },
                   transition: 'all 0.3s ease'
                 }}
               >
                 {mode === 'dark' ? 
-                  <Brightness7 sx={{ fontSize: { xs: '1.2rem', md: '1.4rem', lg: '1.5rem' } }} /> : 
-                  <Brightness4 sx={{ fontSize: { xs: '1.2rem', md: '1.4rem', lg: '1.5rem' } }} />
+                  <Brightness7 sx={{ fontSize: { sm: '1.3rem', md: '1.4rem', lg: '1.45rem', xl: '1.5rem' } }} /> : 
+                  <Brightness4 sx={{ fontSize: { sm: '1.3rem', md: '1.4rem', lg: '1.45rem', xl: '1.5rem' } }} />
                 }
               </IconButton>
             </Tooltip>
           )}
 
           {/* Post Job Button for Employers */}
-          {user && user.role === UserRole.EMPLOYER && !isMobile && (
+          {user && user.role === UserRole.EMPLOYER && !(isMobile || isSmallTablet) && (
             <Button
               variant="contained"
-              startIcon={isTablet ? undefined : <PostAdd />}
+              startIcon={(isTablet || isSmallTablet) ? undefined : <PostAdd />}
               onClick={() => navigate('/app/jobs/create')}
               sx={{
-                mr: { xs: 1, md: 1.5, lg: 2 },
+                mr: { sm: 1.2, md: 1.5, lg: 1.8, xl: 2 },
                 fontWeight: 'bold',
                 background: 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)',
                 boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
                 '&:hover': {
                   background: 'linear-gradient(45deg, #2e7d32 30%, #1b5e20 90%)',
-                  boxShadow: isDesktop ? '0 8px 24px rgba(76, 175, 80, 0.5)' : '0 5px 15px rgba(76, 175, 80, 0.4)',
+                  boxShadow: (isLargeTablet || isDesktop) ? '0 8px 24px rgba(76, 175, 80, 0.5)' : '0 5px 15px rgba(76, 175, 80, 0.4)',
                   transform: 'translateY(-2px)',
                 },
                 borderRadius: 2,
-                px: { xs: 1.5, md: 2, lg: 2.5 },
-                py: { xs: 0.8, md: 1, lg: 1.2 },
-                fontSize: { xs: '0.85rem', md: '0.95rem', lg: '1rem' },
-                minWidth: isTablet ? 'auto' : undefined,
-                height: { xs: 36, md: 40, lg: 44 },
+                px: { sm: 1.8, md: 2, lg: 2.3, xl: 2.5 },
+                py: { sm: 0.9, md: 1, lg: 1.1, xl: 1.2 },
+                fontSize: { sm: '0.87rem', md: '0.95rem', lg: '0.98rem', xl: '1rem' },
+                minWidth: (isTablet || isSmallTablet) ? 'auto' : undefined,
+                height: { sm: 38, md: 40, lg: 42, xl: 44 },
                 transition: 'all 0.3s ease',
               }}
             >
-              {isDesktop ? 'Post New Job' : 'Post Job'}
+              {(isLargeTablet || isDesktop) ? 'Post New Job' : 'Post Job'}
             </Button>
           )}
 
@@ -966,16 +1354,16 @@ const Navbar: React.FC = () => {
                 <Avatar 
                   sx={{ 
                     bgcolor: 'primary.main',
-                    width: { xs: 32, md: 36, lg: 40 },
-                    height: { xs: 32, md: 36, lg: 40 },
-                    fontSize: { xs: '0.9rem', md: '1rem', lg: '1.1rem' },
-                    boxShadow: isDesktop ? '0 3px 12px rgba(76, 175, 80, 0.25)' : 'none',
+                    width: { xs: 32, sm: 34, md: 36, lg: 38, xl: 40 },
+                    height: { xs: 32, sm: 34, md: 36, lg: 38, xl: 40 },
+                    fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1rem', lg: '1.05rem', xl: '1.1rem' },
+                    boxShadow: (isLargeTablet || isDesktop) ? '0 3px 12px rgba(76, 175, 80, 0.25)' : 'none',
                     transition: 'all 0.3s ease',
-                    border: isDesktop ? '3px solid transparent' : '2px solid transparent',
+                    border: (isLargeTablet || isDesktop) ? '3px solid transparent' : '2px solid transparent',
                     backgroundClip: 'padding-box',
                     '&:hover': {
                       transform: 'scale(1.08)',
-                      boxShadow: isDesktop ? '0 6px 20px rgba(76, 175, 80, 0.4)' : '0 4px 12px rgba(76, 175, 80, 0.3)',
+                      boxShadow: (isLargeTablet || isDesktop) ? '0 6px 20px rgba(76, 175, 80, 0.4)' : '0 4px 12px rgba(76, 175, 80, 0.3)',
                       borderColor: alpha(theme.palette.primary.light, 0.5),
                     }
                   }}
@@ -1047,31 +1435,31 @@ const Navbar: React.FC = () => {
           ) : (
             <Box sx={{ 
               display: 'flex', 
-              gap: { xs: 0.5, md: 1, lg: 1.5 }
+              gap: { xs: 0.5, sm: 0.8, md: 1, lg: 1.3, xl: 1.5 }
             }}>
               <Button
                 color="inherit"
-                startIcon={isMobile ? undefined : (isTablet ? undefined : <Login />)}
+                startIcon={(isMobile || isSmallTablet) ? undefined : ((isTablet || isSmallTablet) ? undefined : <Login />)}
                 onClick={() => navigate('/login')}
-                variant={isMobile ? 'contained' : 'text'}
+                variant={(isMobile || isSmallTablet) ? 'contained' : 'text'}
                 sx={{ 
                   fontWeight: 'bold',
-                  px: { xs: 1.5, md: 2, lg: 2.5 },
-                  py: { xs: 0.5, md: 1, lg: 1.25 },
-                  fontSize: { xs: '0.8rem', md: '0.9rem', lg: '1rem' },
-                  minWidth: isMobile ? 'auto' : (isTablet ? 'auto' : undefined),
-                  height: { xs: 32, md: 40, lg: 44 },
+                  px: { xs: 1.5, sm: 1.8, md: 2, lg: 2.3, xl: 2.5 },
+                  py: { xs: 0.5, sm: 0.7, md: 1, lg: 1.1, xl: 1.25 },
+                  fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.9rem', lg: '0.95rem', xl: '1rem' },
+                  minWidth: (isMobile || isSmallTablet) ? 'auto' : ((isTablet || isSmallTablet) ? 'auto' : undefined),
+                  height: { xs: 32, sm: 36, md: 40, lg: 42, xl: 44 },
                   borderRadius: 2,
-                  background: isMobile ? 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)' : 'transparent',
-                  color: isMobile ? 'white' : 'inherit',
-                  boxShadow: isMobile ? '0 2px 8px rgba(76, 175, 80, 0.3)' : 'none',
+                  background: (isMobile || isSmallTablet) ? 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)' : 'transparent',
+                  color: (isMobile || isSmallTablet) ? 'white' : 'inherit',
+                  boxShadow: (isMobile || isSmallTablet) ? '0 2px 8px rgba(76, 175, 80, 0.3)' : 'none',
                   '&:hover': {
-                    backgroundColor: isMobile ? 'transparent' : 'primary.light',
-                    background: isMobile ? 'linear-gradient(45deg, #2e7d32 30%, #1b5e20 90%)' : undefined,
-                    boxShadow: isMobile ? '0 4px 12px rgba(76, 175, 80, 0.4)' 
-                      : isDesktop ? '0 4px 16px rgba(76, 175, 80, 0.25)'
+                    backgroundColor: (isMobile || isSmallTablet) ? 'transparent' : 'primary.light',
+                    background: (isMobile || isSmallTablet) ? 'linear-gradient(45deg, #2e7d32 30%, #1b5e20 90%)' : undefined,
+                    boxShadow: (isMobile || isSmallTablet) ? '0 4px 12px rgba(76, 175, 80, 0.4)' 
+                      : (isLargeTablet || isDesktop) ? '0 4px 16px rgba(76, 175, 80, 0.25)'
                       : '0 2px 8px rgba(76, 175, 80, 0.2)',
-                    transform: isDesktop ? 'translateY(-2px)' : 'none',
+                    transform: (isLargeTablet || isDesktop) ? 'translateY(-2px)' : 'none',
                   },
                   transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:active': {
@@ -1081,22 +1469,22 @@ const Navbar: React.FC = () => {
               >
                 Login
               </Button>
-              {!isMobile && (
+              {!(isMobile || isSmallTablet) && (
                 <Button
                   variant="contained"
-                  startIcon={isTablet ? undefined : <PersonAdd />}
+                  startIcon={(isTablet || isSmallTablet) ? undefined : <PersonAdd />}
                   onClick={() => navigate('/register')}
                   sx={{ 
                     fontWeight: 'bold',
-                    px: { xs: 1.5, md: 2, lg: 2.5 },
-                    py: { xs: 0.75, md: 1, lg: 1.25 },
-                    fontSize: { xs: '0.8rem', md: '0.95rem', lg: '1rem' },
-                    minWidth: isTablet ? 'auto' : undefined,
-                    height: { xs: 36, md: 40, lg: 44 },
+                    px: { sm: 1.8, md: 2, lg: 2.3, xl: 2.5 },
+                    py: { sm: 0.8, md: 1, lg: 1.1, xl: 1.25 },
+                    fontSize: { sm: '0.82rem', md: '0.95rem', lg: '0.98rem', xl: '1rem' },
+                    minWidth: (isTablet || isSmallTablet) ? 'auto' : undefined,
+                    height: { sm: 38, md: 40, lg: 42, xl: 44 },
                     borderRadius: 2,
                     boxShadow: '0 3px 12px rgba(76, 175, 80, 0.3)',
                     '&:hover': {
-                      boxShadow: isDesktop ? '0 8px 24px rgba(76, 175, 80, 0.5)' : '0 4px 12px rgba(76, 175, 80, 0.4)',
+                      boxShadow: (isLargeTablet || isDesktop) ? '0 8px 24px rgba(76, 175, 80, 0.5)' : '0 4px 12px rgba(76, 175, 80, 0.4)',
                       transform: 'translateY(-2px)',
                     },
                     transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -1105,7 +1493,7 @@ const Navbar: React.FC = () => {
                     },
                   }}
                 >
-                  {isDesktop ? 'Sign Up Free' : 'Sign Up'}
+                  {(isLargeTablet || isDesktop) ? 'Sign Up Free' : 'Sign Up'}
                 </Button>
               )}
             </Box>
@@ -1125,12 +1513,41 @@ const Navbar: React.FC = () => {
           display: { xs: 'block', md: 'none' },
           '& .MuiDrawer-paper': { 
             boxSizing: 'border-box', 
-            width: { xs: 280, sm: 300, md: 320 },
+            width: { xs: '100vw', sm: 320, md: 360 },
             borderRadius: '0 20px 20px 0',
-            background: theme.palette.mode === 'dark' 
-              ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
-              : 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
-            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
+            background: mode === 'dark' 
+              ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)'
+              : 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%)',
+            boxShadow: mode === 'dark'
+              ? '0 20px 60px rgba(0, 0, 0, 0.5)'
+              : '0 20px 60px rgba(0, 0, 0, 0.15)',
+            backdropFilter: 'blur(20px)',
+            position: 'relative',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: mode === 'dark'
+                ? 'radial-gradient(circle at 20% 20%, rgba(76, 175, 80, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(33, 150, 243, 0.03) 0%, transparent 50%)'
+                : 'radial-gradient(circle at 20% 20%, rgba(76, 175, 80, 0.02) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(33, 150, 243, 0.01) 0%, transparent 50%)',
+              pointerEvents: 'none',
+              zIndex: 0,
+            }
+          },
+        }}
+        slotProps={{
+          backdrop: {
+            timeout: 500,
+            sx: {
+              backgroundColor: mode === 'dark' 
+                ? 'rgba(0, 0, 0, 0.7)' 
+                : 'rgba(0, 0, 0, 0.5)',
+              backdropFilter: 'blur(8px)',
+            }
           },
         }}
       >

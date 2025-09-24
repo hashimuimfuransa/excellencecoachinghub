@@ -775,7 +775,7 @@ const AllJobsPage: React.FC = () => {
               <Typography
                 variant={isMobile ? 'body1' : 'h6'}
                 sx={{
-                  mb: { xs: 1.5, sm: 2, md: 3 },
+                  mb: { xs: 1.5, sm: 2, md: 2.5 },
                   maxWidth: { xs: '90%', sm: '500px', md: '600px' },
                   mx: 'auto',
                   fontSize: { xs: '0.85rem', sm: '1rem', md: '1.25rem' },
@@ -786,200 +786,78 @@ const AllJobsPage: React.FC = () => {
                   px: { xs: 1, sm: 0 }
                 }}
               >
-                Discover thousands of opportunities from top companies worldwide
+                Discover opportunities from top companies worldwide
               </Typography>
               
-              {/* Quick Action Buttons */}
-              <Grid container spacing={{ xs: 0.5, sm: 1.5, md: 2 }} sx={{ justifyContent: 'center', mb: { xs: 0.5, sm: 1, md: 2 }, px: { xs: 1, sm: 0 } }}>
-                
-                
-                <Grid item xs={6} sm={4} md={2}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    size={isMobile ? 'small' : 'large'}
-                    onClick={() => user ? navigate('/cv-builder') : navigate('/login')}
-                    sx={{
-                      py: { xs: 1, sm: 1.5, md: 2 },
-                      borderRadius: { xs: 2, md: 4 },
-                      background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                      boxShadow: '0 8px 32px rgba(245, 87, 108, 0.3)',
-                      minHeight: { xs: '70px', sm: '80px', md: 'auto' },
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 12px 40px rgba(245, 87, 108, 0.4)',
-                      },
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                    }}
-                    startIcon={<Assignment sx={{ fontSize: { xs: '0.9rem', sm: '1rem', md: '1.25rem' } }} />}
-                  >
-                    <Box>
-                      <Typography 
-                        variant="button" 
-                        fontWeight="bold"
-                        sx={{ 
-                          fontSize: { xs: '0.45rem', sm: '0.75rem', md: '0.875rem' },
-                          lineHeight: 1.2
-                        }}
-                      >
-                        CV Builder
-                      </Typography>
-                      <Typography 
-                        variant="caption" 
-                        display="block" 
-                        sx={{ 
-                          opacity: 0.9,
-                          fontSize: { xs: '0.35rem', sm: '0.65rem', md: '0.75rem' },
-                          lineHeight: 1.1
-                        }}
-                      >
-                        Create perfect <br /> resume
-                      </Typography>
-                    </Box>
-                  </Button>
-                </Grid>
-
-                <Grid item xs={6} sm={4} md={2}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    size={isMobile ? 'small' : 'large'}
-                    onClick={() => user ? navigate('/app/network') : navigate('/login')}
-                    sx={{
-                      py: { xs: 1, sm: 1.5, md: 2 },
-                      borderRadius: { xs: 2, md: 4 },
-                      background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-                      boxShadow: '0 8px 32px rgba(79, 172, 254, 0.3)',
-                      minHeight: { xs: '70px', sm: '80px', md: 'auto' },
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 12px 40px rgba(79, 172, 254, 0.4)',
-                      },
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                    }}
-                    startIcon={<PersonAdd sx={{ fontSize: { xs: '0.9rem', sm: '1rem', md: '1.25rem' } }} />}
-                  >
-                    <Box>
-                      <Typography 
-                        variant="button" 
-                        fontWeight="bold"
-                        sx={{ 
-                          fontSize: { xs: '0.45rem', sm: '0.75rem', md: '0.875rem' },
-                          lineHeight: 1.2
-                        }}
-                      >
-                        Networking
-                      </Typography>
-                      <Typography 
-                        variant="caption" 
-                        display="block" 
-                        sx={{ 
-                          opacity: 0.9,
-                          fontSize: { xs: '0.35rem', sm: '0.65rem', md: '0.75rem' },
-                          lineHeight: 1.1
-                        }}
-                      >
-                      Build Connections.<br />
-                       Unlock Success.
-                      </Typography>
-                    </Box>
-                  </Button>
-                </Grid>
-
-                <Grid item xs={6} sm={4} md={2}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    size={isMobile ? 'small' : 'large'}
-                    onClick={() => navigate('/register?role=employer')}
-                    sx={{
-                      py: { xs: 1, sm: 1.5, md: 2 },
-                      borderRadius: { xs: 2, md: 4 },
-                      background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-                      boxShadow: '0 8px 32px rgba(250, 112, 154, 0.3)',
-                      minHeight: { xs: '70px', sm: '80px', md: 'auto' },
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 12px 40px rgba(250, 112, 154, 0.4)',
-                      },
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                    }}
-                    startIcon={<PostAdd sx={{ fontSize: { xs: '0.9rem', sm: '1rem', md: '1.25rem' } }} />}
-                  >
-                    <Box>
-                      <Typography 
-                        variant="button" 
-                        fontWeight="bold"
-                        sx={{ 
-                          fontSize: { xs: '0.45rem', sm: '0.75rem', md: '0.875rem' },
-                          lineHeight: 1.2
-                        }}
-                      >
-                        Post Jobs
-                      </Typography>
-                      <Typography 
-                        variant="caption" 
-                        display="block" 
-                        sx={{ 
-                          opacity: 0.9,
-                          fontSize: { xs: '0.35rem', sm: '0.65rem', md: '0.75rem' },
-                          lineHeight: 1.1
-                        }}
-                      >
-                        Hire top talent
-                      </Typography>
-                    </Box>
-                  </Button>
-                </Grid>
-
-             
-
-                <Grid item xs={6} sm={4} md={2}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    size={isMobile ? 'small' : 'large'}
-                    onClick={() => user ? navigate('/exam-preparation') : navigate('/login')}
-                    sx={{
-                      py: { xs: 1, sm: 1.5, md: 2 },
-                      borderRadius: { xs: 2, md: 4 },
-                      background: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-                      boxShadow: '0 8px 32px rgba(168, 237, 234, 0.3)',
-                      minHeight: { xs: '70px', sm: '80px', md: 'auto' },
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 12px 40px rgba(168, 237, 234, 0.4)',
-                      },
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                    }}
-                    startIcon={<Assignment sx={{ fontSize: { xs: '0.9rem', sm: '1rem', md: '1.25rem' } }} />}
-                  >
-                    <Box>
-                      <Typography 
-                        variant="button" 
-                        fontWeight="bold"
-                        sx={{ 
-                          fontSize: { xs: '0.45rem', sm: '0.75rem', md: '0.875rem' },
-                          lineHeight: 1.2
-                        }}
-                      >
-                        Smart Exams
-                      </Typography>
-                      <Typography 
-                        variant="caption" 
-                        display="block" 
-                        sx={{ 
-                          opacity: 0.9,
-                          fontSize: { xs: '0.35rem', sm: '0.65rem', md: '0.75rem' },
-                          lineHeight: 1.1
-                        }}
-                      >
-                        Exam preparation
-                      </Typography>
-                    </Box>
-                  </Button>
-                </Grid>
-              </Grid>
+              {/* Small text about services */}
+              <Typography
+                variant="body2"
+                sx={{
+                  mb: { xs: 2, sm: 2.5, md: 3 },
+                  maxWidth: { xs: '85%', sm: '450px', md: '500px' },
+                  mx: 'auto',
+                  fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.9rem' },
+                  color: 'rgba(255,255,255,0.7)',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                  lineHeight: { xs: 1.4, md: 1.5 },
+                  textAlign: 'center',
+                  px: { xs: 1, sm: 0 },
+                  fontStyle: 'italic'
+                }}
+              >
+                Plus job preparation services and professional networking to boost your career
+              </Typography>
+              
+              {/* Enhanced Get Started Button */}
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'center',
+                mt: { xs: 1, sm: 1.5, md: 2 }
+              }}>
+                <Button
+                  variant="contained"
+                  size="large"
+                  onClick={() => navigate('/login')}
+                  sx={{
+                    px: { xs: 4, sm: 5, md: 6 },
+                    py: { xs: 1.8, sm: 2.2, md: 2.8 },
+                    borderRadius: 4,
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+                    boxShadow: '0 12px 32px rgba(102, 126, 234, 0.4), 0 4px 16px rgba(118, 75, 162, 0.3)',
+                    fontSize: { xs: '1rem', sm: '1.1rem', md: '1.2rem' },
+                    fontWeight: 700,
+                    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+                    textTransform: 'none',
+                    letterSpacing: '-0.02em',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: '-100%',
+                      width: '100%',
+                      height: '100%',
+                      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                      transition: 'left 0.6s ease',
+                    },
+                    '&:hover': {
+                      transform: 'translateY(-4px) scale(1.05)',
+                      boxShadow: '0 20px 48px rgba(102, 126, 234, 0.5), 0 8px 24px rgba(118, 75, 162, 0.4)',
+                      background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 50%, #ec4899 100%)',
+                      '&::before': {
+                        left: '100%',
+                      }
+                    },
+                    '&:active': {
+                      transform: 'scale(0.98) translateY(-2px)',
+                    }
+                  }}
+                >
+                  Get Started
+                </Button>
+              </Box>
             </Box>
           </Container>
         </Box>

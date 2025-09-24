@@ -203,7 +203,7 @@ const Navbar: React.FC = () => {
 
   // For non-logged in users, show public menu
   const publicMenuItems = [
-    { text: 'All Jobs', icon: <Work />, path: '/', special: true },
+    { text: 'All Jobs', icon: <Work />, path: '/' },
     { text: 'Internships', icon: <School />, path: '/internships' },
     { text: 'Other Opportunities', icon: <CategoryIcon />, isDropdown: true },
     { text: 'Support', icon: <Support />, path: '/support' },
@@ -493,18 +493,47 @@ const Navbar: React.FC = () => {
         position="sticky" 
         elevation={0}
         sx={{ 
-          backgroundColor: 'background.paper',
-          borderBottom: '1px solid',
-          borderColor: 'divider',
-          color: 'text.primary'
+          backgroundColor: mode === 'dark' ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.98)',
+          backdropFilter: 'blur(24px)',
+          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          boxShadow: mode === 'dark' 
+            ? '0 4px 32px rgba(0, 0, 0, 0.3), 0 1px 0 rgba(255, 255, 255, 0.05)'
+            : '0 4px 32px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(255, 255, 255, 0.8)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: mode === 'dark' 
+              ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 50%, rgba(2, 6, 23, 0.98) 100%)'
+              : 'linear-gradient(135deg, rgba(248, 250, 252, 0.9) 0%, rgba(241, 245, 249, 0.95) 50%, rgba(226, 232, 240, 0.98) 100%)',
+            zIndex: -1,
+          },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: mode === 'dark'
+              ? 'radial-gradient(circle at 20% 50%, rgba(76, 175, 80, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(33, 150, 243, 0.08) 0%, transparent 50%), radial-gradient(circle at 40% 80%, rgba(156, 39, 176, 0.06) 0%, transparent 50%)'
+              : 'radial-gradient(circle at 20% 50%, rgba(76, 175, 80, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(33, 150, 243, 0.04) 0%, transparent 50%), radial-gradient(circle at 40% 80%, rgba(156, 39, 176, 0.03) 0%, transparent 50%)',
+            zIndex: -1,
+          }
         }}
       >
         <Toolbar sx={{ 
-          px: { xs: 2, md: 3, lg: 4 }, 
-          minHeight: { xs: 64, md: 72, lg: 80 },
-          py: { xs: 1, md: 1.5, lg: 2 },
+          px: { xs: 2, md: 4, lg: 6 }, 
+          minHeight: { xs: 70, md: 80, lg: 88 },
+          py: { xs: 1.5, md: 2, lg: 2.5 },
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
+          fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+          fontWeight: 500
         }}>
           {isMobile && (
             <IconButton
@@ -533,36 +562,71 @@ const Navbar: React.FC = () => {
             sx={{ 
               display: 'flex', 
               alignItems: 'center', 
-              gap: { xs: 1, md: 1.5, lg: 2 },
+              gap: { xs: 1.5, md: 2, lg: 2.5 },
               cursor: 'pointer',
-              minWidth: 'fit-content'
+              minWidth: 'fit-content',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': {
+                transform: 'scale(1.02)',
+              }
             }}
             onClick={() => navigate(user ? '/app/network' : '/')}
           >
-            <img 
-              src="/exjobnetlogo.png" 
-              alt="ExJobNet" 
-              style={{ 
-                height: isMobile ? 40 
-                  : isTablet ? 48 
-                  : 56, 
-                width: 'auto',
-                transition: 'height 0.3s ease'
+            <Box
+              sx={{
+                width: { xs: 44, md: 52, lg: 60 },
+                height: { xs: 44, md: 52, lg: 60 },
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '16px',
+                background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 50%, #1b5e20 100%)',
+                boxShadow: '0 8px 24px rgba(76, 175, 80, 0.3), 0 0 0 1px rgba(76, 175, 80, 0.1)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  inset: 0,
+                  borderRadius: '16px',
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 100%)',
+                  zIndex: 1,
+                },
+                '&:hover': {
+                  boxShadow: '0 12px 32px rgba(76, 175, 80, 0.4), 0 0 0 1px rgba(76, 175, 80, 0.2)',
+                  transform: 'scale(1.05)',
+                }
               }}
-            />
+            >
+              <img 
+                src="/exjobnetlogo.png" 
+                alt="ExJobNet" 
+                style={{ 
+                  height: '70%', 
+                  width: '70%',
+                  objectFit: 'contain',
+                  filter: 'brightness(0) invert(1)',
+                  zIndex: 2,
+                  position: 'relative'
+                }}
+              />
+            </Box>
             <Typography 
               variant="h6" 
               component="div" 
               sx={{ 
                 flexGrow: 0, 
-                fontWeight: 'bold',
-                background: 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)',
+                fontWeight: 700,
+                fontSize: { xs: '0.9rem', md: '1rem', lg: '1.1rem' },
+                background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)',
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
+                WebkitTextFillColor: 'transparent',
+                fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+                letterSpacing: '-0.02em'
               }}
             >
-      
+              ExJobNet
             </Typography>
           </Box>
 
@@ -579,7 +643,7 @@ const Navbar: React.FC = () => {
               <Box sx={{ 
                 display: 'flex', 
                 alignItems: 'center', 
-                gap: { xs: 1, md: 1.5, lg: 2 }
+                gap: { xs: 1.5, md: 2, lg: 3 }
               }}>
               {currentMenuItems.filter(item => !('protected' in item) || !item.protected || user).map((item) => {
                 // Handle dropdown menu item
@@ -598,20 +662,23 @@ const Navbar: React.FC = () => {
                         onClick={handleOpportunitiesToggle}
                         variant="text"
                         sx={{
-                          fontWeight: 'bold',
+                          fontWeight: 600,
                           color: opportunitiesOpen ? 'primary.main' : 'text.primary',
-                          backgroundColor: opportunitiesOpen ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
-                          '&:hover': {
-                            backgroundColor: alpha(theme.palette.primary.main, 0.08),
-                            transform: 'translateY(-1px)',
-                          },
-                          borderRadius: 2,
-                          px: { xs: 1.5, md: 2, lg: 2.5 },
-                          py: { xs: 0.75, md: 1, lg: 1.25 },
+                          backgroundColor: opportunitiesOpen ? alpha(theme.palette.primary.main, 0.12) : 'transparent',
+                          borderRadius: 3,
+                          px: { xs: 2, md: 2.5, lg: 3 },
+                          py: { xs: 1, md: 1.25, lg: 1.5 },
                           minWidth: isTablet ? 'auto' : undefined,
-                          fontSize: { xs: '0.85rem', md: '0.95rem', lg: '1rem' },
-                          height: { xs: 36, md: 40, lg: 44 },
-                          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                          fontSize: { xs: '0.8rem', md: '0.85rem', lg: '0.9rem' },
+                          height: { xs: 40, md: 44, lg: 48 },
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+                          letterSpacing: '-0.01em',
+                          '&:hover': {
+                            backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 8px 24px rgba(76, 175, 80, 0.15)',
+                          },
                           '&:active': {
                             transform: 'scale(0.98)',
                           },
@@ -768,13 +835,47 @@ const Navbar: React.FC = () => {
                           ? `1px solid ${alpha(theme.palette.primary.main, 0.5)}`
                           : undefined,
                       },
-                      borderRadius: 2,
-                      px: { xs: 1.5, md: 2, lg: 2.5 },
-                      py: { xs: 0.75, md: 1, lg: 1.25 },
+                      fontWeight: ('path' in item && location.pathname === item.path) 
+                        ? 700 
+                        : (('highlight' in item && item.highlight) || ('special' in item && item.special)) 
+                          ? 700 
+                          : 500,
+                      color: ('highlight' in item && item.highlight) 
+                        ? 'white' 
+                        : ('special' in item && item.special)
+                          ? 'primary.main'
+                          : (('path' in item && location.pathname === item.path) ? 'primary.main' : 'text.primary'),
+                      backgroundColor: ('highlight' in item && item.highlight)
+                        ? 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)' 
+                        : (('path' in item && location.pathname === item.path) ? alpha(theme.palette.primary.main, 0.12) : 'transparent'),
+                      border: ('special' in item && item.special) 
+                        ? `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
+                        : 'none',
+                      borderRadius: 3,
+                      px: { xs: 2, md: 2.5, lg: 3 },
+                      py: { xs: 1, md: 1.25, lg: 1.5 },
                       minWidth: isTablet ? 'auto' : undefined,
-                      fontSize: { xs: '0.85rem', md: '0.95rem', lg: '1rem' },
-                      height: { xs: 36, md: 40, lg: 44 },
-                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                      fontSize: { xs: '0.8rem', md: '0.85rem', lg: '0.9rem' },
+                      height: { xs: 40, md: 44, lg: 48 },
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+                      letterSpacing: '-0.01em',
+                      '&:hover': {
+                        backgroundColor: ('highlight' in item && item.highlight)
+                          ? 'linear-gradient(135deg, #45a049 0%, #1b5e20 100%)' 
+                          : ('special' in item && item.special)
+                            ? alpha(theme.palette.primary.main, 0.1)
+                            : alpha(theme.palette.primary.main, 0.08),
+                        transform: 'translateY(-2px)',
+                        boxShadow: ('highlight' in item && item.highlight) 
+                          ? '0 8px 24px rgba(76, 175, 80, 0.3)' 
+                          : ('special' in item && item.special)
+                            ? '0 4px 16px rgba(76, 175, 80, 0.2)'
+                            : '0 4px 16px rgba(76, 175, 80, 0.1)',
+                        border: ('special' in item && item.special) 
+                          ? `1px solid ${alpha(theme.palette.primary.main, 0.5)}`
+                          : undefined,
+                      },
                       '&:active': {
                         transform: 'scale(0.98)',
                       },

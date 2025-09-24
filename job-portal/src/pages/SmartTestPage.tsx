@@ -217,6 +217,14 @@ const SmartTestPage: React.FC = () => {
     } catch (error) {
       console.error('Error checking free test status:', error);
       
+      // Handle rate limiting errors specifically
+      if (error?.response?.status === 429) {
+        console.warn('🚨 Rate limit exceeded when checking free test status');
+        // Show user-friendly message
+        setError('Server is busy. Please wait a moment and refresh the page.');
+        setTimeout(() => setError(null), 5000);
+      }
+      
       // Check localStorage as fallback (permanent lock check)
       const localFreeUsed = localStorage.getItem('smartTestFreeUsed');
       const permanentLock = localStorage.getItem('smartTestFreePermanentLock');
@@ -381,6 +389,15 @@ const SmartTestPage: React.FC = () => {
       setAdminSmartTests(tests);
     } catch (error) {
       console.error('Error fetching admin smart tests:', error);
+      
+      // Handle rate limiting errors specifically
+      if (error?.response?.status === 429) {
+        console.warn('🚨 Rate limit exceeded when fetching admin smart tests');
+        // Show user-friendly message
+        setError('Server is busy loading tests. Please wait a moment and refresh the page.');
+        setTimeout(() => setError(null), 5000);
+      }
+      
       // Don't show error for admin tests if endpoint doesn't exist yet
     }
   };

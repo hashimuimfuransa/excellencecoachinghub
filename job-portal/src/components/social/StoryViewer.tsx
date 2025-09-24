@@ -109,6 +109,8 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
   const [showShareSuccess, setShowShareSuccess] = useState(false);
   const [showShareError, setShowShareError] = useState(false);
   const [autoUnmuted, setAutoUnmuted] = useState(false);
+  const [videoDuration, setVideoDuration] = useState<number | null>(null);
+  const [actualStoryDuration, setActualStoryDuration] = useState<number>(5000);
   const [storyViewers, setStoryViewers] = useState<any[]>([]);
   const [storyEngagement, setStoryEngagement] = useState<any>({});
   const progressRef = useRef<NodeJS.Timeout | null>(null);
@@ -116,14 +118,16 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
 
   const currentStory = stories[currentStoryIndex];
   const isOwnStory = currentStory?.author._id === user?._id;
-  const storyDuration = currentStory?.media?.type === 'video' ? 10000 : 5000; // 10s for video, 5s for image
+  
+  // Use actual video duration if available, otherwise fallback to default
+  const storyDuration = currentStory?.media?.type === 'video' 
+    ? (videoDuration ? videoDuration * 1000 : 10000) // Convert to milliseconds
+    : 5000;
 
   useEffect(() => {
     if (open && currentStory) {
-      // Load story analytics if it's user's own story
-      if (isOwnStory) {
-        loadStoryAnalytics(currentStory._id);
-      }
+      // Reset video duration for new story
+      setVideoDuration(null);
       
       // Start progress
       startProgress();
@@ -132,6 +136,18 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
       const timer = setTimeout(() => {
         markStoryAsViewed(currentStory._id);
       }, 100);
+
+      // Load story analytics if it's user's own story (with delay to avoid render issues)
+      if (isOwnStory) {
+        const analyticsTimer = setTimeout(() => {
+          loadStoryAnalytics(currentStory._id);
+        }, 200);
+        
+        return () => {
+          clearTimeout(timer);
+          clearTimeout(analyticsTimer);
+        };
+      }
 
       return () => {
         clearTimeout(timer);
@@ -161,6 +177,14 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
       }
     }
   }, [videoMuted, currentStory, autoUnmuted]);
+
+  // Restart progress when video duration changes
+  useEffect(() => {
+    if (videoDuration && currentStory?.media?.type === 'video') {
+      console.log('📹 Restarting progress with video duration:', videoDuration);
+      startProgress();
+    }
+  }, [videoDuration]);
 
   const markStoryAsViewed = async (storyId: string) => {
     try {
@@ -217,7 +241,10 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
       if (!isPaused) {
         setProgress(prev => {
           if (prev >= 100) {
-            nextStory();
+            // Only auto-advance if it's not a video (videos handle their own advancement)
+            if (currentStory?.media?.type !== 'video') {
+              nextStory();
+            }
             return 0;
           }
           return prev + increment;
@@ -436,7 +463,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
                 src={currentStory.media.url}
                 autoPlay
                 muted={videoMuted}
-                loop
+                loop={false}
                 style={{
                   maxWidth: '100%',
                   maxHeight: '100%',
@@ -444,6 +471,22 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
                 }}
                 onPlay={() => setIsPaused(false)}
                 onPause={() => setIsPaused(true)}
+                onLoadedMetadata={(e) => {
+                  const video = e.target as HTMLVideoElement;
+                  if (video.duration && video.duration !== Infinity) {
+                    console.log('📹 Video duration detected:', video.duration);
+                    setVideoDuration(video.duration);
+                  }
+                }}
+                onEnded={() => {
+                  console.log('📹 Video ended, advancing to next story');
+                  nextStory();
+                }}
+                onError={(e) => {
+                  console.error('📹 Video error:', e);
+                  // Fallback to next story if video fails to load
+                  setTimeout(() => nextStory(), 2000);
+                }}
               />
             )
           ) : (
@@ -523,15 +566,20 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
           {currentStory.media?.type === 'video' && (
             <IconButton
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
+                console.log('🔊 Unmute button clicked, current state:', videoMuted);
                 setVideoMuted(!videoMuted);
                 setAutoUnmuted(true); // Mark as manually interacted
               }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
               sx={{ 
                 backgroundColor: 'rgba(0, 0, 0, 0.6)', 
                 color: 'white',
                 '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
                 position: 'relative',
+                zIndex: 10, // Ensure it's above other elements
                 '&::after': autoUnmuted && videoMuted ? {
                   content: '"Tap to unmute"',
                   position: 'absolute',
@@ -553,26 +601,34 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
           )}
           <IconButton
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               handleLikeStory();
             }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             sx={{ 
               backgroundColor: 'rgba(0, 0, 0, 0.6)', 
               color: 'white',
-              '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.8)' }
+              '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
+              zIndex: 10
             }}
           >
             <Favorite />
           </IconButton>
           <IconButton
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
               handleShareStory();
             }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             sx={{ 
               backgroundColor: 'rgba(0, 0, 0, 0.6)', 
               color: 'white',
-              '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.8)' }
+              '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.8)' },
+              zIndex: 10
             }}
           >
             <Share />

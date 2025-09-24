@@ -14,6 +14,7 @@ import {
   Snackbar,
   Alert,
   useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import {
   Close,
@@ -50,6 +51,7 @@ const EnhancedStoryViewer: React.FC<EnhancedStoryViewerProps> = ({
 }) => {
   const { user } = useAuth();
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -59,12 +61,38 @@ const EnhancedStoryViewer: React.FC<EnhancedStoryViewerProps> = ({
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const hideControlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Mobile touch handling
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const touchEndRef = useRef<{ x: number; y: number } | null>(null);
 
   const currentStory = stories[currentIndex];
   const isOwnStory = currentStory?.author?._id === user?._id || currentStory?.author?._id === user?.email;
 
-  // Duration for story progression (6 seconds for images, 10 seconds for videos)
-  const storyDuration = currentStory?.media?.type === 'video' ? 10000 : 6000;
+  // Duration for story progression (6 seconds for images, dynamic for videos)
+  const [videoDuration, setVideoDuration] = useState<number | null>(null);
+  const storyDuration = currentStory?.media?.type === 'video' 
+    ? (videoDuration ? videoDuration * 1000 : 10000) // Use actual video duration or fallback to 10s
+    : 6000;
+
+  // Prevent body scroll on mobile when story viewer is open
+  useEffect(() => {
+    if (open && isMobile) {
+      // Prevent body scroll
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      
+      return () => {
+        // Restore body scroll
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+      };
+    }
+  }, [open, isMobile]);
 
   // Initialize story data
   useEffect(() => {
@@ -72,6 +100,7 @@ const EnhancedStoryViewer: React.FC<EnhancedStoryViewerProps> = ({
       setIsLiked(currentStory.likes?.includes(user?._id || user?.email || '') || false);
       setLikes(currentStory.likes?.length || 0);
       setProgress(0);
+      setVideoDuration(null); // Reset video duration for new story
       
       // Mark story as viewed
       if (!isOwnStory) {
@@ -208,6 +237,58 @@ const EnhancedStoryViewer: React.FC<EnhancedStoryViewerProps> = ({
     setShowControls(true);
   };
 
+  // Mobile touch handling functions
+  const handleTouchStartMobile = (e: React.TouchEvent) => {
+    e.preventDefault(); // Prevent default touch behavior
+    const touch = e.touches[0];
+    const touchData = { x: touch.clientX, y: touch.clientY };
+    setTouchStart(touchData);
+    touchStartRef.current = touchData;
+    setShowControls(true);
+  };
+
+  const handleTouchMoveMobile = (e: React.TouchEvent) => {
+    e.preventDefault(); // Prevent scrolling
+    const touch = e.touches[0];
+    const touchData = { x: touch.clientX, y: touch.clientY };
+    setTouchEnd(touchData);
+    touchEndRef.current = touchData;
+  };
+
+  const handleTouchEndMobile = () => {
+    if (!touchStartRef.current || !touchEndRef.current) return;
+
+    const deltaX = touchEndRef.current.x - touchStartRef.current.x;
+    const deltaY = touchEndRef.current.y - touchStartRef.current.y;
+    const minSwipeDistance = 50;
+
+    // Only handle horizontal swipes (ignore vertical swipes)
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+      if (deltaX > 0) {
+        // Swipe right - go to previous story
+        handlePrevious();
+      } else {
+        // Swipe left - go to next story
+        handleNext();
+      }
+    } else if (Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) {
+      // Small movement = tap
+      handleTapMobile();
+    }
+
+    // Reset touch data
+    setTouchStart(null);
+    setTouchEnd(null);
+    touchStartRef.current = null;
+    touchEndRef.current = null;
+  };
+
+  const handleTapMobile = () => {
+    // Single tap to pause/play
+    setIsPaused(prev => !prev);
+    setShowControls(true);
+  };
+
   // Keyboard navigation
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
@@ -285,8 +366,10 @@ const EnhancedStoryViewer: React.FC<EnhancedStoryViewerProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
             }}
-            onMouseMove={handleMouseMove}
-            onTouchStart={handleTouchStart}
+            onMouseMove={!isMobile ? handleMouseMove : undefined}
+            onTouchStart={isMobile ? handleTouchStartMobile : handleTouchStart}
+            onTouchMove={isMobile ? handleTouchMoveMobile : undefined}
+            onTouchEnd={isMobile ? handleTouchEndMobile : undefined}
           >
             {/* Progress Indicators */}
             <Box
@@ -334,10 +417,11 @@ const EnhancedStoryViewer: React.FC<EnhancedStoryViewerProps> = ({
             <Box
               sx={{
                 width: '100%',
-                maxWidth: 400,
+                maxWidth: isMobile ? '100%' : 400,
                 height: '100%',
                 position: 'relative',
                 mx: 'auto',
+                px: isMobile ? 1 : 0,
               }}
             >
               {/* Story Content */}
@@ -378,6 +462,20 @@ const EnhancedStoryViewer: React.FC<EnhancedStoryViewerProps> = ({
                           autoPlay
                           muted
                           playsInline
+                          loop
+                          controls={false}
+                          onLoadedMetadata={(e) => {
+                            // Set video duration for proper story progression
+                            const video = e.target as HTMLVideoElement;
+                            if (video.duration) {
+                              console.log('Video duration:', video.duration);
+                              setVideoDuration(video.duration);
+                            }
+                          }}
+                          onEnded={() => {
+                            // Auto advance to next story when video ends
+                            handleNext();
+                          }}
                         />
                       ) : (
                         <img
@@ -522,45 +620,49 @@ const EnhancedStoryViewer: React.FC<EnhancedStoryViewerProps> = ({
                 </motion.div>
               </AnimatePresence>
 
-              {/* Navigation Areas (invisible touch/click zones) */}
-              <Box
-                sx={{
-                  position: 'absolute',
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: '30%',
-                  zIndex: 5,
-                  cursor: 'pointer',
-                }}
-                onClick={handlePrevious}
-              />
-              <Box
-                sx={{
-                  position: 'absolute',
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: '30%',
-                  zIndex: 5,
-                  cursor: 'pointer',
-                }}
-                onClick={handleNext}
-              />
-              
-              {/* Center tap area for play/pause */}
-              <Box
-                sx={{
-                  position: 'absolute',
-                  left: '30%',
-                  right: '30%',
-                  top: 0,
-                  bottom: 0,
-                  zIndex: 5,
-                  cursor: 'pointer',
-                }}
-                onClick={() => setIsPaused(prev => !prev)}
-              />
+              {/* Navigation Areas (invisible touch/click zones) - Desktop only */}
+              {!isMobile && (
+                <>
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: '30%',
+                      zIndex: 5,
+                      cursor: 'pointer',
+                    }}
+                    onClick={handlePrevious}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: '30%',
+                      zIndex: 5,
+                      cursor: 'pointer',
+                    }}
+                    onClick={handleNext}
+                  />
+                  
+                  {/* Center tap area for play/pause */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      left: '30%',
+                      right: '30%',
+                      top: 0,
+                      bottom: 0,
+                      zIndex: 5,
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => setIsPaused(prev => !prev)}
+                  />
+                </>
+              )}
             </Box>
 
             {/* Controls Overlay */}
@@ -576,8 +678,8 @@ const EnhancedStoryViewer: React.FC<EnhancedStoryViewerProps> = ({
                   <Box
                     sx={{
                       position: 'absolute',
-                      top: 60,
-                      right: 20,
+                      top: isMobile ? 20 : 60,
+                      right: isMobile ? 10 : 20,
                       zIndex: 10,
                       display: 'flex',
                       gap: 1,
@@ -588,69 +690,77 @@ const EnhancedStoryViewer: React.FC<EnhancedStoryViewerProps> = ({
                       sx={{ 
                         color: 'white', 
                         backgroundColor: 'rgba(0,0,0,0.5)',
-                        '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' }
+                        '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' },
+                        width: isMobile ? 40 : 48,
+                        height: isMobile ? 40 : 48,
                       }}
                     >
-                      {isPaused ? <PlayArrow /> : <Pause />}
+                      {isPaused ? <PlayArrow fontSize={isMobile ? 'medium' : 'large'} /> : <Pause fontSize={isMobile ? 'medium' : 'large'} />}
                     </IconButton>
                     <IconButton
                       onClick={onClose}
                       sx={{ 
                         color: 'white', 
                         backgroundColor: 'rgba(0,0,0,0.5)',
-                        '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' }
+                        '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' },
+                        width: isMobile ? 40 : 48,
+                        height: isMobile ? 40 : 48,
                       }}
                     >
-                      <Close />
+                      <Close fontSize={isMobile ? 'medium' : 'large'} />
                     </IconButton>
                   </Box>
 
-                  {/* Navigation Controls */}
-                  {currentIndex > 0 && (
-                    <IconButton
-                      onClick={handlePrevious}
-                      sx={{
-                        position: 'absolute',
-                        left: 20,
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: 'white',
-                        backgroundColor: 'rgba(0,0,0,0.5)',
-                        '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' },
-                        zIndex: 10,
-                      }}
-                    >
-                      <ChevronLeft fontSize="large" />
-                    </IconButton>
-                  )}
+                  {/* Navigation Controls - Desktop only */}
+                  {!isMobile && (
+                    <>
+                      {currentIndex > 0 && (
+                        <IconButton
+                          onClick={handlePrevious}
+                          sx={{
+                            position: 'absolute',
+                            left: 20,
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            color: 'white',
+                            backgroundColor: 'rgba(0,0,0,0.5)',
+                            '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' },
+                            zIndex: 10,
+                          }}
+                        >
+                          <ChevronLeft fontSize="large" />
+                        </IconButton>
+                      )}
 
-                  {currentIndex < stories.length - 1 && (
-                    <IconButton
-                      onClick={handleNext}
-                      sx={{
-                        position: 'absolute',
-                        right: 20,
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        color: 'white',
-                        backgroundColor: 'rgba(0,0,0,0.5)',
-                        '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' },
-                        zIndex: 10,
-                      }}
-                    >
-                      <ChevronRight fontSize="large" />
-                    </IconButton>
+                      {currentIndex < stories.length - 1 && (
+                        <IconButton
+                          onClick={handleNext}
+                          sx={{
+                            position: 'absolute',
+                            right: 20,
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            color: 'white',
+                            backgroundColor: 'rgba(0,0,0,0.5)',
+                            '&:hover': { backgroundColor: 'rgba(0,0,0,0.7)' },
+                            zIndex: 10,
+                          }}
+                        >
+                          <ChevronRight fontSize="large" />
+                        </IconButton>
+                      )}
+                    </>
                   )}
 
                   {/* Bottom Action Controls */}
                   <Box
                     sx={{
                       position: 'absolute',
-                      bottom: 20,
+                      bottom: isMobile ? 10 : 20,
                       left: '50%',
                       transform: 'translateX(-50%)',
                       display: 'flex',
-                      gap: 2,
+                      gap: isMobile ? 1 : 2,
                       zIndex: 10,
                     }}
                   >
@@ -660,9 +770,9 @@ const EnhancedStoryViewer: React.FC<EnhancedStoryViewerProps> = ({
                         sx={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 1,
-                          px: 2,
-                          py: 1,
+                          gap: isMobile ? 0.5 : 1,
+                          px: isMobile ? 1.5 : 2,
+                          py: isMobile ? 0.5 : 1,
                           backgroundColor: 'rgba(0,0,0,0.7)',
                           backdropFilter: 'blur(10px)',
                           borderRadius: 3,
@@ -676,11 +786,11 @@ const EnhancedStoryViewer: React.FC<EnhancedStoryViewerProps> = ({
                         onClick={handleLike}
                       >
                         {isLiked ? (
-                          <Favorite sx={{ color: '#ff4757', fontSize: '1.2rem' }} />
+                          <Favorite sx={{ color: '#ff4757', fontSize: isMobile ? '1rem' : '1.2rem' }} />
                         ) : (
-                          <FavoriteBorder sx={{ color: 'white', fontSize: '1.2rem' }} />
+                          <FavoriteBorder sx={{ color: 'white', fontSize: isMobile ? '1rem' : '1.2rem' }} />
                         )}
-                        <Typography variant="body2" sx={{ color: 'white', fontWeight: 600 }}>
+                        <Typography variant="body2" sx={{ color: 'white', fontWeight: 600, fontSize: isMobile ? '0.75rem' : '0.875rem' }}>
                           {likes}
                         </Typography>
                       </Paper>
@@ -693,8 +803,8 @@ const EnhancedStoryViewer: React.FC<EnhancedStoryViewerProps> = ({
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          width: 44,
-                          height: 44,
+                          width: isMobile ? 36 : 44,
+                          height: isMobile ? 36 : 44,
                           backgroundColor: 'rgba(0,0,0,0.7)',
                           backdropFilter: 'blur(10px)',
                           borderRadius: 3,
@@ -707,7 +817,7 @@ const EnhancedStoryViewer: React.FC<EnhancedStoryViewerProps> = ({
                         }}
                         onClick={handleShare}
                       >
-                        <Share sx={{ color: 'white', fontSize: '1.2rem' }} />
+                        <Share sx={{ color: 'white', fontSize: isMobile ? '1rem' : '1.2rem' }} />
                       </Paper>
                     </Tooltip>
 
@@ -718,16 +828,16 @@ const EnhancedStoryViewer: React.FC<EnhancedStoryViewerProps> = ({
                           sx={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: 1,
-                            px: 2,
-                            py: 1,
+                            gap: isMobile ? 0.5 : 1,
+                            px: isMobile ? 1.5 : 2,
+                            py: isMobile ? 0.5 : 1,
                             backgroundColor: 'rgba(0,0,0,0.7)',
                             backdropFilter: 'blur(10px)',
                             borderRadius: 3,
                           }}
                         >
-                          <Visibility sx={{ color: 'white', fontSize: '1.2rem' }} />
-                          <Typography variant="body2" sx={{ color: 'white', fontWeight: 600 }}>
+                          <Visibility sx={{ color: 'white', fontSize: isMobile ? '1rem' : '1.2rem' }} />
+                          <Typography variant="body2" sx={{ color: 'white', fontWeight: 600, fontSize: isMobile ? '0.75rem' : '0.875rem' }}>
                             {currentStory.viewers.length}
                           </Typography>
                         </Paper>
@@ -737,6 +847,28 @@ const EnhancedStoryViewer: React.FC<EnhancedStoryViewerProps> = ({
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* Mobile Instructions Overlay */}
+            {isMobile && showControls && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: isMobile ? 80 : 120,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  zIndex: 10,
+                  backgroundColor: 'rgba(0,0,0,0.7)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: 2,
+                  px: 2,
+                  py: 1,
+                }}
+              >
+                <Typography variant="caption" sx={{ color: 'white', fontSize: '0.7rem' }}>
+                  👆 Tap to pause • 👈👉 Swipe to navigate
+                </Typography>
+              </Box>
+            )}
 
             {/* Pause Indicator */}
             {isPaused && (

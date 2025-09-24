@@ -74,7 +74,8 @@ import {
   Lock,
   PhotoCamera,
   Close,
-  AttachFile
+  AttachFile,
+  PlayArrow
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { userService } from '../services/userService';
@@ -83,6 +84,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { validateProfileSimple } from '../utils/simpleProfileValidation';
 import { socialNetworkService, Post, Connection } from '../services/socialNetworkService';
 import { settingsService, UserSettings } from '../services/settingsService';
+import { enhancedStoryService } from '../services/enhancedStoryService';
+import EnhancedCreateStory from '../components/social/EnhancedCreateStory';
+import EnhancedStoryViewer from '../components/social/EnhancedStoryViewer';
 
 const MinimizedProfilePage: React.FC = () => {
   const { user, updateUser, setUserData } = useAuth();
@@ -103,6 +107,14 @@ const MinimizedProfilePage: React.FC = () => {
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [searchConnections, setSearchConnections] = useState('');
   
+  // Story-related state
+  const [userStories, setUserStories] = useState<any[]>([]);
+  const [storiesLoading, setStoriesLoading] = useState(false);
+  const [showCreateStory, setShowCreateStory] = useState(false);
+  const [showStoryViewer, setShowStoryViewer] = useState(false);
+  const [selectedStoryIndex, setSelectedStoryIndex] = useState(0);
+  const [storyViewerStories, setStoryViewerStories] = useState<any[]>([]);
+  
   // Real backend state
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
@@ -121,6 +133,7 @@ const MinimizedProfilePage: React.FC = () => {
       loadUserPosts();
       loadConnections();
       loadUserSettings();
+      loadUserStories();
     }
   }, [targetUserId]);
 
@@ -180,6 +193,61 @@ const MinimizedProfilePage: React.FC = () => {
       setConnections([]); // Set empty array on error
     } finally {
       setConnectionsLoading(false);
+    }
+  };
+
+  const loadUserStories = async () => {
+    if (!targetUserId) {
+      console.log('📚 Profile Page - No targetUserId provided');
+      return;
+    }
+    
+    setStoriesLoading(true);
+    try {
+      console.log('📚 Profile Page - Loading stories for user:', targetUserId);
+      console.log('📚 Profile Page - Current user:', user?._id);
+      console.log('📚 Profile Page - Is own profile:', isOwnProfile);
+      
+      // Try the stories feed approach first (same as network page)
+      let storiesResponse = await enhancedStoryService.getStoriesFeed(1, 20);
+      
+      console.log('📚 Profile Page - Stories feed response:', storiesResponse);
+      
+      if (storiesResponse.success && storiesResponse.data) {
+        const allStories = Array.isArray(storiesResponse.data) ? storiesResponse.data : [storiesResponse.data];
+        
+        // Filter stories for the specific user
+        const userStories = allStories.filter((story: any) => {
+          const storyAuthorId = story.author?._id || story.author?.id;
+          const targetId = targetUserId;
+          console.log('📚 Profile Page - Comparing story author:', storyAuthorId, 'with target:', targetId);
+          return storyAuthorId === targetId;
+        });
+        
+        console.log('📚 Profile Page - Found user stories from feed:', userStories.length);
+        console.log('📚 Profile Page - Stories details:', userStories.map(s => ({ id: s._id, title: s.title, type: s.type, author: s.author?._id })));
+        setUserStories(userStories);
+      } else {
+        console.log('📚 Profile Page - Stories feed failed, trying getUserStories fallback');
+        
+        // Fallback to getUserStories if stories feed doesn't work
+        const fallbackResponse = await enhancedStoryService.getUserStories(targetUserId);
+        console.log('📚 Profile Page - Fallback response:', fallbackResponse);
+        
+        if (fallbackResponse.success && fallbackResponse.data) {
+          const stories = Array.isArray(fallbackResponse.data) ? fallbackResponse.data : [fallbackResponse.data];
+          console.log('📚 Profile Page - Found user stories from fallback:', stories.length);
+          setUserStories(stories);
+        } else {
+          console.log('📚 Profile Page - No stories found in fallback either:', fallbackResponse.error);
+          setUserStories([]);
+        }
+      }
+    } catch (error) {
+      console.error('📚 Profile Page - Error loading stories:', error);
+      setUserStories([]);
+    } finally {
+      setStoriesLoading(false);
     }
   };
 
@@ -372,6 +440,32 @@ const MinimizedProfilePage: React.FC = () => {
       setErrorMessage('Failed to remove connection. Please try again.');
       setTimeout(() => setErrorMessage(''), 3000);
     }
+  };
+
+  // Story handlers
+  const handleCreateStoryClick = () => {
+    setShowCreateStory(true);
+  };
+
+  const handleStoryCreated = (newStory: any) => {
+    setUserStories(prev => [newStory, ...prev]);
+    setSuccessMessage('Story created successfully!');
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
+
+  const handleStoryClick = (story: any, index: number) => {
+    setStoryViewerStories(userStories);
+    setSelectedStoryIndex(index);
+    setShowStoryViewer(true);
+  };
+
+  const handleStoryViewerClose = () => {
+    setShowStoryViewer(false);
+    setSelectedStoryIndex(0);
+  };
+
+  const handleStoryChange = (index: number, story: any) => {
+    setUserStories(prev => prev.map(s => s._id === story._id ? story : s));
   };
 
   const handleSettingsChange = async (section: keyof UserSettings, key: string, value: any) => {
@@ -843,6 +937,11 @@ const MinimizedProfilePage: React.FC = () => {
                 sx={{ '& .MuiSvgIcon-root': { mb: 1 } }}
               />
               <Tab
+                icon={<Star />}
+                label="My Stories"
+                sx={{ '& .MuiSvgIcon-root': { mb: 1 } }}
+              />
+              <Tab
                 icon={<Badge badgeContent={connections?.length || 0} color="secondary"><People /></Badge>}
                 label="Connections"
                 sx={{ '& .MuiSvgIcon-root': { mb: 1 } }}
@@ -1028,8 +1127,197 @@ const MinimizedProfilePage: React.FC = () => {
                 </Box>
               )}
 
-              {/* Connections Tab */}
+              {/* Stories Tab */}
               {activeTab === 1 && (
+                <Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                    <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                      My Stories ({userStories?.length || 0})
+                    </Typography>
+                    {isOwnProfile && (
+                      <Button
+                        variant="contained"
+                        startIcon={<Add />}
+                        onClick={handleCreateStoryClick}
+                        sx={{
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          px: 3,
+                          background: 'linear-gradient(135deg, #FFD700 0%, #FFA000 100%)',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #FFA000 0%, #FF8F00 100%)',
+                          }
+                        }}
+                      >
+                        Create Story
+                      </Button>
+                    )}
+                  </Box>
+
+                  {storiesLoading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                      <LinearProgress sx={{ width: '100%' }} />
+                    </Box>
+                  ) : userStories.length === 0 ? (
+                    <Box sx={{ textAlign: 'center', py: 8 }}>
+                      <Star sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                      <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+                        {isOwnProfile ? 'No stories yet' : 'No stories available'}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
+                        {isOwnProfile 
+                          ? 'Share your professional journey and achievements with your network!'
+                          : 'This user hasn\'t shared any stories yet.'
+                        }
+                      </Typography>
+                      {isOwnProfile && (
+                        <Button
+                          variant="contained"
+                          startIcon={<Add />}
+                          onClick={handleCreateStoryClick}
+                          sx={{
+                            borderRadius: 2,
+                            textTransform: 'none',
+                            px: 3,
+                            background: 'linear-gradient(135deg, #FFD700 0%, #FFA000 100%)',
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #FFA000 0%, #FF8F00 100%)',
+                            }
+                          }}
+                        >
+                          Create Your First Story
+                        </Button>
+                      )}
+                    </Box>
+                  ) : (
+                    <Grid container spacing={3}>
+                      {userStories.map((story, index) => (
+                        <Grid item xs={12} sm={6} md={4} key={story._id}>
+                          <Card
+                            sx={{
+                              borderRadius: 3,
+                              overflow: 'hidden',
+                              cursor: 'pointer',
+                              transition: 'all 0.3s ease',
+                              '&:hover': {
+                                transform: 'translateY(-4px)',
+                                boxShadow: theme.shadows[8],
+                              }
+                            }}
+                            onClick={() => handleStoryClick(story, index)}
+                          >
+                            {/* Story Media */}
+                            {story.media ? (
+                              <Box sx={{ position: 'relative', height: 200 }}>
+                                {story.media.type === 'video' ? (
+                                  <video
+                                    src={story.media.url}
+                                    style={{
+                                      width: '100%',
+                                      height: '100%',
+                                      objectFit: 'cover',
+                                    }}
+                                    muted
+                                  />
+                                ) : (
+                                  <img
+                                    src={story.media.url}
+                                    alt={story.title}
+                                    style={{
+                                      width: '100%',
+                                      height: '100%',
+                                      objectFit: 'cover',
+                                    }}
+                                  />
+                                )}
+                                <Box
+                                  sx={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
+                                  }}
+                                />
+                                <PlayArrow
+                                  sx={{
+                                    position: 'absolute',
+                                    top: '50%',
+                                    left: '50%',
+                                    transform: 'translate(-50%, -50%)',
+                                    color: 'white',
+                                    fontSize: '3rem',
+                                    opacity: 0.8,
+                                  }}
+                                />
+                              </Box>
+                            ) : (
+                              <Box
+                                sx={{
+                                  height: 200,
+                                  background: 'linear-gradient(135deg, #FFD70040 0%, #FFA00020 100%)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  position: 'relative',
+                                }}
+                              >
+                                <Star sx={{ color: '#FFD700', fontSize: '3rem' }} />
+                              </Box>
+                            )}
+
+                            {/* Story Content */}
+                            <CardContent sx={{ p: 3 }}>
+                              <Typography variant="h6" fontWeight={600} sx={{ mb: 1 }}>
+                                {story.title}
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{
+                                  mb: 2,
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 3,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                }}
+                              >
+                                {story.content}
+                              </Typography>
+                              
+                              {/* Story Stats */}
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <Favorite sx={{ fontSize: '1rem', color: 'text.secondary' }} />
+                                  <Typography variant="caption" color="text.secondary">
+                                    {story.likes?.length || 0}
+                                  </Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <Visibility sx={{ fontSize: '1rem', color: 'text.secondary' }} />
+                                  <Typography variant="caption" color="text.secondary">
+                                    {story.viewers?.length || 0}
+                                  </Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <Share sx={{ fontSize: '1rem', color: 'text.secondary' }} />
+                                  <Typography variant="caption" color="text.secondary">
+                                    {story.shares || 0}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </CardContent>
+                          </Card>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  )}
+                </Box>
+              )}
+
+              {/* Connections Tab */}
+              {activeTab === 2 && (
                 <Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                     <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
@@ -1114,7 +1402,7 @@ const MinimizedProfilePage: React.FC = () => {
               )}
 
               {/* Account Settings Tab */}
-              {activeTab === 2 && (
+              {activeTab === 3 && (
                 <Box>
                   <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 3 }}>
                     Account Settings
@@ -1451,6 +1739,22 @@ const MinimizedProfilePage: React.FC = () => {
       >
         <Add />
       </Fab>
+
+      {/* Story Dialogs */}
+      <EnhancedCreateStory
+        open={showCreateStory}
+        onClose={() => setShowCreateStory(false)}
+        onStoryCreated={handleStoryCreated}
+        existingStories={userStories}
+      />
+
+      <EnhancedStoryViewer
+        open={showStoryViewer}
+        onClose={handleStoryViewerClose}
+        stories={storyViewerStories}
+        initialIndex={selectedStoryIndex}
+        onStoryChange={handleStoryChange}
+      />
     </Container>
   );
 };

@@ -117,7 +117,7 @@ class EnhancedStoryService {
       },
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
-      expiresAt: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+      expiresAt: undefined, // Stories don't expire based on time
       isActive: true,
       viewers: [],
       likes: [],
@@ -129,23 +129,36 @@ class EnhancedStoryService {
     try {
       console.log('📝 Creating story:', storyData);
 
-      // Check for 24-hour restriction first
+      // Deactivate previous active stories when creating a new one
       const existingStories = await this.getUserStories();
       if (existingStories.success && existingStories.data) {
         const stories = Array.isArray(existingStories.data) ? existingStories.data : [existingStories.data];
-        const now = new Date();
-        const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-
-        const recentStories = stories.filter(story => {
-          const createdAt = new Date(story.createdAt || '');
-          return createdAt > last24Hours;
-        });
-
-        if (recentStories.length > 0) {
-          return {
-            success: false,
-            error: 'You can only create one story per 24-hour period. Please wait before creating another story.'
-          };
+        
+        // Deactivate all previous active stories
+        const activeStories = stories.filter(story => story.isActive);
+        if (activeStories.length > 0) {
+          console.log(`🔄 Deactivating ${activeStories.length} previous active stories`);
+          
+          // Update stories to be inactive
+          activeStories.forEach(story => {
+            story.isActive = false;
+            story.expiresAt = new Date().toISOString(); // Mark as expired
+          });
+          
+          // Save updated stories back to storage
+          if (this.isGoogleUser()) {
+            const storageKey = this.getStorageKey();
+            localStorage.setItem(storageKey, JSON.stringify(stories));
+            
+            // Also update global feed
+            const globalStoriesKey = 'globalStoryFeed';
+            const globalStories = JSON.parse(localStorage.getItem(globalStoriesKey) || '[]');
+            const updatedGlobalStories = globalStories.map(globalStory => {
+              const matchingStory = activeStories.find(s => s._id === globalStory._id);
+              return matchingStory ? { ...globalStory, isActive: false, expiresAt: new Date().toISOString() } : globalStory;
+            });
+            localStorage.setItem(globalStoriesKey, JSON.stringify(updatedGlobalStories));
+          }
         }
       }
 
@@ -284,25 +297,29 @@ class EnhancedStoryService {
           }
         });
         
-        // Filter only active (non-expired) stories
-        const now = new Date();
-        const activeStories = savedStories.filter((story: StoryData) => {
+        // For user's own stories, show all stories regardless of expiration
+        // Only filter out stories that are explicitly marked as inactive
+        const userStories = savedStories.filter((story: StoryData) => {
+          // If story has no expiration date, it's always active
           if (!story.expiresAt) {
-            console.log('📚 Story without expiration date:', story._id);
-            return false;
+            console.log('📚 Story without expiration date (always active):', story._id);
+            return true;
           }
+          
+          // If story has expiration date, check if it's still active
           const expiresAt = new Date(story.expiresAt);
+          const now = new Date();
           const isActive = expiresAt > now;
           console.log(`📚 Story ${story._id} expires at ${expiresAt}, isActive: ${isActive}`);
           return isActive;
         });
         
-        console.log(`📊 Enhanced Story Service - Found ${activeStories.length} active stories out of ${savedStories.length} total`);
-        console.log('📊 Active stories details:', activeStories.map(s => ({ id: s._id, title: s.title, expiresAt: s.expiresAt })));
+        console.log(`📊 Enhanced Story Service - Found ${userStories.length} stories out of ${savedStories.length} total`);
+        console.log('📊 Stories details:', userStories.map(s => ({ id: s._id, title: s.title, expiresAt: s.expiresAt })));
         
         return {
           success: true,
-          data: activeStories
+          data: userStories
         };
       }
       
@@ -352,94 +369,47 @@ class EnhancedStoryService {
 
   async getStoriesFeed(page: number = 1, limit: number = 20): Promise<StoryResponse> {
     try {
-      if (this.isGoogleUser()) {
-        console.log('🌐 Loading enhanced stories feed for Google user');
-        
-        // Get stories from global feed and user's own stories
-        const globalStoriesKey = 'globalStoryFeed';
-        const globalStories = JSON.parse(localStorage.getItem(globalStoriesKey) || '[]');
-        console.log('🌐 Global stories from localStorage:', globalStories.length);
-        
-        // Also include stories from localStorage users simulation
-        const mockNetworkStories = this.generateMockNetworkStories();
-        console.log('🌐 Mock network stories:', mockNetworkStories.length);
-        
-        const allStories = [...globalStories, ...mockNetworkStories];
-        console.log('🌐 Total stories before filtering:', allStories.length);
-        
-        // Filter active stories only
-        const now = new Date();
-        const activeStories = allStories.filter((story: StoryData) => {
-          if (!story.expiresAt) return false;
-          const expiresAt = new Date(story.expiresAt);
-          return expiresAt > now;
-        });
-        console.log('🌐 Active stories after filtering:', activeStories.length);
-        
-        // Sort by creation date (newest first)
-        activeStories.sort((a, b) => 
-          new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime()
-        );
-        
-        // Paginate results
-        const start = (page - 1) * limit;
-        const paginatedStories = activeStories.slice(start, start + limit);
-        
-        console.log(`📊 Returning ${paginatedStories.length} stories from enhanced feed`);
-        
-        return {
-          success: true,
-          data: paginatedStories
-        };
-      }
+      console.log('🌐 Loading stories feed from backend API');
       
-      // For regular users, try API first, then fallback to localStorage if needed
-      console.log('🌐 Using API for regular user stories feed');
+      // Always try to fetch from backend API first
       try {
         const response = await api.get(`/social/stories?page=${page}&limit=${limit}`);
         console.log('🌐 API response for stories feed:', response.data);
         
         if (response.data && response.data.success && response.data.data) {
+          // Filter out expired stories (only check if expiresAt exists, otherwise keep story active)
+          const activeStories = response.data.data.filter((story: StoryData) => {
+            // If no expiresAt, story is always active
+            if (!story.expiresAt) return true;
+            
+            // If expiresAt exists, check if it's still valid
+            const expiresAt = new Date(story.expiresAt);
+            const now = new Date();
+            return expiresAt > now;
+          });
+          
+          console.log(`📊 Returning ${activeStories.length} active stories from API`);
+          
           return {
             success: true,
-            data: response.data.data || []
+            data: activeStories
           };
         } else {
-          console.warn('⚠️ API returned empty or invalid data, trying localStorage fallback');
+          console.warn('⚠️ API returned empty or invalid data');
           throw new Error('API returned empty data');
         }
       } catch (apiError) {
-        console.warn('⚠️ API call failed, trying localStorage fallback:', apiError);
+        console.warn('⚠️ API call failed:', apiError);
         
-        // Fallback to localStorage if API fails
+        // Only fallback to localStorage for user's own stories, no mock data
         const globalStoriesKey = 'globalStoryFeed';
         const globalStories = JSON.parse(localStorage.getItem(globalStoriesKey) || '[]');
         
-        const mockNetworkStories = this.generateMockNetworkStories();
-        const allStories = [...globalStories, ...mockNetworkStories];
-        
-        // Filter active stories only
-        const now = new Date();
-        const activeStories = allStories.filter((story: StoryData) => {
-          if (!story.expiresAt) return false;
-          const expiresAt = new Date(story.expiresAt);
-          return expiresAt > now;
-        });
-        
-        // Sort by creation date (newest first)
-        activeStories.sort((a, b) => 
-          new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime()
-        );
-        
-        // Paginate results
-        const start = (page - 1) * limit;
-        const paginatedStories = activeStories.slice(start, start + limit);
-        
-        console.log(`📊 Fallback: Returning ${paginatedStories.length} stories from localStorage`);
+        console.log('📊 Fallback: Returning user stories from localStorage:', globalStories.length);
         
         return {
           success: true,
-          data: paginatedStories
+          data: globalStories
         };
       }
       
@@ -455,57 +425,8 @@ class EnhancedStoryService {
   }
 
   private generateMockNetworkStories(): StoryData[] {
-    // Generate some mock network stories for better demo experience
-    const mockStories: StoryData[] = [
-      {
-        _id: 'mock_story_1',
-        type: 'achievement',
-        title: 'Successfully Completed AWS Certification',
-        content: 'Just passed my AWS Solutions Architect certification! The journey was challenging but incredibly rewarding. Looking forward to applying these cloud skills in upcoming projects.',
-        tags: ['aws', 'certification', 'cloud', 'achievement'],
-        visibility: 'public',
-        author: {
-          _id: 'mock_user_1',
-          firstName: 'Sarah',
-          lastName: 'Johnson',
-          profilePicture: null,
-          company: 'Tech Innovations Inc.',
-          jobTitle: 'Senior Developer'
-        },
-        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-        updatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        expiresAt: new Date(Date.now() + 22 * 60 * 60 * 1000).toISOString(), // 22 hours remaining
-        isActive: true,
-        viewers: [],
-        likes: ['user_1', 'user_2'],
-        shares: 0
-      },
-      {
-        _id: 'mock_story_2',
-        type: 'milestone',
-        title: 'Started My New Role as Product Manager',
-        content: 'Excited to announce that I\'ve started my new position as Product Manager at Digital Solutions Corp! Ready to lead innovative projects and work with amazing teams.',
-        tags: ['career', 'newjob', 'productmanagement', 'milestone'],
-        visibility: 'connections',
-        author: {
-          _id: 'mock_user_2',
-          firstName: 'Michael',
-          lastName: 'Chen',
-          profilePicture: null,
-          company: 'Digital Solutions Corp',
-          jobTitle: 'Product Manager'
-        },
-        createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), // 5 hours ago
-        updatedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-        expiresAt: new Date(Date.now() + 19 * 60 * 60 * 1000).toISOString(), // 19 hours remaining
-        isActive: true,
-        viewers: [],
-        likes: ['user_3'],
-        shares: 1
-      }
-    ];
-
-    return mockStories;
+    // Return empty array - we only want real stories from backend
+    return [];
   }
 
   async likeStory(storyId: string): Promise<StoryResponse> {
@@ -593,6 +514,86 @@ class EnhancedStoryService {
       return {
         success: false,
         error: error.response?.data?.error || error.message || 'Failed to like story'
+      };
+    }
+  }
+
+  async shareStory(storyId: string): Promise<StoryResponse> {
+    try {
+      // Check if this is a mock story ID (for Google users)
+      if (storyId.startsWith('mock_story_') || storyId.startsWith('story_')) {
+        console.log('📤 Sharing mock story (local):', storyId);
+        
+        // Update in user's stories
+        const storageKey = this.getStorageKey();
+        const userStories = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        
+        const userStoryIndex = userStories.findIndex((s: StoryData) => s._id === storyId);
+        if (userStoryIndex !== -1) {
+          userStories[userStoryIndex].shares = (userStories[userStoryIndex].shares || 0) + 1;
+          localStorage.setItem(storageKey, JSON.stringify(userStories));
+        }
+        
+        // Also update in global feed
+        const globalStoriesKey = 'globalStoryFeed';
+        const globalStories = JSON.parse(localStorage.getItem(globalStoriesKey) || '[]');
+        const globalStoryIndex = globalStories.findIndex((s: StoryData) => s._id === storyId);
+        
+        if (globalStoryIndex !== -1) {
+          globalStories[globalStoryIndex].shares = (globalStories[globalStoryIndex].shares || 0) + 1;
+          localStorage.setItem(globalStoriesKey, JSON.stringify(globalStories));
+        }
+        
+        return {
+          success: true,
+          message: 'Story shared successfully'
+        };
+      }
+      
+      if (this.isGoogleUser()) {
+        console.log('📤 Sharing story (local):', storyId);
+        
+        // Update in user's stories
+        const storageKey = this.getStorageKey();
+        const userStories = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        
+        const userStoryIndex = userStories.findIndex((s: StoryData) => s._id === storyId);
+        if (userStoryIndex !== -1) {
+          userStories[userStoryIndex].shares = (userStories[userStoryIndex].shares || 0) + 1;
+          localStorage.setItem(storageKey, JSON.stringify(userStories));
+        }
+        
+        // Also update in global feed
+        const globalStoriesKey = 'globalStoryFeed';
+        const globalStories = JSON.parse(localStorage.getItem(globalStoriesKey) || '[]');
+        const globalStoryIndex = globalStories.findIndex((s: StoryData) => s._id === storyId);
+        
+        if (globalStoryIndex !== -1) {
+          globalStories[globalStoryIndex].shares = (globalStories[globalStoryIndex].shares || 0) + 1;
+          localStorage.setItem(globalStoriesKey, JSON.stringify(globalStories));
+        }
+        
+        return {
+          success: true,
+          message: 'Story shared successfully'
+        };
+      }
+      
+      // For regular users, use API
+      const response = await api.post(`/social/stories/${storyId}/share`);
+      
+      return {
+        success: true,
+        data: response.data.data,
+        message: response.data.message
+      };
+      
+    } catch (error: any) {
+      console.error('❌ Error sharing story:', error);
+      
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message || 'Failed to share story'
       };
     }
   }

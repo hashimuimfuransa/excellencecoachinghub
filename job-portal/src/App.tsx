@@ -80,6 +80,7 @@ import SmartHome from './components/SmartHome';
 
 // Social Network pages
 import SocialNetworkPage from './pages/SocialNetworkPage';
+import ViewStoriesPage from './pages/ViewStoriesPage';
 import NetworkPage from './pages/NetworkPage';
 import NotificationsPage from './pages/NotificationsPage';
 
@@ -262,6 +263,7 @@ function App() {
               
               {/* Social Network */}
               <Route path="network" element={<SocialNetworkPage />} />
+              <Route path="stories" element={<ViewStoriesPage />} />
               <Route path="connections" element={<NetworkPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="messages" element={<MessagesPage />} />

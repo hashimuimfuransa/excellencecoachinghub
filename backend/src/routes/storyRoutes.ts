@@ -33,6 +33,15 @@ router.post('/', protect, asyncHandler(async (req: Request, res: Response) => {
     return;
   }
 
+  // Deactivate all previous active stories for this user
+  await Story.updateMany(
+    { author: req.user!._id, isActive: true },
+    { 
+      isActive: false, 
+      expiresAt: new Date() // Mark as expired when deactivated
+    }
+  );
+
   const story = await Story.create({
     type: type || 'announcement',
     title: title.trim(),
@@ -40,7 +49,8 @@ router.post('/', protect, asyncHandler(async (req: Request, res: Response) => {
     media,
     tags: tags || [],
     author: req.user!._id,
-    visibility
+    visibility,
+    isActive: true
   });
 
   console.log('📝 Backend - Story created with ID:', story._id);
@@ -70,20 +80,10 @@ router.get('/', protect, asyncHandler(async (req: Request, res: Response) => {
     .limit(limit);
 
   const totalStories = await Story.countDocuments({
-    $and: [
-      {
-        $or: [
-          { expiresAt: { $gt: new Date() } },
-          { expiresAt: { $exists: false } },
-          { expiresAt: null }
-        ]
-      },
-      {
-        $or: [
-          { visibility: 'public' },
-          { author: req.user!._id }
-        ]
-      }
+    isActive: true,
+    $or: [
+      { visibility: 'public' },
+      { author: req.user!._id }
     ]
   });
 
@@ -129,20 +129,14 @@ router.get('/my-stories', protect, asyncHandler(async (req: Request, res: Respon
   // Debug: Try a manual query to see what's happening
   const mongoose = require('mongoose');
   const userObjectId = new mongoose.Types.ObjectId(userId);
-  const currentTime = new Date();
   
   const debugQuery = {
     author: userObjectId,
-    $or: [
-      { expiresAt: { $gt: currentTime } },
-      { expiresAt: { $exists: false } },
-      { expiresAt: null }
-    ]
+    isActive: true
   };
   
   console.log('📚 Backend - Manual query debug:', {
     userObjectId,
-    currentTime,
     query: debugQuery
   });
   
@@ -151,7 +145,7 @@ router.get('/my-stories', protect, asyncHandler(async (req: Request, res: Respon
   
   const stories = await (Story as any).findUserStories(userId);
   console.log('📚 Backend - Found stories:', stories.length);
-  console.log('📚 Backend - Stories details:', stories.map(s => ({ id: s._id, title: s.title, author: s.author, expiresAt: s.expiresAt })));
+  console.log('📚 Backend - Stories details:', stories.map(s => ({ id: s._id, title: s.title, author: s.author, expiresAt: s.expiresAt, isActive: s.isActive })));
 
   res.status(200).json({
     success: true,

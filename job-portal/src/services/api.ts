@@ -9,13 +9,30 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token and handle deduplication
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Check for duplicate requests (only for GET requests to prevent unnecessary API calls)
+    if (config.method?.toLowerCase() === 'get') {
+      const requestKey = getRequestKey(config);
+      const pendingRequest = pendingRequests.get(requestKey);
+      
+      if (pendingRequest) {
+        console.log(`🔄 Deduplicating duplicate request: ${requestKey}`);
+        // Return a promise that resolves with the pending request result
+        return pendingRequest.then(response => response);
+      }
+      
+      // Mark this request as pending (we'll store the actual promise in the response interceptor)
+      config._isDeduplicationCandidate = true;
+      config._requestKey = requestKey;
+    }
+    
     return config;
   },
   (error) => {
@@ -23,11 +40,50 @@ api.interceptors.request.use(
   }
 );
 
+// Rate limiting state management - per request instead of global
+const requestRetryCounts = new Map<string, number>();
+const pendingRequests = new Map<string, Promise<any>>();
+const MAX_RETRY_ATTEMPTS = 3;
+const RATE_LIMIT_RETRY_DELAYS = [1000, 3000, 5000]; // Progressive delays in ms
+
+// Helper function to get request key
+const getRequestKey = (config: any): string => {
+  return `${config.method?.toUpperCase() || 'GET'}:${config.url}`;
+};
+
+// Helper function to get retry count for a request
+const getRetryCount = (config: any): number => {
+  const key = getRequestKey(config);
+  return requestRetryCounts.get(key) || 0;
+};
+
+// Helper function to increment retry count
+const incrementRetryCount = (config: any): number => {
+  const key = getRequestKey(config);
+  const currentCount = requestRetryCounts.get(key) || 0;
+  const newCount = currentCount + 1;
+  requestRetryCounts.set(key, newCount);
+  return newCount;
+};
+
+// Helper function to reset retry count
+const resetRetryCount = (config: any): void => {
+  const key = getRequestKey(config);
+  requestRetryCounts.delete(key);
+};
+
 // Response interceptor to handle errors
 api.interceptors.response.use(
   (response) => {
     // Clear consecutive error count on successful responses
     sessionStorage.removeItem('consecutive_401s');
+    // Reset rate limit retry count on successful response
+    resetRetryCount(response.config);
+    
+    // Handle request deduplication cleanup
+    if (response.config._isDeduplicationCandidate && response.config._requestKey) {
+      pendingRequests.delete(response.config._requestKey);
+    }
     
     // Check if response data exists and is valid
     if (response.data === '' || response.data === null || response.data === undefined) {
@@ -53,6 +109,62 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Handle request deduplication cleanup for failed requests
+    if (error.config?._isDeduplicationCandidate && error.config?._requestKey) {
+      pendingRequests.delete(error.config._requestKey);
+    }
+    
+    // Handle 429 Rate Limiting errors
+    if (error.response?.status === 429) {
+      const currentRetryCount = getRetryCount(error.config);
+      const nextAttempt = currentRetryCount + 1;
+      
+      console.warn('🚨 Rate limit exceeded (429). Attempting retry...', {
+        attempt: nextAttempt,
+        maxAttempts: MAX_RETRY_ATTEMPTS,
+        retryAfter: error.response?.headers?.['retry-after'] || 'unknown',
+        requestUrl: error.config?.url
+      });
+      
+      if (currentRetryCount < MAX_RETRY_ATTEMPTS) {
+        const delay = RATE_LIMIT_RETRY_DELAYS[currentRetryCount] || 5000;
+        incrementRetryCount(error.config);
+        
+        console.log(`⏳ Waiting ${delay}ms before retry attempt ${nextAttempt}/${MAX_RETRY_ATTEMPTS} for ${error.config?.url}`);
+        
+        // Return a promise that will retry after delay
+        return new Promise((resolve, reject) => {
+          setTimeout(() => {
+            // Retry the original request
+            api.request(error.config)
+              .then(resolve)
+              .catch(reject);
+          }, delay);
+        });
+      } else {
+        console.error('❌ Max retry attempts reached for rate limiting. Request failed.', {
+          requestUrl: error.config?.url,
+          totalAttempts: currentRetryCount + 1
+        });
+        resetRetryCount(error.config); // Reset for future requests
+        
+        // Create a user-friendly error message
+        const customError = {
+          ...error,
+          response: {
+            ...error.response,
+            data: {
+              success: false,
+              error: 'Rate limit exceeded',
+              message: 'Too many requests. Please wait a moment and try again.',
+              retryAfter: error.response?.headers?.['retry-after'] || 60
+            }
+          }
+        };
+        return Promise.reject(customError);
+      }
+    }
+    
     // Handle JSON parsing errors more comprehensively
     if (error.message?.includes('Unexpected end of JSON input') || 
         error.message?.includes('Failed to execute \'json\' on \'Response\'') ||

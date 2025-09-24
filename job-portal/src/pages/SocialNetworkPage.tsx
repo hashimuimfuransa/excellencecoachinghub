@@ -268,39 +268,61 @@ const SidebarCard = styled(Card)(({ theme }) => ({
 
 const StoryContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
-  gap: theme.spacing(1),
-  padding: theme.spacing(2, 2, 1.5, 2),
+  gap: theme.spacing(1.5),
+  padding: theme.spacing(2),
   overflowX: 'auto',
   scrollBehavior: 'smooth',
   '&::-webkit-scrollbar': {
-    height: 3,
+    height: 4,
   },
   '&::-webkit-scrollbar-thumb': {
-    backgroundColor: alpha(theme.palette.divider, 0.3),
+    backgroundColor: alpha(theme.palette.primary.main, 0.3),
     borderRadius: 2,
+    '&:hover': {
+      backgroundColor: alpha(theme.palette.primary.main, 0.5),
+    },
   },
   '&::-webkit-scrollbar-track': {
-    backgroundColor: 'transparent',
+    backgroundColor: alpha(theme.palette.divider, 0.1),
+    borderRadius: 2,
   },
 }));
 
 const StoryCircle = styled(Box)(({ theme }) => ({
-  width: 60,
-  height: 60,
+  width: 70,
+  height: 70,
   borderRadius: '50%',
-  background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)',
-  padding: 2,
+  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  padding: 3,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   cursor: 'pointer',
   flexShrink: 0,
-  transition: 'transform 0.15s ease-in-out',
+  position: 'relative',
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   '&:hover': {
     transform: 'scale(1.05)',
+    boxShadow: `0 8px 25px ${alpha(theme.palette.primary.main, 0.3)}`,
   },
   '&.viewed': {
-    background: `linear-gradient(45deg, ${alpha(theme.palette.text.secondary, 0.3)}, ${alpha(theme.palette.text.secondary, 0.5)})`,
+    background: 'linear-gradient(135deg, #bdc3c7 0%, #2c3e50 100%)',
+    opacity: 0.7,
+  },
+  '&.new-story': {
+    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    animation: 'pulse 2s infinite',
+  },
+  '@keyframes pulse': {
+    '0%': {
+      boxShadow: `0 0 0 0 ${alpha(theme.palette.primary.main, 0.7)}`,
+    },
+    '70%': {
+      boxShadow: `0 0 0 10px ${alpha(theme.palette.primary.main, 0)}`,
+    },
+    '100%': {
+      boxShadow: `0 0 0 0 ${alpha(theme.palette.primary.main, 0)}`,
+    },
   },
 }));
 
@@ -746,8 +768,8 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
                            story.author?._id === userId ||
                            story.author?._id === userEmail;
         
-        // Check if story is still active (not expired)
-        const isActive = !story.expiresAt || new Date(story.expiresAt) > now;
+        // Check if story is still active (stories are active unless explicitly deactivated)
+        const isActive = story.isActive !== false && (!story.expiresAt || new Date(story.expiresAt) > now);
         
         console.log('🔍 Frontend - Checking story:', {
           storyId: story._id,
@@ -1262,7 +1284,7 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
       icon: BusinessCenter,
       color: '#1976d2',
       gradient: 'linear-gradient(135deg, #1976d2, #42a5f5)',
-      route: '/jobs',
+      route: '/app/jobs',
     },
     {
       id: 'interview',
@@ -1271,7 +1293,7 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
       icon: QuestionAnswer,
       color: '#9c27b0',
       gradient: 'linear-gradient(135deg, #9c27b0, #ba68c8)',
-      route: '/interview-prep',
+      route: '/app/interviews',
     },
     {
       id: 'smart-exams',
@@ -1280,7 +1302,7 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
       icon: Psychology,
       color: '#f57c00',
       gradient: 'linear-gradient(135deg, #f57c00, #ffb74d)',
-      route: '/exams',
+      route: '/app/smart-tests',
     },
     {
       id: 'cv-builder',
@@ -1289,16 +1311,16 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
       icon: Assignment,
       color: '#388e3c',
       gradient: 'linear-gradient(135deg, #388e3c, #66bb6a)',
-      route: '/cv-builder',
+      route: '/app/cv-builder',
     },
     {
-      id: 'skill-assessment',
-      title: 'Skills Test',
+      id: 'psychometric-tests',
+      title: 'Psychometric Tests',
       description: 'Evaluate abilities',
       icon: Assessment,
       color: '#d32f2f',
       gradient: 'linear-gradient(135deg, #d32f2f, #f44336)',
-      route: '/skills-assessment',
+      route: '/app/psychometric-tests',
     },
     {
       id: 'achievements',
@@ -1307,7 +1329,7 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
       icon: EmojiEvents,
       color: '#f9a825',
       gradient: 'linear-gradient(135deg, #f9a825, #fdd835)',
-      route: '/achievements',
+      route: '/app/certificates',
     },
   ];
 
@@ -1522,52 +1544,57 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
 
   const renderStories = () => (
     <UniversalPostCard sx={{ mb: 2 }}>
-      <CardContent sx={{ p: 3 }}>
-        {/* Enhanced Stories Header */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2.5 }}>
+      <CardContent sx={{ 
+        p: { xs: 2, sm: 2.5, md: 3 },
+        background: theme.palette.mode === 'dark' 
+          ? 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)'
+          : 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+        borderRadius: 3,
+        border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+        boxShadow: theme.palette.mode === 'dark' 
+          ? '0 4px 20px rgba(0,0,0,0.15)' 
+          : '0 2px 12px rgba(0,0,0,0.08)',
+      }}>
+        {/* Clean Header */}
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          mb: 2,
+          px: 1
+        }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box sx={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)',
+            <Box sx={{ 
+              width: 8, 
+              height: 8, 
+              borderRadius: '50%', 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              animation: 'pulse 2s infinite',
             }} />
             <Typography variant="h6" fontWeight={700} sx={{ 
-              background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743)',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-              fontSize: '1.2rem',
+              fontSize: '1.3rem',
             }}>
               Stories
             </Typography>
+            <Chip 
+              label={`${stories.filter(s => s.type !== 'add').length} active`}
+              size="small"
+              sx={{ 
+                background: alpha(theme.palette.primary.main, 0.1),
+                color: theme.palette.primary.main,
+                fontWeight: 600,
+                fontSize: '0.75rem',
+                height: 24,
+              }}
+            />
           </Box>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-            {stories.length - 1} stories
-          </Typography>
         </Box>
         
-        <StoryContainer sx={{ px: 0 }}>
-          {/* Story Review Button */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, px: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="h6" fontWeight="bold">
-              Stories
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {stories.filter(s => s.type !== 'add').length} stories
-            </Typography>
-          </Box>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<Assessment />}
-            onClick={() => setShowStoryReview(true)}
-            sx={{ borderRadius: 2 }}
-          >
-            Review Performance
-          </Button>
-        </Box>
+        <StoryContainer>
           
           {storiesLoading ? (
             // Enhanced loading skeleton for stories
@@ -1575,61 +1602,113 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
               <Box key={`skeleton-${index}`} sx={{ textAlign: 'center' }}>
                 <Skeleton 
                   variant="circular" 
-                  width={80} 
-                  height={80} 
+                  width={76} 
+                  height={76} 
                   sx={{ 
                     borderRadius: '50%',
-                    background: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)',
-                    padding: 2,
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    padding: 3,
                   }} 
                 />
                 <Skeleton variant="text" width={60} height={16} sx={{ mt: 0.5 }} />
               </Box>
             ))
+          ) : stories.length === 0 ? (
+            // Empty state
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              py: 4,
+              width: '100%',
+              textAlign: 'center'
+            }}>
+              <Box sx={{
+                width: 80,
+                height: 80,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mb: 2,
+                opacity: 0.7,
+              }}>
+                <Add sx={{ color: 'white', fontSize: 32 }} />
+              </Box>
+              <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                No stories yet
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Be the first to share your story!
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={() => setShowCreateStory(true)}
+                sx={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  borderRadius: 2,
+                  px: 3,
+                  py: 1,
+                  textTransform: 'none',
+                  fontWeight: 600,
+                }}
+              >
+                Create Story
+              </Button>
+            </Box>
           ) : (
             stories.map((story, index) => (
               <motion.div
                 key={story.id}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.1, duration: 0.3 }}
-                whileHover={{ scale: 1.05 }}
+                initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ 
+                  delay: index * 0.1, 
+                  duration: 0.4,
+                  type: "spring",
+                  stiffness: 100
+                }}
+                whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
               >
                 <Box sx={{ textAlign: 'center', cursor: 'pointer' }} onClick={() => handleStoryClick(story, index)}>
-                  <StoryCircle className={story.hasViewed ? 'viewed' : ''}>
+                  <StoryCircle 
+                    className={`${story.hasViewed ? 'viewed' : ''} ${story.isOwnStory ? 'new-story' : ''}`}
+                  >
                     {story.type === 'add' ? (
                       <Avatar sx={{ 
-                        width: 56, 
-                        height: 56, 
-                        background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                        border: `2px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+                        width: 64, 
+                        height: 64, 
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        border: `3px solid ${alpha('#ffffff', 0.2)}`,
                         transition: 'all 0.3s ease',
                         '&:hover': {
                           transform: 'scale(1.1)',
-                          border: `2px solid ${alpha(theme.palette.primary.main, 0.6)}`,
-                          boxShadow: `0 0 20px ${alpha(theme.palette.primary.main, 0.3)}`,
+                          boxShadow: `0 0 20px ${alpha('#667eea', 0.5)}`,
                         }
                       }}>
-                        <Add sx={{ color: 'white', fontSize: 24 }} />
+                        <Add sx={{ color: 'white', fontSize: 28 }} />
                       </Avatar>
                     ) : (
                       <Avatar 
                         src={story.user.avatar}
                         sx={{ 
-                          width: 56, 
-                          height: 56,
+                          width: 64, 
+                          height: 64,
                           opacity: story.hasViewed ? 0.6 : 1,
                           border: story.hasViewed ? 'none' : 
-                                 story.isOwnStory ? `2px solid ${alpha(theme.palette.primary.main, 0.6)}` :
-                                 `2px solid ${alpha('#f09433', 0.4)}`,
+                                 story.isOwnStory ? `3px solid ${alpha('#667eea', 0.6)}` :
+                                 `3px solid ${alpha('#ffffff', 0.3)}`,
                           transition: 'all 0.3s ease',
                           '&:hover': {
                             transform: 'scale(1.1)',
                             opacity: 1,
                             boxShadow: story.isOwnStory ? 
-                              `0 0 20px ${alpha(theme.palette.primary.main, 0.3)}` :
-                              `0 0 20px ${alpha('#f09433', 0.3)}`,
+                              `0 0 20px ${alpha('#667eea', 0.4)}` :
+                              `0 0 20px ${alpha('#764ba2', 0.4)}`,
                           }
                         }}
                       >
@@ -1640,11 +1719,15 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
                   <Typography 
                     variant="caption" 
                     sx={{ 
-                      mt: 0.5, 
+                      mt: 1, 
                       display: 'block',
-                      fontWeight: story.type === 'add' || story.isOwnStory ? 600 : 500,
+                      fontWeight: story.type === 'add' || story.isOwnStory ? 700 : 600,
                       color: story.type === 'add' || story.isOwnStory ? 'primary.main' : 'text.secondary',
-                      fontSize: '0.75rem',
+                      fontSize: '0.8rem',
+                      maxWidth: 70,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
                     }}
                   >
                     {story.type === 'add' ? 'Your story' : 
@@ -1668,7 +1751,7 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
     >
       <UniversalPostCard sx={{ mb: 2 }}>
         <CardContent sx={{ 
-          p: { xs: 2, sm: 2.5, md: 3 },
+          p: { xs: 2.5, sm: 3, md: 3.5 },
           background: theme.palette.mode === 'dark' 
             ? 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)'
             : 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
@@ -1765,6 +1848,8 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
             justifyContent: { xs: 'space-between', sm: 'space-around' },
             gap: { xs: 0.5, sm: 1 },
             flexWrap: { xs: 'wrap', sm: 'nowrap' },
+            px: { xs: 0.5, sm: 1 },
+            py: { xs: 0.5, sm: 0.5 },
           }}>
             <motion.div
               whileHover={{ scale: 1.02 }}

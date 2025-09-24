@@ -14,7 +14,8 @@ export interface IStory extends Document {
   author: Types.ObjectId;
   visibility: 'public' | 'connections' | 'private';
   createdAt: Date;
-  expiresAt: Date;
+  expiresAt?: Date; // Optional - only set when story is deactivated
+  isActive: boolean; // New field to track story status
   viewers: Types.ObjectId[];
   likes: Types.ObjectId[];
   shares: number;
@@ -63,6 +64,10 @@ const storySchema = new Schema<IStory>({
     enum: ['public', 'connections', 'private'],
     default: 'connections'
   },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
   viewers: [{
     type: Schema.Types.ObjectId,
     ref: 'User'
@@ -79,31 +84,15 @@ const storySchema = new Schema<IStory>({
   timestamps: true
 });
 
-// Auto-expire stories after 24 hours
-storySchema.index({ createdAt: 1 }, { expireAfterSeconds: 86400 }); // 24 hours
-
-// Set expiresAt when creating a story
-storySchema.pre('save', function(next) {
-  if (this.isNew && (!this.expiresAt || this.expiresAt === null)) {
-    this.expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
-    console.log('📝 Story Model - Setting expiresAt for new story:', this.expiresAt);
-  }
-  next();
-});
-
 // Methods for finding stories
 storySchema.statics.findActiveStories = function(userId: string, visibility: 'public' | 'connections' | 'all' = 'all') {
   // Convert string userId to ObjectId for proper comparison
   const mongoose = require('mongoose');
   const userObjectId = new mongoose.Types.ObjectId(userId);
   
-  // Fix: Handle stories with undefined expiresAt or expired stories
+  // Query for active stories only
   const query: any = {
-    $or: [
-      { expiresAt: { $gt: new Date() } }, // Active stories
-      { expiresAt: { $exists: false } },   // Stories without expiration (legacy)
-      { expiresAt: null }                  // Stories with null expiration
-    ]
+    isActive: true
   };
 
   if (visibility === 'public') {
@@ -129,25 +118,20 @@ storySchema.statics.findActiveStories = function(userId: string, visibility: 'pu
 
 storySchema.statics.findUserStories = function(userId: string) {
   console.log('📚 Story Model - findUserStories called with userId:', userId);
-  console.log('📚 Story Model - Current time:', new Date());
   
   // Convert string userId to ObjectId for proper comparison
   const mongoose = require('mongoose');
   const userObjectId = new mongoose.Types.ObjectId(userId);
   
-  // Fix: Handle stories with undefined expiresAt or expired stories
+  // Query for user's stories - don't filter by expiration for user's own stories
+  // Users should be able to see their own stories regardless of expiration
   const query = {
-    author: userObjectId,
-    $or: [
-      { expiresAt: { $gt: new Date() } }, // Active stories
-      { expiresAt: { $exists: false } },   // Stories without expiration (legacy)
-      { expiresAt: null }                  // Stories with null expiration
-    ]
+    author: userObjectId
   };
   console.log('📚 Story Model - Query with ObjectId:', query);
   
   return this.find(query)
-    .populate('author', 'firstName lastName profilePicture')
+    .populate('author', 'firstName lastName profilePicture company jobTitle')
     .sort({ createdAt: -1 });
 };
 

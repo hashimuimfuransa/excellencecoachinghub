@@ -352,6 +352,16 @@ class SocialNetworkService {
     return response.data.data || response.data;
   }
 
+  async likeComment(commentId: string) {
+    const response = await api.post(`/comments/${commentId}/like`);
+    return response.data.data || response.data;
+  }
+
+  async unlikeComment(commentId: string) {
+    const response = await api.delete(`/comments/${commentId}/like`);
+    return response.data.data || response.data;
+  }
+
   // Connections API
   async getConnections() {
     // Check for Google users using consistent logic

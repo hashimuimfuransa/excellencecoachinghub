@@ -46,6 +46,13 @@ import {
   ChevronLeft,
   ChevronRight,
   FiberManualRecord,
+  ThumbUp,
+  ThumbDown,
+  SentimentSatisfiedAlt,
+  CelebrationOutlined,
+  EmojiEmotions,
+  Reply,
+  Send,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
@@ -67,14 +74,19 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   const navigate = useNavigate();
   const globalVideo = useGlobalVideo();
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
-  const [liked, setLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(post.likesCount);
-  const [sharesCount, setSharesCount] = useState(post.sharesCount);
+  const [liked, setLiked] = useState(post.likes?.includes(user?._id || '') || false);
+  const [likesCount, setLikesCount] = useState(post.likesCount || 0);
+  const [sharesCount, setSharesCount] = useState(post.sharesCount || 0);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<SocialComment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [commentsLoading, setCommentsLoading] = useState(false);
+  const [reactionMenuAnchor, setReactionMenuAnchor] = useState<null | HTMLElement>(null);
+  const [shareMenuAnchor, setShareMenuAnchor] = useState<null | HTMLElement>(null);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState('');
+  const [currentReaction, setCurrentReaction] = useState<string>('like');
   const [selectedMedia, setSelectedMedia] = useState<number | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'connected' | 'loading'>('none');
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
@@ -87,6 +99,29 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
 
   // Precompute authorId to avoid undefined access
   const authorId = post?.author?._id;
+
+  // Update like state when post or user changes
+  useEffect(() => {
+    setLiked(post.likes?.includes(user?._id || '') || false);
+    setLikesCount(post.likesCount || 0);
+    setSharesCount(post.sharesCount || 0);
+  }, [post.likes, post.likesCount, post.sharesCount, user?._id]);
+
+  // Add CSS animation for heartbeat effect
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes heartbeat {
+        0% { transform: scale(1); }
+        25% { transform: scale(1.1); }
+        50% { transform: scale(1); }
+        75% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
 
   // Check connection status on component mount
   useEffect(() => {
@@ -192,24 +227,40 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
            cardCenter <= viewportMiddle + 150; // Allow more buffer for center positioning
   };
 
-  const handleLike = async () => {
+  // Emoji reactions
+  const reactions = [
+    { type: 'like', icon: ThumbUp, color: '#1877f2', label: 'Like' },
+    { type: 'love', icon: Favorite, color: '#e91e63', label: 'Love' },
+    { type: 'laugh', icon: SentimentSatisfiedAlt, color: '#ffc107', label: 'Haha' },
+    { type: 'celebrate', icon: CelebrationOutlined, color: '#ff9800', label: 'Celebrate' },
+    { type: 'wow', icon: EmojiEmotions, color: '#2196f3', label: 'Wow' },
+  ];
+
+  const handleLike = async (reactionType: string = 'like') => {
     try {
       await socialNetworkService.likePost(post._id);
       setLiked(!liked);
       setLikesCount(prev => liked ? prev - 1 : prev + 1);
+      setCurrentReaction(reactionType);
     } catch (error) {
       console.error('Error liking post:', error);
     }
   };
 
+  const handleReactionSelect = (reactionType: string) => {
+    handleLike(reactionType);
+    setReactionMenuAnchor(null);
+  };
+
   const handleCommentToggle = async () => {
-    if (!showComments && comments.length === 0) {
+    if (!showComments && (!comments || comments.length === 0)) {
       setCommentsLoading(true);
       try {
         const response = await socialNetworkService.getPostComments(post._id);
-        setComments(response.data);
+        setComments(Array.isArray(response.data) ? response.data : []);
       } catch (error) {
         console.error('Error loading comments:', error);
+        setComments([]);
       } finally {
         setCommentsLoading(false);
       }
@@ -221,11 +272,114 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     if (!newComment.trim()) return;
 
     try {
-      const response = await socialNetworkService.addComment(post._id, newComment);
-      setComments(prev => [response.data, ...prev]);
+      const response = await socialNetworkService.addComment(post._id, newComment, replyingTo || undefined);
+      const newCommentData = response.data || response;
+      
+      // Ensure the new comment has proper structure
+      const safeComment = {
+        _id: newCommentData._id || Math.random().toString(),
+        author: newCommentData.author || {
+          _id: user?._id || 'unknown',
+          firstName: user?.firstName || 'Unknown',
+          lastName: user?.lastName || 'User',
+          profilePicture: user?.profilePicture || ''
+        },
+        content: newCommentData.content || newComment,
+        likesCount: newCommentData.likesCount || 0,
+        repliesCount: newCommentData.repliesCount || 0,
+        createdAt: newCommentData.createdAt || new Date().toISOString()
+      };
+      
+      setComments(prev => [safeComment, ...prev]);
       setNewComment('');
+      setReplyingTo(null);
     } catch (error) {
       console.error('Error adding comment:', error);
+      // Still add a local comment for better UX
+      const fallbackComment = {
+        _id: Math.random().toString(),
+        author: {
+          _id: user?._id || 'unknown',
+          firstName: user?.firstName || 'Unknown',
+          lastName: user?.lastName || 'User',
+          profilePicture: user?.profilePicture || ''
+        },
+        content: newComment,
+        likesCount: 0,
+        repliesCount: 0,
+        createdAt: new Date().toISOString()
+      };
+      setComments(prev => [fallbackComment, ...prev]);
+      setNewComment('');
+      setReplyingTo(null);
+    }
+  };
+
+  const handleReplyToComment = (commentId: string) => {
+    setReplyingTo(commentId);
+    setReplyContent('');
+  };
+
+  const handleAddReply = async (commentId: string) => {
+    if (!replyContent.trim()) return;
+
+    try {
+      const response = await socialNetworkService.addComment(post._id, replyContent, commentId);
+      const newReplyData = response.data || response;
+      
+      // Ensure the reply has proper structure
+      const safeReply = {
+        _id: newReplyData._id || Math.random().toString(),
+        author: newReplyData.author || {
+          _id: user?._id || 'unknown',
+          firstName: user?.firstName || 'Unknown',
+          lastName: user?.lastName || 'User',
+          profilePicture: user?.profilePicture || ''
+        },
+        content: newReplyData.content || replyContent,
+        likesCount: newReplyData.likesCount || 0,
+        repliesCount: newReplyData.repliesCount || 0,
+        createdAt: newReplyData.createdAt || new Date().toISOString()
+      };
+      
+      // Update the comment with the new reply
+      setComments(prev => prev.map(comment => 
+        comment._id === commentId 
+          ? { ...comment, repliesCount: (comment.repliesCount || 0) + 1 }
+          : comment
+      ));
+      setReplyContent('');
+      setReplyingTo(null);
+    } catch (error) {
+      console.error('Error adding reply:', error);
+      // Still update the reply count for better UX
+      setComments(prev => prev.map(comment => 
+        comment._id === commentId 
+          ? { ...comment, repliesCount: (comment.repliesCount || 0) + 1 }
+          : comment
+      ));
+      setReplyContent('');
+      setReplyingTo(null);
+    }
+  };
+
+  const handleLikeComment = async (commentId: string) => {
+    try {
+      await socialNetworkService.likeComment(commentId);
+      // Update the comment likes count locally
+      setComments(prev => prev.map(comment => 
+        comment._id === commentId 
+          ? { ...comment, likesCount: (comment.likesCount || 0) + 1 }
+          : comment
+      ));
+    } catch (error) {
+      console.error('Error liking comment:', error);
+      // Still update locally for better UX
+      setComments(prev => prev.map(comment => 
+        comment._id === commentId 
+          ? { ...comment, likesCount: (comment.likesCount || 0) + 1 }
+          : comment
+      ));
     }
   };
 
@@ -245,16 +399,40 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     return `${salary.currency} ${salary.min.toLocaleString()} - ${salary.max.toLocaleString()}`;
   };
 
-  const handleShare = async () => {
+  const handleShare = async (platform?: string) => {
     try {
       await socialNetworkService.sharePost(post._id);
       setSharesCount(prev => prev + 1);
       
-      // Copy post URL to clipboard
       const postUrl = `${window.location.origin}/post/${post._id}`;
-      await navigator.clipboard.writeText(postUrl);
+      const shareText = `Check out this post: ${post.content.substring(0, 100)}...`;
       
-      console.log('Post shared successfully');
+      if (platform) {
+        switch (platform) {
+          case 'linkedin':
+            window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(postUrl)}&text=${encodeURIComponent(shareText)}`, '_blank');
+            break;
+          case 'twitter':
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(postUrl)}`, '_blank');
+            break;
+          case 'facebook':
+            window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`, '_blank');
+            break;
+          case 'whatsapp':
+            window.open(`https://wa.me/?text=${encodeURIComponent(shareText + ' ' + postUrl)}`, '_blank');
+            break;
+          case 'copy':
+            await navigator.clipboard.writeText(postUrl);
+            console.log('Post URL copied to clipboard');
+            break;
+        }
+      } else {
+        // Default sharing - copy to clipboard
+        await navigator.clipboard.writeText(postUrl);
+        console.log('Post URL copied to clipboard');
+      }
+      
+      setShareMenuAnchor(null);
     } catch (error) {
       console.error('Error sharing post:', error);
     }
@@ -1142,57 +1320,258 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
       </CardContent>
 
       {/* Post Actions */}
-      <CardActions sx={{ px: { xs: 2, sm: 2.5, md: 2 }, pb: { xs: 1.5, sm: 1.8, md: 1 }, pt: 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, sm: 1.2, md: 1 }, flexGrow: 1 }}>
-          <IconButton 
-            onClick={handleLike} 
-            color={liked ? 'error' : 'default'}
-            sx={{ 
-              p: { xs: 1.2, sm: 1, md: 1 } // Larger touch target for small tablets
-            }}
-          >
-            {liked ? <Favorite /> : <FavoriteBorder />}
-          </IconButton>
-          <Typography variant="body2" color="text.secondary">
-            {likesCount}
-          </Typography>
+      <CardActions sx={{ 
+        px: { xs: 1.5, sm: 2, md: 2.5 }, 
+        pb: { xs: 1, sm: 1.5, md: 1.8 }, 
+        pt: 0,
+        flexWrap: 'wrap',
+        gap: { xs: 0.5, sm: 1 }
+      }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          width: '100%',
+          gap: { xs: 0.5, sm: 1, md: 1.5 }
+        }}>
+          {/* Enhanced Like Button with Reactions */}
+          <Box sx={{ 
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            gap: { xs: 0.5, sm: 0.75, md: 1 },
+            minWidth: { xs: 'auto', sm: '60px' }
+          }}>
+            <IconButton 
+              onClick={() => handleLike()}
+              onMouseEnter={(e) => setReactionMenuAnchor(e.currentTarget)}
+              onMouseLeave={() => setTimeout(() => setReactionMenuAnchor(null), 300)}
+              color={liked ? 'error' : 'default'}
+              sx={{ 
+                p: { xs: 0.8, sm: 1, md: 1.2 },
+                minWidth: { xs: 32, sm: 36, md: 40 },
+                minHeight: { xs: 32, sm: 36, md: 40 },
+                bgcolor: liked ? alpha(theme.palette.error.main, 0.1) : 'transparent',
+                border: liked ? `1px solid ${alpha(theme.palette.error.main, 0.3)}` : '1px solid transparent',
+                '&:hover': { 
+                  transform: 'scale(1.05)',
+                  bgcolor: liked 
+                    ? alpha(theme.palette.error.main, 0.15)
+                    : alpha(theme.palette.primary.main, 0.08)
+                },
+                '&:active': {
+                  transform: 'scale(0.95)'
+                },
+                transition: 'all 0.2s ease-in-out',
+                borderRadius: 2,
+                cursor: 'pointer'
+              }}
+            >
+              {liked ? (
+                <Favorite sx={{ 
+                  fontSize: { xs: 18, sm: 20, md: 22 },
+                  color: theme.palette.error.main,
+                  animation: 'heartbeat 0.6s ease-in-out'
+                }} />
+              ) : (
+                <FavoriteBorder sx={{ 
+                  fontSize: { xs: 18, sm: 20, md: 22 },
+                  color: theme.palette.text.secondary
+                }} />
+              )}
+            </IconButton>
+            
+            <Typography 
+              variant="body2" 
+              color="text.secondary"
+              sx={{ 
+                fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.875rem' },
+                fontWeight: 500,
+                minWidth: { xs: 'auto', sm: '20px' },
+                textAlign: 'center'
+              }}
+            >
+              {likesCount}
+            </Typography>
+            
+            {/* Reaction Menu */}
+            {reactionMenuAnchor && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  bottom: '100%',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  bgcolor: 'background.paper',
+                  borderRadius: 25,
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                  p: { xs: 0.5, sm: 1 },
+                  display: 'flex',
+                  gap: { xs: 0.5, sm: 1 },
+                  border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
+                  zIndex: 1000,
+                  mb: 1,
+                  minWidth: { xs: 200, sm: 250 }
+                }}
+                onMouseEnter={() => setReactionMenuAnchor(reactionMenuAnchor)}
+                onMouseLeave={() => setReactionMenuAnchor(null)}
+              >
+                {reactions.map((reaction) => (
+                  <IconButton
+                    key={reaction.type}
+                    size="small"
+                    onClick={() => handleReactionSelect(reaction.type)}
+                    sx={{
+                      width: { xs: 36, sm: 40 },
+                      height: { xs: 36, sm: 40 },
+                      bgcolor: reaction.color,
+                      color: 'white',
+                      '&:hover': {
+                        bgcolor: reaction.color,
+                        transform: 'scale(1.15)',
+                      },
+                      transition: 'all 0.2s ease-in-out',
+                      borderRadius: '50%'
+                    }}
+                  >
+                    <reaction.icon sx={{ fontSize: { xs: 16, sm: 20 } }} />
+                  </IconButton>
+                ))}
+              </Box>
+            )}
+          </Box>
 
-          <IconButton 
-            onClick={handleCommentToggle}
-            sx={{ 
-              p: { xs: 1.2, sm: 1, md: 1 } // Larger touch target for small tablets
-            }}
-          >
-            <Comment />
-          </IconButton>
-          <Typography variant="body2" color="text.secondary">
-            {post.commentsCount}
-          </Typography>
+          {/* Comment Button */}
+          <Box sx={{ 
+            display: 'flex',
+            alignItems: 'center',
+            gap: { xs: 0.5, sm: 0.75, md: 1 },
+            minWidth: { xs: 'auto', sm: '60px' }
+          }}>
+            <IconButton 
+              onClick={handleCommentToggle}
+              sx={{ 
+                p: { xs: 0.8, sm: 1, md: 1.2 },
+                minWidth: { xs: 32, sm: 36, md: 40 },
+                minHeight: { xs: 32, sm: 36, md: 40 },
+                bgcolor: showComments ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
+                border: showComments ? `1px solid ${alpha(theme.palette.primary.main, 0.3)}` : '1px solid transparent',
+                '&:hover': { 
+                  transform: 'scale(1.05)',
+                  bgcolor: showComments 
+                    ? alpha(theme.palette.primary.main, 0.15)
+                    : alpha(theme.palette.primary.main, 0.08)
+                },
+                '&:active': {
+                  transform: 'scale(0.95)'
+                },
+                transition: 'all 0.2s ease-in-out',
+                borderRadius: 2,
+                cursor: 'pointer'
+              }}
+            >
+              <Comment sx={{ 
+                fontSize: { xs: 18, sm: 20, md: 22 },
+                color: showComments ? theme.palette.primary.main : theme.palette.text.secondary
+              }} />
+            </IconButton>
+            <Typography 
+              variant="body2" 
+              color="text.secondary"
+              sx={{ 
+                fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.875rem' },
+                fontWeight: 500,
+                minWidth: { xs: 'auto', sm: '20px' },
+                textAlign: 'center'
+              }}
+            >
+              {post.commentsCount}
+            </Typography>
+          </Box>
 
-          <IconButton 
-            onClick={handleShare}
-            sx={{ 
-              p: { xs: 1.2, sm: 1, md: 1 } // Larger touch target for small tablets
-            }}
-          >
-            <Share />
-          </IconButton>
-          <Typography variant="body2" color="text.secondary">
-            {sharesCount}
-          </Typography>
+          {/* Enhanced Share Button */}
+          <Box sx={{ 
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            gap: { xs: 0.5, sm: 0.75, md: 1 },
+            minWidth: { xs: 'auto', sm: '60px' }
+          }}>
+            <IconButton 
+              onClick={(e) => setShareMenuAnchor(e.currentTarget)}
+              sx={{ 
+                p: { xs: 0.8, sm: 1, md: 1.2 },
+                minWidth: { xs: 32, sm: 36, md: 40 },
+                minHeight: { xs: 32, sm: 36, md: 40 },
+                bgcolor: Boolean(shareMenuAnchor) ? alpha(theme.palette.success.main, 0.1) : 'transparent',
+                border: Boolean(shareMenuAnchor) ? `1px solid ${alpha(theme.palette.success.main, 0.3)}` : '1px solid transparent',
+                '&:hover': { 
+                  transform: 'scale(1.05)',
+                  bgcolor: Boolean(shareMenuAnchor) 
+                    ? alpha(theme.palette.success.main, 0.15)
+                    : alpha(theme.palette.success.main, 0.08)
+                },
+                '&:active': {
+                  transform: 'scale(0.95)'
+                },
+                transition: 'all 0.2s ease-in-out',
+                borderRadius: 2,
+                cursor: 'pointer'
+              }}
+            >
+              <Share sx={{ 
+                fontSize: { xs: 18, sm: 20, md: 22 },
+                color: Boolean(shareMenuAnchor) ? theme.palette.success.main : theme.palette.text.secondary
+              }} />
+            </IconButton>
+            <Typography 
+              variant="body2" 
+              color="text.secondary"
+              sx={{ 
+                fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.875rem' },
+                fontWeight: 500,
+                minWidth: { xs: 'auto', sm: '20px' },
+                textAlign: 'center'
+              }}
+            >
+              {sharesCount}
+            </Typography>
+          </Box>
 
           {/* Chat Button - Only show if not the current user's post */}
           {user && authorId && authorId !== user._id && (
-            <IconButton 
-              onClick={handleStartChat}
-              sx={{ 
-                ml: 'auto',
-                p: { xs: 1.2, sm: 1, md: 1 } // Larger touch target for small tablets
-              }}
-              color="primary"
-            >
-              <Chat />
-            </IconButton>
+            <Box sx={{ 
+              display: 'flex',
+              alignItems: 'center',
+              ml: 'auto'
+            }}>
+              <IconButton 
+                onClick={handleStartChat}
+                sx={{ 
+                  p: { xs: 0.8, sm: 1, md: 1.2 },
+                  minWidth: { xs: 32, sm: 36, md: 40 },
+                  minHeight: { xs: 32, sm: 36, md: 40 },
+                  bgcolor: alpha(theme.palette.primary.main, 0.1),
+                  border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+                  '&:hover': { 
+                    transform: 'scale(1.05)',
+                    bgcolor: alpha(theme.palette.primary.main, 0.15)
+                  },
+                  '&:active': {
+                    transform: 'scale(0.95)'
+                  },
+                  transition: 'all 0.2s ease-in-out',
+                  borderRadius: 2,
+                  cursor: 'pointer',
+                  color: 'primary.main'
+                }}
+              >
+                <Chat sx={{ 
+                  fontSize: { xs: 18, sm: 20, md: 22 },
+                  color: theme.palette.primary.main
+                }} />
+              </IconButton>
+            </Box>
           )}
         </Box>
       </CardActions>
@@ -1206,19 +1585,36 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
             <TextField
               fullWidth
               size="small"
-              placeholder="Write a comment..."
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleAddComment()}
+              placeholder={replyingTo ? "Write a reply..." : "Write a comment..."}
+              value={replyingTo ? replyContent : newComment}
+              onChange={(e) => replyingTo ? setReplyContent(e.target.value) : setNewComment(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  if (replyingTo) {
+                    handleAddReply(replyingTo);
+                  } else {
+                    handleAddComment();
+                  }
+                }
+              }}
             />
             <Button
               variant="contained"
               size="small"
-              onClick={handleAddComment}
-              disabled={!newComment.trim()}
+              onClick={() => replyingTo ? handleAddReply(replyingTo) : handleAddComment()}
+              disabled={replyingTo ? !replyContent.trim() : !newComment.trim()}
             >
-              Post
+              {replyingTo ? 'Reply' : 'Post'}
             </Button>
+            {replyingTo && (
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setReplyingTo(null)}
+              >
+                Cancel
+              </Button>
+            )}
           </Box>
 
           {/* Comments List */}
@@ -1226,41 +1622,270 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
             <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
               Loading comments...
             </Typography>
-          ) : (
-            comments.map((comment) => (
-              <Box key={comment._id} sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                <Avatar
-                  src={comment.author.profilePicture}
-                  sx={{ width: 32, height: 32 }}
-                >
-                  {comment.author.firstName[0]}
-                </Avatar>
-                <Box sx={{ flexGrow: 1 }}>
-                  <Box
-                    sx={{
-                      backgroundColor: theme.palette.mode === 'dark' 
-                        ? 'rgba(255,255,255,0.05)' 
-                        : 'rgba(0,0,0,0.05)',
-                      borderRadius: 2,
-                      p: 1.5
-                    }}
+          ) : comments && comments.length > 0 ? (
+            comments.map((comment) => {
+              // Safe access to comment author with fallbacks
+              const author = comment.author || {};
+              const firstName = author.firstName || 'Unknown';
+              const lastName = author.lastName || 'User';
+              const profilePicture = author.profilePicture || '';
+              const authorInitial = firstName.charAt(0) || 'U';
+              
+              return (
+                <Box key={comment._id || Math.random()} sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                  <Avatar
+                    src={profilePicture}
+                    sx={{ width: 32, height: 32 }}
                   >
-                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      {comment.author.firstName} {comment.author.lastName}
-                    </Typography>
-                    <Typography variant="body2">
-                      {comment.content}
-                    </Typography>
+                    {authorInitial}
+                  </Avatar>
+                  <Box sx={{ flexGrow: 1 }}>
+                    <Box
+                      sx={{
+                        backgroundColor: theme.palette.mode === 'dark' 
+                          ? 'rgba(255,255,255,0.05)' 
+                          : 'rgba(0,0,0,0.05)',
+                        borderRadius: 2,
+                        p: 1.5
+                      }}
+                    >
+                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                        {firstName} {lastName}
+                      </Typography>
+                      <Typography variant="body2">
+                        {comment.content || 'No content'}
+                      </Typography>
+                    </Box>
+                  
+                    {/* Comment Actions */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5, ml: 1 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        {comment.createdAt ? formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true }) : 'Just now'}
+                      </Typography>
+                      
+                      <Button
+                        size="small"
+                        startIcon={<ThumbUp />}
+                        onClick={() => handleLikeComment(comment._id)}
+                        sx={{ 
+                          textTransform: 'none',
+                          fontSize: '0.75rem',
+                          minWidth: 'auto',
+                          px: 1,
+                          py: 0.5
+                        }}
+                      >
+                        {comment.likesCount || 0}
+                      </Button>
+                      
+                      <Button
+                        size="small"
+                        startIcon={<Reply />}
+                        onClick={() => handleReplyToComment(comment._id)}
+                        sx={{ 
+                          textTransform: 'none',
+                          fontSize: '0.75rem',
+                          minWidth: 'auto',
+                          px: 1,
+                          py: 0.5
+                        }}
+                      >
+                        Reply
+                      </Button>
+                      
+                      {(comment.repliesCount || 0) > 0 && (
+                        <Typography variant="caption" color="primary">
+                          {comment.repliesCount} replies
+                        </Typography>
+                      )}
+                    </Box>
                   </Box>
-                  <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                    {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
-                  </Typography>
                 </Box>
-              </Box>
-            ))
+              );
+            })
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+              No comments yet. Be the first to comment!
+            </Typography>
           )}
         </Box>
       </Collapse>
+
+      {/* Share Menu */}
+      <Menu
+        anchorEl={shareMenuAnchor}
+        open={Boolean(shareMenuAnchor)}
+        onClose={() => setShareMenuAnchor(null)}
+        PaperProps={{
+          sx: { 
+            minWidth: { xs: 180, sm: 200, md: 220 },
+            borderRadius: 2,
+            mt: 1,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+            border: `1px solid ${alpha(theme.palette.divider, 0.08)}`
+          }
+        }}
+        transformOrigin={{ horizontal: 'center', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'center', vertical: 'bottom' }}
+      >
+        <MenuItem 
+          onClick={() => handleShare('copy')} 
+          sx={{ 
+            py: { xs: 1.2, sm: 1.5 },
+            px: { xs: 1.5, sm: 2 },
+            borderRadius: 1,
+            mx: 0.5,
+            '&:hover': {
+              bgcolor: alpha(theme.palette.primary.main, 0.08)
+            }
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
+            <Box sx={{ 
+              width: { xs: 24, sm: 28 }, 
+              height: { xs: 24, sm: 28 }, 
+              bgcolor: alpha(theme.palette.primary.main, 0.1),
+              borderRadius: 1, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}>
+              <Share sx={{ fontSize: { xs: 14, sm: 16 }, color: 'primary.main' }} />
+            </Box>
+            <Typography sx={{ fontSize: { xs: '0.875rem', sm: '0.9rem' }, fontWeight: 500 }}>
+              Copy Link
+            </Typography>
+          </Box>
+        </MenuItem>
+        
+        <MenuItem 
+          onClick={() => handleShare('linkedin')} 
+          sx={{ 
+            py: { xs: 1.2, sm: 1.5 },
+            px: { xs: 1.5, sm: 2 },
+            borderRadius: 1,
+            mx: 0.5,
+            '&:hover': {
+              bgcolor: alpha('#0077b5', 0.08)
+            }
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
+            <Box sx={{ 
+              width: { xs: 24, sm: 28 }, 
+              height: { xs: 24, sm: 28 }, 
+              bgcolor: '#0077b5', 
+              borderRadius: 1, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}>
+              <Typography sx={{ color: 'white', fontSize: { xs: '0.7rem', sm: '0.8rem' }, fontWeight: 'bold' }}>
+                in
+              </Typography>
+            </Box>
+            <Typography sx={{ fontSize: { xs: '0.875rem', sm: '0.9rem' }, fontWeight: 500 }}>
+              LinkedIn
+            </Typography>
+          </Box>
+        </MenuItem>
+        
+        <MenuItem 
+          onClick={() => handleShare('twitter')} 
+          sx={{ 
+            py: { xs: 1.2, sm: 1.5 },
+            px: { xs: 1.5, sm: 2 },
+            borderRadius: 1,
+            mx: 0.5,
+            '&:hover': {
+              bgcolor: alpha('#1da1f2', 0.08)
+            }
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
+            <Box sx={{ 
+              width: { xs: 24, sm: 28 }, 
+              height: { xs: 24, sm: 28 }, 
+              bgcolor: '#1da1f2', 
+              borderRadius: 1, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}>
+              <Typography sx={{ color: 'white', fontSize: { xs: '0.7rem', sm: '0.8rem' }, fontWeight: 'bold' }}>
+                𝕏
+              </Typography>
+            </Box>
+            <Typography sx={{ fontSize: { xs: '0.875rem', sm: '0.9rem' }, fontWeight: 500 }}>
+              Twitter
+            </Typography>
+          </Box>
+        </MenuItem>
+        
+        <MenuItem 
+          onClick={() => handleShare('facebook')} 
+          sx={{ 
+            py: { xs: 1.2, sm: 1.5 },
+            px: { xs: 1.5, sm: 2 },
+            borderRadius: 1,
+            mx: 0.5,
+            '&:hover': {
+              bgcolor: alpha('#1877f2', 0.08)
+            }
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
+            <Box sx={{ 
+              width: { xs: 24, sm: 28 }, 
+              height: { xs: 24, sm: 28 }, 
+              bgcolor: '#1877f2', 
+              borderRadius: 1, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}>
+              <Typography sx={{ color: 'white', fontSize: { xs: '0.7rem', sm: '0.8rem' }, fontWeight: 'bold' }}>
+                f
+              </Typography>
+            </Box>
+            <Typography sx={{ fontSize: { xs: '0.875rem', sm: '0.9rem' }, fontWeight: 500 }}>
+              Facebook
+            </Typography>
+          </Box>
+        </MenuItem>
+        
+        <MenuItem 
+          onClick={() => handleShare('whatsapp')} 
+          sx={{ 
+            py: { xs: 1.2, sm: 1.5 },
+            px: { xs: 1.5, sm: 2 },
+            borderRadius: 1,
+            mx: 0.5,
+            '&:hover': {
+              bgcolor: alpha('#25d366', 0.08)
+            }
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 } }}>
+            <Box sx={{ 
+              width: { xs: 24, sm: 28 }, 
+              height: { xs: 24, sm: 28 }, 
+              bgcolor: '#25d366', 
+              borderRadius: 1, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}>
+              <Typography sx={{ color: 'white', fontSize: { xs: '0.7rem', sm: '0.8rem' }, fontWeight: 'bold' }}>
+                W
+              </Typography>
+            </Box>
+            <Typography sx={{ fontSize: { xs: '0.875rem', sm: '0.9rem' }, fontWeight: 500 }}>
+              WhatsApp
+            </Typography>
+          </Box>
+        </MenuItem>
+      </Menu>
 
       {/* Menu */}
       <Menu
@@ -1268,7 +1893,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
         open={Boolean(menuAnchor)}
         onClose={() => setMenuAnchor(null)}
       >
-        <MenuItem onClick={() => setMenuAnchor(null)}>Share</MenuItem>
         <MenuItem onClick={() => setMenuAnchor(null)}>Save</MenuItem>
         <MenuItem onClick={() => setMenuAnchor(null)}>Report</MenuItem>
       </Menu>

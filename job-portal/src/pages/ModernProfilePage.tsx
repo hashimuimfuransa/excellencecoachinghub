@@ -175,9 +175,12 @@ import {
   AutoStories,
   Twitter,
   Facebook,
-  WhatsApp
+  WhatsApp,
+  LightMode,
+  DarkMode
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme as useCustomTheme } from '../contexts/ThemeContext';
 import { userService } from '../services/userService';
 import { socialNetworkService } from '../services/socialNetworkService';
 import { enhancedStoryService } from '../services/enhancedStoryService';
@@ -209,6 +212,7 @@ function TabPanel(props: TabPanelProps) {
 
 const ModernProfilePage: React.FC = () => {
   const theme = useTheme();
+  const { mode, toggleTheme } = useCustomTheme();
   const navigate = useNavigate();
   const { userId } = useParams();
   const { user, updateUser, setUserData } = useAuth();
@@ -580,26 +584,55 @@ const ModernProfilePage: React.FC = () => {
         }}
       >
         {/* Header Section */}
-        <Box sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
-          <Typography 
-            variant={isMobile ? "h4" : "h3"} 
-            component="h1" 
-            gutterBottom 
-            sx={{ 
-              fontWeight: 'bold', 
-              color: 'text.primary',
-              textAlign: { xs: 'center', md: 'left' }
-            }}
-          >
-            👤 Profile Overview
-          </Typography>
-          <Typography 
-            variant={isMobile ? "body1" : "h6"} 
-            color="text.secondary"
-            sx={{ textAlign: { xs: 'center', md: 'left' } }}
-          >
-            Manage your professional information and boost your career
-          </Typography>
+        <Box sx={{ mb: { xs: 2, sm: 3, md: 4 }, position: 'relative' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+            <Box sx={{ flex: 1 }}>
+              <Typography 
+                variant={isMobile ? "h4" : "h3"} 
+                component="h1" 
+                gutterBottom 
+                sx={{ 
+                  fontWeight: 'bold', 
+                  color: 'text.primary',
+                  textAlign: { xs: 'center', md: 'left' }
+                }}
+              >
+                👤 Profile Overview
+              </Typography>
+              <Typography 
+                variant={isMobile ? "body1" : "h6"} 
+                color="text.secondary"
+                sx={{ textAlign: { xs: 'center', md: 'left' } }}
+              >
+                Manage your professional information and boost your career
+              </Typography>
+            </Box>
+            
+            {/* Theme Switcher Button */}
+            <Tooltip title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}>
+              <IconButton
+                onClick={toggleTheme}
+                sx={{
+                  borderRadius: 2,
+                  bgcolor: alpha(theme.palette.background.paper, 0.8),
+                  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                  backdropFilter: 'blur(8px)',
+                  '&:hover': {
+                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    transform: 'scale(1.05)',
+                    boxShadow: `0 4px 15px ${alpha(theme.palette.primary.main, 0.15)}`,
+                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+              >
+                {mode === 'dark' ? (
+                  <LightMode sx={{ color: theme.palette.warning.main }} />
+                ) : (
+                  <DarkMode sx={{ color: theme.palette.primary.main }} />
+                )}
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
 
         {/* Alerts */}
@@ -1985,8 +2018,33 @@ const ModernProfilePage: React.FC = () => {
                         </Typography>
                         <Stack spacing={2}>
                           <FormControlLabel
-                            control={<Switch />}
-                            label="Dark mode"
+                            control={
+                              <Switch 
+                                checked={mode === 'dark'} 
+                                onChange={toggleTheme}
+                                sx={{
+                                  '& .MuiSwitch-switchBase.Mui-checked': {
+                                    color: theme.palette.primary.main,
+                                    '& + .MuiSwitch-track': {
+                                      backgroundColor: theme.palette.primary.main,
+                                    },
+                                  },
+                                  '& .MuiSwitch-track': {
+                                    backgroundColor: alpha(theme.palette.text.primary, 0.2),
+                                  },
+                                }}
+                              />
+                            }
+                            label={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                  Dark mode
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {mode === 'dark' ? 'Currently enabled' : 'Currently disabled'}
+                                </Typography>
+                              </Box>
+                            }
                           />
                           <FormControlLabel
                             control={<Switch />}

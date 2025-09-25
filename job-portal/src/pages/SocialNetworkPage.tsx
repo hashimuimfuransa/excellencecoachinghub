@@ -616,9 +616,13 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
         mb: 2, 
         p: 2, 
         borderRadius: 3,
-        background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+        background: theme.palette.mode === 'dark' 
+          ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)'
+          : 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
         border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-        boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+        boxShadow: theme.palette.mode === 'dark' 
+          ? '0 2px 12px rgba(0,0,0,0.3)'
+          : '0 2px 12px rgba(0,0,0,0.08)',
       }}>
         <Box sx={{ 
           display: 'flex', 
@@ -629,14 +633,20 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
             height: 4,
           },
           '&::-webkit-scrollbar-track': {
-            background: 'rgba(0,0,0,0.1)',
+            background: theme.palette.mode === 'dark' 
+              ? 'rgba(255,255,255,0.1)' 
+              : 'rgba(0,0,0,0.1)',
             borderRadius: 2,
           },
           '&::-webkit-scrollbar-thumb': {
-            background: 'rgba(0,0,0,0.3)',
+            background: theme.palette.mode === 'dark' 
+              ? 'rgba(255,255,255,0.3)' 
+              : 'rgba(0,0,0,0.3)',
             borderRadius: 2,
             '&:hover': {
-              background: 'rgba(0,0,0,0.5)',
+              background: theme.palette.mode === 'dark' 
+                ? 'rgba(255,255,255,0.5)' 
+                : 'rgba(0,0,0,0.5)',
             },
           },
         }}>
@@ -657,11 +667,17 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
                 src={(user as any)?.profilePicture}
                 sx={{ 
                   border: `3px solid ${theme.palette.primary.main}`,
-                  backgroundColor: theme.palette.grey[100],
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  backgroundColor: theme.palette.mode === 'dark' 
+                    ? theme.palette.grey[800] 
+                    : theme.palette.grey[100],
+                  background: theme.palette.mode === 'dark'
+                    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   '&:hover': {
                     transform: 'scale(1.1)',
-                    boxShadow: '0 4px 20px rgba(102, 126, 234, 0.4)',
+                    boxShadow: theme.palette.mode === 'dark'
+                      ? '0 4px 20px rgba(102, 126, 234, 0.6)'
+                      : '0 4px 20px rgba(102, 126, 234, 0.4)',
                   },
                   transition: 'all 0.3s ease',
                 }}
@@ -694,7 +710,9 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
                 textAlign: 'center', 
                 fontSize: '0.75rem',
                 fontWeight: 600,
-                color: theme.palette.text.primary,
+                color: theme.palette.mode === 'dark' 
+                  ? theme.palette.text.primary 
+                  : theme.palette.text.primary,
                 maxWidth: 70,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -732,7 +750,9 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
                       background: 'linear-gradient(135deg, #4caf50 0%, #81c784 100%)',
                       '&:hover': {
                         transform: 'scale(1.1)',
-                        boxShadow: '0 4px 20px rgba(76, 175, 80, 0.4)',
+                        boxShadow: theme.palette.mode === 'dark'
+                          ? '0 4px 20px rgba(76, 175, 80, 0.6)'
+                          : '0 4px 20px rgba(76, 175, 80, 0.4)',
                       },
                       transition: 'all 0.3s ease',
                     }}
@@ -767,7 +787,9 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
                     textAlign: 'center', 
                     fontSize: '0.75rem',
                     fontWeight: 600,
-                    color: theme.palette.text.primary,
+                    color: theme.palette.mode === 'dark' 
+                      ? theme.palette.text.primary 
+                      : theme.palette.text.primary,
                     maxWidth: 70,
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -817,12 +839,18 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
                           : `2px solid ${theme.palette.divider}`,
                         background: story.hasStory 
                           ? 'linear-gradient(135deg, #1877f2 0%, #42a5f5 100%)'
-                          : theme.palette.grey[200],
+                          : theme.palette.mode === 'dark' 
+                            ? theme.palette.grey[700] 
+                            : theme.palette.grey[200],
                         '&:hover': {
                           transform: 'scale(1.1)',
                           boxShadow: story.hasStory 
-                            ? '0 4px 20px rgba(24, 119, 242, 0.4)'
-                            : '0 4px 20px rgba(0,0,0,0.2)',
+                            ? theme.palette.mode === 'dark'
+                              ? '0 4px 20px rgba(24, 119, 242, 0.6)'
+                              : '0 4px 20px rgba(24, 119, 242, 0.4)'
+                            : theme.palette.mode === 'dark'
+                              ? '0 4px 20px rgba(255,255,255,0.2)'
+                              : '0 4px 20px rgba(0,0,0,0.2)',
                         },
                         transition: 'all 0.3s ease',
                       }}
@@ -858,7 +886,9 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
                       textAlign: 'center', 
                       fontSize: '0.75rem',
                       fontWeight: 600,
-                      color: theme.palette.text.primary,
+                      color: theme.palette.mode === 'dark' 
+                        ? theme.palette.text.primary 
+                        : theme.palette.text.primary,
                       maxWidth: 70,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -878,9 +908,11 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
               justifyContent: 'center', 
               minWidth: 200, 
               py: 2,
-              color: theme.palette.text.secondary,
+              color: theme.palette.mode === 'dark' 
+                ? theme.palette.text.secondary 
+                : theme.palette.text.secondary,
             }}>
-              <Typography variant="body2">
+              <Typography variant="body2" sx={{ color: 'inherit' }}>
                 No stories available
               </Typography>
             </Box>

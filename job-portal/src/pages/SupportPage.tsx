@@ -81,7 +81,7 @@ const SupportPage: React.FC = () => {
     { id: 'all', label: 'All Topics', icon: <Help /> },
     { id: 'account', label: 'Account & Profile', icon: <Settings /> },
     { id: 'jobs', label: 'Job Search', icon: <Work /> },
-    { id: 'interviews', label: 'AI Interviews', icon: <Psychology /> },
+    { id: 'interviews', label: 'Interview Preparation', icon: <Psychology /> },
     { id: 'courses', label: 'Courses & Certification', icon: <School /> },
     { id: 'payment', label: 'Billing & Payment', icon: <Payment /> },
     { id: 'technical', label: 'Technical Issues', icon: <BugReport /> }
@@ -91,7 +91,7 @@ const SupportPage: React.FC = () => {
     {
       category: 'account',
       question: 'How do I create a professional profile?',
-      answer: 'To create a professional profile, go to your dashboard and click on "Complete Profile". Fill in your personal information, work experience, education, skills, and upload a professional photo. Our AI will help guide you through the process and provide suggestions to optimize your profile for better job matches.'
+      answer: 'To create a professional profile, go to your dashboard and click on "Complete Profile". Fill in your personal information, work experience, education, skills, and upload a professional photo. Our platform provides helpful tips and suggestions to optimize your profile for better job matches.'
     },
     {
       category: 'account',
@@ -100,8 +100,8 @@ const SupportPage: React.FC = () => {
     },
     {
       category: 'jobs',
-      question: 'How does the AI job matching work?',
-      answer: 'Our advanced AI analyzes your skills, experience, preferences, career goals, and industry trends to match you with relevant job opportunities. The more complete your profile, the better and more accurate the matches. Our system learns from your interactions to continuously improve recommendations.'
+      question: 'How does job matching work?',
+      answer: 'Our platform analyzes your skills, experience, preferences, career goals, and industry trends to match you with relevant job opportunities. The more complete your profile, the better and more accurate the matches. Our system continuously improves recommendations based on industry best practices.'
     },
     {
       category: 'jobs',
@@ -110,18 +110,18 @@ const SupportPage: React.FC = () => {
     },
     {
       category: 'interviews',
-      question: 'What is the AI Interview Coach?',
-      answer: 'Our AI Interview Coach provides personalized interview practice sessions with real-time feedback on communication skills, content quality, body language, and overall presentation. It helps you prepare for different types of interviews including behavioral, technical, and industry-specific questions.'
+      question: 'What interview preparation resources are available?',
+      answer: 'We provide comprehensive interview preparation resources including practice sessions, mock interviews, and personalized feedback on communication skills, content quality, and overall presentation. Our resources help you prepare for different types of interviews including behavioral, technical, and industry-specific questions.'
     },
     {
       category: 'interviews',
-      question: 'How accurate is the AI interview feedback?',
-      answer: 'Our AI is trained on thousands of successful interviews and provides highly accurate feedback. It analyzes speech patterns, content quality, confidence levels, and presentation skills. The feedback includes specific suggestions for improvement and best practices from top performers.'
+      question: 'How can I improve my interview performance?',
+      answer: 'Our interview preparation tools provide detailed feedback based on best practices from successful professionals. The feedback includes specific suggestions for improvement, communication tips, and presentation skills guidance to help you excel in your interviews.'
     },
     {
       category: 'courses',
       question: 'Are the certificates industry-recognized?',
-      answer: 'Yes, our certificates are recognized by leading industry partners and employers across Africa and internationally. They can be shared on your LinkedIn profile, resume, and are verified through our blockchain-based certification system.'
+      answer: 'Yes, our certificates are recognized by leading industry partners and employers across Africa and internationally. They can be shared on your LinkedIn profile, resume, and are verified through our secure certification system.'
     },
     {
       category: 'courses',
@@ -234,7 +234,7 @@ const SupportPage: React.FC = () => {
       name: 'Grace Uwimana',
       role: 'Software Engineer at Bank of Kigali',
       rating: 5,
-      comment: 'The support team helped me optimize my profile and I got 3 job offers within two weeks! Their AI interview coach was game-changing.',
+      comment: 'The support team helped me optimize my profile and I got 3 job offers within two weeks! Their interview preparation resources were game-changing.',
       avatar: 'GU',
       location: 'Kigali, Rwanda'
     },
@@ -292,7 +292,7 @@ const SupportPage: React.FC = () => {
           sx={{
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             color: 'white',
-            py: { xs: 6, md: 10 },
+            py: { xs: 8, md: 12 },
             position: 'relative',
             overflow: 'hidden'
           }}
@@ -311,30 +311,36 @@ const SupportPage: React.FC = () => {
           <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
             <Fade in timeout={1000}>
               <Box textAlign="center">
-                <SupportIcon sx={{ fontSize: 100, mb: 3, opacity: 0.9 }} />
+                <SupportIcon sx={{ fontSize: 120, mb: 4, opacity: 0.9, filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))' }} />
                 <Typography 
                   variant="h2" 
                   component="h1" 
                   gutterBottom 
                   fontWeight="bold"
                   sx={{ 
-                    fontSize: { xs: '2.5rem', sm: '3rem', md: '3.75rem' },
-                    textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                    fontSize: { xs: '2.5rem', sm: '3.5rem', md: '4rem' },
+                    textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                    background: 'linear-gradient(45deg, #ffffff 30%, #f0f0f0 90%)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent'
                   }}
                 >
-                  We're Here to Help
+                  Professional Support Center
                 </Typography>
                 <Typography 
                   variant="h5" 
                   sx={{ 
                     mb: 6, 
                     opacity: 0.95,
-                    maxWidth: '700px',
+                    maxWidth: '800px',
                     mx: 'auto',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+                    textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                    fontWeight: 300,
+                    lineHeight: 1.4
                   }}
                 >
-                  Get expert support for your career journey. Our dedicated team is ready to help you succeed.
+                  Your success is our priority. Our expert support team provides personalized assistance to help you achieve your career goals and maximize your potential.
                 </Typography>
                 
                 {/* Quick Stats */}
@@ -373,10 +379,10 @@ const SupportPage: React.FC = () => {
           {/* Support Channels */}
           <Box sx={{ mb: 10 }}>
             <Typography variant="h3" textAlign="center" gutterBottom fontWeight="bold" color="text.primary">
-              Get in Touch
+              Connect With Our Experts
             </Typography>
-            <Typography variant="h6" textAlign="center" color="text.secondary" sx={{ mb: 6, maxWidth: '600px', mx: 'auto' }}>
-              Choose your preferred way to reach our expert support team
+            <Typography variant="h6" textAlign="center" color="text.secondary" sx={{ mb: 6, maxWidth: '700px', mx: 'auto', fontWeight: 300 }}>
+              Choose your preferred way to reach our professional support team. We're committed to providing exceptional service and quick response times.
             </Typography>
             
             <Grid container spacing={4}>
@@ -387,24 +393,34 @@ const SupportPage: React.FC = () => {
                     sx={{ 
                       height: '100%',
                       textAlign: 'center',
-                      p: 3,
+                      p: 4,
                       cursor: 'pointer',
-                      transition: 'all 0.3s ease',
+                      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                       border: '2px solid transparent',
+                      borderRadius: 3,
+                      background: 'linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%)',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
                       '&:hover': {
-                        transform: 'translateY(-8px)',
-                        boxShadow: theme.shadows[12],
-                        borderColor: `${theme.palette[channel.color].main}20`
+                        transform: 'translateY(-12px) scale(1.02)',
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+                        borderColor: `${theme.palette[channel.color].main}`,
+                        background: 'linear-gradient(145deg, #ffffff 0%, #f0f8ff 100%)'
                       }
                     }}
                   >
                     <Avatar
                       sx={{
-                        width: 70,
-                        height: 70,
+                        width: 80,
+                        height: 80,
                         bgcolor: `${channel.color}.main`,
                         mx: 'auto',
-                        mb: 2
+                        mb: 3,
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'scale(1.1)',
+                          boxShadow: '0 12px 32px rgba(0,0,0,0.25)'
+                        }
                       }}
                     >
                       {channel.icon}
@@ -441,7 +457,7 @@ const SupportPage: React.FC = () => {
               Our Offices
             </Typography>
             <Typography variant="body1" textAlign="center" color="text.secondary" sx={{ mb: 4 }}>
-              Visit us at our locations across Nigeria
+              Visit us at our location in Kigali, Rwanda
             </Typography>
             
             <Grid container spacing={4}>
@@ -478,8 +494,8 @@ const SupportPage: React.FC = () => {
             <Typography variant="h4" textAlign="center" gutterBottom fontWeight="bold">
               Frequently Asked Questions
             </Typography>
-            <Typography variant="body1" textAlign="center" color="text.secondary" sx={{ mb: 6 }}>
-              Find quick answers to common questions about our platform
+            <Typography variant="body1" textAlign="center" color="text.secondary" sx={{ mb: 6, maxWidth: '700px', mx: 'auto', fontSize: '1.1rem', fontWeight: 300 }}>
+              Find comprehensive answers to common questions about our platform and services
             </Typography>
 
             {/* FAQ Categories */}
@@ -509,10 +525,16 @@ const SupportPage: React.FC = () => {
                 <Accordion 
                   key={index} 
                   sx={{ 
-                    mb: 2,
-                    borderRadius: 2,
+                    mb: 3,
+                    borderRadius: 3,
                     '&:before': { display: 'none' },
-                    boxShadow: 1
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                    border: '1px solid rgba(0,0,0,0.05)',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
+                      transform: 'translateY(-2px)'
+                    }
                   }}
                 >
                   <AccordionSummary 
@@ -536,12 +558,12 @@ const SupportPage: React.FC = () => {
           {/* Contact Form and Testimonials */}
           <Grid container spacing={6}>
             <Grid item xs={12} md={8}>
-              <Paper sx={{ p: 5, borderRadius: 3, boxShadow: 4 }}>
+              <Paper sx={{ p: 6, borderRadius: 4, boxShadow: '0 8px 32px rgba(0,0,0,0.12)', background: 'linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%)' }}>
                 <Typography variant="h4" gutterBottom fontWeight="bold" color="primary">
-                  Contact Support
+                  Contact Our Support Team
                 </Typography>
-                <Typography color="text.secondary" sx={{ mb: 4, fontSize: '1.1rem' }}>
-                  Can't find what you're looking for? Send us a message and we'll get back to you within 4 hours.
+                <Typography color="text.secondary" sx={{ mb: 4, fontSize: '1.1rem', fontWeight: 300 }}>
+                  Can't find what you're looking for? Send us a detailed message and our professional support team will respond within 4 hours.
                 </Typography>
 
                 <form onSubmit={handleContactSubmit}>
@@ -597,10 +619,18 @@ const SupportPage: React.FC = () => {
                         endIcon={<Send />}
                         sx={{ 
                           borderRadius: 3,
-                          py: 1.5,
-                          px: 4,
+                          py: 2,
+                          px: 6,
                           fontSize: '1.1rem',
-                          background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)'
+                          fontWeight: 600,
+                          background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                          boxShadow: '0 8px 24px rgba(102, 126, 234, 0.4)',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 12px 32px rgba(102, 126, 234, 0.6)',
+                            background: 'linear-gradient(45deg, #5a6fd8 30%, #6a4190 90%)'
+                          }
                         }}
                       >
                         Send Message
@@ -613,9 +643,9 @@ const SupportPage: React.FC = () => {
 
             <Grid item xs={12} md={4}>
               {/* Customer Testimonials */}
-              <Paper sx={{ p: 4, borderRadius: 3, mb: 4, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+              <Paper sx={{ p: 5, borderRadius: 4, mb: 4, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)' }}>
                 <Typography variant="h5" gutterBottom fontWeight="bold">
-                  What Our Users Say
+                  What Our Clients Say
                 </Typography>
                 {testimonials.map((testimonial, index) => (
                   <Box key={index} sx={{ mb: index < testimonials.length - 1 ? 4 : 0 }}>
@@ -650,12 +680,12 @@ const SupportPage: React.FC = () => {
               </Paper>
 
               {/* Social Media */}
-              <Paper sx={{ p: 4, borderRadius: 3 }}>
+              <Paper sx={{ p: 5, borderRadius: 4, boxShadow: '0 8px 32px rgba(0,0,0,0.12)', background: 'linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%)' }}>
                 <Typography variant="h6" gutterBottom fontWeight="bold">
-                  Follow Us
+                  Stay Connected
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  Stay connected with us on social media for the latest updates and career tips.
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3, fontWeight: 300 }}>
+                  Follow us on social media for the latest career insights, job opportunities, and professional development tips.
                 </Typography>
                 <Stack direction="row" spacing={2} flexWrap="wrap">
                   {socialLinks.map((social, index) => (
@@ -665,9 +695,14 @@ const SupportPage: React.FC = () => {
                       sx={{
                         color: social.color,
                         border: `2px solid ${social.color}`,
+                        borderRadius: 2,
+                        p: 1.5,
+                        transition: 'all 0.3s ease',
                         '&:hover': {
                           bgcolor: social.color,
-                          color: 'white'
+                          color: 'white',
+                          transform: 'translateY(-2px)',
+                          boxShadow: `0 8px 24px ${social.color}40`
                         }
                       }}
                     >

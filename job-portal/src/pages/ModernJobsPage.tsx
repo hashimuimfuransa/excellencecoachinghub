@@ -121,6 +121,7 @@ import {
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth, UserRole } from '../contexts/AuthContext';
 import { jobService } from '../services/jobService';
+import { internshipService } from '../services/internshipService';
 import { userService } from '../services/userService';
 import { profileService } from '../services/profileService';
 import { shouldRequestNewTest } from '../services/simplePsychometricService';
@@ -237,6 +238,45 @@ const ModernJobsPage: React.FC = () => {
   const getThemeColor = (colorPath: string) => {
     const [palette, shade] = colorPath.split('.');
     return theme.palette[palette as keyof typeof theme.palette][shade as keyof any];
+  };
+
+  // Transform internship to job format (similar to AllJobsPage)
+  const transformInternshipToJob = (internship: any): Job => {
+    return {
+      _id: internship._id,
+      title: internship.title,
+      company: internship.company,
+      location: internship.location,
+      salary: internship.stipend ? {
+        min: internship.stipend.amount,
+        max: internship.stipend.amount,
+        currency: internship.stipend.currency
+      } : undefined,
+      jobType: 'Internship',
+      category: JobCategory.INTERNSHIPS,
+      experienceLevel: internship.experienceLevel,
+      educationLevel: internship.educationLevel,
+      skills: internship.skills || [],
+      status: internship.status || 'active',
+      description: internship.description,
+      requirements: internship.requirements || [],
+      responsibilities: internship.responsibilities || [],
+      benefits: internship.benefits || [],
+      applicationDeadline: internship.applicationDeadline,
+      employer: {
+        _id: internship.employer?._id || '',
+        firstName: internship.employer?.firstName || '',
+        lastName: internship.employer?.lastName || '',
+        company: internship.company
+      },
+      applicationsCount: internship.applicationsCount || 0,
+      viewsCount: internship.viewsCount || 0,
+      createdAt: internship.createdAt,
+      updatedAt: internship.updatedAt,
+      isCurated: internship.isCurated || false,
+      contactInfo: internship.contactInfo,
+      isExternalJob: false
+    };
   };
 
   // Check if user should request new test instead of accessing jobs
@@ -364,6 +404,43 @@ const ModernJobsPage: React.FC = () => {
     return 'info';
   };
 
+  // Fetch category counts separately
+  const fetchCategoryCounts = async () => {
+    try {
+      // Fetch both jobs and internships in parallel (matching AllJobsPage implementation)
+      const [jobsResponse, internshipsResponse] = await Promise.all([
+        jobService.getJobs({}, 1, 1000).catch(err => {
+          console.warn('Error fetching jobs for counts:', err);
+          return { data: [] };
+        }),
+        internshipService.getInternships({ limit: 1000 }).catch(err => {
+          console.warn('Error fetching internships for counts:', err);
+          return { data: [] };
+        })
+      ]);
+
+      const jobs = jobsResponse.data || [];
+      const internships = internshipsResponse.data || [];
+      
+      // Calculate counts for jobs (only active jobs)
+      const counts: Record<string, number> = {};
+      jobs.filter(job => job.status === 'active').forEach((job: Job) => {
+        const category = job.category || 'other';
+        counts[category] = (counts[category] || 0) + 1;
+      });
+      
+      // Add internship counts (only active internships)
+      const activeInternships = internships.filter(internship => 
+        internship.status === 'active' || !internship.status
+      );
+      counts[JobCategory.INTERNSHIPS] = (counts[JobCategory.INTERNSHIPS] || 0) + activeInternships.length;
+      
+      setCategoryCounts(counts);
+    } catch (error) {
+      console.error('Error fetching category counts:', error);
+    }
+  };
+
   // Fetch jobs with pagination
   const fetchJobs = async (page: number = 1) => {
     setLoading(true);
@@ -402,22 +479,125 @@ const ModernJobsPage: React.FC = () => {
           filters.sortOrder = 'desc';
       }
 
-      const response = await jobService.getJobs(filters, page, 12);
-      
-      if (response.success) {
-        setJobs(response.data);
-        setTotalPages(response.pagination?.pages || 1);
-        setTotalJobs(response.pagination?.total || 0);
+      // If internships category is selected, fetch from internship service
+      if (selectedCategory === JobCategory.INTERNSHIPS) {
+        const internshipFilters: any = {};
+        if (searchTerm) internshipFilters.search = searchTerm;
+        if (locationFilter) internshipFilters.location = locationFilter;
+        if (experienceFilter) internshipFilters.experienceLevel = experienceFilter;
         
-        // Calculate category counts
-        const counts: Record<string, number> = {};
-        response.data.forEach((job: Job) => {
-          const category = job.category || 'other';
-          counts[category] = (counts[category] || 0) + 1;
+        // Fetch all internships first to get accurate counts
+        const internshipsResponse = await internshipService.getInternships({
+          ...internshipFilters,
+          limit: 1000 // Get all internships
         });
-        setCategoryCounts(counts);
+        
+        const allInternships = internshipsResponse.data || [];
+        const transformedInternships = allInternships
+          .map(transformInternshipToJob)
+          .filter(job => job.status === 'active'); // Only show active internships
+        
+        // Apply client-side pagination
+        const itemsPerPage = 12;
+        const startIndex = (page - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const paginatedInternships = transformedInternships.slice(startIndex, endIndex);
+        
+        setJobs(paginatedInternships);
+        setTotalPages(Math.ceil(transformedInternships.length / itemsPerPage));
+        setTotalJobs(transformedInternships.length);
+      } else if (selectedCategory === 'all') {
+        // For "All Jobs", fetch both jobs and internships (matching AllJobsPage implementation)
+        const [jobsResponse, internshipsResponse] = await Promise.all([
+          jobService.getJobs({}, 1, 1000).catch(err => {
+            console.warn('Error fetching jobs:', err);
+            return { success: true, data: [], pagination: { total: 0, pages: 0 } };
+          }),
+          internshipService.getInternships({ limit: 1000 }).catch(err => {
+            console.warn('Error fetching internships:', err);
+            return { data: [] };
+          })
+        ]);
+
+        const allJobsData = jobsResponse.success ? jobsResponse.data : [];
+        const allInternships = internshipsResponse.data || [];
+        
+        // Filter out jobs with category 'internships' to avoid duplication
+        const filteredJobs = allJobsData.filter((job: Job) => 
+          job.category !== JobCategory.INTERNSHIPS && 
+          job.jobType !== 'internship'
+        );
+        
+        // Transform internships to job format and filter by active status
+        const transformedInternships = allInternships
+          .map(transformInternshipToJob)
+          .filter(job => job.status === 'active');
+        
+        // Combine jobs and internships
+        const allJobs = [...filteredJobs, ...transformedInternships];
+        
+        // Apply client-side filtering
+        let filteredAllJobs = allJobs;
+        
+        // Filter to only show active jobs (matching the original behavior)
+        filteredAllJobs = filteredAllJobs.filter(job => job.status === 'active');
+        
+        if (searchTerm) {
+          const searchLower = searchTerm.toLowerCase();
+          filteredAllJobs = filteredAllJobs.filter(job => 
+            job.title.toLowerCase().includes(searchLower) ||
+            job.company.toLowerCase().includes(searchLower) ||
+            job.location.toLowerCase().includes(searchLower) ||
+            job.skills.some(skill => skill.toLowerCase().includes(searchLower))
+          );
+        }
+        
+        if (locationFilter) {
+          const locationLower = locationFilter.toLowerCase();
+          filteredAllJobs = filteredAllJobs.filter(job => 
+            job.location.toLowerCase().includes(locationLower)
+          );
+        }
+        
+        if (jobTypeFilter) {
+          filteredAllJobs = filteredAllJobs.filter(job => 
+            job.jobType.toLowerCase() === jobTypeFilter.toLowerCase()
+          );
+        }
+        
+        if (experienceFilter) {
+          filteredAllJobs = filteredAllJobs.filter(job => 
+            job.experienceLevel.toLowerCase() === experienceFilter.toLowerCase()
+          );
+        }
+        
+        if (companyFilter) {
+          const companyLower = companyFilter.toLowerCase();
+          filteredAllJobs = filteredAllJobs.filter(job => 
+            job.company.toLowerCase().includes(companyLower)
+          );
+        }
+        
+        // Apply client-side pagination
+        const itemsPerPage = 12;
+        const startIndex = (page - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const paginatedJobs = filteredAllJobs.slice(startIndex, endIndex);
+        
+        setJobs(paginatedJobs);
+        setTotalPages(Math.ceil(filteredAllJobs.length / itemsPerPage));
+        setTotalJobs(filteredAllJobs.length);
       } else {
-        setError(response.error || 'Failed to fetch jobs');
+        // For other specific categories, use job service
+        const response = await jobService.getJobs(filters, page, 12);
+        
+        if (response.success) {
+          setJobs(response.data);
+          setTotalPages(response.pagination?.pages || 1);
+          setTotalJobs(response.pagination?.total || 0);
+        } else {
+          setError(response.error || 'Failed to fetch jobs');
+        }
       }
     } catch (error: any) {
       console.error('Error fetching jobs:', error);
@@ -533,10 +713,8 @@ const ModernJobsPage: React.FC = () => {
   useEffect(() => {
     let filtered = jobs;
 
-    // Apply category filter first
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(job => job.category === selectedCategory);
-    }
+    // Note: Category filtering is handled server-side in fetchJobs()
+    // No need to filter by category here as it's already filtered on the server
 
     // Apply client-side filtering for better UX
     if (searchTerm) {
@@ -567,7 +745,7 @@ const ModernJobsPage: React.FC = () => {
     }
 
     setFilteredJobs(filtered);
-  }, [jobs, selectedCategory, searchTerm, locationFilter, salaryRange]);
+  }, [jobs, searchTerm, locationFilter, salaryRange]);
 
   // Handle category change
   const handleCategoryChange = (event: React.SyntheticEvent, newValue: JobCategory | 'all') => {
@@ -684,6 +862,7 @@ const ModernJobsPage: React.FC = () => {
   // Initial data fetch
   useEffect(() => {
     fetchJobs(1);
+    fetchCategoryCounts(); // Fetch category counts separately
   }, []);
 
   if (loading && jobs.length === 0) {
@@ -727,14 +906,14 @@ const ModernJobsPage: React.FC = () => {
     }}>
       {/* Header Section */}
       <Container maxWidth="xl" sx={{ px: { xs: 2, md: 3 } }}>
-        <Box sx={{ py: { xs: 3, md: 4 } }}>
-          <Grid container spacing={{ xs: 2, md: 3 }} alignItems="center">
-            <Grid item xs={12} md={6}>
+        <Box sx={{ py: { xs: 4, md: 5 } }}>
+          <Grid container spacing={{ xs: 3, md: 4 }} alignItems="center">
+            <Grid item xs={12} md={8}>
               <Typography 
                 variant={{ xs: 'h4', sm: 'h3' }}
                 fontWeight="bold"
                 sx={{ 
-                  mb: 1,
+                  mb: 2,
                   fontSize: { xs: '1.75rem', sm: '2.25rem', md: '3rem' },
                   background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
                   backgroundClip: 'text',
@@ -748,30 +927,38 @@ const ModernJobsPage: React.FC = () => {
                 variant="body1"
                 color="text.secondary" 
                 sx={{ 
-                  mb: { xs: 2, md: 3 },
-                  fontSize: { xs: '0.875rem', md: '1rem' },
-                  lineHeight: 1.5
+                  mb: 3,
+                  fontSize: { xs: '0.875rem', md: '1.1rem' },
+                  lineHeight: 1.6,
+                  maxWidth: '600px'
                 }}
               >
-                {totalJobs} opportunities available
+                Discover {totalJobs} opportunities tailored to your skills and aspirations. 
+                Find your next career move with our intelligent job matching system.
               </Typography>
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} md={4}>
               <Stack 
-                direction={{ xs: 'column', sm: 'row' }} 
+                direction={{ xs: 'row', sm: 'row' }} 
                 spacing={2} 
-                justifyContent={{ xs: 'flex-start', md: 'flex-end' }}
-                alignItems={{ xs: 'stretch', sm: 'center' }}
+                justifyContent={{ xs: 'center', md: 'flex-end' }}
+                alignItems="center"
+                sx={{ flexWrap: 'wrap', gap: 1 }}
               >
                 <Tooltip title="Refresh Jobs">
                   <IconButton 
                     onClick={handleRefresh}
                     disabled={refreshing}
-                    size={isMobile ? 'small' : 'medium'}
+                    size={isMobile ? 'medium' : 'large'}
                     sx={{ 
                       bgcolor: alpha(theme.palette.primary.main, 0.1),
-                      alignSelf: { xs: 'center', sm: 'auto' },
-                      '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.2) }
+                      border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                      borderRadius: 2,
+                      '&:hover': { 
+                        bgcolor: alpha(theme.palette.primary.main, 0.2),
+                        transform: 'scale(1.05)'
+                      },
+                      transition: 'all 0.2s ease'
                     }}
                   >
                     <Refresh sx={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
@@ -782,144 +969,30 @@ const ModernJobsPage: React.FC = () => {
                   value={viewMode}
                   exclusive
                   onChange={(e, newView) => newView && setViewMode(newView)}
-                  size={isMobile ? 'small' : 'medium'}
-                  sx={{ alignSelf: { xs: 'center', sm: 'auto' } }}
+                  size={isMobile ? 'medium' : 'large'}
+                  sx={{ 
+                    border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+                    borderRadius: 2,
+                    '& .MuiToggleButton-root': {
+                      border: 'none',
+                      borderRadius: 2,
+                      '&.Mui-selected': {
+                        bgcolor: 'primary.main',
+                        color: 'primary.contrastText'
+                      }
+                    }
+                  }}
                 >
                   <ToggleButton value="grid" aria-label="grid view">
                     <GridView fontSize="small" />
+                    {!isMobile && <Typography variant="caption" sx={{ ml: 1 }}>Grid</Typography>}
                   </ToggleButton>
                   <ToggleButton value="list" aria-label="list view">
                     <ViewList fontSize="small" />
+                    {!isMobile && <Typography variant="caption" sx={{ ml: 1 }}>List</Typography>}
                   </ToggleButton>
                 </ToggleButtonGroup>
               </Stack>
-            </Grid>
-          </Grid>
-          
-          {/* Quick Action Buttons */}
-          <Grid container spacing={{ xs: 1, md: 2 }} sx={{ justifyContent: 'center', mt: { xs: 1, md: 2 }, mb: { xs: 1, md: 2 } }}>
-            <Grid item xs={12} sm={6} md={3}>
-              <Button
-                fullWidth
-                variant="contained"
-                size={isMobile ? 'medium' : 'large'}
-                onClick={() => setCurrentTab(1)}
-                sx={{
-                  py: { xs: 1.5, md: 2 },
-                  borderRadius: 4,
-                  fontSize: { xs: '0.875rem', md: '1rem' },
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)',
-                  },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                }}
-                startIcon={<SmartToy />}
-              >
-                <Box>
-                  <Typography variant="button" fontWeight="bold">
-                    AI Job Match
-                  </Typography>
-                  <Typography variant="caption" display="block" sx={{ opacity: 0.9 }}>
-                    Personalized matches
-                  </Typography>
-                </Box>
-              </Button>
-            </Grid>
-            
-            <Grid item xs={12} sm={6} md={3}>
-              <Button
-                fullWidth
-                variant="contained"
-                size={isMobile ? 'medium' : 'large'}
-                onClick={() => navigate('/app/cv-builder')}
-                sx={{
-                  py: { xs: 1.5, md: 2 },
-                  borderRadius: 4,
-                  fontSize: { xs: '0.875rem', md: '1rem' },
-                  background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                  boxShadow: '0 8px 32px rgba(245, 87, 108, 0.3)',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 12px 40px rgba(245, 87, 108, 0.4)',
-                  },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                }}
-                startIcon={<Assignment />}
-              >
-                <Box>
-                  <Typography variant="button" fontWeight="bold">
-                    CV Builder
-                  </Typography>
-                  <Typography variant="caption" display="block" sx={{ opacity: 0.9 }}>
-                    Create perfect resume
-                  </Typography>
-                </Box>
-              </Button>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={3}>
-              <Button
-                fullWidth
-                variant="contained"
-                size={isMobile ? 'medium' : 'large'}
-                onClick={() => navigate('/app/career-guidance')}
-                sx={{
-                  py: { xs: 1.5, md: 2 },
-                  borderRadius: 4,
-                  fontSize: { xs: '0.875rem', md: '1rem' },
-                  background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-                  boxShadow: '0 8px 32px rgba(79, 172, 254, 0.3)',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 12px 40px rgba(79, 172, 254, 0.4)',
-                  },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                }}
-                startIcon={<Quiz />}
-              >
-                <Box>
-                  <Typography variant="button" fontWeight="bold">
-                    Career Guide
-                  </Typography>
-                  <Typography variant="caption" display="block" sx={{ opacity: 0.9 }}>
-                    Expert guidance
-                  </Typography>
-                </Box>
-              </Button>
-            </Grid>
-
-            <Grid item xs={12} sm={6} md={3}>
-              <Button
-                fullWidth
-                variant="contained"
-                size={isMobile ? 'medium' : 'large'}
-                onClick={() => navigate('/app/interviews')}
-                sx={{
-                  py: { xs: 1.5, md: 2 },
-                  borderRadius: 4,
-                  fontSize: { xs: '0.875rem', md: '1rem' },
-                  background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-                  boxShadow: '0 8px 32px rgba(250, 112, 154, 0.3)',
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 12px 40px rgba(250, 112, 154, 0.4)',
-                  },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                }}
-                startIcon={<Psychology />}
-              >
-                <Box>
-                  <Typography variant="button" fontWeight="bold">
-                    Interview Coach
-                  </Typography>
-                  <Typography variant="caption" display="block" sx={{ opacity: 0.9 }}>
-                    Practice interviews
-                  </Typography>
-                </Box>
-              </Button>
             </Grid>
           </Grid>
         </Box>
@@ -985,171 +1058,353 @@ const ModernJobsPage: React.FC = () => {
       {/* Search and Filter Section - Only show for All Jobs tab */}
       {currentTab === 0 && (
         <Container maxWidth="xl" sx={{ mb: { xs: 3, md: 4 }, px: { xs: 2, md: 3 } }}>
-          <Grid container spacing={{ xs: 2, md: 3 }}>
-            {/* Search Bar */}
-          <Grid item xs={12} md={6}>
-            <TextField
-              fullWidth
-              placeholder="Search jobs, companies, or skills..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              size={isMobile ? 'small' : 'medium'}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search color="action" fontSize={isMobile ? 'small' : 'medium'} />
-                  </InputAdornment>
-                ),
-                sx: {
-                  borderRadius: 2,
-                  bgcolor: 'background.paper',
-                  '& fieldset': { border: 'none' },
-                  boxShadow: `0 2px 10px ${alpha(theme.palette.common.black, 0.1)}`,
-                  fontSize: { xs: '0.875rem', md: '1rem' }
-                }
-              }}
-            />
-          </Grid>
-
-          {/* Location Filter */}
-          <Grid item xs={12} sm={6} md={3}>
-            <TextField
-              fullWidth
-              placeholder="Location"
-              value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
-              size={isMobile ? 'small' : 'medium'}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <LocationOn color="action" fontSize={isMobile ? 'small' : 'medium'} />
-                  </InputAdornment>
-                ),
-                sx: {
-                  borderRadius: 2,
-                  bgcolor: 'background.paper',
-                  '& fieldset': { border: 'none' },
-                  boxShadow: `0 2px 10px ${alpha(theme.palette.common.black, 0.1)}`
-                }
-              }}
-            />
-          </Grid>
-
-          {/* Sort and Filter Controls */}
-          <Grid item xs={12} sm={6} md={3}>
-            <Stack direction="row" spacing={1} sx={{ width: '100%' }}>
-              <FormControl fullWidth size={isMobile ? 'small' : 'medium'}>
-                <Select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  sx={{ 
-                    borderRadius: 2,
-                    bgcolor: 'background.paper',
-                    '& fieldset': { border: 'none' },
-                    boxShadow: `0 2px 10px ${alpha(theme.palette.common.black, 0.1)}`,
-                    fontSize: { xs: '0.875rem', md: '1rem' }
+          <Paper sx={{ 
+            p: { xs: 2, md: 3 }, 
+            borderRadius: 3,
+            boxShadow: `0 4px 20px ${alpha(theme.palette.common.black, 0.08)}`,
+            background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.8)} 0%, ${alpha(theme.palette.primary.main, 0.02)} 100%)`
+          }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: 'text.primary' }}>
+              Find Your Perfect Job
+            </Typography>
+            
+            <Grid container spacing={{ xs: 2, md: 3 }}>
+              {/* Search Bar */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  placeholder="Search jobs, companies, or skills..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  size={isMobile ? 'small' : 'medium'}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Search color="primary" fontSize={isMobile ? 'small' : 'medium'} />
+                      </InputAdornment>
+                    ),
+                    sx: {
+                      borderRadius: 2,
+                      bgcolor: 'background.paper',
+                      '& fieldset': { border: `1px solid ${alpha(theme.palette.divider, 0.2)}` },
+                      '&:hover fieldset': { borderColor: 'primary.main' },
+                      '&.Mui-focused fieldset': { borderColor: 'primary.main', borderWidth: 2 },
+                      fontSize: { xs: '0.875rem', md: '1rem' }
+                    }
                   }}
-                >
-                  <MenuItem value="newest">Latest Jobs</MenuItem>
-                  <MenuItem value="salary">Highest Salary</MenuItem>
-                  <MenuItem value="deadline">Deadline Soon</MenuItem>
-                  <MenuItem value="oldest">Oldest First</MenuItem>
-                </Select>
-              </FormControl>
-              
-              <IconButton
-                onClick={() => setShowFilters(!showFilters)}
-                size={isMobile ? 'small' : 'medium'}
-                sx={{ 
-                  bgcolor: showFilters ? 'primary.main' : 'background.paper',
-                  color: showFilters ? 'primary.contrastText' : 'action.active',
-                  boxShadow: `0 2px 10px ${alpha(theme.palette.common.black, 0.1)}`,
-                  '&:hover': {
-                    bgcolor: showFilters ? 'primary.dark' : alpha(theme.palette.primary.main, 0.1)
-                  }
-                }}
-              >
-                <TuneRounded fontSize={isMobile ? 'small' : 'medium'} />
-              </IconButton>
-            </Stack>
-          </Grid>
-        </Grid>
-
-        {/* Category Tabs */}
-        <Box sx={{ mt: { xs: 2, md: 3 }, mb: { xs: 1, md: 2 } }}>
-          <Tabs
-            value={selectedCategory}
-            onChange={handleCategoryChange}
-            variant="scrollable"
-            scrollButtons="auto"
-            allowScrollButtonsMobile
-            sx={{
-              '& .MuiTabs-flexContainer': {
-                gap: { xs: 0.5, md: 1 }
-              },
-              '& .MuiTab-root': {
-                minHeight: { xs: 40, md: 48 },
-                borderRadius: 3,
-                textTransform: 'none',
-                fontWeight: 500,
-                fontSize: { xs: '0.75rem', md: '0.875rem' },
-                px: { xs: 1, md: 2 },
-                border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
-                bgcolor: 'background.paper',
-                color: 'text.secondary',
-                '&.Mui-selected': {
-                  bgcolor: 'primary.main',
-                  color: 'primary.contrastText',
-                  borderColor: 'primary.main'
-                }
-              },
-              '& .MuiTabs-scrollButtons': {
-                color: 'action.active'
-              }
-            }}
-          >
-            {categories.map((category) => {
-              const IconComponent = category.icon;
-              const count = categoryCounts[category.key] || 0;
-              
-              return (
-                <Tab
-                  key={category.key}
-                  value={category.key}
-                  label={
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      {loading && selectedCategory === category.key ? (
-                        <CircularProgress size={18} color="inherit" />
-                      ) : (
-                        <IconComponent sx={{ fontSize: 18 }} />
-                      )}
-                      <span>{category.label}</span>
-                      {count > 0 && (
-                        <Chip 
-                          label={count} 
-                          size="small" 
-                          sx={{ 
-                            height: 20, 
-                            fontSize: '0.7rem',
-                            bgcolor: selectedCategory === category.key ? 'rgba(255,255,255,0.2)' : alpha(theme.palette.primary.main, 0.1),
-                            color: selectedCategory === category.key ? 'inherit' : 'primary.main'
-                          }} 
-                        />
-                      )}
-                    </Stack>
-                  }
                 />
-              );
-            })}
-          </Tabs>
-        </Box>
-      </Container>
+              </Grid>
+
+              {/* Location Filter */}
+              <Grid item xs={12} sm={6} md={3}>
+                <TextField
+                  fullWidth
+                  placeholder="Enter location..."
+                  value={locationFilter}
+                  onChange={(e) => setLocationFilter(e.target.value)}
+                  size={isMobile ? 'small' : 'medium'}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <LocationOn color="primary" fontSize={isMobile ? 'small' : 'medium'} />
+                      </InputAdornment>
+                    ),
+                    sx: {
+                      borderRadius: 2,
+                      bgcolor: 'background.paper',
+                      '& fieldset': { border: `1px solid ${alpha(theme.palette.divider, 0.2)}` },
+                      '&:hover fieldset': { borderColor: 'primary.main' },
+                      '&.Mui-focused fieldset': { borderColor: 'primary.main', borderWidth: 2 }
+                    }
+                  }}
+                />
+              </Grid>
+
+              {/* Sort and Filter Controls */}
+              <Grid item xs={12} sm={6} md={3}>
+                <Stack direction="row" spacing={1} sx={{ width: '100%' }}>
+                  <FormControl fullWidth size={isMobile ? 'small' : 'medium'}>
+                    <InputLabel>Sort by</InputLabel>
+                    <Select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as any)}
+                      label="Sort by"
+                      sx={{ 
+                        borderRadius: 2,
+                        bgcolor: 'background.paper',
+                        '& fieldset': { border: `1px solid ${alpha(theme.palette.divider, 0.2)}` },
+                        '&:hover fieldset': { borderColor: 'primary.main' },
+                        '&.Mui-focused fieldset': { borderColor: 'primary.main', borderWidth: 2 },
+                        fontSize: { xs: '0.875rem', md: '1rem' }
+                      }}
+                    >
+                      <MenuItem value="newest">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <FiberNew fontSize="small" />
+                          Latest Jobs
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="salary">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <AttachMoney fontSize="small" />
+                          Highest Salary
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="deadline">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Schedule fontSize="small" />
+                          Deadline Soon
+                        </Box>
+                      </MenuItem>
+                      <MenuItem value="oldest">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <AccessTime fontSize="small" />
+                          Oldest First
+                        </Box>
+                      </MenuItem>
+                    </Select>
+                  </FormControl>
+                  
+                  <Tooltip title={showFilters ? "Hide filters" : "Show filters"}>
+                    <IconButton
+                      onClick={() => setShowFilters(!showFilters)}
+                      size={isMobile ? 'small' : 'medium'}
+                      sx={{ 
+                        bgcolor: showFilters ? 'primary.main' : 'background.paper',
+                        color: showFilters ? 'primary.contrastText' : 'action.active',
+                        border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
+                        borderRadius: 2,
+                        '&:hover': {
+                          bgcolor: showFilters ? 'primary.dark' : alpha(theme.palette.primary.main, 0.1),
+                          borderColor: 'primary.main'
+                        }
+                      }}
+                    >
+                      <TuneRounded fontSize={isMobile ? 'small' : 'medium'} />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
+              </Grid>
+            </Grid>
+
+            {/* Advanced Filters */}
+            <Collapse in={showFilters}>
+              <Box sx={{ mt: 3, pt: 3, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: 'text.secondary' }}>
+                  Advanced Filters
+                </Typography>
+                <Grid container spacing={{ xs: 2, md: 3 }}>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <FormControl fullWidth size={isMobile ? 'small' : 'medium'}>
+                      <InputLabel>Job Type</InputLabel>
+                      <Select
+                        value={jobTypeFilter}
+                        onChange={(e) => setJobTypeFilter(e.target.value)}
+                        label="Job Type"
+                        sx={{ 
+                          borderRadius: 2,
+                          bgcolor: 'background.paper',
+                          '& fieldset': { border: `1px solid ${alpha(theme.palette.divider, 0.2)}` },
+                          '&:hover fieldset': { borderColor: 'primary.main' },
+                          '&.Mui-focused fieldset': { borderColor: 'primary.main', borderWidth: 2 }
+                        }}
+                      >
+                        <MenuItem value="">All Types</MenuItem>
+                        <MenuItem value="Full-time">Full-time</MenuItem>
+                        <MenuItem value="Part-time">Part-time</MenuItem>
+                        <MenuItem value="Contract">Contract</MenuItem>
+                        <MenuItem value="Internship">Internship</MenuItem>
+                        <MenuItem value="Remote">Remote</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+
+                  <Grid item xs={12} sm={6} md={3}>
+                    <FormControl fullWidth size={isMobile ? 'small' : 'medium'}>
+                      <InputLabel>Experience Level</InputLabel>
+                      <Select
+                        value={experienceFilter}
+                        onChange={(e) => setExperienceFilter(e.target.value)}
+                        label="Experience Level"
+                        sx={{ 
+                          borderRadius: 2,
+                          bgcolor: 'background.paper',
+                          '& fieldset': { border: `1px solid ${alpha(theme.palette.divider, 0.2)}` },
+                          '&:hover fieldset': { borderColor: 'primary.main' },
+                          '&.Mui-focused fieldset': { borderColor: 'primary.main', borderWidth: 2 }
+                        }}
+                      >
+                        <MenuItem value="">All Levels</MenuItem>
+                        <MenuItem value="Entry">Entry Level</MenuItem>
+                        <MenuItem value="Mid">Mid Level</MenuItem>
+                        <MenuItem value="Senior">Senior Level</MenuItem>
+                        <MenuItem value="Executive">Executive</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      fullWidth
+                      placeholder="Company name..."
+                      value={companyFilter}
+                      onChange={(e) => setCompanyFilter(e.target.value)}
+                      size={isMobile ? 'small' : 'medium'}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Business color="primary" fontSize={isMobile ? 'small' : 'medium'} />
+                          </InputAdornment>
+                        ),
+                        sx: {
+                          borderRadius: 2,
+                          bgcolor: 'background.paper',
+                          '& fieldset': { border: `1px solid ${alpha(theme.palette.divider, 0.2)}` },
+                          '&:hover fieldset': { borderColor: 'primary.main' },
+                          '&.Mui-focused fieldset': { borderColor: 'primary.main', borderWidth: 2 }
+                        }
+                      }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6} md={3}>
+                    <Box sx={{ px: 1 }}>
+                      <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+                        Salary Range: ${salaryRange[0].toLocaleString()} - ${salaryRange[1].toLocaleString()}
+                      </Typography>
+                      <Slider
+                        value={salaryRange}
+                        onChange={(e, newValue) => setSalaryRange(newValue as number[])}
+                        valueLabelDisplay="auto"
+                        min={0}
+                        max={200000}
+                        step={5000}
+                        sx={{
+                          color: 'primary.main',
+                          '& .MuiSlider-thumb': {
+                            width: 20,
+                            height: 20,
+                          },
+                          '& .MuiSlider-track': {
+                            height: 6,
+                          },
+                          '& .MuiSlider-rail': {
+                            height: 6,
+                            opacity: 0.3,
+                          }
+                        }}
+                      />
+                    </Box>
+                  </Grid>
+                </Grid>
+
+                {/* Clear Filters Button */}
+                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {
+                      setSearchTerm('');
+                      setLocationFilter('');
+                      setJobTypeFilter('');
+                      setExperienceFilter('');
+                      setCompanyFilter('');
+                      setSalaryRange([0, 200000]);
+                    }}
+                    startIcon={<Close />}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Clear All Filters
+                  </Button>
+                </Box>
+              </Box>
+            </Collapse>
+          </Paper>
+
+          {/* Category Tabs */}
+          <Box sx={{ mt: { xs: 2, md: 3 }, mb: { xs: 1, md: 2 } }}>
+            <Tabs
+              value={selectedCategory}
+              onChange={handleCategoryChange}
+              variant="scrollable"
+              scrollButtons="auto"
+              allowScrollButtonsMobile
+              sx={{
+                '& .MuiTabs-flexContainer': {
+                  gap: { xs: 0.5, md: 1 }
+                },
+                '& .MuiTab-root': {
+                  minHeight: { xs: 40, md: 48 },
+                  borderRadius: 3,
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  fontSize: { xs: '0.75rem', md: '0.875rem' },
+                  px: { xs: 1, md: 2 },
+                  border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
+                  bgcolor: 'background.paper',
+                  color: 'text.secondary',
+                  '&.Mui-selected': {
+                    bgcolor: 'primary.main',
+                    color: 'primary.contrastText',
+                    borderColor: 'primary.main'
+                  }
+                },
+                '& .MuiTabs-scrollButtons': {
+                  color: 'action.active'
+                }
+              }}
+            >
+              {categories.map((category) => {
+                const IconComponent = category.icon;
+                const count = categoryCounts[category.key] || 0;
+                
+                return (
+                  <Tab
+                    key={category.key}
+                    value={category.key}
+                    label={
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        {loading && selectedCategory === category.key ? (
+                          <CircularProgress size={18} color="inherit" />
+                        ) : (
+                          <IconComponent sx={{ fontSize: 18 }} />
+                        )}
+                        <span>{category.label}</span>
+                        {count > 0 && (
+                          <Chip 
+                            label={count} 
+                            size="small" 
+                            sx={{ 
+                              height: 20, 
+                              fontSize: '0.7rem',
+                              bgcolor: selectedCategory === category.key ? 'rgba(255,255,255,0.2)' : alpha(theme.palette.primary.main, 0.1),
+                              color: selectedCategory === category.key ? 'inherit' : 'primary.main'
+                            }} 
+                          />
+                        )}
+                      </Stack>
+                    }
+                  />
+                );
+              })}
+            </Tabs>
+          </Box>
+        </Container>
       )}
 
       {/* Jobs Grid/List */}
-      <Container maxWidth="xl">
+      <Container maxWidth="xl" sx={{ px: { xs: 2, md: 3 }, pb: { xs: 4, md: 6 } }}>
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mb: 3, 
+              borderRadius: 2,
+              '& .MuiAlert-message': {
+                fontSize: '0.9rem'
+              }
+            }}
+          >
             {error}
           </Alert>
         )}
@@ -1280,13 +1535,14 @@ const ModernJobsPage: React.FC = () => {
         <Box
           sx={{
             display: 'grid',
-            gap: 2,
+            gap: { xs: 2, md: 3 },
             gridTemplateColumns: viewMode === 'grid' ? {
               xs: '1fr',
               sm: 'repeat(2, 1fr)',
               md: 'repeat(3, 1fr)',
               lg: 'repeat(4, 1fr)'
             } : 'repeat(1, 1fr)',
+            mt: { xs: 2, md: 3 }
           }}
         >
           {(() => {
@@ -1719,15 +1975,27 @@ const ModernJobsPage: React.FC = () => {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 6, mb: 4 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            mt: { xs: 4, md: 6 }, 
+            mb: { xs: 2, md: 4 },
+            py: 2
+          }}>
             <Pagination
               count={totalPages}
               page={currentPage}
               onChange={handlePageChange}
               color="primary"
-              size="large"
+              size={isMobile ? "medium" : "large"}
               showFirstButton
               showLastButton
+              sx={{
+                '& .MuiPaginationItem-root': {
+                  borderRadius: 2,
+                  fontWeight: 500
+                }
+              }}
             />
           </Box>
         )}

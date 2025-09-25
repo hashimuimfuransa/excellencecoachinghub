@@ -447,6 +447,93 @@ const Navbar: React.FC = () => {
         },
       }}>
         <Box sx={{ p: { xs: 1.5, sm: 2 } }}>
+          {/* Opportunity Categories */}
+          <Box sx={{ mb: 2 }}>
+            <Typography 
+              variant="subtitle2" 
+              sx={{ 
+                px: { xs: 2, sm: 2.5 },
+                py: 1,
+                color: 'text.secondary',
+                fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}
+            >
+              Categories
+            </Typography>
+            <List sx={{ py: 0 }}>
+              {opportunityCategories.map((opportunity) => (
+                <ListItem
+                  component="button"
+                  key={opportunity.id}
+                  onClick={() => {
+                    console.log('Navigating to:', opportunity.path);
+                    window.location.href = opportunity.path;
+                    setMobileOpen(false);
+                  }}
+                  sx={{
+                    backgroundColor: location.pathname === opportunity.path 
+                      ? alpha(theme.palette.primary.main, 0.12) 
+                      : 'transparent',
+                    '&:hover': {
+                      backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                      transform: 'translateX(4px)',
+                    },
+                    borderRadius: '12px',
+                    mb: 0.5,
+                    pl: { xs: 2, sm: 2.5 },
+                    pr: { xs: 1.5, sm: 2 },
+                    py: { xs: 1.2, sm: 1.5 },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    border: location.pathname === opportunity.path 
+                      ? `1px solid ${alpha(theme.palette.primary.main, 0.2)}`
+                      : '1px solid transparent',
+                    boxShadow: location.pathname === opportunity.path 
+                      ? '0 2px 8px rgba(76, 175, 80, 0.15)'
+                      : 'none',
+                  }}
+                >
+                  <ListItemIcon sx={{ 
+                    color: location.pathname === opportunity.path ? 'primary.main' : 'inherit',
+                    minWidth: { xs: 32, sm: 36 }
+                  }}>
+                    <Box sx={{
+                      p: 0.5,
+                      borderRadius: '8px',
+                      background: location.pathname === opportunity.path 
+                        ? alpha(theme.palette.primary.main, 0.1)
+                        : 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      {opportunity.icon}
+                    </Box>
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={opportunity.label}
+                    secondary={opportunity.description}
+                    sx={{ 
+                      '& .MuiListItemText-primary': { 
+                        fontWeight: location.pathname === opportunity.path ? 'bold' : 'normal',
+                        color: location.pathname === opportunity.path ? 'primary.main' : 'inherit',
+                        fontSize: { xs: '0.9rem', sm: '0.95rem' }
+                      },
+                      '& .MuiListItemText-secondary': {
+                        fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                        color: 'text.secondary',
+                        mt: 0.25,
+                        lineHeight: 1.3
+                      }
+                    }}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </Box>
+
           {/* Main Navigation */}
           <Box sx={{ mb: 2 }}>
             <Typography 
@@ -465,120 +552,9 @@ const Navbar: React.FC = () => {
             </Typography>
             <List sx={{ py: 0 }}>
               {currentMenuItems.filter(item => !item.protected || user).map((item) => {
-                // If it's the dropdown item, render the opportunities as sub-items
+                // Skip dropdown items since categories are now separate
                 if (item.isDropdown) {
-                  return (
-                    <React.Fragment key={item.text}>
-                      {/* Dropdown header */}
-                      <ListItem sx={{ 
-                        px: { xs: 2, sm: 2.5 },
-                        py: { xs: 1.5, sm: 2 },
-                        mb: 1,
-                        borderRadius: '16px',
-                        background: mode === 'dark' 
-                          ? 'rgba(255, 255, 255, 0.05)'
-                          : 'rgba(0, 0, 0, 0.02)',
-                        border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
-                      }}>
-                        <ListItemIcon sx={{ 
-                          color: 'primary.main', 
-                          minWidth: { xs: 36, sm: 40 },
-                          mr: { xs: 1.5, sm: 2 }
-                        }}>
-                          <Box sx={{
-                            p: 1,
-                            borderRadius: '12px',
-                            background: alpha(theme.palette.primary.main, 0.1),
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}>
-                            {item.icon}
-                          </Box>
-                        </ListItemIcon>
-                        <ListItemText 
-                          primary={item.text} 
-                          sx={{ 
-                            '& .MuiListItemText-primary': { 
-                              fontWeight: 'bold',
-                              color: 'primary.main',
-                              fontSize: { xs: '0.95rem', sm: '1rem' }
-                            } 
-                          }}
-                        />
-                      </ListItem>
-                      {/* Render opportunity categories as sub-items */}
-                      <Box sx={{ pl: { xs: 2, sm: 2.5 }, pr: { xs: 1.5, sm: 2 } }}>
-                        {opportunityCategories.map((opportunity) => (
-                          <ListItem
-                            component="button"
-                            key={opportunity.id}
-                            onClick={() => {
-                              console.log('Navigating to:', opportunity.path);
-                              window.location.href = opportunity.path;
-                              setMobileOpen(false);
-                            }}
-                            sx={{
-                              backgroundColor: location.pathname === opportunity.path 
-                                ? alpha(theme.palette.primary.main, 0.12) 
-                                : 'transparent',
-                              '&:hover': {
-                                backgroundColor: alpha(theme.palette.primary.main, 0.08),
-                                transform: 'translateX(4px)',
-                              },
-                              borderRadius: '12px',
-                              mb: 0.5,
-                              pl: { xs: 3, sm: 3.5 },
-                              py: { xs: 1.2, sm: 1.5 },
-                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                              border: location.pathname === opportunity.path 
-                                ? `1px solid ${alpha(theme.palette.primary.main, 0.2)}`
-                                : '1px solid transparent',
-                              boxShadow: location.pathname === opportunity.path 
-                                ? '0 2px 8px rgba(76, 175, 80, 0.15)'
-                                : 'none',
-                            }}
-                          >
-                            <ListItemIcon sx={{ 
-                              color: location.pathname === opportunity.path ? 'primary.main' : 'inherit',
-                              minWidth: { xs: 32, sm: 36 }
-                            }}>
-                              <Box sx={{
-                                p: 0.5,
-                                borderRadius: '8px',
-                                background: location.pathname === opportunity.path 
-                                  ? alpha(theme.palette.primary.main, 0.1)
-                                  : 'transparent',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                              }}>
-                                {opportunity.icon}
-                              </Box>
-                            </ListItemIcon>
-                            <ListItemText 
-                              primary={opportunity.label}
-                              secondary={opportunity.description}
-                              sx={{ 
-                                '& .MuiListItemText-primary': { 
-                                  fontWeight: location.pathname === opportunity.path ? 'bold' : 'normal',
-                                  color: location.pathname === opportunity.path ? 'primary.main' : 'inherit',
-                                  fontSize: { xs: '0.9rem', sm: '0.95rem' }
-                                },
-                                '& .MuiListItemText-secondary': {
-                                  fontSize: { xs: '0.75rem', sm: '0.8rem' },
-                                  color: 'text.secondary',
-                                  mt: 0.25,
-                                  lineHeight: 1.3
-                                }
-                              }}
-                            />
-                          </ListItem>
-                        ))}
-                      </Box>
-                    </React.Fragment>
-                  );
+                  return null;
                 }
 
                 // Regular menu item
@@ -692,6 +668,171 @@ const Navbar: React.FC = () => {
               })}
             </List>
           </Box>
+
+          {/* Add Job Section for Non-Employers */}
+          {!user && (
+            <Box sx={{ mb: 2 }}>
+              <Typography 
+                variant="subtitle2" 
+                sx={{ 
+                  px: { xs: 2, sm: 2.5 },
+                  py: 1,
+                  color: 'text.secondary',
+                  fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}
+              >
+                Get Started
+              </Typography>
+              <ListItem
+                component="button"
+                onClick={() => {
+                  navigate('/register?role=employer');
+                  setMobileOpen(false);
+                }}
+                sx={{
+                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.15),
+                    transform: 'translateX(4px)',
+                  },
+                  mx: { xs: 1.5, sm: 2 },
+                  borderRadius: '16px',
+                  mb: 1,
+                  py: { xs: 1.5, sm: 2 },
+                  px: { xs: 2, sm: 2.5 },
+                  border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                  boxShadow: '0 2px 8px rgba(76, 175, 80, 0.1)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+              >
+                <ListItemIcon sx={{ 
+                  color: 'primary.main',
+                  minWidth: { xs: 36, sm: 40 },
+                  mr: { xs: 1.5, sm: 2 },
+                  position: 'relative',
+                  zIndex: 2
+                }}>
+                  <Box sx={{
+                    p: 1,
+                    borderRadius: '12px',
+                    background: alpha(theme.palette.primary.main, 0.1),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    <PostAdd sx={{ fontSize: { xs: '1.2rem', sm: '1.3rem' } }} />
+                  </Box>
+                </ListItemIcon>
+                <ListItemText 
+                  primary="Add Job" 
+                  secondary="Register as an employer to post jobs"
+                  sx={{ 
+                    '& .MuiListItemText-primary': { 
+                      fontWeight: 'bold',
+                      color: 'primary.main',
+                      fontSize: { xs: '0.95rem', sm: '1rem' },
+                      position: 'relative',
+                      zIndex: 2
+                    },
+                    '& .MuiListItemText-secondary': {
+                      fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                      color: 'text.secondary',
+                      mt: 0.25,
+                      lineHeight: 1.3
+                    }
+                  }}
+                />
+              </ListItem>
+            </Box>
+          )}
+
+          {/* Post Job Section for Employers */}
+          {user && user.role === UserRole.EMPLOYER && (
+            <Box sx={{ mb: 2 }}>
+              <Typography 
+                variant="subtitle2" 
+                sx={{ 
+                  px: { xs: 2, sm: 2.5 },
+                  py: 1,
+                  color: 'text.secondary',
+                  fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}
+              >
+                Employer Tools
+              </Typography>
+              <ListItem
+                component="button"
+                onClick={() => {
+                  navigate('/app/jobs/create');
+                  setMobileOpen(false);
+                }}
+                sx={{
+                  backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.15),
+                    transform: 'translateX(4px)',
+                  },
+                  mx: { xs: 1.5, sm: 2 },
+                  borderRadius: '16px',
+                  mb: 1,
+                  py: { xs: 1.5, sm: 2 },
+                  px: { xs: 2, sm: 2.5 },
+                  border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                  boxShadow: '0 2px 8px rgba(76, 175, 80, 0.1)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+              >
+                <ListItemIcon sx={{ 
+                  color: 'primary.main',
+                  minWidth: { xs: 36, sm: 40 },
+                  mr: { xs: 1.5, sm: 2 },
+                  position: 'relative',
+                  zIndex: 2
+                }}>
+                  <Box sx={{
+                    p: 1,
+                    borderRadius: '12px',
+                    background: alpha(theme.palette.primary.main, 0.1),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    <PostAdd sx={{ fontSize: { xs: '1.2rem', sm: '1.3rem' } }} />
+                  </Box>
+                </ListItemIcon>
+                <ListItemText 
+                  primary="Post New Job" 
+                  secondary="Create and publish a new job listing"
+                  sx={{ 
+                    '& .MuiListItemText-primary': { 
+                      fontWeight: 'bold',
+                      color: 'primary.main',
+                      fontSize: { xs: '0.95rem', sm: '1rem' },
+                      position: 'relative',
+                      zIndex: 2
+                    },
+                    '& .MuiListItemText-secondary': {
+                      fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                      color: 'text.secondary',
+                      mt: 0.25,
+                      lineHeight: 1.3
+                    }
+                  }}
+                />
+              </ListItem>
+            </Box>
+          )}
+
           {/* Theme Toggle Section */}
           <Box sx={{ 
             px: { xs: 2, sm: 2.5 },
@@ -911,17 +1052,17 @@ const Navbar: React.FC = () => {
 
   return (
     <>
+      {/* Top Navigation Bar - Categories */}
       <AppBar 
         position="sticky" 
         elevation={0}
         sx={{ 
-          backgroundColor: mode === 'dark' ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.98)',
-          backdropFilter: 'blur(24px)',
-          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+          backgroundColor: 'transparent',
+          backdropFilter: 'blur(20px)',
+          borderBottom: 'none',
           transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-          boxShadow: mode === 'dark' 
-            ? '0 4px 32px rgba(0, 0, 0, 0.3), 0 1px 0 rgba(255, 255, 255, 0.05)'
-            : '0 4px 32px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(255, 255, 255, 0.8)',
+          boxShadow: 'none',
+          zIndex: 1200,
           '&::before': {
             content: '""',
             position: 'absolute',
@@ -930,8 +1071,8 @@ const Navbar: React.FC = () => {
             right: 0,
             bottom: 0,
             background: mode === 'dark' 
-              ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 50%, rgba(2, 6, 23, 0.98) 100%)'
-              : 'linear-gradient(135deg, rgba(248, 250, 252, 0.9) 0%, rgba(241, 245, 249, 0.95) 50%, rgba(226, 232, 240, 0.98) 100%)',
+              ? 'linear-gradient(135deg, rgba(30, 58, 138, 0.95) 0%, rgba(59, 130, 246, 0.9) 30%, rgba(34, 197, 94, 0.85) 70%, rgba(22, 163, 74, 0.9) 100%)'
+              : 'linear-gradient(135deg, rgba(59, 130, 246, 0.95) 0%, rgba(34, 197, 94, 0.9) 50%, rgba(22, 163, 74, 0.95) 100%)',
             zIndex: -1,
           },
           '&::after': {
@@ -942,21 +1083,20 @@ const Navbar: React.FC = () => {
             right: 0,
             bottom: 0,
             background: mode === 'dark'
-              ? 'radial-gradient(circle at 20% 50%, rgba(76, 175, 80, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(33, 150, 243, 0.08) 0%, transparent 50%), radial-gradient(circle at 40% 80%, rgba(156, 39, 176, 0.06) 0%, transparent 50%)'
-              : 'radial-gradient(circle at 20% 50%, rgba(76, 175, 80, 0.05) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(33, 150, 243, 0.04) 0%, transparent 50%), radial-gradient(circle at 40% 80%, rgba(156, 39, 176, 0.03) 0%, transparent 50%)',
+              ? 'radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.15) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(34, 197, 94, 0.12) 0%, transparent 50%)'
+              : 'radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(34, 197, 94, 0.08) 0%, transparent 50%)',
             zIndex: -1,
           }
         }}
       >
         <Toolbar sx={{ 
-          px: { xs: 2, sm: 3, md: 4, lg: 5, xl: 6 }, 
-          minHeight: { xs: 70, sm: 75, md: 80, lg: 85, xl: 88 },
-          py: { xs: 1.5, sm: 1.8, md: 2, lg: 2.2, xl: 2.5 },
+          px: { xs: 1.2, sm: 1.8, md: 2.5 }, 
+          minHeight: { xs: 56, sm: 60, md: 64 },
+          py: { xs: 0.4, sm: 0.5, md: 0.6 },
           justifyContent: 'space-between',
           alignItems: 'center',
-          fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-          fontWeight: 500
         }}>
+          {/* Mobile Menu Button */}
           {(isMobile || isSmallTablet) && (
             <IconButton
               color="inherit"
@@ -964,543 +1104,413 @@ const Navbar: React.FC = () => {
               edge="start"
               onClick={handleDrawerToggle}
               sx={{ 
-                mr: 2,
-                p: { xs: 1.5, sm: 1.8 },
-                borderRadius: '12px',
-                backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                mr: 0.5,
+                p: 1,
+                borderRadius: '10px',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
                 '&:hover': {
-                  backgroundColor: alpha(theme.palette.primary.main, 0.15),
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
                   transform: 'scale(1.05)',
                 },
-                transition: 'all 0.3s ease'
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             >
-              <MenuIcon sx={{ fontSize: '1.5rem' }} />
+              <MenuIcon sx={{ fontSize: '1.2rem' }} />
             </IconButton>
           )}
-          
-          {/* Left Section - Logo */}
+
+          {/* Logo Section */}
           <Box 
             sx={{ 
               display: 'flex', 
               alignItems: 'center', 
-              gap: { xs: 1.5, md: 2, lg: 2.5 },
               cursor: 'pointer',
               minWidth: 'fit-content',
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              position: 'relative',
               '&:hover': {
-                transform: 'scale(1.02)',
+                transform: 'scale(1.05)',
               }
             }}
             onClick={() => navigate(user ? '/app/network' : '/')}
           >
-            <Box
-              sx={{
-                width: { xs: 44, sm: 48, md: 52, lg: 56, xl: 60 },
-                height: { xs: 44, sm: 48, md: 52, lg: 56, xl: 60 },
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '16px',
-                background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 50%, #1b5e20 100%)',
-                boxShadow: '0 8px 24px rgba(76, 175, 80, 0.3), 0 0 0 1px rgba(76, 175, 80, 0.1)',
+            <img 
+              src="/exjobnetlogo.png" 
+              alt="ExJobNet" 
+              style={{ 
+                height: '50px',
+                width: '50px',
+                objectFit: 'contain',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                position: 'relative',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  inset: 0,
-                  borderRadius: '16px',
-                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 100%)',
-                  zIndex: 1,
-                },
-                '&:hover': {
-                  boxShadow: '0 12px 32px rgba(76, 175, 80, 0.4), 0 0 0 1px rgba(76, 175, 80, 0.2)',
-                  transform: 'scale(1.05)',
-                }
+                cursor: 'pointer'
               }}
-            >
-              <img 
-                src="/exjobnetlogo.png" 
-                alt="ExJobNet" 
-                style={{ 
-                  height: '70%', 
-                  width: '70%',
-                  objectFit: 'contain',
-                  filter: 'brightness(0) invert(1)',
-                  zIndex: 2,
-                  position: 'relative'
-                }}
-              />
-            </Box>
-            <Typography 
-              variant="h6" 
-              component="div" 
-              sx={{ 
-                flexGrow: 0, 
-                fontWeight: 700,
-                fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1rem', lg: '1.05rem', xl: '1.1rem' },
-                background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-                letterSpacing: '-0.02em'
-              }}
-            >
-              ExJobNet
-            </Typography>
+            />
           </Box>
 
-          <Box sx={{ flexGrow: 1 }} />
-
-          {/* Center Section - Navigation */}
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            flex: 1,
-            justifyContent: 'center',
-          }}>
-            {!(isMobile || isSmallTablet) && (
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: { sm: 1.8, md: 2.2, lg: 2.8, xl: 3 }
-              }}>
-              {currentMenuItems.filter(item => !('protected' in item) || !(item as any).protected || user).map((item) => {
-                // Handle dropdown menu item
-                if (item.isDropdown) {
-                  return (
-                    <React.Fragment key={item.text}>
-                      <Button
-                        ref={opportunitiesRef}
-                        color="inherit"
-                        startIcon={(isTablet || isSmallTablet) ? undefined : item.icon}
-                        endIcon={<KeyboardArrowDown sx={{ 
-                          fontSize: 16, 
-                          transform: opportunitiesOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                          transition: 'transform 0.2s'
-                        }} />}
-                        onClick={handleOpportunitiesToggle}
-                        variant="text"
-                        sx={{
-                          fontWeight: 600,
-                          color: opportunitiesOpen ? 'primary.main' : 'text.primary',
-                          backgroundColor: opportunitiesOpen ? alpha(theme.palette.primary.main, 0.12) : 'transparent',
-                          borderRadius: 3,
-                          px: { sm: 2.2, md: 2.5, lg: 2.8, xl: 3 },
-                          py: { sm: 1.2, md: 1.25, lg: 1.4, xl: 1.5 },
-                          minWidth: (isTablet || isSmallTablet) ? 'auto' : undefined,
-                          fontSize: { sm: '0.82rem', md: '0.85rem', lg: '0.88rem', xl: '0.9rem' },
-                          height: { sm: 42, md: 44, lg: 46, xl: 48 },
-                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                          fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-                          letterSpacing: '-0.01em',
-                          '&:hover': {
-                            backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 8px 24px rgba(76, 175, 80, 0.15)',
-                          },
-                          '&:active': {
-                            transform: 'scale(0.98)',
-                          },
-                        }}
-                      >
-                        {item.text}
-                      </Button>
-                      
-                      {/* Dropdown menu */}
-                      <Popper
-                        open={opportunitiesOpen}
-                        anchorEl={opportunitiesRef.current}
-                        role={undefined}
-                        placement="bottom-start"
-                        transition
-                        disablePortal
-                        sx={{ zIndex: 1300 }}
-                      >
-                        {({ TransitionProps, placement }) => (
-                          <Grow
-                            {...TransitionProps}
-                            style={{
-                              transformOrigin: placement === 'bottom-start' ? 'left top' : 'left bottom',
-                            }}
-                          >
-                            <Paper
-                              sx={{
-                                mt: 1,
-                                borderRadius: 3,
-                                overflow: 'hidden',
-                                boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-                                border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-                                minWidth: 280,
-                                maxWidth: 320
-                              }}
-                            >
-                              <ClickAwayListener onClickAway={handleOpportunitiesClose}>
-                                <MenuList
-                                  autoFocusItem={opportunitiesOpen}
-                                  sx={{ py: 1 }}
-                                >
-                                  {opportunityCategories.map((opportunity) => (
-                                    <MenuItem
-                                      key={opportunity.id}
-                                      onClick={() => {
-                                        console.log('Desktop navigating to:', opportunity.path);
-                                        window.location.href = opportunity.path;
-                                        setOpportunitiesOpen(false);
-                                      }}
-                                      sx={{
-                                        py: 1.5,
-                                        px: 2,
-                                        mx: 1,
-                                        borderRadius: 2,
-                                        '&:hover': {
-                                          backgroundColor: alpha(theme.palette.primary.main, 0.08),
-                                          transform: 'translateX(4px)',
-                                        },
-                                        transition: 'all 0.2s ease',
-                                        gap: 2,
-                                        display: 'flex',
-                                        alignItems: 'flex-start'
-                                      }}
-                                    >
-                                      <Box sx={{ 
-                                        color: 'primary.main',
-                                        mt: 0.2,
-                                        minWidth: 'auto'
-                                      }}>
-                                        {opportunity.icon}
-                                      </Box>
-                                      <Box sx={{ flex: 1 }}>
-                                        <Typography 
-                                          variant="subtitle2" 
-                                          sx={{ 
-                                            fontWeight: 600, 
-                                            color: 'text.primary',
-                                            mb: 0.25 
-                                          }}
-                                        >
-                                          {opportunity.label}
-                                        </Typography>
-                                        <Typography 
-                                          variant="caption" 
-                                          sx={{ 
-                                            color: 'text.secondary',
-                                            lineHeight: 1.3,
-                                            display: 'block'
-                                          }}
-                                        >
-                                          {opportunity.description}
-                                        </Typography>
-                                      </Box>
-                                    </MenuItem>
-                                  ))}
-                                </MenuList>
-                              </ClickAwayListener>
-                            </Paper>
-                          </Grow>
-                        )}
-                      </Popper>
-                    </React.Fragment>
-                  );
-                }
-
-                // Regular menu item
-                return (
-                  <Button
-                    key={item.text}
-                    color="inherit"
-                    startIcon={(isTablet || isSmallTablet) ? undefined : item.icon}
-                    onClick={() => {
-                      if (item.isContactDialog && 'action' in item) {
-                        item.action();
-                      } else if ('requiresAuth' in item && (item as any).requiresAuth && !user) {
-                        navigate('/register?role=employer');
-                      } else if ('path' in item) {
-                        navigate(item.path);
+          {/* Center Section - Categories */}
+          {!(isMobile || isSmallTablet) && (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: { sm: 0.4, md: 0.6, lg: 0.8 },
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              flex: 1,
+              maxWidth: '100%'
+            }}>
+              {opportunityCategories.map((category, index) => (
+                <Button
+                  key={category.id}
+                  color="inherit"
+                  startIcon={category.icon}
+                  onClick={() => {
+                    console.log('Navigating to:', category.path);
+                    window.location.href = category.path;
+                  }}
+                  variant="text"
+                  sx={{
+                    fontWeight: 600,
+                    color: 'rgba(255, 255, 255, 0.95)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    px: { sm: 1, md: 1.2, lg: 1.4 },
+                    py: { sm: 0.4, md: 0.5, lg: 0.6 },
+                    fontSize: { sm: '0.7rem', md: '0.75rem', lg: '0.8rem' },
+                    height: { sm: 26, md: 28, lg: 30 },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+                    letterSpacing: '-0.01em',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: mode === 'dark'
+                        ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(46, 125, 50, 0.05) 100%)'
+                        : 'linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(46, 125, 50, 0.02) 100%)',
+                      opacity: 0,
+                      transition: 'opacity 0.3s ease',
+                      zIndex: 1,
+                    },
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    backdropFilter: 'blur(10px)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                      transform: 'translateY(-1px)',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                      color: 'white',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      '&::before': {
+                        opacity: 1,
+                      },
+                    },
+                    '&:active': {
+                      transform: 'scale(0.96)',
+                    },
+                    '& .MuiButton-startIcon': {
+                      marginRight: '4px',
+                      '& svg': {
+                        fontSize: { sm: '0.8rem', md: '0.85rem', lg: '0.9rem' },
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        transition: 'color 0.3s ease',
                       }
-                    }}
-                    variant={('highlight' in item && (item as any).highlight) ? 'contained' : 'text'}
-                    sx={{
-                      fontWeight: ('path' in item && location.pathname === item.path) 
-                        ? 'bold' 
-                        : (('highlight' in item && (item as any).highlight) || ('special' in item && (item as any).special)) 
-                          ? 'bold' 
-                          : 'normal',
-                      color: ('highlight' in item && (item as any).highlight) 
-                        ? 'white' 
-                        : ('special' in item && (item as any).special)
-                          ? 'primary.main'
-                          : (('path' in item && location.pathname === item.path) ? 'primary.main' : 'text.primary'),
-                      backgroundColor: ('highlight' in item && (item as any).highlight)
-                        ? 'primary.main' 
-                        : (('path' in item && location.pathname === item.path) ? alpha(theme.palette.primary.main, 0.1) : 'transparent'),
-                      border: ('special' in item && (item as any).special) 
-                        ? `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
-                        : 'none',
-                      borderRadius: 3,
-                      px: { sm: 2.2, md: 2.5, lg: 2.8, xl: 3 },
-                      py: { sm: 1.2, md: 1.25, lg: 1.4, xl: 1.5 },
-                      minWidth: (isTablet || isSmallTablet) ? 'auto' : undefined,
-                      fontSize: { sm: '0.82rem', md: '0.85rem', lg: '0.88rem', xl: '0.9rem' },
-                      height: { sm: 42, md: 44, lg: 46, xl: 48 },
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-                      letterSpacing: '-0.01em',
-                      '&:hover': {
-                        backgroundColor: ('highlight' in item && (item as any).highlight)
-                          ? 'linear-gradient(135deg, #45a049 0%, #1b5e20 100%)' 
-                          : ('special' in item && (item as any).special)
-                            ? alpha(theme.palette.primary.main, 0.1)
-                            : alpha(theme.palette.primary.main, 0.08),
-                        transform: 'translateY(-2px)',
-                        boxShadow: ('highlight' in item && (item as any).highlight) 
-                          ? '0 8px 24px rgba(76, 175, 80, 0.3)' 
-                          : ('special' in item && (item as any).special)
-                            ? '0 4px 16px rgba(76, 175, 80, 0.2)'
-                            : '0 4px 16px rgba(76, 175, 80, 0.1)',
-                        border: ('special' in item && (item as any).special) 
-                          ? `1px solid ${alpha(theme.palette.primary.main, 0.5)}`
-                          : undefined,
-                      },
-                      '&:active': {
-                        transform: 'scale(0.98)',
-                      },
-                    }}
-                  >
-                    {item.text}
-                  </Button>
-                );
-              })}
+                    },
+                    '&:hover .MuiButton-startIcon svg': {
+                      color: 'white',
+                    }
+                  }}
+                >
+                  {category.label}
+                </Button>
+              ))}
             </Box>
           )}
 
-
-          </Box>
-
-          {/* Right Section - Theme Toggle and Auth */}
+          {/* Right Section - Theme Toggle, Support, Contact, Auth */}
           <Box sx={{ 
             display: 'flex', 
             alignItems: 'center', 
-            gap: { xs: 1, sm: 1.2, md: 1.5, lg: 1.8, xl: 2 },
-            minWidth: 'fit-content'
+            gap: { xs: 0.4, sm: 0.6, md: 0.8, lg: 1 },
+            minWidth: 'fit-content',
+            position: 'relative',
+            zIndex: 2
           }}>
-          {!(isMobile || isSmallTablet) && (
-            <Tooltip title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}>
-              <IconButton 
-                onClick={toggleTheme} 
-                color="inherit" 
-                sx={{ 
-                  p: { sm: 1.2, md: 1.5, lg: 1.7, xl: 1.8 },
-                  width: { sm: 38, md: 40, lg: 42, xl: 44 },
-                  height: { sm: 38, md: 40, lg: 42, xl: 44 },
-                  borderRadius: 3,
+            {/* Support and Contact Us */}
+            {!(isMobile || isSmallTablet) && (
+              <>
+                <Button
+                  color="inherit"
+                  startIcon={<Support sx={{ fontSize: { sm: '0.7rem', md: '0.75rem', lg: '0.8rem' } }} />}
+                  onClick={() => navigate('/support')}
+                  variant="text"
+                  sx={{
+                    fontWeight: 600,
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    borderRadius: '8px',
+                    px: { sm: 1, md: 1.2, lg: 1.4 },
+                    py: { sm: 0.4, md: 0.5, lg: 0.6 },
+                    fontSize: { sm: '0.7rem', md: '0.75rem', lg: '0.8rem' },
+                    height: { sm: 26, md: 28, lg: 30 },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                      transform: 'translateY(-1px)',
+                      color: 'white',
+                    },
+                    '& .MuiButton-startIcon': {
+                      marginRight: '4px',
+                    }
+                  }}
+                >
+                  Support
+                </Button>
+                <Button
+                  color="inherit"
+                  startIcon={<ContactSupport sx={{ fontSize: { sm: '0.7rem', md: '0.75rem', lg: '0.8rem' } }} />}
+                  onClick={handleContactOpen}
+                  variant="text"
+                  sx={{
+                    fontWeight: 600,
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    borderRadius: '8px',
+                    px: { sm: 1, md: 1.2, lg: 1.4 },
+                    py: { sm: 0.4, md: 0.5, lg: 0.6 },
+                    fontSize: { sm: '0.7rem', md: '0.75rem', lg: '0.8rem' },
+                    height: { sm: 26, md: 28, lg: 30 },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                      transform: 'translateY(-1px)',
+                      color: 'white',
+                    },
+                    '& .MuiButton-startIcon': {
+                      marginRight: '4px',
+                    }
+                  }}
+                >
+                  Contact
+                </Button>
+              </>
+            )}
+
+            {/* Theme Toggle */}
+            {!(isMobile || isSmallTablet) && (
+              <Tooltip title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`} arrow>
+                <IconButton 
+                  onClick={toggleTheme} 
+                  color="inherit" 
+                  sx={{ 
+                    p: 0.8,
+                    width: { sm: 28, md: 30, lg: 32 },
+                    height: { sm: 28, md: 30, lg: 32 },
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                      transform: 'scale(1.05)',
+                    },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                  }}
+                >
+                  {mode === 'dark' ? 
+                    <Brightness7 sx={{ fontSize: { sm: '0.9rem', md: '1rem', lg: '1.1rem' } }} /> : 
+                    <Brightness4 sx={{ fontSize: { sm: '0.9rem', md: '1rem', lg: '1.1rem' } }} />
+                  }
+                </IconButton>
+              </Tooltip>
+            )}
+
+            {/* Add Job Button for Non-Employers */}
+            {!user && !(isMobile || isSmallTablet) && (
+              <Button
+                variant="contained"
+                startIcon={<PostAdd sx={{ fontSize: { sm: '0.8rem', md: '0.85rem', lg: '0.9rem' } }} />}
+                onClick={() => navigate('/register?role=employer')}
+                sx={{
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 50%, #1b5e20 100%)',
+                  boxShadow: '0 4px 12px rgba(76, 175, 80, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  px: { sm: 1, md: 1.2, lg: 1.4 },
+                  py: { sm: 0.4, md: 0.5, lg: 0.6 },
+                  fontSize: { sm: '0.7rem', md: '0.75rem', lg: '0.8rem' },
+                  height: { sm: 26, md: 28, lg: 30 },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
                   '&:hover': {
-                    backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                    transform: 'scale(1.05)',
-                    boxShadow: (isLargeTablet || isDesktop) ? '0 6px 20px rgba(76, 175, 80, 0.3)' : '0 4px 12px rgba(76, 175, 80, 0.2)',
+                    background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 50%, #0d3e0f 100%)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 6px 16px rgba(76, 175, 80, 0.5)',
                   },
-                  transition: 'all 0.3s ease'
+                  '& .MuiButton-startIcon': {
+                    marginRight: '4px',
+                  }
                 }}
               >
-                {mode === 'dark' ? 
-                  <Brightness7 sx={{ fontSize: { sm: '1.3rem', md: '1.4rem', lg: '1.45rem', xl: '1.5rem' } }} /> : 
-                  <Brightness4 sx={{ fontSize: { sm: '1.3rem', md: '1.4rem', lg: '1.45rem', xl: '1.5rem' } }} />
-                }
-              </IconButton>
-            </Tooltip>
-          )}
+                Add Job
+              </Button>
+            )}
 
-          {/* Post Job Button for Employers */}
-          {user && user.role === UserRole.EMPLOYER && !(isMobile || isSmallTablet) && (
-            <Button
-              variant="contained"
-              startIcon={(isTablet || isSmallTablet) ? undefined : <PostAdd />}
-              onClick={() => navigate('/app/jobs/create')}
-              sx={{
-                mr: { sm: 1.2, md: 1.5, lg: 1.8, xl: 2 },
-                fontWeight: 'bold',
-                background: 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)',
-                boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
-                '&:hover': {
-                  background: 'linear-gradient(45deg, #2e7d32 30%, #1b5e20 90%)',
-                  boxShadow: (isLargeTablet || isDesktop) ? '0 8px 24px rgba(76, 175, 80, 0.5)' : '0 5px 15px rgba(76, 175, 80, 0.4)',
-                  transform: 'translateY(-2px)',
-                },
-                borderRadius: 2,
-                px: { sm: 1.8, md: 2, lg: 2.3, xl: 2.5 },
-                py: { sm: 0.9, md: 1, lg: 1.1, xl: 1.2 },
-                fontSize: { sm: '0.87rem', md: '0.95rem', lg: '0.98rem', xl: '1rem' },
-                minWidth: (isTablet || isSmallTablet) ? 'auto' : undefined,
-                height: { sm: 38, md: 40, lg: 42, xl: 44 },
-                transition: 'all 0.3s ease',
-              }}
-            >
-              {(isLargeTablet || isDesktop) ? 'Post New Job' : 'Post Job'}
-            </Button>
-          )}
+            {/* Post Job Button for Employers */}
+            {user && user.role === UserRole.EMPLOYER && !(isMobile || isSmallTablet) && (
+              <Button
+                variant="contained"
+                startIcon={<PostAdd sx={{ fontSize: { sm: '0.8rem', md: '0.85rem', lg: '0.9rem' } }} />}
+                onClick={() => navigate('/app/jobs/create')}
+                sx={{
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 50%, #1b5e20 100%)',
+                  boxShadow: '0 4px 12px rgba(76, 175, 80, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  px: { sm: 1, md: 1.2, lg: 1.4 },
+                  py: { sm: 0.4, md: 0.5, lg: 0.6 },
+                  fontSize: { sm: '0.7rem', md: '0.75rem', lg: '0.8rem' },
+                  height: { sm: 26, md: 28, lg: 30 },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 50%, #0d3e0f 100%)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 6px 16px rgba(76, 175, 80, 0.5)',
+                  },
+                  '& .MuiButton-startIcon': {
+                    marginRight: '4px',
+                  }
+                }}
+              >
+                Post Job
+              </Button>
+            )}
 
-          {user ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {/* User Authentication */}
+            {user ? (
               <IconButton
-                size="large"
+                size="small"
                 aria-label="account of current user"
                 aria-controls="menu-appbar"
                 aria-haspopup="true"
                 onClick={handleMenu}
                 color="inherit"
+                sx={{
+                  p: 0.4,
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                    transform: 'scale(1.05)',
+                  },
+                }}
               >
                 <Avatar 
                   sx={{ 
-                    bgcolor: 'primary.main',
-                    width: { xs: 32, sm: 34, md: 36, lg: 38, xl: 40 },
-                    height: { xs: 32, sm: 34, md: 36, lg: 38, xl: 40 },
-                    fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1rem', lg: '1.05rem', xl: '1.1rem' },
-                    boxShadow: (isLargeTablet || isDesktop) ? '0 3px 12px rgba(76, 175, 80, 0.25)' : 'none',
-                    transition: 'all 0.3s ease',
-                    border: (isLargeTablet || isDesktop) ? '3px solid transparent' : '2px solid transparent',
-                    backgroundClip: 'padding-box',
+                    background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 50%, #1b5e20 100%)',
+                    width: { xs: 20, sm: 22, md: 24 },
+                    height: { xs: 20, sm: 22, md: 24 },
+                    fontSize: { xs: '0.6rem', sm: '0.7rem', md: '0.8rem' },
+                    fontWeight: 700,
+                    boxShadow: '0 2px 6px rgba(76, 175, 80, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     '&:hover': {
-                      transform: 'scale(1.08)',
-                      boxShadow: (isLargeTablet || isDesktop) ? '0 6px 20px rgba(76, 175, 80, 0.4)' : '0 4px 12px rgba(76, 175, 80, 0.3)',
-                      borderColor: alpha(theme.palette.primary.light, 0.5),
+                      transform: 'scale(1.1)',
+                      boxShadow: '0 3px 10px rgba(76, 175, 80, 0.4)',
                     }
                   }}
                 >
                   {user.firstName?.charAt(0) || user.email?.charAt(0)}
                 </Avatar>
               </IconButton>
-              <Menu
-                id="menu-appbar"
-                anchorEl={anchorEl}
-                anchorOrigin={{
-                  vertical: 'bottom',
-                  horizontal: 'right',
-                }}
-                keepMounted
-                transformOrigin={{
-                  vertical: 'top',
-                  horizontal: 'right',
-                }}
-                open={Boolean(anchorEl)}
-                onClose={handleClose}
-                PaperProps={{
-                  sx: {
-                    mt: 1,
-                    minWidth: 200,
-                    borderRadius: 2,
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-                  }
-                }}
-              >
-                <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
-                  <Typography variant="subtitle1" fontWeight="bold">
-                    {user.firstName} {user.lastName}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {user.email}
-                  </Typography>
-                </Box>
-                <MenuItem onClick={() => { navigate('/app/network'); handleClose(); }}>
-                  <Home sx={{ mr: 1 }} />
-                  Network Home
-                </MenuItem>
-                <MenuItem onClick={() => { navigate('/app/profile'); handleClose(); }}>
-                  <Person sx={{ mr: 1 }} />
-                  Profile
-                </MenuItem>
-                {user?.role === UserRole.EMPLOYER && (
-                  <MenuItem 
-                    onClick={() => { navigate('/app/jobs/create'); handleClose(); }}
+            ) : (
+              <Box sx={{ 
+                display: 'flex', 
+                gap: { xs: 0.3, sm: 0.4, md: 0.6 }
+              }}>
+                <Button
+                  color="inherit"
+                  startIcon={!(isMobile || isSmallTablet) ? <Login sx={{ fontSize: { sm: '0.7rem', md: '0.75rem', lg: '0.8rem' } }} /> : undefined}
+                  onClick={() => navigate('/login')}
+                  variant="text"
+                  sx={{ 
+                    fontWeight: 600,
+                    px: { xs: 0.8, sm: 1, md: 1.2 },
+                    py: { xs: 0.3, sm: 0.4, md: 0.5 },
+                    fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
+                    height: { xs: 20, sm: 22, md: 24 },
+                    borderRadius: '6px',
+                    background: (isMobile || isSmallTablet) 
+                      ? 'linear-gradient(135deg, #4caf50 0%, #2e7d32 50%, #1b5e20 100%)' 
+                      : 'rgba(255, 255, 255, 0.08)',
+                    color: (isMobile || isSmallTablet) 
+                      ? 'white' 
+                      : 'rgba(255, 255, 255, 0.9)',
+                    border: (isMobile || isSmallTablet) 
+                      ? '1px solid rgba(255, 255, 255, 0.2)' 
+                      : '1px solid rgba(255, 255, 255, 0.15)',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:hover': {
+                      backgroundColor: (isMobile || isSmallTablet) 
+                        ? 'transparent' 
+                        : 'rgba(255, 255, 255, 0.15)',
+                      background: (isMobile || isSmallTablet) 
+                        ? 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 50%, #0d3e0f 100%)' 
+                        : undefined,
+                      transform: 'translateY(-1px)',
+                      color: 'white',
+                    },
+                    '& .MuiButton-startIcon': {
+                      marginRight: '4px',
+                    }
+                  }}
+                >
+                  Login
+                </Button>
+                {!(isMobile || isSmallTablet) && (
+                  <Button
+                    variant="contained"
+                    startIcon={<PersonAdd sx={{ fontSize: { sm: '0.7rem', md: '0.75rem', lg: '0.8rem' } }} />}
+                    onClick={() => navigate('/register')}
                     sx={{ 
-                      color: 'primary.main', 
-                      fontWeight: 'bold',
+                      fontWeight: 700,
+                      px: { sm: 0.8, md: 1, lg: 1.2 },
+                      py: { sm: 0.3, md: 0.4, lg: 0.5 },
+                      fontSize: { sm: '0.6rem', md: '0.65rem', lg: '0.7rem' },
+                      height: { sm: 22, md: 24, lg: 26 },
+                      borderRadius: '6px',
+                      background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 50%, #1b5e20 100%)',
+                      boxShadow: '0 3px 8px rgba(76, 175, 80, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&:hover': {
-                        backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                        background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 50%, #0d3e0f 100%)',
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 12px rgba(76, 175, 80, 0.4)',
+                      },
+                      '& .MuiButton-startIcon': {
+                        marginRight: '4px',
                       }
                     }}
                   >
-                    <PostAdd sx={{ mr: 1 }} />
-                    Post a Job
-                  </MenuItem>
+                    Sign Up
+                  </Button>
                 )}
-                <Divider />
-                <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
-                  <Login sx={{ mr: 1 }} />
-                  Logout
-                </MenuItem>
-              </Menu>
-            </Box>
-          ) : (
-            <Box sx={{ 
-              display: 'flex', 
-              gap: { xs: 0.5, sm: 0.8, md: 1, lg: 1.3, xl: 1.5 }
-            }}>
-              <Button
-                color="inherit"
-                startIcon={(isMobile || isSmallTablet) ? undefined : ((isTablet || isSmallTablet) ? undefined : <Login />)}
-                onClick={() => navigate('/login')}
-                variant={(isMobile || isSmallTablet) ? 'contained' : 'text'}
-                sx={{ 
-                  fontWeight: 'bold',
-                  px: { xs: 1.5, sm: 1.8, md: 2, lg: 2.3, xl: 2.5 },
-                  py: { xs: 0.5, sm: 0.7, md: 1, lg: 1.1, xl: 1.25 },
-                  fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.9rem', lg: '0.95rem', xl: '1rem' },
-                  minWidth: (isMobile || isSmallTablet) ? 'auto' : ((isTablet || isSmallTablet) ? 'auto' : undefined),
-                  height: { xs: 32, sm: 36, md: 40, lg: 42, xl: 44 },
-                  borderRadius: 2,
-                  background: (isMobile || isSmallTablet) ? 'linear-gradient(45deg, #4caf50 30%, #2e7d32 90%)' : 'transparent',
-                  color: (isMobile || isSmallTablet) ? 'white' : 'inherit',
-                  boxShadow: (isMobile || isSmallTablet) ? '0 2px 8px rgba(76, 175, 80, 0.3)' : 'none',
-                  '&:hover': {
-                    backgroundColor: (isMobile || isSmallTablet) ? 'transparent' : 'primary.light',
-                    background: (isMobile || isSmallTablet) ? 'linear-gradient(45deg, #2e7d32 30%, #1b5e20 90%)' : undefined,
-                    boxShadow: (isMobile || isSmallTablet) ? '0 4px 12px rgba(76, 175, 80, 0.4)' 
-                      : (isLargeTablet || isDesktop) ? '0 4px 16px rgba(76, 175, 80, 0.25)'
-                      : '0 2px 8px rgba(76, 175, 80, 0.2)',
-                    transform: (isLargeTablet || isDesktop) ? 'translateY(-2px)' : 'none',
-                  },
-                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:active': {
-                    transform: 'scale(0.98)',
-                  },
-                }}
-              >
-                Login
-              </Button>
-              {!(isMobile || isSmallTablet) && (
-                <Button
-                  variant="contained"
-                  startIcon={(isTablet || isSmallTablet) ? undefined : <PersonAdd />}
-                  onClick={() => navigate('/register')}
-                  sx={{ 
-                    fontWeight: 'bold',
-                    px: { sm: 1.8, md: 2, lg: 2.3, xl: 2.5 },
-                    py: { sm: 0.8, md: 1, lg: 1.1, xl: 1.25 },
-                    fontSize: { sm: '0.82rem', md: '0.95rem', lg: '0.98rem', xl: '1rem' },
-                    minWidth: (isTablet || isSmallTablet) ? 'auto' : undefined,
-                    height: { sm: 38, md: 40, lg: 42, xl: 44 },
-                    borderRadius: 2,
-                    boxShadow: '0 3px 12px rgba(76, 175, 80, 0.3)',
-                    '&:hover': {
-                      boxShadow: (isLargeTablet || isDesktop) ? '0 8px 24px rgba(76, 175, 80, 0.5)' : '0 4px 12px rgba(76, 175, 80, 0.4)',
-                      transform: 'translateY(-2px)',
-                    },
-                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '&:active': {
-                      transform: 'scale(0.98)',
-                    },
-                  }}
-                >
-                  {(isLargeTablet || isDesktop) ? 'Sign Up Free' : 'Sign Up'}
-                </Button>
-              )}
-            </Box>
-          )}
+              </Box>
+            )}
           </Box>
         </Toolbar>
       </AppBar>
+
 
       <Drawer
         variant="temporary"

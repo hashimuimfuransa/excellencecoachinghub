@@ -217,6 +217,86 @@ const changePasswordValidation = [
     })
 ];
 
+// @desc    Search users
+// @route   GET /api/users/search
+// @access  Private
+router.get('/search', async (req, res) => {
+  try {
+    const { q: query, page = 1, limit = 20 } = req.query;
+    
+    if (!query || typeof query !== 'string' || query.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Search query is required'
+      });
+    }
+
+    const searchQuery = query.trim();
+    const pageNum = parseInt(page as string) || 1;
+    const limitNum = parseInt(limit as string) || 20;
+    const skip = (pageNum - 1) * limitNum;
+
+    // Search users by name, email, company, job title, skills, location
+    const users = await User.find({
+      $and: [
+        { _id: { $ne: req.user?._id } }, // Exclude current user
+        {
+          $or: [
+            { firstName: { $regex: searchQuery, $options: 'i' } },
+            { lastName: { $regex: searchQuery, $options: 'i' } },
+            { email: { $regex: searchQuery, $options: 'i' } },
+            { company: { $regex: searchQuery, $options: 'i' } },
+            { jobTitle: { $regex: searchQuery, $options: 'i' } },
+            { location: { $regex: searchQuery, $options: 'i' } },
+            { skills: { $regex: searchQuery, $options: 'i' } },
+            { bio: { $regex: searchQuery, $options: 'i' } }
+          ]
+        }
+      ]
+    })
+    .select('firstName lastName email profilePicture company jobTitle location skills bio createdAt')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limitNum);
+
+    // Get total count for pagination
+    const total = await User.countDocuments({
+      $and: [
+        { _id: { $ne: req.user?._id } },
+        {
+          $or: [
+            { firstName: { $regex: searchQuery, $options: 'i' } },
+            { lastName: { $regex: searchQuery, $options: 'i' } },
+            { email: { $regex: searchQuery, $options: 'i' } },
+            { company: { $regex: searchQuery, $options: 'i' } },
+            { jobTitle: { $regex: searchQuery, $options: 'i' } },
+            { location: { $regex: searchQuery, $options: 'i' } },
+            { skills: { $regex: searchQuery, $options: 'i' } },
+            { bio: { $regex: searchQuery, $options: 'i' } }
+          ]
+        }
+      ]
+    });
+
+    res.status(200).json({
+      success: true,
+      data: users,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum)
+      }
+    });
+  } catch (error) {
+    console.error('Error searching users:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to search users'
+    });
+  }
+});
+
 // Profile routes (authenticated users can access their own profile)
 router.get('/profile', getCurrentProfile);
 router.put('/profile', updateProfileValidation, validateRequest, updateProfile);

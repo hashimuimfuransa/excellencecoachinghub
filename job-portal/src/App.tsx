@@ -27,6 +27,7 @@ import MinimizedProfilePage from './pages/MinimizedProfilePage';
 import ProfileEditPage from './pages/ProfileEditPage';
 import SummaryProfilePage from './pages/SummaryProfilePage';
 import ProfessionalProfilePage from './pages/ProfessionalProfilePage';
+import ModernProfilePage from './pages/ModernProfilePage';
 import SavedJobsPage from './pages/SavedJobsPage';
 import CertificatesPage from './pages/CertificatesPage';
 import CoursesPage from './pages/CoursesPage';
@@ -83,6 +84,7 @@ import SocialNetworkPage from './pages/SocialNetworkPage';
 import ViewStoriesPage from './pages/ViewStoriesPage';
 import NetworkPage from './pages/NetworkPage';
 import NotificationsPage from './pages/NotificationsPage';
+import SearchPage from './pages/SearchPage';
 
 // Career Insights page
 import CareerInsightsPage from './pages/CareerInsightsPage';
@@ -234,10 +236,11 @@ function App() {
               <Route path="applications/:id" element={<ApplicationDetailsPage />} />
               
               {/* Profile */}
-              <Route path="profile" element={<MinimizedProfilePage />} />
+              <Route path="profile" element={<ModernProfilePage />} />
               <Route path="profile/edit" element={<ProfileEditPage />} />
               <Route path="profile/view/:userId" element={<SummaryProfilePage />} />
               <Route path="profile/simple" element={<ImprovedProfilePage />} />
+              <Route path="profile/minimized" element={<MinimizedProfilePage />} />
               <Route 
                 path="profile/professional" 
                 element={
@@ -267,6 +270,7 @@ function App() {
               <Route path="connections" element={<NetworkPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="messages" element={<MessagesPage />} />
+              <Route path="search" element={<SearchPage />} />
               
               {/* Debug Routes (Development only) */}
               <Route path="debug/stories" element={<StoryDebugger />} />

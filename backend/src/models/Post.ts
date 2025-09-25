@@ -9,7 +9,7 @@ export interface IPostDocument extends Document {
     thumbnail?: string;
   }[];
   tags: string[];
-  postType: 'text' | 'job_post' | 'event' | 'training' | 'company_update';
+  postType: 'text' | 'image' | 'video' | 'document' | 'job_post' | 'event' | 'training' | 'company_update';
   relatedJob?: string; // Job ID if this is a job post
   relatedEvent?: string; // Event ID if this is an event post
   relatedCompany?: string; // Company ID if this is a company update
@@ -65,7 +65,7 @@ const postSchema = new Schema<IPostDocument>({
   }],
   postType: {
     type: String,
-    enum: ['text', 'job_post', 'event', 'training', 'company_update'],
+    enum: ['text', 'image', 'video', 'document', 'job_post', 'event', 'training', 'company_update'],
     default: 'text',
     required: true
   },

@@ -1,4 +1,5 @@
 import { api } from './api';
+import { uploadApi } from './uploadService';
 
 export interface Post {
   _id: string;
@@ -129,40 +130,123 @@ class SocialNetworkService {
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     const isGoogleUser = token?.startsWith('google_') || currentUser.authProvider === 'google';
     
-    if (isGoogleUser) {
-      console.log('🔄 Returning mock feed for Google user');
-      // Return some sample posts
-      return [
-        {
-          _id: 'post_1',
-          author: {
-            _id: 'user_1',
-            firstName: 'John',
-            lastName: 'Doe',
-            profilePicture: null,
-            company: 'Tech Corp',
-            jobTitle: 'Software Engineer'
-          },
-          content: 'Welcome to the professional network! Connect with colleagues and discover opportunities.',
-          tags: ['networking', 'career'],
-          postType: 'text',
-          likes: [],
-          likesCount: 5,
-          commentsCount: 2,
-          sharesCount: 1,
-          visibility: 'public',
-          isPinned: false,
-          isPromoted: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+        if (isGoogleUser) {
+          console.log('🔄 Returning mock feed for Google user');
+          // Return some sample posts with media
+          return [
+            {
+              _id: 'post_1',
+              author: {
+                _id: 'user_1',
+                firstName: 'John',
+                lastName: 'Doe',
+                profilePicture: null,
+                company: 'Tech Corp',
+                jobTitle: 'Software Engineer'
+              },
+              content: 'Welcome to the professional network! Connect with colleagues and discover opportunities.',
+              tags: ['networking', 'career'],
+              postType: 'text',
+              media: [],
+              likes: [],
+              likesCount: 5,
+              commentsCount: 2,
+              sharesCount: 1,
+              visibility: 'public',
+              isPinned: false,
+              isPromoted: false,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            },
+            {
+              _id: 'post_2',
+              author: {
+                _id: 'user_2',
+                firstName: 'Sarah',
+                lastName: 'Johnson',
+                profilePicture: null,
+                company: 'Design Studio',
+                jobTitle: 'UI/UX Designer'
+              },
+              content: 'Just finished working on this amazing project! Check out the design process and final result.',
+              tags: ['design', 'ui', 'ux'],
+              postType: 'text',
+              media: [
+                {
+                  type: 'image',
+                  url: 'https://images.unsplash.com/photo-1558655146-d09347e92766?w=800&h=600&fit=crop',
+                  thumbnail: 'https://images.unsplash.com/photo-1558655146-d09347e92766?w=400&h=300&fit=crop'
+                },
+                {
+                  type: 'image',
+                  url: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&h=600&fit=crop',
+                  thumbnail: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400&h=300&fit=crop'
+                }
+              ],
+              likes: [],
+              likesCount: 12,
+              commentsCount: 8,
+              sharesCount: 3,
+              visibility: 'public',
+              isPinned: false,
+              isPromoted: false,
+              createdAt: new Date(Date.now() - 3600000).toISOString(),
+              updatedAt: new Date(Date.now() - 3600000).toISOString()
+            },
+            {
+              _id: 'post_3',
+              author: {
+                _id: 'user_3',
+                firstName: 'Mike',
+                lastName: 'Chen',
+                profilePicture: null,
+                company: 'Video Productions',
+                jobTitle: 'Video Editor'
+              },
+              content: 'Behind the scenes of our latest video production! The team did an incredible job.',
+              tags: ['video', 'production', 'teamwork'],
+              postType: 'text',
+              media: [
+                {
+                  type: 'video',
+                  url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+                  thumbnail: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=800&h=600&fit=crop'
+                }
+              ],
+              likes: [],
+              likesCount: 8,
+              commentsCount: 4,
+              sharesCount: 2,
+              visibility: 'public',
+              isPinned: false,
+              isPromoted: false,
+              createdAt: new Date(Date.now() - 7200000).toISOString(),
+              updatedAt: new Date(Date.now() - 7200000).toISOString()
+            }
+          ];
         }
-      ];
-    }
     
     const response = await api.get('/posts/feed', {
       params: { page, limit, filter }
     });
-    return response.data.data || response.data;
+    
+    console.log('📊 Posts API Response:', response.data);
+    const posts = response.data.data || response.data;
+    console.log('📊 Processed Posts:', posts);
+    
+    // Log media information for debugging
+    if (Array.isArray(posts)) {
+      posts.forEach((post, index) => {
+        console.log(`📊 Post ${index + 1}:`, {
+          id: post._id,
+          content: post.content?.substring(0, 50) + '...',
+          mediaCount: post.media?.length || 0,
+          media: post.media
+        });
+      });
+    }
+    
+    return posts;
   }
 
   async createPost(postData: CreatePostData) {
@@ -171,9 +255,58 @@ class SocialNetworkService {
   }
 
   async createPostWithMedia(formData: FormData) {
-    const response = await api.post('/posts/create', formData, {
+    // Check for Google users using consistent logic
+    const token = localStorage.getItem('token');
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    const isGoogleUser = token?.startsWith('google_') || currentUser.authProvider === 'google';
+    
+    if (isGoogleUser) {
+      console.log('🔄 Creating mock post for Google user');
+      
+      // Extract data from FormData for Google users
+      const content = formData.get('content') as string;
+      const postType = formData.get('postType') as string || 'text';
+      const visibility = formData.get('visibility') as string || 'public';
+      const tags = formData.getAll('tags[]') as string[];
+      
+      // Create a mock post for Google users
+      const mockPost = {
+        _id: `post_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        author: {
+          _id: currentUser._id || currentUser.email,
+          firstName: currentUser.firstName || 'User',
+          lastName: currentUser.lastName || '',
+          profilePicture: currentUser.profilePicture || null,
+          company: currentUser.company || 'Company',
+          jobTitle: currentUser.jobTitle || 'Professional'
+        },
+        content: content || 'New post',
+        media: [], // For now, we'll handle media separately for Google users
+        tags: tags || [],
+        postType: postType || 'text',
+        likes: [],
+        likesCount: 0,
+        commentsCount: 0,
+        sharesCount: 0,
+        visibility: visibility || 'public',
+        isPinned: false,
+        isPromoted: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      console.log('✅ Mock post created successfully:', mockPost);
+      return mockPost;
+    }
+    
+    const response = await uploadApi.post('/posts/create', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
+      },
+      timeout: 300000, // 5 minutes for file uploads
+      onUploadProgress: (progressEvent) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
+        console.log(`📤 Upload progress: ${percentCompleted}%`);
       }
     });
     return response.data.data || response.data;
@@ -648,11 +781,34 @@ class SocialNetworkService {
 
   async getStoriesFeed(page: number = 1, limit: number = 20) {
     try {
+      console.log('📚 Fetching stories from API...');
       const response = await api.get(`/social/stories?page=${page}&limit=${limit}`);
-      return response.data;
+      console.log('📚 Stories API Response:', response.data);
+      
+      const stories = response.data.data || response.data;
+      console.log('📚 Processed Stories:', stories);
+      
+      // Log story information for debugging
+      if (Array.isArray(stories)) {
+        stories.forEach((story, index) => {
+          console.log(`📚 Story ${index + 1}:`, {
+            id: story._id,
+            title: story.title,
+            author: story.author?.firstName + ' ' + story.author?.lastName,
+            type: story.type,
+            hasMedia: !!story.media,
+            mediaType: story.media?.type
+          });
+        });
+      }
+      
+      return stories;
     } catch (error) {
       console.error('Error fetching stories feed:', error);
-      throw error;
+      
+      // Return empty array instead of mock data to encourage real data usage
+      console.log('📚 No stories available from API, returning empty array');
+      return [];
     }
   }
 
@@ -663,6 +819,124 @@ class SocialNetworkService {
     } catch (error) {
       console.error('Error deleting story:', error);
       throw error;
+    }
+  }
+
+  // Connections API
+  async getSuggestedConnections() {
+    try {
+      console.log('👥 Fetching suggested connections from API...');
+      const response = await api.get('/connections/suggestions');
+      console.log('👥 Suggested connections API response:', response.data);
+      
+      const connections = response.data.data || response.data;
+      console.log('👥 Processed suggested connections:', connections);
+      
+      // Log connection information for debugging
+      if (Array.isArray(connections)) {
+        connections.forEach((connection, index) => {
+          console.log(`👥 Connection ${index + 1}:`, {
+            id: connection._id,
+            name: connection.firstName + ' ' + connection.lastName,
+            company: connection.company,
+            jobTitle: connection.jobTitle,
+            mutualConnections: connection.mutualConnections || 0
+          });
+        });
+      }
+      
+      return connections;
+    } catch (error) {
+      console.error('Error fetching suggested connections:', error);
+      
+      // Return empty array instead of mock data to encourage real data usage
+      console.log('👥 No suggested connections available from API, returning empty array');
+      return [];
+    }
+  }
+
+  async sendConnectionRequest(userId: string) {
+    try {
+      console.log('🔗 Sending connection request to user:', userId);
+      const response = await api.post('/connections/request', { recipientId: userId });
+      console.log('🔗 Connection request response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error sending connection request:', error);
+      throw error;
+    }
+  }
+
+  async acceptConnectionRequest(requestId: string) {
+    try {
+      console.log('✅ Accepting connection request:', requestId);
+      const response = await api.post(`/connections/accept/${requestId}`);
+      console.log('✅ Connection acceptance response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error accepting connection request:', error);
+      throw error;
+    }
+  }
+
+  async rejectConnectionRequest(requestId: string) {
+    try {
+      console.log('❌ Rejecting connection request:', requestId);
+      const response = await api.post(`/connections/reject/${requestId}`);
+      console.log('❌ Connection rejection response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error rejecting connection request:', error);
+      throw error;
+    }
+  }
+
+  // Search functionality
+  async searchPosts(query: string) {
+    try {
+      console.log('🔍 Searching posts with query:', query);
+      const response = await api.get(`/posts/search?q=${encodeURIComponent(query)}`);
+      console.log('🔍 Posts search results:', response.data);
+      return response.data.data || response.data || [];
+    } catch (error) {
+      console.error('Error searching posts:', error);
+      return [];
+    }
+  }
+
+  async searchUsers(query: string) {
+    try {
+      console.log('👥 Searching users with query:', query);
+      const response = await api.get(`/users/search?q=${encodeURIComponent(query)}`);
+      console.log('👥 Users search results:', response.data);
+      return response.data.data || response.data || [];
+    } catch (error) {
+      console.error('Error searching users:', error);
+      return [];
+    }
+  }
+
+  async searchJobs(query: string) {
+    try {
+      console.log('💼 Searching jobs with query:', query);
+      const response = await api.get(`/jobs/search?q=${encodeURIComponent(query)}`);
+      console.log('💼 Jobs search results:', response.data);
+      return response.data.data || response.data || [];
+    } catch (error) {
+      console.error('Error searching jobs:', error);
+      return [];
+    }
+  }
+
+  async searchCompanies(query: string) {
+    try {
+      console.log('🏢 Searching companies with query:', query);
+      const response = await api.get(`/companies/search?q=${encodeURIComponent(query)}`);
+      console.log('🏢 Companies search results:', response.data);
+      return response.data.data || response.data || [];
+    } catch (error) {
+      console.error('Error searching companies:', error);
+      return [];
     }
   }
 }

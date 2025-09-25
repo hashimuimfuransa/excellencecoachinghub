@@ -85,6 +85,8 @@ const MobileCreatePost: React.FC<MobileCreatePostProps> = ({
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [showMediaOptions, setShowMediaOptions] = useState(false);
   const [uploadError, setUploadError] = useState<string>('');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState<string>('');
   const [currentStep, setCurrentStep] = useState<'content' | 'media' | 'settings'>('content');
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -94,35 +96,98 @@ const MobileCreatePost: React.FC<MobileCreatePostProps> = ({
     if (!content.trim() && mediaFiles.length === 0) return;
 
     setIsSubmitting(true);
+    setUploadError('');
+    setUploadProgress(0);
+    setUploadStatus('Preparing post...');
+    
     try {
-      // Upload media files first if any
-      const uploadedMediaList = [];
-      for (const mediaFile of mediaFiles) {
-        if (!mediaFile.uploading) {
-          const uploadedMedia = await uploadMediaFile(mediaFile);
-          uploadedMediaList.push(uploadedMedia);
-        }
+      // Create FormData for file uploads
+      const formData = new FormData();
+      formData.append('content', content.trim());
+      
+      // Set post type based on media content
+      if (mediaFiles.length > 0) {
+        const hasVideo = mediaFiles.some(file => file.type === 'video');
+        formData.append('postType', hasVideo ? 'video' : 'image');
+      } else {
+        formData.append('postType', 'text');
+      }
+      
+      formData.append('visibility', visibility);
+      
+      // Add tags if provided
+      if (tags.length > 0) {
+        tags.forEach(tag => formData.append('tags[]', tag));
       }
 
-      const postData: CreatePostData = {
-        content: content.trim(),
-        postType: 'text',
-        visibility,
-        tags: tags.length > 0 ? tags : undefined,
-        media: uploadedMediaList.length > 0 ? uploadedMediaList : undefined,
-      };
+      // Add media files
+      mediaFiles.forEach((mediaFile) => {
+        formData.append('media', mediaFile.file);
+      });
 
-      const createdPost = await socialNetworkService.createPost(postData);
+      console.log('📝 Creating post with:', {
+        content: content.trim(),
+        postType: mediaFiles.length > 0 ? (mediaFiles.some(f => f.type === 'video') ? 'video' : 'image') : 'text',
+        visibility,
+        tags,
+        mediaCount: mediaFiles.length
+      });
+
+      setUploadStatus('Uploading files...');
+      
+      // Create a custom axios instance with progress tracking
+      const axios = (await import('axios')).default;
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/posts/create`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          timeout: 300000, // 5 minutes
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              setUploadProgress(percentCompleted);
+              setUploadStatus(`Uploading... ${percentCompleted}%`);
+            }
+          }
+        }
+      );
+
+      setUploadStatus('Creating post...');
+      const createdPost = response.data.data || response.data;
       onPostCreated?.(createdPost);
       
       // Reset form and close
       handleClose();
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating post:', error);
-      setUploadError('Failed to create post. Please try again.');
+      
+      // Extract error message from response
+      let errorMessage = 'Failed to create post. Please try again.';
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.details) {
+        errorMessage = error.response.data.details;
+      } else if (error.message) {
+        if (error.message.includes('timeout')) {
+          errorMessage = 'Upload timed out. Please try with smaller files or check your connection.';
+        } else if (error.message.includes('Network Error')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setUploadError(errorMessage);
+      setUploadStatus('Upload failed');
     } finally {
       setIsSubmitting(false);
+      setUploadProgress(0);
+      setUploadStatus('');
     }
   };
 
@@ -140,41 +205,22 @@ const MobileCreatePost: React.FC<MobileCreatePostProps> = ({
     onClose();
   };
 
-  const uploadMediaFile = async (mediaFile: MediaFile): Promise<{ type: 'image' | 'video'; url: string; thumbnail?: string }> => {
-    try {
-      setMediaFiles(prev => prev.map(m => 
-        m.url === mediaFile.url ? { ...m, uploading: true, uploadProgress: 0 } : m
-      ));
-
-      const response = await uploadService.uploadFileSimple(mediaFile.file, 'post');
-      
-      setMediaFiles(prev => prev.map(m => 
-        m.url === mediaFile.url ? { ...m, uploading: false, uploadProgress: 100 } : m
-      ));
-
-      return {
-        type: mediaFile.type,
-        url: response.url,
-        thumbnail: mediaFile.thumbnail,
-      };
-    } catch (error) {
-      console.error('Media upload error:', error);
-      return {
-        type: mediaFile.type,
-        url: mediaFile.url,
-        thumbnail: mediaFile.thumbnail,
-      };
-    }
-  };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
     const files = event.target.files;
     if (!files) return;
 
     const maxFiles = 3; // Limit to 3 files for mobile
+    const maxFileSize = 50 * 1024 * 1024; // 50MB limit
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      
+      // Check file size
+      if (file.size > maxFileSize) {
+        setUploadError(`File ${file.name} is too large. Maximum size is 50MB.`);
+        return;
+      }
 
       if (mediaFiles.length >= maxFiles) {
         setUploadError(`Maximum ${maxFiles} files allowed per post.`);
@@ -367,6 +413,25 @@ const MobileCreatePost: React.FC<MobileCreatePostProps> = ({
                   >
                     <Close fontSize="small" />
                   </IconButton>
+                  
+                  {/* File size indicator */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      bottom: 4,
+                      left: 4,
+                      right: 4,
+                      bgcolor: alpha(theme.palette.common.black, 0.7),
+                      color: 'white',
+                      borderRadius: 1,
+                      px: 1,
+                      py: 0.5,
+                      fontSize: '0.7rem',
+                      textAlign: 'center',
+                    }}
+                  >
+                    {(media.file.size / (1024 * 1024)).toFixed(1)} MB
+                  </Box>
                   {media.uploading && (
                     <LinearProgress
                       sx={{
@@ -519,33 +584,68 @@ const MobileCreatePost: React.FC<MobileCreatePostProps> = ({
         </Select>
       </FormControl>
 
-      <FormControl fullWidth>
-        <InputLabel>Visibility</InputLabel>
-        <Select
-          value={visibility}
-          label="Visibility"
-          onChange={(e) => setVisibility(e.target.value as CreatePostData['visibility'])}
-        >
-          <MenuItem value="public">
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Public fontSize="small" />
-              Public
-            </Box>
-          </MenuItem>
-          <MenuItem value="connections">
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Group fontSize="small" />
-              Connections Only
-            </Box>
-          </MenuItem>
-          <MenuItem value="private">
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Lock fontSize="small" />
-              Private
-            </Box>
-          </MenuItem>
-        </Select>
-      </FormControl>
+      {/* Enhanced Visibility Selection */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: 'text.primary' }}>
+          Who can see this post?
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          {[
+            { value: 'public', label: 'Public', icon: <Public />, description: 'Anyone can see this post' },
+            { value: 'connections', label: 'Connections', icon: <Group />, description: 'Only your connections can see this post' },
+            { value: 'private', label: 'Private', icon: <Lock />, description: 'Only you can see this post' }
+          ].map((option) => (
+            <Paper
+              key={option.value}
+              onClick={() => setVisibility(option.value as CreatePostData['visibility'])}
+              sx={{
+                flex: 1,
+                minWidth: 100,
+                p: 2,
+                cursor: 'pointer',
+                border: visibility === option.value ? `2px solid ${theme.palette.primary.main}` : `1px solid ${theme.palette.divider}`,
+                backgroundColor: visibility === option.value ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                  borderColor: theme.palette.primary.main,
+                },
+                borderRadius: 2,
+              }}
+            >
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ 
+                  color: visibility === option.value ? 'primary.main' : 'text.secondary',
+                  transition: 'color 0.3s ease'
+                }}>
+                  {option.icon}
+                </Box>
+                <Typography 
+                  variant="subtitle2" 
+                  sx={{ 
+                    fontWeight: visibility === option.value ? 600 : 500,
+                    color: visibility === option.value ? 'primary.main' : 'text.primary',
+                    textAlign: 'center'
+                  }}
+                >
+                  {option.label}
+                </Typography>
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    color: 'text.secondary',
+                    textAlign: 'center',
+                    fontSize: '0.7rem',
+                    lineHeight: 1.2
+                  }}
+                >
+                  {option.description}
+                </Typography>
+              </Box>
+            </Paper>
+          ))}
+        </Box>
+      </Box>
     </Box>
   );
 
@@ -633,6 +733,34 @@ const MobileCreatePost: React.FC<MobileCreatePostProps> = ({
                 <Public />
               </IconButton>
               <Box sx={{ flexGrow: 1 }} />
+              
+              {/* Upload Progress */}
+              {isSubmitting && (
+                <Box sx={{ width: '100%', mb: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', mr: 1 }}>
+                      {uploadStatus}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 600 }}>
+                      {uploadProgress}%
+                    </Typography>
+                  </Box>
+                  <LinearProgress 
+                    variant="determinate" 
+                    value={uploadProgress} 
+                    sx={{ 
+                      height: 6, 
+                      borderRadius: 3,
+                      backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                      '& .MuiLinearProgress-bar': {
+                        borderRadius: 3,
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      }
+                    }} 
+                  />
+                </Box>
+              )}
+              
               <Button
                 variant="contained"
                 onClick={handleSubmit}
@@ -648,7 +776,7 @@ const MobileCreatePost: React.FC<MobileCreatePostProps> = ({
                   },
                 }}
               >
-                Post
+                {isSubmitting ? 'Posting...' : 'Post'}
               </Button>
             </Stack>
           )}
@@ -661,14 +789,43 @@ const MobileCreatePost: React.FC<MobileCreatePostProps> = ({
               </Button>
               <Box sx={{ flexGrow: 1 }} />
               {currentStep === 'settings' && (
-                <Button
-                  variant="contained"
-                  onClick={handleSubmit}
-                  disabled={!content.trim() && mediaFiles.length === 0}
-                  loading={isSubmitting}
-                >
-                  Post
-                </Button>
+                <>
+                  {/* Upload Progress */}
+                  {isSubmitting && (
+                    <Box sx={{ width: '100%', mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', mr: 1 }}>
+                          {uploadStatus}
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 600 }}>
+                          {uploadProgress}%
+                        </Typography>
+                      </Box>
+                      <LinearProgress 
+                        variant="determinate" 
+                        value={uploadProgress} 
+                        sx={{ 
+                          height: 6, 
+                          borderRadius: 3,
+                          backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                          '& .MuiLinearProgress-bar': {
+                            borderRadius: 3,
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          }
+                        }} 
+                      />
+                    </Box>
+                  )}
+                  
+                  <Button
+                    variant="contained"
+                    onClick={handleSubmit}
+                    disabled={!content.trim() && mediaFiles.length === 0}
+                    loading={isSubmitting}
+                  >
+                    {isSubmitting ? 'Posting...' : 'Post'}
+                  </Button>
+                </>
               )}
             </Stack>
           )}

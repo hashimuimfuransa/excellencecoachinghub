@@ -19,6 +19,7 @@ import {
   useMediaQuery,
   Dialog,
   DialogContent,
+  alpha,
 } from '@mui/material';
 import {
   Favorite,
@@ -42,6 +43,9 @@ import {
   Close,
   PersonAdd,
   Check,
+  ChevronLeft,
+  ChevronRight,
+  FiberManualRecord,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
@@ -73,8 +77,13 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<number | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'connected' | 'loading'>('none');
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartX, setDragStartX] = useState(0);
+  const [dragOffset, setDragOffset] = useState(0);
   const cardRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<{ [key: number]: HTMLVideoElement | null }>({});
+  const mediaContainerRef = useRef<HTMLDivElement>(null);
 
   // Precompute authorId to avoid undefined access
   const authorId = post?.author?._id;
@@ -104,7 +113,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     checkConnectionStatus();
   }, [user?._id, authorId]);
 
-  // Enhanced Intersection Observer for auto-playing videos when scrolled to middle/above
+  // Enhanced Intersection Observer for auto-playing videos when scrolled into view
   useEffect(() => {
     const cardElement = cardRef.current;
     if (!cardElement || !post.media?.some(media => media.type === 'video')) return;
@@ -119,11 +128,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
           const cardCenter = cardTop + (cardHeight / 2);
           const viewportMiddle = viewportHeight / 2;
           
-          // Only auto-play when the card's center is at or above the viewport middle
-          // and when the card is sufficiently visible (at least 60% intersecting)
+          // More generous autoplay conditions for better user experience
+          // Auto-play when card is 50% visible and center is in upper half of viewport
           const shouldAutoPlay = isIntersecting && 
-                                 intersectionRatio >= 0.6 && 
-                                 cardCenter <= viewportMiddle;
+                                 intersectionRatio >= 0.5 && 
+                                 cardCenter <= viewportMiddle + 100; // Allow some buffer
 
           if (shouldAutoPlay) {
             // Card is properly positioned and visible, auto-play first video
@@ -132,21 +141,23 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
               const videoElement = videoRefs.current[firstVideoIndex];
               const videoId = `${post._id}-${firstVideoIndex}`;
               if (videoElement && videoElement.paused) {
-                // Add slight delay to avoid conflicts during rapid scrolling
+                // Reduced delay for more responsive autoplay
                 setTimeout(() => {
                   if (cardRef.current && isElementInOptimalPosition(cardRef.current)) {
+                    console.log(`🎬 Auto-playing video ${videoId} for post ${post._id}`);
                     globalVideo.autoPlayVideo(videoId);
                   }
-                }, 200);
+                }, 100);
               }
             }
-          } else if (!isIntersecting || intersectionRatio < 0.3) {
+          } else if (!isIntersecting || intersectionRatio < 0.2) {
             // Card is out of view or barely visible, pause videos
             post.media?.forEach((media, index) => {
               if (media.type === 'video') {
                 const videoElement = videoRefs.current[index];
                 const videoId = `${post._id}-${index}`;
                 if (videoElement && !videoElement.paused) {
+                  console.log(`⏸️ Auto-pausing video ${videoId} for post ${post._id}`);
                   pauseVideo(videoElement, videoId);
                 }
               }
@@ -156,8 +167,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
       },
       {
         root: null, // Use viewport as root
-        rootMargin: '-10% 0px -10% 0px', // More restrictive margins for better control
-        threshold: [0.3, 0.6, 0.8] // Multiple thresholds for better precision
+        rootMargin: '-5% 0px -5% 0px', // Less restrictive margins for smoother autoplay
+        threshold: [0.2, 0.5, 0.8] // Multiple thresholds for better precision
       }
     );
 
@@ -175,9 +186,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     const cardCenter = rect.top + (rect.height / 2);
     const viewportMiddle = viewportHeight / 2;
     
-    return rect.top >= 0 && 
-           rect.bottom <= viewportHeight && 
-           cardCenter <= viewportMiddle;
+    // More generous positioning for better autoplay experience
+    return rect.top >= -50 && // Allow some buffer above viewport
+           rect.bottom <= viewportHeight + 50 && // Allow some buffer below viewport
+           cardCenter <= viewportMiddle + 150; // Allow more buffer for center positioning
   };
 
   const handleLike = async () => {
@@ -328,49 +340,50 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     }
   };
 
-  // Enhanced video play function with better error handling
+  // Enhanced video play function with better error handling and graceful autoplay
   const playVideo = async (videoElement: HTMLVideoElement, videoId: string) => {
     try {
-      console.log(`Attempting to play video ${videoId}`, videoElement);
+      console.log(`🎬 Attempting to play video ${videoId}`, videoElement);
       
       // Validate video source URL
       const videoSrc = videoElement.src;
       if (!validateVideoUrl(videoSrc)) {
-        console.error(`Invalid video URL for video ${videoId}:`, videoSrc);
+        console.error(`❌ Invalid video URL for video ${videoId}:`, videoSrc);
         globalVideo.updateVideoState(videoId, { playing: false, error: 'Invalid video URL' });
         return;
       }
       
-      // Pause all other videos first
+      // Pause all other videos first for better performance
       globalVideo.pauseAllExcept(videoId);
       
-      // Automatically unmute the video when it starts playing
-      videoElement.muted = false;
-      globalVideo.updateVideoState(videoId, { muted: false });
+      // For autoplay, start muted to comply with browser policies
+      // User can manually unmute if desired
+      videoElement.muted = true;
+      globalVideo.updateVideoState(videoId, { muted: true });
       
       // Ensure video is loaded
       if (videoElement.readyState >= 2) {
         videoElement.currentTime = 0; // Start from beginning
         await videoElement.play();
         globalVideo.updateVideoState(videoId, { playing: true, error: null });
-        console.log(`Video ${videoId} started playing`);
+        console.log(`✅ Video ${videoId} started playing successfully`);
       } else {
-        console.log(`Video ${videoId} not ready, waiting for load...`);
+        console.log(`⏳ Video ${videoId} not ready, waiting for load...`);
         // Wait for video to load
         const loadHandler = async () => {
           try {
             videoElement.currentTime = 0;
             await videoElement.play();
             globalVideo.updateVideoState(videoId, { playing: true, error: null });
-            console.log(`Video ${videoId} started playing after load`);
+            console.log(`✅ Video ${videoId} started playing after load`);
           } catch (error) {
-            console.error(`Error playing video ${videoId} after load:`, error);
+            console.error(`❌ Error playing video ${videoId} after load:`, error);
             globalVideo.updateVideoState(videoId, { playing: false, error: 'Failed to play video' });
           }
         };
         
         const errorHandler = () => {
-          console.error(`Video ${videoId} failed to load`);
+          console.error(`❌ Video ${videoId} failed to load`);
           globalVideo.updateVideoState(videoId, { playing: false, error: 'Failed to load video' });
         };
         
@@ -380,21 +393,21 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
         // Set a timeout for loading
         setTimeout(() => {
           if (videoElement.readyState < 2) {
-            console.warn(`Video ${videoId} loading timeout`);
+            console.warn(`⏰ Video ${videoId} loading timeout`);
             globalVideo.updateVideoState(videoId, { playing: false, error: 'Video loading timeout' });
           }
-        }, 10000); // 10 second timeout
+        }, 8000); // Reduced timeout for better responsiveness
       }
     } catch (error) {
-      console.error(`Error playing video ${videoId}:`, error);
-      // If autoplay is blocked, try with muted
+      console.error(`❌ Error playing video ${videoId}:`, error);
+      // If autoplay is blocked, ensure video is muted and show appropriate state
       videoElement.muted = true;
-      globalVideo.updateVideoState(videoId, { playing: false, muted: true, error: 'Autoplay blocked or error occurred' });
+      globalVideo.updateVideoState(videoId, { playing: false, muted: true, error: 'Autoplay blocked - click to play' });
     }
   };
 
   const pauseVideo = (videoElement: HTMLVideoElement, videoId: string) => {
-    console.log(`Pausing video ${videoId}`);
+    console.log(`⏸️ Pausing video ${videoId}`);
     videoElement.pause();
     globalVideo.updateVideoState(videoId, { playing: false });
   };
@@ -460,39 +473,166 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     return '16/9';
   };
 
-  const renderMediaGallery = () => {
-    if (!post.media || post.media.length === 0) return null;
+  // Touch/Swipe handling for media carousel
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!post.media || post.media.length <= 1) return;
+    setIsDragging(true);
+    setDragStartX(e.touches[0].clientX);
+    setDragOffset(0);
+  };
 
-    const mediaCount = post.media.length;
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || !post.media || post.media.length <= 1) return;
+    const currentX = e.touches[0].clientX;
+    const diff = currentX - dragStartX;
+    setDragOffset(diff);
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDragging || !post.media || post.media.length <= 1) return;
+    
+    // Filter valid media
+    const validMedia = post.media.filter(media => media && (media.url || media.thumbnail));
+    if (validMedia.length <= 1) return;
+    
+    const threshold = 50; // Minimum swipe distance
+    const mediaCount = validMedia.length;
+    
+    if (Math.abs(dragOffset) > threshold) {
+      if (dragOffset > 0) {
+        // Swipe right - go to previous media
+        setCurrentMediaIndex(prev => prev === 0 ? mediaCount - 1 : prev - 1);
+      } else {
+        // Swipe left - go to next media
+        setCurrentMediaIndex(prev => prev === mediaCount - 1 ? 0 : prev + 1);
+      }
+    }
+    
+    setIsDragging(false);
+    setDragOffset(0);
+  };
+
+  // Mouse drag handling for desktop
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!post.media || post.media.length <= 1) return;
+    setIsDragging(true);
+    setDragStartX(e.clientX);
+    setDragOffset(0);
+    e.preventDefault();
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !post.media || post.media.length <= 1) return;
+    const diff = e.clientX - dragStartX;
+    setDragOffset(diff);
+  };
+
+  const handleMouseUp = () => {
+    if (!isDragging || !post.media || post.media.length <= 1) return;
+    
+    // Filter valid media
+    const validMedia = post.media.filter(media => media && (media.url || media.thumbnail));
+    if (validMedia.length <= 1) return;
+    
+    const threshold = 50;
+    const mediaCount = validMedia.length;
+    
+    if (Math.abs(dragOffset) > threshold) {
+      if (dragOffset > 0) {
+        setCurrentMediaIndex(prev => prev === 0 ? mediaCount - 1 : prev - 1);
+      } else {
+        setCurrentMediaIndex(prev => prev === mediaCount - 1 ? 0 : prev + 1);
+      }
+    }
+    
+    setIsDragging(false);
+    setDragOffset(0);
+  };
+
+  // Reset media index when post changes
+  useEffect(() => {
+    setCurrentMediaIndex(0);
+  }, [post._id]);
+
+  const renderMediaGallery = () => {
+    console.log('🎬 PostCard renderMediaGallery - Post:', post._id, 'Media:', post.media);
+    
+    // Check if post has media and it's an array with content
+    if (!post.media || !Array.isArray(post.media) || post.media.length === 0) {
+      console.log('🎬 No media found for post:', post._id);
+      return null;
+    }
+
+    // Filter out any null/undefined media items
+    const validMedia = post.media.filter(media => media && (media.url || media.thumbnail));
+    
+    if (validMedia.length === 0) {
+      console.log('🎬 No valid media found for post:', post._id);
+      return null;
+    }
+
+    const mediaCount = validMedia.length;
+    const currentMedia = validMedia[currentMediaIndex];
+    
+    console.log('🎬 Rendering media gallery:', {
+      postId: post._id,
+      mediaCount,
+      currentIndex: currentMediaIndex,
+      currentMedia
+    });
     
     return (
       <Box sx={{ 
         mb: 2,
         width: '100%',
         maxWidth: '100%',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        position: 'relative'
       }}>
-        {mediaCount === 1 ? (
-          // Single media - full width
+        {/* Media Container with Carousel */}
+        <Box
+          ref={mediaContainerRef}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          sx={{
+            position: 'relative',
+            borderRadius: 2,
+            overflow: 'hidden',
+            backgroundColor: theme.palette.grey[100],
+            aspectRatio: currentMedia?.type === 'video' ? getVideoAspectRatio(currentMedia) : 'auto',
+            maxHeight: { xs: 400, sm: 450, md: 500, lg: 550 },
+            width: '100%',
+            maxWidth: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            cursor: mediaCount > 1 ? 'grab' : 'pointer',
+            userSelect: 'none',
+            transform: isDragging ? `translateX(${dragOffset * 0.1}px)` : 'none',
+            transition: isDragging ? 'none' : 'transform 0.3s ease',
+          }}
+        >
+          {/* Carousel Container - Shows only current media */}
           <Box
             sx={{
               position: 'relative',
-              borderRadius: 2,
-              overflow: 'hidden',
-              backgroundColor: theme.palette.grey[100],
-              aspectRatio: post.media[0].type === 'video' ? getVideoAspectRatio(post.media[0]) : 'auto',
-              maxHeight: { xs: 200, sm: 220, md: 180, lg: 200 }, // Significantly reduced max heights for very compact layout
               width: '100%',
-              maxWidth: '100%',
+              height: '100%',
               display: 'flex',
-              justifyContent: 'center',
               alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            {post.media[0].type === 'image' ? (
+            {/* Current Media Display */}
+            {currentMedia?.type === 'image' ? (
               <img
-                src={post.media[0].url}
-                alt="Post media"
+                src={currentMedia.url}
+                alt={`Post media ${currentMediaIndex + 1}`}
                 style={{
                   width: '100%',
                   height: '100%',
@@ -500,124 +640,82 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                   cursor: 'pointer',
                   backgroundColor: '#000',
                 }}
-                onClick={() => setSelectedMedia(0)}
+                onClick={() => setSelectedMedia(currentMediaIndex)}
               />
             ) : (
               <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
-                <Box sx={{ position: 'relative', height: '100%' }}>
-                  <video
-                    ref={(el) => {
-                      videoRefs.current[0] = el;
-                    }}
-                    src={post.media[0].url}
-                    poster={post.media[0].thumbnail}
-                    playsInline
-                    preload="metadata"
-                    data-video-id={`${post._id}-0`}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'contain',
-                      backgroundColor: '#000',
-                      cursor: 'pointer',
-                    }}
-                    muted={globalVideo.videoStates[`${post._id}-0`]?.muted !== false}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleVideoClick(0, e.target as HTMLVideoElement);
-                    }}
-                    onLoadedMetadata={(e) => {
-                      const video = e.target as HTMLVideoElement;
-                      // Update video dimensions for better aspect ratio handling
-                      if (post.media && post.media[0]) {
-                        post.media[0].width = video.videoWidth;
-                        post.media[0].height = video.videoHeight;
-                      }
-                    }}
-                    onPlay={() => {
-                      const videoId = `${post._id}-0`;
-                      globalVideo.updateVideoState(videoId, { playing: true, error: null });
-                    }}
-                    onPause={() => {
-                      const videoId = `${post._id}-0`;
-                      globalVideo.updateVideoState(videoId, { playing: false });
-                    }}
-                    onEnded={() => {
-                      const videoId = `${post._id}-0`;
-                      globalVideo.updateVideoState(videoId, { playing: false });
-                    }}
-                    onError={(e) => {
-                      console.error(`Video 0 error:`, e);
-                      const videoId = `${post._id}-0`;
-                      globalVideo.updateVideoState(videoId, { playing: false, error: 'Failed to load video' });
-                    }}
-                  />
-                  
-                  {/* Play/Pause Overlay */}
-                  <IconButton
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleVideoToggle(0, 'play');
-                    }}
-                    sx={{
-                      position: 'absolute',
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                      color: 'white',
-                      opacity: globalVideo.videoStates[`${post._id}-0`]?.playing ? 0 : 1,
-                      transition: 'opacity 0.3s ease',
-                      '&:hover': {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        opacity: 1,
-                      },
-                    }}
-                  >
-                    {globalVideo.videoStates[`${post._id}-0`]?.playing ? <Pause fontSize="large" /> : <PlayArrow fontSize="large" />}
-                  </IconButton>
+                <video
+                  ref={(el) => {
+                    videoRefs.current[currentMediaIndex] = el;
+                  }}
+                  src={currentMedia?.url}
+                  poster={currentMedia?.thumbnail}
+                  playsInline
+                  preload="metadata"
+                  data-video-id={`${post._id}-${currentMediaIndex}`}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    backgroundColor: '#000',
+                    cursor: 'pointer',
+                  }}
+                  muted={globalVideo.videoStates[`${post._id}-${currentMediaIndex}`]?.muted !== false}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleVideoClick(currentMediaIndex, e.target as HTMLVideoElement);
+                  }}
+                  onLoadedMetadata={(e) => {
+                    const video = e.target as HTMLVideoElement;
+                    if (currentMedia) {
+                      currentMedia.width = video.videoWidth;
+                      currentMedia.height = video.videoHeight;
+                    }
+                  }}
+                  onPlay={() => {
+                    const videoId = `${post._id}-${currentMediaIndex}`;
+                    globalVideo.updateVideoState(videoId, { playing: true, error: null });
+                  }}
+                  onPause={() => {
+                    const videoId = `${post._id}-${currentMediaIndex}`;
+                    globalVideo.updateVideoState(videoId, { playing: false });
+                  }}
+                  onEnded={() => {
+                    const videoId = `${post._id}-${currentMediaIndex}`;
+                    globalVideo.updateVideoState(videoId, { playing: false });
+                  }}
+                  onError={(e) => {
+                    console.error(`Video ${currentMediaIndex} error:`, e);
+                    const videoId = `${post._id}-${currentMediaIndex}`;
+                    globalVideo.updateVideoState(videoId, { playing: false, error: 'Failed to load video' });
+                  }}
+                />
+                
+                {/* Play/Pause Overlay */}
+                <IconButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleVideoToggle(currentMediaIndex, 'play');
+                  }}
+                  sx={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                    color: '#ffffff',
+                    opacity: globalVideo.videoStates[`${post._id}-${currentMediaIndex}`]?.playing ? 0 : 1,
+                    transition: 'opacity 0.3s ease',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                      opacity: 1,
+                    },
+                  }}
+                >
+                  {globalVideo.videoStates[`${post._id}-${currentMediaIndex}`]?.playing ? <Pause fontSize="large" /> : <PlayArrow fontSize="large" />}
+                </IconButton>
 
-                  {/* Video Controls Overlay */}
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      background: 'linear-gradient(transparent, rgba(0,0,0,0.6))',
-                      padding: 1,
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      opacity: 0,
-                      transition: 'opacity 0.3s ease',
-                      '&:hover': {
-                        opacity: 1,
-                      },
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleVideoToggle(0, 'mute');
-                        }}
-                        sx={{ color: 'white' }}
-                      >
-                        {globalVideo.videoStates[`${post._id}-0`]?.muted !== false ? <VolumeOff /> : <VolumeUp />}
-                      </IconButton>
-                    </Box>
-                    <IconButton
-                      size="small"
-                      onClick={() => setSelectedMedia(0)}
-                      sx={{ color: 'white' }}
-                    >
-                      <Fullscreen />
-                    </IconButton>
-                  </Box>
-                </Box>
-                {/* Enhanced video controls overlay */}
+                {/* Video Controls */}
                 <Box
                   sx={{
                     position: 'absolute',
@@ -631,24 +729,24 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                     size="small"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleVideoToggle(0, 'mute');
+                      handleVideoToggle(currentMediaIndex, 'mute');
                     }}
                     sx={{
                       backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                      color: 'white',
+                      color: '#ffffff',
                       '&:hover': {
                         backgroundColor: 'rgba(0, 0, 0, 0.8)',
                       },
                     }}
                   >
-                    {globalVideo.videoStates[`${post._id}-0`]?.muted !== false ? <VolumeOff /> : <VolumeUp />}
+                    {globalVideo.videoStates[`${post._id}-${currentMediaIndex}`]?.muted !== false ? <VolumeOff /> : <VolumeUp />}
                   </IconButton>
                   <IconButton
                     size="small"
-                    onClick={() => setSelectedMedia(0)}
+                    onClick={() => setSelectedMedia(currentMediaIndex)}
                     sx={{
                       backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                      color: 'white',
+                      color: '#ffffff',
                       '&:hover': {
                         backgroundColor: 'rgba(0, 0, 0, 0.8)',
                       },
@@ -660,381 +758,114 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
               </Box>
             )}
           </Box>
-        ) : (
-          // Multiple media - grid layout
-          <Box sx={{ 
-            display: 'grid', 
-            gap: 1, 
-            borderRadius: 2, 
-            overflow: 'hidden',
-            maxHeight: { xs: 200, sm: 220, md: 150, lg: 180 }, // Constrain gallery height
-          }}>
-            {mediaCount === 2 && (
-              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
-                {post.media.slice(0, 2).map((media, index) => (
-                  <Box
-                    key={index}
-                    sx={{
-                      position: 'relative',
-                      aspectRatio: '1',
-                      backgroundColor: theme.palette.grey[100],
-                      borderRadius: 1,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {media.type === 'image' ? (
-                      <img
-                        src={media.url}
-                        alt={`Post media ${index + 1}`}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'contain',
-                          backgroundColor: '#000',
-                          cursor: 'pointer',
-                        }}
-                        onClick={() => setSelectedMedia(index)}
-                      />
-                    ) : (
-                      <Box sx={{ position: 'relative', height: '100%' }}>
-                        {validateVideoUrl(media.url) ? (
-                          <video
-                            ref={(el) => { videoRefs.current[index] = el; }}
-                            src={media.url}
-                            poster={media.thumbnail}
-                            muted
-                            playsInline
-                            preload="metadata"
-                            data-video-id={`${post._id}-${index}`}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'contain',
-                              backgroundColor: '#000',
-                              cursor: 'pointer',
-                            }}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handleVideoClick(index, e.target as HTMLVideoElement);
-                            }}
-                            onLoadedMetadata={(e) => {
-                              const video = e.target as HTMLVideoElement;
-                              if (media) {
-                                media.width = video.videoWidth;
-                                media.height = video.videoHeight;
-                              }
-                            }}
-                            onPlay={() => {
-                              const videoId = `${post._id}-${index}`;
-                              globalVideo.updateVideoState(videoId, { playing: true, error: null });
-                            }}
-                            onPause={() => {
-                              const videoId = `${post._id}-${index}`;
-                              globalVideo.updateVideoState(videoId, { playing: false });
-                            }}
-                            onEnded={() => {
-                              const videoId = `${post._id}-${index}`;
-                              globalVideo.updateVideoState(videoId, { playing: false });
-                            }}
-                            onError={(e) => {
-                              console.error(`Video ${index} error:`, e);
-                              const videoId = `${post._id}-${index}`;
-                              globalVideo.updateVideoState(videoId, { playing: false, error: 'Failed to load video' });
-                            }}
-                          />
-                        ) : (
-                          <Box
-                            sx={{
-                              width: '100%',
-                              height: '100%',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              backgroundColor: '#000',
-                              color: 'white',
-                              flexDirection: 'column',
-                              gap: 1
-                            }}
-                          >
-                            <Typography variant="body2">Video unavailable</Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              Invalid video URL
-                            </Typography>
-                          </Box>
-                        )}
-                        <IconButton
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleVideoToggle(index, 'play');
-                          }}
-                          sx={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                            color: 'white',
-                            opacity: globalVideo.videoStates[`${post._id}-${index}`]?.playing ? 0 : 1,
-                            transition: 'opacity 0.3s ease',
-                            '&:hover': {
-                              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                              opacity: 1,
-                            },
-                          }}
-                        >
-                          {globalVideo.videoStates[`${post._id}-${index}`]?.playing ? <Pause fontSize="large" /> : <PlayArrow fontSize="large" />}
-                        </IconButton>
-                        
-                        {/* Error overlay */}
-                        {globalVideo.videoStates[`${post._id}-${index}`]?.error && (
-                          <Box
-                            sx={{
-                              position: 'absolute',
-                              bottom: 8,
-                              left: 8,
-                              backgroundColor: 'rgba(255, 0, 0, 0.8)',
-                              color: 'white',
-                              padding: '4px 8px',
-                              borderRadius: 1,
-                              fontSize: '0.75rem',
-                            }}
-                          >
-                            {globalVideo.videoStates[`${post._id}-${index}`]?.error}
-                          </Box>
-                        )}
-                        
-                        {/* Mute/Unmute button for grid videos */}
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleVideoToggle(index, 'mute');
-                          }}
-                          sx={{
-                            position: 'absolute',
-                            bottom: 8,
-                            right: 8,
-                            backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                            color: 'white',
-                            '&:hover': {
-                              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            },
-                          }}
-                        >
-                          {globalVideo.videoStates[`${post._id}-${index}`]?.muted !== false ? <VolumeOff /> : <VolumeUp />}
-                        </IconButton>
-                      </Box>
-                    )}
-                  </Box>
-                ))}
-              </Box>
-            )}
-            
-            {mediaCount >= 3 && (
-              <Box sx={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 1, aspectRatio: '2/1' }}>
-                {/* First large media */}
+
+          {/* Navigation Arrows - Only show if multiple media */}
+          {mediaCount > 1 && (
+            <>
+              <IconButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentMediaIndex(prev => prev === 0 ? mediaCount - 1 : prev - 1);
+                }}
+                sx={{
+                  position: 'absolute',
+                  left: 8,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  color: '#ffffff',
+                  opacity: 0.7,
+                  transition: 'opacity 0.3s ease',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    opacity: 1,
+                  },
+                }}
+              >
+                <ChevronLeft />
+              </IconButton>
+
+              <IconButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentMediaIndex(prev => prev === mediaCount - 1 ? 0 : prev + 1);
+                }}
+                sx={{
+                  position: 'absolute',
+                  right: 8,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  color: '#ffffff',
+                  opacity: 0.7,
+                  transition: 'opacity 0.3s ease',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    opacity: 1,
+                  },
+                }}
+              >
+                <ChevronRight />
+              </IconButton>
+            </>
+          )}
+
+          {/* Media Indicators/Dots */}
+          {mediaCount > 1 && (
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: 12,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                display: 'flex',
+                gap: 1,
+                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                borderRadius: 2,
+                padding: '4px 8px',
+              }}
+            >
+              {post.media.map((_, index) => (
                 <Box
+                  key={index}
+                  onClick={() => setCurrentMediaIndex(index)}
                   sx={{
-                    position: 'relative',
-                    backgroundColor: theme.palette.grey[100],
-                    borderRadius: 1,
-                    overflow: 'hidden',
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: index === currentMediaIndex ? '#ffffff' : alpha('#ffffff', 0.5),
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      backgroundColor: '#ffffff',
+                      transform: 'scale(1.2)',
+                    },
                   }}
-                >
-                  {post.media[0].type === 'image' ? (
-                    <img
-                      src={post.media[0].url}
-                      alt="Post media 1"
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'contain',
-                        backgroundColor: '#000',
-                        cursor: 'pointer',
-                      }}
-                      onClick={() => setSelectedMedia(0)}
-                    />
-                  ) : (
-                    <Box sx={{ position: 'relative', height: '100%' }}>
-                      <video
-                        ref={(el) => { videoRefs.current[0] = el; }}
-                        src={post.media[0].url}
-                        poster={post.media[0].thumbnail}
-                        muted
-                        playsInline
-                        preload="metadata"
-                        data-video-id={`${post._id}-0`}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'contain',
-                          backgroundColor: '#000',
-                          cursor: 'pointer',
-                        }}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleVideoClick(0, e.target as HTMLVideoElement);
-                        }}
-                        onLoadedMetadata={(e) => {
-                          const video = e.target as HTMLVideoElement;
-                          if (post.media && post.media[0]) {
-                            post.media[0].width = video.videoWidth;
-                            post.media[0].height = video.videoHeight;
-                          }
-                        }}
-                        onPlay={() => {
-                          const videoId = `${post._id}-0`;
-                          globalVideo.updateVideoState(videoId, { playing: true, error: null });
-                        }}
-                        onPause={() => {
-                          const videoId = `${post._id}-0`;
-                          globalVideo.updateVideoState(videoId, { playing: false });
-                        }}
-                        onEnded={() => {
-                          const videoId = `${post._id}-0`;
-                          globalVideo.updateVideoState(videoId, { playing: false });
-                        }}
-                        onError={(e) => {
-                          console.error(`Video 0 error:`, e);
-                          const videoId = `${post._id}-0`;
-                          globalVideo.updateVideoState(videoId, { playing: false, error: 'Failed to load video' });
-                        }}
-                      />
-                      <IconButton
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleVideoToggle(0, 'play');
-                        }}
-                        sx={{
-                          position: 'absolute',
-                          top: '50%',
-                          left: '50%',
-                          transform: 'translate(-50%, -50%)',
-                          backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                          color: 'white',
-                          opacity: globalVideo.videoStates[`${post._id}-0`]?.playing ? 0 : 1,
-                          transition: 'opacity 0.3s ease',
-                          '&:hover': {
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            opacity: 1,
-                          },
-                        }}
-                      >
-                        {globalVideo.videoStates[`${post._id}-0`]?.playing ? <Pause fontSize="large" /> : <PlayArrow fontSize="large" />}
-                      </IconButton>
-                    </Box>
-                  )}
-                </Box>
-                
-                {/* Smaller media grid */}
-                <Box sx={{ display: 'grid', gridTemplateRows: '1fr 1fr', gap: 1 }}>
-                  {post.media.slice(1, 3).map((media, index) => (
-                    <Box
-                      key={index + 1}
-                      sx={{
-                        position: 'relative',
-                        backgroundColor: theme.palette.grey[100],
-                        borderRadius: 1,
-                        overflow: 'hidden',
-                      }}
-                    >
-                      {media.type === 'image' ? (
-                        <img
-                          src={media.url}
-                          alt={`Post media ${index + 2}`}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'contain',
-                            backgroundColor: '#000',
-                            cursor: 'pointer',
-                          }}
-                          onClick={() => setSelectedMedia(index + 1)}
-                        />
-                      ) : (
-                        <Box sx={{ position: 'relative', height: '100%' }}>
-                          <video
-                            ref={(el) => { videoRefs.current[index + 1] = el; }}
-                            src={media.url}
-                            poster={media.thumbnail}
-                            muted
-                            playsInline
-                            preload="metadata"
-                            data-video-id={`${post._id}-${index + 1}`}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover',
-                              cursor: 'pointer',
-                            }}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handleVideoClick(index + 1, e.target as HTMLVideoElement);
-                            }}
-                            onPlay={() => {
-                              const videoId = `${post._id}-${index + 1}`;
-                              globalVideo.updateVideoState(videoId, { playing: true, error: null });
-                            }}
-                            onPause={() => {
-                              const videoId = `${post._id}-${index + 1}`;
-                              globalVideo.updateVideoState(videoId, { playing: false });
-                            }}
-                            onEnded={() => {
-                              const videoId = `${post._id}-${index + 1}`;
-                              globalVideo.updateVideoState(videoId, { playing: false });
-                            }}
-                            onError={(e) => {
-                              console.error(`Video ${index + 1} error:`, e);
-                              const videoId = `${post._id}-${index + 1}`;
-                              globalVideo.updateVideoState(videoId, { playing: false, error: 'Failed to load video' });
-                            }}
-                          />
-                          <IconButton
-                            onClick={() => setSelectedMedia(index + 1)}
-                            sx={{
-                              position: 'absolute',
-                              top: '50%',
-                              left: '50%',
-                              transform: 'translate(-50%, -50%)',
-                              backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                              color: 'white',
-                              fontSize: '1.2rem',
-                            }}
-                          >
-                            <PlayArrow />
-                          </IconButton>
-                        </Box>
-                      )}
-                      
-                      {/* Show "+X more" overlay for the last visible item if there are more media */}
-                      {index === 1 && mediaCount > 3 && (
-                        <Box
-                          onClick={() => setSelectedMedia(index + 1)}
-                          sx={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <Typography variant="h6" sx={{ color: 'white', fontWeight: 700 }}>
-                            +{mediaCount - 3} more
-                          </Typography>
-                        </Box>
-                      )}
-                    </Box>
-                  ))}
-                </Box>
-              </Box>
-            )}
-          </Box>
-        )}
+                />
+              ))}
+            </Box>
+          )}
+
+          {/* Media Counter */}
+          {mediaCount > 1 && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 12,
+                right: 12,
+                backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                color: '#ffffff',
+                px: 1.5,
+                py: 0.5,
+                borderRadius: 1,
+                fontSize: '0.75rem',
+                fontWeight: 600,
+              }}
+            >
+              {currentMediaIndex + 1} / {mediaCount}
+            </Box>
+          )}
+        </Box>
       </Box>
     );
   };
@@ -1205,7 +1036,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
               size="small"
               sx={{
                 backgroundColor: getPostTypeColor(post.postType || 'text'),
-                color: 'white',
+                color: '#ffffff',
                 fontWeight: 600,
                 fontSize: '0.75rem'
               }}
@@ -1466,7 +1297,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                   right: 16,
                   zIndex: 1,
                   backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  color: 'white',
+                  color: '#ffffff',
                   '&:hover': {
                     backgroundColor: 'rgba(255, 255, 255, 0.2)',
                   }
@@ -1519,7 +1350,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                       top: '50%',
                       transform: 'translateY(-50%)',
                       backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      color: 'white',
+                      color: '#ffffff',
                       '&:hover': {
                         backgroundColor: 'rgba(255, 255, 255, 0.2)',
                       }
@@ -1536,7 +1367,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                       top: '50%',
                       transform: 'translateY(-50%)',
                       backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      color: 'white',
+                      color: '#ffffff',
                       '&:hover': {
                         backgroundColor: 'rgba(255, 255, 255, 0.2)',
                       }
@@ -1553,7 +1384,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                       left: '50%',
                       transform: 'translateX(-50%)',
                       backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                      color: 'white',
+                      color: '#ffffff',
                       px: 2,
                       py: 1,
                       borderRadius: 1,

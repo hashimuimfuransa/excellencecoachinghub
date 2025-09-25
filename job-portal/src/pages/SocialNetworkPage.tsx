@@ -16,28 +16,31 @@ import {
   IconButton,
   Divider,
   Stack,
+  Badge,
   alpha,
   Chip,
-  Fab,
-  AvatarGroup,
-  styled,
-  CardMedia,
-  CardActions,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Drawer,
   List,
   ListItem,
+  ListItemButton,
+  ListItemIcon,
   ListItemText,
-  ListItemAvatar,
+  AppBar,
+  Toolbar,
+  InputBase,
+  Menu,
+  MenuItem,
+  AvatarGroup,
+  styled,
   Skeleton,
 } from '@mui/material';
 import {
   Add,
+  Search,
   Home,
   People,
+  Notifications,
+  Chat,
   Bookmark,
   TrendingUp,
   Camera,
@@ -46,6 +49,9 @@ import {
   Article,
   Poll,
   Event,
+  Business,
+  School,
+  Work,
   LocationOn,
   MoreVert,
   Share,
@@ -53,491 +59,428 @@ import {
   ThumbUp,
   Send,
   Close,
+  Menu as MenuIcon,
   Groups,
   PersonAdd,
   CameraAlt,
   VideoLibrary,
   EmojiEmotions,
+  Gif,
   AttachFile,
   Public,
+  Lock,
+  Group,
+  Language,
   AccessTime,
   Star,
   Verified,
-  FavoriteBorder,
-  Favorite,
-  ShareOutlined,
-  ChatBubbleOutline,
-  MoreHoriz,
-  AddCircleOutline,
-  PlayCircleOutline,
-  AccountCircle,
   Settings,
-  Logout,
-  WorkOutline,
-  SchoolOutlined,
-  PlaceOutlined,
-  CalendarTodayOutlined,
-  LinkOutlined,
-  ExpandMore,
-  ExpandLess,
-  BusinessCenter,
-  Assessment,
-  QuestionAnswer,
-  EmojiEvents,
-  Psychology,
-  Assignment,
-  Build,
-  TrendingUpOutlined,
-  VolumeOff,
-  VolumeUp,
+  Help,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { SocialPost } from '../types/social';
-import { formatDistanceToNow } from 'date-fns';
 import { socialNetworkService } from '../services/socialNetworkService';
+import MobileFooterNavbar from '../components/MobileFooterNavbar';
+import PostCard from '../components/social/PostCard';
+import MobileCreatePost from '../components/social/MobileCreatePost';
 import CreateStory from '../components/social/CreateStory';
-import StoryViewer from '../components/social/StoryViewer';
-import StoryReviewInterface from '../components/social/StoryReviewInterface';
-import { enhancedStoryService } from '../services/enhancedStoryService';
+import { formatDistanceToNow } from 'date-fns';
 
-// Modern Instagram-like Post Card with improved sizing and layout
-
-const InstagramPostCard = styled(Card)(({ theme }) => ({
-  marginBottom: theme.spacing(2),
-  borderRadius: 12,
-  backgroundColor: theme.palette.background.paper,
-  boxShadow: theme.palette.mode === 'dark' 
-    ? '0 2px 8px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.2)' 
-    : '0 2px 8px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.1)',
-  border: theme.palette.mode === 'dark' 
-    ? `1px solid ${alpha(theme.palette.divider, 0.08)}`
-    : `1px solid ${alpha(theme.palette.divider, 0.05)}`,
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  overflow: 'hidden',
+// Styled components for modern design
+const StyledSearchBar = styled(Paper)(({ theme }) => ({
+  padding: '8px 16px',
+  display: 'flex',
+  alignItems: 'center',
   width: '100%',
-  maxWidth: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  
-  '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: theme.palette.mode === 'dark' 
-      ? '0 8px 25px rgba(0,0,0,0.25), 0 4px 10px rgba(0,0,0,0.3)' 
-      : '0 8px 25px rgba(0,0,0,0.12), 0 4px 10px rgba(0,0,0,0.15)',
-  },
-  
-  '& .MuiCardContent-root': {
-    padding: 0,
-    '&:last-child': {
-      paddingBottom: 0,
-    },
-  },
-}));
-
-// Instagram-like content container
-const PostContentContainer = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  flexDirection: 'column',
-  width: '100%',
-}));
-
-// Post header styling
-const PostHeader = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  padding: theme.spacing(1.5, 2),
-  borderBottom: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
-  
-  [theme.breakpoints.up('md')]: {
-    padding: theme.spacing(2, 2.5),
-  },
-}));
-
-// Post media container
-const PostMediaContainer = styled(Box)(({ theme }) => ({
-  position: 'relative',
-  width: '100%',
-  maxHeight: '500px',
-  overflow: 'hidden',
-  backgroundColor: theme.palette.mode === 'dark' ? '#0a0a0a' : '#fafafa',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  
-  [theme.breakpoints.up('md')]: {
-    maxHeight: '600px',
-  },
-}));
-
-// Post text content
-const PostTextContent = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(1.5, 2),
-  
-  [theme.breakpoints.up('md')]: {
-    padding: theme.spacing(2, 2.5),
-  },
-  
-  '& .MuiTypography-body1': {
-    fontSize: '0.9rem',
-    lineHeight: 1.5,
-  },
-}));
-
-// Post actions (like, comment, share)
-const PostActions = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: theme.spacing(1, 2),
-  borderTop: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
-  
-  [theme.breakpoints.up('md')]: {
-    padding: theme.spacing(1.5, 2.5),
-  },
-}));
-
-// Legacy support - keeping UniversalPostCard for backwards compatibility
-const UniversalPostCard = InstagramPostCard;
-
-// Content wrapper for ensuring uniform content display
-const PostContentWrapper = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  flexDirection: 'column',
-  flex: 1,
-  minHeight: 0, // Allow flex shrinking
-  
-  '& .post-media-section': {
-    flex: '0 0 auto', // Don't grow/shrink, but allow wrapping
-    minHeight: '200px', // Minimum height for media section
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    
-    [theme.breakpoints.down('md')]: {
-      minHeight: '180px',
-    },
-    [theme.breakpoints.down('sm')]: {
-      minHeight: '160px',
-    },
-  },
-  
-  '& .post-text-section': {
-    flex: '1 1 auto', // Grow to fill available space
-    minHeight: '120px', // Minimum height for text content
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'flex-start',
-    
-    [theme.breakpoints.down('md')]: {
-      minHeight: '100px',
-    },
-    [theme.breakpoints.down('sm')]: {
-      minHeight: '80px',
-    },
-  },
-}));
-
-const SidebarCard = styled(Card)(({ theme }) => ({
-  marginBottom: theme.spacing(1.2),
-  borderRadius: 16,
-  backgroundColor: theme.palette.background.paper,
-  border: `1px solid ${alpha(theme.palette.divider, 0.06)}`,
-  position: 'sticky',
-  top: theme.spacing(8),
-  boxShadow: theme.palette.mode === 'dark' 
-    ? '0 4px 12px rgba(0,0,0,0.15)' 
-    : '0 2px 8px rgba(0,0,0,0.08)',
-  backdropFilter: 'blur(10px)',
-  transition: 'all 0.3s ease',
-  '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: theme.palette.mode === 'dark' 
-      ? '0 6px 16px rgba(0,0,0,0.2)' 
-      : '0 4px 12px rgba(0,0,0,0.12)',
-  },
-  '& .MuiCardContent-root': {
-    padding: `${theme.spacing(1.2)} ${theme.spacing(1.5)}`,
-    '&:last-child': {
-      paddingBottom: theme.spacing(1.2),
-    },
-  },
-}));
-
-const StoryContainer = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  gap: theme.spacing(1.5),
-  padding: theme.spacing(2),
-  overflowX: 'auto',
-  scrollBehavior: 'smooth',
-  '&::-webkit-scrollbar': {
-    height: 4,
-  },
-  '&::-webkit-scrollbar-thumb': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.3),
-    borderRadius: 2,
-    '&:hover': {
-      backgroundColor: alpha(theme.palette.primary.main, 0.5),
-    },
-  },
-  '&::-webkit-scrollbar-track': {
-    backgroundColor: alpha(theme.palette.divider, 0.1),
-    borderRadius: 2,
-  },
-}));
-
-const StoryCircle = styled(Box)(({ theme }) => ({
-  width: 70,
-  height: 70,
-  borderRadius: '50%',
-  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-  padding: 3,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  cursor: 'pointer',
-  flexShrink: 0,
-  position: 'relative',
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  '&:hover': {
-    transform: 'scale(1.05)',
-    boxShadow: `0 8px 25px ${alpha(theme.palette.primary.main, 0.3)}`,
-  },
-  '&.viewed': {
-    background: 'linear-gradient(135deg, #bdc3c7 0%, #2c3e50 100%)',
-    opacity: 0.7,
-  },
-  '&.new-story': {
-    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-    animation: 'pulse 2s infinite',
-  },
-  '@keyframes pulse': {
-    '0%': {
-      boxShadow: `0 0 0 0 ${alpha(theme.palette.primary.main, 0.7)}`,
-    },
-    '70%': {
-      boxShadow: `0 0 0 10px ${alpha(theme.palette.primary.main, 0)}`,
-    },
-    '100%': {
-      boxShadow: `0 0 0 0 ${alpha(theme.palette.primary.main, 0)}`,
-    },
-  },
-}));
-
-const CreatePostButton = styled(Button)(({ theme }) => ({
-  justifyContent: 'flex-start',
+  maxWidth: 400,
   borderRadius: 25,
-  padding: '12px 20px',
-  color: theme.palette.text.secondary,
-  textTransform: 'none',
-  fontSize: '1rem',
-  backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : '#f0f2f5',
-  border: 'none',
-  position: 'relative',
-  overflow: 'hidden',
-  '&:hover': {
-    backgroundColor: theme.palette.mode === 'dark' ? '#333' : '#e4e6ea',
-    border: 'none',
-  },
-  '&::before': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: '-100%',
-    width: '100%',
-    height: '100%',
-    background: `linear-gradient(90deg, transparent, ${alpha(theme.palette.primary.main, 0.1)}, transparent)`,
-    transition: 'left 0.5s ease',
-  },
-  '&:hover::before': {
-    left: '100%',
-  },
-}));
-
-const FloatingCreateButton = styled(Fab)(({ theme }) => ({
-  position: 'fixed',
-  bottom: theme.spacing(10),
-  right: theme.spacing(3),
-  zIndex: 1000,
-  background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-  '&:hover': {
-    background: `linear-gradient(45deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
-    transform: 'scale(1.05)',
-  },
-}));
-
-const EngagementButton = styled(IconButton)(({ theme }) => ({
-  borderRadius: 12,
-  padding: theme.spacing(1, 2),
-  transition: 'all 0.2s ease-in-out',
-  '&:hover': {
-    backgroundColor: alpha(theme.palette.primary.main, 0.1),
-    transform: 'scale(1.02)',
-  },
-}));
-
-const QuickActionCard = styled(Card)(({ theme }) => ({
-  borderRadius: 20,
-  backgroundColor: theme.palette.background.paper,
-  border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
-  cursor: 'pointer',
-  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-  position: 'relative',
-  overflow: 'hidden',
+  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+  boxShadow: theme.palette.mode === 'dark' 
+    ? '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)' 
+    : '0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+  border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
   backdropFilter: 'blur(10px)',
-  '&:hover': {
-    transform: 'translateY(-6px) scale(1.02)',
-    boxShadow: theme.palette.mode === 'dark' 
-      ? '0 12px 35px rgba(0,0,0,0.3), 0 4px 15px rgba(0,0,0,0.2)' 
-      : '0 8px 30px rgba(0,0,0,0.12), 0 4px 15px rgba(0,0,0,0.08)',
-    '& .action-icon': {
-      transform: 'scale(1.15) rotate(5deg)',
-    },
-    '& .action-glow': {
-      opacity: 0.1,
-    },
-  },
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  position: 'relative',
+  overflow: 'hidden',
   '&::before': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 4,
-    background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-    borderRadius: '20px 20px 0 0',
-  },
-  '&::after': {
     content: '""',
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.02)}, ${alpha(theme.palette.secondary.main, 0.02)})`,
+    background: theme.palette.mode === 'dark' 
+      ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(33, 150, 243, 0.03) 100%)'
+      : 'linear-gradient(135deg, rgba(76, 175, 80, 0.02) 0%, rgba(33, 150, 243, 0.01) 100%)',
     opacity: 0,
     transition: 'opacity 0.3s ease',
-    borderRadius: 20,
+    zIndex: 0,
   },
-  '&:hover::after': {
-    opacity: 1,
-  },
-}));
-
-const ActionButton = styled(Button)(({ theme }) => ({
-  borderRadius: 12,
-  padding: theme.spacing(1.5, 2),
-  textTransform: 'none',
-  fontSize: '0.875rem',
-  fontWeight: 600,
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  border: `1px solid ${alpha(theme.palette.divider, 0.12)}`,
-  background: alpha(theme.palette.background.paper, 0.8),
-  backdropFilter: 'blur(10px)',
-  position: 'relative',
-  overflow: 'hidden',
   '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: `0 4px 20px ${alpha(theme.palette.primary.main, 0.25)}`,
-    borderColor: theme.palette.primary.main,
-    '& .MuiButton-startIcon': {
-      transform: 'scale(1.2)',
+    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)',
+    transform: 'translateY(-1px)',
+    boxShadow: theme.palette.mode === 'dark' 
+      ? '0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15)' 
+      : '0 4px 16px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
+    border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+    '&::before': {
+      opacity: 1,
     },
   },
-  '&::before': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: '-100%',
-    width: '100%',
-    height: '100%',
-    background: `linear-gradient(90deg, transparent, ${alpha(theme.palette.primary.main, 0.1)}, transparent)`,
-    transition: 'left 0.5s ease',
-  },
-  '&:hover::before': {
-    left: '100%',
+  '&:focus-within': {
+    backgroundColor: theme.palette.background.paper,
+    boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.2)}, 0 4px 20px rgba(76, 175, 80, 0.15)`,
+    border: `2px solid ${theme.palette.primary.main}`,
+    transform: 'translateY(-2px)',
+    '&::before': {
+      opacity: 1,
+    },
   },
 }));
 
-interface SocialNetworkPageProps {}
+const StoryAvatar = styled(Avatar)(({ theme }) => ({
+  width: 60,
+  height: 60,
+  border: `3px solid ${theme.palette.primary.main}`,
+  cursor: 'pointer',
+  transition: 'transform 0.2s ease-in-out',
+  '&:hover': {
+    transform: 'scale(1.05)',
+  },
+}));
 
-const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
+const StyledPostCard = styled(Card)(({ theme }) => ({
+  marginBottom: theme.spacing(2),
+  borderRadius: 12,
+  backgroundColor: theme.palette.background.paper,
+  boxShadow: theme.palette.mode === 'dark' 
+    ? '0 2px 8px rgba(0,0,0,0.3)' 
+    : '0 1px 3px rgba(0,0,0,0.12)',
+  border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+  transition: 'box-shadow 0.2s ease-in-out',
+  '&:hover': {
+    boxShadow: theme.palette.mode === 'dark' 
+      ? '0 4px 20px rgba(0,0,0,0.4)' 
+      : '0 2px 8px rgba(0,0,0,0.15)',
+  },
+}));
+
+const SidebarCard = styled(Card)(({ theme }) => ({
+  marginBottom: theme.spacing(2),
+  borderRadius: 12,
+  backgroundColor: theme.palette.background.paper,
+  border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+  position: 'sticky',
+  top: theme.spacing(2),
+}));
+
+interface ModernSocialNetworkPageProps {}
+
+const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { user } = useAuth();
   
   // Responsive breakpoints
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const isSmallTablet = useMediaQuery(theme.breakpoints.between('md', 'lg')); // 768px to 1200px
-  const isLargeTablet = useMediaQuery(theme.breakpoints.between('lg', 'xl')); // 1200px to 1536px
-  const isDesktop = useMediaQuery(theme.breakpoints.up('xl')); // 1536px+
+  const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
+  const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
 
   // State management
   const [posts, setPosts] = useState<SocialPost[]>([]);
-  const [stories, setStories] = useState<any[]>([]);
-  const [suggestedConnections, setSuggestedConnections] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [storiesLoading, setStoriesLoading] = useState(false);
-  const [connectionsLoading, setConnectionsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState('home');
-  const [expandedPost, setExpandedPost] = useState<string | null>(null);
-  
-  // Video modal state
-  const [showVideoModal, setShowVideoModal] = useState(false);
-  const [selectedVideo, setSelectedVideo] = useState<{ url: string; title?: string } | null>(null);
-  
-  // Video playback state - Initialize all videos as muted for auto-play compatibility
-  const [mutedVideos, setMutedVideos] = useState<Set<string>>(new Set());
-  const [playingVideos, setPlayingVideos] = useState<Set<string>>(new Set());
-  
-  // Create post form state
-  const [postContent, setPostContent] = useState('');
-  const [postMedia, setPostMedia] = useState<File[]>([]);
-  const [postTags, setPostTags] = useState<string>('');
-  const [isPosting, setIsPosting] = useState(false);
-  
-  // Comment state
-  const [showCommentDialog, setShowCommentDialog] = useState(false);
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
-  const [commentContent, setCommentContent] = useState('');
-  const [isCommenting, setIsCommenting] = useState(false);
-  
-  // Story state
+  const [stories, setStories] = useState<any[]>([]);
+  const [storiesLoading, setStoriesLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [showCreateStory, setShowCreateStory] = useState(false);
-  const [showStoryViewer, setShowStoryViewer] = useState(false);
-  const [selectedStoryIndex, setSelectedStoryIndex] = useState(0);
-  const [storyViewerStories, setStoryViewerStories] = useState<any[]>([]);
-  const [showStoryReview, setShowStoryReview] = useState(false);
+  const [suggestedConnections, setSuggestedConnections] = useState<any[]>([]);
+  const [connectionsLoading, setConnectionsLoading] = useState(false);
 
-  // Sample modern posts data
+  // Load posts and stories on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+    setLoading(true);
+    setError(null);
+        
+        // Load posts
+        const postsData = await socialNetworkService.getFeed();
+        setPosts(Array.isArray(postsData) ? postsData : postsData.data || []);
+        
+        // Load stories (with better error handling and fallback data)
+        setStoriesLoading(true);
+        try {
+          const storiesData = await socialNetworkService.getStoriesFeed();
+          console.log('📚 Stories data received:', storiesData);
+          
+          // Handle different response formats
+          let stories = [];
+          if (Array.isArray(storiesData)) {
+            stories = storiesData;
+          } else if (storiesData && storiesData.data) {
+            stories = Array.isArray(storiesData.data) ? storiesData.data : [];
+          }
+          
+          // Add fallback stories if none exist
+          if (stories.length === 0) {
+            console.log('📚 No stories found, adding fallback data');
+            stories = [
+              {
+                _id: 'fallback-1',
+                title: 'Welcome to ExJobNet!',
+                content: 'Share your professional journey and connect with others in your field.',
+                type: 'announcement',
+                author: {
+                  _id: 'system',
+                  firstName: 'ExJobNet',
+                  lastName: 'Team',
+                  profilePicture: '',
+                  jobTitle: 'Career Platform'
+                },
+                createdAt: new Date().toISOString(),
+                isActive: true,
+                hasStory: true
+              }
+            ];
+          }
+          
+          setStories(stories);
+          console.log('📚 Stories set:', stories.length);
+        } catch (storiesError) {
+          console.error('Error loading stories:', storiesError);
+          // Set fallback stories on error
+          setStories([
+            {
+              _id: 'fallback-error',
+              title: 'Welcome to ExJobNet!',
+              content: 'Share your professional journey and connect with others in your field.',
+              type: 'announcement',
+              author: {
+                _id: 'system',
+                firstName: 'ExJobNet',
+                lastName: 'Team',
+                profilePicture: '',
+                jobTitle: 'Career Platform'
+              },
+              createdAt: new Date().toISOString(),
+              isActive: true,
+              hasStory: true
+            }
+          ]);
+        } finally {
+          setStoriesLoading(false);
+        }
+        
+        // Load suggested connections
+    setConnectionsLoading(true);
+    try {
+          const connectionsData = await socialNetworkService.getSuggestedConnections();
+          setSuggestedConnections(Array.isArray(connectionsData) ? connectionsData : connectionsData.data || []);
+        } catch (connectionsError) {
+          console.error('Error loading suggested connections:', connectionsError);
+          setSuggestedConnections([]);
+    } finally {
+      setConnectionsLoading(false);
+    }
+        
+      } catch (err) {
+        console.error('Error loading data:', err);
+        setError('Failed to load posts. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Handler functions
+  const handleConnect = async (userId: string) => {
+    try {
+      console.log('🔗 Sending connection request to:', userId);
+      await socialNetworkService.sendConnectionRequest(userId);
+      
+      // Remove from suggestions after successful request
+      setSuggestedConnections(prev => prev.filter(conn => conn._id !== userId));
+      
+      // Show success message (you could add a snackbar here)
+      console.log('✅ Connection request sent successfully');
+    } catch (error) {
+      console.error('❌ Error sending connection request:', error);
+      // You could show an error message to the user here
+    }
+  };
+
+  const handleTopicClick = (topic: string) => {
+    console.log('🏷️ Topic clicked:', topic);
+    // TODO: Implement topic filtering or navigation
+    // This could filter posts by the selected topic
+  };
+
+  const handleFeelingActivity = () => {
+    console.log('😊 Feeling/Activity clicked');
+    // TODO: Implement feeling/activity selection
+    // This could open a modal with activity options
+    setShowCreatePost(true);
+  };
+
+  const handleLiveVideo = () => {
+    console.log('📹 Live Video clicked');
+    // TODO: Implement live video functionality
+    // This could start a live video stream or open live video options
+    alert('Live video feature coming soon!');
+  };
+
+  const handleFindJobs = () => {
+    console.log('💼 Find Jobs clicked');
+    navigate('/app/jobs');
+  };
+
+  const handleInterviewPrep = () => {
+    console.log('🎓 Interview Preparation clicked');
+    navigate('/interview-prep');
+  };
+
+  const handleNetworking = () => {
+    console.log('🤝 Networking clicked');
+    navigate('/connections');
+  };
+
+  const handleEvents = () => {
+    console.log('📅 Events clicked');
+    navigate('/events');
+  };
+
+  const handleArticles = () => {
+    console.log('📰 Articles clicked');
+    navigate('/articles');
+  };
+
+  const handlePoll = () => {
+    console.log('📊 Poll clicked');
+    // TODO: Implement poll creation
+    alert('Poll feature coming soon!');
+  };
+
+  const handleBusiness = () => {
+    console.log('🏢 Business clicked');
+    navigate('/business');
+  };
+
+  const handlePsychometricTests = () => {
+    console.log('🧠 Psychometric Tests clicked');
+    navigate('/psychometric-tests');
+  };
+
+  const handleProfile = () => {
+    console.log('👤 Profile clicked');
+    navigate('/app/profile');
+  };
+
+  const handleSettings = () => {
+    console.log('⚙️ Settings clicked');
+    navigate('/settings');
+  };
+
+  const handleHelp = () => {
+    console.log('❓ Help clicked');
+    navigate('/help');
+  };
+
+  const handleViewStory = (story: any) => {
+    console.log('📖 Viewing story:', story);
+    // TODO: Implement story viewing functionality
+    // This could open a story viewer modal or navigate to a story page
+    alert(`Viewing story: ${story.title || 'Untitled Story'}`);
+  };
+
+  const handleInternships = () => {
+    console.log('🎓 Internships clicked');
+    navigate('/app/internships');
+  };
+
+  const handleApplications = () => {
+    console.log('📋 Applications clicked');
+    navigate('/app/applications');
+  };
+
+  const handleCareerGuidance = () => {
+    console.log('🎯 Career Guidance clicked');
+    navigate('/app/career-guidance');
+  };
+
+  const handleLearning = () => {
+    console.log('📚 Learning clicked');
+    navigate('/app/learning');
+  };
+
+  const handleSaved = () => {
+    console.log('💾 Saved clicked');
+    navigate('/app/saved');
+  };
+
+  const handleSmartExams = () => {
+    console.log('🧠 Smart Exams clicked');
+    navigate('/app/smart-exams');
+  };
+
+  const handleCVBuilder = () => {
+    console.log('📄 CV Builder clicked');
+    navigate('/app/cv-builder');
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchValue(value);
+  };
+
+  const handleSearchClick = () => {
+    console.log('🔍 Search clicked, navigating to search page...');
+    // Navigate to dedicated search page with current search value
+    const searchQuery = searchValue.trim();
+    if (searchQuery) {
+      console.log('🔍 Navigating to search page with query:', searchQuery);
+      navigate(`/app/search?q=${encodeURIComponent(searchQuery)}`);
+    } else {
+      console.log('🔍 Navigating to search page');
+      navigate('/app/search');
+    }
+  };
+
+  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      console.log('🔍 Enter pressed, navigating to search page...');
+      handleSearchClick();
+    }
+  };
+
+  // Sample posts data with modern structure
   const samplePosts: SocialPost[] = [
     {
       _id: '1',
       author: {
         _id: '1',
-        firstName: 'Alexandra',
-        lastName: 'Thompson',
-        profilePicture: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
-        jobTitle: 'Senior Product Designer at Meta',
+        firstName: 'John',
+        lastName: 'Doe',
+        profilePicture: '',
+        jobTitle: 'Software Engineer at Google',
       },
-      content: '🎉 Thrilled to share that our design system update has improved user engagement by 40%! Here\'s what we learned:\n\n✨ Consistency builds trust\n🎯 User feedback is gold\n🚀 Iterate fast, learn faster\n\nSpecial thanks to our amazing team who made this possible. The future of design is collaborative! 💙\n\n#ProductDesign #DesignSystem #UserExperience #Meta #TeamWork',
-      tags: ['ProductDesign', 'DesignSystem', 'UserExperience', 'Meta', 'TeamWork'],
+      content: '🚀 Excited to share that I just completed my first full-stack project using React, Node.js, and MongoDB! The journey was challenging but incredibly rewarding. Here are some key learnings:\n\n✅ Planning is crucial\n✅ Break down complex problems\n✅ Don\'t be afraid to ask for help\n\nLooking forward to applying these skills in new opportunities! #webdevelopment #react #nodejs #coding',
+      tags: ['webdevelopment', 'react', 'nodejs', 'coding'],
       postType: 'text',
-      media: [
-        {
-          type: 'video',
-          url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
-          thumbnail: 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=280&h=720&fit=crop'
-        }
-      ],
-      likes: ['1', '2', '3'],
-      likesCount: 127,
-      commentsCount: 23,
-      sharesCount: 15,
+      likes: ['1'],
+      likesCount: 24,
+      commentsCount: 5,
+      sharesCount: 2,
       visibility: 'public',
       isPinned: false,
       isPromoted: false,
@@ -548,345 +491,80 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
       _id: '2',
       author: {
         _id: '2',
-        firstName: 'Marcus',
-        lastName: 'Rodriguez',
-        profilePicture: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-        jobTitle: 'Full Stack Developer at Google',
+        firstName: 'Sarah',
+        lastName: 'Johnson',
+        profilePicture: '',
+        jobTitle: 'UX Designer at Meta',
       },
-      content: '🚀 Just deployed our new AI-powered recommendation engine! After 6 months of development, we\'ve achieved:\n\n📈 35% increase in user retention\n⚡ 50% faster response times\n🎯 90% accuracy in recommendations\n\nThe power of machine learning never ceases to amaze me. Excited to see how this impacts our users! 🔥\n\n#AI #MachineLearning #WebDevelopment #Google #Innovation',
-      tags: ['AI', 'MachineLearning', 'WebDevelopment', 'Google', 'Innovation'],
-      postType: 'text',
-      media: [
-        {
-          type: 'video',
-          url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-          thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=280&h=720&fit=crop'
-        },
-        {
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1555421689-491a97ff2040?w=280&h=360&fit=crop'
-        },
-        {
-          type: 'video',
-          url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_2mb.mp4',
-          thumbnail: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=280&h=720&fit=crop'
-        }
-      ],
-      likes: ['1', '2', '3', '4', '5'],
-      likesCount: 89,
-      commentsCount: 31,
-      sharesCount: 22,
+      content: '🎨 Just attended the most inspiring UX conference! Key takeaways on accessibility and inclusive design that every designer should know. The future of design is inclusive! 💡\n\n#ux #design #accessibility #inclusion #userexperience',
+      tags: ['ux', 'design', 'accessibility', 'inclusion'],
+      postType: 'event',
+      likes: ['1', '2', '3'],
+      likesCount: 47,
+      commentsCount: 12,
+      sharesCount: 8,
+      visibility: 'public',
+      isPinned: false,
+      isPromoted: false,
+      createdAt: new Date(Date.now() - 86400000).toISOString(),
+      updatedAt: new Date(Date.now() - 86400000).toISOString(),
+    },
+    {
+      _id: '3',
+      author: {
+        _id: '3',
+        firstName: 'Alex',
+        lastName: 'Chen',
+        profilePicture: '',
+        jobTitle: 'Product Manager at Tesla',
+      },
+      content: '⚡ Thrilled to announce that our team has successfully launched the new autonomous driving feature! This represents months of hard work, innovation, and collaboration. \n\nShout out to our amazing engineering team! 🙌\n\n#tesla #innovation #autonomousdriving #teamwork #product',
+      tags: ['tesla', 'innovation', 'autonomousdriving', 'teamwork'],
+      postType: 'company_update',
+      likes: ['1', '2', '3', '4'],
+      likesCount: 156,
+      commentsCount: 23,
+      sharesCount: 34,
       visibility: 'public',
       isPinned: true,
       isPromoted: false,
       createdAt: new Date(Date.now() - 7200000).toISOString(),
       updatedAt: new Date(Date.now() - 7200000).toISOString(),
     },
-    {
-      _id: '3',
-      author: {
-        _id: '3',
-        firstName: 'Priya',
-        lastName: 'Patel',
-        profilePicture: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
-        jobTitle: 'Data Scientist at Netflix',
-      },
-      content: '📊 Fascinating insights from our latest user behavior analysis! Did you know that 73% of users prefer personalized content over generic recommendations?\n\nKey findings:\n• Personalization increases engagement by 2.5x\n• Users spend 40% more time on personalized feeds\n• Satisfaction scores jumped from 3.2 to 4.7\n\nData truly tells a story! 📈\n\n#DataScience #Analytics #Netflix #UserBehavior #Insights',
-      tags: ['DataScience', 'Analytics', 'Netflix', 'UserBehavior', 'Insights'],
-      postType: 'text',
-      likes: ['1', '2'],
-      likesCount: 156,
-      commentsCount: 42,
-      sharesCount: 38,
-      visibility: 'public',
-      isPinned: false,
-      isPromoted: true,
-      createdAt: new Date(Date.now() - 86400000).toISOString(),
-      updatedAt: new Date(Date.now() - 86400000).toISOString(),
-    },
-    {
-      _id: '4',
-      author: {
-        _id: '4',
-        firstName: 'David',
-        lastName: 'Kim',
-        profilePicture: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150',
-        jobTitle: 'UI/UX Designer at Adobe',
-      },
-      content: '🎨 Just finished designing a new mobile app interface! Love how clean and intuitive it turned out. Here\'s a sneak peek at the onboarding screens.\n\n#UIDesign #MobileApp #UserExperience',
-      tags: ['UIDesign', 'MobileApp', 'UserExperience'],
-      postType: 'text',
-      media: [
-        {
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=480&h=300&fit=crop',
-          thumbnail: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=150&h=100&fit=crop'
-        }
-      ],
-      likes: ['2', '3'],
-      likesCount: 67,
-      commentsCount: 18,
-      sharesCount: 12,
-      visibility: 'public',
-      isPinned: false,
-      isPromoted: false,
-      createdAt: new Date(Date.now() - 7200000).toISOString(),
-      updatedAt: new Date(Date.now() - 7200000).toISOString(),
-    },
-    {
-      _id: '5',
-      author: {
-        _id: '5',
-        firstName: 'Lisa',
-        lastName: 'Wang',
-        profilePicture: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150',
-        jobTitle: 'Marketing Director at Spotify',
-      },
-      content: '🚀 Our team presentation went amazing today! Here are some highlights from our quarterly review. Exciting things ahead! 📈✨\n\n#TeamWork #Marketing #Growth',
-      tags: ['TeamWork', 'Marketing', 'Growth'],
-      postType: 'text',
-      media: [
-        {
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1553484771-371a605b060b?w=480&h=300&fit=crop',
-          thumbnail: 'https://images.unsplash.com/photo-1553484771-371a605b060b?w=150&h=100&fit=crop'
-        },
-        {
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=480&h=300&fit=crop',
-          thumbnail: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=150&h=100&fit=crop'
-        },
-        {
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=480&h=300&fit=crop',
-          thumbnail: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=150&h=100&fit=crop'
-        }
-      ],
-      likes: ['1', '3', '4'],
-      likesCount: 94,
-      commentsCount: 27,
-      sharesCount: 19,
-      visibility: 'public',
-      isPinned: false,
-      isPromoted: true,
-      createdAt: new Date(Date.now() - 10800000).toISOString(),
-      updatedAt: new Date(Date.now() - 10800000).toISOString(),
-    },
   ];
-
-  // Sample stories
-  const sampleStories = [
-    { id: 'add', type: 'add', user: user },
-    { id: '1', type: 'story', user: { name: 'Alex Chen', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150' }, hasViewed: false },
-    { id: '2', type: 'story', user: { name: 'Sarah Kim', avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150' }, hasViewed: true },
-    { id: '3', type: 'story', user: { name: 'David Lee', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150' }, hasViewed: false },
-    { id: '4', type: 'story', user: { name: 'Emma Wilson', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150' }, hasViewed: false },
-  ];
-
-  // Sample trending topics
-  const trendingTopics = [
-    { topic: '#AI', posts: 12400, growth: '+15%' },
-    { topic: '#WebDevelopment', posts: 8900, growth: '+8%' },
-    { topic: '#DesignSystem', posts: 6540, growth: '+22%' },
-    { topic: '#RemoteWork', posts: 4320, growth: '+5%' },
-    { topic: '#TechCareers', posts: 3210, growth: '+12%' },
-  ];
-
-  useEffect(() => {
-    loadFeed();
-    loadStories();
-    loadSuggestedConnections();
-  }, []);
 
   const loadFeed = async () => {
-    setLoading(true);
-    setError(null);
+    // This function is now handled by the useEffect above
+    // Keeping it for backward compatibility but it's no longer used
+  };
+
+  const loadMorePosts = async () => {
+    if (loading || !hasMore) return;
+    
     try {
-      console.log('🔄 Loading social network feed...');
-      const feedData = await socialNetworkService.getFeed({
-        page: 1,
-        limit: 20,
-        filter: selectedTab === 'home' ? 'all' : 'all'
-      });
+      setLoading(true);
+      const nextPage = page + 1;
+      const postsData = await socialNetworkService.getFeed({ page: nextPage });
+      const newPosts = Array.isArray(postsData) ? postsData : postsData.data || [];
       
-      console.log('✅ Feed loaded:', feedData);
-      
-      // Handle different response formats
-      const postsData = Array.isArray(feedData) ? feedData : feedData.data || [];
-      
-      // If no real posts from backend, fall back to sample data for better UX
-      if (postsData.length === 0) {
-        console.log('📝 No posts from backend, showing sample posts');
-        setPosts(samplePosts);
+      if (newPosts.length === 0) {
+        setHasMore(false);
       } else {
-        setPosts(postsData);
+        setPosts(prev => [...prev, ...newPosts]);
+        setPage(nextPage);
       }
-      
-    } catch (error) {
-      console.error('❌ Error loading feed:', error);
-      setError('Failed to load feed. Showing sample content.');
-      // Fallback to sample posts in case of error
-      setPosts(samplePosts);
+    } catch (err) {
+      console.error('Error loading more posts:', err);
+      setError('Failed to load more posts');
     } finally {
       setLoading(false);
     }
   };
 
-  const loadStories = async () => {
-    setStoriesLoading(true);
-    try {
-      console.log('🔄 Loading stories...');
-      const storiesResponse = await enhancedStoryService.getStoriesFeed(1, 10);
-      
-      console.log('✅ Stories loaded:', storiesResponse);
-      
-      // Handle enhanced story service response format
-      const storiesArray = storiesResponse.success && storiesResponse.data 
-        ? (Array.isArray(storiesResponse.data) ? storiesResponse.data : [storiesResponse.data])
-        : [];
-      
-      // Check if user has an active story (created within last 24 hours)
-      const now = new Date();
-      const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      
-      console.log('🔍 Frontend - Checking for user active story:', {
-        userId: user?._id,
-        userEmail: user?.email,
-        storiesArrayLength: storiesArray.length,
-        last24Hours: last24Hours.toISOString()
-      });
-      
-      const userActiveStory = storiesArray.find((story: any) => {
-        const createdAt = new Date(story.createdAt);
-        const storyAuthorId = story.author?._id?.toString();
-        const userId = user?._id?.toString();
-        const userEmail = user?.email;
-        
-        // More robust user story detection
-        const isUserStory = storyAuthorId === userId || 
-                           storyAuthorId === userEmail ||
-                           story.author?._id === userId ||
-                           story.author?._id === userEmail;
-        
-        // Check if story is still active (stories are active unless explicitly deactivated)
-        const isActive = story.isActive !== false && (!story.expiresAt || new Date(story.expiresAt) > now);
-        
-        console.log('🔍 Frontend - Checking story:', {
-          storyId: story._id,
-          storyAuthor: story.author?._id,
-          storyAuthorId,
-          userId,
-          userEmail,
-          storyCreatedAt: story.createdAt,
-          storyExpiresAt: story.expiresAt,
-          isUserStory,
-          isActive,
-          isWithin24Hours: createdAt > last24Hours
-        });
-        
-        // Return true if it's the user's story and it's still active
-        return isUserStory && isActive;
-      });
-      
-      console.log('🔍 Frontend - User active story found:', userActiveStory ? 'Yes' : 'No');
-      
-      let storiesWithUserStory;
-      
-      if (userActiveStory) {
-        // User has an active story - show it instead of "Add Story"
-        console.log('👤 User has active story, showing it instead of Add Story option');
-        storiesWithUserStory = [
-          {
-            id: userActiveStory._id,
-            type: 'story',
-            user: {
-              name: `${userActiveStory.author?.firstName || 'User'} ${userActiveStory.author?.lastName || ''}`.trim(),
-              avatar: userActiveStory.author?.profilePicture || null
-            },
-            hasViewed: false,
-            story: userActiveStory,
-            isOwnStory: true
-          },
-          ...storiesArray.filter((story: any) => story._id !== userActiveStory._id).map((story: any) => ({
-            id: story._id,
-            type: 'story',
-            user: {
-              name: `${story.author?.firstName || 'User'} ${story.author?.lastName || ''}`.trim(),
-              avatar: story.author?.profilePicture || null
-            },
-            hasViewed: false,
-            story: story
-          }))
-        ];
-      } else {
-        // User doesn't have an active story - show "Add Story" option
-        console.log('➕ User can create new story, showing Add Story option');
-        storiesWithUserStory = [
-          { id: 'add', type: 'add', user: user },
-          ...storiesArray.map((story: any) => ({
-            id: story._id,
-            type: 'story',
-            user: {
-              name: `${story.author?.firstName || 'User'} ${story.author?.lastName || ''}`.trim(),
-              avatar: story.author?.profilePicture || null
-            },
-            hasViewed: false,
-            story: story
-          }))
-        ];
-      }
-      
-      setStories(storiesWithUserStory);
-      
-    } catch (error) {
-      console.error('❌ Error loading stories:', error);
-      // Fallback to sample stories
-      setStories(sampleStories);
-    } finally {
-      setStoriesLoading(false);
-    }
-  };
-
-  const loadSuggestedConnections = async () => {
-    setConnectionsLoading(true);
-    try {
-      console.log('🔄 Loading suggested connections...');
-      const connectionsData = await socialNetworkService.getConnectionSuggestions(5);
-      
-      console.log('✅ Suggested connections loaded:', connectionsData);
-      
-      // Handle different response formats
-      const connections = Array.isArray(connectionsData) ? connectionsData : connectionsData.data || [];
-      
-      setSuggestedConnections(connections.map((conn: any) => ({
-        id: conn._id,
-        name: `${conn.firstName} ${conn.lastName}`,
-        title: conn.jobTitle || conn.company || 'Professional',
-        avatar: conn.profilePicture,
-        mutualConnections: conn.mutualConnections || 0
-      })));
-      
-    } catch (error) {
-      console.error('❌ Error loading suggested connections:', error);
-      // Fallback to sample connections - Remove the const keyword
-      setSuggestedConnections([
-        { id: '1', name: 'Emily Chen', title: 'Senior Designer at Apple', avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150', mutualConnections: 12 },
-        { id: '2', name: 'James Wilson', title: 'Product Manager at Microsoft', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150', mutualConnections: 8 },
-        { id: '3', name: 'Sofia Rodriguez', title: 'UX Researcher at Spotify', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150', mutualConnections: 15 },
-      ]);
-    } finally {
-      setConnectionsLoading(false);
-    }
-  };
-
-  const handlePostLike = async (postId: string) => {
-    try {
-      // Optimistically update UI first
-      const currentPost = posts.find(post => post._id === postId);
-      const isLiked = currentPost?.likes.includes(user?._id || '');
-      
+  const handlePostLike = (postId: string) => {
       setPosts(prev => prev.map(post => {
         if (post._id === postId) {
+        const isLiked = post.likes.includes(user?._id || '');
           return {
             ...post,
             likes: isLiked 
@@ -897,2170 +575,1916 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
         }
         return post;
       }));
-
-      // Make API call
-      console.log(`🔄 ${isLiked ? 'Unliking' : 'Liking'} post ${postId}...`);
-      const result = await socialNetworkService.likePost(postId);
-      console.log('✅ Like action result:', result);
-      
-    } catch (error) {
-      console.error('❌ Error toggling like:', error);
-      
-      // Revert optimistic update on error
-      const isLiked = posts.find(post => post._id === postId)?.likes.includes(user?._id || '');
-      setPosts(prev => prev.map(post => {
-        if (post._id === postId) {
-          return {
-            ...post,
-            likes: isLiked 
-              ? [...post.likes, user?._id || '']
-              : post.likes.filter(id => id !== user?._id),
-            likesCount: isLiked ? post.likesCount + 1 : post.likesCount - 1,
-          };
-        }
-        return post;
-      }));
-      
-      // Show error message
-      setError('Failed to update post like. Please try again.');
-      setTimeout(() => setError(null), 3000);
-    }
   };
 
-  const handlePostShare = async (postId: string) => {
-    try {
-      // Optimistically update UI first
-      setPosts(prev => prev.map(post => {
-        if (post._id === postId) {
-          return {
-            ...post,
-            sharesCount: post.sharesCount + 1,
-          };
-        }
-        return post;
-      }));
-
-      // Make API call
-      console.log(`🔄 Sharing post ${postId}...`);
-      const result = await socialNetworkService.sharePost(postId);
-      console.log('✅ Share result:', result);
-      
-    } catch (error) {
-      console.error('❌ Error sharing post:', error);
-      
-      // Revert optimistic update on error
-      setPosts(prev => prev.map(post => {
-        if (post._id === postId) {
-          return {
-            ...post,
-            sharesCount: post.sharesCount - 1,
-          };
-        }
-        return post;
-      }));
-      
-      // Show error message
-      setError('Failed to share post. Please try again.');
-      setTimeout(() => setError(null), 3000);
-    }
-  };
-
-  const togglePostExpansion = (postId: string) => {
-    setExpandedPost(expandedPost === postId ? null : postId);
-  };
-
-  const handleVideoClick = (videoUrl: string, title?: string) => {
-    setSelectedVideo({ url: videoUrl, title });
-    setShowVideoModal(true);
-  };
-
-  const handleCloseVideoModal = () => {
-    setShowVideoModal(false);
-    setSelectedVideo(null);
-  };
-
-  // Story handlers
-  const handleStoryClick = (story: any, index: number) => {
-    console.log('🖱️ Story clicked:', {
-      storyType: story.type,
-      storyId: story.id,
-      isOwnStory: story.isOwnStory,
-      storyData: story.story,
-      allStories: stories.map(s => ({ id: s.id, type: s.type, isOwnStory: s.isOwnStory }))
-    });
-    
-    if (story.type === 'add') {
-      // User clicked on "Add Story" - show creation dialog
-      console.log('➕ Showing create story dialog');
-      setShowCreateStory(true);
-    } else if (story.isOwnStory) {
-      // User clicked on their own story - show it in the viewer
-      console.log('👤 User clicked on their own story:', story);
-      const actualStories = stories.filter(s => s.type !== 'add').map(s => s.story);
-      setStoryViewerStories(actualStories);
-      
-      // Find the index of the user's story in the filtered list
-      const userStoryIndex = actualStories.findIndex(s => s._id === story.story._id);
-      setSelectedStoryIndex(userStoryIndex >= 0 ? userStoryIndex : 0);
-      setShowStoryViewer(true);
-    } else {
-      // User clicked on someone else's story - show it in the viewer
-      console.log('👥 User clicked on someone else\'s story:', story);
-      const actualStories = stories.filter(s => s.type !== 'add').map(s => s.story);
-      setStoryViewerStories(actualStories);
-      
-      // Calculate correct index for story viewer
-      let viewerIndex = index;
-      if (stories[0]?.type === 'add') {
-        viewerIndex = index - 1; // Adjust if "add story" is first
-      }
-      
-      setSelectedStoryIndex(viewerIndex);
-      setShowStoryViewer(true);
-    }
-  };
-
-  const handleStoryCreated = (newStory: any) => {
-    console.log('New story created:', newStory);
-    // Reload stories to include the new one
-    loadStories();
-    
-    // Also add a small delay and reload again to ensure the story is visible
-    setTimeout(() => {
-      console.log('🔄 Refreshing stories after delay to ensure new story is visible');
-      loadStories();
-    }, 2000);
-  };
-
-  const handleCloseStoryViewer = () => {
-    setShowStoryViewer(false);
-    setStoryViewerStories([]);
-    setSelectedStoryIndex(0);
-  };
-
-  const handleCommentClick = (postId: string) => {
-    setSelectedPostId(postId);
-    setShowCommentDialog(true);
-  };
-
-  const handleCloseCommentDialog = () => {
-    setShowCommentDialog(false);
-    setSelectedPostId(null);
-    setCommentContent('');
-  };
-
-  const handleAddComment = async () => {
-    if (!commentContent.trim() || !selectedPostId || !user) return;
-
-    setIsCommenting(true);
-    try {
-      // Optimistically update UI first
-      setPosts(prev => prev.map(post => {
-        if (post._id === selectedPostId) {
-          return {
-            ...post,
-            commentsCount: post.commentsCount + 1,
-          };
-        }
-        return post;
-      }));
-
-      // Make API call
-      console.log(`🔄 Adding comment to post ${selectedPostId}...`);
-      const result = await socialNetworkService.addComment(selectedPostId, commentContent.trim());
-      console.log('✅ Comment added:', result);
-      
-      // Close dialog and reset
-      handleCloseCommentDialog();
-      
-    } catch (error) {
-      console.error('❌ Error adding comment:', error);
-      
-      // Revert optimistic update on error
-      setPosts(prev => prev.map(post => {
-        if (post._id === selectedPostId) {
-          return {
-            ...post,
-            commentsCount: post.commentsCount - 1,
-          };
-        }
-        return post;
-      }));
-      
-      // Show error message
-      setError('Failed to add comment. Please try again.');
-      setTimeout(() => setError(null), 3000);
-    } finally {
-      setIsCommenting(false);
-    }
-  };
-
-  const handleTabChange = (newTab: string) => {
-    setSelectedTab(newTab);
-    // Reload feed when tab changes to apply filter
-    loadFeed();
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    setPostMedia(prevFiles => [...prevFiles, ...files]);
-  };
-
-  const removeMedia = (index: number) => {
-    setPostMedia(prev => prev.filter((_, i) => i !== index));
-  };
-
-  // Video control functions
-  const toggleVideoMute = (videoId: string) => {
-    const videoElement = document.querySelector(`video[data-video-id="${videoId}"]`) as HTMLVideoElement;
-    
-    setMutedVideos(prev => {
-      const newSet = new Set(prev);
-      const willBeMuted = !newSet.has(videoId);
-      
-      if (newSet.has(videoId)) {
-        newSet.delete(videoId);
-      } else {
-        newSet.add(videoId);
-      }
-      
-      // Update the actual video element
-      if (videoElement) {
-        videoElement.muted = willBeMuted;
-      }
-      
-      return newSet;
-    });
-  };
-
-  const handleVideoIntersection = (entries: IntersectionObserverEntry[]) => {
-    entries.forEach((entry) => {
-      const videoElement = entry.target as HTMLVideoElement;
-      const videoId = videoElement.dataset.videoId;
-      
-      if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
-        // Video is in view, start playing
-        if (videoId) {
-          setPlayingVideos(prev => new Set(prev).add(videoId));
-          
-          // Automatically unmute the video when it starts playing
-          videoElement.muted = false;
-          setMutedVideos(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(videoId);
-            return newSet;
-          });
-          
-          videoElement.play().catch((error) => {
-            console.log('Auto-play failed for video:', videoId, error);
-            // If auto-play fails, try with muted
-            videoElement.muted = true;
-            setMutedVideos(prev => new Set(prev).add(videoId));
-            videoElement.play().catch(() => {
-              console.log('Auto-play failed even with mute for video:', videoId);
-            });
-          });
-        }
-      } else {
-        // Video is out of view, pause it
-        if (videoId) {
-          setPlayingVideos(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(videoId);
-            return newSet;
-          });
-          videoElement.pause();
-        }
-      }
-    });
-  };
-
-  // Initialize video muting when posts change (but preserve existing mute states)
-  useEffect(() => {
-    const allVideoIds = new Set<string>();
-    posts.forEach(post => {
-      post.media?.forEach((media, index) => {
-        if (media.type === 'video') {
-          allVideoIds.add(`${post._id}-${index}`);
-        }
-      });
-    });
-    
-    // Only add new video IDs to mutedVideos, don't reset existing ones
-    setMutedVideos(prevMuted => {
-      const updatedMuted = new Set(prevMuted);
-      allVideoIds.forEach(videoId => {
-        // Only add if it's not already in the set (new videos should be muted by default)
-        if (!prevMuted.has(videoId)) {
-          updatedMuted.add(videoId);
-        }
-      });
-      
-      // Remove video IDs that no longer exist in posts
-      const currentVideoIds = Array.from(updatedMuted).filter(videoId => allVideoIds.has(videoId));
-      return new Set(currentVideoIds);
-    });
-  }, [posts]);
-
-  // Set up intersection observer for auto-play
-  useEffect(() => {
-    const observer = new IntersectionObserver(handleVideoIntersection, {
-      threshold: 0.5, // Trigger when 50% of video is visible
-      rootMargin: '0px 0px -10% 0px' // Start slightly before coming into view
-    });
-
-    // Observe all video elements
-    const videoElements = document.querySelectorAll('video[data-video-id]');
-    videoElements.forEach(video => observer.observe(video));
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [posts]); // Re-run when posts change
-
-  const handleCreatePost = async () => {
-    if (!postContent.trim() && postMedia.length === 0) {
-      setError('Please add content or media to your post.');
-      return;
-    }
-
-    setIsPosting(true);
-    try {
-      console.log('🔄 Creating new post...', {
-        content: postContent,
-        mediaCount: postMedia.length,
-        tags: postTags
-      });
-
-      // Create FormData for file uploads
-      const formData = new FormData();
-      formData.append('content', postContent);
-      formData.append('postType', 'text');
-      formData.append('visibility', 'public');
-      
-      // Add tags if provided
-      if (postTags.trim()) {
-        const tagArray = postTags.split(',').map(tag => tag.trim()).filter(tag => tag);
-        tagArray.forEach(tag => formData.append('tags[]', tag));
-      }
-
-      // Add media files
-      postMedia.forEach((file) => {
-        formData.append('media', file);
-      });
-
-      const newPost = await socialNetworkService.createPostWithMedia(formData);
-      console.log('✅ Post created successfully:', newPost);
-
-      // Add the new post to the beginning of the feed
-      setPosts(prev => [newPost, ...prev]);
-
-      // Reset form state
-      setPostContent('');
-      setPostMedia([]);
-      setPostTags('');
-      setShowCreatePost(false);
-
-      // Show success message
-      setError(null);
-
-    } catch (error) {
-      console.error('❌ Error creating post:', error);
-      setError('Failed to create post. Please try again.');
-      setTimeout(() => setError(null), 5000);
-    } finally {
-      setIsPosting(false);
-    }
-  };
-
-
-
-  // Enhanced Quick Actions
-  const quickActionsData = [
-    {
-      id: 'find-jobs',
-      title: 'Find Jobs',
-      description: 'Discover opportunities',
-      icon: BusinessCenter,
-      color: '#1976d2',
-      gradient: 'linear-gradient(135deg, #1976d2, #42a5f5)',
-      route: '/app/jobs',
-    },
-    {
-      id: 'interview',
-      title: 'Interview Prep',
-      description: 'Practice & improve',
-      icon: QuestionAnswer,
-      color: '#9c27b0',
-      gradient: 'linear-gradient(135deg, #9c27b0, #ba68c8)',
-      route: '/app/interviews',
-    },
-    {
-      id: 'smart-exams',
-      title: 'Smart Exams',
-      description: 'Test your skills',
-      icon: Psychology,
-      color: '#f57c00',
-      gradient: 'linear-gradient(135deg, #f57c00, #ffb74d)',
-      route: '/app/smart-tests',
-    },
-    {
-      id: 'cv-builder',
-      title: 'CV Builder',
-      description: 'Create stunning CV',
-      icon: Assignment,
-      color: '#388e3c',
-      gradient: 'linear-gradient(135deg, #388e3c, #66bb6a)',
-      route: '/app/cv-builder',
-    },
-    {
-      id: 'psychometric-tests',
-      title: 'Psychometric Tests',
-      description: 'Evaluate abilities',
-      icon: Assessment,
-      color: '#d32f2f',
-      gradient: 'linear-gradient(135deg, #d32f2f, #f44336)',
-      route: '/app/psychometric-tests',
-    },
-    {
-      id: 'achievements',
-      title: 'Achievements',
-      description: 'Track progress',
-      icon: EmojiEvents,
-      color: '#f9a825',
-      gradient: 'linear-gradient(135deg, #f9a825, #fdd835)',
-      route: '/app/certificates',
-    },
+  // Mobile Navigation Items
+  const mobileNavItems = [
+    { icon: <Home />, label: 'Home', value: 'home' },
+    { icon: <Search />, label: 'Search', value: 'search' },
+    { icon: <People />, label: 'Network', value: 'network' },
+    { icon: <Notifications />, label: 'Notifications', value: 'notifications' },
+    { icon: <Chat />, label: 'Messages', value: 'messages' },
   ];
 
-  const renderEnhancedQuickActions = () => (
-    <UniversalPostCard sx={{ mb: 2 }}>
-      <CardContent sx={{ p: 3 }}>
-        {/* Enhanced Header */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box sx={{
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-            }} />
-            <Typography variant="h5" fontWeight={700} sx={{ 
-              background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              fontSize: '1.4rem',
-            }}>
-              Quick Actions
-            </Typography>
-          </Box>
-          <Box sx={{
-            px: 1.5,
-            py: 0.5,
-            borderRadius: 2,
-            background: alpha(theme.palette.primary.main, 0.1),
-            display: 'flex',
-            alignItems: 'center',
-            gap: 0.5,
-          }}>
-            <TrendingUpOutlined sx={{ color: 'primary.main', fontSize: 18 }} />
-            <Typography variant="caption" fontWeight={600} color="primary.main">
-              Popular
-            </Typography>
-          </Box>
-        </Box>
-        
-        {/* Enhanced Grid Layout */}
-        <Box sx={{ 
-          display: 'grid', 
-          gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)' },
-          gap: 2 
-        }}>
-          {quickActionsData.map((action, index) => (
-            <Box key={action.id}>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1, duration: 0.4 }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <QuickActionCard
-                  onClick={() => navigate(action.route)}
-                  sx={{ 
-                    height: '100%',
-                    minHeight: 120,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      '& .action-icon': {
-                        transform: 'scale(1.1) rotate(5deg)',
-                      },
-                      '& .action-glow': {
-                        opacity: 1,
-                      }
-                    }
-                  }}
-                >
-                  {/* Background Glow Effect */}
-                  <Box className="action-glow" sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: action.gradient,
-                    opacity: 0,
-                    transition: 'opacity 0.3s ease',
-                    zIndex: 0,
-                  }} />
-                  
-                  <CardContent sx={{ 
-                    textAlign: 'center', 
-                    p: 2, 
-                    position: 'relative',
-                    zIndex: 1,
-                    '&:last-child': { pb: 2 } 
-                  }}>
-                    <Box
-                      className="action-icon"
-                      sx={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: '50%',
-                        background: action.gradient,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        mx: 'auto',
-                        mb: 1.5,
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        boxShadow: `0 4px 12px ${alpha(action.color, 0.3)}`,
-                      }}
-                    >
-                      <action.icon sx={{ fontSize: 24, color: 'white' }} />
-                    </Box>
-                    <Typography variant="body2" fontWeight={700} sx={{ 
-                      fontSize: '0.85rem', 
-                      mb: 0.5,
-                      color: 'text.primary',
-                      lineHeight: 1.2,
-                    }}>
-                      {action.title}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ 
-                      fontSize: '0.7rem',
-                      lineHeight: 1.3,
-                      display: 'block',
-                    }}>
-                      {action.description}
-                    </Typography>
-                  </CardContent>
-                </QuickActionCard>
-              </motion.div>
-            </Box>
-          ))}
-        </Box>
+  const renderStories = () => {
+    // Get user's own stories
+    const userStories = stories.filter(story => story.author?._id === user?._id);
+    const otherStories = stories.filter(story => story.author?._id !== user?._id);
 
-        {/* Enhanced Divider */}
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          my: 3,
-          '&::before, &::after': {
-            content: '""',
-            flex: 1,
-            height: 1,
-            background: `linear-gradient(90deg, transparent, ${alpha(theme.palette.divider, 0.3)}, transparent)`,
-          }
-        }}>
-          <Typography variant="caption" sx={{ 
-            px: 2, 
-            color: 'text.secondary',
-            fontWeight: 500,
-            fontSize: '0.75rem',
-          }}>
-            More Tools
-          </Typography>
-        </Box>
-        
-        {/* Enhanced Action Buttons */}
-        <Stack direction="row" spacing={2} sx={{ justifyContent: 'center' }}>
-          <ActionButton
-            size="medium"
-            startIcon={<Build sx={{ fontSize: 20 }} />}
-            onClick={() => navigate('/tools')}
-            sx={{ 
-              flex: 1, 
-              minWidth: 140,
-              py: 1.5,
-              borderRadius: 3,
-              background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-              color: 'white',
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
-              '&:hover': {
-                background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
-                boxShadow: `0 6px 16px ${alpha(theme.palette.primary.main, 0.4)}`,
-                transform: 'translateY(-2px)',
-              }
-            }}
-          >
-            Career Tools
-          </ActionButton>
-          <ActionButton
-            size="medium"
-            startIcon={<Groups sx={{ fontSize: 20 }} />}
-            onClick={() => navigate('/networking')}
-            sx={{ 
-              flex: 1, 
-              minWidth: 140,
-              py: 1.5,
-              borderRadius: 3,
-              background: `linear-gradient(135deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`,
-              color: 'white',
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              boxShadow: `0 4px 12px ${alpha(theme.palette.secondary.main, 0.3)}`,
-              '&:hover': {
-                background: `linear-gradient(135deg, ${theme.palette.secondary.dark}, ${theme.palette.secondary.main})`,
-                boxShadow: `0 6px 16px ${alpha(theme.palette.secondary.main, 0.4)}`,
-                transform: 'translateY(-2px)',
-              }
-            }}
-          >
-            Network
-          </ActionButton>
-        </Stack>
-      </CardContent>
-    </UniversalPostCard>
-  );
-
-  const renderStories = () => (
-    <UniversalPostCard sx={{ mb: 2 }}>
-      <CardContent sx={{ 
-        p: { xs: 2, sm: 2.5, md: 3 },
-        background: theme.palette.mode === 'dark' 
-          ? 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)'
-          : 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+    return (
+      <Card sx={{ 
+        mb: 2, 
+        p: 2, 
         borderRadius: 3,
-        border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
-        boxShadow: theme.palette.mode === 'dark' 
-          ? '0 4px 20px rgba(0,0,0,0.15)' 
-          : '0 2px 12px rgba(0,0,0,0.08)',
+        background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+        border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+        boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
       }}>
-        {/* Clean Header */}
         <Box sx={{ 
           display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between',
-          mb: 2,
-          px: 1
+          gap: 2, 
+          overflowX: 'auto',
+          pb: 1,
+          '&::-webkit-scrollbar': {
+            height: 4,
+          },
+          '&::-webkit-scrollbar-track': {
+            background: 'rgba(0,0,0,0.1)',
+            borderRadius: 2,
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: 'rgba(0,0,0,0.3)',
+            borderRadius: 2,
+            '&:hover': {
+              background: 'rgba(0,0,0,0.5)',
+            },
+          },
         }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box sx={{ 
-              width: 8, 
-              height: 8, 
-              borderRadius: '50%', 
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              animation: 'pulse 2s infinite',
-            }} />
-            <Typography variant="h6" fontWeight={700} sx={{ 
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              fontSize: '1.3rem',
-            }}>
-              Stories
-            </Typography>
-            <Chip 
-              label={`${stories.filter(s => s.type !== 'add').length} active`}
-              size="small"
-              sx={{ 
-                background: alpha(theme.palette.primary.main, 0.1),
-                color: theme.palette.primary.main,
-                fontWeight: 600,
-                fontSize: '0.75rem',
-                height: 24,
-              }}
-            />
-          </Box>
-        </Box>
-        
-        <StoryContainer>
-          
-          {storiesLoading ? (
-            // Enhanced loading skeleton for stories
-            Array.from({ length: 5 }).map((_, index) => (
-              <Box key={`skeleton-${index}`} sx={{ textAlign: 'center' }}>
-                <Skeleton 
-                  variant="circular" 
-                  width={76} 
-                  height={76} 
-                  sx={{ 
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    padding: 3,
-                  }} 
-                />
-                <Skeleton variant="text" width={60} height={16} sx={{ mt: 0.5 }} />
-              </Box>
-            ))
-          ) : stories.length === 0 ? (
-            // Empty state
-            <Box sx={{ 
+          {/* User's own story button */}
+          <Box 
+            sx={{ 
               display: 'flex', 
               flexDirection: 'column', 
               alignItems: 'center', 
-              justifyContent: 'center',
-              py: 4,
-              width: '100%',
-              textAlign: 'center'
-            }}>
-              <Box sx={{
-                width: 80,
-                height: 80,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                mb: 2,
-                opacity: 0.7,
-              }}>
-                <Add sx={{ color: 'white', fontSize: 32 }} />
-              </Box>
-              <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
-                No stories yet
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Be the first to share your story!
-              </Typography>
-              <Button
-                variant="contained"
-                startIcon={<Add />}
-                onClick={() => setShowCreateStory(true)}
-                sx={{
+              minWidth: 80,
+              cursor: 'pointer',
+              position: 'relative',
+            }}
+            onClick={() => setShowCreateStory(true)}
+          >
+            <Box sx={{ position: 'relative' }}>
+              <StoryAvatar 
+                src={(user as any)?.profilePicture}
+                sx={{ 
+                  border: `3px solid ${theme.palette.primary.main}`,
+                  backgroundColor: theme.palette.grey[100],
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  borderRadius: 2,
-                  px: 3,
-                  py: 1,
-                  textTransform: 'none',
-                  fontWeight: 600,
+                  '&:hover': {
+                    transform: 'scale(1.1)',
+                    boxShadow: '0 4px 20px rgba(102, 126, 234, 0.4)',
+                  },
+                  transition: 'all 0.3s ease',
                 }}
               >
-                Create Story
-              </Button>
+                <Add sx={{ color: 'white', fontSize: 24 }} />
+              </StoryAvatar>
+              <Box
+                sx={{
+                  position: 'absolute',
+                  bottom: -2,
+                  right: -2,
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid white',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                }}
+              >
+                <Add sx={{ color: 'white', fontSize: 12 }} />
+              </Box>
             </Box>
-          ) : (
-            stories.map((story, index) => (
-              <motion.div
-                key={story.id}
-                initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ 
-                  delay: index * 0.1, 
-                  duration: 0.4,
-                  type: "spring",
-                  stiffness: 100
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                mt: 1, 
+                textAlign: 'center', 
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                color: theme.palette.text.primary,
+                maxWidth: 70,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Your Story
+            </Typography>
+          </Box>
+
+          {/* User's own stories */}
+          {userStories.map((story, index) => (
+            <motion.div
+              key={`user-story-${story._id}`}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  minWidth: 80,
+                  cursor: 'pointer',
+                  position: 'relative',
                 }}
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
+                onClick={() => handleViewStory(story)}
               >
-                <Box sx={{ textAlign: 'center', cursor: 'pointer' }} onClick={() => handleStoryClick(story, index)}>
-                  <StoryCircle 
-                    className={`${story.hasViewed ? 'viewed' : ''} ${story.isOwnStory ? 'new-story' : ''}`}
+                <Box sx={{ position: 'relative' }}>
+                  <StoryAvatar 
+                    src={story.media?.thumbnail || story.media?.url}
+                    sx={{ 
+                      border: `3px solid ${theme.palette.success.main}`,
+                      background: 'linear-gradient(135deg, #4caf50 0%, #81c784 100%)',
+                      '&:hover': {
+                        transform: 'scale(1.1)',
+                        boxShadow: '0 4px 20px rgba(76, 175, 80, 0.4)',
+                      },
+                      transition: 'all 0.3s ease',
+                    }}
                   >
-                    {story.type === 'add' ? (
-                      <Avatar sx={{ 
-                        width: 64, 
-                        height: 64, 
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        border: `3px solid ${alpha('#ffffff', 0.2)}`,
-                        transition: 'all 0.3s ease',
+                    {!story.media?.thumbnail && !story.media?.url && (
+                      <CameraAlt sx={{ color: 'white', fontSize: 20 }} />
+                    )}
+                  </StoryAvatar>
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      bottom: -2,
+                      right: -2,
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #4caf50 0%, #81c784 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '2px solid white',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                    }}
+                  >
+                    <Star sx={{ color: 'white', fontSize: 10 }} />
+                  </Box>
+                </Box>
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    mt: 1, 
+                    textAlign: 'center', 
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: theme.palette.text.primary,
+                    maxWidth: 70,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {story.title || 'My Story'}
+                </Typography>
+              </Box>
+            </motion.div>
+          ))}
+          
+          {/* Other users' stories */}
+          {storiesLoading ? (
+            // Loading skeleton
+            Array.from({ length: 5 }).map((_, index) => (
+              <Box key={index} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 80 }}>
+                <Skeleton variant="circular" width={60} height={60} />
+                <Skeleton variant="text" width={50} height={12} sx={{ mt: 1 }} />
+              </Box>
+            ))
+          ) : otherStories.length > 0 ? (
+            otherStories.map((story, index) => (
+              <motion.div
+                key={`other-story-${story._id || story.id}`}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: (userStories.length + index) * 0.1 }}
+              >
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    minWidth: 80,
+                    cursor: 'pointer',
+                    position: 'relative',
+                  }}
+                  onClick={() => handleViewStory(story)}
+                >
+                  <Box sx={{ position: 'relative' }}>
+                    <StoryAvatar 
+                      src={story.author?.profilePicture || story.avatar}
+                      sx={{ 
+                        border: story.hasStory 
+                          ? `3px solid ${theme.palette.primary.main}` 
+                          : `2px solid ${theme.palette.divider}`,
+                        background: story.hasStory 
+                          ? 'linear-gradient(135deg, #1877f2 0%, #42a5f5 100%)'
+                          : theme.palette.grey[200],
                         '&:hover': {
                           transform: 'scale(1.1)',
-                          boxShadow: `0 0 20px ${alpha('#667eea', 0.5)}`,
-                        }
-                      }}>
-                        <Add sx={{ color: 'white', fontSize: 28 }} />
-                      </Avatar>
-                    ) : (
-                      <Avatar 
-                        src={story.user.avatar}
-                        sx={{ 
-                          width: 64, 
-                          height: 64,
-                          opacity: story.hasViewed ? 0.6 : 1,
-                          border: story.hasViewed ? 'none' : 
-                                 story.isOwnStory ? `3px solid ${alpha('#667eea', 0.6)}` :
-                                 `3px solid ${alpha('#ffffff', 0.3)}`,
-                          transition: 'all 0.3s ease',
-                          '&:hover': {
-                            transform: 'scale(1.1)',
-                            opacity: 1,
-                            boxShadow: story.isOwnStory ? 
-                              `0 0 20px ${alpha('#667eea', 0.4)}` :
-                              `0 0 20px ${alpha('#764ba2', 0.4)}`,
-                          }
+                          boxShadow: story.hasStory 
+                            ? '0 4px 20px rgba(24, 119, 242, 0.4)'
+                            : '0 4px 20px rgba(0,0,0,0.2)',
+                        },
+                        transition: 'all 0.3s ease',
+                      }}
+                    >
+                      {!(story.author?.profilePicture || story.avatar) && 
+                        (story.author?.firstName || story.name)?.charAt(0)}
+                    </StoryAvatar>
+                    {story.hasStory && (
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          bottom: -2,
+                          right: -2,
+                          width: 18,
+                          height: 18,
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #1877f2 0%, #42a5f5 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          border: '2px solid white',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
                         }}
                       >
-                        {story.user.name ? story.user.name.charAt(0).toUpperCase() : 'U'}
-                      </Avatar>
+                        <Star sx={{ color: 'white', fontSize: 10 }} />
+                      </Box>
                     )}
-                  </StoryCircle>
+                  </Box>
                   <Typography 
                     variant="caption" 
                     sx={{ 
                       mt: 1, 
-                      display: 'block',
-                      fontWeight: story.type === 'add' || story.isOwnStory ? 700 : 600,
-                      color: story.type === 'add' || story.isOwnStory ? 'primary.main' : 'text.secondary',
-                      fontSize: '0.8rem',
+                      textAlign: 'center', 
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      color: theme.palette.text.primary,
                       maxWidth: 70,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {story.type === 'add' ? 'Your story' : 
-                     story.isOwnStory ? 'Your story' : 
-                     (story.user.name ? story.user.name.split(' ')[0] : 'User')}
+                    {story.author?.firstName || story.name}
                   </Typography>
                 </Box>
               </motion.div>
             ))
+          ) : (
+            // No stories message
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              minWidth: 200, 
+              py: 2,
+              color: theme.palette.text.secondary,
+            }}>
+              <Typography variant="body2">
+                No stories available
+              </Typography>
+            </Box>
           )}
-        </StoryContainer>
-      </CardContent>
-    </UniversalPostCard>
-  );
+        </Box>
+      </Card>
+    );
+  };
 
   const renderCreatePost = () => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.2 }}
-    >
-      <UniversalPostCard sx={{ mb: 2 }}>
-        <CardContent sx={{ 
-          p: { xs: 2.5, sm: 3, md: 3.5 },
-          background: theme.palette.mode === 'dark' 
-            ? 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)'
-            : 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
-          borderRadius: 3,
-          border: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
-          boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 20px rgba(0,0,0,0.15)' 
-            : '0 2px 12px rgba(0,0,0,0.08)',
-        }}>
-          {/* Enhanced Post Composer Header */}
-          <Box sx={{ 
-            display: 'flex', 
-            gap: { xs: 1.5, sm: 2 }, 
-            alignItems: 'center', 
-            mb: { xs: 2, sm: 2.5 } 
-          }}>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Avatar 
-                src={(user as any)?.profilePicture || undefined}
-                sx={{ 
-                  width: { xs: 40, sm: 44, md: 48 }, 
-                  height: { xs: 40, sm: 44, md: 48 },
-                  border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                  boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.15)}`,
-                  cursor: 'pointer',
-                }}
-              >
+    <StyledPostCard>
+      <CardContent sx={{ pb: 1 }}>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+          <Avatar src={(user as any)?.profilePicture}>
                 {user?.firstName?.charAt(0)}
               </Avatar>
-            </motion.div>
-            <Box sx={{ flex: 1 }}>
-              <CreatePostButton
+          <Button
                 variant="outlined"
                 fullWidth
                 onClick={() => setShowCreatePost(true)}
                 sx={{
-                  borderRadius: { xs: 2.5, sm: 3 },
-                  py: { xs: 1.2, sm: 1.5 },
-                  px: { xs: 1.5, sm: 2 },
-                  backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : '#f8f9fa',
-                  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                  fontSize: { xs: '0.9rem', sm: '1rem' },
-                  fontWeight: 500,
-                  color: 'text.secondary',
-                  textAlign: 'left',
                   justifyContent: 'flex-start',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    backgroundColor: theme.palette.mode === 'dark' ? '#333' : '#e9ecef',
-                    borderColor: alpha(theme.palette.primary.main, 0.3),
-                    transform: 'translateY(-2px)',
-                    boxShadow: `0 6px 16px ${alpha(theme.palette.primary.main, 0.15)}`,
-                  },
-                  '&:active': {
-                    transform: 'translateY(0px)',
-                  }
+              borderRadius: 25,
+              py: 1.5,
+              color: 'text.secondary',
+              textTransform: 'none',
+              fontSize: '1rem',
                 }}
               >
                 What's on your mind, {user?.firstName}?
-              </CreatePostButton>
-            </Box>
+          </Button>
           </Box>
           
-          {/* Enhanced Divider */}
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            my: { xs: 2, sm: 2.5 },
-            '&::before, &::after': {
-              content: '""',
-              flex: 1,
-              height: 1,
-              background: `linear-gradient(90deg, transparent, ${alpha(theme.palette.divider, 0.2)}, transparent)`,
-            }
-          }}>
-            <Typography variant="caption" sx={{ 
-              px: 2, 
-              color: 'text.secondary',
-              fontWeight: 600,
-              fontSize: { xs: '0.7rem', sm: '0.75rem' },
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-            }}>
-              Share
-            </Typography>
-          </Box>
-          
-          {/* Enhanced Responsive Action Buttons */}
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: { xs: 'space-between', sm: 'space-around' },
-            gap: { xs: 0.5, sm: 1 },
-            flexWrap: { xs: 'wrap', sm: 'nowrap' },
-            px: { xs: 0.5, sm: 1 },
-            py: { xs: 0.5, sm: 0.5 },
-          }}>
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Button 
-                startIcon={<VideoLibrary sx={{ fontSize: { xs: 18, sm: 20 } }} />} 
-                sx={{ 
-                  textTransform: 'none', 
-                  color: 'text.secondary', 
-                  borderRadius: { xs: 2.5, sm: 3 },
-                  px: { xs: 1, sm: 2 },
-                  py: { xs: 0.8, sm: 1 },
-                  fontWeight: 600,
-                  fontSize: { xs: '0.8rem', sm: '0.9rem' },
-                  backgroundColor: alpha('#f02849', 0.05),
-                  border: `1px solid ${alpha('#f02849', 0.1)}`,
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  width: { xs: '100%', sm: 'auto' },
-                  minWidth: { xs: 'auto', sm: 120 },
-                  '&:hover': {
-                    backgroundColor: alpha('#f02849', 0.1),
-                    borderColor: alpha('#f02849', 0.2),
-                    transform: 'translateY(-2px)',
-                    color: '#f02849',
-                    boxShadow: `0 4px 12px ${alpha('#f02849', 0.2)}`,
-                  },
-                  '&:active': {
-                    transform: 'translateY(0px)',
-                  }
-                }}
-                onClick={() => setShowCreatePost(true)}
-              >
-                <Box sx={{ display: { xs: 'none', sm: 'inline' } }}>Live video</Box>
-                <Box sx={{ display: { xs: 'inline', sm: 'none' } }}>Live</Box>
+        <Divider sx={{ mb: 2 }} />
+        
+        <Box sx={{ display: 'flex', justifyContent: 'space-around' }}>
+          <Button startIcon={<VideoLibrary sx={{ color: '#f02849' }} />} sx={{ textTransform: 'none', color: 'text.secondary' }}>
+            Video
               </Button>
-            </motion.div>
-            
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Button 
-                startIcon={<Photo sx={{ fontSize: { xs: 18, sm: 20 } }} />} 
-                sx={{ 
-                  textTransform: 'none', 
-                  color: 'text.secondary', 
-                  borderRadius: { xs: 2.5, sm: 3 },
-                  px: { xs: 1, sm: 2 },
-                  py: { xs: 0.8, sm: 1 },
-                  fontWeight: 600,
-                  fontSize: { xs: '0.8rem', sm: '0.9rem' },
-                  backgroundColor: alpha('#45bd62', 0.05),
-                  border: `1px solid ${alpha('#45bd62', 0.1)}`,
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  width: { xs: '100%', sm: 'auto' },
-                  minWidth: { xs: 'auto', sm: 120 },
-                  '&:hover': {
-                    backgroundColor: alpha('#45bd62', 0.1),
-                    borderColor: alpha('#45bd62', 0.2),
-                    transform: 'translateY(-2px)',
-                    color: '#45bd62',
-                    boxShadow: `0 4px 12px ${alpha('#45bd62', 0.2)}`,
-                  },
-                  '&:active': {
-                    transform: 'translateY(0px)',
-                  }
-                }}
-                onClick={() => setShowCreatePost(true)}
-              >
-                <Box sx={{ display: { xs: 'none', sm: 'inline' } }}>Photo/video</Box>
-                <Box sx={{ display: { xs: 'inline', sm: 'none' } }}>Photo</Box>
+          <Button startIcon={<Photo sx={{ color: '#45bd62' }} />} sx={{ textTransform: 'none', color: 'text.secondary' }}>
+            Photo
               </Button>
-            </motion.div>
-            
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Button 
-                startIcon={<EmojiEmotions sx={{ fontSize: { xs: 18, sm: 20 } }} />} 
-                sx={{ 
-                  textTransform: 'none', 
-                  color: 'text.secondary', 
-                  borderRadius: { xs: 2.5, sm: 3 },
-                  px: { xs: 1, sm: 2 },
-                  py: { xs: 0.8, sm: 1 },
-                  fontWeight: 600,
-                  fontSize: { xs: '0.8rem', sm: '0.9rem' },
-                  backgroundColor: alpha('#f7b928', 0.05),
-                  border: `1px solid ${alpha('#f7b928', 0.1)}`,
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  width: { xs: '100%', sm: 'auto' },
-                  minWidth: { xs: 'auto', sm: 120 },
-                  '&:hover': {
-                    backgroundColor: alpha('#f7b928', 0.1),
-                    borderColor: alpha('#f7b928', 0.2),
-                    transform: 'translateY(-2px)',
-                    color: '#f7b928',
-                    boxShadow: `0 4px 12px ${alpha('#f7b928', 0.2)}`,
-                  },
-                  '&:active': {
-                    transform: 'translateY(0px)',
-                  }
-                }}
-                onClick={() => setShowCreatePost(true)}
-              >
-                <Box sx={{ display: { xs: 'none', sm: 'inline' } }}>Feeling/activity</Box>
-                <Box sx={{ display: { xs: 'inline', sm: 'none' } }}>Feeling</Box>
+          <Button startIcon={<EmojiEmotions sx={{ color: '#f7b928' }} />} sx={{ textTransform: 'none', color: 'text.secondary' }}>
+            Feeling
               </Button>
-            </motion.div>
+          {!isMobile && (
+            <Button startIcon={<Article sx={{ color: '#1877f2' }} />} sx={{ textTransform: 'none', color: 'text.secondary' }}>
+              Article
+            </Button>
+          )}
           </Box>
         </CardContent>
-      </UniversalPostCard>
-    </motion.div>
+    </StyledPostCard>
   );
 
-  // Helper function to check if post contains video content
-  const hasVideoContent = (post: SocialPost): boolean => {
-    return post.media && post.media.some(media => media.type === 'video');
-  };
-
-  const renderPost = (post: SocialPost) => {
-    const isLiked = post.likes.includes(user?._id || '');
-    const isExpanded = expandedPost === post._id;
-    const shouldTruncate = post.content.length > 280; // Instagram-like truncation length
-    const displayContent = isExpanded || !shouldTruncate 
-      ? post.content 
-      : post.content.substring(0, 280) + '...';
-
-    const isVideoPost = hasVideoContent(post);
-
-    return (
+  const renderPost = (post: SocialPost) => (
       <motion.div
         key={post._id}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
-      >
-        <InstagramPostCard data-testid="post-card">
-          <PostContentContainer>
-            {/* Post Header - Modern Instagram style */}
-            <PostHeader>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Avatar 
-                  src={(post.author as any)?.profilePicture}
-                  sx={{ 
-                    width: 40,
-                    height: 40,
-                    border: post.isPinned || post.isPromoted 
-                      ? '2px solid #f09433'
-                      : '2px solid transparent',
-                    cursor: 'pointer',
-                    transition: 'transform 0.2s ease',
-                    '&:hover': {
-                      transform: 'scale(1.05)',
-                    }
-                  }}
+      transition={{ duration: 0.3 }}
+    >
+      <PostCard post={post} />
+    </motion.div>
+  );
+
+  const renderQuickActions = () => {
+    const quickActions = [
+      {
+        id: 'find-jobs',
+        label: 'Jobs',
+        icon: <Work sx={{ fontSize: 16 }} />,
+        onClick: () => handleFindJobs(),
+        color: '#1877f2'
+      },
+      {
+        id: 'internships',
+        label: 'Internships',
+        icon: <School sx={{ fontSize: 16 }} />,
+        onClick: () => handleInternships(),
+        color: '#ff9800'
+      },
+      {
+        id: 'interview-prep',
+        label: 'Interview',
+        icon: <School sx={{ fontSize: 16 }} />,
+        onClick: () => handleInterviewPrep(),
+        color: '#e91e63'
+      },
+      {
+        id: 'psychometric-tests',
+        label: 'Tests',
+        icon: <Article sx={{ fontSize: 16 }} />,
+        onClick: () => handlePsychometricTests(),
+        color: '#4caf50'
+      },
+      {
+        id: 'smart-exams',
+        label: 'Smart Exams',
+        icon: <School sx={{ fontSize: 16 }} />,
+        onClick: () => handleSmartExams(),
+        color: '#ff5722'
+      },
+      {
+        id: 'cv-builder',
+        label: 'CV Builder',
+        icon: <Article sx={{ fontSize: 16 }} />,
+        onClick: () => handleCVBuilder(),
+        color: '#795548'
+      },
+      {
+        id: 'applications',
+        label: 'Applications',
+        icon: <PersonAdd sx={{ fontSize: 16 }} />,
+        onClick: () => handleApplications(),
+        color: '#9c27b0'
+      },
+      {
+        id: 'career-guidance',
+        label: 'Guidance',
+        icon: <TrendingUp sx={{ fontSize: 16 }} />,
+        onClick: () => handleCareerGuidance(),
+        color: '#2196f3'
+      },
+      {
+        id: 'networking',
+        label: 'Network',
+        icon: <People sx={{ fontSize: 16 }} />,
+        onClick: () => handleNetworking(),
+        color: '#9c27b0'
+      },
+      {
+        id: 'events',
+        label: 'Events',
+        icon: <Event sx={{ fontSize: 16 }} />,
+        onClick: () => handleEvents(),
+        color: '#ff9800'
+      },
+      {
+        id: 'articles',
+        label: 'Articles',
+        icon: <Article sx={{ fontSize: 16 }} />,
+        onClick: () => handleArticles(),
+        color: '#2196f3'
+      },
+      {
+        id: 'learning',
+        label: 'Learning',
+        icon: <School sx={{ fontSize: 16 }} />,
+        onClick: () => handleLearning(),
+        color: '#4caf50'
+      },
+      {
+        id: 'saved',
+        label: 'Saved',
+        icon: <Bookmark sx={{ fontSize: 16 }} />,
+        onClick: () => handleSaved(),
+        color: '#795548'
+      },
+      {
+        id: 'business',
+        label: 'Business',
+        icon: <Business sx={{ fontSize: 16 }} />,
+        onClick: () => handleBusiness(),
+        color: '#795548'
+      },
+      {
+        id: 'profile',
+        label: 'Profile',
+        icon: <PersonAdd sx={{ fontSize: 16 }} />,
+        onClick: () => handleProfile(),
+        color: '#607d8b'
+      },
+      {
+        id: 'settings',
+        label: 'Settings',
+        icon: <Settings sx={{ fontSize: 16 }} />,
+        onClick: () => handleSettings(),
+        color: '#9e9e9e'
+      },
+      {
+        id: 'help',
+        label: 'Help',
+        icon: <Help sx={{ fontSize: 16 }} />,
+        onClick: () => handleHelp(),
+        color: '#ff5722'
+      }
+    ];
+
+    return (
+      <Card sx={{ mb: 2, borderRadius: 2, overflow: 'hidden' }}>
+                        <Box sx={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          position: 'relative',
+          p: 1.5,
+          '&::before': {
+            content: '""',
+                          position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
+            backdropFilter: 'blur(10px)',
+          }
+        }}>
+          {/* Auto-scrolling Actions Container */}
+                          <Box sx={{
+                            display: 'flex',
+                      gap: 1,
+            overflow: 'hidden',
+            position: 'relative',
+            height: 50,
+          }}>
+            <motion.div
+              animate={{
+                x: [0, -200, 0],
+              }}
+              transition={{
+                duration: 20,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+              style={{
+                display: 'flex',
+                gap: 8,
+                              position: 'absolute',
+                top: 0,
+                left: 0,
+              }}
+            >
+              {[...quickActions, ...quickActions].map((action, index) => (
+                <motion.div
+                  key={`${action.id}-${index}`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  style={{ flexShrink: 0 }}
                 >
-                  {post.author.firstName.charAt(0)}
-                </Avatar>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <Typography 
-                      variant="body2" 
-                      fontWeight={600}
-                      sx={{
-                        fontSize: '0.95rem',
-                        color: 'text.primary',
-                        cursor: 'pointer',
-                        '&:hover': {
-                          color: 'primary.main',
-                        }
-                      }}
-                    >
-                      {post.author.firstName} {post.author.lastName}
-                    </Typography>
-                    {post.isPinned && <Star sx={{ color: '#FFD700', fontSize: 16 }} />}
-                    {post.isPromoted && <TrendingUp sx={{ color: 'primary.main', fontSize: 16 }} />}
-                  </Box>
-                  <Typography 
-                    variant="caption" 
-                    color="text.secondary" 
-                    sx={{ 
-                      fontSize: '0.8rem',
-                      fontWeight: 500,
+                  <Button
+                    variant="contained"
+                    startIcon={action.icon}
+                    onClick={action.onClick}
+                                sx={{
+                      borderRadius: 20,
+                      px: 2,
+                      py: 0.8,
+                      textTransform: 'none',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      background: 'rgba(255, 255, 255, 0.2)',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                                  color: 'white',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                      minWidth: 'auto',
+                      whiteSpace: 'nowrap',
+                      height: 36,
+                                  '&:hover': {
+                        background: 'rgba(255, 255, 255, 0.3)',
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                      },
+                      transition: 'all 0.3s ease',
                     }}
                   >
-                    {post.author.jobTitle}
-                  </Typography>
-                </Box>
-              </Box>
-              <IconButton size="small" sx={{ borderRadius: '50%' }}>
-                <MoreHoriz />
-              </IconButton>
-            </PostHeader>
-
-            {/* Post Media - Instagram style (media first, then text) */}
-            {post.media && post.media.length > 0 && (
-              <PostMediaContainer>
-                {post.media.length === 1 ? (
-                  // Single media item
-                  <Box sx={{ position: 'relative', width: '200%', maxHeight: 400, overflow: 'hidden' }}>
-                    {post.media[0].type === 'image' ? (
-                      <CardMedia
-                        component="img"
-                        image={post.media[0].url}
-                        alt="Post media"
-                        sx={{
-                          width: '100%',
-                          height: 'auto',
-                          maxHeight: 400,
-                          objectFit: 'cover',
-                          cursor: 'pointer'
-                        }}
-                        onClick={() => window.open(post.media[0].url, '_blank')}
-                      />
-                    ) : (
-                      <Box 
-                        sx={{ 
-                          position: 'relative', 
-                          width: '100%', 
-                          height: 320,
-                          aspectRatio: '16/9',
-                          overflow: 'hidden',
-                          backgroundColor: 'black'
-                        }}
-                      >
-                        {/* Auto-playing Video */}
-                        <video
-                          data-video-id={`${post._id}-0`}
-                          loop
-                          muted={mutedVideos.has(`${post._id}-0`)}
-                          playsInline
-                          preload="metadata"
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                            cursor: 'pointer'
-                          }}
-                          poster={post.media[0].thumbnail}
-                          onClick={() => handleVideoClick(post.media[0].url, `${post.author.firstName} ${post.author.lastName}'s video`)}
-                        >
-                          <source src={post.media[0].url} type="video/mp4" />
-                          Your browser does not support the video tag.
-                        </video>
-
-                        {/* Video Controls Overlay */}
-                        <Box sx={{
-                          position: 'absolute',
-                          top: 12,
-                          right: 12,
-                          display: 'flex',
-                          gap: 1,
-                          zIndex: 2
-                        }}>
-                          {/* Mute/Unmute Button */}
-                          <IconButton
-                            data-testid="volume-button"
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleVideoMute(`${post._id}-0`);
-                            }}
-                            sx={{
-                              backgroundColor: 'rgba(0,0,0,0.6)',
-                              color: 'white',
-                              width: 36,
-                              height: 36,
-                              '&:hover': {
-                                backgroundColor: 'rgba(0,0,0,0.8)',
-                              }
-                            }}
-                          >
-                            {mutedVideos.has(`${post._id}-0`) ? (
-                              <VolumeOff sx={{ fontSize: 18 }} />
-                            ) : (
-                              <VolumeUp sx={{ fontSize: 18 }} />
-                            )}
-                          </IconButton>
-                        </Box>
-
-                        {/* Video duration badge */}
-                        <Box sx={{
-                          position: 'absolute',
-                          bottom: 12,
-                          right: 12,
-                          backgroundColor: 'rgba(0,0,0,0.8)',
-                          color: 'white',
-                          px: 1,
-                          py: 0.5,
-                          borderRadius: 1,
-                          fontSize: '0.75rem',
-                          fontWeight: 'bold'
-                        }}>
-                          {'0:30'}
-                        </Box>
-
-                        {/* Play indicator when paused */}
-                        {!playingVideos.has(`${post._id}-0`) && (
-                          <Box sx={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            backgroundColor: 'rgba(0,0,0,0.7)',
-                            borderRadius: '50%',
-                            width: 80,
-                            height: 80,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            pointerEvents: 'none'
-                          }}>
-                            <PlayCircleOutline sx={{ fontSize: 48, color: 'white' }} />
-                          </Box>
-                        )}
-                      </Box>
-                    )}
-                  </Box>
-                ) : (
-                  // Multiple media items - grid layout
-                  <Box 
-                    data-testid="video-grid"
-                    sx={{ 
-                      display: 'grid', 
-                      gap: 1,
-                      gridTemplateColumns: post.media.length === 2 ? '1fr 1fr' : hasVideoContent(post) ? 'repeat(auto-fit, minmax(180px, 1fr))' : 'repeat(auto-fit, minmax(220px, 1fr))',
-                      maxHeight: hasVideoContent(post) ? 400 : 420, // Increased from 300/320 for better space utilization
-                      overflow: 'hidden'
-                    }}>
-                    {post.media.slice(0, 4).map((media, index) => (
-                      <Box key={index} sx={{ position: 'relative', height: hasVideoContent(post) ? 190 : 200, overflow: 'hidden', backgroundColor: 'black', borderRadius: 1 }}> {/* Increased from 140px/160px to 190px/200px */}
-                        {media.type === 'image' ? (
-                          <CardMedia
-                            component="img"
-                            image={media.url}
-                            alt={`Post media ${index + 1}`}
-                            sx={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover',
-                              borderRadius: 0.5,
-                              cursor: 'pointer'
-                            }}
-                            onClick={() => window.open(media.url, '_blank')}
-                          />
-                        ) : (
-                          <>
-                            {/* Auto-playing Video */}
-                            <video
-                              data-video-id={`${post._id}-${index}`}
-                              loop
-                              muted={mutedVideos.has(`${post._id}-${index}`)}
-                              playsInline
-                              preload="metadata"
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover',
-                                borderRadius: 4,
-                                cursor: 'pointer'
-                              }}
-                              poster={media.thumbnail}
-                              onClick={() => handleVideoClick(media.url, `${post.author.firstName} ${post.author.lastName}'s video ${index + 1}`)}
-                            >
-                              <source src={media.url} type="video/mp4" />
-                              Your browser does not support the video tag.
-                            </video>
-
-                            {/* Video Controls Overlay */}
-                            <Box sx={{
-                              position: 'absolute',
-                              top: 4,
-                              right: 4,
-                              zIndex: 2
-                            }}>
-                              {/* Mute/Unmute Button */}
-                              <IconButton
-                                data-testid="volume-button"
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleVideoMute(`${post._id}-${index}`);
-                                }}
-                                sx={{
-                                  backgroundColor: 'rgba(0,0,0,0.6)',
-                                  color: 'white',
-                                  width: 24,
-                                  height: 24,
-                                  '&:hover': {
-                                    backgroundColor: 'rgba(0,0,0,0.8)',
-                                  }
-                                }}
-                              >
-                                {mutedVideos.has(`${post._id}-${index}`) ? (
-                                  <VolumeOff sx={{ fontSize: 14 }} />
-                                ) : (
-                                  <VolumeUp sx={{ fontSize: 14 }} />
-                                )}
-                              </IconButton>
+                    {action.label}
+                  </Button>
+                </motion.div>
+              ))}
+            </motion.div>
                             </Box>
 
-                            {/* Play indicator when paused */}
-                            {!playingVideos.has(`${post._id}-${index}`) && (
+          {/* Compact Scroll Indicators */}
                               <Box sx={{
-                                position: 'absolute',
-                                top: '50%',
-                                left: '50%',
-                                transform: 'translate(-50%, -50%)',
-                                backgroundColor: 'rgba(0,0,0,0.6)',
-                                borderRadius: '50%',
-                                width: 32,
-                                height: 32,
                                 display: 'flex',
-                                alignItems: 'center',
                                 justifyContent: 'center',
-                                pointerEvents: 'none'
-                              }}>
-                                <PlayCircleOutline sx={{ fontSize: 24, color: 'white' }} />
-                              </Box>
-                            )}
-                          </>
-                        )}
-                        {/* Show +X more overlay for last item if there are more than 4 items */}
-                        {index === 3 && post.media.length > 4 && (
-                          <Box sx={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            backgroundColor: 'rgba(0,0,0,0.6)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            borderRadius: 0.5,
-                            cursor: 'pointer'
-                          }}>
-                            <Typography variant="body2" color="white" fontWeight={600}>
-                              +{post.media.length - 4}
-                            </Typography>
-                          </Box>
-                        )}
-                      </Box>
-                    ))}
-                  </Box>
-                )}
-              </PostMediaContainer>
-            )}
-
-            {/* Instagram-style Action Buttons */}
-            <PostActions>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <IconButton
-                  data-testid="like-button"
-                  onClick={() => handlePostLike(post._id)}
+            mt: 0.5,
+            gap: 0.3
+          }}>
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Box
+                key={index}
                   sx={{ 
-                    color: isLiked ? '#ed4956' : 'text.primary',
-                    p: 0.5,
-                    '&:hover': {
-                      color: isLiked ? '#c73641' : 'text.secondary',
-                      backgroundColor: 'transparent',
-                    }
-                  }}
-                >
-                  {isLiked ? <Favorite sx={{ fontSize: 24 }} /> : <FavoriteBorder sx={{ fontSize: 24 }} />}
-                </IconButton>
-                
-                <IconButton 
-                  data-testid="comment-button"
-                  onClick={() => handleCommentClick(post._id)}
-                  sx={{ 
-                    color: 'text.primary', 
-                    p: 0.5,
-                    '&:hover': {
-                      color: 'text.secondary',
-                      backgroundColor: 'transparent',
-                    }
-                  }}
-                >
-                  <ChatBubbleOutline sx={{ fontSize: 24 }} />
-                </IconButton>
-                
-                <IconButton 
-                  onClick={() => handlePostShare(post._id)}
-                  sx={{ 
-                    color: 'text.primary', 
-                    p: 0.5,
-                    '&:hover': {
-                      color: 'text.secondary',
-                      backgroundColor: 'transparent',
-                    }
-                  }}
-                >
-                  <ShareOutlined sx={{ fontSize: 24 }} />
-                </IconButton>
-              </Box>
-              
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <AccessTime sx={{ fontSize: 12, color: 'text.secondary' }} />
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                  {formatDistanceToNow(new Date(post.createdAt))} ago
-                </Typography>
-              </Box>
-            </PostActions>
-
-            {/* Instagram-style Text Content */}
-            <PostTextContent>
-              {/* Likes count */}
-              {post.likesCount > 0 && (
-                <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5, fontSize: '0.875rem' }}>
-                  {post.likesCount.toLocaleString()} likes
-                </Typography>
-              )}
-
-              {/* Post content */}
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  lineHeight: 1.4,
-                  fontSize: '0.875rem',
-                  wordWrap: 'break-word',
-                  overflowWrap: 'break-word',
-                  whiteSpace: 'pre-wrap',
-                  mb: 1,
+                  width: 4,
+                  height: 4,
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                  transition: 'all 0.3s ease',
                 }}
-              >
-                <Typography component="span" fontWeight={600} sx={{ mr: 1 }}>
-                  {post.author.firstName.toLowerCase()}{post.author.lastName.toLowerCase()}
-                </Typography>
-                {displayContent}
-              </Typography>
-
-              {/* Show more/less button */}
-              {shouldTruncate && (
-                <Button
-                  onClick={() => togglePostExpansion(post._id)}
-                  sx={{ 
-                    textTransform: 'none', 
-                    p: 0, 
-                    mb: 1,
-                    fontWeight: 400,
-                    minHeight: 'auto',
-                    fontSize: '0.875rem',
-                    color: 'text.secondary',
-                  }}
-                >
-                  {isExpanded ? 'Show less' : 'more'}
-                </Button>
-              )}
-
-              {/* Tags - Instagram style */}
-              {post.tags && post.tags.length > 0 && (
-                <Box sx={{ mb: 1 }}>
-                  {post.tags.slice(0, 5).map((tag, index) => (
-                    <Typography
-                      key={tag}
-                      component="span"
-                      variant="body2"
-                      sx={{
-                        color: '#00376b',
-                        fontSize: '0.875rem',
-                        mr: 0.5,
-                        cursor: 'pointer',
-                        '&:hover': {
-                          textDecoration: 'underline',
-                        }
-                      }}
-                    >
-                      #{tag}
-                    </Typography>
-                  ))}
-                </Box>
-              )}
-
-              {/* Comments preview */}
-              {post.commentsCount > 0 && (
-                <Button
-                  onClick={() => handleCommentClick(post._id)}
-                  sx={{
-                    textTransform: 'none',
-                    p: 0,
-                    fontSize: '0.875rem',
-                    color: 'text.secondary',
-                    fontWeight: 400,
-                    justifyContent: 'flex-start',
-                  }}
-                >
-                  View all {post.commentsCount} comments
-                </Button>
-              )}
-            </PostTextContent>
-          </PostContentContainer>
-        </InstagramPostCard>
-      </motion.div>
+              />
+            ))}
+              </Box>
+              </Box>
+      </Card>
     );
   };
 
-  const renderSidebar = () => (
-    <Box>
-      {/* Ultra-Compact Profile Summary */}
-      <SidebarCard>
-        <CardContent>
-          <Box sx={{ textAlign: 'center' }}>
+  const renderRightSidebar = () => (
+    <Box sx={{ position: 'sticky', top: theme.spacing(2) }}>
+      {/* User Profile Section */}
+      <SidebarCard sx={{ 
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        color: 'white',
+        mb: 2,
+      }}>
+        <CardContent sx={{ textAlign: 'center', py: 3 }}>
+          <Box sx={{ position: 'relative', display: 'inline-block', mb: 2 }}>
             <Avatar
-              src={(user as any)?.profilePicture || undefined}
-              sx={{ 
-                width: 40, 
-                height: 40, 
-                mx: 'auto', 
-                mb: 1,
-                border: `2px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-                boxShadow: `0 2px 8px ${alpha(theme.palette.primary.main, 0.15)}`,
+              src={(user as any)?.profilePicture}
+              sx={{
+                width: 80,
+                height: 80,
+                border: '4px solid rgba(255,255,255,0.3)',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+                background: 'rgba(255,255,255,0.1)',
               }}
             >
-              {user?.firstName?.charAt(0)}
+              {user?.firstName?.charAt(0)?.toUpperCase()}
             </Avatar>
-            <Typography variant="body2" fontWeight={700} sx={{ fontSize: '0.8rem', mb: 0.5 }}>
-              {user?.firstName} {user?.lastName}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block', fontSize: '0.7rem' }}>
-              Full Stack Developer
-            </Typography>
-            {/* Compact stats in single row */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1.2, textAlign: 'center' }}>
-              <Box>
-                <Typography variant="caption" fontWeight={700} color="primary.main" sx={{ fontSize: '0.7rem' }}>1.9K</Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.6rem' }}>
-                  Connect
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="caption" fontWeight={700} color="primary.main" sx={{ fontSize: '0.7rem' }}>224</Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.6rem' }}>
-                  Posts
-                </Typography>
-              </Box>
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: 0,
+                right: 0,
+                width: 24,
+                height: 24,
+                borderRadius: '50%',
+                background: 'rgba(76, 175, 80, 0.9)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '3px solid white',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              }}
+            >
+              <Verified sx={{ color: 'white', fontSize: 14 }} />
             </Box>
+          </Box>
+          
+          <Typography variant="h6" fontWeight="700" sx={{ mb: 0.5, color: 'white' }}>
+            {user?.firstName} {user?.lastName}
+          </Typography>
+          
+          <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.8)' }}>
+            {user?.jobTitle || 'Professional'}
+          </Typography>
+          
+          <Button
+            variant="outlined"
+            sx={{
+              borderColor: 'rgba(255,255,255,0.5)',
+              color: 'white',
+              borderRadius: 3,
+              px: 3,
+              py: 1,
+              fontWeight: 600,
+              textTransform: 'none',
+              '&:hover': {
+                borderColor: 'white',
+                backgroundColor: 'rgba(255,255,255,0.1)',
+              },
+            }}
+            onClick={() => navigate('/app/profile')}
+          >
+            View Profile
+          </Button>
+        </CardContent>
+      </SidebarCard>
+
+      {/* Quick Navigation */}
+      <SidebarCard sx={{ mb: 2 }}>
+        <CardContent>
+          <Typography variant="h6" fontWeight="600" sx={{ mb: 2, color: theme.palette.text.primary }}>
+            Quick Navigation
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Button
+              startIcon={<People sx={{ color: '#4caf50' }} />}
+              variant="outlined"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                borderRadius: 2,
+                py: 1.5,
+                borderColor: '#4caf50',
+                color: '#4caf50',
+                fontWeight: 600,
+                '&:hover': {
+                  backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                  borderColor: '#4caf50',
+                },
+              }}
+              onClick={() => navigate('/network')}
+            >
+              My Network
+            </Button>
+            <Button
+              startIcon={<Work sx={{ color: '#1877f2' }} />}
+              variant="outlined"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                borderRadius: 2,
+                py: 1.5,
+                borderColor: '#1877f2',
+                color: '#1877f2',
+                fontWeight: 600,
+                '&:hover': {
+                  backgroundColor: 'rgba(24, 119, 242, 0.1)',
+                  borderColor: '#1877f2',
+                },
+              }}
+              onClick={() => navigate('/app/jobs')}
+            >
+              Jobs
+            </Button>
+            <Button
+              startIcon={<School sx={{ color: '#ff9800' }} />}
+              variant="outlined"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                borderRadius: 2,
+                py: 1.5,
+                borderColor: '#ff9800',
+                color: '#ff9800',
+                fontWeight: 600,
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                  borderColor: '#ff9800',
+                },
+              }}
+              onClick={() => navigate('/learning')}
+            >
+              Learning
+            </Button>
+            <Button
+              startIcon={<Bookmark sx={{ color: '#9c27b0' }} />}
+              variant="outlined"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                borderRadius: 2,
+                py: 1.5,
+                borderColor: '#9c27b0',
+                color: '#9c27b0',
+                fontWeight: 600,
+                '&:hover': {
+                  backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                  borderColor: '#9c27b0',
+                },
+              }}
+              onClick={() => navigate('/saved')}
+            >
+              Saved
+            </Button>
+            <Button
+              startIcon={<Event sx={{ color: '#e91e63' }} />}
+              variant="outlined"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                borderRadius: 2,
+                py: 1.5,
+                borderColor: '#e91e63',
+                color: '#e91e63',
+                fontWeight: 600,
+                '&:hover': {
+                  backgroundColor: 'rgba(233, 30, 99, 0.1)',
+                  borderColor: '#e91e63',
+                },
+              }}
+              onClick={() => navigate('/events')}
+            >
+              Events
+            </Button>
           </Box>
         </CardContent>
       </SidebarCard>
 
-      {/* Ultra-Compact Career Hub */}
+      {/* Suggested Connections */}
       <SidebarCard>
         <CardContent>
-          <Typography variant="body2" fontWeight={700} sx={{ 
-            mb: 1.2, 
-            textAlign: 'center',
-            background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            fontSize: '0.85rem',
-          }}>
-            Career Hub
-          </Typography>
-          <Stack spacing={0.8}>
-            <IconButton 
-              size="small" 
-              onClick={() => navigate('/jobs')}
-              sx={{ 
-                borderRadius: 2.5, 
-                p: 0.8,
-                background: 'linear-gradient(135deg, #1976d2, #42a5f5)',
-                color: 'white',
-                width: '100%',
-                height: 36,
-                '&:hover': { 
-                  background: 'linear-gradient(135deg, #1565c0, #1976d2)',
-                  transform: 'scale(1.02)'
-                }
-              }}
+          <Typography variant="h6" fontWeight="600" sx={{ mb: 2 }}>
+            Suggested Connections
+                </Typography>
+          
+          {connectionsLoading ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {Array.from({ length: 3 }).map((_, index) => (
+                <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Skeleton variant="circular" width={40} height={40} />
+                  <Box sx={{ flex: 1 }}>
+                    <Skeleton variant="text" width="70%" height={16} />
+                    <Skeleton variant="text" width="50%" height={14} />
+                  </Box>
+                  <Skeleton variant="rectangular" width={60} height={32} />
+                </Box>
+              ))}
+            </Box>
+          ) : suggestedConnections.length > 0 ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {suggestedConnections.slice(0, 5).map((connection) => (
+                <Box key={connection._id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Avatar 
+                    src={connection.profilePicture}
+                    sx={{ width: 40, height: 40 }}
+                  >
+                    {connection.firstName?.charAt(0)}
+                  </Avatar>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="subtitle2" fontWeight="600" noWrap>
+                      {connection.firstName} {connection.lastName}
+                </Typography>
+                    <Typography variant="caption" color="text.secondary" noWrap>
+                      {connection.jobTitle} at {connection.company}
+              </Typography>
+                    {connection.mutualConnections > 0 && (
+                      <Typography variant="caption" color="primary.main">
+                        {connection.mutualConnections} mutual connections
+                      </Typography>
+                    )}
+                  </Box>
+                <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<PersonAdd />}
+                  sx={{ 
+                      borderRadius: 20,
+                    textTransform: 'none', 
+                      fontSize: '0.75rem'
+                    }}
+                    onClick={() => handleConnect(connection._id)}
+                  >
+                    Connect
+                </Button>
+                </Box>
+                  ))}
+                </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+              No suggested connections at the moment
+            </Typography>
+              )}
+
+          {suggestedConnections.length > 5 && (
+                <Button
+              fullWidth
+              variant="text"
+              sx={{ mt: 2, textTransform: 'none' }}
+              onClick={() => navigate('/connections')}
             >
-              <BusinessCenter fontSize="small" />
-            </IconButton>
-            <IconButton 
-              size="small" 
-              onClick={() => navigate('/interview-prep')}
-              sx={{ 
-                borderRadius: 2.5, 
-                p: 0.8,
-                background: 'linear-gradient(135deg, #9c27b0, #ba68c8)',
-                color: 'white',
-                width: '100%',
-                height: 36,
-                '&:hover': { 
-                  background: 'linear-gradient(135deg, #7b1fa2, #9c27b0)',
-                  transform: 'scale(1.02)'
-                }
-              }}
-            >
-              <QuestionAnswer fontSize="small" />
-            </IconButton>
-            <IconButton 
-              size="small" 
-              onClick={() => navigate('/cv-builder')}
-              sx={{ 
-                borderRadius: 2.5, 
-                p: 0.8,
-                background: 'linear-gradient(135deg, #388e3c, #66bb6a)',
-                color: 'white',
-                width: '100%',
-                height: 36,
-                '&:hover': { 
-                  background: 'linear-gradient(135deg, #2e7d32, #388e3c)',
-                  transform: 'scale(1.02)'
-                }
-              }}
-            >
-              <Assignment fontSize="small" />
-            </IconButton>
-            <IconButton 
-              size="small" 
-              onClick={() => navigate('/skills-assessment')}
-              sx={{ 
-                borderRadius: 2.5, 
-                p: 0.8,
-                background: 'linear-gradient(135deg, #d32f2f, #f44336)',
-                color: 'white',
-                width: '100%',
-                height: 36,
-                '&:hover': { 
-                  background: 'linear-gradient(135deg, #c62828, #d32f2f)',
-                  transform: 'scale(1.02)'
-                }
-              }}
-            >
-              <Assessment fontSize="small" />
-            </IconButton>
-          </Stack>
+              View All Suggestions
+                </Button>
+              )}
         </CardContent>
       </SidebarCard>
 
-      {/* Ultra-Compact Trending */}
+      {/* Trending Topics */}
       <SidebarCard>
         <CardContent>
-          <Typography variant="body2" fontWeight={700} sx={{ 
-            mb: 1.2, 
-            textAlign: 'center',
-            fontSize: '0.85rem',
-            color: 'text.primary',
-          }}>
-            Trending
-          </Typography>
-          <Stack spacing={0.6}>
-            {trendingTopics.slice(0, 3).map((topic, index) => (
-              <Box 
-                key={index} 
-                sx={{ 
-                  p: 0.8, 
-                  borderRadius: 1.5, 
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                  '&:hover': { 
-                    backgroundColor: alpha(theme.palette.primary.main, 0.05),
-                    borderColor: alpha(theme.palette.primary.main, 0.2),
-                    transform: 'translateY(-1px)',
-                  }
-                }}
-              >
-                <Typography variant="caption" fontWeight={700} color="primary.main" sx={{ fontSize: '0.7rem', display: 'block' }}>
-                  {topic.topic}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
-                  {topic.posts > 1000 ? `${Math.round(topic.posts/1000)}k` : topic.posts} • {topic.growth}
-                </Typography>
-              </Box>
+          <Typography variant="h6" fontWeight="600" sx={{ mb: 2 }}>
+            Trending Topics
+            </Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {['#career', '#networking', '#jobs', '#technology', '#leadership'].map((topic) => (
+              <Chip
+                key={topic}
+                label={topic}
+                variant="outlined"
+                size="small"
+                clickable
+                sx={{ fontSize: '0.75rem' }}
+                onClick={() => handleTopicClick(topic)}
+              />
             ))}
-          </Stack>
+          </Box>
+        </CardContent>
+      </SidebarCard>
+
+      {/* Quick Actions */}
+      <SidebarCard>
+        <CardContent>
+          <Typography variant="h6" fontWeight="600" sx={{ mb: 2 }}>
+            Quick Actions
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            {/* Career & Jobs */}
+            <Button
+              startIcon={<Work sx={{ color: '#1877f2' }} />}
+              variant="contained"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                background: 'linear-gradient(135deg, #1877f2 0%, #42a5f5 100%)',
+                color: 'white',
+                fontWeight: 600,
+                borderRadius: 2,
+                py: 1.5,
+                boxShadow: '0 2px 8px rgba(24, 119, 242, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #1565c0 0%, #1976d2 100%)',
+                  boxShadow: '0 4px 12px rgba(24, 119, 242, 0.4)',
+                  transform: 'translateY(-1px)',
+                },
+                transition: 'all 0.3s ease',
+              }}
+              onClick={() => handleFindJobs()}
+            >
+              Jobs
+            </Button>
+            <Button
+              startIcon={<School sx={{ color: '#ff9800' }} />}
+              variant="contained"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                background: 'linear-gradient(135deg, #ff9800 0%, #ffb74d 100%)',
+                color: 'white',
+                fontWeight: 600,
+                borderRadius: 2,
+                py: 1.5,
+                boxShadow: '0 2px 8px rgba(255, 152, 0, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #f57c00 0%, #ff9800 100%)',
+                  boxShadow: '0 4px 12px rgba(255, 152, 0, 0.4)',
+                  transform: 'translateY(-1px)',
+                },
+                transition: 'all 0.3s ease',
+              }}
+              onClick={() => handleInternships()}
+            >
+              Internships
+            </Button>
+            <Button
+              startIcon={<School sx={{ color: '#e91e63' }} />}
+              variant="contained"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                background: 'linear-gradient(135deg, #e91e63 0%, #f06292 100%)',
+                color: 'white',
+                fontWeight: 600,
+                borderRadius: 2,
+                py: 1.5,
+                boxShadow: '0 2px 8px rgba(233, 30, 99, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #c2185b 0%, #e91e63 100%)',
+                  boxShadow: '0 4px 12px rgba(233, 30, 99, 0.4)',
+                  transform: 'translateY(-1px)',
+                },
+                transition: 'all 0.3s ease',
+              }}
+              onClick={() => handleInterviewPrep()}
+            >
+              Interview Prep
+            </Button>
+            <Button
+              startIcon={<PersonAdd sx={{ color: '#9c27b0' }} />}
+              variant="contained"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                background: 'linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%)',
+                color: 'white',
+                fontWeight: 600,
+                borderRadius: 2,
+                py: 1.5,
+                boxShadow: '0 2px 8px rgba(156, 39, 176, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #7b1fa2 0%, #9c27b0 100%)',
+                  boxShadow: '0 4px 12px rgba(156, 39, 176, 0.4)',
+                  transform: 'translateY(-1px)',
+                },
+                transition: 'all 0.3s ease',
+              }}
+              onClick={() => handleApplications()}
+            >
+              Applications
+            </Button>
+            
+            {/* Assessment & Testing */}
+            <Button
+              startIcon={<Article sx={{ color: '#4caf50' }} />}
+              variant="contained"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                background: 'linear-gradient(135deg, #4caf50 0%, #81c784 100%)',
+                color: 'white',
+                fontWeight: 600,
+                borderRadius: 2,
+                py: 1.5,
+                boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #388e3c 0%, #4caf50 100%)',
+                  boxShadow: '0 4px 12px rgba(76, 175, 80, 0.4)',
+                  transform: 'translateY(-1px)',
+                },
+                transition: 'all 0.3s ease',
+              }}
+              onClick={() => handlePsychometricTests()}
+            >
+              Psychometric Tests
+            </Button>
+            <Button
+              startIcon={<School sx={{ color: '#ff5722' }} />}
+              variant="contained"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                background: 'linear-gradient(135deg, #ff5722 0%, #ff8a65 100%)',
+                color: 'white',
+                fontWeight: 600,
+                borderRadius: 2,
+                py: 1.5,
+                boxShadow: '0 2px 8px rgba(255, 87, 34, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #d84315 0%, #ff5722 100%)',
+                  boxShadow: '0 4px 12px rgba(255, 87, 34, 0.4)',
+                  transform: 'translateY(-1px)',
+                },
+                transition: 'all 0.3s ease',
+              }}
+              onClick={() => handleSmartExams()}
+            >
+              Smart Exams
+            </Button>
+            <Button
+              startIcon={<Article sx={{ color: '#795548' }} />}
+              variant="contained"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                background: 'linear-gradient(135deg, #795548 0%, #a1887f 100%)',
+                color: 'white',
+                fontWeight: 600,
+                borderRadius: 2,
+                py: 1.5,
+                boxShadow: '0 2px 8px rgba(121, 85, 72, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #5d4037 0%, #795548 100%)',
+                  boxShadow: '0 4px 12px rgba(121, 85, 72, 0.4)',
+                  transform: 'translateY(-1px)',
+                },
+                transition: 'all 0.3s ease',
+              }}
+              onClick={() => handleCVBuilder()}
+            >
+              CV Builder
+            </Button>
+            
+            {/* Professional Development */}
+            <Button
+              startIcon={<TrendingUp sx={{ color: '#2196f3' }} />}
+              variant="contained"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                background: 'linear-gradient(135deg, #2196f3 0%, #64b5f6 100%)',
+                color: 'white',
+                fontWeight: 600,
+                borderRadius: 2,
+                py: 1.5,
+                boxShadow: '0 2px 8px rgba(33, 150, 243, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #1976d2 0%, #2196f3 100%)',
+                  boxShadow: '0 4px 12px rgba(33, 150, 243, 0.4)',
+                  transform: 'translateY(-1px)',
+                },
+                transition: 'all 0.3s ease',
+              }}
+              onClick={() => handleCareerGuidance()}
+            >
+              Career Guidance
+            </Button>
+            <Button
+              startIcon={<School sx={{ color: '#4caf50' }} />}
+              variant="contained"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                background: 'linear-gradient(135deg, #4caf50 0%, #81c784 100%)',
+                color: 'white',
+                fontWeight: 600,
+                borderRadius: 2,
+                py: 1.5,
+                boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #388e3c 0%, #4caf50 100%)',
+                  boxShadow: '0 4px 12px rgba(76, 175, 80, 0.4)',
+                  transform: 'translateY(-1px)',
+                },
+                transition: 'all 0.3s ease',
+              }}
+              onClick={() => handleLearning()}
+            >
+              Learning
+            </Button>
+            <Button
+              startIcon={<People sx={{ color: '#9c27b0' }} />}
+              variant="contained"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                background: 'linear-gradient(135deg, #9c27b0 0%, #ba68c8 100%)',
+                color: 'white',
+                fontWeight: 600,
+                borderRadius: 2,
+                py: 1.5,
+                boxShadow: '0 2px 8px rgba(156, 39, 176, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #7b1fa2 0%, #9c27b0 100%)',
+                  boxShadow: '0 4px 12px rgba(156, 39, 176, 0.4)',
+                  transform: 'translateY(-1px)',
+                },
+                transition: 'all 0.3s ease',
+              }}
+              onClick={() => handleNetworking()}
+            >
+              My Network
+            </Button>
+            <Button
+              startIcon={<Event sx={{ color: '#ff9800' }} />}
+              variant="contained"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                background: 'linear-gradient(135deg, #ff9800 0%, #ffb74d 100%)',
+                color: 'white',
+                fontWeight: 600,
+                borderRadius: 2,
+                py: 1.5,
+                boxShadow: '0 2px 8px rgba(255, 152, 0, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #f57c00 0%, #ff9800 100%)',
+                  boxShadow: '0 4px 12px rgba(255, 152, 0, 0.4)',
+                  transform: 'translateY(-1px)',
+                },
+                transition: 'all 0.3s ease',
+              }}
+              onClick={() => handleEvents()}
+            >
+              Events
+            </Button>
+            <Button
+              startIcon={<Article sx={{ color: '#2196f3' }} />}
+              variant="contained"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                background: 'linear-gradient(135deg, #2196f3 0%, #64b5f6 100%)',
+                color: 'white',
+                fontWeight: 600,
+                borderRadius: 2,
+                py: 1.5,
+                boxShadow: '0 2px 8px rgba(33, 150, 243, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #1976d2 0%, #2196f3 100%)',
+                  boxShadow: '0 4px 12px rgba(33, 150, 243, 0.4)',
+                  transform: 'translateY(-1px)',
+                },
+                transition: 'all 0.3s ease',
+              }}
+              onClick={() => handleArticles()}
+            >
+              Articles
+            </Button>
+            
+            {/* Platform Management */}
+            <Button
+              startIcon={<Bookmark sx={{ color: '#795548' }} />}
+              variant="contained"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                background: 'linear-gradient(135deg, #795548 0%, #a1887f 100%)',
+                color: 'white',
+                fontWeight: 600,
+                borderRadius: 2,
+                py: 1.5,
+                boxShadow: '0 2px 8px rgba(121, 85, 72, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #5d4037 0%, #795548 100%)',
+                  boxShadow: '0 4px 12px rgba(121, 85, 72, 0.4)',
+                  transform: 'translateY(-1px)',
+                },
+                transition: 'all 0.3s ease',
+              }}
+              onClick={() => handleSaved()}
+            >
+              Saved
+            </Button>
+            <Button
+              startIcon={<Business sx={{ color: '#795548' }} />}
+              variant="contained"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                background: 'linear-gradient(135deg, #795548 0%, #a1887f 100%)',
+                color: 'white',
+                fontWeight: 600,
+                borderRadius: 2,
+                py: 1.5,
+                boxShadow: '0 2px 8px rgba(121, 85, 72, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #5d4037 0%, #795548 100%)',
+                  boxShadow: '0 4px 12px rgba(121, 85, 72, 0.4)',
+                  transform: 'translateY(-1px)',
+                },
+                transition: 'all 0.3s ease',
+              }}
+              onClick={() => handleBusiness()}
+            >
+              Business
+            </Button>
+            <Button
+              startIcon={<PersonAdd sx={{ color: '#607d8b' }} />}
+              variant="contained"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                background: 'linear-gradient(135deg, #607d8b 0%, #90a4ae 100%)',
+                color: 'white',
+                fontWeight: 600,
+                borderRadius: 2,
+                py: 1.5,
+                boxShadow: '0 2px 8px rgba(96, 125, 139, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #455a64 0%, #607d8b 100%)',
+                  boxShadow: '0 4px 12px rgba(96, 125, 139, 0.4)',
+                  transform: 'translateY(-1px)',
+                },
+                transition: 'all 0.3s ease',
+              }}
+              onClick={() => handleProfile()}
+            >
+              Profile
+            </Button>
+            <Button
+              startIcon={<Settings sx={{ color: '#9e9e9e' }} />}
+              variant="contained"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                background: 'linear-gradient(135deg, #9e9e9e 0%, #bdbdbd 100%)',
+                color: 'white',
+                fontWeight: 600,
+                borderRadius: 2,
+                py: 1.5,
+                boxShadow: '0 2px 8px rgba(158, 158, 158, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #757575 0%, #9e9e9e 100%)',
+                  boxShadow: '0 4px 12px rgba(158, 158, 158, 0.4)',
+                  transform: 'translateY(-1px)',
+                },
+                transition: 'all 0.3s ease',
+              }}
+              onClick={() => handleSettings()}
+            >
+              Settings
+            </Button>
+            <Button
+              startIcon={<Help sx={{ color: '#ff5722' }} />}
+              variant="contained"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                background: 'linear-gradient(135deg, #ff5722 0%, #ff8a65 100%)',
+                color: 'white',
+                fontWeight: 600,
+                borderRadius: 2,
+                py: 1.5,
+                boxShadow: '0 2px 8px rgba(255, 87, 34, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #d84315 0%, #ff5722 100%)',
+                  boxShadow: '0 4px 12px rgba(255, 87, 34, 0.4)',
+                  transform: 'translateY(-1px)',
+                },
+                transition: 'all 0.3s ease',
+              }}
+              onClick={() => handleHelp()}
+            >
+              Help
+            </Button>
+          </Box>
         </CardContent>
       </SidebarCard>
     </Box>
   );
 
-  if (error) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Alert severity="error" sx={{ borderRadius: 2 }}>
-          {error}
-          <Button onClick={loadFeed} sx={{ ml: 2 }}>
-            Try Again
+  const renderLeftSidebar = () => (
+    <Box sx={{ position: 'sticky', top: theme.spacing(2) }}>
+      {/* User Profile Section */}
+      <SidebarCard sx={{ 
+        background: 'linear-gradient(135deg, #4caf50 0%, #81c784 100%)',
+        color: 'white',
+        mb: 2,
+      }}>
+        <CardContent sx={{ textAlign: 'center', py: 3 }}>
+          <Box sx={{ position: 'relative', display: 'inline-block', mb: 2 }}>
+            <Avatar
+              src={(user as any)?.profilePicture}
+              sx={{
+                width: 80,
+                height: 80,
+                border: '4px solid rgba(255,255,255,0.3)',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+                background: 'rgba(255,255,255,0.1)',
+              }}
+            >
+              {user?.firstName?.charAt(0)?.toUpperCase()}
+            </Avatar>
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: 0,
+                right: 0,
+                width: 24,
+                height: 24,
+                borderRadius: '50%',
+                background: 'rgba(255, 193, 7, 0.9)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '3px solid white',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              }}
+            >
+              <Star sx={{ color: 'white', fontSize: 14 }} />
+            </Box>
+          </Box>
+          
+          <Typography variant="h6" fontWeight="700" sx={{ mb: 0.5, color: 'white' }}>
+            {user?.firstName} {user?.lastName}
+          </Typography>
+          
+          <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255,255,255,0.8)' }}>
+            {user?.jobTitle || 'Professional'}
+          </Typography>
+          
+          <Button
+            variant="outlined"
+            sx={{
+              borderColor: 'rgba(255,255,255,0.5)',
+              color: 'white',
+              borderRadius: 3,
+              px: 3,
+              py: 1,
+              fontWeight: 600,
+              textTransform: 'none',
+              '&:hover': {
+                borderColor: 'white',
+                backgroundColor: 'rgba(255,255,255,0.1)',
+              },
+            }}
+            onClick={() => navigate('/app/profile')}
+          >
+            View Profile
           </Button>
-        </Alert>
-      </Container>
+        </CardContent>
+      </SidebarCard>
+
+      {/* Quick Navigation */}
+      <SidebarCard sx={{ mb: 2 }}>
+        <CardContent>
+          <Typography variant="h6" fontWeight="600" sx={{ mb: 2, color: theme.palette.text.primary }}>
+            Quick Navigation
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Button
+              startIcon={<People sx={{ color: '#4caf50' }} />}
+              variant="outlined"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                borderRadius: 2,
+                py: 1.5,
+                borderColor: '#4caf50',
+                color: '#4caf50',
+                fontWeight: 600,
+                '&:hover': {
+                  backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                  borderColor: '#4caf50',
+                },
+              }}
+              onClick={() => navigate('/network')}
+            >
+              My Network
+            </Button>
+            <Button
+              startIcon={<Work sx={{ color: '#1877f2' }} />}
+              variant="outlined"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                borderRadius: 2,
+                py: 1.5,
+                borderColor: '#1877f2',
+                color: '#1877f2',
+                fontWeight: 600,
+                '&:hover': {
+                  backgroundColor: 'rgba(24, 119, 242, 0.1)',
+                  borderColor: '#1877f2',
+                },
+              }}
+              onClick={() => navigate('/app/jobs')}
+            >
+              Jobs
+            </Button>
+            <Button
+              startIcon={<School sx={{ color: '#ff9800' }} />}
+              variant="outlined"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                borderRadius: 2,
+                py: 1.5,
+                borderColor: '#ff9800',
+                color: '#ff9800',
+                fontWeight: 600,
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                  borderColor: '#ff9800',
+                },
+              }}
+              onClick={() => navigate('/learning')}
+            >
+              Learning
+            </Button>
+            <Button
+              startIcon={<Bookmark sx={{ color: '#9c27b0' }} />}
+              variant="outlined"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                borderRadius: 2,
+                py: 1.5,
+                borderColor: '#9c27b0',
+                color: '#9c27b0',
+                fontWeight: 600,
+                '&:hover': {
+                  backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                  borderColor: '#9c27b0',
+                },
+              }}
+              onClick={() => navigate('/saved')}
+            >
+              Saved
+            </Button>
+            <Button
+              startIcon={<Event sx={{ color: '#e91e63' }} />}
+              variant="outlined"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                borderRadius: 2,
+                py: 1.5,
+                borderColor: '#e91e63',
+                color: '#e91e63',
+                fontWeight: 600,
+                '&:hover': {
+                  backgroundColor: 'rgba(233, 30, 99, 0.1)',
+                  borderColor: '#e91e63',
+                },
+              }}
+              onClick={() => navigate('/events')}
+            >
+              Events
+            </Button>
+          </Box>
+        </CardContent>
+      </SidebarCard>
+
+      {/* Additional Quick Actions */}
+      <SidebarCard>
+        <CardContent>
+          <Typography variant="h6" fontWeight="600" sx={{ mb: 2, color: theme.palette.text.primary }}>
+            More Actions
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Button
+              startIcon={<Article sx={{ color: '#2196f3' }} />}
+              variant="outlined"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                borderRadius: 2,
+                py: 1.5,
+                borderColor: '#2196f3',
+                color: '#2196f3',
+                fontWeight: 600,
+                '&:hover': {
+                  backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                  borderColor: '#2196f3',
+                },
+              }}
+              onClick={() => navigate('/articles')}
+            >
+              Articles
+            </Button>
+            <Button
+              startIcon={<TrendingUp sx={{ color: '#ff5722' }} />}
+              variant="outlined"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                borderRadius: 2,
+                py: 1.5,
+                borderColor: '#ff5722',
+                color: '#ff5722',
+                fontWeight: 600,
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 87, 34, 0.1)',
+                  borderColor: '#ff5722',
+                },
+              }}
+              onClick={() => navigate('/trending')}
+            >
+              Trending
+            </Button>
+            <Button
+              startIcon={<Article sx={{ color: '#795548' }} />}
+              variant="outlined"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                borderRadius: 2,
+                py: 1.5,
+                borderColor: '#795548',
+                color: '#795548',
+                fontWeight: 600,
+                '&:hover': {
+                  backgroundColor: 'rgba(121, 85, 72, 0.1)',
+                  borderColor: '#795548',
+                },
+              }}
+              onClick={() => handleCVBuilder()}
+            >
+              CV Builder
+            </Button>
+            <Button
+              startIcon={<Settings sx={{ color: '#607d8b' }} />}
+              variant="outlined"
+              fullWidth
+              sx={{ 
+                justifyContent: 'flex-start', 
+                textTransform: 'none',
+                borderRadius: 2,
+                py: 1.5,
+                borderColor: '#607d8b',
+                color: '#607d8b',
+                fontWeight: 600,
+                '&:hover': {
+                  backgroundColor: 'rgba(96, 125, 139, 0.1)',
+                  borderColor: '#607d8b',
+                },
+              }}
+              onClick={() => navigate('/settings')}
+            >
+              Settings
+            </Button>
+          </Box>
+        </CardContent>
+      </SidebarCard>
+    </Box>
+  );
+
+  // Helper function to format distance to now
+  const formatDistanceToNow = (date: Date) => {
+    const now = new Date();
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours}h`;
+    if (diffInDays < 7) return `${diffInDays}d`;
+    return date.toLocaleDateString();
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '50vh' 
+      }}>
+        <CircularProgress />
+      </Box>
     );
   }
 
   return (
     <Box sx={{ 
       minHeight: '100vh', 
-      bgcolor: 'background.default',
-      background: theme.palette.mode === 'dark' 
-        ? 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%)'
-        : 'linear-gradient(135deg, #f8fafc 0%, #ffffff 50%, #f1f5f9 100%)'
+      backgroundColor: theme.palette.mode === 'dark' ? '#121212' : '#f0f2f5',
     }}>
-      <Container maxWidth="xl" sx={{ py: 2 }}>
-        <Box sx={{ 
-          display: 'flex', 
-          gap: 3, 
-          justifyContent: 'center',
-          flexWrap: 'wrap'
+      {/* Mobile Top Bar */}
+      {isMobile && (
+        <AppBar position="sticky" elevation={0} sx={{ 
+          bgcolor: theme.palette.mode === 'dark' 
+            ? 'rgba(15, 23, 42, 0.95)' 
+            : 'rgba(255, 255, 255, 0.98)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`,
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 4px 32px rgba(0, 0, 0, 0.3), 0 1px 0 rgba(255, 255, 255, 0.05)'
+            : '0 4px 32px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(255, 255, 255, 0.8)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: theme.palette.mode === 'dark' 
+              ? 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 50%, rgba(2, 6, 23, 0.98) 100%)'
+              : 'linear-gradient(135deg, rgba(248, 250, 252, 0.9) 0%, rgba(241, 245, 249, 0.95) 50%, rgba(226, 232, 240, 0.98) 100%)',
+            zIndex: -1,
+          },
         }}>
+          <Toolbar sx={{ 
+            px: { xs: 1.5, sm: 2 }, 
+            py: { xs: 1, sm: 1.5 },
+            minHeight: { xs: 65, sm: 70 },
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}>
+            <Typography 
+              variant="h5" 
+              sx={{ 
+                fontWeight: 700, 
+                background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                mr: { xs: 1.5, sm: 2 },
+                fontSize: { xs: '1.1rem', sm: '1.3rem' },
+                letterSpacing: '-0.02em'
+              }}
+            >
+              Social
+            </Typography>
+            
+            <StyledSearchBar 
+              sx={{ 
+                flex: 1, 
+                maxWidth: 'none', 
+                mr: { xs: 1.5, sm: 2 },
+                cursor: 'pointer',
+                height: { xs: 40, sm: 44 },
+                borderRadius: { xs: 20, sm: 22 },
+                '& .MuiInputBase-root': {
+                  fontSize: { xs: '0.9rem', sm: '0.95rem' },
+                  fontWeight: 500,
+                },
+                '& .MuiInputBase-input': {
+                  padding: { xs: '6px 0', sm: '8px 0' },
+                  '&::placeholder': {
+                    opacity: 0.7,
+                    fontWeight: 400,
+                  },
+                },
+              }}
+              onClick={handleSearchClick}
+            >
+              <Search 
+                sx={{ 
+                  mr: { xs: 1, sm: 1.5 }, 
+                  color: 'text.secondary',
+                  fontSize: { xs: '1.1rem', sm: '1.2rem' },
+                  transition: 'all 0.3s ease',
+                }} 
+              />
+              <InputBase
+                placeholder="Search posts and users..."
+                value={searchValue}
+                onChange={handleSearchChange}
+                onKeyPress={handleSearchKeyPress}
+                onClick={(e) => e.stopPropagation()}
+                sx={{ 
+                  flex: 1,
+                  fontSize: { xs: '0.9rem', sm: '0.95rem' },
+                  fontWeight: 500,
+                  '& .MuiInputBase-input': {
+                    padding: { xs: '6px 0', sm: '8px 0' },
+                    '&::placeholder': {
+                      opacity: 0.7,
+                      fontWeight: 400,
+                    },
+                  },
+                }}
+              />
+            </StyledSearchBar>
+            
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <IconButton 
+                onClick={() => navigate('/app/notifications')}
+                sx={{
+                  p: 1.2,
+                  borderRadius: 2,
+                  backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.primary.main, 0.15),
+                    transform: 'scale(1.05)',
+                  },
+                  transition: 'all 0.3s ease',
+                }}
+              >
+                <Notifications sx={{ fontSize: '1.3rem' }} />
+              </IconButton>
+              <IconButton
+                sx={{
+                  p: 1.2,
+                  borderRadius: 2,
+                  backgroundColor: alpha(theme.palette.secondary.main, 0.08),
+                  '&:hover': {
+                    backgroundColor: alpha(theme.palette.secondary.main, 0.15),
+                    transform: 'scale(1.05)',
+                  },
+                  transition: 'all 0.3s ease',
+                }}
+              >
+                <Chat sx={{ fontSize: '1.3rem' }} />
+              </IconButton>
+            </Box>
+          </Toolbar>
+        </AppBar>
+      )}
+
+      <Container maxWidth="xl" sx={{ py: isMobile ? 1 : 3, px: { xs: 1, sm: 2, md: 3 } }}>
+        <Box sx={{ display: 'flex', gap: 3 }}>
           {/* Left Sidebar - Desktop only */}
           {isDesktop && (
-            <Box sx={{ 
-              flex: '0 0 240px',
-              maxWidth: '240px',
-              minWidth: '200px'
-            }}>
-              {renderSidebar()}
+            <Box sx={{ width: { xs: '100%', lg: '25%' } }}>
+              {renderLeftSidebar()}
             </Box>
           )}
           
-          {/* Main Content - Modern Instagram-like centered feed */}
-          <Box sx={{ 
-            flex: isDesktop ? '0 0 680px' : '1 1 100%',
-            maxWidth: isDesktop ? '680px' : '100%',
-            minWidth: 0
-          }}>
-            <Box sx={{ 
-              width: '100%', 
-              maxWidth: { xs: '100%', sm: '600px', md: '650px', lg: '680px' },
-              margin: '0 auto',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: { xs: 1.5, sm: 2, md: 2.5 },
-              px: { xs: 1, sm: 1.5, md: 2 },
-            }}>
-              {/* Stories Section */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
+          {/* Main Content */}
+          <Box sx={{ flex: 1, maxWidth: { xs: '100%', lg: isDesktop ? '50%' : '75%' } }}>
+            <Box sx={{ maxWidth: 680, mx: 'auto' }}>
+              {/* Desktop Search Bar */}
+              {!isMobile && (
+                <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <StyledSearchBar 
+                    sx={{ 
+                      cursor: 'pointer',
+                      height: 48,
+                      borderRadius: 24,
+                      '& .MuiInputBase-root': {
+                        fontSize: '1rem',
+                        fontWeight: 500,
+                      },
+                      '& .MuiInputBase-input': {
+                        padding: '12px 0',
+                        '&::placeholder': {
+                          opacity: 0.7,
+                          fontWeight: 400,
+                        },
+                      },
+                    }}
+                    onClick={handleSearchClick}
+                  >
+                    <Search 
+                      sx={{ 
+                        mr: 2, 
+                        color: 'text.secondary',
+                        fontSize: '1.3rem',
+                        transition: 'all 0.3s ease',
+                      }} 
+                    />
+                    <InputBase
+                      placeholder="Search for posts, people, companies..."
+                      value={searchValue}
+                      onChange={handleSearchChange}
+                      onKeyPress={handleSearchKeyPress}
+                      onClick={(e) => e.stopPropagation()}
+                      sx={{ 
+                        flex: 1,
+                        fontSize: '1rem',
+                        fontWeight: 500,
+                        '& .MuiInputBase-input': {
+                          padding: '12px 0',
+                          '&::placeholder': {
+                            opacity: 0.7,
+                            fontWeight: 400,
+                          },
+                        },
+                      }}
+                    />
+                  </StyledSearchBar>
+                  {!isMobile && (
+                    <IconButton 
+                      sx={{ 
+                        bgcolor: 'background.paper', 
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        borderRadius: 2,
+                        p: 1.5,
+                        '&:hover': {
+                          backgroundColor: alpha(theme.palette.primary.main, 0.08),
+                          transform: 'scale(1.05)',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        },
+                        transition: 'all 0.3s ease',
+                      }}
+                      onClick={() => navigate('/app/notifications')}
+                    >
+                      <Notifications sx={{ fontSize: '1.3rem' }} />
+                    </IconButton>
+                  )}
+                </Box>
+              )}
+
+              {/* Stories */}
                 {renderStories()}
-              </motion.div>
               
               {/* Quick Actions */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-              >
-                {renderEnhancedQuickActions()}
-              </motion.div>
+                {renderQuickActions()}
               
               {/* Create Post */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-              >
                 {renderCreatePost()}
-              </motion.div>
               
               {/* Posts Feed */}
               {loading ? (
-                <Stack spacing={3}>
-                  {[1, 2, 3].map((i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: i * 0.1 }}
-                    >
-                      <Card sx={{ 
-                        borderRadius: 3,
-                        boxShadow: theme.palette.mode === 'dark' 
-                          ? '0 4px 20px rgba(0,0,0,0.3)' 
-                          : '0 4px 20px rgba(0,0,0,0.08)',
-                        border: `1px solid ${alpha(theme.palette.divider, 0.1)}`
-                      }}>
-                        <CardContent sx={{ p: 3 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                            <Skeleton variant="circular" width={48} height={48} />
-                            <Box sx={{ ml: 2, flex: 1 }}>
-                              <Skeleton variant="text" width="60%" height={24} />
-                              <Skeleton variant="text" width="40%" height={20} />
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <Card key={index} sx={{ p: 2 }}>
+                      <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                        <Skeleton variant="circular" width={40} height={40} />
+                        <Box sx={{ flex: 1 }}>
+                          <Skeleton variant="text" width="60%" height={20} />
+                          <Skeleton variant="text" width="40%" height={16} />
                             </Box>
                           </Box>
-                          <Skeleton variant="text" height={20} />
-                          <Skeleton variant="text" height={20} />
+                      <Skeleton variant="text" width="100%" height={20} />
                           <Skeleton variant="text" width="80%" height={20} />
-                          <Skeleton variant="rectangular" height={200} sx={{ mt: 2, borderRadius: 2 }} />
-                        </CardContent>
+                      <Skeleton variant="rectangular" width="100%" height={200} sx={{ mt: 2, borderRadius: 1 }} />
                       </Card>
-                    </motion.div>
                   ))}
-                </Stack>
-              ) : (
+                </Box>
+              ) : error ? (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {error}
+                </Alert>
+              ) : posts.length > 0 ? (
                 <AnimatePresence>
-                  {posts.map((post, index) => (
-                    <motion.div
-                      key={post._id}
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -30 }}
-                      transition={{ 
-                        duration: 0.4, 
-                        delay: index * 0.1,
-                        ease: "easeOut"
-                      }}
-                    >
-                      {renderPost(post)}
-                    </motion.div>
-                  ))}
+                  {posts.map((post) => renderPost(post))}
                 </AnimatePresence>
+              ) : (
+                <Card sx={{ p: 4, textAlign: 'center' }}>
+                  <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+                    No posts yet
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                    Be the first to share something with your network!
+                  </Typography>
+                  <Button variant="contained" onClick={() => setShowCreatePost(true)}>
+                    Create First Post
+                  </Button>
+                </Card>
               )}
-            </Box>
-          </Box>
-          
-          {/* Right Sidebar - Desktop only */}
-          {isDesktop && (
-            <Box sx={{ 
-              flex: '0 0 240px',
-              maxWidth: '240px',
-              minWidth: '200px'
-            }}>
-              <Box sx={{ position: 'sticky', top: 20 }}>
-                <SidebarCard>
-                  <CardContent>
-                    <Typography variant="body2" fontWeight={700} sx={{ 
-                      mb: 1.5,
-                      textAlign: 'center',
-                      background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                      backgroundClip: 'text',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      fontSize: '0.9rem',
-                    }}>
-                      Career Tools
-                    </Typography>
-                    <Stack spacing={1}>
-                      <ActionButton 
+
+              {/* Load More */}
+              {posts.length > 0 && hasMore && (
+                <Box sx={{ textAlign: 'center', mt: 4 }}>
+                  <Button 
                         variant="outlined" 
-                        startIcon={<BusinessCenter sx={{ fontSize: 18 }} />} 
-                        fullWidth 
-                        onClick={() => navigate('/jobs')}
-                        sx={{ 
-                          justifyContent: 'flex-start', 
-                          borderRadius: 2.5,
-                          py: 1,
-                          fontSize: '0.8rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        Find Jobs
-                      </ActionButton>
-                      <ActionButton 
-                        variant="outlined" 
-                        startIcon={<QuestionAnswer sx={{ fontSize: 18 }} />} 
-                        fullWidth 
-                        onClick={() => navigate('/interview-prep')}
-                        sx={{ 
-                          justifyContent: 'flex-start', 
-                          borderRadius: 2.5,
-                          py: 1,
-                          fontSize: '0.8rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        Interview Prep
-                      </ActionButton>
-                      <ActionButton 
-                        variant="outlined" 
-                        startIcon={<Assignment sx={{ fontSize: 18 }} />} 
-                        fullWidth 
-                        onClick={() => navigate('/cv-builder')}
-                        sx={{ 
-                          justifyContent: 'flex-start', 
-                          borderRadius: 2.5,
-                          py: 1,
-                          fontSize: '0.8rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        CV Builder
-                      </ActionButton>
-                      <ActionButton 
-                        variant="outlined" 
-                        startIcon={<Assessment sx={{ fontSize: 18 }} />} 
-                        fullWidth 
-                        onClick={() => navigate('/skills-assessment')}
-                        sx={{ 
-                          justifyContent: 'flex-start', 
-                          borderRadius: 2.5,
-                          py: 1,
-                          fontSize: '0.8rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        Skills Test
-                      </ActionButton>
-                      <ActionButton 
-                        variant="outlined" 
-                        startIcon={<Psychology sx={{ fontSize: 18 }} />} 
-                        fullWidth 
-                        onClick={() => navigate('/exams')}
-                        sx={{ 
-                          justifyContent: 'flex-start', 
-                          borderRadius: 2.5,
-                          py: 1,
-                          fontSize: '0.8rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        Smart Exams
-                      </ActionButton>
-                      <ActionButton 
-                        variant="outlined" 
-                        startIcon={<EmojiEvents sx={{ fontSize: 18 }} />} 
-                        fullWidth 
-                        onClick={() => navigate('/achievements')}
-                        sx={{ 
-                          justifyContent: 'flex-start', 
-                          borderRadius: 2.5,
-                          py: 1,
-                          fontSize: '0.8rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        Achievements
-                      </ActionButton>
-                    </Stack>
-                  </CardContent>
-                </SidebarCard>
-              </Box>
+                    size="large" 
+                    sx={{ borderRadius: 25 }}
+                    onClick={loadMorePosts}
+                    disabled={loading}
+                  >
+                    {loading ? 'Loading...' : 'Load More Posts'}
+                  </Button>
             </Box>
           )}
         </Box>
-      </Container>
-
-      {/* Floating Create Button - Mobile and Small Tablets */}
-      {(isMobile || isSmallTablet) && (
-        <FloatingCreateButton onClick={() => setShowCreatePost(true)}>
-          <Add />
-        </FloatingCreateButton>
-      )}
-
-      {/* Create Post Dialog */}
-      <Dialog
-        open={showCreatePost}
-        onClose={() => setShowCreatePost(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: { borderRadius: 3 }
-        }}
-      >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Create post
-          <IconButton onClick={() => setShowCreatePost(false)} disabled={isPosting}>
-            <Close />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <Avatar src={(user as any)?.profilePicture}>
-              {user?.firstName?.charAt(0)}
-            </Avatar>
-            <Box>
-              <Typography variant="subtitle2" fontWeight={600}>
-                {user?.firstName} {user?.lastName}
-              </Typography>
-              <Button size="small" startIcon={<Public />} sx={{ textTransform: 'none', minHeight: 'auto', p: 0 }}>
-                Public
-              </Button>
-            </Box>
           </Box>
-          
-          <TextField
-            multiline
-            rows={4}
-            placeholder="What's on your mind?"
-            variant="outlined"
-            fullWidth
-            value={postContent}
-            onChange={(e) => setPostContent(e.target.value)}
-            sx={{ mb: 2, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-          />
 
-          {/* Tags Input */}
-          <TextField
-            placeholder="Add tags (comma separated, e.g., technology, career, innovation)"
-            variant="outlined"
-            fullWidth
-            value={postTags}
-            onChange={(e) => setPostTags(e.target.value)}
-            sx={{ mb: 2, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-          />
-
-          {/* Media Preview */}
-          {postMedia.length > 0 && (
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                Attached Media ({postMedia.length})
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {postMedia.map((file, index) => (
-                  <Box key={index} sx={{ position: 'relative', width: 100, height: 80 }}>
-                    <Box
-                      sx={{
-                        width: '100%',
-                        height: '100%',
-                        borderRadius: 1,
-                        overflow: 'hidden',
-                        border: '1px solid',
-                        borderColor: 'divider',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        bgcolor: 'background.paper'
-                      }}
-                    >
-                      {file.type.startsWith('image/') ? (
-                        <img
-                          src={URL.createObjectURL(file)}
-                          alt={`Preview ${index + 1}`}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                          }}
-                        />
-                      ) : file.type.startsWith('video/') ? (
-                        <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
-                          <video
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover'
-                            }}
-                          >
-                            <source src={URL.createObjectURL(file)} type={file.type} />
-                          </video>
-                          <Box sx={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            color: 'white',
-                            opacity: 0.8
-                          }}>
-                            <PlayCircleOutline sx={{ fontSize: 24 }} />
-                          </Box>
-                        </Box>
-                      ) : (
-                        <AttachFile sx={{ color: 'text.secondary' }} />
-                      )}
-                    </Box>
-                    <IconButton
-                      size="small"
-                      onClick={() => removeMedia(index)}
-                      sx={{
-                        position: 'absolute',
-                        top: -8,
-                        right: -8,
-                        bgcolor: 'error.main',
-                        color: 'white',
-                        width: 20,
-                        height: 20,
-                        '&:hover': {
-                          bgcolor: 'error.dark',
-                        }
-                      }}
-                    >
-                      <Close sx={{ fontSize: 14 }} />
-                    </IconButton>
-                  </Box>
-                ))}
-              </Box>
+          {/* Right Sidebar - Desktop and Tablet */}
+          {!isMobile && (
+            <Box sx={{ width: { xs: '100%', lg: '25%' } }}>
+              {renderRightSidebar()}
             </Box>
           )}
-          
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-            <input
-              accept="image/*,video/*"
-              style={{ display: 'none' }}
-              id="media-upload"
-              multiple
-              type="file"
-              onChange={handleFileUpload}
-            />
-            <label htmlFor="media-upload">
-              <Button 
-                component="span"
-                startIcon={<Photo sx={{ color: '#45bd62' }} />} 
-                sx={{ textTransform: 'none', borderRadius: 2 }}
-                disabled={isPosting}
-              >
-                Photo/Video
-              </Button>
-            </label>
-            <Button 
-              startIcon={<EmojiEmotions sx={{ color: '#f7b928' }} />} 
-              sx={{ textTransform: 'none', borderRadius: 2 }}
-              disabled={isPosting}
-            >
-              Feeling
-            </Button>
-            <Button 
-              startIcon={<LocationOn sx={{ color: '#1877f2' }} />} 
-              sx={{ textTransform: 'none', borderRadius: 2 }}
-              disabled={isPosting}
-            >
-              Check in
-            </Button>
-          </Box>
+            </Box>
+      </Container>
+
+      {/* Mobile Footer Navigation */}
+      {isMobile && <MobileFooterNavbar />}
+
 
           {/* Error Display */}
           {error && (
@@ -3068,219 +2492,28 @@ const SocialNetworkPage: React.FC<SocialNetworkPageProps> = () => {
               {error}
             </Alert>
           )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button
-            variant="contained"
-            fullWidth
-            onClick={handleCreatePost}
-            disabled={isPosting || (!postContent.trim() && postMedia.length === 0)}
-            sx={{ 
-              borderRadius: 2, 
-              py: 1.5,
-              background: isPosting 
-                ? 'rgba(0,0,0,0.12)' 
-                : `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-            }}
-          >
-            {isPosting ? (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CircularProgress size={20} color="inherit" />
-                Posting...
-              </Box>
-            ) : (
-              'Post'
-            )}
-          </Button>
-        </DialogActions>
-      </Dialog>
 
-      {/* Comment Dialog */}
-      <Dialog
-        open={showCommentDialog}
-        onClose={handleCloseCommentDialog}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            maxHeight: '80vh',
-          }
+      {/* Create Post Dialog */}
+      <MobileCreatePost
+        open={showCreatePost}
+        onClose={() => setShowCreatePost(false)}
+        onPostCreated={(newPost) => {
+          setPosts(prev => [newPost, ...prev]);
+          setShowCreatePost(false);
         }}
-      >
-        <DialogTitle sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          pb: 2
-        }}>
-          <Typography variant="h6" fontWeight={600}>
-            Add Comment
-          </Typography>
-          <IconButton 
-            onClick={handleCloseCommentDialog}
-            size="small"
-          >
-            <Close />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ pt: 0 }}>
-          <TextField
-            fullWidth
-            multiline
-            rows={4}
-            placeholder="What do you think about this post?"
-            value={commentContent}
-            onChange={(e) => setCommentContent(e.target.value)}
-            variant="outlined"
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 2,
-                backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : '#f8f9fa',
-              }
-            }}
-          />
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 1, 
-            mt: 2,
-            color: 'text.secondary'
-          }}>
-            <Avatar
-              src={(user as any)?.profilePicture || undefined}
-              sx={{ width: 32, height: 32 }}
-            >
-              {user?.firstName?.charAt(0)}
-            </Avatar>
-            <Typography variant="body2">
-              Commenting as {user?.firstName} {user?.lastName}
-            </Typography>
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 3, pt: 2 }}>
-          <Button 
-            onClick={handleCloseCommentDialog}
-            color="inherit"
-            sx={{ borderRadius: 2 }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleAddComment}
-            variant="contained"
-            disabled={!commentContent.trim() || isCommenting}
-            sx={{
-              borderRadius: 2,
-              background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-              px: 3,
-              '&:hover': {
-                background: `linear-gradient(45deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
-              }
-            }}
-          >
-            {isCommenting ? (
-              <>
-                <CircularProgress size={18} sx={{ mr: 1 }} />
-                Posting...
-              </>
-            ) : (
-              'Post Comment'
-            )}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Video Modal */}
-      <Dialog
-        open={showVideoModal}
-        onClose={handleCloseVideoModal}
-        maxWidth="lg"
-        fullWidth
-        PaperProps={{
-          sx: {
-            backgroundColor: 'black',
-            borderRadius: 2,
-            maxHeight: '90vh',
-          }
-        }}
-      >
-        <DialogTitle 
-          sx={{ 
-            color: 'white', 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            pb: 1
-          }}
-        >
-          <Typography variant="h6" sx={{ color: 'white' }}>
-            {selectedVideo?.title || 'Video'}
-          </Typography>
-          <IconButton 
-            onClick={handleCloseVideoModal}
-            sx={{ color: 'white' }}
-          >
-            <Close />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ p: 0, backgroundColor: 'black' }}>
-          {selectedVideo && (
-            <Box sx={{ 
-              position: 'relative',
-              width: '100%',
-              height: 'auto',
-              minHeight: '60vh',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <video
-                controls
-                autoPlay // Auto-play when modal opens
-                style={{
-                  width: '100%',
-                  height: 'auto',
-                  maxHeight: '70vh',
-                  objectFit: 'contain'
-                }}
-                onLoadStart={() => console.log('Video loading started')}
-                onCanPlay={() => console.log('Video can play')}
-                onError={(e) => console.error('Video error:', e)}
-              >
-                <source src={selectedVideo.url} type="video/mp4" />
-                <source src={selectedVideo.url} type="video/webm" />
-                <source src={selectedVideo.url} type="video/ogg" />
-                Your browser does not support the video tag.
-              </video>
-            </Box>
-          )}
-        </DialogContent>
-      </Dialog>
+      />
 
       {/* Create Story Dialog */}
       <CreateStory
         open={showCreateStory}
         onClose={() => setShowCreateStory(false)}
-        onStoryCreated={handleStoryCreated}
-      />
-
-      {/* Story Viewer */}
-      <StoryViewer
-        open={showStoryViewer}
-        onClose={handleCloseStoryViewer}
-        stories={storyViewerStories}
-        initialStoryIndex={selectedStoryIndex}
-        currentUserId={user?._id}
-      />
-
-      {/* Story Review Interface */}
-      <StoryReviewInterface
-        open={showStoryReview}
-        onClose={() => setShowStoryReview(false)}
+        onStoryCreated={(newStory) => {
+          setStories(prev => [newStory, ...prev]);
+          setShowCreateStory(false);
+        }}
       />
     </Box>
   );
 };
 
-export default SocialNetworkPage;
+export default ModernSocialNetworkPage;

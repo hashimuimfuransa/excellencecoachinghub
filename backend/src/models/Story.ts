@@ -90,24 +90,23 @@ storySchema.statics.findActiveStories = function(userId: string, visibility: 'pu
   const mongoose = require('mongoose');
   const userObjectId = new mongoose.Types.ObjectId(userId);
   
-  // Query for active stories only
-  const query: any = {
+  // Build query step by step to avoid circular references
+  let query: any = {
     isActive: true
   };
 
   if (visibility === 'public') {
     query.visibility = 'public';
   } else if (visibility === 'connections') {
-    query.$and = [
-      query,
-      {
-        $or: [
-          { visibility: 'public' },
-          { visibility: 'connections' }, // Would need connection logic here
-          { author: userObjectId } // Always include own stories
-        ]
-      }
-    ];
+    // Create a new query object to avoid circular reference
+    query = {
+      isActive: true,
+      $or: [
+        { visibility: 'public' },
+        { visibility: 'connections' }, // Would need connection logic here
+        { author: userObjectId } // Always include own stories
+      ]
+    };
   }
   // If 'all', don't add visibility filter (admin view)
 

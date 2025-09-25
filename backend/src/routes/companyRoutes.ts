@@ -5,6 +5,70 @@ import { asyncHandler } from '../middleware/asyncHandler';
 
 const router = Router();
 
+// @desc    Search companies
+// @route   GET /api/companies/search
+// @access  Private
+router.get('/search', protect, asyncHandler(async (req: Request, res: Response) => {
+  try {
+    const { q: query, page = 1, limit = 20 } = req.query;
+    
+    if (!query || typeof query !== 'string' || query.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Search query is required'
+      });
+    }
+
+    const searchQuery = query.trim();
+    const pageNum = parseInt(page as string) || 1;
+    const limitNum = parseInt(limit as string) || 20;
+    const skip = (pageNum - 1) * limitNum;
+
+    // Search companies by name, industry, description, location
+    const companies = await Company.find({
+      $or: [
+        { name: { $regex: searchQuery, $options: 'i' } },
+        { industry: { $regex: searchQuery, $options: 'i' } },
+        { description: { $regex: searchQuery, $options: 'i' } },
+        { location: { $regex: searchQuery, $options: 'i' } },
+        { website: { $regex: searchQuery, $options: 'i' } }
+      ]
+    })
+    .select('name industry description location website logo followersCount createdAt')
+    .sort({ followersCount: -1, createdAt: -1 })
+    .skip(skip)
+    .limit(limitNum);
+
+    // Get total count for pagination
+    const total = await Company.countDocuments({
+      $or: [
+        { name: { $regex: searchQuery, $options: 'i' } },
+        { industry: { $regex: searchQuery, $options: 'i' } },
+        { description: { $regex: searchQuery, $options: 'i' } },
+        { location: { $regex: searchQuery, $options: 'i' } },
+        { website: { $regex: searchQuery, $options: 'i' } }
+      ]
+    });
+
+    res.status(200).json({
+      success: true,
+      data: companies,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum)
+      }
+    });
+  } catch (error) {
+    console.error('Error searching companies:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to search companies'
+    });
+  }
+}));
+
 // @desc    Get company suggestions
 // @route   GET /api/companies/suggestions
 // @access  Private

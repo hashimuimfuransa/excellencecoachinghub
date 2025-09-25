@@ -487,12 +487,10 @@ export class JobRecommendationEmailService {
         // Generate batch ID and URLs for auto-apply functionality
         const batchId = `batch_${Date.now()}_${user._id}`;
         
-        // Use production URLs by default, fallback to environment variables, then localhost
-        const backendUrl = process.env.BACKEND_URL || 
-          (process.env.NODE_ENV === 'production' ? 'https://ech-w16g.onrender.com' : 'http://localhost:5000');
+        // Generate robust production URLs - prioritize production domains
+        const backendUrl = this.getProductionUrl('backend');
+        const frontendUrl = this.getProductionUrl('frontend');
         
-        const frontendUrl = process.env.JOB_PORTAL_URL || 
-          (process.env.NODE_ENV === 'production' ? 'https://exjobnet.com' : 'http://localhost:3000');
         const confirmUrl = `${backendUrl}/api/job-emails/confirm-auto-apply/${user._id}/${batchId}`;
         const rejectUrl = `${backendUrl}/api/job-emails/reject-auto-apply/${user._id}/${batchId}`;
 
@@ -691,5 +689,23 @@ export class JobRecommendationEmailService {
    */
   private static delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Get production URLs with robust fallback logic
+   */
+  private static getProductionUrl(type: 'backend' | 'frontend'): string {
+    // Check if we're running on Render (production)
+    const isRender = process.env.RENDER === 'true' || process.env.NODE_ENV === 'production';
+    
+    if (type === 'backend') {
+      // Backend URL priority: environment variable > production default > localhost
+      return process.env.BACKEND_URL || 
+             (isRender ? 'https://ech-w16g.onrender.com' : 'http://localhost:5000');
+    } else {
+      // Frontend URL priority: environment variable > production default > localhost
+      return process.env.JOB_PORTAL_URL || 
+             (isRender ? 'https://exjobnet.com' : 'http://localhost:3000');
+    }
   }
 }

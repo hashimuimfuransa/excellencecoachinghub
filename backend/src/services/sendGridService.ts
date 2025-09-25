@@ -5,6 +5,24 @@ import axios, { AxiosResponse } from 'axios';
  * Replaces EmailJS with SendGrid's REST API for server-side email sending
  */
 
+/**
+ * Get production URLs with robust fallback logic
+ */
+function getProductionUrl(type: 'backend' | 'frontend'): string {
+  // Check if we're running on Render (production)
+  const isRender = process.env.RENDER === 'true' || process.env.NODE_ENV === 'production';
+  
+  if (type === 'backend') {
+    // Backend URL priority: environment variable > production default > localhost
+    return process.env.BACKEND_URL || 
+           (isRender ? 'https://ech-w16g.onrender.com' : 'http://localhost:5000');
+  } else {
+    // Frontend URL priority: environment variable > production default > localhost
+    return process.env.JOB_PORTAL_URL || 
+           (isRender ? 'https://exjobnet.com' : 'http://localhost:3000');
+  }
+}
+
 interface SendEmailOptions {
   to: string;
   subject: string;
@@ -279,7 +297,7 @@ export const sendWelcomeEmail = async (
           🚀 Get Started Now
         </a>
         ${platform === 'elearning' ? `
-        <a href="${process.env.JOB_PORTAL_URL || 'http://localhost:3000'}" 
+        <a href="${getProductionUrl('frontend')}" 
            style="background-color: #ff5722; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 5px;">
           💼 Find Jobs
         </a>
@@ -291,7 +309,7 @@ export const sendWelcomeEmail = async (
         </a>
         ` : ''}
         ${platform === 'homepage' ? `
-        <a href="${process.env.JOB_PORTAL_URL || 'http://localhost:3000'}" 
+        <a href="${getProductionUrl('frontend')}" 
            style="background-color: #ff5722; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 5px;">
           💼 Job Portal
         </a>
@@ -378,11 +396,9 @@ export const sendJobRecommendationEmail = async (
   const subject = 'New Job Recommendations from Exjobnet! 🎯';
   const text = `Hi ${name}, we found ${jobs.length} new job opportunities that match your profile through Exjobnet!`;
   
-  // Get environment-based URLs - prioritize production domain
-  const baseUrl = process.env.JOB_PORTAL_URL || 
-    (process.env.NODE_ENV === 'production' ? 'https://exjobnet.com' : 'http://localhost:3000');
-  const backendUrl = process.env.BACKEND_URL ||
-    (process.env.NODE_ENV === 'production' ? 'https://ech-w16g.onrender.com' : 'http://localhost:5000');
+  // Get robust production URLs - prioritize production domains
+  const baseUrl = getProductionUrl('frontend');
+  const backendUrl = getProductionUrl('backend');
   
   const jobListHtml = jobs.map((job, index) => `
     <div style="border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 8px; background-color: white;">
@@ -497,11 +513,9 @@ export const sendJobApplicationEmail = async (
 ): Promise<void> => {
   const subject = `Application Confirmed: ${jobTitle} at ${company} - From Exjobnet`;
   
-  // Get environment-based URLs - prioritize production domain
-  const baseUrl = process.env.JOB_PORTAL_URL || 
-    (process.env.NODE_ENV === 'production' ? 'https://exjobnet.com' : 'http://localhost:3000');
-  const backendUrl = process.env.BACKEND_URL ||
-    (process.env.NODE_ENV === 'production' ? 'https://ech-w16g.onrender.com' : 'http://localhost:5000');
+  // Get robust production URLs - prioritize production domains
+  const baseUrl = getProductionUrl('frontend');
+  const backendUrl = getProductionUrl('backend');
 
   const text = `Hi ${name}, your application for ${jobTitle} at ${company} has been successfully submitted through Exjobnet.`;
 

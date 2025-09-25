@@ -28,20 +28,20 @@ export class JobRecommendationEmailService {
       return;
     }
 
-    // Run every day at 8:00 AM (Rwanda time) - after job scraping at 2:00 AM
-    this.cronJob = cron.schedule('0 0 8 * * *', async () => {
-      await this.sendDailyJobRecommendations();
+    // Run every Monday at 8:00 AM (Rwanda time) - weekly job recommendations
+    this.cronJob = cron.schedule('0 0 8 * * 1', async () => {
+      await this.sendWeeklyJobRecommendations();
     }, {
       timezone: 'Africa/Kigali'
     });
 
-    console.log('✅ Job recommendation email scheduler started - will run daily at 8:00 AM (Rwanda time)');
+    console.log('✅ Job recommendation email scheduler started - will run weekly on Mondays at 8:00 AM (Rwanda time)');
 
     // For development mode, run a test after 10 seconds
     if (process.env.NODE_ENV === 'development') {
       console.log('🔄 Running initial job recommendation email check in development mode...');
       setTimeout(() => {
-        this.sendDailyJobRecommendations();
+        this.sendWeeklyJobRecommendations();
       }, 10000);
     }
   }
@@ -58,9 +58,9 @@ export class JobRecommendationEmailService {
   }
 
   /**
-   * Main function to send daily job recommendations
+   * Main function to send weekly job recommendations
    */
-  static async sendDailyJobRecommendations(): Promise<{
+  static async sendWeeklyJobRecommendations(): Promise<{
     success: boolean;
     emailsSent: number;
     errors: string[];
@@ -83,18 +83,18 @@ export class JobRecommendationEmailService {
     };
 
     try {
-      console.log('🚀 Starting daily job recommendation email process...');
+      console.log('🚀 Starting weekly job recommendation email process...');
 
-      // Get new jobs from the last 24 hours
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
+      // Get new jobs from the last 7 days
+      const lastWeek = new Date();
+      lastWeek.setDate(lastWeek.getDate() - 7);
 
       const newJobs = await Job.find({
         status: JobStatus.ACTIVE,
-        createdAt: { $gte: yesterday }
+        createdAt: { $gte: lastWeek }
       }).populate('employer', 'firstName lastName company email');
 
-      console.log(`📊 Found ${newJobs.length} new jobs from the last 24 hours`);
+      console.log(`📊 Found ${newJobs.length} new jobs from the last 7 days`);
 
       if (newJobs.length === 0) {
         console.log('✅ No new jobs found, skipping email process');
@@ -193,6 +193,7 @@ export class JobRecommendationEmailService {
         role: { $nin: ['admin', 'super_admin', 'employer'] }, // Exclude admin and employer roles
         // Don't require isEmailVerified as it might be undefined for some users
         emailNotifications: { $ne: false }, // Include undefined as true
+        jobRecommendationEmails: { $ne: false }, // Check specific job recommendation email preference
         // Include users with any profile information
         $or: [
           { skills: { $exists: true, $not: { $size: 0 } } },
@@ -510,23 +511,31 @@ export class JobRecommendationEmailService {
                       job.matchPercentage >= 60 ? '#ff9800' : '#2196f3'
         }));
 
+        // Generate unsubscribe token if not exists
+        if (!user.unsubscribeToken) {
+          user.generateUnsubscribeToken();
+          await user.save();
+        }
+
         // Send email using SendGrid
         await sendJobRecommendationEmail(
           user.email,
           user.firstName || user.name || 'Job Seeker',
           formattedJobs,
           confirmUrl,
-          rejectUrl
+          rejectUrl,
+          user.unsubscribeToken
         );
 
-        // Record that email was sent to prevent duplicate sends
+        // Record that email was sent to prevent duplicate sends (weekly frequency)
         await EmailTracker.recordEmailSent(
           user._id, 
           EmailType.JOB_RECOMMENDATIONS,
           {
             jobCount: formattedJobs.length,
             campaignId: batchId,
-            reason: 'daily_job_recommendations'
+            reason: 'weekly_job_recommendations',
+            frequency: 'weekly'
           }
         );
 

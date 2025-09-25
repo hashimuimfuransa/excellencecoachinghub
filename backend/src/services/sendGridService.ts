@@ -372,7 +372,8 @@ export const sendJobRecommendationEmail = async (
   name: string, 
   jobs: any[], 
   confirmUrl?: string, 
-  rejectUrl?: string
+  rejectUrl?: string,
+  unsubscribeToken?: string
 ): Promise<void> => {
   const subject = 'New Job Recommendations from Exjobnet! 🎯';
   const text = `Hi ${name}, we found ${jobs.length} new job opportunities that match your profile through Exjobnet!`;
@@ -380,6 +381,8 @@ export const sendJobRecommendationEmail = async (
   // Get environment-based URLs - prioritize production domain
   const baseUrl = process.env.JOB_PORTAL_URL || 
     (process.env.NODE_ENV === 'production' ? 'https://exjobnet.com' : 'http://localhost:3000');
+  const backendUrl = process.env.BACKEND_URL ||
+    (process.env.NODE_ENV === 'production' ? 'https://ech-w16g.onrender.com' : 'http://localhost:5000');
   
   const jobListHtml = jobs.map((job, index) => `
     <div style="border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 8px; background-color: white;">
@@ -466,7 +469,16 @@ export const sendJobRecommendationEmail = async (
       <div style="background: linear-gradient(135deg, #1976d2, #42a5f5); color: white; padding: 20px; text-align: center; border-radius: 0 0 8px 8px;">
         <h3 style="margin: 0 0 10px 0; font-size: 18px;">Exjobnet</h3>
         <p style="margin: 0; opacity: 0.9; font-size: 14px;">Connecting talent with opportunity across East Africa</p>
-        <p style="margin: 10px 0 0 0; opacity: 0.8; font-size: 12px;">We send personalized job recommendations daily to help advance your career</p>
+        <p style="margin: 10px 0 0 0; opacity: 0.8; font-size: 12px;">We send personalized job recommendations weekly to help advance your career</p>
+        ${unsubscribeToken ? `
+          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
+            <p style="margin: 0; font-size: 12px; opacity: 0.8;">
+              Don't want to receive these emails? 
+              <a href="${backendUrl}/api/unsubscribe/job-recommendations/${unsubscribeToken}" 
+                 style="color: #fff; text-decoration: underline;">Unsubscribe here</a>
+            </p>
+          </div>
+        ` : ''}
       </div>
     </div>
   `;

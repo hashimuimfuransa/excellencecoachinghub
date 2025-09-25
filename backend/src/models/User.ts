@@ -29,6 +29,9 @@ export interface IUserDocument extends Document {
   pushNotifications?: boolean;
   theme?: string;
   language?: string;
+  // Email subscription preferences
+  jobRecommendationEmails?: boolean;
+  unsubscribeToken?: string;
   // Job Portal fields
   company?: string; // For employers
   jobTitle?: string; // For employers
@@ -172,6 +175,7 @@ export interface IUserDocument extends Document {
   comparePassword(candidatePassword: string): Promise<boolean>;
   generateEmailVerificationToken(): string;
   generatePasswordResetToken(): string;
+  generateUnsubscribeToken(): string;
   isLocked(): boolean;
   incLoginAttempts(): Promise<IUserDocument>;
 }
@@ -301,6 +305,16 @@ const userSchema = new Schema<IUserDocument>({
   language: {
     type: String,
     default: 'en'
+  },
+  // Email subscription preferences
+  jobRecommendationEmails: {
+    type: Boolean,
+    default: true
+  },
+  unsubscribeToken: {
+    type: String,
+    unique: true,
+    sparse: true
   },
   // Job Portal fields
   company: {
@@ -618,6 +632,16 @@ userSchema.methods.generatePasswordResetToken = function(): string {
   
   this.passwordResetToken = crypto.createHash('sha256').update(token).digest('hex');
   this.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  
+  return token;
+};
+
+// Instance method to generate unsubscribe token
+userSchema.methods.generateUnsubscribeToken = function(): string {
+  const crypto = require('crypto');
+  const token = crypto.randomBytes(32).toString('hex');
+  
+  this.unsubscribeToken = crypto.createHash('sha256').update(token).digest('hex');
   
   return token;
 };

@@ -172,7 +172,10 @@ import {
   TuneRounded as TuneRoundedIcon,
   Close as CloseIconAlt,
   RecordVoiceOver,
-  AutoStories
+  AutoStories,
+  Twitter,
+  Facebook,
+  WhatsApp
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { userService } from '../services/userService';
@@ -240,6 +243,7 @@ const ModernProfilePage: React.FC = () => {
   // Dialog states
   const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null);
   const [connectionMenuAnchor, setConnectionMenuAnchor] = useState<null | HTMLElement>(null);
+  const [shareMenuAnchor, setShareMenuAnchor] = useState<null | HTMLElement>(null);
   
   // Check if viewing own profile
   const isOwnProfile = !userId || userId === user?._id;
@@ -325,6 +329,45 @@ const ModernProfilePage: React.FC = () => {
     } finally {
       setSuggestionsLoading(false);
     }
+  };
+
+  // Profile sharing functionality
+  const handleShareProfile = async () => {
+    try {
+      const profileUrl = `${window.location.origin}/app/profile/view/${targetUserId}`;
+      await navigator.clipboard.writeText(profileUrl);
+      setSuccessMessage('Profile link copied to clipboard!');
+      setShareMenuAnchor(null);
+    } catch (error) {
+      console.error('Error copying profile link:', error);
+      setErrorMessage('Failed to copy profile link');
+    }
+  };
+
+  const handleShareToSocial = (platform: string) => {
+    const profileUrl = `${window.location.origin}/app/profile/view/${targetUserId}`;
+    const text = `Check out ${profile?.firstName} ${profile?.lastName}'s profile on Excellence Coaching Hub!`;
+    
+    let shareUrl = '';
+    switch (platform) {
+      case 'linkedin':
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(profileUrl)}`;
+        break;
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(profileUrl)}`;
+        break;
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(profileUrl)}`;
+        break;
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + profileUrl)}`;
+        break;
+      default:
+        return;
+    }
+    
+    window.open(shareUrl, '_blank');
+    setShareMenuAnchor(null);
   };
 
   const loadUserStories = async () => {
@@ -754,6 +797,27 @@ const ModernProfilePage: React.FC = () => {
                   >
                     Professional Profile
                   </Button>
+
+                  {/* Share Profile Button */}
+                  <Button
+                    variant="outlined"
+                    onClick={(e) => setShareMenuAnchor(e.currentTarget)}
+                    startIcon={<Share />}
+                    fullWidth
+                    size={isMobile ? "medium" : "large"}
+                    sx={{ 
+                      textTransform: 'none',
+                      py: { xs: 1, sm: 1.5 },
+                      borderColor: theme.palette.success.main,
+                      color: theme.palette.success.main,
+                      '&:hover': {
+                        borderColor: theme.palette.success.dark,
+                        backgroundColor: alpha(theme.palette.success.main, 0.1)
+                      }
+                    }}
+                  >
+                    Share Profile
+                  </Button>
                 </Stack>
 
                 {/* LinkedIn-style mobile call-to-action */}
@@ -812,55 +876,88 @@ const ModernProfilePage: React.FC = () => {
                   Quick Actions
                 </Typography>
                 
-                {/* LinkedIn-style horizontal scrollable quick actions */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  gap: 1.5, 
-                  overflowX: 'auto',
-                  pb: 1,
-                  '&::-webkit-scrollbar': {
-                    height: 4,
-                  },
-                  '&::-webkit-scrollbar-track': {
-                    backgroundColor: 'rgba(0,0,0,0.1)',
-                    borderRadius: 2,
-                  },
-                  '&::-webkit-scrollbar-thumb': {
-                    backgroundColor: 'rgba(0,0,0,0.3)',
-                    borderRadius: 2,
-                  },
-                }}>
-                  {quickActions.map((action) => (
-                    <Button
-                      key={action.id}
-                      variant="contained"
-                      startIcon={action.icon}
-                      onClick={action.action}
-                      sx={{
-                        minWidth: 'auto',
-                        px: 2,
-                        py: 1.5,
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        background: `linear-gradient(135deg, ${action.color} 0%, ${alpha(action.color, 0.8)} 100%)`,
-                        color: 'white',
-                        fontWeight: 600,
-                        fontSize: '0.875rem',
-                        boxShadow: `0 2px 8px ${alpha(action.color, 0.3)}`,
-                        '&:hover': {
-                          background: `linear-gradient(135deg, ${action.color} 0%, ${action.color} 100%)`,
-                          transform: 'translateY(-1px)',
-                          boxShadow: `0 4px 12px ${alpha(action.color, 0.4)}`,
-                        },
-                        transition: 'all 0.3s ease',
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0
-                      }}
-                    >
-                      {action.title}
-                    </Button>
-                  ))}
-                </Box>
+                {/* Responsive quick actions - Grid on desktop, horizontal scroll on mobile */}
+                {isDesktop ? (
+                  <Grid container spacing={2}>
+                    {quickActions.map((action) => (
+                      <Grid item xs={6} sm={4} key={action.id}>
+                        <Button
+                          variant="contained"
+                          startIcon={action.icon}
+                          onClick={action.action}
+                          fullWidth
+                          sx={{
+                            py: 2,
+                            borderRadius: 2,
+                            textTransform: 'none',
+                            background: `linear-gradient(135deg, ${action.color} 0%, ${alpha(action.color, 0.8)} 100%)`,
+                            color: 'white',
+                            fontWeight: 600,
+                            fontSize: '0.875rem',
+                            boxShadow: `0 2px 8px ${alpha(action.color, 0.3)}`,
+                            '&:hover': {
+                              background: `linear-gradient(135deg, ${action.color} 0%, ${action.color} 100%)`,
+                              transform: 'translateY(-2px)',
+                              boxShadow: `0 6px 16px ${alpha(action.color, 0.4)}`,
+                            },
+                            transition: 'all 0.3s ease',
+                          }}
+                        >
+                          {action.title}
+                        </Button>
+                      </Grid>
+                    ))}
+                  </Grid>
+                ) : (
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: 1.5, 
+                    overflowX: 'auto',
+                    pb: 1,
+                    '&::-webkit-scrollbar': {
+                      height: 4,
+                    },
+                    '&::-webkit-scrollbar-track': {
+                      backgroundColor: 'rgba(0,0,0,0.1)',
+                      borderRadius: 2,
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      backgroundColor: 'rgba(0,0,0,0.3)',
+                      borderRadius: 2,
+                    },
+                  }}>
+                    {quickActions.map((action) => (
+                      <Button
+                        key={action.id}
+                        variant="contained"
+                        startIcon={action.icon}
+                        onClick={action.action}
+                        sx={{
+                          minWidth: 'auto',
+                          px: 2,
+                          py: 1.5,
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          background: `linear-gradient(135deg, ${action.color} 0%, ${alpha(action.color, 0.8)} 100%)`,
+                          color: 'white',
+                          fontWeight: 600,
+                          fontSize: '0.875rem',
+                          boxShadow: `0 2px 8px ${alpha(action.color, 0.3)}`,
+                          '&:hover': {
+                            background: `linear-gradient(135deg, ${action.color} 0%, ${action.color} 100%)`,
+                            transform: 'translateY(-1px)',
+                            boxShadow: `0 4px 12px ${alpha(action.color, 0.4)}`,
+                          },
+                          transition: 'all 0.3s ease',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0
+                        }}
+                      >
+                        {action.title}
+                      </Button>
+                    ))}
+                  </Box>
+                )}
               </CardContent>
             </Card>
 
@@ -1921,6 +2018,52 @@ const ModernProfilePage: React.FC = () => {
           setShowCreateStory(false);
         }}
       />
+
+      {/* Share Profile Menu */}
+      <Menu
+        anchorEl={shareMenuAnchor}
+        open={Boolean(shareMenuAnchor)}
+        onClose={() => setShareMenuAnchor(null)}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            minWidth: 200,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          }
+        }}
+      >
+        <MenuItem onClick={handleShareProfile} sx={{ py: 1.5 }}>
+          <ListItemIcon>
+            <ContentCopy color="primary" />
+          </ListItemIcon>
+          <ListItemText primary="Copy Profile Link" />
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={() => handleShareToSocial('linkedin')} sx={{ py: 1.5 }}>
+          <ListItemIcon>
+            <LinkedIn sx={{ color: '#0077b5' }} />
+          </ListItemIcon>
+          <ListItemText primary="Share on LinkedIn" />
+        </MenuItem>
+        <MenuItem onClick={() => handleShareToSocial('twitter')} sx={{ py: 1.5 }}>
+          <ListItemIcon>
+            <Twitter sx={{ color: '#1DA1F2' }} />
+          </ListItemIcon>
+          <ListItemText primary="Share on Twitter" />
+        </MenuItem>
+        <MenuItem onClick={() => handleShareToSocial('facebook')} sx={{ py: 1.5 }}>
+          <ListItemIcon>
+            <Facebook sx={{ color: '#1877f2' }} />
+          </ListItemIcon>
+          <ListItemText primary="Share on Facebook" />
+        </MenuItem>
+        <MenuItem onClick={() => handleShareToSocial('whatsapp')} sx={{ py: 1.5 }}>
+          <ListItemIcon>
+            <WhatsApp sx={{ color: '#25D366' }} />
+          </ListItemIcon>
+          <ListItemText primary="Share on WhatsApp" />
+        </MenuItem>
+      </Menu>
     </Box>
   );
 };

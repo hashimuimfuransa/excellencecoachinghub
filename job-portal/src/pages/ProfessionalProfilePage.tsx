@@ -29,7 +29,9 @@ import {
   Paper,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
+  Menu,
+  MenuItem
 } from '@mui/material';
 import {
   Timeline,
@@ -64,7 +66,11 @@ import {
   ExpandMore,
   Link as LinkIcon,
   Visibility,
-  Share
+  Share,
+  ContentCopy,
+  Twitter,
+  Facebook,
+  WhatsApp
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { userService } from '../services/userService';
@@ -99,6 +105,7 @@ const ProfessionalProfilePage: React.FC = () => {
   const [editMode, setEditMode] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [shareMenuAnchor, setShareMenuAnchor] = useState<null | HTMLElement>(null);
 
   // Dialog states
   const [experienceDialog, setExperienceDialog] = useState({ open: false, item: null as WorkExperience | null, mode: 'create' });
@@ -303,6 +310,45 @@ const ProfessionalProfilePage: React.FC = () => {
     }
   };
 
+  // Profile sharing functionality
+  const handleShareProfile = async () => {
+    try {
+      const profileUrl = `${window.location.origin}/app/profile/view/${profile._id}`;
+      await navigator.clipboard.writeText(profileUrl);
+      setSuccessMessage('Profile link copied to clipboard!');
+      setShareMenuAnchor(null);
+    } catch (error) {
+      console.error('Error copying profile link:', error);
+      setErrorMessage('Failed to copy profile link');
+    }
+  };
+
+  const handleShareToSocial = (platform: string) => {
+    const profileUrl = `${window.location.origin}/app/profile/view/${profile._id}`;
+    const text = `Check out ${profile?.firstName} ${profile?.lastName}'s professional profile on Excellence Coaching Hub!`;
+    
+    let shareUrl = '';
+    switch (platform) {
+      case 'linkedin':
+        shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(profileUrl)}`;
+        break;
+      case 'twitter':
+        shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(profileUrl)}`;
+        break;
+      case 'facebook':
+        shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(profileUrl)}`;
+        break;
+      case 'whatsapp':
+        shareUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + profileUrl)}`;
+        break;
+      default:
+        return;
+    }
+    
+    window.open(shareUrl, '_blank');
+    setShareMenuAnchor(null);
+  };
+
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -332,7 +378,11 @@ const ProfessionalProfilePage: React.FC = () => {
         </Typography>
         
         <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-          <Button variant="outlined" startIcon={<Share />}>
+          <Button 
+            variant="outlined" 
+            startIcon={<Share />}
+            onClick={(e) => setShareMenuAnchor(e.currentTarget)}
+          >
             Share Profile
           </Button>
           <Button variant="outlined" startIcon={<Download />}>
@@ -837,6 +887,52 @@ const ProfessionalProfilePage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Share Profile Menu */}
+      <Menu
+        anchorEl={shareMenuAnchor}
+        open={Boolean(shareMenuAnchor)}
+        onClose={() => setShareMenuAnchor(null)}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            minWidth: 200,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          }
+        }}
+      >
+        <MenuItem onClick={handleShareProfile} sx={{ py: 1.5 }}>
+          <ListItemIcon>
+            <ContentCopy color="primary" />
+          </ListItemIcon>
+          <ListItemText primary="Copy Profile Link" />
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={() => handleShareToSocial('linkedin')} sx={{ py: 1.5 }}>
+          <ListItemIcon>
+            <LinkedIn sx={{ color: '#0077b5' }} />
+          </ListItemIcon>
+          <ListItemText primary="Share on LinkedIn" />
+        </MenuItem>
+        <MenuItem onClick={() => handleShareToSocial('twitter')} sx={{ py: 1.5 }}>
+          <ListItemIcon>
+            <Twitter sx={{ color: '#1DA1F2' }} />
+          </ListItemIcon>
+          <ListItemText primary="Share on Twitter" />
+        </MenuItem>
+        <MenuItem onClick={() => handleShareToSocial('facebook')} sx={{ py: 1.5 }}>
+          <ListItemIcon>
+            <Facebook sx={{ color: '#1877f2' }} />
+          </ListItemIcon>
+          <ListItemText primary="Share on Facebook" />
+        </MenuItem>
+        <MenuItem onClick={() => handleShareToSocial('whatsapp')} sx={{ py: 1.5 }}>
+          <ListItemIcon>
+            <WhatsApp sx={{ color: '#25D366' }} />
+          </ListItemIcon>
+          <ListItemText primary="Share on WhatsApp" />
+        </MenuItem>
+      </Menu>
     </Container>
   );
 };

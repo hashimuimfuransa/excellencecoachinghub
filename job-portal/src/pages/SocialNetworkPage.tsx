@@ -86,6 +86,7 @@ import MobileFooterNavbar from '../components/MobileFooterNavbar';
 import PostCard from '../components/social/PostCard';
 import MobileCreatePost from '../components/social/MobileCreatePost';
 import CreateStory from '../components/social/CreateStory';
+import StoryViewer from '../components/social/StoryViewer';
 import { formatDistanceToNow } from 'date-fns';
 
 // Styled components for modern design
@@ -202,6 +203,8 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [showCreateStory, setShowCreateStory] = useState(false);
+  const [showStoryViewer, setShowStoryViewer] = useState(false);
+  const [selectedStoryIndex, setSelectedStoryIndex] = useState(0);
   const [suggestedConnections, setSuggestedConnections] = useState<any[]>([]);
   const [connectionsLoading, setConnectionsLoading] = useState(false);
 
@@ -247,6 +250,12 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
                   jobTitle: 'Career Platform'
                 },
                 createdAt: new Date().toISOString(),
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours from now
+                viewers: [],
+                likes: [],
+                shares: 0,
+                tags: ['welcome', 'career', 'networking'],
+                visibility: 'public',
                 isActive: true,
                 hasStory: true
               }
@@ -272,6 +281,12 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
                 jobTitle: 'Career Platform'
               },
               createdAt: new Date().toISOString(),
+              expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours from now
+              viewers: [],
+              likes: [],
+              shares: 0,
+              tags: ['welcome', 'career', 'networking'],
+              visibility: 'public',
               isActive: true,
               hasStory: true
             }
@@ -398,9 +413,14 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
 
   const handleViewStory = (story: any) => {
     console.log('📖 Viewing story:', story);
-    // TODO: Implement story viewing functionality
-    // This could open a story viewer modal or navigate to a story page
-    alert(`Viewing story: ${story.title || 'Untitled Story'}`);
+    // Find the story index in the stories array
+    const storyIndex = stories.findIndex(s => s._id === story._id);
+    if (storyIndex !== -1) {
+      setSelectedStoryIndex(storyIndex);
+      setShowStoryViewer(true);
+    } else {
+      console.error('Story not found in stories array:', story);
+    }
   };
 
   const handleInternships = () => {
@@ -2511,6 +2531,15 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
           setStories(prev => [newStory, ...prev]);
           setShowCreateStory(false);
         }}
+      />
+
+      {/* Story Viewer */}
+      <StoryViewer
+        open={showStoryViewer}
+        onClose={() => setShowStoryViewer(false)}
+        stories={stories}
+        initialStoryIndex={selectedStoryIndex}
+        currentUserId={user?._id}
       />
     </Box>
   );

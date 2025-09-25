@@ -193,4 +193,5 @@ class UploadService {
 }
 
 export const uploadService = new UploadService();
+export { uploadApi };
 export default uploadService;

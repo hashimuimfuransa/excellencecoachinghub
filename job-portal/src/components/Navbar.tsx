@@ -148,33 +148,40 @@ const Navbar: React.FC = () => {
     setOpportunitiesOpen(false);
   };
 
-  // Define opportunity categories with modern styling
-  const opportunityCategories = [
+  // Define job categories with enhanced styling
+  const jobCategories = [
+    {
+      id: 'all-jobs',
+      label: 'All Jobs',
+      icon: <Work sx={{ fontSize: 22 }} />,
+      path: user ? '/app/jobs' : '/jobs',
+      description: 'Browse all available positions'
+    },
     {
       id: 'internship',
       label: 'Internships',
-      icon: <School sx={{ fontSize: 20 }} />,
+      icon: <School sx={{ fontSize: 22 }} />,
       path: user ? '/app/jobs/all?categories=internships' : '/jobs?categories=internships',
       description: 'Student & graduate internships'
     },
     {
       id: 'tender',
       label: 'Tenders',
-      icon: <TenderIcon sx={{ fontSize: 20 }} />,
+      icon: <TenderIcon sx={{ fontSize: 22 }} />,
       path: user ? '/app/jobs/all?categories=tenders' : '/jobs?categories=tenders',
       description: 'Government & business tenders'
     },
     {
       id: 'training',
       label: 'Training',
-      icon: <TrainingIcon sx={{ fontSize: 20 }} />,
+      icon: <TrainingIcon sx={{ fontSize: 22 }} />,
       path: user ? '/app/jobs/all?categories=trainings' : '/jobs?categories=trainings',
       description: 'Professional development'
     },
     {
       id: 'finance',
       label: 'Access to Finance',
-      icon: <FinanceIcon sx={{ fontSize: 20 }} />,
+      icon: <FinanceIcon sx={{ fontSize: 22 }} />,
       path: user ? '/app/jobs/all?categories=access_to_finance' : '/jobs?categories=access_to_finance',
       description: 'Funding & financial support'
     }
@@ -464,7 +471,7 @@ const Navbar: React.FC = () => {
               Categories
             </Typography>
             <List sx={{ py: 0 }}>
-              {opportunityCategories.map((opportunity) => (
+              {jobCategories.map((opportunity) => (
                 <ListItem
                   component="button"
                   key={opportunity.id}
@@ -1090,9 +1097,9 @@ const Navbar: React.FC = () => {
         }}
       >
         <Toolbar sx={{ 
-          px: { xs: 1.2, sm: 1.8, md: 2.5 }, 
-          minHeight: { xs: 56, sm: 60, md: 64 },
-          py: { xs: 0.4, sm: 0.5, md: 0.6 },
+          px: { xs: 1.5, sm: 2.2, md: 3 }, 
+          minHeight: { xs: 70, sm: 75, md: 80 },
+          py: { xs: 0.8, sm: 1, md: 1.2 },
           justifyContent: 'space-between',
           alignItems: 'center',
         }}>
@@ -1148,18 +1155,18 @@ const Navbar: React.FC = () => {
             />
           </Box>
 
-          {/* Center Section - Categories */}
+          {/* Center Section - Job Categories */}
           {!(isMobile || isSmallTablet) && (
             <Box sx={{ 
               display: 'flex', 
               alignItems: 'center', 
-              gap: { sm: 0.4, md: 0.6, lg: 0.8 },
+              gap: { sm: 0.8, md: 1, lg: 1.2 },
               flexWrap: 'wrap',
               justifyContent: 'center',
               flex: 1,
               maxWidth: '100%'
             }}>
-              {opportunityCategories.map((category, index) => (
+              {jobCategories.map((category, index) => (
                 <Button
                   key={category.id}
                   color="inherit"
@@ -1170,19 +1177,31 @@ const Navbar: React.FC = () => {
                   }}
                   variant="text"
                   sx={{
-                    fontWeight: 600,
-                    color: 'rgba(255, 255, 255, 0.95)',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: '8px',
-                    px: { sm: 1, md: 1.2, lg: 1.4 },
-                    py: { sm: 0.4, md: 0.5, lg: 0.6 },
-                    fontSize: { sm: '0.7rem', md: '0.75rem', lg: '0.8rem' },
-                    height: { sm: 26, md: 28, lg: 30 },
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    fontWeight: 700,
+                    color: 'white',
+                    background: index === 0 
+                      ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' // All Jobs - Purple gradient
+                      : index === 1 
+                      ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' // Internships - Pink gradient
+                      : index === 2 
+                      ? 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' // Tenders - Blue gradient
+                      : index === 3 
+                      ? 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' // Training - Green gradient
+                      : 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', // Finance - Orange gradient
+                    borderRadius: '16px',
+                    px: { sm: 1.5, md: 1.8, lg: 2 },
+                    py: { sm: 0.8, md: 1, lg: 1.2 },
+                    fontSize: { sm: '0.8rem', md: '0.85rem', lg: '0.9rem' },
+                    height: { sm: 36, md: 40, lg: 44 },
+                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
                     letterSpacing: '-0.01em',
                     position: 'relative',
                     overflow: 'hidden',
+                    minWidth: { sm: '100px', md: '110px', lg: '120px' },
+                    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    backdropFilter: 'blur(20px)',
                     '&::before': {
                       content: '""',
                       position: 'absolute',
@@ -1190,38 +1209,52 @@ const Navbar: React.FC = () => {
                       left: 0,
                       right: 0,
                       bottom: 0,
-                      background: mode === 'dark'
-                        ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(46, 125, 50, 0.05) 100%)'
-                        : 'linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(46, 125, 50, 0.02) 100%)',
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
                       opacity: 0,
                       transition: 'opacity 0.3s ease',
                       zIndex: 1,
                     },
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    backdropFilter: 'blur(10px)',
+                    '&::after': {
+                      content: '""',
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      width: '0',
+                      height: '0',
+                      background: 'radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%)',
+                      borderRadius: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      transition: 'all 0.6s ease',
+                      zIndex: 2,
+                    },
                     '&:hover': {
-                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                      transform: 'translateY(-1px)',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
-                      color: 'white',
-                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      transform: 'translateY(-3px) scale(1.02)',
+                      boxShadow: '0 8px 25px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
                       '&::before': {
                         opacity: 1,
                       },
+                      '&::after': {
+                        width: '300px',
+                        height: '300px',
+                      },
                     },
                     '&:active': {
-                      transform: 'scale(0.96)',
+                      transform: 'translateY(-1px) scale(0.98)',
+                      transition: 'all 0.1s ease',
                     },
                     '& .MuiButton-startIcon': {
-                      marginRight: '4px',
+                      marginRight: '8px',
+                      position: 'relative',
+                      zIndex: 3,
                       '& svg': {
-                        fontSize: { sm: '0.8rem', md: '0.85rem', lg: '0.9rem' },
-                        color: 'rgba(255, 255, 255, 0.9)',
-                        transition: 'color 0.3s ease',
+                        fontSize: { sm: '1rem', md: '1.1rem', lg: '1.2rem' },
+                        color: 'white',
+                        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))',
+                        transition: 'all 0.3s ease',
                       }
                     },
                     '&:hover .MuiButton-startIcon svg': {
-                      color: 'white',
+                      transform: 'scale(1.1) rotate(5deg)',
                     }
                   }}
                 >
@@ -1235,7 +1268,7 @@ const Navbar: React.FC = () => {
           <Box sx={{ 
             display: 'flex', 
             alignItems: 'center', 
-            gap: { xs: 0.4, sm: 0.6, md: 0.8, lg: 1 },
+            gap: { xs: 0.6, sm: 0.8, md: 1, lg: 1.2 },
             minWidth: 'fit-content',
             position: 'relative',
             zIndex: 2
@@ -1245,27 +1278,58 @@ const Navbar: React.FC = () => {
               <>
                 <Button
                   color="inherit"
-                  startIcon={<Support sx={{ fontSize: { sm: '0.7rem', md: '0.75rem', lg: '0.8rem' } }} />}
+                  startIcon={<Support sx={{ fontSize: { sm: '0.8rem', md: '0.85rem', lg: '0.9rem' } }} />}
                   onClick={() => navigate('/support')}
                   variant="text"
                   sx={{
-                    fontWeight: 600,
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                    borderRadius: '8px',
-                    px: { sm: 1, md: 1.2, lg: 1.4 },
-                    py: { sm: 0.4, md: 0.5, lg: 0.6 },
-                    fontSize: { sm: '0.7rem', md: '0.75rem', lg: '0.8rem' },
-                    height: { sm: 26, md: 28, lg: 30 },
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    fontWeight: 700,
+                    color: 'white',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    borderRadius: '12px',
+                    px: { sm: 1.2, md: 1.4, lg: 1.6 },
+                    py: { sm: 0.6, md: 0.7, lg: 0.8 },
+                    fontSize: { sm: '0.75rem', md: '0.8rem', lg: '0.85rem' },
+                    height: { sm: 32, md: 36, lg: 40 },
+                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    backdropFilter: 'blur(15px)',
+                    boxShadow: '0 3px 12px rgba(102, 126, 234, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
+                      opacity: 0,
+                      transition: 'opacity 0.3s ease',
+                      zIndex: 1,
+                    },
                     '&:hover': {
-                      backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                      transform: 'translateY(-1px)',
-                      color: 'white',
+                      transform: 'translateY(-2px) scale(1.05)',
+                      boxShadow: '0 6px 20px rgba(102, 126, 234, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                      '&::before': {
+                        opacity: 1,
+                      },
+                    },
+                    '&:active': {
+                      transform: 'translateY(0) scale(0.98)',
+                      transition: 'all 0.1s ease',
                     },
                     '& .MuiButton-startIcon': {
-                      marginRight: '4px',
+                      marginRight: '6px',
+                      position: 'relative',
+                      zIndex: 2,
+                      '& svg': {
+                        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))',
+                        transition: 'all 0.3s ease',
+                      }
+                    },
+                    '&:hover .MuiButton-startIcon svg': {
+                      transform: 'scale(1.1) rotate(5deg)',
                     }
                   }}
                 >
@@ -1273,27 +1337,58 @@ const Navbar: React.FC = () => {
                 </Button>
                 <Button
                   color="inherit"
-                  startIcon={<ContactSupport sx={{ fontSize: { sm: '0.7rem', md: '0.75rem', lg: '0.8rem' } }} />}
+                  startIcon={<ContactSupport sx={{ fontSize: { sm: '0.8rem', md: '0.85rem', lg: '0.9rem' } }} />}
                   onClick={handleContactOpen}
                   variant="text"
                   sx={{
-                    fontWeight: 600,
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                    borderRadius: '8px',
-                    px: { sm: 1, md: 1.2, lg: 1.4 },
-                    py: { sm: 0.4, md: 0.5, lg: 0.6 },
-                    fontSize: { sm: '0.7rem', md: '0.75rem', lg: '0.8rem' },
-                    height: { sm: 26, md: 28, lg: 30 },
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    fontWeight: 700,
+                    color: 'white',
+                    background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                    borderRadius: '12px',
+                    px: { sm: 1.2, md: 1.4, lg: 1.6 },
+                    py: { sm: 0.6, md: 0.7, lg: 0.8 },
+                    fontSize: { sm: '0.75rem', md: '0.8rem', lg: '0.85rem' },
+                    height: { sm: 32, md: 36, lg: 40 },
+                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    backdropFilter: 'blur(15px)',
+                    boxShadow: '0 3px 12px rgba(79, 172, 254, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
+                      opacity: 0,
+                      transition: 'opacity 0.3s ease',
+                      zIndex: 1,
+                    },
                     '&:hover': {
-                      backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                      transform: 'translateY(-1px)',
-                      color: 'white',
+                      transform: 'translateY(-2px) scale(1.05)',
+                      boxShadow: '0 6px 20px rgba(79, 172, 254, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                      '&::before': {
+                        opacity: 1,
+                      },
+                    },
+                    '&:active': {
+                      transform: 'translateY(0) scale(0.98)',
+                      transition: 'all 0.1s ease',
                     },
                     '& .MuiButton-startIcon': {
-                      marginRight: '4px',
+                      marginRight: '6px',
+                      position: 'relative',
+                      zIndex: 2,
+                      '& svg': {
+                        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))',
+                        transition: 'all 0.3s ease',
+                      }
+                    },
+                    '&:hover .MuiButton-startIcon svg': {
+                      transform: 'scale(1.1) rotate(5deg)',
                     }
                   }}
                 >
@@ -1309,17 +1404,52 @@ const Navbar: React.FC = () => {
                   onClick={toggleTheme} 
                   color="inherit" 
                   sx={{ 
-                    p: 0.8,
-                    width: { sm: 28, md: 30, lg: 32 },
-                    height: { sm: 28, md: 30, lg: 32 },
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    '&:hover': {
-                      backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                      transform: 'scale(1.05)',
+                    p: 1,
+                    width: { sm: 36, md: 40, lg: 44 },
+                    height: { sm: 36, md: 40, lg: 44 },
+                    borderRadius: '12px',
+                    background: mode === 'dark' 
+                      ? 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)' 
+                      : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    backdropFilter: 'blur(15px)',
+                    boxShadow: mode === 'dark' 
+                      ? '0 3px 12px rgba(252, 182, 159, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)' 
+                      : '0 3px 12px rgba(102, 126, 234, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
+                      opacity: 0,
+                      transition: 'opacity 0.3s ease',
+                      zIndex: 1,
                     },
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                    '&:hover': {
+                      transform: 'scale(1.1) rotate(5deg)',
+                      boxShadow: mode === 'dark' 
+                        ? '0 6px 20px rgba(252, 182, 159, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3)' 
+                        : '0 6px 20px rgba(102, 126, 234, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                      '&::before': {
+                        opacity: 1,
+                      },
+                    },
+                    '&:active': {
+                      transform: 'scale(0.95)',
+                      transition: 'all 0.1s ease',
+                    },
+                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '& svg': {
+                      position: 'relative',
+                      zIndex: 2,
+                      filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))',
+                      transition: 'all 0.3s ease',
+                    }
                   }}
                 >
                   {mode === 'dark' ? 
@@ -1334,26 +1464,57 @@ const Navbar: React.FC = () => {
             {!user && !(isMobile || isSmallTablet) && (
               <Button
                 variant="contained"
-                startIcon={<PostAdd sx={{ fontSize: { sm: '0.8rem', md: '0.85rem', lg: '0.9rem' } }} />}
+                startIcon={<PostAdd sx={{ fontSize: { sm: '0.9rem', md: '1rem', lg: '1.1rem' } }} />}
                 onClick={() => navigate('/register?role=employer')}
                 sx={{
                   fontWeight: 700,
-                  background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 50%, #1b5e20 100%)',
-                  boxShadow: '0 4px 12px rgba(76, 175, 80, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
-                  borderRadius: '8px',
-                  px: { sm: 1, md: 1.2, lg: 1.4 },
-                  py: { sm: 0.4, md: 0.5, lg: 0.6 },
-                  fontSize: { sm: '0.7rem', md: '0.75rem', lg: '0.8rem' },
-                  height: { sm: 26, md: 28, lg: 30 },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                  boxShadow: '0 4px 15px rgba(67, 233, 123, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                  borderRadius: '12px',
+                  px: { sm: 1.4, md: 1.6, lg: 1.8 },
+                  py: { sm: 0.6, md: 0.7, lg: 0.8 },
+                  fontSize: { sm: '0.75rem', md: '0.8rem', lg: '0.85rem' },
+                  height: { sm: 32, md: 36, lg: 40 },
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  backdropFilter: 'blur(15px)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
+                    opacity: 0,
+                    transition: 'opacity 0.3s ease',
+                    zIndex: 1,
+                  },
                   '&:hover': {
-                    background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 50%, #0d3e0f 100%)',
-                    transform: 'translateY(-1px)',
-                    boxShadow: '0 6px 16px rgba(76, 175, 80, 0.5)',
+                    transform: 'translateY(-2px) scale(1.05)',
+                    boxShadow: '0 8px 25px rgba(67, 233, 123, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+                    '&::before': {
+                      opacity: 1,
+                    },
+                  },
+                  '&:active': {
+                    transform: 'translateY(0) scale(0.98)',
+                    transition: 'all 0.1s ease',
                   },
                   '& .MuiButton-startIcon': {
-                    marginRight: '4px',
+                    marginRight: '6px',
+                    position: 'relative',
+                    zIndex: 2,
+                    '& svg': {
+                      filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))',
+                      transition: 'all 0.3s ease',
+                    }
+                  },
+                  '&:hover .MuiButton-startIcon svg': {
+                    transform: 'scale(1.1) rotate(5deg)',
                   }
                 }}
               >
@@ -1365,26 +1526,57 @@ const Navbar: React.FC = () => {
             {user && user.role === UserRole.EMPLOYER && !(isMobile || isSmallTablet) && (
               <Button
                 variant="contained"
-                startIcon={<PostAdd sx={{ fontSize: { sm: '0.8rem', md: '0.85rem', lg: '0.9rem' } }} />}
+                startIcon={<PostAdd sx={{ fontSize: { sm: '0.9rem', md: '1rem', lg: '1.1rem' } }} />}
                 onClick={() => navigate('/app/jobs/create')}
                 sx={{
                   fontWeight: 700,
-                  background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 50%, #1b5e20 100%)',
-                  boxShadow: '0 4px 12px rgba(76, 175, 80, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
-                  borderRadius: '8px',
-                  px: { sm: 1, md: 1.2, lg: 1.4 },
-                  py: { sm: 0.4, md: 0.5, lg: 0.6 },
-                  fontSize: { sm: '0.7rem', md: '0.75rem', lg: '0.8rem' },
-                  height: { sm: 26, md: 28, lg: 30 },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                  boxShadow: '0 4px 15px rgba(67, 233, 123, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                  borderRadius: '12px',
+                  px: { sm: 1.4, md: 1.6, lg: 1.8 },
+                  py: { sm: 0.6, md: 0.7, lg: 0.8 },
+                  fontSize: { sm: '0.75rem', md: '0.8rem', lg: '0.85rem' },
+                  height: { sm: 32, md: 36, lg: 40 },
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  backdropFilter: 'blur(15px)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
+                    opacity: 0,
+                    transition: 'opacity 0.3s ease',
+                    zIndex: 1,
+                  },
                   '&:hover': {
-                    background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 50%, #0d3e0f 100%)',
-                    transform: 'translateY(-1px)',
-                    boxShadow: '0 6px 16px rgba(76, 175, 80, 0.5)',
+                    transform: 'translateY(-2px) scale(1.05)',
+                    boxShadow: '0 8px 25px rgba(67, 233, 123, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+                    '&::before': {
+                      opacity: 1,
+                    },
+                  },
+                  '&:active': {
+                    transform: 'translateY(0) scale(0.98)',
+                    transition: 'all 0.1s ease',
                   },
                   '& .MuiButton-startIcon': {
-                    marginRight: '4px',
+                    marginRight: '6px',
+                    position: 'relative',
+                    zIndex: 2,
+                    '& svg': {
+                      filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))',
+                      transition: 'all 0.3s ease',
+                    }
+                  },
+                  '&:hover .MuiButton-startIcon svg': {
+                    transform: 'scale(1.1) rotate(5deg)',
                   }
                 }}
               >
@@ -1402,30 +1594,55 @@ const Navbar: React.FC = () => {
                 onClick={handleMenu}
                 color="inherit"
                 sx={{
-                  p: 0.4,
-                  borderRadius: '8px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                    transform: 'scale(1.05)',
+                  p: 0.6,
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  backdropFilter: 'blur(15px)',
+                  boxShadow: '0 3px 12px rgba(102, 126, 234, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
+                    opacity: 0,
+                    transition: 'opacity 0.3s ease',
+                    zIndex: 1,
                   },
+                  '&:hover': {
+                    transform: 'scale(1.1) rotate(5deg)',
+                    boxShadow: '0 6px 20px rgba(102, 126, 234, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                    '&::before': {
+                      opacity: 1,
+                    },
+                  },
+                  '&:active': {
+                    transform: 'scale(0.95)',
+                    transition: 'all 0.1s ease',
+                  },
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
               >
                 <Avatar 
                   sx={{ 
-                    background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 50%, #1b5e20 100%)',
-                    width: { xs: 20, sm: 22, md: 24 },
-                    height: { xs: 20, sm: 22, md: 24 },
-                    fontSize: { xs: '0.6rem', sm: '0.7rem', md: '0.8rem' },
+                    background: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
+                    width: { xs: 24, sm: 26, md: 28 },
+                    height: { xs: 24, sm: 26, md: 28 },
+                    fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.9rem' },
                     fontWeight: 700,
-                    boxShadow: '0 2px 6px rgba(76, 175, 80, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: '0 2px 8px rgba(252, 182, 159, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    position: 'relative',
+                    zIndex: 2,
+                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                     '&:hover': {
                       transform: 'scale(1.1)',
-                      boxShadow: '0 3px 10px rgba(76, 175, 80, 0.4)',
+                      boxShadow: '0 4px 15px rgba(252, 182, 159, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
                     }
                   }}
                 >
@@ -1439,38 +1656,64 @@ const Navbar: React.FC = () => {
               }}>
                 <Button
                   color="inherit"
-                  startIcon={!(isMobile || isSmallTablet) ? <Login sx={{ fontSize: { sm: '0.7rem', md: '0.75rem', lg: '0.8rem' } }} /> : undefined}
+                  startIcon={!(isMobile || isSmallTablet) ? <Login sx={{ fontSize: { sm: '0.8rem', md: '0.85rem', lg: '0.9rem' } }} /> : undefined}
                   onClick={() => navigate('/login')}
                   variant="text"
                   sx={{ 
-                    fontWeight: 600,
-                    px: { xs: 0.8, sm: 1, md: 1.2 },
-                    py: { xs: 0.3, sm: 0.4, md: 0.5 },
-                    fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
-                    height: { xs: 20, sm: 22, md: 24 },
-                    borderRadius: '6px',
+                    fontWeight: 700,
+                    px: { xs: 1, sm: 1.2, md: 1.4 },
+                    py: { xs: 0.5, sm: 0.6, md: 0.7 },
+                    fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.8rem' },
+                    height: { xs: 24, sm: 28, md: 32 },
+                    borderRadius: '10px',
                     background: (isMobile || isSmallTablet) 
-                      ? 'linear-gradient(135deg, #4caf50 0%, #2e7d32 50%, #1b5e20 100%)' 
-                      : 'rgba(255, 255, 255, 0.08)',
-                    color: (isMobile || isSmallTablet) 
-                      ? 'white' 
-                      : 'rgba(255, 255, 255, 0.9)',
-                    border: (isMobile || isSmallTablet) 
-                      ? '1px solid rgba(255, 255, 255, 0.2)' 
-                      : '1px solid rgba(255, 255, 255, 0.15)',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                      : 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                    color: 'white',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    backdropFilter: 'blur(15px)',
+                    boxShadow: (isMobile || isSmallTablet) 
+                      ? '0 3px 12px rgba(102, 126, 234, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)' 
+                      : '0 3px 12px rgba(79, 172, 254, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
+                      opacity: 0,
+                      transition: 'opacity 0.3s ease',
+                      zIndex: 1,
+                    },
+                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                     '&:hover': {
-                      backgroundColor: (isMobile || isSmallTablet) 
-                        ? 'transparent' 
-                        : 'rgba(255, 255, 255, 0.15)',
-                      background: (isMobile || isSmallTablet) 
-                        ? 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 50%, #0d3e0f 100%)' 
-                        : undefined,
-                      transform: 'translateY(-1px)',
-                      color: 'white',
+                      transform: 'translateY(-2px) scale(1.05)',
+                      boxShadow: (isMobile || isSmallTablet) 
+                        ? '0 6px 20px rgba(102, 126, 234, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3)' 
+                        : '0 6px 20px rgba(79, 172, 254, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                      '&::before': {
+                        opacity: 1,
+                      },
+                    },
+                    '&:active': {
+                      transform: 'translateY(0) scale(0.98)',
+                      transition: 'all 0.1s ease',
                     },
                     '& .MuiButton-startIcon': {
-                      marginRight: '4px',
+                      marginRight: '6px',
+                      position: 'relative',
+                      zIndex: 2,
+                      '& svg': {
+                        filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))',
+                        transition: 'all 0.3s ease',
+                      }
+                    },
+                    '&:hover .MuiButton-startIcon svg': {
+                      transform: 'scale(1.1) rotate(5deg)',
                     }
                   }}
                 >
@@ -1479,26 +1722,57 @@ const Navbar: React.FC = () => {
                 {!(isMobile || isSmallTablet) && (
                   <Button
                     variant="contained"
-                    startIcon={<PersonAdd sx={{ fontSize: { sm: '0.7rem', md: '0.75rem', lg: '0.8rem' } }} />}
+                    startIcon={<PersonAdd sx={{ fontSize: { sm: '0.8rem', md: '0.85rem', lg: '0.9rem' } }} />}
                     onClick={() => navigate('/register')}
                     sx={{ 
                       fontWeight: 700,
-                      px: { sm: 0.8, md: 1, lg: 1.2 },
-                      py: { sm: 0.3, md: 0.4, lg: 0.5 },
-                      fontSize: { sm: '0.6rem', md: '0.65rem', lg: '0.7rem' },
-                      height: { sm: 22, md: 24, lg: 26 },
-                      borderRadius: '6px',
-                      background: 'linear-gradient(135deg, #4caf50 0%, #2e7d32 50%, #1b5e20 100%)',
-                      boxShadow: '0 3px 8px rgba(76, 175, 80, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      px: { sm: 1.2, md: 1.4, lg: 1.6 },
+                      py: { sm: 0.5, md: 0.6, lg: 0.7 },
+                      fontSize: { sm: '0.7rem', md: '0.75rem', lg: '0.8rem' },
+                      height: { sm: 28, md: 32, lg: 36 },
+                      borderRadius: '10px',
+                      color: 'white',
+                      background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                      boxShadow: '0 4px 15px rgba(240, 147, 251, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      backdropFilter: 'blur(15px)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
+                        opacity: 0,
+                        transition: 'opacity 0.3s ease',
+                        zIndex: 1,
+                      },
+                      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&:hover': {
-                        background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 50%, #0d3e0f 100%)',
-                        transform: 'translateY(-1px)',
-                        boxShadow: '0 4px 12px rgba(76, 175, 80, 0.4)',
+                        transform: 'translateY(-2px) scale(1.05)',
+                        boxShadow: '0 8px 25px rgba(240, 147, 251, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+                        '&::before': {
+                          opacity: 1,
+                        },
+                      },
+                      '&:active': {
+                        transform: 'translateY(0) scale(0.98)',
+                        transition: 'all 0.1s ease',
                       },
                       '& .MuiButton-startIcon': {
-                        marginRight: '4px',
+                        marginRight: '6px',
+                        position: 'relative',
+                        zIndex: 2,
+                        '& svg': {
+                          filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))',
+                          transition: 'all 0.3s ease',
+                        }
+                      },
+                      '&:hover .MuiButton-startIcon svg': {
+                        transform: 'scale(1.1) rotate(5deg)',
                       }
                     }}
                   >

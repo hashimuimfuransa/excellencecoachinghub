@@ -52,12 +52,6 @@ class NotificationService {
     const response = await api.delete(`/notifications/${notificationId}`);
     return response.data;
   }
-
-  // Create notification (usually called by backend, but useful for testing)
-  async createNotification(notification: Partial<Notification>) {
-    const response = await api.post('/notifications', notification);
-    return response.data;
-  }
 }
 
 export const notificationService = new NotificationService();

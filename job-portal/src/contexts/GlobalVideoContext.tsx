@@ -127,6 +127,15 @@ export const GlobalVideoProvider: React.FC<GlobalVideoProviderProps> = ({ childr
         ...prev,
         [videoId]: { ...prev[videoId], playing: false, muted: true, error: 'Autoplay failed' }
       }));
+      
+      // Try playing muted
+      videoElement.play().catch(mutedError => {
+        console.warn(`Muted autoplay also failed for video ${videoId}:`, mutedError);
+        setVideoStates(prev => ({
+          ...prev,
+          [videoId]: { ...prev[videoId], playing: false, muted: true, error: 'Autoplay blocked' }
+        }));
+      });
     });
     
     setCurrentPlayingVideo(videoId);

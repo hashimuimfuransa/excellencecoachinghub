@@ -36,6 +36,7 @@ import {
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { socialNetworkService } from '../services/socialNetworkService';
+import { toast } from 'react-toastify';
 
 interface SearchResult {
   _id: string;
@@ -255,23 +256,53 @@ const SearchPage: React.FC = () => {
     setConnectingUsers(prev => new Set(prev).add(userId));
     
     try {
-      await socialNetworkService.sendConnectionRequest(userId);
+      const response = await socialNetworkService.sendConnectionRequest(userId);
       
-      // Remove the user from results after successful connection
-      setResults(prev => prev.filter(result => 
-        !(result.type === 'user' && result._id === userId)
-      ));
+      // Find the user before removing from results
+      const userResult = results.find(result => result.type === 'user' && result._id === userId);
       
-      console.log('✅ Connection request sent successfully');
+      // Update the result to show pending status instead of removing
+      setResults(prev => prev.map(result => {
+        if (result.type === 'user' && result._id === userId) {
+          return {
+            ...result,
+            connectionStatus: 'pending',
+            connectionRequestId: response.data?._id || `temp-${userId}`
+          };
+        }
+        return result;
+      }));
+      
+      // Show success message
+      if (userResult) {
+        toast.success(`✅ Connection request sent to ${userResult.firstName} ${userResult.lastName}! They'll be notified.`, {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
     } catch (error) {
       console.error('❌ Error sending connection request:', error);
-      // You could show a toast notification here
-    } finally {
-      setConnectingUsers(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(userId);
-        return newSet;
+      toast.error('❌ Failed to send connection request. Please try again.', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
       });
+    } finally {
+      // Remove user from connecting state after a delay to show pending state
+      setTimeout(() => {
+        setConnectingUsers(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(userId);
+          return newSet;
+        });
+      }, 1000);
     }
   };
 
@@ -576,20 +607,27 @@ const SearchPage: React.FC = () => {
                                 variant="contained"
                                 size="small"
                                 onClick={(e) => handleConnect(result._id, e)}
-                                disabled={connectingUsers.has(result._id)}
+                                disabled={connectingUsers.has(result._id) || result.connectionStatus === 'pending'}
                                 sx={{
                                   mt: 1,
                                   textTransform: 'none',
                                   fontSize: { xs: '0.7rem', sm: '0.8rem' },
                                   px: { xs: 1.5, sm: 2 },
                                   py: { xs: 0.3, sm: 0.5 },
+                                  backgroundColor: result.connectionStatus === 'pending' 
+                                    ? '#4CAF50' 
+                                    : connectingUsers.has(result._id) 
+                                      ? '#ccc' 
+                                      : '#2196F3',
                                 }}
                               >
                                 {connectingUsers.has(result._id) ? (
                                   <>
                                     <CircularProgress size={10} sx={{ mr: 1 }} />
-                                    {isMobile ? 'Connecting...' : 'Connecting...'}
+                                    {isMobile ? 'Sending...' : 'Sending...'}
                                   </>
+                                ) : result.connectionStatus === 'pending' ? (
+                                  'Pending'
                                 ) : (
                                   'Connect'
                                 )}

@@ -387,16 +387,22 @@ class SocialNetworkService {
     if (isGoogleUser) {
       console.log('🔄 Simulating connection request for Google user');
       // Simulate a successful request
-      return {
+      const mockResponse = {
         _id: `request_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         success: true,
         message: 'Connection request sent successfully'
       };
+      
+      // Note: For Google users, notifications are handled by the backend
+      // when the actual connection request is processed
+      
+      return mockResponse;
     }
     
     const response = await api.post(`/connections/request/${userId}`, {
       connectionType
     });
+    
     return response.data.data || response.data;
   }
 
@@ -865,17 +871,6 @@ class SocialNetworkService {
     }
   }
 
-  async sendConnectionRequest(userId: string) {
-    try {
-      console.log('🔗 Sending connection request to user:', userId);
-      const response = await api.post('/connections/request', { recipientId: userId });
-      console.log('🔗 Connection request response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('Error sending connection request:', error);
-      throw error;
-    }
-  }
 
   async acceptConnectionRequest(requestId: string) {
     try {

@@ -76,6 +76,7 @@ import {
   Verified,
   Settings,
   Help,
+  CheckCircle,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -88,6 +89,7 @@ import MobileCreatePost from '../components/social/MobileCreatePost';
 import CreateStory from '../components/social/CreateStory';
 import StoryViewer from '../components/social/StoryViewer';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'react-toastify';
 
 // Styled components for modern design
 const StyledSearchBar = styled(Paper)(({ theme }) => ({
@@ -322,16 +324,44 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
   const handleConnect = async (userId: string) => {
     try {
       console.log('🔗 Sending connection request to:', userId);
-      await socialNetworkService.sendConnectionRequest(userId);
+      const response = await socialNetworkService.sendConnectionRequest(userId);
       
-      // Remove from suggestions after successful request
-      setSuggestedConnections(prev => prev.filter(conn => conn._id !== userId));
+      // Find the user before removing from suggestions
+      const userToConnect = suggestedConnections.find(conn => conn._id === userId);
       
-      // Show success message (you could add a snackbar here)
-      console.log('✅ Connection request sent successfully');
+      // Update the connection status instead of removing
+      setSuggestedConnections(prev => prev.map(conn => {
+        if (conn._id === userId) {
+          return {
+            ...conn,
+            connectionStatus: 'pending',
+            connectionRequestId: response.data?._id || `temp-${userId}`
+          };
+        }
+        return conn;
+      }));
+      
+      // Show success message
+      if (userToConnect) {
+        toast.success(`✅ Connection request sent to ${userToConnect.firstName} ${userToConnect.lastName}! They'll be notified.`, {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
     } catch (error) {
       console.error('❌ Error sending connection request:', error);
-      // You could show an error message to the user here
+      toast.error('❌ Failed to send connection request. Please try again.', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     }
   };
 
@@ -1444,15 +1474,19 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
                 <Button
                     size="small"
                     variant="outlined"
-                    startIcon={<PersonAdd />}
+                    startIcon={connection.connectionStatus === 'pending' ? <CheckCircle /> : <PersonAdd />}
+                    disabled={connection.connectionStatus === 'pending'}
                   sx={{ 
                       borderRadius: 20,
                     textTransform: 'none', 
-                      fontSize: '0.75rem'
+                      fontSize: '0.75rem',
+                      backgroundColor: connection.connectionStatus === 'pending' ? '#4CAF50' : 'transparent',
+                      color: connection.connectionStatus === 'pending' ? 'white' : 'inherit',
+                      borderColor: connection.connectionStatus === 'pending' ? '#4CAF50' : 'inherit',
                     }}
                     onClick={() => handleConnect(connection._id)}
                   >
-                    Connect
+                    {connection.connectionStatus === 'pending' ? 'Pending' : 'Connect'}
                 </Button>
                 </Box>
                   ))}

@@ -64,6 +64,7 @@ import { chatService } from '../services/chatService';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, UserRole } from '../contexts/AuthContext';
 import FloatingContact from '../components/FloatingContact';
+import { toast } from 'react-toastify';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -277,21 +278,23 @@ const NetworkPage: React.FC = () => {
   };
 
   const handleSendRequest = async (userId: string) => {
-    // Add user to requesting state
+    // Add user to requesting state immediately
     setRequestingUsers(prev => new Set(prev).add(userId));
     
     try {
       const response = await socialNetworkService.sendConnectionRequest(userId);
       
+      // Find the user before removing from suggestions
+      const userToAdd = (suggestions || []).find((user: any) => user && user._id === userId);
+      
       // Remove from suggestions (guard against bad items)
       setSuggestions(prev => (prev || []).filter((user: any) => user && user._id !== userId));
       
-      // Find the user to add to pending requests
-      const userToAdd = (suggestions || []).find((user: any) => user && user._id === userId);
       if (userToAdd) {
-        const newPendingRequest: ConnectionRequest = {
+        // Add to sent requests to show pending status
+        const newSentRequest: SentRequest = {
           _id: response.data?._id || `temp-${userId}`,
-          requester: {
+          recipient: {
             _id: userToAdd._id,
             firstName: userToAdd.firstName,
             lastName: userToAdd.lastName,
@@ -299,31 +302,45 @@ const NetworkPage: React.FC = () => {
             company: userToAdd.company,
             jobTitle: userToAdd.jobTitle,
           },
-          recipient: userId,
+          requester: userId,
           status: 'pending',
           connectionType: 'connect',
           createdAt: new Date().toISOString(),
         };
         
-        // Note: This would show in "sent requests" not "received requests"
-        // For now, we'll just show the success message
+        // Add to sent requests
+        setSentRequests(prev => [newSentRequest, ...prev]);
+        
+        // Show success message with toast notification
+        toast.success(`✅ Connection request sent to ${userToAdd.firstName} ${userToAdd.lastName}! They'll be notified.`, {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
       }
-      
-      // Show success message
-      setSuccessMessage(`Connection request sent to ${userToAdd?.firstName} ${userToAdd?.lastName}!`);
-      setTimeout(() => setSuccessMessage(null), 5000); // Clear after 5 seconds
       
     } catch (error) {
       console.error('Error sending connection request:', error);
-      setError('Failed to send connection request. Please try again.');
-      setTimeout(() => setError(null), 5000);
-    } finally {
-      // Remove user from requesting state
-      setRequestingUsers(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(userId);
-        return newSet;
+      toast.error('❌ Failed to send connection request. Please try again.', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
       });
+    } finally {
+      // Remove user from requesting state after a short delay to show the pending state
+      setTimeout(() => {
+        setRequestingUsers(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(userId);
+          return newSet;
+        });
+      }, 1000);
     }
   };
 
@@ -1589,23 +1606,36 @@ const NetworkPage: React.FC = () => {
                           <Button
                             variant="contained"
                             size="small"
-                            startIcon={requestingUsers.has(user._id) ? <CircularProgress size={16} color="inherit" /> : <PersonAdd />}
+                            startIcon={
+                              requestingUsers.has(user._id) 
+                                ? <CircularProgress size={16} color="inherit" /> 
+                                : sentRequests.some(req => req.recipient._id === user._id && req.status === 'pending')
+                                  ? <CheckCircle />
+                                  : <PersonAdd />
+                            }
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
                               handleSendRequest(user._id);
                             }}
-                            disabled={requestingUsers.has(user._id)}
+                            disabled={requestingUsers.has(user._id) || sentRequests.some(req => req.recipient._id === user._id && req.status === 'pending')}
                             sx={{
                               background: requestingUsers.has(user._id) 
                                 ? 'linear-gradient(45deg, #ccc 30%, #ddd 90%)'
-                                : 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+                                : sentRequests.some(req => req.recipient._id === user._id && req.status === 'pending')
+                                  ? 'linear-gradient(45deg, #4CAF50 30%, #66BB6A 90%)'
+                                  : 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
                               textTransform: 'none',
                               fontWeight: 600,
                               flex: 1,
                             }}
                           >
-                            {requestingUsers.has(user._id) ? 'Sending...' : 'Connect'}
+                            {requestingUsers.has(user._id) 
+                              ? 'Sending...' 
+                              : sentRequests.some(req => req.recipient._id === user._id && req.status === 'pending')
+                                ? 'Pending'
+                                : 'Connect'
+                            }
                           </Button>
                           <Button
                             variant="outlined"

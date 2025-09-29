@@ -142,6 +142,13 @@ const NetworkPage: React.FC = () => {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   
+  // Browse Users tab states
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [allUsersLoading, setAllUsersLoading] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -175,6 +182,13 @@ const NetworkPage: React.FC = () => {
     
     loadDataProgressively();
   }, []);
+
+  // Load all users when Browse Users tab is selected
+  useEffect(() => {
+    if (currentTab === 3 && allUsers.length === 0) {
+      loadAllUsers();
+    }
+  }, [currentTab]);
 
   // Memoized filtered suggestions for better performance
   const filteredSuggestions = useMemo(() => {
@@ -570,6 +584,57 @@ const NetworkPage: React.FC = () => {
     } else {
       navigate(`/app/profile/view/${user._id}`);
     }
+  };
+
+  // Load all users for browsing
+  const loadAllUsers = async () => {
+    try {
+      setAllUsersLoading(true);
+      const result = await chatService.getAllUsers(200, 0); // Load more users initially
+      setAllUsers(result.users);
+    } catch (error) {
+      console.error('Error loading all users:', error);
+      // Fallback to search with empty query
+      try {
+        const users = await chatService.searchUsers('', 'all', 200, 0);
+        setAllUsers(users);
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+      }
+    } finally {
+      setAllUsersLoading(false);
+    }
+  };
+
+  // Search users for chat
+  const searchUsersForChat = async (query: string) => {
+    if (!query.trim()) {
+      setUserSearchResults([]);
+      return;
+    }
+
+    try {
+      setUserSearchLoading(true);
+      const results = await chatService.searchUsers(query, 'all', 200, 0); // Increased limit for search
+      setUserSearchResults(results);
+    } catch (error) {
+      console.error('Error searching users:', error);
+    } finally {
+      setUserSearchLoading(false);
+    }
+  };
+
+  // Handle user search input change
+  const handleUserSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const query = event.target.value;
+    setUserSearchQuery(query);
+    
+    // Debounce search
+    const timeoutId = setTimeout(() => {
+      searchUsersForChat(query);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
   };
 
   const filteredConnections = connections.filter(conn => {
@@ -1153,6 +1218,39 @@ const NetworkPage: React.FC = () => {
                     {!isMobile && (
                       <Typography variant="caption" color="text.secondary">
                         ({filteredSuggestions.length})
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+              } 
+            />
+            <Tab 
+              label={
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: { xs: 0.5, md: 1 },
+                  flexDirection: { xs: 'column', sm: 'row' }
+                }}>
+                  <Message sx={{ fontSize: { xs: 18, md: 22 } }} />
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 'inherit' }}>
+                      Browse Users
+                    </Typography>
+                    <Chip 
+                      label={allUsers.length} 
+                      size="small" 
+                      color="secondary"
+                      sx={{ 
+                        height: 18,
+                        fontSize: '0.7rem',
+                        mt: 0.5,
+                        display: { xs: 'inline-flex', sm: 'none' }
+                      }}
+                    />
+                    {!isMobile && (
+                      <Typography variant="caption" color="text.secondary">
+                        ({allUsers.length})
                       </Typography>
                     )}
                   </Box>
@@ -2055,6 +2153,315 @@ const NetworkPage: React.FC = () => {
               </Typography>
             </Paper>
           )}
+        </TabPanel>
+
+        {/* Browse Users Tab */}
+        <TabPanel value={currentTab} index={3}>
+          <Box sx={{ mb: 3 }}>
+            <Paper sx={{ p: 2, borderRadius: 2, mb: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                    Browse All Users
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Search and chat with any user on the platform
+                  </Typography>
+                </Box>
+                <Button
+                  variant="outlined"
+                  startIcon={<Refresh />}
+                  onClick={loadAllUsers}
+                  disabled={allUsersLoading}
+                >
+                  Refresh
+                </Button>
+              </Box>
+              
+              <TextField
+                fullWidth
+                placeholder="Search users by name, company, or role..."
+                value={userSearchQuery}
+                onChange={handleUserSearchChange}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ maxWidth: 500 }}
+              />
+            </Paper>
+          </Box>
+
+          {/* Search Results */}
+          {userSearchQuery && (
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                Search Results ({userSearchResults.length})
+              </Typography>
+              
+              {userSearchLoading ? (
+                <Grid container spacing={2}>
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <Grid item xs={12} sm={6} md={4} key={`search-skeleton-${index}`}>
+                      <Card sx={{ borderRadius: 2, height: '100%' }}>
+                        <CardContent sx={{ textAlign: 'center' }}>
+                          <Skeleton variant="circular" width={64} height={64} sx={{ mx: 'auto', mb: 2 }} />
+                          <Skeleton variant="text" width="70%" height={24} sx={{ mx: 'auto', mb: 1 }} />
+                          <Skeleton variant="text" width="50%" height={16} sx={{ mx: 'auto', mb: 1 }} />
+                          <Skeleton variant="text" width="40%" height={16} sx={{ mx: 'auto', mb: 2 }} />
+                          <Skeleton variant="rectangular" width={100} height={36} sx={{ mx: 'auto' }} />
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              ) : userSearchResults.length > 0 ? (
+                <Grid container spacing={2}>
+                  {userSearchResults.map((user) => (
+                    <Grid item xs={12} sm={6} md={4} key={user._id}>
+                      <Card sx={{ 
+                        borderRadius: 2, 
+                        height: '100%',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          boxShadow: theme.shadows[8]
+                        }
+                      }}>
+                        <CardContent sx={{ textAlign: 'center', p: 3 }}>
+                          <Box sx={{ position: 'relative', mb: 2 }}>
+                            <Avatar
+                              src={user.profilePicture}
+                              sx={{ 
+                                width: 64, 
+                                height: 64, 
+                                mx: 'auto',
+                                border: `3px solid ${user.isOnline ? theme.palette.success.main : theme.palette.grey[300]}`
+                              }}
+                            >
+                              {user.firstName?.[0]}{user.lastName?.[0]}
+                            </Avatar>
+                            {user.isOnline && (
+                              <Box sx={{
+                                position: 'absolute',
+                                bottom: 2,
+                                right: '50%',
+                                transform: 'translateX(50%)',
+                                width: 16,
+                                height: 16,
+                                borderRadius: '50%',
+                                bgcolor: theme.palette.success.main,
+                                border: `2px solid ${theme.palette.background.paper}`
+                              }} />
+                            )}
+                          </Box>
+                          
+                          <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                            {user.firstName} {user.lastName}
+                          </Typography>
+                          
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            {user.title || user.role}
+                          </Typography>
+                          
+                          {user.company && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                              {user.company}
+                            </Typography>
+                          )}
+                          
+                          {user.location && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                              <LocationOn sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
+                              {user.location}
+                            </Typography>
+                          )}
+                          
+                          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                            <Button
+                              variant="contained"
+                              size="small"
+                              startIcon={<Message />}
+                              onClick={() => handleStartChat(user._id, `${user.firstName} ${user.lastName}`)}
+                              sx={{ 
+                                borderRadius: 2,
+                                textTransform: 'none',
+                                fontWeight: 600
+                              }}
+                            >
+                              Chat
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => handleViewProfile(user)}
+                              sx={{ 
+                                borderRadius: 2,
+                                textTransform: 'none',
+                                fontWeight: 600
+                              }}
+                            >
+                              Profile
+                            </Button>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              ) : (
+                <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 2 }}>
+                  <Search sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                  <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+                    No users found
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Try a different search term or browse all users below.
+                  </Typography>
+                </Paper>
+              )}
+            </Box>
+          )}
+
+          {/* All Users */}
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+              All Users ({allUsers.length})
+            </Typography>
+            
+            {allUsersLoading ? (
+              <Grid container spacing={2}>
+                {Array.from({ length: 9 }).map((_, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={`all-skeleton-${index}`}>
+                    <Card sx={{ borderRadius: 2, height: '100%' }}>
+                      <CardContent sx={{ textAlign: 'center' }}>
+                        <Skeleton variant="circular" width={64} height={64} sx={{ mx: 'auto', mb: 2 }} />
+                        <Skeleton variant="text" width="70%" height={24} sx={{ mx: 'auto', mb: 1 }} />
+                        <Skeleton variant="text" width="50%" height={16} sx={{ mx: 'auto', mb: 1 }} />
+                        <Skeleton variant="text" width="40%" height={16} sx={{ mx: 'auto', mb: 2 }} />
+                        <Skeleton variant="rectangular" width={100} height={36} sx={{ mx: 'auto' }} />
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            ) : allUsers.length > 0 ? (
+              <Grid container spacing={2}>
+                {allUsers.map((user) => (
+                  <Grid item xs={12} sm={6} md={4} key={user._id}>
+                    <Card sx={{ 
+                      borderRadius: 2, 
+                      height: '100%',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: theme.shadows[8]
+                      }
+                    }}>
+                      <CardContent sx={{ textAlign: 'center', p: 3 }}>
+                        <Box sx={{ position: 'relative', mb: 2 }}>
+                          <Avatar
+                            src={user.profilePicture}
+                            sx={{ 
+                              width: 64, 
+                              height: 64, 
+                              mx: 'auto',
+                              border: `3px solid ${user.isOnline ? theme.palette.success.main : theme.palette.grey[300]}`
+                            }}
+                          >
+                            {user.firstName?.[0]}{user.lastName?.[0]}
+                          </Avatar>
+                          {user.isOnline && (
+                            <Box sx={{
+                              position: 'absolute',
+                              bottom: 2,
+                              right: '50%',
+                              transform: 'translateX(50%)',
+                              width: 16,
+                              height: 16,
+                              borderRadius: '50%',
+                              bgcolor: theme.palette.success.main,
+                              border: `2px solid ${theme.palette.background.paper}`
+                            }} />
+                          )}
+                        </Box>
+                        
+                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                          {user.firstName} {user.lastName}
+                        </Typography>
+                        
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                          {user.title || user.role}
+                        </Typography>
+                        
+                        {user.company && (
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            {user.company}
+                          </Typography>
+                        )}
+                        
+                        {user.location && (
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            <LocationOn sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
+                            {user.location}
+                          </Typography>
+                        )}
+                        
+                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                          <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={<Message />}
+                            onClick={() => handleStartChat(user._id, `${user.firstName} ${user.lastName}`)}
+                            sx={{ 
+                              borderRadius: 2,
+                              textTransform: 'none',
+                              fontWeight: 600
+                            }}
+                          >
+                            Chat
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => handleViewProfile(user)}
+                            sx={{ 
+                              borderRadius: 2,
+                              textTransform: 'none',
+                              fontWeight: 600
+                            }}
+                          >
+                            Profile
+                          </Button>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 2 }}>
+                <People sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+                  No users available
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Click refresh to load users from the platform.
+                </Typography>
+                <Button
+                  variant="contained"
+                  startIcon={<Refresh />}
+                  onClick={loadAllUsers}
+                  disabled={allUsersLoading}
+                >
+                  Load Users
+                </Button>
+              </Paper>
+            )}
+          </Box>
         </TabPanel>
       </motion.div>
 

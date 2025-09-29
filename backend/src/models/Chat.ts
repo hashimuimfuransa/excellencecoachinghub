@@ -7,6 +7,7 @@ export interface IChatMessage extends Document {
   messageType: 'text' | 'file' | 'image';
   fileUrl?: string;
   fileName?: string;
+  replyTo?: mongoose.Types.ObjectId;
   isRead: boolean;
   readBy: mongoose.Types.ObjectId[];
   createdAt: Date;
@@ -51,6 +52,10 @@ const chatMessageSchema = new Schema<IChatMessage>({
   },
   fileName: {
     type: String,
+  },
+  replyTo: {
+    type: Schema.Types.ObjectId,
+    ref: 'ChatMessage',
   },
   isRead: {
     type: Boolean,

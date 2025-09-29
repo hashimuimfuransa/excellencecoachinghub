@@ -47,7 +47,7 @@ const mediaUpload = multer({
     fileSize: 100 * 1024 * 1024, // 100MB limit for media files
   },
   fileFilter: (req, file, cb) => {
-    // Allow media types
+    // Allow media types including audio for voice notes
     const allowedTypes = [
       'image/jpeg',
       'image/png',
@@ -58,13 +58,19 @@ const mediaUpload = multer({
       'video/webm',
       'video/ogg',
       'video/avi',
-      'video/mov'
+      'video/mov',
+      'audio/mpeg',
+      'audio/wav',
+      'audio/ogg',
+      'audio/webm',
+      'audio/mp4',
+      'audio/m4a'
     ];
     
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Only JPG, PNG, GIF, WebP, MP4, WebM, OGG, AVI, and MOV files are allowed!'));
+      cb(new Error('Only JPG, PNG, GIF, WebP, MP4, WebM, OGG, AVI, MOV, MP3, WAV, M4A files are allowed!'));
     }
   },
 });
@@ -158,7 +164,8 @@ router.post('/media', protect, mediaUpload.single('file'), async (req, res) => {
 
     // Determine the folder based on file type and usage
     const isVideo = file.mimetype.startsWith('video/');
-    const mediaType = isVideo ? 'videos' : 'images';
+    const isAudio = file.mimetype.startsWith('audio/');
+    const mediaType = isVideo ? 'videos' : isAudio ? 'audio' : 'images';
     const folder = `excellence-coaching-hub/media/${type}/${mediaType}/${userId}`;
 
     // Upload to Cloudinary using optimized media upload function
@@ -178,7 +185,7 @@ router.post('/media', protect, mediaUpload.single('file'), async (req, res) => {
         fileName: file.originalname,
         fileSize: result.size,
         mimeType: file.mimetype,
-        type: isVideo ? 'video' : 'image'
+        type: isVideo ? 'video' : isAudio ? 'audio' : 'image'
       },
       message: 'Media uploaded successfully'
     });

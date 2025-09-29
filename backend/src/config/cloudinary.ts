@@ -164,9 +164,11 @@ export const uploadMediaToCloudinary = async (
     const timestamp = Date.now();
     const fileName = originalName.replace(/\.[^/.]+$/, "").substring(0, 50); // Limit filename length
     const isVideo = mimeType.startsWith('video/');
-    const publicId = `${folder}/${isVideo ? 'video' : 'image'}_${userId}_${fileName}_${timestamp}`;
+    const isAudio = mimeType.startsWith('audio/');
+    const mediaType = isVideo ? 'video' : isAudio ? 'audio' : 'image';
+    const publicId = `${folder}/${mediaType}_${userId}_${fileName}_${timestamp}`;
 
-    console.log(`🎬 Starting Cloudinary ${isVideo ? 'video' : 'image'} upload for user:`, userId);
+    console.log(`🎬 Starting Cloudinary ${mediaType} upload for user:`, userId);
     console.log('📁 File name:', originalName);
     console.log('📂 Folder:', folder);
     console.log('🆔 Public ID:', publicId);
@@ -175,7 +177,7 @@ export const uploadMediaToCloudinary = async (
     const uploadOptions: any = {
       public_id: publicId,
       folder: folder,
-      resource_type: isVideo ? 'video' : 'image',
+      resource_type: isVideo ? 'video' : isAudio ? 'video' : 'image', // Audio files use 'video' resource_type in Cloudinary
       chunk_size: 6000000, // 6MB chunks for better reliability
     };
 
@@ -191,6 +193,17 @@ export const uploadMediaToCloudinary = async (
         }
       ];
       uploadOptions.allowed_formats = ['mp4', 'mov', 'avi', 'mkv', 'webm', 'ogg'];
+    } else if (isAudio) {
+      uploadOptions.transformation = [
+        {
+          quality: 'auto:good',
+          format: 'mp3',
+          audio_codec: 'mp3',
+          audio_frequency: 44100,
+          audio_bitrate: '128k'
+        }
+      ];
+      uploadOptions.allowed_formats = ['mp3', 'wav', 'ogg', 'webm', 'mp4', 'm4a'];
     } else {
       uploadOptions.transformation = [
         {
@@ -208,9 +221,9 @@ export const uploadMediaToCloudinary = async (
 
     const result = await uploadWithRetry(fileBuffer, uploadOptions, 2);
     
-    console.log(`✅ Cloudinary ${isVideo ? 'video' : 'image'} upload successful!`);
+    console.log(`✅ Cloudinary ${mediaType} upload successful!`);
     console.log('🔗 Media URL:', result.secure_url);
-    if (isVideo && result.duration) {
+    if ((isVideo || isAudio) && result.duration) {
       console.log('⏱️ Duration:', `${result.duration}s`);
     }
     console.log('📏 Size:', `${(result.bytes / (1024 * 1024)).toFixed(2)} MB`);
@@ -221,7 +234,7 @@ export const uploadMediaToCloudinary = async (
       size: result.bytes || 0,
     };
     
-    if (isVideo && result.duration) {
+    if ((isVideo || isAudio) && result.duration) {
       response.duration = result.duration;
     }
     

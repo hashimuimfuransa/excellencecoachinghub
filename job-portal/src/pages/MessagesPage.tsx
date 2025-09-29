@@ -26,6 +26,8 @@ import {
   Menu,
   MenuItem,
   alpha,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   Send,
@@ -37,10 +39,20 @@ import {
   Add,
   Refresh,
   FilterList,
+  Image,
+  Mic,
+  Stop,
+  PlayArrow,
+  Pause,
+  Close,
+  Person,
+  Message,
+  Delete,
+  Reply,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ChatRoom, ChatMessage } from '../types/chat';
 import { chatService } from '../services/chatService';
 import { realTimeNotificationService } from '../services/realTimeNotificationService';
@@ -51,6 +63,24 @@ const MessagesPage: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Add CSS animation for recording pulse
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -61,7 +91,37 @@ const MessagesPage: React.FC = () => {
   const [showChatList, setShowChatList] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [filterType, setFilterType] = useState<'all' | 'unread'>('all');
+  const [chatListTab, setChatListTab] = useState(0); // 0: Conversations, 1: Browse Users
+  const [allUsersForChat, setAllUsersForChat] = useState<any[]>([]);
+  const [allUsersLoading, setAllUsersLoading] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const [hasMoreUsers, setHasMoreUsers] = useState(false);
+  const [usersOffset, setUsersOffset] = useState(0);
+  const [totalUsers, setTotalUsers] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // File upload and voice recording states
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+  const [sendingVoiceMessage, setSendingVoiceMessage] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [messageMenuAnchor, setMessageMenuAnchor] = useState<{ [key: string]: HTMLElement | null }>({});
+  const [selectedMessageForMenu, setSelectedMessageForMenu] = useState<ChatMessage | null>(null);
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState<ChatMessage | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     loadChatRooms();
@@ -178,6 +238,22 @@ const MessagesPage: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Cleanup recording interval on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Load all users when Browse Users tab is selected in chat dialog
+  useEffect(() => {
+    if (showChatList && chatListTab === 1 && allUsersForChat.length === 0) {
+      loadAllUsersForChat();
+    }
+  }, [showChatList, chatListTab]);
 
   // Handle URL parameter changes
   useEffect(() => {
@@ -372,6 +448,488 @@ const MessagesPage: React.FC = () => {
     }
   };
 
+  // File upload functions
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    
+    if (imageFiles.length > 0) {
+      setSelectedFiles(prev => [...prev, ...imageFiles]);
+    }
+    
+    // Reset the input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleFileUpload = async () => {
+    if (!selectedFiles.length || !selectedRoom || uploadingFiles) return;
+
+    setUploadingFiles(true);
+    
+    try {
+      for (const file of selectedFiles) {
+        // Upload file
+        const uploadResult = await chatService.uploadChatFile(file);
+        
+        // Send message with image
+        await chatService.sendMessage(selectedRoom._id, {
+          content: `📷 ${file.name}`,
+          messageType: 'image',
+          fileUrl: uploadResult.fileUrl,
+          fileName: uploadResult.fileName
+        });
+      }
+      
+      setSelectedFiles([]);
+      
+      // Reload messages to show the new image messages
+      loadMessages(selectedRoom._id);
+      
+    } catch (error) {
+      console.error('Error uploading files:', error);
+    } finally {
+      setUploadingFiles(false);
+    }
+  };
+
+  const removeSelectedFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Voice recording functions
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      
+      setMediaRecorder(recorder);
+      setAudioChunks([]);
+      setIsRecording(true);
+      setRecordingDuration(0);
+      
+      // Store chunks in a local variable for better access
+      const chunks: Blob[] = [];
+      
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data);
+          setAudioChunks(prev => [...prev, event.data]);
+        }
+      };
+      
+      recorder.onstop = () => {
+        stream.getTracks().forEach(track => track.stop());
+        
+        // Create preview URL after recording stops
+        setTimeout(() => {
+          if (chunks.length > 0) {
+            const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+            const previewUrl = URL.createObjectURL(audioBlob);
+            setAudioPreviewUrl(previewUrl);
+            console.log('Preview URL created:', previewUrl);
+            console.log('Audio blob size:', audioBlob.size);
+          } else {
+            console.log('No audio chunks available for preview');
+          }
+        }, 200); // Increased delay to ensure chunks are ready
+      };
+      
+      recorder.start();
+      
+      // Start duration counter
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Error starting recording:', error);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+      
+      // Backup: Create preview URL immediately if not created in onstop
+      setTimeout(() => {
+        if (!audioPreviewUrl && audioChunks.length > 0) {
+          console.log('Creating backup preview URL');
+          const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+          const previewUrl = URL.createObjectURL(audioBlob);
+          setAudioPreviewUrl(previewUrl);
+          console.log('Backup preview URL created:', previewUrl);
+        }
+      }, 500);
+    }
+  };
+
+  const sendVoiceMessage = async () => {
+    if (!audioChunks.length || !selectedRoom || sendingVoiceMessage) return;
+
+    try {
+      setSendingVoiceMessage(true);
+      
+      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+      const audioFile = new File([audioBlob], 'voice-message.webm', { type: 'audio/webm' });
+      
+      // Upload voice file
+      const uploadResult = await chatService.uploadChatFile(audioFile);
+      
+      // Send voice message
+      await chatService.sendMessage(selectedRoom._id, {
+        content: `🎤 Voice message (${Math.floor(recordingDuration / 60)}:${(recordingDuration % 60).toString().padStart(2, '0')})`,
+        messageType: 'file',
+        fileUrl: uploadResult.fileUrl,
+        fileName: uploadResult.fileName
+      });
+      
+      // Reset recording state
+      setAudioChunks([]);
+      setRecordingDuration(0);
+      
+      // Clean up preview URL
+      if (audioPreviewUrl) {
+        URL.revokeObjectURL(audioPreviewUrl);
+        setAudioPreviewUrl(null);
+      }
+      
+      // Clean up audio reference
+      if (audioPreviewRef.current) {
+        audioPreviewRef.current.pause();
+        audioPreviewRef.current = null;
+      }
+      setIsPlayingPreview(false);
+      
+      // Reload messages
+      loadMessages(selectedRoom._id);
+      
+    } catch (error) {
+      console.error('Error sending voice message:', error);
+    } finally {
+      setSendingVoiceMessage(false);
+    }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+    }
+    
+    // Reset recording state
+    setAudioChunks([]);
+    setRecordingDuration(0);
+    
+    // Clean up preview URL
+    if (audioPreviewUrl) {
+      URL.revokeObjectURL(audioPreviewUrl);
+      setAudioPreviewUrl(null);
+    }
+    
+    // Clean up audio reference
+    if (audioPreviewRef.current) {
+      audioPreviewRef.current.pause();
+      audioPreviewRef.current = null;
+    }
+    setIsPlayingPreview(false);
+  };
+
+  // Voice preview functions
+  const playPreview = () => {
+    console.log('Play preview clicked');
+    console.log('Audio preview URL:', audioPreviewUrl);
+    console.log('Audio chunks length:', audioChunks.length);
+    
+    if (audioPreviewUrl) {
+      // Stop any existing audio
+      if (audioPreviewRef.current) {
+        audioPreviewRef.current.pause();
+        audioPreviewRef.current.currentTime = 0;
+      }
+      
+      // Create new audio element
+      const audio = new Audio(audioPreviewUrl);
+      audioPreviewRef.current = audio;
+      
+      audio.onplay = () => {
+        console.log('Audio started playing');
+        setIsPlayingPreview(true);
+      };
+      audio.onended = () => {
+        console.log('Audio ended');
+        setIsPlayingPreview(false);
+      };
+      audio.onerror = (error) => {
+        console.error('Audio error:', error);
+        setIsPlayingPreview(false);
+      };
+      audio.onpause = () => {
+        console.log('Audio paused');
+        setIsPlayingPreview(false);
+      };
+      
+      audio.play().catch(error => {
+        console.error('Error playing preview:', error);
+        setIsPlayingPreview(false);
+      });
+    } else {
+      console.log('No preview URL available');
+      // Try to create preview URL from current chunks
+      if (audioChunks.length > 0) {
+        console.log('Creating preview URL from chunks');
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        const previewUrl = URL.createObjectURL(audioBlob);
+        setAudioPreviewUrl(previewUrl);
+        
+        // Try playing again
+        setTimeout(() => {
+          const audio = new Audio(previewUrl);
+          audioPreviewRef.current = audio;
+          audio.onplay = () => setIsPlayingPreview(true);
+          audio.onended = () => setIsPlayingPreview(false);
+          audio.onerror = () => setIsPlayingPreview(false);
+          audio.play().catch(error => {
+            console.error('Error playing preview after creating URL:', error);
+            setIsPlayingPreview(false);
+          });
+        }, 100);
+      }
+    }
+  };
+
+  const stopPreview = () => {
+    if (audioPreviewRef.current) {
+      audioPreviewRef.current.pause();
+      audioPreviewRef.current.currentTime = 0;
+    }
+    setIsPlayingPreview(false);
+  };
+
+  // Message menu handlers
+  const handleMessageMenuOpen = (event: React.MouseEvent<HTMLElement>, message: ChatMessage) => {
+    event.stopPropagation();
+    setMessageMenuAnchor(prev => ({
+      ...prev,
+      [message._id]: event.currentTarget
+    }));
+    setSelectedMessageForMenu(message);
+  };
+
+  const handleMessageMenuClose = (messageId: string) => {
+    setMessageMenuAnchor(prev => ({
+      ...prev,
+      [messageId]: null
+    }));
+    setSelectedMessageForMenu(null);
+  };
+
+  const handleMenuReply = (message: ChatMessage) => {
+    handleMessageMenuClose(message._id);
+    handleReplyToMessage(message);
+  };
+
+
+  // Message actions
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!selectedRoom || !user) return;
+    
+    try {
+      setDeletingMessageId(messageId);
+      await chatService.deleteMessage(selectedRoom._id, messageId);
+      
+      // Remove message from local state
+      setMessages(prev => prev.filter(msg => msg._id !== messageId));
+      
+      // Update last message if this was the last message
+      setChatRooms(prev => 
+        prev.map(room => 
+          room._id === selectedRoom._id 
+            ? { 
+                ...room, 
+                lastMessage: room.lastMessage?._id === messageId ? null : room.lastMessage,
+                updatedAt: new Date().toISOString()
+              }
+            : room
+        )
+      );
+      
+      // Close confirmation dialog
+      setDeleteConfirmOpen(false);
+      setMessageToDelete(null);
+      
+    } catch (error) {
+      console.error('Error deleting message:', error);
+    } finally {
+      setDeletingMessageId(null);
+    }
+  };
+
+  const handleDeleteClick = (message: ChatMessage) => {
+    setMessageToDelete(message);
+    setDeleteConfirmOpen(true);
+    handleMessageMenuClose(message._id);
+  };
+
+  const handleReplyToMessage = (message: ChatMessage) => {
+    setReplyingTo(message);
+    setReplyText(`Replying to ${message.sender.firstName}: `);
+  };
+
+  const handleCancelReply = () => {
+    setReplyingTo(null);
+    setReplyText('');
+  };
+
+  const handleSendReply = async () => {
+    if (!replyText.trim() || !selectedRoom || !user || !replyingTo) return;
+
+    const messageContent = replyText.trim();
+    setReplyText('');
+    setReplyingTo(null);
+
+    try {
+      const message = await chatService.sendMessage(selectedRoom._id, { 
+        content: messageContent,
+        replyTo: replyingTo._id
+      });
+      
+      // Add message to UI
+      setMessages(prev => {
+        const exists = prev.some(m => m._id === message._id);
+        return exists ? prev : [...prev, message];
+      });
+      
+      // Update the selected room's last message
+      setChatRooms(prev => 
+        prev.map(room => 
+          room._id === selectedRoom._id 
+            ? { ...room, lastMessage: message, updatedAt: message.createdAt, unreadCount: 0 }
+            : room
+        )
+      );
+
+      // Mark messages as read for this chat
+      await chatService.markMessagesAsRead(selectedRoom._id);
+      
+    } catch (error) {
+      console.error('Error sending reply:', error);
+      // Restore the reply text if sending failed
+      setReplyText(messageContent);
+      setReplyingTo(replyingTo);
+    }
+  };
+
+  // Profile viewing functionality
+  const handleViewProfile = (user: any) => {
+    // Navigate to appropriate profile based on user role
+    if (user.role === 'employer' || user.userType === 'employer') {
+      navigate(`/app/employer/profile`, { state: { userId: user._id } });
+    } else {
+      navigate(`/app/profile/view/${user._id}`);
+    }
+  };
+
+  // Load all users for chat dialog
+  const loadAllUsersForChat = async (loadMore: boolean = false) => {
+    try {
+      setAllUsersLoading(true);
+      
+      if (loadMore) {
+        // For now, just reload all users since backend pagination might not work
+        const result = await chatService.getAllUsers(200, 0);
+        setAllUsersForChat(result.users);
+        setHasMoreUsers(false); // Disable load more for now
+      } else {
+        // Load initial users
+        const result = await chatService.getAllUsers(200, 0);
+        setAllUsersForChat(result.users);
+        setHasMoreUsers(false); // Disable load more for now
+        setTotalUsers(result.users.length);
+      }
+    } catch (error) {
+      console.error('Error loading all users:', error);
+      // Fallback to search with empty query
+      try {
+        const users = await chatService.searchUsers('', 'all', 200, 0);
+        setAllUsersForChat(users);
+        setTotalUsers(users.length);
+        setHasMoreUsers(false);
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+      }
+    } finally {
+      setAllUsersLoading(false);
+    }
+  };
+
+  // Search users for chat dialog
+  const searchUsersForChatDialog = async (query: string) => {
+    if (!query.trim()) {
+      setUserSearchResults([]);
+      return;
+    }
+
+    try {
+      setUserSearchLoading(true);
+      const results = await chatService.searchUsers(query, 'all', 200, 0); // Increased limit for search
+      setUserSearchResults(results);
+    } catch (error) {
+      console.error('Error searching users:', error);
+    } finally {
+      setUserSearchLoading(false);
+    }
+  };
+
+  // Handle user search input change for chat dialog
+  const handleUserSearchChangeDialog = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const query = event.target.value;
+    setUserSearchQuery(query);
+    
+    // Debounce search
+    const timeoutId = setTimeout(() => {
+      searchUsersForChatDialog(query);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  };
+
+  // Start chat with user from dialog
+  const handleStartChatFromDialog = async (userId: string, userName: string) => {
+    try {
+      // Create or get existing chat with the user
+      const chat = await chatService.createOrGetChat([userId]);
+      
+      // Reload chat rooms to include the new/existing chat
+      const updatedRooms = await chatService.getChats();
+      setChatRooms(updatedRooms);
+      
+      // Find and select the chat room
+      const targetRoom = updatedRooms.find(room => room._id === chat._id);
+      if (targetRoom) {
+        setSelectedRoom(targetRoom);
+        setShowChatList(false);
+        if (targetRoom._id) {
+          loadMessages(targetRoom._id);
+        }
+      }
+    } catch (error) {
+      console.error('Error starting chat with user:', error);
+    }
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -525,25 +1083,54 @@ const MessagesPage: React.FC = () => {
         </Box>
 
         {/* Main Messages Area */}
-        <Paper sx={{ 
-          height: { xs: 'calc(100vh - 200px)', sm: 'calc(100vh - 180px)', md: 'calc(100% - 80px)' }, 
-          display: 'flex', 
-          flexDirection: 'column',
-          borderRadius: { xs: 1, sm: 2, md: 3 },
-          overflow: 'hidden'
-        }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Paper sx={{ 
+            height: { xs: 'calc(100vh - 200px)', sm: 'calc(100vh - 180px)', md: 'calc(100% - 80px)' }, 
+            display: 'flex', 
+            flexDirection: 'column',
+            borderRadius: { xs: 2, sm: 3, md: 4 },
+            overflow: 'hidden',
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 8px 32px rgba(0, 0, 0, 0.3)'
+              : '0 8px 32px rgba(0, 0, 0, 0.1)',
+            background: theme.palette.mode === 'dark'
+              ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
+              : 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`
+          }}>
           {selectedRoom ? (
             <>
               {/* Chat Header */}
-              <Box sx={{ 
-                p: { xs: 1, sm: 1.5, md: 2 }, 
-                borderBottom: 1, 
-                borderColor: 'divider',
-                background: theme.palette.mode === 'dark' 
-                  ? 'linear-gradient(45deg, #1a1a2e, #16213e)'
-                  : 'linear-gradient(45deg, #f8f9fa, #ffffff)',
-                flexShrink: 0
-              }}>
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+              >
+                <Box sx={{ 
+                  p: { xs: 1.5, sm: 2, md: 2.5 }, 
+                  borderBottom: 1, 
+                  borderColor: 'divider',
+                  background: theme.palette.mode === 'dark' 
+                    ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)'
+                    : 'linear-gradient(135deg, rgba(0, 0, 0, 0.02) 0%, rgba(0, 0, 0, 0.01) 100%)',
+                  backdropFilter: 'blur(10px)',
+                  flexShrink: 0,
+                  position: 'relative',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '1px',
+                    background: `linear-gradient(90deg, transparent 0%, ${theme.palette.primary.main} 50%, transparent 100%)`,
+                    opacity: 0.3
+                  }
+                }}>
                 <Box sx={{ 
                   display: 'flex', 
                   alignItems: 'center', 
@@ -561,13 +1148,29 @@ const MessagesPage: React.FC = () => {
                       color="success"
                       variant="dot"
                       invisible={!getOtherParticipant(selectedRoom)?.isOnline}
+                      sx={{
+                        '& .MuiBadge-badge': {
+                          width: 12,
+                          height: 12,
+                          borderRadius: '50%',
+                          border: `2px solid ${theme.palette.background.paper}`,
+                          animation: getOtherParticipant(selectedRoom)?.isOnline ? 'pulse 2s infinite' : 'none'
+                        }
+                      }}
                     >
                       <Avatar 
                         src={getOtherParticipant(selectedRoom)?.profilePicture}
                         sx={{ 
-                          width: { xs: 36, sm: 44, md: 50 }, 
-                          height: { xs: 36, sm: 44, md: 50 },
-                          flexShrink: 0
+                          width: { xs: 40, sm: 48, md: 56 }, 
+                          height: { xs: 40, sm: 48, md: 56 },
+                          flexShrink: 0,
+                          border: `3px solid ${theme.palette.primary.main}`,
+                          boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.3)}`,
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            transform: 'scale(1.05)',
+                            boxShadow: `0 6px 16px ${alpha(theme.palette.primary.main, 0.4)}`
+                          }
                         }}
                       >
                         {getOtherParticipant(selectedRoom)?.firstName?.[0]}{getOtherParticipant(selectedRoom)?.lastName?.[0]}
@@ -636,7 +1239,7 @@ const MessagesPage: React.FC = () => {
                   
                   <Box sx={{ 
                     display: 'flex', 
-                    gap: { xs: 0.25, sm: 0.5, md: 1 },
+                    gap: { xs: 0.5, sm: 1, md: 1.5 },
                     flexShrink: 0
                   }}>
                     <IconButton 
@@ -645,7 +1248,13 @@ const MessagesPage: React.FC = () => {
                       size="small"
                       sx={{ 
                         display: { xs: 'none', md: 'inline-flex' },
-                        p: { sm: 0.5, md: 1 }
+                        p: { sm: 0.75, md: 1 },
+                        backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                        '&:hover': {
+                          backgroundColor: alpha(theme.palette.primary.main, 0.2),
+                          transform: 'scale(1.1)'
+                        },
+                        transition: 'all 0.2s ease'
                       }}
                     >
                       <Phone fontSize="small" />
@@ -656,7 +1265,13 @@ const MessagesPage: React.FC = () => {
                       size="small"
                       sx={{ 
                         display: { xs: 'none', md: 'inline-flex' },
-                        p: { sm: 0.5, md: 1 }
+                        p: { sm: 0.75, md: 1 },
+                        backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                        '&:hover': {
+                          backgroundColor: alpha(theme.palette.primary.main, 0.2),
+                          transform: 'scale(1.1)'
+                        },
+                        transition: 'all 0.2s ease'
                       }}
                     >
                       <VideoCall fontSize="small" />
@@ -666,28 +1281,75 @@ const MessagesPage: React.FC = () => {
                       title="Switch Conversation"
                       onClick={() => setShowChatList(true)}
                       size="small"
-                      sx={{ p: { xs: 0.5, sm: 0.75, md: 1 } }}
+                      sx={{ 
+                        p: { xs: 0.75, sm: 1, md: 1.25 },
+                        backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                        '&:hover': {
+                          backgroundColor: alpha(theme.palette.primary.main, 0.2),
+                          transform: 'scale(1.1)'
+                        },
+                        transition: 'all 0.2s ease'
+                      }}
                     >
                       <Search fontSize="small" />
                     </IconButton>
                     <IconButton 
+                      color="primary" 
+                      title="View Profile"
+                      onClick={() => handleViewProfile(getOtherParticipant(selectedRoom))}
                       size="small"
-                      sx={{ p: { xs: 0.5, sm: 0.75, md: 1 } }}
+                      sx={{ 
+                        p: { xs: 0.75, sm: 1, md: 1.25 },
+                        backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                        '&:hover': {
+                          backgroundColor: alpha(theme.palette.primary.main, 0.2),
+                          transform: 'scale(1.1)'
+                        },
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      <Person fontSize="small" />
+                    </IconButton>
+                    <IconButton 
+                      size="small"
+                      sx={{ 
+                        p: { xs: 0.75, sm: 1, md: 1.25 },
+                        backgroundColor: alpha(theme.palette.grey[500], 0.1),
+                        '&:hover': {
+                          backgroundColor: alpha(theme.palette.grey[500], 0.2),
+                          transform: 'scale(1.1)'
+                        },
+                        transition: 'all 0.2s ease'
+                      }}
                     >
                       <MoreVert fontSize="small" />
                     </IconButton>
                   </Box>
                 </Box>
-              </Box>
+                </Box>
+              </motion.div>
 
               {/* Messages */}
               <Box sx={{ 
                 flexGrow: 1, 
                 overflow: 'auto', 
-                p: { xs: 1, sm: 1.5, md: 2 },
+                p: { xs: 1.5, sm: 2, md: 2.5 },
                 minHeight: 0, // Important for proper scrolling
-                display: 'flex',
-                flexDirection: 'column'
+                background: theme.palette.mode === 'dark'
+                  ? 'linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%)'
+                  : 'linear-gradient(180deg, rgba(0, 0, 0, 0.01) 0%, transparent 100%)',
+                position: 'relative',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '20px',
+                  background: `linear-gradient(180deg, ${theme.palette.background.paper} 0%, transparent 100%)`,
+                  zIndex: 1,
+                  pointerEvents: 'none'
+                }
               }}>
                 {messagesLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -712,21 +1374,30 @@ const MessagesPage: React.FC = () => {
                         </Typography>
                       </Box>
                     ) : (
-                      messages.map((message) => {
+                      messages.map((message, index) => {
                         const isSentByUser = message.sender._id === user?._id;
                         return (
-                          <Box
+                          <motion.div
                             key={message._id}
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'flex-end',
-                              mb: { xs: 1.5, sm: 2 },
-                              px: { xs: 1, sm: 2 },
-                              width: '100%',
-                              flexDirection: isSentByUser ? 'row-reverse' : 'row',
-                              gap: 1,
+                            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            transition={{ 
+                              duration: 0.3, 
+                              delay: index * 0.05,
+                              ease: "easeOut"
                             }}
                           >
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'flex-end',
+                                mb: { xs: 1.5, sm: 2 },
+                                px: { xs: 1, sm: 2 },
+                                width: '100%',
+                                flexDirection: isSentByUser ? 'row-reverse' : 'row',
+                                gap: 1,
+                              }}
+                            >
                             {/* Avatar for received messages - always show for received */}
                             {!isSentByUser && (
                               <Avatar 
@@ -772,6 +1443,114 @@ const MessagesPage: React.FC = () => {
                                       : '0 1px 3px rgba(0, 0, 0, 0.1)',
                                 }}
                               >
+                                {/* Image Message */}
+                                {message.messageType === 'image' && message.fileUrl && (
+                                  <Box sx={{ mb: 1 }}>
+                                    <img
+                                      src={message.fileUrl}
+                                      alt={message.fileName || 'Image'}
+                                      style={{
+                                        maxWidth: '100%',
+                                        maxHeight: '300px',
+                                        borderRadius: '8px',
+                                        objectFit: 'cover',
+                                        cursor: 'pointer'
+                                      }}
+                                      onClick={() => window.open(message.fileUrl, '_blank')}
+                                    />
+                                    <Typography 
+                                      variant="body2" 
+                                      sx={{ 
+                                        fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                                        opacity: 0.8,
+                                        mt: 0.5,
+                                        fontStyle: 'italic'
+                                      }}
+                                    >
+                                      {message.fileName}
+                                    </Typography>
+                                  </Box>
+                                )}
+
+                                {/* Voice Message */}
+                                {message.messageType === 'file' && message.fileUrl && message.content.includes('Voice message') && (
+                                  <Box sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: 1,
+                                    mb: 1,
+                                    p: 1,
+                                    borderRadius: 1,
+                                    backgroundColor: isSentByUser 
+                                      ? 'rgba(255, 255, 255, 0.1)' 
+                                      : 'rgba(0, 0, 0, 0.05)'
+                                  }}>
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => {
+                                        const audio = new Audio(message.fileUrl);
+                                        audio.play();
+                                      }}
+                                      sx={{
+                                        backgroundColor: isSentByUser 
+                                          ? 'rgba(255, 255, 255, 0.2)' 
+                                          : theme.palette.primary.main,
+                                        color: isSentByUser ? 'white' : 'white',
+                                        '&:hover': {
+                                          backgroundColor: isSentByUser 
+                                            ? 'rgba(255, 255, 255, 0.3)' 
+                                            : theme.palette.primary.dark,
+                                        }
+                                      }}
+                                    >
+                                      <PlayArrow />
+                                    </IconButton>
+                                    <Typography 
+                                      variant="body2" 
+                                      sx={{ 
+                                        fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                                        opacity: 0.9
+                                      }}
+                                    >
+                                      Voice Message
+                                    </Typography>
+                                  </Box>
+                                )}
+
+                                {/* Reply Preview */}
+                                {message.replyTo && (
+                                  <Box sx={{ 
+                                    mb: 1,
+                                    p: 1.5,
+                                    backgroundColor: isSentByUser 
+                                      ? 'rgba(255, 255, 255, 0.1)' 
+                                      : 'rgba(0, 0, 0, 0.05)',
+                                    borderRadius: 1,
+                                    borderLeft: `3px solid ${isSentByUser ? 'rgba(255, 255, 255, 0.5)' : theme.palette.primary.main}`,
+                                    maxWidth: '100%',
+                                  }}>
+                                    <Typography variant="caption" sx={{ 
+                                      color: isSentByUser ? 'rgba(255, 255, 255, 0.8)' : theme.palette.text.secondary,
+                                      fontWeight: 500,
+                                      display: 'block',
+                                      mb: 0.5
+                                    }}>
+                                      Replying to {message.replyTo.sender?.firstName} {message.replyTo.sender?.lastName}
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ 
+                                      color: isSentByUser ? 'rgba(255, 255, 255, 0.7)' : theme.palette.text.secondary,
+                                      fontStyle: 'italic',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap',
+                                      fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                                    }}>
+                                      {message.replyTo.content}
+                                    </Typography>
+                                  </Box>
+                                )}
+
+                                {/* Text Content */}
                                 <Typography 
                                   variant="body1" 
                                   sx={{ 
@@ -797,6 +1576,33 @@ const MessagesPage: React.FC = () => {
                               >
                                 {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
                               </Typography>
+
+                              {/* Message Actions */}
+                              <Box sx={{ 
+                                display: 'flex', 
+                                gap: 0.5, 
+                                mt: 0.5,
+                                justifyContent: isSentByUser ? 'flex-end' : 'flex-start',
+                                opacity: 1, // Always visible
+                                transition: 'opacity 0.2s ease',
+                              }}>
+                                {/* Three-dot menu */}
+                                <IconButton
+                                  size="small"
+                                  onClick={(e) => handleMessageMenuOpen(e, message)}
+                                  sx={{ 
+                                    p: 0.5,
+                                    opacity: 0.6, // Slightly transparent when not hovered
+                                    transition: 'opacity 0.2s ease',
+                                    '&:hover': {
+                                      backgroundColor: theme.palette.action.hover,
+                                      opacity: 1, // Fully opaque on hover
+                                    }
+                                  }}
+                                >
+                                  <MoreVert sx={{ fontSize: 16 }} />
+                                </IconButton>
+                              </Box>
                             </Box>
 
                             {/* Avatar placeholder for sent messages to keep alignment */}
@@ -804,6 +1610,7 @@ const MessagesPage: React.FC = () => {
                               <Box sx={{ width: { xs: 28, sm: 32, md: 36 }, flexShrink: 0 }} />
                             )}
                           </Box>
+                          </motion.div>
                         );
                       })
                     )}
@@ -811,6 +1618,277 @@ const MessagesPage: React.FC = () => {
                   </>
                 )}
               </Box>
+
+              {/* Message Actions Menu */}
+              {selectedMessageForMenu && (
+                <Menu
+                  anchorEl={messageMenuAnchor[selectedMessageForMenu._id]}
+                  open={Boolean(messageMenuAnchor[selectedMessageForMenu._id])}
+                  onClose={() => handleMessageMenuClose(selectedMessageForMenu._id)}
+                  anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'right',
+                  }}
+                  transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                  }}
+                  PaperProps={{
+                    sx: {
+                      borderRadius: 2,
+                      minWidth: 120,
+                      boxShadow: theme.shadows[8],
+                    }
+                  }}
+                >
+                  <MenuItem 
+                    onClick={() => handleMenuReply(selectedMessageForMenu)}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      py: 1,
+                      px: 2,
+                    }}
+                  >
+                    <Reply sx={{ fontSize: 18 }} />
+                    <Typography variant="body2">Reply</Typography>
+                  </MenuItem>
+                  
+                  {selectedMessageForMenu.sender._id === user?._id && (
+                    <MenuItem 
+                      onClick={() => handleDeleteClick(selectedMessageForMenu)}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        py: 1,
+                        px: 2,
+                        color: theme.palette.error.main,
+                        '&:hover': {
+                          backgroundColor: theme.palette.error.light + '10',
+                        }
+                      }}
+                    >
+                      <Delete sx={{ fontSize: 18 }} />
+                      <Typography variant="body2">Delete</Typography>
+                    </MenuItem>
+                  )}
+                </Menu>
+              )}
+
+              {/* Selected Files Preview */}
+              {selectedFiles.length > 0 && (
+                <Box sx={{ 
+                  p: 2, 
+                  borderTop: 1, 
+                  borderColor: 'divider',
+                  background: theme.palette.mode === 'dark' 
+                    ? 'rgba(255,255,255,0.02)'
+                    : 'rgba(0,0,0,0.02)',
+                }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Selected Images ({selectedFiles.length})
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    {selectedFiles.map((file, index) => (
+                      <Box key={index} sx={{ position: 'relative' }}>
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={file.name}
+                          style={{
+                            width: 80,
+                            height: 80,
+                            objectFit: 'cover',
+                            borderRadius: 8,
+                            border: `2px solid ${theme.palette.primary.main}`
+                          }}
+                        />
+                        <IconButton
+                          size="small"
+                          onClick={() => removeSelectedFile(index)}
+                          sx={{
+                            position: 'absolute',
+                            top: -8,
+                            right: -8,
+                            backgroundColor: theme.palette.error.main,
+                            color: 'white',
+                            width: 20,
+                            height: 20,
+                            '&:hover': {
+                              backgroundColor: theme.palette.error.dark,
+                            }
+                          }}
+                        >
+                          <Close sx={{ fontSize: 12 }} />
+                        </IconButton>
+                      </Box>
+                    ))}
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={handleFileUpload}
+                      disabled={uploadingFiles}
+                      startIcon={uploadingFiles ? <CircularProgress size={16} /> : <Send />}
+                    >
+                      {uploadingFiles ? 'Uploading...' : 'Send Images'}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => setSelectedFiles([])}
+                    >
+                      Cancel
+                    </Button>
+                  </Box>
+                </Box>
+              )}
+
+              {/* Voice Recording Interface */}
+              {isRecording && (
+                <Box sx={{ 
+                  p: 2, 
+                  borderTop: 1, 
+                  borderColor: 'divider',
+                  background: theme.palette.mode === 'dark' 
+                    ? 'rgba(255,255,255,0.02)'
+                    : 'rgba(0,0,0,0.02)',
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ 
+                      width: 12, 
+                      height: 12, 
+                      borderRadius: '50%', 
+                      backgroundColor: theme.palette.error.main,
+                      animation: 'pulse 1s infinite'
+                    }} />
+                    <Typography variant="body2" color="text.secondary">
+                      Recording... {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                    <Button
+                      variant="contained"
+                      color="error"
+                      size="small"
+                      onClick={stopRecording}
+                      startIcon={<Stop />}
+                    >
+                      Stop Recording
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={cancelRecording}
+                    >
+                      Cancel
+                    </Button>
+                  </Box>
+                </Box>
+              )}
+
+              {/* Voice Message Preview */}
+              {audioChunks.length > 0 && !isRecording && (
+                <Box sx={{ 
+                  p: 2, 
+                  borderTop: 1, 
+                  borderColor: 'divider',
+                  background: theme.palette.mode === 'dark' 
+                    ? 'rgba(255,255,255,0.02)'
+                    : 'rgba(0,0,0,0.02)',
+                }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Voice Message Ready ({Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')})
+                    {audioPreviewUrl && (
+                      <Chip 
+                        label="Preview Available" 
+                        size="small" 
+                        color="success" 
+                        sx={{ ml: 1, fontSize: '0.7rem' }}
+                      />
+                    )}
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={isPlayingPreview ? stopPreview : playPreview}
+                      disabled={sendingVoiceMessage}
+                      startIcon={isPlayingPreview ? <Pause /> : <PlayArrow />}
+                      sx={{ minWidth: 'auto' }}
+                    >
+                      {isPlayingPreview ? 'Pause' : 'Preview'}
+                    </Button>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={sendVoiceMessage}
+                      disabled={sendingVoiceMessage}
+                      startIcon={sendingVoiceMessage ? <CircularProgress size={16} /> : <Send />}
+                    >
+                      {sendingVoiceMessage ? 'Sending...' : 'Send Voice Message'}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={cancelRecording}
+                      disabled={sendingVoiceMessage}
+                    >
+                      Cancel
+                    </Button>
+                  </Box>
+                </Box>
+              )}
+
+              {/* Reply Preview */}
+              {replyingTo && (
+                <Box sx={{ 
+                  p: 2, 
+                  borderTop: 1, 
+                  borderColor: 'divider',
+                  background: theme.palette.mode === 'dark' 
+                    ? 'rgba(255,255,255,0.02)'
+                    : 'rgba(0,0,0,0.02)',
+                }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    p: 1.5,
+                    borderRadius: 1,
+                    backgroundColor: theme.palette.primary.main + '10',
+                    borderLeft: `3px solid ${theme.palette.primary.main}`,
+                  }}>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="body2" color="primary" sx={{ fontWeight: 600, mb: 0.5 }}>
+                        Replying to {replyingTo.sender.firstName}
+                      </Typography>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: 'text.secondary',
+                          fontSize: '0.875rem',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          maxWidth: '300px'
+                        }}
+                      >
+                        {replyingTo.content}
+                      </Typography>
+                    </Box>
+                    <IconButton
+                      size="small"
+                      onClick={handleCancelReply}
+                      sx={{ ml: 1 }}
+                    >
+                      <Close sx={{ fontSize: 18 }} />
+                    </IconButton>
+                  </Box>
+                </Box>
+              )}
 
               {/* Message Input */}
               <Box sx={{ 
@@ -827,30 +1905,55 @@ const MessagesPage: React.FC = () => {
                   gap: { xs: 1, sm: 2 }, 
                   alignItems: 'flex-end' 
                 }}>
+                  {/* Hidden file input */}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    accept="image/*"
+                    multiple
+                    style={{ display: 'none' }}
+                  />
+                  
                   <IconButton 
                     size={isMobile ? "small" : "medium"} 
                     color="primary"
+                    onClick={() => fileInputRef.current?.click()}
                     sx={{ 
                       backgroundColor: theme.palette.action.hover,
-                      display: { xs: 'none', sm: 'inline-flex' }, // Hide on mobile to save space
                       '&:hover': {
                         backgroundColor: theme.palette.action.selected,
                       }
                     }}
                   >
-                    <AttachFile />
+                    <Image />
                   </IconButton>
+                  
+                  <IconButton 
+                    size={isMobile ? "small" : "medium"} 
+                    color={isRecording ? "error" : "primary"}
+                    onClick={isRecording ? stopRecording : startRecording}
+                    sx={{ 
+                      backgroundColor: isRecording ? theme.palette.error.light : theme.palette.action.hover,
+                      '&:hover': {
+                        backgroundColor: isRecording ? theme.palette.error.main : theme.palette.action.selected,
+                      }
+                    }}
+                  >
+                    {isRecording ? <Stop /> : <Mic />}
+                  </IconButton>
+                  
                   <TextField
                     fullWidth
                     multiline
                     maxRows={isMobile ? 3 : 4}
-                    placeholder={isMobile ? "Message..." : "Type a message..."}
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder={replyingTo ? "Reply..." : (isMobile ? "Message..." : "Type a message...")}
+                    value={replyingTo ? replyText : newMessage}
+                    onChange={(e) => replyingTo ? setReplyText(e.target.value) : setNewMessage(e.target.value)}
                     onKeyPress={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
-                        handleSendMessage();
+                        replyingTo ? handleSendReply() : handleSendMessage();
                       }
                     }}
                     variant="outlined"
@@ -868,17 +1971,17 @@ const MessagesPage: React.FC = () => {
                   />
                   <IconButton 
                     color="primary" 
-                    onClick={handleSendMessage}
-                    disabled={!newMessage.trim()}
+                    onClick={replyingTo ? handleSendReply : handleSendMessage}
+                    disabled={replyingTo ? !replyText.trim() : !newMessage.trim()}
                     size={isMobile ? "medium" : "large"}
                     sx={{ 
-                      backgroundColor: newMessage.trim() ? theme.palette.primary.main : theme.palette.action.disabledBackground,
-                      color: newMessage.trim() ? 'white' : theme.palette.action.disabled,
+                      backgroundColor: (replyingTo ? replyText.trim() : newMessage.trim()) ? theme.palette.primary.main : theme.palette.action.disabledBackground,
+                      color: (replyingTo ? replyText.trim() : newMessage.trim()) ? 'white' : theme.palette.action.disabled,
                       width: { xs: 44, sm: 48 },
                       height: { xs: 44, sm: 48 },
                       minWidth: 'auto',
                       '&:hover': {
-                        backgroundColor: newMessage.trim() ? theme.palette.primary.dark : theme.palette.action.disabledBackground,
+                        backgroundColor: (replyingTo ? replyText.trim() : newMessage.trim()) ? theme.palette.primary.dark : theme.palette.action.disabledBackground,
                       },
                       '&:disabled': {
                         backgroundColor: theme.palette.action.disabledBackground,
@@ -916,6 +2019,7 @@ const MessagesPage: React.FC = () => {
             </Box>
           )}
         </Paper>
+        </motion.div>
 
         {/* Chat List Dialog */}
         <Dialog
@@ -934,90 +2038,326 @@ const MessagesPage: React.FC = () => {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="h6">Select Conversation</Typography>
               <IconButton onClick={() => setShowChatList(false)}>
-                <MoreVert />
+                <Close />
               </IconButton>
             </Box>
           </DialogTitle>
           
-          <DialogContent>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Search conversations..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              sx={{ mb: 2 }}
-              InputProps={{
-                startAdornment: <Search sx={{ color: 'text.secondary', mr: 1 }} />,
-              }}
-            />
-            
-            <List sx={{ maxHeight: '400px', overflow: 'auto' }}>
-              {filteredRooms.length === 0 ? (
-                <Box sx={{ p: 3, textAlign: 'center' }}>
-                  <Typography color="text.secondary">
-                    No conversations found
-                  </Typography>
-                </Box>
-              ) : (
-                filteredRooms.map((room) => {
-                  const otherParticipant = getOtherParticipant(room);
-                  if (!otherParticipant) return null;
+          <DialogContent sx={{ p: 0 }}>
+            {/* Tabs */}
+            <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}>
+              <Tabs 
+                value={chatListTab} 
+                onChange={(e, newValue) => setChatListTab(newValue)}
+                sx={{
+                  '& .MuiTab-root': {
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    minHeight: 48,
+                  }
+                }}
+              >
+                <Tab 
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Message />
+                      Conversations ({filteredRooms.length})
+                    </Box>
+                  } 
+                />
+                <Tab 
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Person />
+                      Browse Users ({allUsersForChat.length})
+                    </Box>
+                  } 
+                />
+              </Tabs>
+            </Box>
 
-                  return (
-                    <ListItem
-                      key={room._id}
-                      onClick={() => {
-                        setSelectedRoom(room);
-                        setShowChatList(false);
-                      }}
-                      sx={{
-                        borderRadius: '12px',
-                        mb: 1,
-                        cursor: 'pointer',
-                        backgroundColor: selectedRoom?._id === room._id ? theme.palette.primary.main + '20' : 'transparent',
-                        '&:hover': {
-                          backgroundColor: theme.palette.action.hover,
-                        },
-                      }}
-                    >
-                      <ListItemAvatar>
-                        <Badge
-                          color="success"
-                          variant="dot"
-                          invisible={!otherParticipant.isOnline}
-                        >
-                          <Avatar src={otherParticipant.profilePicture}>
-                            {otherParticipant.firstName[0]}{otherParticipant.lastName[0]}
-                          </Avatar>
-                        </Badge>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={`${otherParticipant.firstName} ${otherParticipant.lastName}`}
-                        secondary={
-                          <Box>
-                            <Typography variant="body2" color="text.secondary" noWrap>
-                              {room.lastMessage?.content || 'No messages yet'}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {room.lastMessage && formatDistanceToNow(new Date(room.lastMessage.createdAt), { addSuffix: true })}
-                            </Typography>
-                          </Box>
-                        }
-                      />
-                      {room.unreadCount > 0 && (
-                        <Chip
-                          label={room.unreadCount}
-                          size="small"
-                          color="primary"
-                          sx={{ minWidth: 20, height: 20 }}
-                        />
+            {/* Tab Content */}
+            <Box sx={{ p: 2 }}>
+              {chatListTab === 0 ? (
+                // Conversations Tab
+                <>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    placeholder="Search conversations..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    sx={{ mb: 2 }}
+                    InputProps={{
+                      startAdornment: <Search sx={{ color: 'text.secondary', mr: 1 }} />,
+                    }}
+                  />
+                  
+                  <List sx={{ maxHeight: '400px', overflow: 'auto' }}>
+                    {filteredRooms.length === 0 ? (
+                      <Box sx={{ p: 3, textAlign: 'center' }}>
+                        <Typography color="text.secondary">
+                          No conversations found
+                        </Typography>
+                      </Box>
+                    ) : (
+                      filteredRooms.map((room) => {
+                        const otherParticipant = getOtherParticipant(room);
+                        if (!otherParticipant) return null;
+
+                        return (
+                          <ListItem
+                            key={room._id}
+                            onClick={() => {
+                              setSelectedRoom(room);
+                              setShowChatList(false);
+                            }}
+                            sx={{
+                              borderRadius: '12px',
+                              mb: 1,
+                              cursor: 'pointer',
+                              backgroundColor: selectedRoom?._id === room._id ? theme.palette.primary.main + '20' : 'transparent',
+                              '&:hover': {
+                                backgroundColor: theme.palette.action.hover,
+                              },
+                            }}
+                          >
+                            <ListItemAvatar>
+                              <Badge
+                                color="success"
+                                variant="dot"
+                                invisible={!otherParticipant.isOnline}
+                              >
+                                <Avatar src={otherParticipant.profilePicture}>
+                                  {otherParticipant.firstName[0]}{otherParticipant.lastName[0]}
+                                </Avatar>
+                              </Badge>
+                            </ListItemAvatar>
+                            <ListItemText
+                              primary={`${otherParticipant.firstName} ${otherParticipant.lastName}`}
+                              secondary={
+                                <Box>
+                                  <Typography variant="body2" color="text.secondary" noWrap>
+                                    {room.lastMessage?.content || 'No messages yet'}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {room.lastMessage && formatDistanceToNow(new Date(room.lastMessage.createdAt), { addSuffix: true })}
+                                  </Typography>
+                                </Box>
+                              }
+                            />
+                            {room.unreadCount > 0 && (
+                              <Chip
+                                label={room.unreadCount}
+                                size="small"
+                                color="primary"
+                                sx={{ minWidth: 20, height: 20 }}
+                              />
+                            )}
+                          </ListItem>
+                        );
+                      })
+                    )}
+                  </List>
+                </>
+              ) : (
+                // Browse Users Tab
+                <>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    placeholder="Search users by name, company, or role..."
+                    value={userSearchQuery}
+                    onChange={handleUserSearchChangeDialog}
+                    sx={{ mb: 2 }}
+                    InputProps={{
+                      startAdornment: <Search sx={{ color: 'text.secondary', mr: 1 }} />,
+                    }}
+                  />
+
+                  {/* Search Results */}
+                  {userSearchQuery && (
+                    <Box sx={{ mb: 3 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+                        Search Results ({userSearchResults.length})
+                      </Typography>
+                      
+                      {userSearchLoading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                          <CircularProgress />
+                        </Box>
+                      ) : userSearchResults.length > 0 ? (
+                        <List sx={{ maxHeight: '300px', overflow: 'auto' }}>
+                          {userSearchResults.map((user) => (
+                            <ListItem
+                              key={user._id}
+                              sx={{
+                                borderRadius: '12px',
+                                mb: 1,
+                                cursor: 'pointer',
+                                '&:hover': {
+                                  backgroundColor: theme.palette.action.hover,
+                                },
+                              }}
+                            >
+                              <ListItemAvatar>
+                                <Badge
+                                  color="success"
+                                  variant="dot"
+                                  invisible={!user.isOnline}
+                                >
+                                  <Avatar src={user.profilePicture}>
+                                    {user.firstName?.[0]}{user.lastName?.[0]}
+                                  </Avatar>
+                                </Badge>
+                              </ListItemAvatar>
+                              <ListItemText
+                                primary={`${user.firstName} ${user.lastName}`}
+                                secondary={
+                                  <Box>
+                                    <Typography variant="body2" color="text.secondary">
+                                      {user.title || user.role}
+                                    </Typography>
+                                    {user.company && (
+                                      <Typography variant="caption" color="text.secondary">
+                                        {user.company}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                }
+                              />
+                              <Button
+                                variant="contained"
+                                size="small"
+                                onClick={() => handleStartChatFromDialog(user._id, `${user.firstName} ${user.lastName}`)}
+                                sx={{ ml: 1 }}
+                              >
+                                Chat
+                              </Button>
+                            </ListItem>
+                          ))}
+                        </List>
+                      ) : (
+                        <Box sx={{ p: 3, textAlign: 'center' }}>
+                          <Search sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                          <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+                            No users found
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Try a different search term or browse all users below.
+                          </Typography>
+                        </Box>
                       )}
-                    </ListItem>
-                  );
-                })
+                    </Box>
+                  )}
+
+                  {/* All Users */}
+                  <Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        All Users ({allUsersForChat.length} of {totalUsers})
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<Refresh />}
+                          onClick={() => loadAllUsersForChat(false)}
+                          disabled={allUsersLoading}
+                        >
+                          Refresh
+                        </Button>
+                        {hasMoreUsers && (
+                          <Button
+                            variant="contained"
+                            size="small"
+                            onClick={() => loadAllUsersForChat(true)}
+                            disabled={allUsersLoading}
+                          >
+                            Load More
+                          </Button>
+                        )}
+                      </Box>
+                    </Box>
+                    
+                    {allUsersLoading ? (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                        <CircularProgress />
+                      </Box>
+                    ) : allUsersForChat.length > 0 ? (
+                      <List sx={{ maxHeight: '300px', overflow: 'auto' }}>
+                        {allUsersForChat.map((user) => (
+                          <ListItem
+                            key={user._id}
+                            sx={{
+                              borderRadius: '12px',
+                              mb: 1,
+                              cursor: 'pointer',
+                              '&:hover': {
+                                backgroundColor: theme.palette.action.hover,
+                              },
+                            }}
+                          >
+                            <ListItemAvatar>
+                              <Badge
+                                color="success"
+                                variant="dot"
+                                invisible={!user.isOnline}
+                              >
+                                <Avatar src={user.profilePicture}>
+                                  {user.firstName?.[0]}{user.lastName?.[0]}
+                                </Avatar>
+                              </Badge>
+                            </ListItemAvatar>
+                            <ListItemText
+                              primary={`${user.firstName} ${user.lastName}`}
+                              secondary={
+                                <Box>
+                                  <Typography variant="body2" color="text.secondary">
+                                    {user.title || user.role}
+                                  </Typography>
+                                  {user.company && (
+                                    <Typography variant="caption" color="text.secondary">
+                                      {user.company}
+                                    </Typography>
+                                  )}
+                                </Box>
+                              }
+                            />
+                            <Button
+                              variant="contained"
+                              size="small"
+                              onClick={() => handleStartChatFromDialog(user._id, `${user.firstName} ${user.lastName}`)}
+                              sx={{ ml: 1 }}
+                            >
+                              Chat
+                            </Button>
+                          </ListItem>
+                        ))}
+                      </List>
+                    ) : (
+                      <Box sx={{ p: 3, textAlign: 'center' }}>
+                        <Person sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                        <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+                          No users available
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                          Click refresh to load users from the platform.
+                        </Typography>
+                        <Button
+                          variant="contained"
+                          startIcon={<Refresh />}
+                          onClick={loadAllUsersForChat}
+                          disabled={allUsersLoading}
+                        >
+                          Load Users
+                        </Button>
+                      </Box>
+                    )}
+                  </Box>
+                </>
               )}
-            </List>
+            </Box>
           </DialogContent>
         </Dialog>
 
@@ -1049,6 +2389,71 @@ const MessagesPage: React.FC = () => {
           <Add />
         </Fab>
       </motion.div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            p: 2,
+          }
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Delete Message
+          </Typography>
+        </DialogTitle>
+        
+        <DialogContent sx={{ pb: 2 }}>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Are you sure you want to delete this message? This action cannot be undone.
+          </Typography>
+          
+          {messageToDelete && (
+            <Box sx={{ 
+              p: 2, 
+              backgroundColor: theme.palette.grey[50], 
+              borderRadius: 1,
+              border: `1px solid ${theme.palette.grey[200]}`,
+              mb: 2
+            }}>
+              <Typography variant="body2" sx={{ fontStyle: 'italic', color: theme.palette.text.secondary }}>
+                "{messageToDelete.content}"
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        
+        <DialogActions sx={{ pt: 1, gap: 1 }}>
+          <Button
+            onClick={() => setDeleteConfirmOpen(false)}
+            variant="outlined"
+            disabled={deletingMessageId !== null}
+            sx={{ borderRadius: 2 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              if (messageToDelete) {
+                handleDeleteMessage(messageToDelete._id);
+              }
+            }}
+            variant="contained"
+            color="error"
+            disabled={deletingMessageId !== null}
+            startIcon={deletingMessageId ? <CircularProgress size={16} /> : <Delete />}
+            sx={{ borderRadius: 2 }}
+          >
+            {deletingMessageId ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

@@ -47,6 +47,10 @@ const sendMessageValidation = [
     .optional()
     .isIn(['text', 'file', 'image'])
     .withMessage('Invalid message type'),
+  body('replyTo')
+    .optional()
+    .isMongoId()
+    .withMessage('Invalid reply message ID'),
 ];
 
 // Get all conversations for current user
@@ -119,6 +123,14 @@ router.get('/:chatId/messages', auth, param('chatId').isMongoId(), validateReque
     // Get messages with pagination
     const messages = await ChatMessage.find({ chat: chatId })
       .populate('sender', 'firstName lastName profilePicture')
+      .populate('replyTo', 'content sender')
+      .populate({
+        path: 'replyTo',
+        populate: {
+          path: 'sender',
+          select: 'firstName lastName'
+        }
+      })
       .sort({ createdAt: -1 })
       .limit(limit)
       .skip(skip);
@@ -271,7 +283,7 @@ router.post('/create', auth, createChatValidation, validateRequest, async (req: 
 router.post('/:chatId/message', auth, sendMessageValidation, validateRequest, async (req: Request, res: Response) => {
   try {
     const { chatId } = req.params;
-    const { content, messageType = 'text', fileUrl, fileName } = req.body;
+    const { content, messageType = 'text', fileUrl, fileName, replyTo } = req.body;
     const userId = req.user?.id;
 
     // Check if user is participant in this chat
@@ -287,6 +299,21 @@ router.post('/:chatId/message', auth, sendMessageValidation, validateRequest, as
       });
     }
 
+    // Validate replyTo message if provided
+    if (replyTo) {
+      const replyMessage = await ChatMessage.findOne({
+        _id: replyTo,
+        chat: chatId,
+      });
+
+      if (!replyMessage) {
+        return res.status(404).json({
+          success: false,
+          message: 'Reply message not found',
+        });
+      }
+    }
+
     // Create new message
     const message = new ChatMessage({
       chat: chatId,
@@ -295,6 +322,7 @@ router.post('/:chatId/message', auth, sendMessageValidation, validateRequest, as
       messageType,
       fileUrl,
       fileName,
+      replyTo,
     });
 
     await message.save();
@@ -420,6 +448,78 @@ router.put('/:chatId/read', auth, param('chatId').isMongoId(), validateRequest, 
     res.status(500).json({
       success: false,
       message: 'Failed to mark messages as read',
+      error: process.env.NODE_ENV === 'development' ? error : undefined,
+    });
+  }
+});
+
+// Delete message
+router.delete('/:chatId/message/:messageId', auth, param('chatId').isMongoId(), param('messageId').isMongoId(), validateRequest, async (req: Request, res: Response) => {
+  try {
+    const { chatId, messageId } = req.params;
+    const userId = req.user?.id;
+
+    // Check if user is participant in this chat
+    const chat = await Chat.findOne({
+      _id: chatId,
+      participants: userId,
+    });
+
+    if (!chat) {
+      return res.status(404).json({
+        success: false,
+        message: 'Chat not found or access denied',
+      });
+    }
+
+    // Find the message and check if user is the sender
+    const message = await ChatMessage.findOne({
+      _id: messageId,
+      chat: chatId,
+      sender: userId,
+    });
+
+    if (!message) {
+      return res.status(404).json({
+        success: false,
+        message: 'Message not found or you can only delete your own messages',
+      });
+    }
+
+    // Delete the message
+    await ChatMessage.findByIdAndDelete(messageId);
+
+    // Update chat's last message if this was the last message
+    if (chat.lastMessage?.toString() === messageId) {
+      const lastMessage = await ChatMessage.findOne({ chat: chatId })
+        .sort({ createdAt: -1 });
+      
+      chat.lastMessage = lastMessage?._id || null;
+      await chat.save();
+    }
+
+    // Emit message deletion to other participants
+    if (io) {
+      chat.participants.forEach((participantId: any) => {
+        if (participantId.toString() !== userId) {
+          io.to(`user_${participantId}`).emit('message-deleted', {
+            chatId: chat._id,
+            messageId: messageId,
+            deletedBy: userId,
+          });
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Message deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting message:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete message',
       error: process.env.NODE_ENV === 'development' ? error : undefined,
     });
   }

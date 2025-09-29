@@ -1,4 +1,4 @@
-import { api, apiGet, apiPost, apiPut } from './api';
+import { api, apiGet, apiPost, apiPut, apiDelete } from './api';
 import { io, Socket } from 'socket.io-client';
 
 export interface ChatUser {
@@ -221,6 +221,16 @@ class ChatService {
     }
   }
 
+  // Delete message
+  async deleteMessage(chatId: string, messageId: string): Promise<void> {
+    try {
+      await apiDelete(`/chat/${chatId}/message/${messageId}`);
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      throw error;
+    }
+  }
+
   // Mark messages as read
   async markMessagesAsRead(chatId: string): Promise<void> {
     try {
@@ -237,16 +247,50 @@ class ChatService {
   }
 
   // Search users to chat with
-  async searchUsers(query: string, userType?: 'all' | 'job_seekers' | 'employers'): Promise<ChatUser[]> {
+  async searchUsers(query: string, userType?: 'all' | 'job_seekers' | 'employers', limit?: number, offset?: number): Promise<ChatUser[]> {
     try {
       const response = await apiGet<{ success: boolean; data: ChatUser[] }>('/chat/users/search', {
         query,
         type: userType || 'all',
         excludeCurrentUser: true,
+        limit: limit || 100, // Default to 100 users
+        offset: offset || 0,
       });
       return response.data || [];
     } catch (error) {
       console.error('Error searching users:', error);
+      throw error;
+    }
+  }
+
+  // Get all users with pagination
+  async getAllUsers(limit?: number, offset?: number): Promise<{ users: ChatUser[]; hasMore: boolean; total: number }> {
+    try {
+      // Use the existing search endpoint with empty query to get all users
+      const response = await apiGet<{ 
+        success: boolean; 
+        data: ChatUser[]; 
+        pagination?: { hasMore: boolean; total: number; limit: number; offset: number; }
+      }>('/chat/users/search', {
+        query: '', // Empty query to get all users
+        type: 'all',
+        excludeCurrentUser: true,
+        limit: limit || 100,
+        offset: offset || 0,
+      });
+      
+      // Since the backend might not support pagination, we'll simulate it
+      const users = response.data || [];
+      const hasMore = users.length === (limit || 100); // Assume more if we got the full limit
+      const total = users.length; // We don't have total count from backend
+      
+      return {
+        users,
+        hasMore,
+        total,
+      };
+    } catch (error) {
+      console.error('Error fetching all users:', error);
       throw error;
     }
   }
@@ -288,13 +332,24 @@ class ChatService {
       formData.append('file', file);
       formData.append('type', 'chat');
 
-      const response = await api.post<{ success: boolean; data: { fileUrl: string; fileName: string } }>('/upload/chat-file', formData, {
+      const response = await api.post<{ 
+        success: boolean; 
+        data: { url: string; fileName: string; fileSize: number; mimeType: string; type: string }; 
+        message: string 
+      }>('/upload/media', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
-      return response.data.data;
+      if (!response.data.success || !response.data.data) {
+        throw new Error('Upload failed');
+      }
+
+      return {
+        fileUrl: response.data.data.url,
+        fileName: response.data.data.fileName
+      };
     } catch (error) {
       console.error('Error uploading chat file:', error);
       throw error;

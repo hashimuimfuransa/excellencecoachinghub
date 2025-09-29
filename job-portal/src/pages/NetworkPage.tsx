@@ -56,6 +56,14 @@ import {
   People,
   NetworkCheck,
   Handshake,
+  Article,
+  BusinessCenter,
+  Assignment,
+  Bookmark,
+  Event,
+  SupervisorAccount,
+  GroupAdd,
+  AssignmentInd,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { SocialConnection, ConnectionRequest, SentRequest } from '../types/social';
@@ -555,65 +563,179 @@ const NetworkPage: React.FC = () => {
           }} />
         </Box>
 
-        {/* Modern Employer Quick Actions Banner */}
-        {hasRole(UserRole.EMPLOYER) && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
+        {/* Role-Based Quick Actions */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+        >
+          <Paper 
+            sx={{ 
+              mb: { xs: 3, md: 4 }, 
+              p: { xs: 2.5, md: 3.5 }, 
+              borderRadius: 3,
+              background: hasRole(UserRole.EMPLOYER) 
+                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                : 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
+              color: 'white',
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: hasRole(UserRole.EMPLOYER) 
+                ? '0 8px 32px rgba(102, 126, 234, 0.3)'
+                : '0 8px 32px rgba(25, 118, 210, 0.3)',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                width: { xs: '150px', md: '200px' },
+                height: { xs: '150px', md: '200px' },
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '50%',
+                transform: 'translate(50%, -50%)',
+              }
+            }}
           >
-            <Paper 
-              sx={{ 
-                mb: { xs: 3, md: 4 }, 
-                p: { xs: 2.5, md: 3.5 }, 
-                borderRadius: 3,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
-                position: 'relative',
-                overflow: 'hidden',
-                boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  right: 0,
-                  width: { xs: '150px', md: '200px' },
-                  height: { xs: '150px', md: '200px' },
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  borderRadius: '50%',
-                  transform: 'translate(50%, -50%)',
-                }
-              }}
-            >
-              <Box sx={{ position: 'relative', zIndex: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                  <Box sx={{
-                    p: 1,
-                    borderRadius: 2,
-                    background: 'rgba(255, 255, 255, 0.2)',
-                    display: { xs: 'none', sm: 'flex' },
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    <TrendingUp sx={{ fontSize: 24 }} />
-                  </Box>
-                  <Typography variant={isMobile ? "h6" : "h5"} sx={{ fontWeight: 700 }}>
-                    🚀 Expand Your Talent Network
-                  </Typography>
+            <Box sx={{ position: 'relative', zIndex: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <Box sx={{
+                  p: 1,
+                  borderRadius: 2,
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  display: { xs: 'none', sm: 'flex' },
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <TrendingUp sx={{ fontSize: 24 }} />
                 </Box>
-                <Typography 
-                  variant="body1" 
-                  sx={{ 
-                    mb: 3, 
-                    opacity: 0.95, 
-                    fontSize: { xs: '0.9rem', md: '1rem' },
-                    lineHeight: 1.5
-                  }}
-                >
-                  {isMobile 
-                    ? 'Connect with top talent and grow your team.' 
-                    : 'Connect with top talent and grow your team. Post jobs and internships to attract the best candidates.'}
+                <Typography variant={isMobile ? "h6" : "h5"} sx={{ fontWeight: 700 }}>
+                  {hasRole(UserRole.EMPLOYER) ? '🚀 Expand Your Talent Network' : '🎯 Accelerate Your Career'}
                 </Typography>
+              </Box>
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  mb: 3, 
+                  opacity: 0.95, 
+                  fontSize: { xs: '0.9rem', md: '1rem' },
+                  lineHeight: 1.5
+                }}
+              >
+                {hasRole(UserRole.EMPLOYER) 
+                  ? (isMobile 
+                    ? 'Connect with top talent and grow your team.'
+                    : 'Connect with top talent and grow your team. Post jobs and internships to attract the best candidates.')
+                  : (isMobile
+                    ? 'Find opportunities and build your professional network.'
+                    : 'Find opportunities and build your professional network. Apply for jobs and internships to advance your career.')
+                }
+              </Typography>
+              
+              {/* Job Seeker Quick Actions */}
+              {!hasRole(UserRole.EMPLOYER) && (
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: { xs: 1.5, md: 2 }, 
+                  flexWrap: 'wrap',
+                  justifyContent: { xs: 'center', sm: 'flex-start' }
+                }}>
+                  <Button
+                    variant="contained"
+                    size={isMobile ? "medium" : "large"}
+                    sx={{
+                      bgcolor: 'rgba(255, 255, 255, 0.2)',
+                      color: 'white',
+                      fontWeight: 600,
+                      px: { xs: 2, md: 3 },
+                      py: { xs: 0.8, md: 1 },
+                      borderRadius: 2,
+                      backdropFilter: 'blur(10px)',
+                      '&:hover': {
+                        bgcolor: 'rgba(255, 255, 255, 0.3)',
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 20px rgba(255, 255, 255, 0.3)'
+                      },
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                    startIcon={<Work />}
+                    onClick={() => navigate('/app/jobs')}
+                  >
+                    Browse Jobs
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size={isMobile ? "medium" : "large"}
+                    sx={{
+                      borderColor: 'rgba(255, 255, 255, 0.4)',
+                      color: 'white',
+                      fontWeight: 600,
+                      px: { xs: 2, md: 3 },
+                      py: { xs: 0.8, md: 1 },
+                      borderRadius: 2,
+                      backdropFilter: 'blur(10px)',
+                      '&:hover': {
+                        borderColor: 'rgba(255, 255, 255, 0.6)',
+                        bgcolor: 'rgba(255, 255, 255, 0.15)',
+                        transform: 'translateY(-1px)',
+                      },
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                    startIcon={<Assignment />}
+                    onClick={() => navigate('/app/internships')}
+                  >
+                    Browse Internships
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size={isMobile ? "medium" : "large"}
+                    sx={{
+                      borderColor: 'rgba(255, 255, 255, 0.4)',
+                      color: 'white',
+                      fontWeight: 600,
+                      px: { xs: 2, md: 3 },
+                      py: { xs: 0.8, md: 1 },
+                      borderRadius: 2,
+                      backdropFilter: 'blur(10px)',
+                      '&:hover': {
+                        borderColor: 'rgba(255, 255, 255, 0.6)',
+                        bgcolor: 'rgba(255, 255, 255, 0.15)',
+                        transform: 'translateY(-1px)',
+                      },
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                    startIcon={<Article />}
+                    onClick={() => navigate('/app/profile')}
+                  >
+                    Build CV
+                  </Button>
+                  {!isMobile && (
+                    <Button
+                      variant="text"
+                      size="large"
+                      sx={{
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        fontWeight: 600,
+                        px: 3,
+                        py: 1,
+                        borderRadius: 2,
+                        '&:hover': {
+                          color: 'white',
+                          bgcolor: 'rgba(255, 255, 255, 0.15)',
+                          transform: 'translateY(-1px)',
+                        },
+                        transition: 'all 0.2s ease-in-out'
+                      }}
+                      startIcon={<School />}
+                      onClick={() => navigate('/app/courses')}
+                    >
+                      Learning Center
+                    </Button>
+                  )}
+                </Box>
+              )}
+              
+              {/* Employer Quick Actions */}
+              {hasRole(UserRole.EMPLOYER) && (
                 <Box sx={{ 
                   display: 'flex', 
                   gap: { xs: 1.5, md: 2 }, 
@@ -641,7 +763,7 @@ const NetworkPage: React.FC = () => {
                     startIcon={<Work />}
                     onClick={() => navigate('/app/jobs/create')}
                   >
-                    {isMobile ? 'Post Job' : 'Post New Job'}
+                    Post Job
                   </Button>
                   <Button
                     variant="outlined"
@@ -661,39 +783,62 @@ const NetworkPage: React.FC = () => {
                       },
                       transition: 'all 0.2s ease-in-out'
                     }}
-                    startIcon={<School />}
+                    startIcon={<AssignmentInd />}
                     onClick={() => navigate('/app/internships/create')}
                   >
-                    {isMobile ? 'Internship' : 'Post Internship'}
+                    Create Internship
                   </Button>
                   {!isMobile && (
-                    <Button
-                      variant="text"
-                      size="large"
-                      sx={{
-                        color: 'rgba(255, 255, 255, 0.9)',
-                        fontWeight: 600,
-                        px: 3,
-                        py: 1,
-                        borderRadius: 2,
-                        '&:hover': {
-                          color: 'white',
-                          bgcolor: 'rgba(255, 255, 255, 0.15)',
-                          transform: 'translateY(-1px)',
-                        },
-                        transition: 'all 0.2s ease-in-out'
-                      }}
-                      startIcon={<Business />}
-                      onClick={() => navigate('/app/employer/internships')}
-                    >
-                      Manage Internships
+                    <>
+                      <Button
+                        variant="text"
+                        size="large"
+                        sx={{
+                          color: 'rgba(255, 255, 255, 0.9)',
+                          fontWeight: 600,
+                          px: 3,
+                          py: 1,
+                          borderRadius: 2,
+                          '&:hover': {
+                            color: 'white',
+                            bgcolor: 'rgba(255, 255, 255, 0.15)',
+                            transform: 'translateY(-1px)',
+                          },
+                          transition: 'all 0.2s ease-in-out'
+                        }}
+                        startIcon={<SupervisorAccount />}
+                        onClick={() => navigate('/app/employer/jobs')} 
+                      >
+                        Manage Jobs
+                      </Button>
+                      <Button
+                        variant="text"
+                        size="large"
+                        sx={{
+                          color: 'rgba(255, 255, 255, 0.9)',
+                          fontWeight: 600,
+                          px: 3,
+                          py: 1,
+                          borderRadius: 2,
+                          '&:hover': {
+                            color: 'white',
+                            bgcolor: 'rgba(255, 255, 255, 0.15)',
+                            transform: 'translateY(-1px)',
+                          },
+                          transition: 'all 0.2s ease-in-out'
+                        }}
+                        startIcon={<Business />}
+                        onClick={() => navigate('/app/employer/internships')}
+                      >
+                        Manage Internships
                     </Button>
+                  </>
                   )}
                 </Box>
-              </Box>
-            </Paper>
-          </motion.div>
-        )}
+              )}
+            </Box>
+          </Paper>
+        </motion.div>
 
         {error && (
           <Fade in={!!error}>

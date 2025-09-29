@@ -1430,72 +1430,138 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
 
       {/* Suggested Connections */}
       <SidebarCard>
-        <CardContent>
-          <Typography variant="h6" fontWeight="600" sx={{ mb: 2 }}>
+        <CardContent sx={{ px: { xs: 2, md: 2.5 }, py: 2 }}>
+          <Typography 
+            variant="subtitle1" 
+            fontWeight="700" 
+            sx={{ 
+              mb: 2,
+              fontSize: { md: '0.95rem', lg: '1.125rem' },
+              lineHeight: 1.2
+            }}
+          >
             Suggested Connections
-                </Typography>
+          </Typography>
           
           {connectionsLoading ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               {Array.from({ length: 3 }).map((_, index) => (
-                <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Skeleton variant="circular" width={40} height={40} />
+                <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Skeleton variant="circular" width={32} height={32} />
                   <Box sx={{ flex: 1 }}>
-                    <Skeleton variant="text" width="70%" height={16} />
-                    <Skeleton variant="text" width="50%" height={14} />
+                    <Skeleton variant="text" width="80%" height={14} />
+                    <Skeleton variant="text" width="60%" height={12} />
                   </Box>
-                  <Skeleton variant="rectangular" width={60} height={32} />
                 </Box>
               ))}
             </Box>
           ) : suggestedConnections.length > 0 ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               {suggestedConnections.slice(0, 5).map((connection) => (
-                <Box key={connection._id} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box key={connection._id} sx={{ 
+                  display: 'flex', 
+                  alignItems: 'flex-start', 
+                  gap: 1.5,
+                  pb: 1,
+                  borderBottom: '1px solid',
+                  borderColor: 'divider',
+                  '&:last-child': { borderBottom: 'none', pb: 0 }
+                }}>
                   <Avatar 
                     src={connection.profilePicture}
-                    sx={{ width: 40, height: 40 }}
+                    sx={{ 
+                      width: { md: 32, lg: 36 }, 
+                      height: { md: 32, lg: 36 },
+                      fontSize: { md: '0.8rem', lg: '0.9rem' }
+                    }}
                   >
                     {connection.firstName?.charAt(0)}
                   </Avatar>
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="subtitle2" fontWeight="600" noWrap>
+                    <Typography 
+                      variant="body2" 
+                      fontWeight="600" 
+                      sx={{ 
+                        fontSize: { md: '0.75rem', lg: '0.875rem' },
+                        lineHeight: 1.2,
+                        mb: 0.25,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
                       {connection.firstName} {connection.lastName}
-                </Typography>
-                    <Typography variant="caption" color="text.secondary" noWrap>
-                      {connection.jobTitle} at {connection.company}
-              </Typography>
+                    </Typography>
+                    <Typography 
+                      variant="caption" 
+                      color="text.secondary" 
+                      sx={{ 
+                        fontSize: { md: '0.7rem', lg: '0.75rem' },
+                        lineHeight: 1.1,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        display: 'block'
+                      }}
+                    >
+                      {connection.jobTitle && connection.company 
+                        ? `${connection.jobTitle} at ${connection.company}` 
+                        : connection.jobTitle || connection.company || 'Professional'}
+                    </Typography>
                     {connection.mutualConnections > 0 && (
-                      <Typography variant="caption" color="primary.main">
-                        {connection.mutualConnections} mutual connections
+                      <Typography 
+                        variant="caption" 
+                        color="primary.main"
+                        sx={{ 
+                          fontSize: { md: '0.65rem', lg: '0.7rem' },
+                          fontWeight: 500,
+                          display: 'block',
+                          mt: 0.25
+                        }}
+                      >
+                        {connection.mutualConnections} connection{connection.mutualConnections > 1 ? 's' : ''}
                       </Typography>
                     )}
                   </Box>
-                <Button
+                  <Button
                     size="small"
-                    variant="outlined"
-                    startIcon={connection.connectionStatus === 'pending' ? <CheckCircle /> : <PersonAdd />}
-                    disabled={connection.connectionStatus === 'pending'}
-                  sx={{ 
-                      borderRadius: 20,
-                    textTransform: 'none', 
-                      fontSize: '0.75rem',
+                    variant={connection.connectionStatus === 'pending' ? 'contained' : 'outlined'}
+                    sx={{ 
+                      borderRadius: 2,
+                      textTransform: 'none', 
+                      fontSize: { md: '0.7rem', lg: '0.75rem' },
+                      fontWeight: 600,
+                      px: { md: 1, lg: 1.5 },
+                      py: 0.5,
+                      minWidth: { md: 'auto', lg: 'auto' },
                       backgroundColor: connection.connectionStatus === 'pending' ? '#4CAF50' : 'transparent',
                       color: connection.connectionStatus === 'pending' ? 'white' : 'inherit',
                       borderColor: connection.connectionStatus === 'pending' ? '#4CAF50' : 'inherit',
+                      '&:hover': {
+                        backgroundColor: connection.connectionStatus === 'pending' ? '#45a049' : 'rgba(25, 118, 210, 0.1)',
+                      }
                     }}
                     onClick={() => handleConnect(connection._id)}
                   >
-                    {connection.connectionStatus === 'pending' ? 'Pending' : 'Connect'}
-                </Button>
+                    {connection.connectionStatus === 'pending' ? '✓' : '+'}
+                  </Button>
                 </Box>
-                  ))}
-                </Box>
+              ))}
+            </Box>
           ) : (
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
-              No suggested connections at the moment
+            <Typography 
+              variant="body2" 
+              color="text.secondary" 
+              sx={{ 
+                textAlign: 'center', 
+                py: 2,
+                fontSize: { md: '0.75rem', lg: '0.875rem' },
+                lineHeight: 1.4
+              }}
+            >
+              No suggested connections
             </Typography>
-              )}
+          )}
 
           {suggestedConnections.length > 5 && (
                 <Button
@@ -2411,15 +2477,9 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
 
       <Container maxWidth="xl" sx={{ py: isMobile ? 1 : 3, px: { xs: 1, sm: 2, md: 3 } }}>
         <Box sx={{ display: 'flex', gap: 3 }}>
-          {/* Left Sidebar - Desktop only */}
-          {isDesktop && (
-            <Box sx={{ width: { xs: '100%', lg: '25%' } }}>
-              {renderLeftSidebar()}
-            </Box>
-          )}
           
           {/* Main Content */}
-          <Box sx={{ flex: 1, maxWidth: { xs: '100%', lg: isDesktop ? '50%' : '75%' } }}>
+          <Box sx={{ flex: 1, maxWidth: { xs: '100%', md: '80%', lg: '75%' } }}>
             <Box sx={{ maxWidth: 680, mx: 'auto' }}>
               {/* Desktop Search Bar */}
               {!isMobile && (
@@ -2561,7 +2621,7 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
 
           {/* Right Sidebar - Desktop and Tablet */}
           {!isMobile && (
-            <Box sx={{ width: { xs: '100%', lg: '25%' } }}>
+            <Box sx={{ width: { xs: '100%', md: '20%', lg: '25%' } }}>
               {renderRightSidebar()}
             </Box>
           )}

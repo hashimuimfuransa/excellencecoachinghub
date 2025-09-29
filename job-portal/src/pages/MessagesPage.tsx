@@ -119,12 +119,20 @@ const MessagesPage: React.FC = () => {
   const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<ChatMessage | null>(null);
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [isTyping, setIsTyping] = useState(false);
+  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     loadChatRooms();
+    
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
     
     // Initialize real-time messaging
     if (user?._id) {
@@ -135,12 +143,14 @@ const MessagesPage: React.FC = () => {
       chatService.on('chat-unread-updated', handleUnreadUpdate);
       chatService.on('user-online', handleUserOnline);
       chatService.on('user-offline', handleUserOffline);
+      chatService.on('typing', handleTypingIndicator);
       
       return () => {
         chatService.off('new-message', handleNewMessage);
         chatService.off('chat-unread-updated', handleUnreadUpdate);
         chatService.off('user-online', handleUserOnline);
         chatService.off('user-offline', handleUserOffline);
+        chatService.off('typing', handleTypingIndicator);
       };
     }
   }, [user]);
@@ -170,10 +180,22 @@ const MessagesPage: React.FC = () => {
 
   const handleNewMessage = (data: { chatId: string; message: ChatMessage }) => {
     const { chatId, message } = data;
+    console.log('New message received:', data);
     
     // Update messages if this is the selected room
     if (selectedRoom && selectedRoom._id === chatId) {
-      setMessages(prev => [...prev, message]);
+      setMessages(prev => {
+        const exists = prev.some(m => m._id === message._id);
+        return exists ? prev : [...prev, message];
+      });
+      
+      // Auto-scroll to bottom
+      setTimeout(() => {
+        const messagesContainer = document.getElementById('messages-container');
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+      }, 100);
     }
     
     // Update chat room's last message
@@ -184,11 +206,16 @@ const MessagesPage: React.FC = () => {
               ...room, 
               lastMessage: message, 
               updatedAt: message.createdAt,
-              unreadCount: room._id === selectedRoom?._id ? 0 : room.unreadCount + 1
+              unreadCount: room._id === selectedRoom?._id ? 0 : (room.unreadCount || 0) + 1
             }
           : room
       )
     );
+    
+    // Show notification if message is not from current user and chat is not selected
+    if (message.sender._id !== user?._id && chatId !== selectedRoom?._id) {
+      showNotification(message);
+    }
   };
 
   const handleUnreadUpdate = (data: { chatId: string; unreadCount: number }) => {
@@ -199,6 +226,70 @@ const MessagesPage: React.FC = () => {
           : room
       )
     );
+  };
+
+  // Handle typing indicator
+  const handleTypingIndicator = (data: { chatId: string; userId: string; isTyping: boolean }) => {
+    if (data.chatId !== selectedRoom?._id || data.userId === user?._id) return;
+    
+    setTypingUsers(prev => {
+      const newSet = new Set(prev);
+      if (data.isTyping) {
+        newSet.add(data.userId);
+      } else {
+        newSet.delete(data.userId);
+      }
+      return newSet;
+    });
+  };
+
+  // Show notification for new messages
+  const showNotification = (message: ChatMessage) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const notification = new Notification(`New message from ${message.sender.firstName} ${message.sender.lastName}`, {
+        body: message.content,
+        icon: message.sender.profilePicture || '/default-avatar.png',
+        tag: message.chat,
+      });
+      
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+      
+      // Auto-close after 5 seconds
+      setTimeout(() => notification.close(), 5000);
+    }
+  };
+
+  // Handle typing change
+  const handleTypingChange = (value: string) => {
+    if (!selectedRoom || !user) return;
+    
+    const isCurrentlyTyping = value.length > 0;
+    
+    if (isCurrentlyTyping && !isTyping) {
+      setIsTyping(true);
+      chatService.sendTypingIndicator(selectedRoom._id, user._id, true);
+    } else if (!isCurrentlyTyping && isTyping) {
+      setIsTyping(false);
+      chatService.sendTypingIndicator(selectedRoom._id, user._id, false);
+    }
+    
+    // Clear existing timeout
+    if (typingTimeout) {
+      clearTimeout(typingTimeout);
+    }
+    
+    // Set new timeout to stop typing indicator
+    if (isCurrentlyTyping) {
+      const timeout = setTimeout(() => {
+        setIsTyping(false);
+        chatService.sendTypingIndicator(selectedRoom._id, user._id, false);
+      }, 2000); // Stop typing indicator after 2 seconds of inactivity
+      
+      setTypingTimeout(timeout);
+    }
   };
 
   const handleUserOnline = (userId: string) => {
@@ -417,6 +508,16 @@ const MessagesPage: React.FC = () => {
 
     const messageContent = newMessage.trim();
     setNewMessage(''); // Clear input immediately for better UX
+    
+    // Stop typing indicator
+    if (isTyping) {
+      setIsTyping(false);
+      chatService.sendTypingIndicator(selectedRoom._id, user._id, false);
+    }
+    if (typingTimeout) {
+      clearTimeout(typingTimeout);
+      setTypingTimeout(null);
+    }
 
     try {
       const message = await chatService.sendMessage(selectedRoom._id, { content: messageContent });
@@ -799,6 +900,16 @@ const MessagesPage: React.FC = () => {
     const messageContent = replyText.trim();
     setReplyText('');
     setReplyingTo(null);
+    
+    // Stop typing indicator
+    if (isTyping) {
+      setIsTyping(false);
+      chatService.sendTypingIndicator(selectedRoom._id, user._id, false);
+    }
+    if (typingTimeout) {
+      clearTimeout(typingTimeout);
+      setTypingTimeout(null);
+    }
 
     try {
       const message = await chatService.sendMessage(selectedRoom._id, { 
@@ -988,14 +1099,29 @@ const MessagesPage: React.FC = () => {
   }
 
   return (
-    <Container 
-      maxWidth="xl" 
-      sx={{ 
-        py: { xs: 1, sm: 2, md: 3 }, 
-        px: { xs: 1, sm: 2, md: 3 },
-        height: { xs: 'calc(100vh - 80px)', sm: 'calc(100vh - 120px)' }
-      }}
-    >
+    <>
+      <style>
+        {`
+          @keyframes typing {
+            0%, 60%, 100% {
+              transform: translateY(0);
+              opacity: 0.4;
+            }
+            30% {
+              transform: translateY(-10px);
+              opacity: 1;
+            }
+          }
+        `}
+      </style>
+      <Container 
+        maxWidth="xl" 
+        sx={{ 
+          py: { xs: 1, sm: 2, md: 3 }, 
+          px: { xs: 1, sm: 2, md: 3 },
+          height: { xs: 'calc(100vh - 80px)', sm: 'calc(100vh - 120px)' }
+        }}
+      >
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -1614,6 +1740,75 @@ const MessagesPage: React.FC = () => {
                         );
                       })
                     )}
+                    
+                    {/* Typing Indicator */}
+                    {typingUsers.size > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            px: 2,
+                            py: 1,
+                            mb: 1,
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', gap: 0.5 }}>
+                            {Array.from(typingUsers).map((userId) => {
+                              const participant = selectedRoom?.participants.find(p => p._id === userId);
+                              return (
+                                <Box key={userId} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                                    {participant?.firstName} is typing
+                                  </Typography>
+                                  <Box sx={{ display: 'flex', gap: 0.25 }}>
+                                    <Box
+                                      sx={{
+                                        width: 4,
+                                        height: 4,
+                                        borderRadius: '50%',
+                                        backgroundColor: theme.palette.primary.main,
+                                        animation: 'typing 1.4s infinite ease-in-out',
+                                        '&:nth-of-type(1)': { animationDelay: '0s' },
+                                        '&:nth-of-type(2)': { animationDelay: '0.2s' },
+                                        '&:nth-of-type(3)': { animationDelay: '0.4s' },
+                                      }}
+                                    />
+                                    <Box
+                                      sx={{
+                                        width: 4,
+                                        height: 4,
+                                        borderRadius: '50%',
+                                        backgroundColor: theme.palette.primary.main,
+                                        animation: 'typing 1.4s infinite ease-in-out',
+                                        animationDelay: '0.2s',
+                                      }}
+                                    />
+                                    <Box
+                                      sx={{
+                                        width: 4,
+                                        height: 4,
+                                        borderRadius: '50%',
+                                        backgroundColor: theme.palette.primary.main,
+                                        animation: 'typing 1.4s infinite ease-in-out',
+                                        animationDelay: '0.4s',
+                                      }}
+                                    />
+                                  </Box>
+                                </Box>
+                              );
+                            })}
+                          </Box>
+                        </Box>
+                      </motion.div>
+                    )}
+                    
                     <div ref={messagesEndRef} />
                   </>
                 )}
@@ -1949,7 +2144,14 @@ const MessagesPage: React.FC = () => {
                     maxRows={isMobile ? 3 : 4}
                     placeholder={replyingTo ? "Reply..." : (isMobile ? "Message..." : "Type a message...")}
                     value={replyingTo ? replyText : newMessage}
-                    onChange={(e) => replyingTo ? setReplyText(e.target.value) : setNewMessage(e.target.value)}
+                    onChange={(e) => {
+                      if (replyingTo) {
+                        setReplyText(e.target.value);
+                      } else {
+                        setNewMessage(e.target.value);
+                        handleTypingChange(e.target.value);
+                      }
+                    }}
                     onKeyPress={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -2455,6 +2657,7 @@ const MessagesPage: React.FC = () => {
         </DialogActions>
       </Dialog>
     </Container>
+    </>
   );
 };
 

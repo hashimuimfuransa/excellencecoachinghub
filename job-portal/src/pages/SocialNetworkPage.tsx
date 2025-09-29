@@ -33,6 +33,12 @@ import {
   AvatarGroup,
   styled,
   Skeleton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Tooltip,
+  Slide,
 } from '@mui/material';
 import {
   Add,
@@ -59,11 +65,20 @@ import {
   ThumbUp,
   Send,
   Close,
+  Phone,
+  Email,
+  WhatsApp,
+  Facebook,
+  Instagram,
+  LinkedIn,
+  Twitter,
+  VideoLibrary,
+  Schedule,
+  ContactSupport,
   Menu as MenuIcon,
   Groups,
   PersonAdd,
   CameraAlt,
-  VideoLibrary,
   EmojiEmotions,
   Gif,
   AttachFile,
@@ -209,6 +224,7 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
   const [selectedStoryIndex, setSelectedStoryIndex] = useState(0);
   const [suggestedConnections, setSuggestedConnections] = useState<any[]>([]);
   const [connectionsLoading, setConnectionsLoading] = useState(false);
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
 
   // Load posts and stories on component mount
   useEffect(() => {
@@ -392,7 +408,7 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
 
   const handleInterviewPrep = () => {
     console.log('🎓 Interview Preparation clicked');
-    navigate('/interview-prep');
+    navigate('/app/interviews');
   };
 
   const handleNetworking = () => {
@@ -423,7 +439,7 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
 
   const handlePsychometricTests = () => {
     console.log('🧠 Psychometric Tests clicked');
-    navigate('/psychometric-tests');
+    navigate('/app/tests');
   };
 
   const handleProfile = () => {
@@ -438,7 +454,15 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
 
   const handleHelp = () => {
     console.log('❓ Help clicked');
-    navigate('/help');
+    setContactDialogOpen(true);
+  };
+
+  const handleContactOpen = () => {
+    setContactDialogOpen(true);
+  };
+
+  const handleContactClose = () => {
+    setContactDialogOpen(false);
   };
 
   const handleViewStory = (story: any) => {
@@ -480,7 +504,7 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
 
   const handleSmartExams = () => {
     console.log('🧠 Smart Exams clicked');
-    navigate('/app/smart-exams');
+    navigate('/app/smart-tests');
   };
 
   const handleCVBuilder = () => {
@@ -1019,13 +1043,6 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
         color: '#1877f2'
       },
       {
-        id: 'internships',
-        label: 'Internships',
-        icon: <School sx={{ fontSize: 16 }} />,
-        onClick: () => handleInternships(),
-        color: '#ff9800'
-      },
-      {
         id: 'interview-prep',
         label: 'Interview',
         icon: <School sx={{ fontSize: 16 }} />,
@@ -1034,7 +1051,7 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
       },
       {
         id: 'psychometric-tests',
-        label: 'Tests',
+        label: 'Psychometric Tests',
         icon: <Article sx={{ fontSize: 16 }} />,
         onClick: () => handlePsychometricTests(),
         color: '#4caf50'
@@ -1089,13 +1106,6 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
         color: '#2196f3'
       },
       {
-        id: 'learning',
-        label: 'Learning',
-        icon: <School sx={{ fontSize: 16 }} />,
-        onClick: () => handleLearning(),
-        color: '#4caf50'
-      },
-      {
         id: 'saved',
         label: 'Saved',
         icon: <Bookmark sx={{ fontSize: 16 }} />,
@@ -1115,13 +1125,6 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
         icon: <PersonAdd sx={{ fontSize: 16 }} />,
         onClick: () => handleProfile(),
         color: '#607d8b'
-      },
-      {
-        id: 'settings',
-        label: 'Settings',
-        icon: <Settings sx={{ fontSize: 16 }} />,
-        onClick: () => handleSettings(),
-        color: '#9e9e9e'
       },
       {
         id: 'help',
@@ -1360,27 +1363,6 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
               onClick={() => navigate('/app/jobs')}
             >
               Jobs
-            </Button>
-            <Button
-              startIcon={<School sx={{ color: '#ff9800' }} />}
-              variant="outlined"
-              fullWidth
-              sx={{ 
-                justifyContent: 'flex-start', 
-                textTransform: 'none',
-                borderRadius: 2,
-                py: 1.5,
-                borderColor: '#ff9800',
-                color: '#ff9800',
-                fontWeight: 600,
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 152, 0, 0.1)',
-                  borderColor: '#ff9800',
-                },
-              }}
-              onClick={() => navigate('/learning')}
-            >
-              Learning
             </Button>
             <Button
               startIcon={<Bookmark sx={{ color: '#9c27b0' }} />}
@@ -1631,30 +1613,6 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
               Jobs
             </Button>
             <Button
-              startIcon={<School sx={{ color: '#ff9800' }} />}
-              variant="contained"
-              fullWidth
-              sx={{ 
-                justifyContent: 'flex-start', 
-                textTransform: 'none',
-                background: 'linear-gradient(135deg, #ff9800 0%, #ffb74d 100%)',
-                color: 'white',
-                fontWeight: 600,
-                borderRadius: 2,
-                py: 1.5,
-                boxShadow: '0 2px 8px rgba(255, 152, 0, 0.3)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #f57c00 0%, #ff9800 100%)',
-                  boxShadow: '0 4px 12px rgba(255, 152, 0, 0.4)',
-                  transform: 'translateY(-1px)',
-                },
-                transition: 'all 0.3s ease',
-              }}
-              onClick={() => handleInternships()}
-            >
-              Internships
-            </Button>
-            <Button
               startIcon={<School sx={{ color: '#e91e63' }} />}
               variant="contained"
               fullWidth
@@ -1803,30 +1761,6 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
               Career Guidance
             </Button>
             <Button
-              startIcon={<School sx={{ color: '#4caf50' }} />}
-              variant="contained"
-              fullWidth
-              sx={{ 
-                justifyContent: 'flex-start', 
-                textTransform: 'none',
-                background: 'linear-gradient(135deg, #4caf50 0%, #81c784 100%)',
-                color: 'white',
-                fontWeight: 600,
-                borderRadius: 2,
-                py: 1.5,
-                boxShadow: '0 2px 8px rgba(76, 175, 80, 0.3)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #388e3c 0%, #4caf50 100%)',
-                  boxShadow: '0 4px 12px rgba(76, 175, 80, 0.4)',
-                  transform: 'translateY(-1px)',
-                },
-                transition: 'all 0.3s ease',
-              }}
-              onClick={() => handleLearning()}
-            >
-              Learning
-            </Button>
-            <Button
               startIcon={<People sx={{ color: '#9c27b0' }} />}
               variant="contained"
               fullWidth
@@ -1971,30 +1905,6 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
               onClick={() => handleProfile()}
             >
               Profile
-            </Button>
-            <Button
-              startIcon={<Settings sx={{ color: '#9e9e9e' }} />}
-              variant="contained"
-              fullWidth
-              sx={{ 
-                justifyContent: 'flex-start', 
-                textTransform: 'none',
-                background: 'linear-gradient(135deg, #9e9e9e 0%, #bdbdbd 100%)',
-                color: 'white',
-                fontWeight: 600,
-                borderRadius: 2,
-                py: 1.5,
-                boxShadow: '0 2px 8px rgba(158, 158, 158, 0.3)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #757575 0%, #9e9e9e 100%)',
-                  boxShadow: '0 4px 12px rgba(158, 158, 158, 0.4)',
-                  transform: 'translateY(-1px)',
-                },
-                transition: 'all 0.3s ease',
-              }}
-              onClick={() => handleSettings()}
-            >
-              Settings
             </Button>
             <Button
               startIcon={<Help sx={{ color: '#ff5722' }} />}
@@ -2148,27 +2058,6 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
               Jobs
             </Button>
             <Button
-              startIcon={<School sx={{ color: '#ff9800' }} />}
-              variant="outlined"
-              fullWidth
-              sx={{ 
-                justifyContent: 'flex-start', 
-                textTransform: 'none',
-                borderRadius: 2,
-                py: 1.5,
-                borderColor: '#ff9800',
-                color: '#ff9800',
-                fontWeight: 600,
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 152, 0, 0.1)',
-                  borderColor: '#ff9800',
-                },
-              }}
-              onClick={() => navigate('/learning')}
-            >
-              Learning
-            </Button>
-            <Button
               startIcon={<Bookmark sx={{ color: '#9c27b0' }} />}
               variant="outlined"
               fullWidth
@@ -2283,27 +2172,6 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
               onClick={() => handleCVBuilder()}
             >
               CV Builder
-            </Button>
-            <Button
-              startIcon={<Settings sx={{ color: '#607d8b' }} />}
-              variant="outlined"
-              fullWidth
-              sx={{ 
-                justifyContent: 'flex-start', 
-                textTransform: 'none',
-                borderRadius: 2,
-                py: 1.5,
-                borderColor: '#607d8b',
-                color: '#607d8b',
-                fontWeight: 600,
-                '&:hover': {
-                  backgroundColor: 'rgba(96, 125, 139, 0.1)',
-                  borderColor: '#607d8b',
-                },
-              }}
-              onClick={() => navigate('/settings')}
-            >
-              Settings
             </Button>
           </Box>
         </CardContent>
@@ -2667,6 +2535,196 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
         initialStoryIndex={selectedStoryIndex}
         currentUserId={user?._id}
       />
+
+      {/* Contact Dialog */}
+      <Dialog
+        open={contactDialogOpen}
+        onClose={handleContactClose}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '20px',
+            background: theme.palette.mode === 'dark' 
+              ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)'
+              : 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 20px 60px rgba(0, 0, 0, 0.5)'
+              : '0 20px 60px rgba(0, 0, 0, 0.15)',
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            background: 'linear-gradient(45deg, #22c55e, #4ade80)',
+            color: 'white',
+            textAlign: 'center',
+            position: 'relative',
+            py: 3,
+          }}
+        >
+          <IconButton
+            onClick={handleContactClose}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: 'white',
+            }}
+          >
+            <Close />
+          </IconButton>
+          <Typography variant="h5" fontWeight={700}>
+            Get in Touch
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 1, opacity: 0.9 }}>
+            We're here to help you succeed!
+          </Typography>
+        </DialogTitle>
+
+        <DialogContent sx={{ p: 0 }}>
+          {/* Contact Methods */}
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'primary.main' }}>
+              Contact Methods
+            </Typography>
+            <List>
+              <ListItem
+                onClick={() => window.open('tel:+0788535156', '_self')}
+                sx={{
+                  borderRadius: '12px',
+                  mb: 1,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(34,197,94,0.05)',
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  <Phone sx={{ color: '#4caf50' }} />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Call Us"
+                  secondary="+250 0788535156"
+                  primaryTypographyProps={{ fontWeight: 600 }}
+                />
+              </ListItem>
+              <ListItem
+                onClick={() => window.open('https://wa.me/0788535156?text=Hello%20ExJobNet', '_blank')}
+                sx={{
+                  borderRadius: '12px',
+                  mb: 1,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(34,197,94,0.05)',
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  <WhatsApp sx={{ color: '#25d366' }} />
+                </ListItemIcon>
+                <ListItemText
+                  primary="WhatsApp"
+                  secondary="Chat with us instantly"
+                  primaryTypographyProps={{ fontWeight: 600 }}
+                />
+              </ListItem>
+              <ListItem
+                onClick={() => window.open('mailto:info@excellencecoachinghub.com', '_self')}
+                sx={{
+                  borderRadius: '12px',
+                  mb: 1,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(34,197,94,0.05)',
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  <Email sx={{ color: '#1976d2' }} />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Email"
+                  secondary="info@excellencecoachinghub.com"
+                  primaryTypographyProps={{ fontWeight: 600 }}
+                />
+              </ListItem>
+            </List>
+          </Box>
+
+          <Divider />
+
+          {/* Social Media */}
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'primary.main' }}>
+              Follow Us
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Tooltip title="Facebook" arrow>
+                <IconButton
+                  onClick={() => window.open('https://facebook.com/excellencecoachinghub', '_blank')}
+                  sx={{ color: '#1877f2' }}
+                >
+                  <Facebook />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Instagram" arrow>
+                <IconButton
+                  onClick={() => window.open('https://www.instagram.com/excellencecoachinghub/?utm_source=qr&igsh=Ym5xMXh5aXZmNHVi#', '_blank')}
+                  sx={{ color: '#e4405f' }}
+                >
+                  <Instagram />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="LinkedIn" arrow>
+                <IconButton
+                  onClick={() => window.open('https://www.linkedin.com/in/excellence-coachinghub-1b8b1a380?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app', '_blank')}
+                  sx={{ color: '#0077b5' }}
+                >
+                  <LinkedIn />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Twitter" arrow>
+                <IconButton
+                  onClick={() => window.open('https://x.com/ECH_coachinghub?t=Awf4GVPp9eCkSZhDlHkFew&s=08', '_blank')}
+                  sx={{ color: '#1DA1F2' }}
+                >
+                  <Twitter />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="TikTok" arrow>
+                <IconButton
+                  onClick={() => window.open('https://www.tiktok.com/@excellence.coachi4?_t=ZM-8zCgEouFb8w&_r=1', '_blank')}
+                  sx={{ color: '#ff0050' }}
+                >
+                  <VideoLibrary />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          </Box>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button
+            onClick={handleContactClose}
+            variant="contained"
+            fullWidth
+            sx={{
+              background: 'linear-gradient(45deg, #22c55e, #4ade80)',
+              boxShadow: '0 4px 15px rgba(34, 197, 94, 0.3)',
+              '&:hover': {
+                background: 'linear-gradient(45deg, #16a34a, #22c55e)',
+                boxShadow: '0 6px 20px rgba(34, 197, 94, 0.4)',
+              },
+            }}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

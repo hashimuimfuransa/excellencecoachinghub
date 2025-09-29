@@ -53,6 +53,8 @@ import {
   EmojiEmotions,
   Reply,
   Send,
+  EmojiEmotionsOutlined,
+  Add,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
@@ -86,6 +88,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   const [shareMenuAnchor, setShareMenuAnchor] = useState<null | HTMLElement>(null);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState('');
+  const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [emojiPickerCommentId, setEmojiPickerCommentId] = useState<string | null>(null);
   const [currentReaction, setCurrentReaction] = useState<string>('like');
   const [selectedMedia, setSelectedMedia] = useState<number | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'connected' | 'loading'>('none');
@@ -253,11 +258,34 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   };
 
   const handleCommentToggle = async () => {
-    if (!showComments && (!comments || comments.length === 0)) {
+    // Always fetch comments when opening the comments section
+    if (!showComments) {
       setCommentsLoading(true);
       try {
+        console.log('🚀 Fetching comments for post:', post._id);
         const response = await socialNetworkService.getPostComments(post._id);
-        setComments(Array.isArray(response.data) ? response.data : []);
+        console.log('📥 Raw comments response:', response);
+        console.log('📥 Response type:', typeof response);
+        console.log('📥 Is array:', Array.isArray(response));
+        
+        // The service already extracts response.data.data or response.data
+        const commentsData = Array.isArray(response) ? response : (response?.data || []);
+        console.log('📊 Processed comments data:', commentsData);
+        console.log('📊 Number of comments found:', commentsData.length);
+        
+        setComments(commentsData);
+        
+        // Log each comment for debugging
+        commentsData.forEach((comment, index) => {
+          console.log(`💬 Comment ${index + 1}:`, {
+            id: comment._id,
+            content: comment.content?.substring(0, 50) + (comment.content?.length > 50 ? '...' : ''),
+            author: comment.author?.firstName + ' ' + comment.author?.lastName,
+            repliesCount: comment.repliesCount,
+            repliesLength: comment.replies?.length || 0,
+            hasReplies: comment.replies?.length > 0
+          });
+        });
       } catch (error) {
         console.error('Error loading comments:', error);
         setComments([]);
@@ -273,7 +301,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
 
     try {
       const response = await socialNetworkService.addComment(post._id, newComment, replyingTo || undefined);
-      const newCommentData = response.data || response;
+      const newCommentData = response;
       
       // Ensure the new comment has proper structure
       const safeComment = {
@@ -293,6 +321,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
       setComments(prev => [safeComment, ...prev]);
       setNewComment('');
       setReplyingTo(null);
+      
+      console.log('Comment added successfully:', safeComment);
     } catch (error) {
       console.error('Error adding comment:', error);
       // Still add a local comment for better UX
@@ -320,12 +350,76 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
     setReplyContent('');
   };
 
+  const toggleReplies = (commentId: string) => {
+    setExpandedReplies(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(commentId)) {
+        newSet.delete(commentId);
+      } else {
+        newSet.add(commentId);
+      }
+      return newSet;
+    });
+  };
+
+  const addEmojiToComment = (emoji: string, commentId: string) => {
+    if (commentId === 'new') {
+      setNewComment(prev => prev + emoji);
+    } else if (commentId) {
+      setReplyContent(prev => prev + emoji);
+    }
+    setShowEmojiPicker(false);
+    setEmojiPickerCommentId(null);
+  };
+
+  const refreshComments = async () => {
+    console.log('🔄 Manually refreshing comments...');
+    console.log('🔄 Post ID:', post._id);
+    console.log('🔄 Post comments count:', post.commentsCount);
+    setCommentsLoading(true);
+    try {
+      const response = await socialNetworkService.getPostComments(post._id);
+      console.log('🔄 Refresh response:', response);
+      console.log('🔄 Response type:', typeof response);
+      console.log('🔄 Is array:', Array.isArray(response));
+      console.log('🔄 Response.data:', response?.data);
+      console.log('🔄 Response.data.data:', response?.data?.data);
+      
+      const commentsData = Array.isArray(response) ? response : (response?.data || []);
+      console.log('🔄 Processed comments data:', commentsData);
+      console.log('🔄 Comments data length:', commentsData.length);
+      console.log('🔄 First comment preview:', commentsData[0] ? {
+        id: commentsData[0]._id,
+        content: commentsData[0].content?.substring(0, 50) + '...',
+        author: commentsData[0].author?.firstName + ' ' + commentsData[0].author?.lastName,
+        createdAt: commentsData[0].createdAt
+      } : 'No comments in array');
+      
+      if (commentsData.length === 0) {
+        console.log('🚨 WARNING: No comments returned despite post having', post.commentsCount, 'comments');
+        console.log('🚨 This suggests either:');
+        console.log('🚨 1. Backend filtering issue (all comments might be replies)');
+        console.log('🚨 2. Database query issue');
+        console.log('🚨 3. Parent comment field issue');
+      }
+      
+      setComments(commentsData);
+      console.log('🔄 Refresh completed. Comments set:', commentsData.length);
+    } catch (error) {
+      console.error('🔄 Refresh error:', error);
+      console.error('🔄 Error details:', error);
+      setComments([]);
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
   const handleAddReply = async (commentId: string) => {
     if (!replyContent.trim()) return;
 
     try {
       const response = await socialNetworkService.addComment(post._id, replyContent, commentId);
-      const newReplyData = response.data || response;
+      const newReplyData = response;
       
       // Ensure the reply has proper structure
       const safeReply = {
@@ -342,14 +436,24 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
         createdAt: newReplyData.createdAt || new Date().toISOString()
       };
       
-      // Update the comment with the new reply
+      // Add reply to the appropriate comment
       setComments(prev => prev.map(comment => 
         comment._id === commentId 
-          ? { ...comment, repliesCount: (comment.repliesCount || 0) + 1 }
+          ? { 
+              ...comment, 
+              repliesCount: (comment.repliesCount || 0) + 1,
+              replies: [...(comment.replies || []), safeReply]
+            }
           : comment
       ));
+      
+      // Automatically expand replies for this comment
+      setExpandedReplies(prev => new Set([...prev, commentId]));
+      
       setReplyContent('');
       setReplyingTo(null);
+      
+      console.log('Reply added successfully:', safeReply);
     } catch (error) {
       console.error('Error adding reply:', error);
       // Still update the reply count for better UX
@@ -731,6 +835,17 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   useEffect(() => {
     setCurrentMediaIndex(0);
   }, [post._id]);
+
+  // Debug comment state changes
+  useEffect(() => {
+    console.log('📝 Comments state changed:', {
+      comments: comments,
+      length: comments?.length,
+      isUndefined: comments === undefined,
+      postId: post._id,
+      postCommentsCount: post.commentsCount
+    });
+  }, [comments, post._id, post.commentsCount]);
 
   const renderMediaGallery = () => {
     console.log('🎬 PostCard renderMediaGallery - Post:', post._id, 'Media:', post.media);
@@ -1581,39 +1696,82 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
         <Divider />
         <Box sx={{ p: 2 }}>
           {/* Add Comment */}
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <TextField
-              fullWidth
-              size="small"
-              placeholder={replyingTo ? "Write a reply..." : "Write a comment..."}
-              value={replyingTo ? replyContent : newComment}
-              onChange={(e) => replyingTo ? setReplyContent(e.target.value) : setNewComment(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  if (replyingTo) {
-                    handleAddReply(replyingTo);
-                  } else {
-                    handleAddComment();
-                  }
-                }
-              }}
-            />
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => replyingTo ? handleAddReply(replyingTo) : handleAddComment()}
-              disabled={replyingTo ? !replyContent.trim() : !newComment.trim()}
-            >
-              {replyingTo ? 'Reply' : 'Post'}
-            </Button>
-            {replyingTo && (
-              <Button
-                variant="outlined"
+          <Box sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+              <TextField
+                fullWidth
                 size="small"
-                onClick={() => setReplyingTo(null)}
+                placeholder={replyingTo ? "Write a reply..." : "Write a comment..."}
+                value={replyingTo ? replyContent : newComment}
+                onChange={(e) => replyingTo ? setReplyContent(e.target.value) : setNewComment(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    if (replyingTo) {
+                      handleAddReply(replyingTo);
+                    } else {
+                      handleAddComment();
+                    }
+                  }
+                }}
+              />
+              <IconButton
+                size="small"
+                onClick={() => {
+                  setShowEmojiPicker(!showEmojiPicker);
+                  setEmojiPickerCommentId(replyingTo ? replyingTo : 'new');
+                }}
+                sx={{ color: theme.palette.text.secondary }}
               >
-                Cancel
+                <EmojiEmotionsOutlined />
+              </IconButton>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => replyingTo ? handleAddReply(replyingTo) : handleAddComment()}
+                disabled={replyingTo ? !replyContent.trim() : !newComment.trim()}
+                sx={{ textTransform: 'none' }}
+              >
+                {replyingTo ? 'Reply' : 'Post'}
               </Button>
+              {replyingTo && (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => setReplyingTo(null)}
+                  sx={{ textTransform: 'none' }}
+                >
+                  Cancel
+                </Button>
+              )}
+            </Box>
+            
+            {/* Emoji Picker */}
+            {showEmojiPicker && (
+              <Box sx={{ 
+                display: 'flex', 
+                gap: 1, 
+                p: 1, 
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                borderRadius: 1,
+                flexWrap: 'wrap'
+              }}>
+                {['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳'].map((emoji) => (
+                  <IconButton
+                    key={emoji}
+                    size="small"
+                    onClick={() => addEmojiToComment(emoji, emojiPickerCommentId || 'new')}
+                    sx={{ 
+                      fontSize: '1.2rem',
+                      '&:hover': {
+                        bgcolor: 'rgba(0,0,0,0.1)',
+                        transform: 'scale(1.1)'
+                      }
+                    }}
+                  >
+                    {emoji}
+                  </IconButton>
+                ))}
+              </Box>
             )}
           </Box>
 
@@ -1622,7 +1780,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
             <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
               Loading comments...
             </Typography>
-          ) : comments && comments.length > 0 ? (
+          ) : comments !== undefined && comments.length > 0 ? (
             comments.map((comment) => {
               // Safe access to comment author with fallbacks
               const author = comment.author || {};
@@ -1630,73 +1788,153 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
               const lastName = author.lastName || 'User';
               const profilePicture = author.profilePicture || '';
               const authorInitial = firstName.charAt(0) || 'U';
+              const repliesCount = comment.repliesCount || 0;
+              const hasReplies = repliesCount > 0;
+              const showReplies = expandedReplies.has(comment._id);
+              const replies = comment.replies || [];
               
               return (
-                <Box key={comment._id || Math.random()} sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                  <Avatar
-                    src={profilePicture}
-                    sx={{ width: 32, height: 32 }}
-                  >
-                    {authorInitial}
-                  </Avatar>
-                  <Box sx={{ flexGrow: 1 }}>
-                    <Box
-                      sx={{
-                        backgroundColor: theme.palette.mode === 'dark' 
-                          ? 'rgba(255,255,255,0.05)' 
-                          : 'rgba(0,0,0,0.05)',
-                        borderRadius: 2,
-                        p: 1.5
-                      }}
+                <Box key={comment._id || Math.random()} sx={{ mb: 3 }}>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Avatar
+                      src={profilePicture}
+                      sx={{ width: 32, height: 32 }}
                     >
-                      <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                        {firstName} {lastName}
-                      </Typography>
-                      <Typography variant="body2">
-                        {comment.content || 'No content'}
-                      </Typography>
-                    </Box>
-                  
-                    {/* Comment Actions */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 0.5, ml: 1 }}>
-                      <Typography variant="caption" color="text.secondary">
-                        {comment.createdAt ? formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true }) : 'Just now'}
-                      </Typography>
-                      
-                      <Button
-                        size="small"
-                        startIcon={<ThumbUp />}
-                        onClick={() => handleLikeComment(comment._id)}
-                        sx={{ 
-                          textTransform: 'none',
-                          fontSize: '0.75rem',
-                          minWidth: 'auto',
-                          px: 1,
-                          py: 0.5
+                      {authorInitial}
+                    </Avatar>
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Box
+                        sx={{
+                          backgroundColor: theme.palette.mode === 'dark' 
+                            ? 'rgba(255,255,255,0.05)' 
+                            : 'rgba(0,0,0,0.05)',
+                          borderRadius: 2,
+                          p: 1.5
                         }}
                       >
-                        {comment.likesCount || 0}
-                      </Button>
-                      
-                      <Button
-                        size="small"
-                        startIcon={<Reply />}
-                        onClick={() => handleReplyToComment(comment._id)}
-                        sx={{ 
-                          textTransform: 'none',
-                          fontSize: '0.75rem',
-                          minWidth: 'auto',
-                          px: 1,
-                          py: 0.5
-                        }}
-                      >
-                        Reply
-                      </Button>
-                      
-                      {(comment.repliesCount || 0) > 0 && (
-                        <Typography variant="caption" color="primary">
-                          {comment.repliesCount} replies
+                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                          {firstName} {lastName}
                         </Typography>
+                        <Typography variant="body2">
+                          {comment.content || 'No content'}
+                        </Typography>
+                      </Box>
+                    
+                      {/* Comment Actions */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5, ml: 1 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          {comment.createdAt ? formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true }) : 'Just now'}
+                        </Typography>
+                        
+                        <Button
+                          size="small"
+                          startIcon={<ThumbUp />}
+                          onClick={() => handleLikeComment(comment._id)}
+                          sx={{ 
+                            textTransform: 'none',
+                            fontSize: '0.75rem',
+                            minWidth: 'auto',
+                            px: 1,
+                            py: 0.5
+                          }}
+                        >
+                          {comment.likesCount || 0}
+                        </Button>
+                        
+                        <Button
+                          size="small"
+                          startIcon={<Reply />}
+                          onClick={() => handleReplyToComment(comment._id)}
+                          sx={{ 
+                            textTransform: 'none',
+                            fontSize: '0.75rem',
+                            minWidth: 'auto',
+                            px: 1,
+                            py: 0.5
+                          }}
+                        >
+                          Reply
+                        </Button>
+                        
+                        {hasReplies && (
+                          <Button
+                            size="small"
+                            onClick={() => toggleReplies(comment._id)}
+                            sx={{ 
+                              textTransform: 'none',
+                              fontSize: '0.75rem',
+                              minWidth: 'auto',
+                              px: 1,
+                              py: 0.5,
+                              color: 'primary.main'
+                            }}
+                          >
+                            {showReplies ? 'Hide' : 'Show'} {repliesCount} {repliesCount === 1 ? 'reply' : 'replies'}
+                          </Button>
+                        )}
+                      </Box>
+                      
+                      {/* Replies Section */}
+                      {hasReplies && showReplies && (
+                        <Box sx={{ mt: 1, ml: 4, pl: 1, borderLeft: `2px solid ${theme.palette.divider}` }}>
+                          {replies.map((reply: any) => {
+                            const replyAuthor = reply.author || {};
+                            const replyFirstName = replyAuthor.firstName || 'Unknown';
+                            const replyLastName = replyAuthor.lastName || 'User';
+                            const replyProfilePicture = replyAuthor.profilePicture || '';
+                            const replyAuthorInitial = replyFirstName.charAt(0) || 'U';
+                            
+                            return (
+                              <Box key={reply._id || Math.random()} sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                                <Avatar
+                                  src={replyProfilePicture}
+                                  sx={{ width: 28, height: 28 }}
+                                >
+                                  {replyAuthorInitial}
+                                </Avatar>
+                                <Box sx={{ flexGrow: 1 }}>
+                                  <Box
+                                    sx={{
+                                      backgroundColor: theme.palette.mode === 'dark' 
+                                        ? 'rgba(255,255,255,0.03)' 
+                                        : 'rgba(0,0,0,0.03)',
+                                      borderRadius: 2,
+                                      p: 1.25
+                                    }}
+                                  >
+                                    <Typography variant="caption" sx={{ fontWeight: 600, mb: 0.5, display: 'block' }}>
+                                      {replyFirstName} {replyLastName}
+                                    </Typography>
+                                    <Typography variant="body2">
+                                      {reply.content || 'No content'}
+                                    </Typography>
+                                  </Box>
+                                  
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5, ml: 1 }}>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {reply.createdAt ? formatDistanceToNow(new Date(reply.createdAt), { addSuffix: true }) : 'Just now'}
+                                    </Typography>
+                                    
+                                    <Button
+                                      size="small"
+                                      startIcon={<ThumbUp />}
+                                      onClick={() => handleLikeComment(reply._id)}
+                                      sx={{ 
+                                        textTransform: 'none',
+                                        fontSize: '0.7rem',
+                                        minWidth: 'auto',
+                                        px: 0.5,
+                                        py: 0.25
+                                      }}
+                                    >
+                                      {reply.likesCount || 0}
+                                    </Button>
+                                  </Box>
+                                </Box>
+                              </Box>
+                            );
+                          })}
+                        </Box>
                       )}
                     </Box>
                   </Box>
@@ -1704,9 +1942,19 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
               );
             })
           ) : (
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
-              No comments yet. Be the first to comment!
-            </Typography>
+            <Box sx={{ textAlign: 'center', py: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                No comments found. 
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                Comments state: {comments === undefined ? 'undefined' : `Array(${comments.length})`}
+                {post.commentsCount > 0 && ` | Post count: ${post.commentsCount}`}
+              </Typography>
+              <Typography variant="body2" color="primary" sx={{ mt: 1, cursor: 'pointer' }}
+                onClick={refreshComments}>
+                Refresh comments
+              </Typography>
+            </Box>
           )}
         </Box>
       </Collapse>

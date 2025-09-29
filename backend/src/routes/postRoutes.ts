@@ -578,18 +578,103 @@ router.get('/:id/comments', protect, asyncHandler(async (req: Request, res: Resp
     return;
   }
 
+  console.log(`🔍 Getting comments for post: ${req.params.id}`);
+  
+  // Debug: Get total comments count first
+  const totalComments = await Comment.countDocuments({ post: req.params.id });
+  console.log(`📊 Total comments in DB: ${totalComments}`);
+  
   const comments = await Comment.findByPost(req.params.id);
+  console.log(`📊 Top-level comments found: ${comments.length}`);
+  
+  // If no top-level comments found but there are comments in DB, 
+  // check if we have orphaned replies (comments with parentComment but no valid parent)
+  if (comments.length === 0 && totalComments > 0) {
+    console.log(`🔧 No top-level comments found, checking for orphaned replies...`);
+    
+    // Get all comments for this post that are marked as replies
+    const potentialReplies = await Comment.find({ 
+      post: req.params.id, 
+      parentComment: { $exists: true } 
+    }).populate('author', 'firstName lastName profilePicture');
+    
+    console.log(`📊 Comments with parentComment field: ${potentialReplies.length}`);
+    
+    // Get unique parent IDs that actually exist
+    const existingParents = await Comment.find({
+      _id: { $in: potentialReplies.map(c => c.parentComment).filter(Boolean) }
+    }).select('_id');
+    
+    const validParentIds = new Set(existingParents.map(p => p._id.toString()));
+    console.log(`📊 Valid parent comments: ${validParentIds.size}`);
+    
+    // Find orphaned comments (have parentComment but parent doesn't exist)
+    const orphanedComments = potentialReplies.filter(c => {
+      if (!c.parentComment) return false;
+      const parentIdStr = c.parentComment.toString();
+      return !validParentIds.has(parentIdStr);
+    });
+    
+    console.log(`📊 Debug orphaned filtering:`);
+    console.log(`📊 potentialReplies length: ${potentialReplies.length}`);
+    potentialReplies.forEach((c, index) => {
+      console.log(`📊 Reply ${index}: _id=${c._id}, parentComment=${c.parentComment}`);
+      if (c.parentComment) {
+        console.log(`📊 Parent check: ${c.parentComment} exists in validParents: ${validParentIds.has(c.parentComment.toString())}`);
+      }
+    });
+    
+    console.log(`📊 Orphaned comments (no valid parent): ${orphanedComments.length}`);
+    
+    if (orphanedComments.length > 0) {
+      console.log(`🔧 Converting ${orphanedComments.length} orphaned replies to top-level comments`);
+      // Convert orphaned replies to top-level comments by removing parentComment field
+      await Comment.updateMany(
+        { _id: { $in: orphanedComments.map(c => c._id) } },
+        { $unset: { parentComment: 1 } }
+      );
+      
+      // Now fetch top-level comments again
+      const updatedComments = await Comment.findByPost(req.params.id);
+      console.log(`📊 Top-level comments after fix: ${updatedComments.length}`);
+      
+      // Update comments to use the corrected data
+      comments.push(...updatedComments);
+    } else {
+      // If no orphaned comments found but orphaned logic might have failed,
+      // try converting ALL comments with parentComment to top-level for this post
+      console.log(`🔧 No orphaned comments detected, trying alternative fix...`);
+      console.log(`🔧 Converting ALL comments with parentComment for this post...`);
+      
+      const allRepliesConversion = await Comment.updateMany(
+        { post: req.params.id, parentComment: { $exists: true } },
+        { $unset: { parentComment: 1 } }
+      );
+      
+      console.log(`🔧 Conversion result: ${allRepliesConversion.modifiedCount} comments converted`);
+      
+      // Fetch top-level comments after the conversion
+      const fixedComments = await Comment.findByPost(req.params.id);
+      console.log(`📊 Top-level comments after alternative fix: ${fixedComments.length}`);
+      
+      // Update comments to use the corrected data
+      comments.push(...fixedComments);
+    }
+  }
 
   // Get replies for each comment
   const commentsWithReplies = await Promise.all(
     comments.map(async (comment) => {
       const replies = await Comment.findReplies(comment._id);
+      console.log(`📊 Comment ${comment._id} has ${replies.length} replies`);
       return {
         ...comment.toJSON(),
         replies
       };
     })
   );
+  
+  console.log(`📊 Returning ${commentsWithReplies.length} comments with replies`);
 
   res.status(200).json({
     success: true,

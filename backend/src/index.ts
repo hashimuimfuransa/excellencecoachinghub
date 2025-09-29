@@ -95,6 +95,7 @@ import unsubscribeRoutes from '@/routes/unsubscribeRoutes';
 
 // Social Network routes
 import postRoutes from '@/routes/postRoutes';
+import commentRoutes from '@/routes/commentRoutes';
 import connectionRoutes from '@/routes/connectionRoutes';
 import companyRoutes from '@/routes/companyRoutes';
 import eventRoutes from '@/routes/eventRoutes';
@@ -954,6 +955,7 @@ app.use('/api/cv-builder', cvBuilderRoutes);
 
 // Social Network routes
 app.use('/api/posts', postRoutes);
+app.use('/api/comments', commentRoutes);
 app.use('/api/connections', connectionRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/events', eventRoutes);

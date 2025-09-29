@@ -32,6 +32,7 @@ import SavedJobsPage from './pages/SavedJobsPage';
 import CertificatesPage from './pages/CertificatesPage';
 import CoursesPage from './pages/CoursesPage';
 import AIInterviewsPage from './pages/AIInterviewsPage';
+import StandaloneInterviewPage from './pages/StandaloneInterviewPage';
 import PsychometricTestsPage from './pages/PsychometricTestsPage';
 import TestTakingPage from './pages/TestTakingPage';
 import TestPage from './pages/TestPage';
@@ -409,6 +410,16 @@ function App() {
               element={
                 <ProtectedRoute>
                   <TestTakingPage />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Standalone Interview Page - Full Screen (Outside MainLayout) */}
+            <Route 
+              path="/interview/:sessionId" 
+              element={
+                <ProtectedRoute>
+                  <StandaloneInterviewPage />
                 </ProtectedRoute>
               } 
             />

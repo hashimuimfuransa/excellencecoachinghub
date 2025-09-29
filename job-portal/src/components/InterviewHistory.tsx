@@ -1,471 +1,493 @@
+/**
+ * Interview History Component
+ * Displays recorded interview sessions with video playback and feedback
+ */
+
 import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
   Card,
   CardContent,
-  CardActions,
+  CardMedia,
   Button,
-  Grid,
   Chip,
-  LinearProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   IconButton,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  Divider,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogActions,
+  Grid,
   Stack,
-  Avatar,
+  Divider,
+  LinearProgress,
+  Alert,
+  CircularProgress,
   Tooltip,
-  Alert
+  Badge
 } from '@mui/material';
-import { SafeDialogTransition } from '../utils/transitionFix';
 import {
   PlayArrow,
   Pause,
   Stop,
   Download,
   Delete,
+  VideoLibrary,
+  Schedule,
+  Person,
+  Assessment,
+  CheckCircle,
+  Error,
+  Refresh,
   Visibility,
-  AccessTime,
-  Score,
-  Mic,
-  VolumeUp,
-  SmartToy,
-  Business
+  Feedback,
+  Close
 } from '@mui/icons-material';
-import { interviewStorageService, InterviewHistoryEntry, InterviewRecording } from '../services/interviewStorageService';
 
-const InterviewHistory: React.FC = () => {
-  const [interviews, setInterviews] = useState<InterviewHistoryEntry[]>([]);
-  const [selectedInterview, setSelectedInterview] = useState<InterviewHistoryEntry | null>(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
-  const [playingRecording, setPlayingRecording] = useState<string | null>(null);
+interface InterviewRecording {
+  id: string;
+  sessionId: string;
+  userId: string;
+  jobTitle: string;
+  startTime: Date;
+  endTime: Date;
+  duration: number;
+  videoUrl: string;
+  thumbnailUrl: string;
+  avatarService: 'did' | 'talkavatar';
+  quality: 'low' | 'medium' | 'high';
+  status: 'recording' | 'processing' | 'completed' | 'failed';
+  questions: Array<{
+    id: string;
+    text: string;
+    questionNumber: number;
+    timestamp: number;
+  }>;
+  userResponses: Array<{
+    questionId: string;
+    text: string;
+    timestamp: number;
+    duration: number;
+  }>;
+}
+
+interface InterviewHistoryProps {
+  userId: string;
+  onClose?: () => void;
+}
+
+const InterviewHistory: React.FC<InterviewHistoryProps> = ({ userId, onClose }) => {
+  const [recordings, setRecordings] = useState<InterviewRecording[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedRecording, setSelectedRecording] = useState<InterviewRecording | null>(null);
+  const [videoDialogOpen, setVideoDialogOpen] = useState(false);
+  const [playingVideo, setPlayingVideo] = useState<string | null>(null);
 
   useEffect(() => {
-    loadInterviewHistory();
-  }, []);
+    loadRecordings();
+  }, [userId]);
 
-  useEffect(() => {
-    // Cleanup audio when component unmounts
-    return () => {
-      if (currentAudio) {
-        currentAudio.pause();
-        currentAudio.src = '';
-      }
-    };
-  }, [currentAudio]);
-
-  const loadInterviewHistory = () => {
-    setLoading(true);
+  const loadRecordings = async () => {
     try {
-      const history = interviewStorageService.getInterviewHistory();
-      setInterviews(history);
+      setLoading(true);
+      setError(null);
+
+      // Check if localStorage is available
+      if (typeof localStorage === 'undefined') {
+        setRecordings([]);
+        return;
+      }
+
+      // Load from localStorage as fallback
+      const localRecordings = Object.keys(localStorage)
+        .filter(key => key.startsWith('recording_'))
+        .map(key => {
+          try {
+            const item = localStorage.getItem(key);
+            return item ? JSON.parse(item) : null;
+          } catch {
+            return null;
+          }
+        })
+        .filter(Boolean);
+
+      setRecordings(localRecordings);
     } catch (error) {
-      console.error('Failed to load interview history:', error);
+      console.error('Failed to load recordings:', error);
+      setError('Failed to load interview recordings');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleViewDetails = (interview: InterviewHistoryEntry) => {
-    setSelectedInterview(interview);
-    setDetailsOpen(true);
-  };
-
-  const handleDeleteInterview = (interviewId: string) => {
-    if (window.confirm('Are you sure you want to delete this interview? This action cannot be undone.')) {
-      try {
-        interviewStorageService.deleteInterviewFromHistory(interviewId);
-        loadInterviewHistory();
-        if (selectedInterview?.id === interviewId) {
-          setDetailsOpen(false);
-          setSelectedInterview(null);
-        }
-      } catch (error) {
-        console.error('Failed to delete interview:', error);
-      }
-    }
-  };
-
-  const handlePlayRecording = async (recording: InterviewRecording) => {
-    try {
-      // Stop current audio if playing
-      if (currentAudio) {
-        currentAudio.pause();
-        setCurrentAudio(null);
-        setPlayingRecording(null);
-      }
-
-      // If clicking the same recording that was playing, just stop
-      if (playingRecording === recording.id) {
-        return;
-      }
-
-      // Play new recording
-      const audio = await interviewStorageService.playRecording(recording);
-      
-      audio.addEventListener('ended', () => {
-        setPlayingRecording(null);
-        setCurrentAudio(null);
-      });
-
-      audio.addEventListener('error', (e) => {
-        console.error('Audio playback error:', e);
-        setPlayingRecording(null);
-        setCurrentAudio(null);
-      });
-
-      setCurrentAudio(audio);
-      setPlayingRecording(recording.id);
-      audio.play();
-    } catch (error) {
-      console.error('Failed to play recording:', error);
-    }
-  };
-
-  const handleStopAudio = () => {
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio.currentTime = 0;
-      setCurrentAudio(null);
-      setPlayingRecording(null);
-    }
-  };
-
-  const handleExportData = () => {
-    try {
-      const exportData = interviewStorageService.exportInterviewData();
-      const blob = new Blob([exportData], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `interview_history_${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Failed to export data:', error);
-    }
-  };
-
   const formatDuration = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getScoreColor = (score?: number): string => {
-    if (!score) return 'default';
-    if (score >= 85) return 'success';
-    if (score >= 70) return 'warning';
-    return 'error';
+  const formatDate = (date: Date | string): string => {
+    const d = new Date(date);
+    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const getStatusColor = (status: string): 'default' | 'success' | 'warning' | 'error' => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return 'success';
-      case 'in_progress': return 'warning';
-      case 'incomplete': return 'error';
+      case 'processing': return 'warning';
+      case 'failed': return 'error';
       default: return 'default';
     }
   };
 
-  const statistics = interviewStorageService.getInterviewStatistics();
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed': return <CheckCircle />;
+      case 'processing': return <CircularProgress size={16} />;
+      case 'failed': return <Error />;
+      default: return <Schedule />;
+    }
+  };
+
+  const handlePlayVideo = (recording: InterviewRecording) => {
+    setSelectedRecording(recording);
+    setVideoDialogOpen(true);
+    setPlayingVideo(recording.id);
+  };
+
+  const handleDeleteRecording = async (recordingId: string) => {
+    try {
+      // Remove from localStorage if available
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(`recording_${recordingId}`);
+      }
+      
+      // Update state
+      setRecordings(prev => prev.filter(r => r.id !== recordingId));
+      
+      // Close dialog if this recording was selected
+      if (selectedRecording?.id === recordingId) {
+        setVideoDialogOpen(false);
+        setSelectedRecording(null);
+      }
+    } catch (error) {
+      console.error('Failed to delete recording:', error);
+    }
+  };
+
+  const handleDownloadVideo = async (recording: InterviewRecording) => {
+    try {
+      // Create download link
+      const link = document.createElement('a');
+      link.href = recording.videoUrl;
+      link.download = `interview_${recording.id}.webm`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Failed to download video:', error);
+    }
+  };
 
   if (loading) {
     return (
-      <Box sx={{ p: 3 }}>
-        <LinearProgress />
-        <Typography sx={{ mt: 2, textAlign: 'center' }}>Loading interview history...</Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+        <CircularProgress />
       </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert 
+        severity="error" 
+        action={
+          <Button color="inherit" size="small" onClick={loadRecordings}>
+            <Refresh />
+          </Button>
+        }
+      >
+        {error}
+      </Alert>
     );
   }
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* Statistics Overview */}
-      <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-        <CardContent>
-          <Typography variant="h5" sx={{ color: 'white', mb: 2 }}>
-            Interview Statistics
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={6} sm={3}>
-              <Box sx={{ textAlign: 'center', color: 'white' }}>
-                <Typography variant="h3">{statistics.totalInterviews}</Typography>
-                <Typography variant="body2">Total Interviews</Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={6} sm={3}>
-              <Box sx={{ textAlign: 'center', color: 'white' }}>
-                <Typography variant="h3">{statistics.completedInterviews}</Typography>
-                <Typography variant="body2">Completed</Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={6} sm={3}>
-              <Box sx={{ textAlign: 'center', color: 'white' }}>
-                <Typography variant="h3">{statistics.averageScore}%</Typography>
-                <Typography variant="body2">Average Score</Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={6} sm={3}>
-              <Box sx={{ textAlign: 'center', color: 'white' }}>
-                <Typography variant="h3">{formatDuration(statistics.totalRecordingTime)}</Typography>
-                <Typography variant="body2">Total Recording Time</Typography>
-              </Box>
-            </Grid>
-          </Grid>
-        </CardContent>
-        <CardActions>
-          <Button 
-            variant="contained" 
-            startIcon={<Download />} 
-            onClick={handleExportData}
-            sx={{ color: 'white', borderColor: 'white' }}
-          >
-            Export Data
-          </Button>
-        </CardActions>
-      </Card>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+          Interview History
+        </Typography>
+        <Button
+          variant="outlined"
+          startIcon={<Refresh />}
+          onClick={loadRecordings}
+        >
+          Refresh
+        </Button>
+      </Box>
 
-      {/* Interview List */}
-      {interviews.length === 0 ? (
-        <Alert severity="info">
-          No interview history found. Complete an AI interview to see your recordings here.
-        </Alert>
+      {recordings.length === 0 ? (
+        <Card>
+          <CardContent sx={{ textAlign: 'center', py: 6 }}>
+            <VideoLibrary sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+              No Interview Recordings
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Your recorded interviews will appear here
+            </Typography>
+          </CardContent>
+        </Card>
       ) : (
-        <Grid container spacing={2}>
-          {interviews.map((interview) => (
-            <Grid item xs={12} sm={6} md={4} key={interview.id}>
+        <Grid container spacing={3}>
+          {recordings.map((recording) => (
+            <Grid item xs={12} md={6} lg={4} key={recording.id}>
               <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                    <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>
-                      <SmartToy fontSize="small" />
-                    </Avatar>
-                    <Chip 
-                      label={interview.status}
-                      color={getStatusColor(interview.status)}
-                      size="small"
+                {/* Thumbnail */}
+                <CardMedia
+                  component="div"
+                  sx={{
+                    height: 200,
+                    backgroundColor: 'grey.200',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => handlePlayVideo(recording)}
+                >
+                  {recording.thumbnailUrl ? (
+                    <img
+                      src={recording.thumbnailUrl}
+                      alt="Interview thumbnail"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
                     />
-                  </Stack>
-                  
-                  <Typography variant="h6" gutterBottom noWrap>
-                    {interview.jobTitle}
-                  </Typography>
-                  
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    <Business fontSize="small" sx={{ mr: 1, verticalAlign: 'middle' }} />
-                    {interview.company}
-                  </Typography>
-                  
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    {interview.date.toLocaleDateString()} • {formatDuration(interview.totalDuration)}
-                  </Typography>
-                  
-                  <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-                    <Chip 
-                      icon={<Mic />} 
-                      label={`${interview.recordings.length} recordings`}
-                      size="small" 
-                      variant="outlined"
-                    />
-                    <Chip 
-                      label={`${interview.questionsAsked}/10 questions`}
-                      size="small"
-                      variant="outlined"
-                    />
-                  </Stack>
-                  
-                  {interview.overallScore && (
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      <Score fontSize="small" color="primary" />
-                      <Typography variant="body2">
-                        Score: {interview.overallScore}%
-                      </Typography>
-                      <LinearProgress 
-                        variant="determinate" 
-                        value={interview.overallScore} 
-                        sx={{ flexGrow: 1, height: 4, borderRadius: 2 }}
-                        color={getScoreColor(interview.overallScore) as any}
-                      />
-                    </Stack>
+                  ) : (
+                    <VideoLibrary sx={{ fontSize: 48, color: 'text.secondary' }} />
                   )}
+                  
+                  {/* Play overlay */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      backgroundColor: 'rgba(0,0,0,0.7)',
+                      borderRadius: '50%',
+                      p: 1
+                    }}
+                  >
+                    <PlayArrow sx={{ color: 'white', fontSize: 32 }} />
+                  </Box>
+
+                  {/* Status badge */}
+                  <Chip
+                    icon={getStatusIcon(recording.status)}
+                    label={recording.status}
+                    color={getStatusColor(recording.status) as any}
+                    size="small"
+                    sx={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8
+                    }}
+                  />
+                </CardMedia>
+
+                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                  <Typography variant="h6" sx={{ mb: 1, fontWeight: 'bold' }}>
+                    {recording.jobTitle}
+                  </Typography>
+                  
+                  <Stack spacing={1} sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Schedule sx={{ fontSize: 16, color: 'text.secondary' }} />
+                      <Typography variant="body2" color="text.secondary">
+                        {formatDate(recording.startTime)}
+                      </Typography>
+                    </Box>
+                    
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Person sx={{ fontSize: 16, color: 'text.secondary' }} />
+                      <Typography variant="body2" color="text.secondary">
+                        Duration: {formatDuration(recording.duration)}
+                      </Typography>
+                    </Box>
+                    
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Assessment sx={{ fontSize: 16, color: 'text.secondary' }} />
+                      <Typography variant="body2" color="text.secondary">
+                        {recording.questions.length} questions
+                      </Typography>
+                    </Box>
+                  </Stack>
+
+                  <Box sx={{ display: 'flex', gap: 1, mt: 'auto' }}>
+                    <Button
+                      variant="contained"
+                      startIcon={<PlayArrow />}
+                      onClick={() => handlePlayVideo(recording)}
+                      sx={{ flexGrow: 1 }}
+                    >
+                      Play
+                    </Button>
+                    
+                    <Tooltip title="Download">
+                      <IconButton
+                        onClick={() => handleDownloadVideo(recording)}
+                        size="small"
+                      >
+                        <Download />
+                      </IconButton>
+                    </Tooltip>
+                    
+                    <Tooltip title="Delete">
+                      <IconButton
+                        onClick={() => handleDeleteRecording(recording.id)}
+                        size="small"
+                        color="error"
+                      >
+                        <Delete />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                 </CardContent>
-                
-                <CardActions>
-                  <Button 
-                    size="small" 
-                    startIcon={<Visibility />}
-                    onClick={() => handleViewDetails(interview)}
-                  >
-                    View Details
-                  </Button>
-                  <IconButton 
-                    size="small" 
-                    color="error"
-                    onClick={() => handleDeleteInterview(interview.id)}
-                  >
-                    <Delete />
-                  </IconButton>
-                </CardActions>
               </Card>
             </Grid>
           ))}
         </Grid>
       )}
 
-      {/* Interview Details Dialog */}
-      <Dialog 
-        open={detailsOpen && !!selectedInterview} 
-        onClose={() => setDetailsOpen(false)}
-        maxWidth="md" 
+      {/* Video Player Dialog */}
+      <Dialog
+        open={videoDialogOpen}
+        onClose={() => setVideoDialogOpen(false)}
+        maxWidth="lg"
         fullWidth
-        TransitionComponent={SafeDialogTransition}
       >
-        {selectedInterview && (
-          <>
-            <DialogTitle>
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <Avatar sx={{ bgcolor: 'primary.main' }}>
-                  <SmartToy />
-                </Avatar>
-                <Box>
-                  <Typography variant="h6">{selectedInterview.jobTitle}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {selectedInterview.company} • {selectedInterview.date.toLocaleDateString()}
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">
+              {selectedRecording?.jobTitle} - Interview Recording
+            </Typography>
+            <IconButton onClick={() => setVideoDialogOpen(false)}>
+              <Close />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent>
+          {selectedRecording && (
+            <Box>
+              {/* Video Player */}
+              <Box sx={{ mb: 3 }}>
+                <video
+                  controls
+                  style={{
+                    width: '100%',
+                    height: 'auto',
+                    borderRadius: 8
+                  }}
+                  poster={selectedRecording.thumbnailUrl}
+                >
+                  <source src={selectedRecording.videoUrl} type="video/webm" />
+                  Your browser does not support the video tag.
+                </video>
+              </Box>
+
+              {/* Recording Details */}
+              <Grid container spacing={3}>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Interview Details
                   </Typography>
-                </Box>
-              </Stack>
-            </DialogTitle>
-            
-            <DialogContent>
-              {/* Interview Summary */}
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="body2" color="text.secondary">Duration</Typography>
-                  <Typography variant="body1">{formatDuration(selectedInterview.totalDuration)}</Typography>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="body2" color="text.secondary">Questions</Typography>
-                  <Typography variant="body1">{selectedInterview.questionsAsked}/10</Typography>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="body2" color="text.secondary">Score</Typography>
-                  <Typography variant="body1">
-                    {selectedInterview.overallScore ? `${selectedInterview.overallScore}%` : 'N/A'}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="body2" color="text.secondary">Avatar</Typography>
-                  <Typography variant="body1">European Woman</Typography>
-                </Grid>
-              </Grid>
-
-              <Divider sx={{ mb: 2 }} />
-
-              {/* Feedback */}
-              {selectedInterview.feedback && (
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h6" gutterBottom>Feedback</Typography>
-                  <Typography variant="body2">{selectedInterview.feedback}</Typography>
-                </Box>
-              )}
-
-              {/* Recordings */}
-              <Typography variant="h6" gutterBottom>
-                Interview Recordings ({selectedInterview.recordings.length})
-              </Typography>
-              
-              <List>
-                {selectedInterview.recordings.map((recording, index) => (
-                  <React.Fragment key={recording.id}>
-                    <ListItem>
-                      <ListItemText
-                        primary={`Question ${index + 1}`}
-                        secondary={
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              {recording.question}
-                            </Typography>
-                            <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 1 }}>
-                              <AccessTime fontSize="small" />
-                              <Typography variant="caption">
-                                {formatDuration(recording.duration)}
-                              </Typography>
-                              {recording.transcription && (
-                                <Chip 
-                                  label={`${Math.round((recording.confidence || 0) * 100)}% confidence`}
-                                  size="small"
-                                  variant="outlined"
-                                />
-                              )}
-                            </Stack>
-                          </Box>
-                        }
+                  <Stack spacing={1}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" color="text.secondary">Job Title:</Typography>
+                      <Typography variant="body2">{selectedRecording.jobTitle}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" color="text.secondary">Date:</Typography>
+                      <Typography variant="body2">{formatDate(selectedRecording.startTime)}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" color="text.secondary">Duration:</Typography>
+                      <Typography variant="body2">{formatDuration(selectedRecording.duration)}</Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" color="text.secondary">Avatar Service:</Typography>
+                      <Chip 
+                        label={selectedRecording.avatarService === 'did' ? 'D-ID Real-Time' : 'TalkAvatar'}
+                        color={selectedRecording.avatarService === 'did' ? 'success' : 'warning'}
+                        size="small"
                       />
-                      <ListItemSecondaryAction>
-                        <Tooltip title={playingRecording === recording.id ? "Stop playback" : "Play recording"}>
-                          <IconButton 
-                            onClick={() => 
-                              playingRecording === recording.id 
-                                ? handleStopAudio() 
-                                : handlePlayRecording(recording)
-                            }
-                            color={playingRecording === recording.id ? "secondary" : "primary"}
-                          >
-                            {playingRecording === recording.id ? <Pause /> : <PlayArrow />}
-                          </IconButton>
-                        </Tooltip>
-                      </ListItemSecondaryAction>
-                    </ListItem>
-                    
-                    {/* Show transcription if available */}
-                    {recording.transcription && (
-                      <ListItem sx={{ pt: 0, pl: 4 }}>
-                        <ListItemText
-                          secondary={
-                            <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1, mt: 1 }}>
-                              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                                <VolumeUp fontSize="small" color="primary" />
-                                <Typography variant="caption" color="primary">
-                                  Your Response:
-                                </Typography>
-                              </Stack>
-                              <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
-                                "{recording.transcription}"
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Typography variant="body2" color="text.secondary">Quality:</Typography>
+                      <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
+                        {selectedRecording.quality}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Grid>
+
+                <Grid item xs={12} md={6}>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Questions & Responses
+                  </Typography>
+                  <Box sx={{ maxHeight: 300, overflow: 'auto' }}>
+                    {selectedRecording.questions.map((question, index) => {
+                      const response = selectedRecording.userResponses.find(r => r.questionId === question.id);
+                      return (
+                        <Box key={question.id} sx={{ mb: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                            Question {question.questionNumber}
+                          </Typography>
+                          <Typography variant="body2" sx={{ mb: 1 }}>
+                            {question.text}
+                          </Typography>
+                          {response && (
+                            <Box sx={{ mt: 1, p: 1, backgroundColor: 'grey.50', borderRadius: 1 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                Your Response ({formatDuration(response.duration)}):
+                              </Typography>
+                              <Typography variant="body2">
+                                {response.text}
                               </Typography>
                             </Box>
-                          }
-                        />
-                      </ListItem>
-                    )}
-                    
-                    {index < selectedInterview.recordings.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))}
-              </List>
-            </DialogContent>
-            
-            <DialogActions>
-              <Button onClick={handleStopAudio} startIcon={<Stop />}>
-                Stop Audio
-              </Button>
-              <Button onClick={() => setDetailsOpen(false)}>
-                Close
-              </Button>
-            </DialogActions>
-          </>
-        )}
+                          )}
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+        </DialogContent>
+        
+        <DialogActions>
+          <Button onClick={() => setVideoDialogOpen(false)}>
+            Close
+          </Button>
+          {selectedRecording && (
+            <Button
+              variant="contained"
+              startIcon={<Download />}
+              onClick={() => handleDownloadVideo(selectedRecording)}
+            >
+              Download
+            </Button>
+          )}
+        </DialogActions>
       </Dialog>
     </Box>
   );

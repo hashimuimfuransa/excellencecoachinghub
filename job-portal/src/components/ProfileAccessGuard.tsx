@@ -103,10 +103,9 @@ const ProfileAccessGuard: React.FC<ProfileAccessGuardProps> = ({
           title: 'Psychometric Tests',
           icon: <Psychology sx={{ fontSize: 48, color: 'primary.main' }} />,
           description: 'Assess your personality, cognitive abilities, and work preferences',
-          requiredCompletion: 60,
+          requiredCompletion: 40,
           requiredFields: [
-            'firstName', 'lastName', 'email', 'phone', 'dateOfBirth',
-            'education', 'experienceLevel', 'skills'
+            'firstName', 'lastName', 'email', 'skills'
           ]
         };
       case 'aiInterviews':
@@ -137,12 +136,12 @@ const ProfileAccessGuard: React.FC<ProfileAccessGuardProps> = ({
           title: 'Smart Job Tests',
           icon: <SmartToy sx={{ fontSize: 48, color: 'info.main' }} />,
           description: 'AI-powered job-specific tests to prepare for your target positions',
-          requiredCompletion: 75,
+          requiredCompletion: 40,
           requiredFields: [
-            'firstName', 'lastName', 'email', 'phone', 
-            'skills', 'jobTitle'
+            'firstName', 'lastName', 'email', 'skills', 'jobTitle'
           ]
         };
+
       default:
         return {
           title: 'Feature',

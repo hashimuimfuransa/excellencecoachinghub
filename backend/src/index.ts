@@ -78,7 +78,7 @@ import speechRoutes from '@/routes/speechRoutes';
 import jobCertificateRoutes from '@/routes/jobCertificateRoutes';
 import profileRoutes from '@/routes/profileRoutes';
 import uploadRoutes from '@/routes/uploadRoutes';
-import superAdminRoutes from '@/routes/superAdminRoutes';
+import recordingRoutes from '@/routes/recordingRoutes';
 import employerRoutes from '@/routes/employerRoutes';
 import testRequestRoutes from '@/routes/testRequestRoutes';
 import paymentRoutes from '@/routes/paymentRoutes';
@@ -104,6 +104,9 @@ import storyRoutes from '@/routes/storyRoutes';
 
 // Chat routes
 import chatRoutes from '@/routes/chatRoutes';
+
+// Admin routes
+import superAdminRoutes from '@/routes/superAdminRoutes';
 
 const app = express();
 const server = createServer(app);
@@ -935,6 +938,7 @@ app.use('/api/speech', speechRoutes);
 app.use('/api/job-certificates', jobCertificateRoutes);
 app.use('/api/profiles', profileRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/recordings', recordingRoutes);
 app.use('/api/job-scraping', jobScrapingRoutes);
 app.use('/api/smart-tests', smartTestRoutes);
 app.use('/api/job-recommendations', jobRecommendationRoutes);

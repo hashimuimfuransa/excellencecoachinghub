@@ -219,22 +219,61 @@ const EnhancedInterviewHistory: React.FC = () => {
       const alternativeResults = JSON.parse(localStorage.getItem('interview_results') || '[]');
       console.log('📊 Alternative localStorage key has:', alternativeResults.length, 'results');
 
-      // Merge both sources
+      // Merge both sources and ensure no duplicates
       const allResults = [...results];
       alternativeResults.forEach((altResult: any) => {
         if (!allResults.find(r => r.sessionId === altResult.sessionId)) {
-          allResults.push(altResult);
+          // Only add if it looks like a quick interview result
+          if (altResult.sessionId && altResult.sessionId.startsWith('test_')) {
+            allResults.push(altResult);
+            console.log('✅ Added alternative result:', altResult.sessionId);
+          }
         }
       });
+
+      // Additional fallback: Check all localStorage keys for quick interview results
+      const additionalResults: any[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('quick_result_')) {
+          try {
+            const resultData = localStorage.getItem(key);
+            if (resultData) {
+              const result = JSON.parse(resultData);
+              if (!allResults.find(r => r.sessionId === result.sessionId)) {
+                // Try to verify this belongs to the user by checking session
+                const sessionData = localStorage.getItem(`quick_interview_${result.sessionId}`);
+                if (sessionData) {
+                  const session = JSON.parse(sessionData);
+                  if (session.userId === userId) {
+                    additionalResults.push(result);
+                    console.log('✅ Found additional result:', result.sessionId);
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            console.warn('Error parsing additional result:', error);
+          }
+        }
+      }
+
+      // Add additional results
+      allResults.push(...additionalResults);
 
       console.log('📊 Total combined quick results:', allResults.length);
       return allResults;
     } catch (error) {
       console.error('Error fetching quick interview results:', error);
       // Final fallback to localStorage
-      const fallbackResults = JSON.parse(localStorage.getItem('interview_results') || '[]');
-      console.log('📊 Using fallback localStorage results:', fallbackResults.length);
-      return fallbackResults;
+      try {
+        const fallbackResults = JSON.parse(localStorage.getItem('interview_results') || '[]');
+        console.log('📊 Fallback results:', fallbackResults.length);
+        return fallbackResults.filter((r: any) => r.sessionId && r.sessionId.startsWith('test_'));
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+        return [];
+      }
     }
   };
 
@@ -1077,11 +1116,11 @@ const EnhancedInterviewHistory: React.FC = () => {
                         {session.result && (
                           <Box sx={{ mt: 2 }}>
                             <Chip
-                              label={`Score: ${session.result.score}/100`}
-                              color={session.result.score >= 80 ? 'success' : session.result.score >= 60 ? 'warning' : 'error'}
+                              label={`Score: ${session.result.overallScore || session.result.score || 0}/100`}
+                              color={(session.result.overallScore || session.result.score || 0) >= 80 ? 'success' : (session.result.overallScore || session.result.score || 0) >= 60 ? 'warning' : 'error'}
                             />
                             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                              {session.result.overallFeedback.substring(0, 100)}...
+                              {(session.result.feedback || session.result.overallFeedback || '').substring(0, 150) + '...'}
                             </Typography>
                           </Box>
                         )}

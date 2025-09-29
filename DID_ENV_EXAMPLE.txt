@@ -1,0 +1,14 @@
+# D-ID Real-Time API Configuration
+# Get your API key from: https://www.d-id.com/
+VITE_DID_API_URL=https://api.d-id.com
+VITE_DID_API_KEY=sk-your_did_api_key_here
+
+# TalkAvatar Configuration (fallback only)
+VITE_AVATARTALK_API_URL=https://avatartalk.ai/api/inference
+VITE_AVATARTALK_API_KEY=your_avatartalk_api_key_here
+
+# Backend API URL
+VITE_API_URL=http://localhost:5000/api
+
+# Example D-ID API Key Format:
+# VITE_DID_API_KEY=sk-1234567890abcdef1234567890abcdef12345678

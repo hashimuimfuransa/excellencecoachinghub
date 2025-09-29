@@ -79,7 +79,7 @@ import { useAuth } from '../contexts/AuthContext';
 import ProfileAccessGuard from '../components/ProfileAccessGuard';
 import { jobService, type Job } from '../services/jobService';
 import { optimizedQuickInterviewService, QuickInterviewSession, QuickInterviewResult } from '../services/optimizedQuickInterviewService';
-import JobInterviewInterface from '../components/JobInterviewInterface';
+import InterviewLauncher from '../components/InterviewLauncher';
 import QuickTestInterviewInterface from '../components/QuickTestInterviewInterface';
 // Removed complex InterviewHistory component
 import { testRequestService, TestRequest } from '../services/testRequestService';
@@ -1695,14 +1695,16 @@ const AIInterviewsPage: React.FC<AIInterviewsPageProps> = () => {
         <ResultDetailsDialog />
         <PaymentApprovalDialog />
 
-        {/* Interview Interfaces */}
+        {/* Interview Launcher */}
         {jobInterviewSession && (
-          <JobInterviewInterface
-            key={`job-${jobInterviewSession.id}`}
+          <InterviewLauncher
             open={jobInterviewOpen}
             onClose={handleCloseJobInterview}
-            session={jobInterviewSession}
-            onComplete={handleJobInterviewComplete}
+            sessionId={jobInterviewSession.id}
+            sessionTitle={`${jobInterviewSession.position || 'AI'} Interview`}
+            questionCount={jobInterviewSession.questions.length}
+            duration={jobInterviewSession.totalDuration}
+            loading={generatingQuestions}
           />
         )}
       </Box>

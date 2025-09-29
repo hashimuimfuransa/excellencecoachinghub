@@ -65,14 +65,18 @@ import {
   WhatsApp,
   Email,
   CardGiftcard,
-  Settings
+  Settings,
+  Person,
+  Warning,
+  VerifiedUser,
+  Add
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { jobService } from '../services/jobService';
 import { smartTestService } from '../services/smartTestService';
 import { paymentRequestService } from '../services/paymentRequestService';
-import SimpleProfileGuard from '../components/SimpleProfileGuard';
+import { User } from '../types/user';
 
 interface Job {
   _id: string;
@@ -160,6 +164,7 @@ const SmartTestPage: React.FC = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   
+  
   // Removed payment information dialog - now integrated into request dialog
 
   useEffect(() => {
@@ -182,7 +187,7 @@ const SmartTestPage: React.FC = () => {
     fetchAdminSmartTests();
     checkFreeTestStatus();
     checkPaymentRequestStatus();
-  }, []);
+  }, [user]);
 
   // Check if user has used their free test
   const checkFreeTestStatus = async () => {
@@ -689,9 +694,8 @@ const SmartTestPage: React.FC = () => {
   }
 
   return (
-    <SimpleProfileGuard feature="smartTests">
-    {/* Original content wrapped here */}
     <Container maxWidth="lg" sx={{ py: 4 }}>
+      {/* <>
       {/* Header */}
       <Box mb={4}>
         <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
@@ -839,6 +843,7 @@ const SmartTestPage: React.FC = () => {
                   <Typography variant="body2" color="text.secondary" paragraph>
                     Create personalized job preparation tests
                   </Typography>
+                  
                   <Button 
                     variant="contained" 
                     size="medium"
@@ -1454,6 +1459,7 @@ const SmartTestPage: React.FC = () => {
                 )}
               </Box>
             </Grid>
+
 
             {/* Selected Job Details */}
             {selectedJob && (
@@ -2124,7 +2130,6 @@ const SmartTestPage: React.FC = () => {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
     </Container>
-    </SimpleProfileGuard>
   );
 };
 

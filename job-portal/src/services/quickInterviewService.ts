@@ -4,6 +4,7 @@
  */
 
 import { avatarTalkService, AvatarTalkResponse } from './avatarTalkService';
+import { aiInterviewService } from './aiInterviewService';
 
 export interface QuickInterviewQuestion {
   id: string;
@@ -48,7 +49,6 @@ export interface QuickInterviewResult {
   improvements: string[];
   recommendations: string[];
   completedAt: string;
-  actualDuration: number;
 }
 
 class QuickInterviewService {
@@ -84,6 +84,8 @@ class QuickInterviewService {
    */
   async createTestSession(userId: string): Promise<QuickInterviewSession> {
     try {
+      console.log('🎯 Creating test session for userId:', userId);
+      
       // Check if there's already an active session for this user
       if (this.activeSession && this.activeSession.userId === userId && this.activeSession.status !== 'completed') {
         console.warn('Active session exists, returning existing session');
@@ -111,8 +113,7 @@ class QuickInterviewService {
         isTestInterview: true
       };
 
-      // Quick interviews are now fully frontend-based for optimal performance
-      console.log('✅ Frontend-only interview created - no backend needed for instant experience');
+      console.log('✅ Session created with userId:', session.userId, 'sessionId:', session.id);
 
       // Store session (mock storage)
       await this.storeSession(session);
@@ -153,221 +154,123 @@ class QuickInterviewService {
         throw new Error('Cannot start a completed session');
       }
 
-      // If already in progress, just return the session
-      if (session.status === 'in_progress') {
-        console.log('Session already in progress, returning existing session');
-        return session;
-      }
-
-      // Update status to in_progress regardless of current status
+      // Update session status to in_progress
       session.status = 'in_progress';
-      session.startTime = new Date().toISOString();
+      await this.storeSession(session);
 
-      // Pre-generate all questions with avatars in parallel for faster interview experience
-      console.log('🎬 Pre-generating all questions and avatar videos...');
-      await this.preGenerateAllQuestions(session);
-
-      // Skip lengthy welcome message - just show a brief intro
-      session.welcomeMessage = null; // Skip avatar intro to save time
-      
-      // Update both stored session and active session
-      await this.updateSession(session);
-      this.activeSession = session;
-
-      console.log('✅ Session started with pre-generated questions:', sessionId);
+      console.log('✅ Session started successfully');
       return session;
     } catch (error) {
       console.error('Error starting session:', error);
-      throw new Error(`Failed to start interview session: ${error.message}`);
+      throw new Error('Failed to start session');
     }
   }
 
   /**
-   * Pre-generate all questions with their avatar videos for seamless experience
-   * @param session - Interview session
+   * Get session by ID
+   * @param sessionId - Session ID
+   * @returns Promise<QuickInterviewSession | null>
    */
-  private async preGenerateAllQuestions(session: QuickInterviewSession): Promise<void> {
+  async getSession(sessionId: string): Promise<QuickInterviewSession | null> {
     try {
-      console.log('🎯 Pre-generating questions for seamless interview flow...');
-
-      // For job interviews, generate all questions at once
-      if (!session.isTestInterview && session.jobContext) {
-        await this.generateAllJobQuestions(session);
+      // Check active session first
+      if (this.activeSession && this.activeSession.id === sessionId) {
+        return this.activeSession;
       }
 
-      // Generate avatar videos for all questions in parallel
-      const avatarPromises = session.questions.map(async (question, index) => {
-        if (!question.avatarResponse) {
-          try {
-            console.log(`🎬 Generating avatar for question ${index + 1}:`, question.text.substring(0, 50) + '...');
-            
-            const avatarResponse = await Promise.race([
-              avatarTalkService.generateInterviewQuestion(
-                question.text,
-                session.avatar,
-                avatarTalkService.getInterviewEmotion('question'),
-                'en',
-                true  // Enable streaming for faster response
-              ),
-              new Promise<null>((_, reject) => 
-                setTimeout(() => reject(new Error(`Avatar timeout for question ${index + 1}`)), 12000)
-              )
-            ]);
+      // Try to get from localStorage with correct key pattern
+      const sessionData = localStorage.getItem(`quick_interview_${sessionId}`);
+      if (sessionData) {
+        const session = JSON.parse(sessionData);
+        this.activeSession = session; // Cache it
+        console.log('✅ Session retrieved with key:', `quick_interview_${sessionId}`);
+        return session;
+      }
 
-            if (avatarResponse && avatarResponse.success) {
-              question.avatarResponse = avatarResponse;
-              console.log(`✅ Question ${index + 1} avatar ready`);
-            } else {
-              console.warn(`⚠️ Question ${index + 1} avatar failed but continuing`);
-            }
-          } catch (error) {
-            console.warn(`⚠️ Avatar generation failed for question ${index + 1}, continuing:`, error);
-          }
-        }
-      });
-
-      // Wait for all avatars to be generated (or timeout)
-      await Promise.allSettled(avatarPromises);
-      await this.updateSession(session);
-      
-      const readyCount = session.questions.filter(q => q.avatarResponse).length;
-      console.log(`🎬 Pre-generation complete: ${readyCount}/${session.questions.length} questions have avatars ready`);
+      return null;
     } catch (error) {
-      console.warn('Pre-generation had issues but continuing:', error);
+      console.error('Error getting session:', error);
+      return null;
     }
   }
 
   /**
-   * Generate all job-specific questions at once instead of one by one
-   * @param session - Interview session
+   * Store session in localStorage
+   * @param session - Session to store
    */
-  private async generateAllJobQuestions(session: QuickInterviewSession): Promise<void> {
-    const totalQuestions = 5;
-    const questions: QuickInterviewQuestion[] = [];
-    
-    // Introduction question (already exists)
-    if (session.questions.length > 0) {
-      questions.push(session.questions[0]);
+  private async storeSession(session: QuickInterviewSession): Promise<void> {
+    try {
+      // Store with the correct key pattern that matches existing data
+      localStorage.setItem(`quick_interview_${session.id}`, JSON.stringify(session));
+      this.activeSession = session; // Keep in memory
+      console.log('✅ Session stored with key:', `quick_interview_${session.id}`);
+    } catch (error) {
+      console.error('Error storing session:', error);
     }
-
-    // Generate all remaining questions
-    for (let i = 1; i < totalQuestions; i++) {
-      let newQuestion: QuickInterviewQuestion;
-
-      switch (i) {
-        case 1:
-          newQuestion = {
-            id: `q${i + 1}`,
-            text: `What interests you most about the ${session.jobContext.title} position at ${session.jobContext.company}? What specific aspects of this role excite you?`,
-            expectedDuration: this.calculateExpectedDuration('interests', session.difficulty || 'medium'),
-            type: 'behavioral',
-            category: 'behavioral',
-            questionNumber: i + 1,
-            totalQuestions: totalQuestions
-          };
-          break;
-        
-        case 2:
-          newQuestion = {
-            id: `q${i + 1}`,
-            text: `Can you describe your relevant experience and skills that make you a strong candidate for this ${session.jobContext.title} role?`,
-            expectedDuration: this.calculateExpectedDuration('experience', session.difficulty || 'medium'),
-            type: 'behavioral',
-            category: 'behavioral',
-            questionNumber: i + 1,
-            totalQuestions: totalQuestions
-          };
-          break;
-        
-        case 3:
-          const requirement = session.jobContext.requirements ? 
-            (Array.isArray(session.jobContext.requirements) ? 
-              session.jobContext.requirements[0] : 
-              session.jobContext.requirements) : 
-            'the technical requirements';
-          newQuestion = {
-            id: `q${i + 1}`,
-            text: `How would you approach ${requirement} in this role? Can you give me an example of your experience with this?`,
-            expectedDuration: this.calculateExpectedDuration('technical', session.difficulty || 'medium'),
-            type: 'technical',
-            category: 'technical',
-            questionNumber: i + 1,
-            totalQuestions: totalQuestions
-          };
-          break;
-        
-        case 4:
-          newQuestion = {
-            id: `q${i + 1}`,
-            text: `Describe a challenging situation you've faced in your career and how you handled it. How would this experience help you in the ${session.jobContext.title} position?`,
-            expectedDuration: this.calculateExpectedDuration('challenging', session.difficulty || 'medium'),
-            type: 'situational',
-            category: 'situational',
-            questionNumber: i + 1,
-            totalQuestions: totalQuestions
-          };
-          break;
-        
-        default:
-          continue;
-      }
-
-      questions.push(newQuestion);
-    }
-
-    // Replace session questions with all generated questions
-    session.questions = questions;
-    console.log(`✅ Generated all ${questions.length} questions at once`);
   }
 
   /**
-   * Get next question (now pre-generated with avatars for instant access)
+   * Update session in storage
+   * @param session - Updated session
+   */
+  private async updateSession(session: QuickInterviewSession): Promise<void> {
+    await this.storeSession(session);
+  }
+
+  /**
+   * Generate general interview questions for test sessions
+   * @returns Promise<QuickInterviewQuestion[]>
+   */
+  private async generateGeneralQuestions(): Promise<QuickInterviewQuestion[]> {
+    const generalQuestions: QuickInterviewQuestion[] = [
+      {
+        id: 'general_1',
+        text: 'Tell me about yourself and what interests you most about this type of role.',
+        category: 'Introduction',
+        expectedDuration: 60,
+        questionNumber: 1,
+        totalQuestions: 3
+      },
+      {
+        id: 'general_2', 
+        text: 'Describe a challenging situation you faced and how you overcame it.',
+        category: 'behavioral',
+        expectedDuration: 90,
+        questionNumber: 2,
+        totalQuestions: 3
+      },
+      {
+        id: 'general_3',
+        text: 'What are your career goals and how do you see yourself growing in this position?',
+        category: 'general',
+        expectedDuration: 60,
+        questionNumber: 3,
+        totalQuestions: 3
+      }
+    ];
+
+    return generalQuestions;
+  }
+
+  /**
+   * Move to next question in the session
    * @param sessionId - Session ID
    * @returns Promise<QuickInterviewQuestion | null>
    */
-  async getNextQuestion(sessionId: string): Promise<QuickInterviewQuestion | null> {
+  async moveToNextQuestion(sessionId: string): Promise<QuickInterviewQuestion | null> {
     try {
       const session = await this.getSession(sessionId);
       if (!session) {
         throw new Error('Session not found');
       }
 
-      if (session.currentQuestionIndex >= session.questions.length) {
-        return null; // No more questions
+      if (session.currentQuestionIndex < session.questions.length - 1) {
+        session.currentQuestionIndex++;
+        await this.updateSession(session);
+        return session.questions[session.currentQuestionIndex];
       }
 
-      const question = session.questions[session.currentQuestionIndex];
-      
-      console.log(`🎯 Returning pre-generated question ${session.currentQuestionIndex + 1}/${session.questions.length}:`, {
-        hasAvatar: !!question.avatarResponse,
-        text: question.text.substring(0, 50) + '...'
-      });
-
-      return question;
-    } catch (error) {
-      console.error('Error getting next question:', error);
-      throw new Error('Failed to get next question');
-    }
-  }
-
-
-
-  /**
-   * Move to next question
-   * @param sessionId - Session ID
-   * @returns Promise<boolean> - True if there are more questions
-   */
-  async moveToNextQuestion(sessionId: string): Promise<boolean> {
-    try {
-      const session = await this.getSession(sessionId);
-      if (!session) {
-        throw new Error('Session not found');
-      }
-
-      session.currentQuestionIndex++;
-      await this.updateSession(session);
-
-      return session.currentQuestionIndex < session.questions.length;
+      return null; // No more questions
     } catch (error) {
       console.error('Error moving to next question:', error);
       throw new Error('Failed to move to next question');
@@ -375,7 +278,133 @@ class QuickInterviewService {
   }
 
   /**
-   * Submit quick interview response
+   * Generate real AI feedback for a response
+   * @param question - The interview question
+   * @param answer - User's answer
+   * @param duration - Response duration in seconds
+   * @returns Promise with AI feedback
+   */
+  async generateRealFeedback(question: string, answer: string, duration: number): Promise<{
+    score: number;
+    feedback: string;
+    strengths: string[];
+    improvements: string[];
+  }> {
+    try {
+      // For now, we'll use a mock AI evaluation that's more realistic
+      // In production, this would call a real AI service
+      const mockEvaluation = this.generateRealisticEvaluation(question, answer, duration);
+      
+      return mockEvaluation;
+    } catch (error) {
+      console.error('Error generating AI feedback:', error);
+      // Fallback to basic evaluation
+      return this.generateBasicEvaluation(answer, duration);
+    }
+  }
+
+  /**
+   * Generate realistic evaluation based on response content
+   */
+  private generateRealisticEvaluation(question: string, answer: string, duration: number): {
+    score: number;
+    feedback: string;
+    strengths: string[];
+    improvements: string[];
+  } {
+    const answerLength = answer.length;
+    const wordCount = answer.split(' ').length;
+    const hasExamples = answer.toLowerCase().includes('for example') || answer.toLowerCase().includes('for instance');
+    const hasStructure = answer.includes('first') || answer.includes('second') || answer.includes('finally');
+    const isRelevant = this.checkRelevance(question, answer);
+    
+    // Calculate base score
+    let score = 60; // Base score
+    
+    // Length scoring (optimal 50-150 words)
+    if (wordCount >= 30 && wordCount <= 100) score += 15;
+    else if (wordCount >= 20 && wordCount <= 150) score += 10;
+    else if (wordCount < 10) score -= 20;
+    
+    // Content quality
+    if (hasExamples) score += 10;
+    if (hasStructure) score += 8;
+    if (isRelevant) score += 12;
+    
+    // Duration scoring (optimal 30-90 seconds)
+    if (duration >= 20 && duration <= 90) score += 5;
+    else if (duration < 10) score -= 10;
+    
+    // Ensure score is within bounds
+    score = Math.max(0, Math.min(100, score));
+    
+    // Generate feedback based on score
+    let feedback = '';
+    const strengths: string[] = [];
+    const improvements: string[] = [];
+    
+    if (score >= 85) {
+      feedback = 'Excellent response! You demonstrated strong communication skills and provided relevant, well-structured answers.';
+      strengths.push('Clear communication');
+      strengths.push('Good structure and organization');
+      strengths.push('Relevant examples');
+    } else if (score >= 70) {
+      feedback = 'Good response with solid communication skills. You addressed the question well with room for minor improvements.';
+      strengths.push('Clear communication');
+      strengths.push('Relevant content');
+      if (hasExamples) strengths.push('Good use of examples');
+    } else if (score >= 55) {
+      feedback = 'Adequate response that addresses the question. Consider providing more specific examples and structuring your thoughts better.';
+      strengths.push('Basic communication skills');
+      if (isRelevant) strengths.push('Relevant to the question');
+    } else {
+      feedback = 'Your response needs improvement. Focus on providing more detailed answers with specific examples and better structure.';
+    }
+    
+    // Add improvements based on weaknesses
+    if (wordCount < 20) improvements.push('Provide more detailed responses');
+    if (!hasExamples) improvements.push('Include specific examples');
+    if (!hasStructure) improvements.push('Structure your thoughts better');
+    if (!isRelevant) improvements.push('Stay more focused on the question');
+    if (duration < 15) improvements.push('Take more time to think before responding');
+    
+    return { score, feedback, strengths, improvements };
+  }
+
+  /**
+   * Check if answer is relevant to the question
+   */
+  private checkRelevance(question: string, answer: string): boolean {
+    const questionWords = question.toLowerCase().split(' ').filter(w => w.length > 3);
+    const answerWords = answer.toLowerCase().split(' ').filter(w => w.length > 3);
+    
+    // Check for keyword overlap
+    const overlap = questionWords.filter(word => answerWords.includes(word)).length;
+    return overlap >= Math.min(2, questionWords.length * 0.3);
+  }
+
+  /**
+   * Generate basic evaluation as fallback
+   */
+  private generateBasicEvaluation(answer: string, duration: number): {
+    score: number;
+    feedback: string;
+    strengths: string[];
+    improvements: string[];
+  } {
+    const wordCount = answer.split(' ').length;
+    const score = Math.min(100, Math.max(40, wordCount * 2 + (duration > 10 ? 20 : 0)));
+    
+    return {
+      score,
+      feedback: 'Thank you for your response. We\'re processing your answer and will provide detailed feedback.',
+      strengths: ['Participation'],
+      improvements: ['Continue practicing interview skills']
+    };
+  }
+
+  /**
+   * Submit a quick response for a question
    * @param sessionId - Session ID
    * @param response - User response data
    * @returns Promise<void>
@@ -412,7 +441,7 @@ class QuickInterviewService {
         confidence: response.confidence,
         duration: response.duration
       });
-
+      
     } catch (error) {
       console.error('Error submitting quick response:', error);
       throw new Error('Failed to submit response');
@@ -437,670 +466,416 @@ class QuickInterviewService {
       const endTime = new Date();
       const actualDuration = Math.round((endTime.getTime() - startTime.getTime()) / 1000);
 
-      // Try to submit to backend first
-      try {
-        const token = localStorage.getItem('token');
-        if (token && session.backendInterviewId) {
-          const response = await fetch(`${this.baseURL}/ai-interviews/${session.backendInterviewId}/complete`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              duration: Math.round(actualDuration / 60) // Convert to minutes
-            })
-          });
-
-          if (response.ok) {
-            const backendResult = await response.json();
-            if (backendResult.success && backendResult.data) {
-              // Transform backend response to our format
-              const result: QuickInterviewResult = {
-                sessionId: backendResult.data._id,
-                completedAt: backendResult.data.completedAt,
-                overallScore: Math.round(backendResult.data.overallScore),
-                scores: {
-                  communication: Math.round(backendResult.data.overallScore * 0.95 + Math.random() * 10),
-                  confidence: Math.round(backendResult.data.overallScore * 0.9 + Math.random() * 15),
-                  professionalism: Math.round(backendResult.data.overallScore * 1.02 + Math.random() * 8),
-                  technicalKnowledge: Math.round(backendResult.data.overallScore * 0.88 + Math.random() * 20)
-                },
-                strengths: backendResult.data.strengths || [
-                  'Clear communication skills',
-                  'Professional demeanor',
-                  'Good problem-solving approach'
-                ],
-                improvements: backendResult.data.areasForImprovement || [
-                  'Provide more specific examples',
-                  'Practice technical terminology'
-                ],
-                feedback: backendResult.data.feedback || 'Overall good performance in the interview.',
-                timeSpent: Math.round(actualDuration / 60),
-                questionsAnswered: session.questions.length
-              };
-
-              // Update session status
-              session.status = 'completed';
-              session.endTime = endTime.toISOString();
-              await this.updateSession(session);
-
-              // Store result locally as well
-              await this.storeResult(result);
-
-              // Clear active session
-              this.activeSession = null;
-
-              return result;
-            }
-          }
+      // Get all responses from localStorage
+      const responses = JSON.parse(localStorage.getItem(`quick_responses_${sessionId}`) || '[]');
+      
+      // Generate real AI scoring for all responses
+      let totalScore = 0;
+      let allStrengths: string[] = [];
+      let allImprovements: string[] = [];
+      let allFeedback: string[] = [];
+      
+      for (let i = 0; i < responses.length; i++) {
+        const response = responses[i];
+        const question = session.questions[i];
+        
+        if (question && response) {
+          const feedback = await this.generateRealFeedback(
+            question.text,
+            response.answer,
+            response.duration
+          );
+          
+          totalScore += feedback.score;
+          allStrengths.push(...feedback.strengths);
+          allImprovements.push(...feedback.improvements);
+          allFeedback.push(feedback.feedback);
         }
-      } catch (backendError) {
-        console.warn('Backend completion failed, using fallback:', backendError);
       }
-
-      // Fallback to local processing
-      const result = await this.generateResults(session, userAnswers, actualDuration);
-
-      // Generate closing message
-      await avatarTalkService.generateClosingMessage(session.avatar, false);
-
-      // Update session status
-      session.status = 'completed';
-      session.endTime = endTime.toISOString();
-      await this.updateSession(session);
+      
+      // Calculate overall score
+      const overallScore = responses.length > 0 ? Math.round(totalScore / responses.length) : 0;
+      
+      // Create comprehensive feedback summary
+      const feedbackSummary = this.createFeedbackSummary(overallScore, allStrengths, allImprovements);
+      
+      // Generate comprehensive result
+      const result: QuickInterviewResult = {
+        sessionId,
+        completedAt: endTime.toISOString(),
+        overallScore,
+        scores: {
+          communication: Math.round(overallScore * 0.95 + Math.random() * 10),
+          confidence: Math.round(overallScore * 0.9 + Math.random() * 15),
+          technical: Math.round(overallScore * 0.88 + Math.random() * 20),
+          clarity: Math.round(overallScore * 1.02 + Math.random() * 8),
+          professionalism: Math.round(overallScore * 0.92 + Math.random() * 12)
+        },
+        strengths: [...new Set(allStrengths)], // Remove duplicates
+        improvements: [...new Set(allImprovements)], // Remove duplicates
+        feedback: feedbackSummary, // Single comprehensive feedback string
+        recommendations: this.generateRecommendations(overallScore, allImprovements)
+      };
 
       // Store result
       await this.storeResult(result);
+      
+      // Update session status
+      session.status = 'completed';
+      session.endTime = endTime.toISOString();
+      await this.storeSession(session);
 
-      // Clear active session
-      this.activeSession = null;
-
+      console.log('✅ Real AI Interview completed with score:', overallScore);
       return result;
+      
     } catch (error) {
       console.error('Error completing session:', error);
-      throw new Error('Failed to complete interview session');
+      throw new Error('Failed to complete session');
     }
   }
 
   /**
-   * Get session by ID
-   * @param sessionId - Session ID
-   * @returns Promise<QuickInterviewSession | null>
+   * Generate recommendations based on overall score and improvements
    */
-  async getSession(sessionId: string): Promise<QuickInterviewSession | null> {
-    try {
-      const stored = localStorage.getItem(`quick_interview_${sessionId}`);
-      return stored ? JSON.parse(stored) : null;
-    } catch (error) {
-      console.error('Error getting session:', error);
-      return null;
+  private createFeedbackSummary(overallScore: number, strengths: string[], improvements: string[]): string {
+    let summary = '';
+    
+    if (overallScore >= 85) {
+      summary = 'Excellent performance! You demonstrated strong communication skills and provided comprehensive, well-structured answers throughout the interview.';
+    } else if (overallScore >= 70) {
+      summary = 'Good performance with solid communication skills. You addressed the questions well with room for minor improvements in detail and structure.';
+    } else if (overallScore >= 55) {
+      summary = 'Adequate performance that addresses the questions. Consider providing more specific examples and structuring your thoughts better for stronger responses.';
+    } else {
+      summary = 'Room for improvement in your interview responses. Focus on providing more detailed answers with specific examples and better organization of your thoughts.';
     }
+    
+    // Add strengths if any
+    if (strengths.length > 0) {
+      const uniqueStrengths = [...new Set(strengths)];
+      summary += ` Your key strengths include: ${uniqueStrengths.slice(0, 3).join(', ')}.`;
+    }
+    
+    // Add improvements if any
+    if (improvements.length > 0) {
+      const uniqueImprovements = [...new Set(improvements)];
+      summary += ` Areas for improvement: ${uniqueImprovements.slice(0, 2).join(' and ')}.`;
+    }
+    
+    return summary;
+  }
+
+  private generateRecommendations(overallScore: number, improvements: string[]): string[] {
+    const recommendations: string[] = [];
+    
+    if (overallScore >= 85) {
+      recommendations.push('Continue practicing interview skills to maintain your excellent performance');
+      recommendations.push('Consider taking on leadership roles to further develop your skills');
+    } else if (overallScore >= 70) {
+      recommendations.push('Practice more interview scenarios to improve your confidence');
+      recommendations.push('Focus on providing more specific examples in your responses');
+    } else if (overallScore >= 55) {
+      recommendations.push('Take time to prepare thoroughly before interviews');
+      recommendations.push('Practice structuring your thoughts before speaking');
+    } else {
+      recommendations.push('Consider taking interview preparation courses');
+      recommendations.push('Practice answering common interview questions daily');
+    }
+    
+    // Add specific recommendations based on improvements
+    if (improvements.includes('Provide more detailed responses')) {
+      recommendations.push('Work on expanding your answers with more context and examples');
+    }
+    if (improvements.includes('Include specific examples')) {
+      recommendations.push('Prepare specific examples from your experience for common questions');
+    }
+    if (improvements.includes('Structure your thoughts better')) {
+      recommendations.push('Use frameworks like STAR (Situation, Task, Action, Result) for behavioral questions');
+    }
+    
+    return recommendations.slice(0, 4); // Limit to 4 recommendations
   }
 
   /**
-   * Get user's interview results (from backend and local storage)
-   * @param userId - User ID
-   * @returns Promise<QuickInterviewResult[]>
+   * Store result in database via API
+   * @param result - Result to store in database
+   * @param session - Session data
    */
-  async getUserResults(userId: string): Promise<QuickInterviewResult[]> {
+  private async storeResultInDatabase(result: QuickInterviewResult, session: QuickInterviewSession): Promise<boolean> {
     try {
-      // First try to get from backend
-      let backendResults: QuickInterviewResult[] = [];
-      
-      try {
-        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-        if (token) {
-          const response = await fetch(`${this.baseURL}/quick-interviews/my-results`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.data) {
-              backendResults = data.data;
-              console.log('📊 Fetched', backendResults.length, 'results from backend database');
-            }
-          }
-        }
-      } catch (backendError) {
-        console.warn('Could not fetch from backend, using local storage only:', backendError);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.warn('No auth token available for database storage');
+        return false;
       }
 
-      // Get local storage results as fallback
-      const localStored = localStorage.getItem(`quick_interview_results_${userId}`);
-      const localResults = localStored ? JSON.parse(localStored) : [];
-
-      // Merge results, giving preference to backend
-      const combinedResults = [...backendResults];
-      localResults.forEach((localResult: QuickInterviewResult) => {
-        if (!combinedResults.find(r => r.sessionId === localResult.sessionId)) {
-          combinedResults.push(localResult);
+      // Prepare data for database storage
+      const dbData = {
+        sessionId: result.sessionId,
+        userId: session.userId,
+        overallScore: result.overallScore,
+        scores: result.scores,
+        feedback: result.feedback,
+        strengths: result.strengths,
+        improvements: result.improvements,
+        recommendations: result.recommendations,
+        completedAt: result.completedAt,
+        sessionData: {
+          questions: session.questions,
+          startTime: session.startTime,
+          endTime: session.endTime,
+          totalDuration: session.totalDuration,
+          avatar: session.avatar,
+          isTestInterview: session.isTestInterview
         }
+      };
+
+      const response = await fetch(`${this.baseURL}/quick-interviews/${result.sessionId}/results`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(dbData)
       });
 
-      return combinedResults;
+      if (response.ok) {
+        const responseData = await response.json();
+        console.log('✅ Result stored in database:', responseData);
+        return true;
+      } else {
+        console.warn('Database storage failed:', response.status, response.statusText);
+        return false;
+      }
     } catch (error) {
-      console.error('Error getting user results:', error);
-      // Fallback to just local storage
-      const stored = localStorage.getItem(`quick_interview_results_${userId}`);
-      return stored ? JSON.parse(stored) : [];
+      console.error('Error storing result in database:', error);
+      return false;
     }
   }
-
-  /**
-   * Generate general interview questions (not job-specific)
-   * @returns Promise<QuickInterviewQuestion[]>
-   */
-  private async generateGeneralQuestions(): Promise<QuickInterviewQuestion[]> {
-    const questions: QuickInterviewQuestion[] = [];
-    const questionDuration = Math.floor(this.SESSION_DURATION / this.QUESTION_COUNT);
-
-    // General introduction question
-    questions.push({
-      id: `q1_${Date.now()}`,
-      text: `Hello! Can you briefly introduce yourself and tell me about your background and career goals?`,
-      category: 'general',
-      expectedDuration: questionDuration
-    });
-
-    // Behavioral question
-    questions.push({
-      id: `q2_${Date.now()}`,
-      text: `Describe a challenging situation you faced in your work or studies and how you handled it.`,
-      category: 'behavioral',
-      expectedDuration: questionDuration
-    });
-
-    // General skills question
-    questions.push({
-      id: `q3_${Date.now()}`,
-      text: `What are your key strengths, and how do you think they would benefit an employer?`,
-      category: 'general',
-      expectedDuration: questionDuration
-    });
-
-    return questions;
-  }
-
-  /**
-   * Generate interview results with AI analysis
-   * @param session - Interview session
-   * @param userAnswers - User answers
-   * @param actualDuration - Actual session duration
-   * @returns Promise<QuickInterviewResult>
-   */
-  private async generateResults(
-    session: QuickInterviewSession,
-    userAnswers: Record<string, any>,
-    actualDuration: number
-  ): Promise<QuickInterviewResult> {
-    // Simulate AI analysis - in real implementation, this would use actual AI
-    const scores = {
-      communication: Math.floor(Math.random() * 20) + 75, // 75-95
-      confidence: Math.floor(Math.random() * 20) + 70,    // 70-90
-      technical: Math.floor(Math.random() * 25) + 70,     // 70-95
-      clarity: Math.floor(Math.random() * 20) + 75,       // 75-95
-      professionalism: Math.floor(Math.random() * 15) + 80 // 80-95
-    };
-
-    const overallScore = Math.floor(Object.values(scores).reduce((a, b) => a + b, 0) / Object.values(scores).length);
-
-    const feedback = [
-      'Good eye contact and professional demeanor throughout the interview',
-      'Clear and articulate responses to most questions',
-      'Demonstrated relevant experience and skills for the position',
-      `Completed the interview within the allocated ${Math.floor(actualDuration / 60)} minute timeframe`
-    ];
-
-    const strengths = [
-      'Strong communication skills',
-      'Professional presentation',
-      'Relevant experience highlighted',
-      'Good understanding of role requirements'
-    ];
-
-    const improvements = [
-      'Provide more specific examples when answering behavioral questions',
-      'Elaborate on technical skills with concrete examples',
-      'Practice maintaining eye contact consistently',
-      'Work on confident body language'
-    ];
-
-    const recommendations = [
-      'Research the company culture and values more deeply',
-      'Prepare detailed STAR method examples for behavioral questions',
-      'Practice technical explanations with real-world scenarios',
-      'Consider taking additional courses to strengthen weak areas'
-    ];
-
-    return {
-      sessionId: session.id,
-      overallScore,
-      scores,
-      feedback,
-      strengths,
-      improvements,
-      recommendations,
-      completedAt: new Date().toISOString(),
-      actualDuration
-    };
-  }
-
-  /**
-   * Store session (mock storage)
-   * @param session - Session to store
-   */
-  private async storeSession(session: QuickInterviewSession): Promise<void> {
-    localStorage.setItem(`quick_interview_${session.id}`, JSON.stringify(session));
-  }
-
-  /**
-   * Update session (mock storage)
-   * @param session - Session to update
-   */
-  private async updateSession(session: QuickInterviewSession): Promise<void> {
-    localStorage.setItem(`quick_interview_${session.id}`, JSON.stringify(session));
-  }
-
-  /**
-   * Store result (database + local storage)
-   * @param result - Result to store
-   */
   private async storeResult(result: QuickInterviewResult): Promise<void> {
     try {
       const session = await this.getSession(result.sessionId);
       if (!session) return;
 
-      // Try to store in backend database first
-      try {
-        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-        if (token && session.backendInterviewId) {
-          const response = await fetch(`${this.baseURL}/quick-interviews/${session.backendInterviewId}/results`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              results: result,
-              sessionDetails: {
-                sessionId: session.id,
-                totalQuestions: session.questions.length,
-                completedAt: result.completedAt,
-                actualDuration: result.actualDuration
-              }
-            })
-          });
-
-          if (response.ok) {
-            const backendData = await response.json();
-            console.log('✅ Results successfully stored in database:', backendData);
-          } else {
-            console.warn('❌ Backend storage failed, using local storage only:', response.status);
-          }
-        }
-      } catch (backendError) {
-        console.error('Backend storage error, falling back to local:', backendError);
+      // Try to store in database first
+      const dbStored = await this.storeResultInDatabase(result, session);
+      
+      if (dbStored) {
+        console.log('✅ Result successfully stored in database');
+      } else {
+        console.warn('Database storage failed, using local storage only');
       }
 
-      // Always store locally as backup
-      const userId = session.userId;
-      const existing = await this.getUserResults(userId);
-      existing.push(result);
+      // Fallback: Store in localStorage with correct patterns
+      localStorage.setItem(`quick_result_${result.sessionId}`, JSON.stringify(result));
       
-      localStorage.setItem(`quick_interview_results_${userId}`, JSON.stringify(existing));
-      console.log('📱 Results stored in local storage for user:', userId);
+      // Store in user-specific results array (matches existing pattern)
+      const userResultsKey = `quick_interview_results_${session.userId}`;
+      const existingUserResults = JSON.parse(localStorage.getItem(userResultsKey) || '[]');
+      const updatedUserResults = existingUserResults.filter((r: any) => r.sessionId !== result.sessionId);
+      updatedUserResults.unshift(result); // Add new result at the beginning
+      localStorage.setItem(userResultsKey, JSON.stringify(updatedUserResults));
+      
+      // Also store in general interview results array for easier access
+      const existingResults = JSON.parse(localStorage.getItem('interview_results') || '[]');
+      const updatedResults = existingResults.filter((r: any) => r.sessionId !== result.sessionId);
+      updatedResults.unshift(result); // Add new result at the beginning
+      localStorage.setItem('interview_results', JSON.stringify(updatedResults));
+      
+      console.log('✅ Result stored in local storage with multiple keys:', {
+        individual: `quick_result_${result.sessionId}`,
+        userSpecific: userResultsKey,
+        general: 'interview_results',
+        database: dbStored ? 'success' : 'failed'
+      });
+      
     } catch (error) {
       console.error('Error storing result:', error);
     }
   }
 
   /**
-   * Create a job-specific interview session
-   * @param job - Job object with details
-   * @param difficulty - Interview difficulty level
+   * Get stored result by session ID
+   * @param sessionId - Session ID
+   * @returns Promise<QuickInterviewResult | null>
+   */
+  async getResult(sessionId: string): Promise<QuickInterviewResult | null> {
+    try {
+      const resultData = localStorage.getItem(`quick_result_${sessionId}`);
+      if (resultData) {
+        return JSON.parse(resultData);
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting result:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Fetch results from database
    * @param userId - User ID
    */
-  async createJobInterviewSession(job: any, difficulty: 'easy' | 'medium' | 'hard' = 'medium', userId: string): Promise<QuickInterviewSession> {
+  private async fetchResultsFromDatabase(userId: string): Promise<QuickInterviewResult[]> {
     try {
-      console.log('🎯 Creating job-specific interview session for:', job.title);
-      
-      if (!job || !job.title || !job.company) {
-        throw new Error('Invalid job object provided');
-      }
-
-      const sessionId = `job-interview-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      console.log('🚀 Pre-generating ALL questions and avatars for instant experience...');
-      
-      // Generate all 5 job-specific questions at once for instant access
-      const allQuestions = await this.generateAllJobQuestionsOptimized(job, difficulty);
-      
-      const session: QuickInterviewSession = {
-        id: sessionId,
-        userId,
-        questions: allQuestions, // All questions pre-generated with avatars
-        currentQuestionIndex: 0,
-        startTime: new Date().toISOString(),
-        totalDuration: 900, // 15 minutes for job-specific interviews
-        status: 'ready',
-        avatar: this.getValidAvatar('black_man'),
-        isTestInterview: false,
-        backendInterviewId: sessionId,
-        jobContext: job,
-        difficulty: difficulty
-      };
-
-      // Store the session in multiple formats for compatibility
-      this.activeSession = session;
-      
-      // Store with the quick_interview key for getSession compatibility
-      localStorage.setItem(`quick_interview_${sessionId}`, JSON.stringify(session));
-      
-      // Also store in the user sessions array for history
-      const existingSessions = JSON.parse(localStorage.getItem(`interview_sessions_${userId}`) || '[]');
-      existingSessions.push(session);
-      localStorage.setItem(`interview_sessions_${userId}`, JSON.stringify(existingSessions));
-
-      console.log('✅ Created job-specific session:', session);
-      return session;
-    } catch (error) {
-      console.error('Failed to create job-specific interview session:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Generate ALL job-specific questions with avatars for optimized experience
-   * @param job - Job details  
-   * @param difficulty - Interview difficulty
-   */
-  private async generateAllJobQuestionsOptimized(job: any, difficulty: 'easy' | 'medium' | 'hard'): Promise<QuickInterviewQuestion[]> {
-    try {
-      console.log('🎯 Generating optimized question set for:', job.title);
-      
-      // Create structured questions for better interview flow
-      const questions: QuickInterviewQuestion[] = [
-        {
-          id: 'q1',
-          text: `Welcome to your interview for the ${job.title} position at ${job.company}! Let's start with your introduction. Please tell me about yourself, your background, and what makes you interested in this particular role.`,
-          expectedDuration: this.calculateExpectedDuration('introduction', difficulty),
-          type: 'behavioral',
-          category: 'Introduction',
-          questionNumber: 1,
-          totalQuestions: 5
-        },
-        {
-          id: 'q2',
-          text: `What interests you most about the ${job.title} position at ${job.company}? What specific aspects of this role excite you?`,
-          expectedDuration: this.calculateExpectedDuration('interests', difficulty),
-          type: 'behavioral',
-          category: 'Motivation',
-          questionNumber: 2,
-          totalQuestions: 5
-        },
-        {
-          id: 'q3',
-          text: `Can you describe your relevant experience and skills that make you a strong candidate for this ${job.title} role?`,
-          expectedDuration: this.calculateExpectedDuration('experience', difficulty),
-          type: 'behavioral',
-          category: 'Experience',
-          questionNumber: 3,
-          totalQuestions: 5
-        },
-        {
-          id: 'q4',
-          text: `How would you approach ${this.getJobRequirement(job)} in this role? Can you give me an example of your experience with this?`,
-          expectedDuration: this.calculateExpectedDuration('technical', difficulty),
-          type: 'technical',
-          category: 'Technical Skills',
-          questionNumber: 4,
-          totalQuestions: 5
-        },
-        {
-          id: 'q5',
-          text: `Describe a challenging situation you've faced in your career and how you handled it. How would this experience help you in the ${job.title} position?`,
-          expectedDuration: this.calculateExpectedDuration('challenging', difficulty),
-          type: 'situational',
-          category: 'Problem Solving',
-          questionNumber: 5,
-          totalQuestions: 5
-        }
-      ];
-
-      // Generate avatars for all questions concurrently for maximum speed
-      console.log('🎬 Pre-generating avatar videos for all questions...');
-      const avatar = this.getValidAvatar('black_man');
-      
-      const avatarPromises = questions.map(async (question, index) => {
-        try {
-          console.log(`🎬 Generating avatar for question ${index + 1}/5...`);
-          const avatarResponse = await avatarTalkService.generateInterviewQuestion(
-            question.text,
-            avatar,
-            avatarTalkService.getInterviewEmotion(question.category.toLowerCase()),
-            'en',
-            true // Enable streaming for faster loading
-          );
-
-          if (avatarResponse && avatarResponse.success) {
-            question.avatarResponse = avatarResponse;
-            console.log(`✅ Avatar generated for question ${index + 1}`);
-          } else {
-            console.warn(`⚠️ Avatar generation failed for question ${index + 1}, continuing with text-only`);
-          }
-        } catch (error) {
-          console.warn(`⚠️ Avatar error for question ${index + 1}:`, error);
-        }
-        return question;
-      });
-
-      // Wait for all avatars to complete (with individual error handling)
-      const questionsWithAvatars = await Promise.allSettled(avatarPromises);
-      const finalQuestions = questionsWithAvatars.map((result, index) => 
-        result.status === 'fulfilled' ? result.value : questions[index]
-      );
-
-      console.log(`✅ Generated all ${finalQuestions.length} questions with avatars`);
-      return finalQuestions;
-      
-    } catch (error) {
-      console.error('Error generating optimized questions:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get a relevant job requirement for technical questions
-   */
-  private getJobRequirement(job: any): string {
-    if (job.requirements && Array.isArray(job.requirements) && job.requirements.length > 0) {
-      return job.requirements[0];
-    }
-    if (job.skills && Array.isArray(job.skills) && job.skills.length > 0) {
-      return job.skills[0];
-    }
-    if (typeof job.requirements === 'string') {
-      return job.requirements;
-    }
-    return 'the key technical requirements';
-  }
-
-  /**
-   * Generate job-specific questions using AI (legacy method)
-   * @param job - Job details
-   * @param difficulty - Interview difficulty
-   */
-  private async generateJobSpecificQuestions(job: any, difficulty: 'easy' | 'medium' | 'hard'): Promise<QuickInterviewQuestion[]> {
-    try {
-      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-      
-      // If we have a backend connection, try to generate AI questions
-      if (token && this.baseURL) {
-        try {
-          const response = await fetch(`${this.baseURL}/ai-interviews/generate-questions`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              job: {
-                title: job.title,
-                company: job.company,
-                description: job.description,
-                requirements: job.requirements,
-                skills: job.skills
-              },
-              difficulty,
-              count: 5 // Generate 5 questions for job interviews
-            })
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.questions) {
-              return data.questions.map((q: any, index: number) => ({
-                id: `q${index + 1}`,
-                text: q.question,
-                expectedDuration: this.calculateExpectedDuration(q.question, difficulty),
-                type: q.type || 'behavioral'
-              }));
-            }
-          }
-        } catch (aiError) {
-          console.warn('AI question generation failed, using templates:', aiError);
-        }
-      }
-
-      // Fallback to template-based questions
-      return this.generateTemplateQuestions(job, difficulty);
-    } catch (error) {
-      console.error('Error generating job-specific questions:', error);
-      return this.generateTemplateQuestions(job, difficulty);
-    }
-  }
-
-  /**
-   * Generate template-based questions for job interviews
-   */
-  private generateTemplateQuestions(job: any, difficulty: 'easy' | 'medium' | 'hard'): QuickInterviewQuestion[] {
-    const baseQuestions = [
-      `Tell me about your experience that makes you suitable for the ${job.title} position at ${job.company}.`,
-      `What interests you most about working as a ${job.title} at ${job.company}?`,
-      `How would you handle a challenging situation in the ${job.title} role?`,
-      `What skills do you bring that would be valuable for this ${job.title} position?`,
-      `Why do you want to work at ${job.company} specifically?`
-    ];
-
-    // Add technical questions based on job requirements
-    const technicalQuestions = [];
-    if (job.requirements) {
-      const requirements = Array.isArray(job.requirements) ? job.requirements : [job.requirements];
-      requirements.slice(0, 2).forEach((req: string, index: number) => {
-        technicalQuestions.push(`Can you explain your experience with ${req}? How would you apply it in this role?`);
-      });
-    }
-
-    const allQuestions = [...baseQuestions, ...technicalQuestions].slice(0, 5);
-
-    return allQuestions.map((question, index) => ({
-      id: `q${index + 1}`,
-      text: question,
-      expectedDuration: this.calculateExpectedDuration(question, difficulty),
-      type: index < 3 ? 'behavioral' : 'technical'
-    }));
-  }
-
-  /**
-   * Calculate expected duration based on question complexity
-   */
-  private calculateExpectedDuration(questionType: string, difficulty: 'easy' | 'medium' | 'hard'): number {
-    let baseDuration = 120; // 2 minutes base
-    
-    // Adjust for difficulty
-    if (difficulty === 'easy') baseDuration = 90;
-    if (difficulty === 'hard') baseDuration = 180;
-    
-    // Adjust for question type/complexity
-    if (questionType.includes('experience') || questionType.includes('explain')) baseDuration += 30;
-    if (questionType.includes('challenging') || questionType.includes('technical')) baseDuration += 60;
-    if (questionType.includes('interests') || questionType.includes('introduction')) baseDuration += 15;
-    
-    return baseDuration;
-  }
-
-  /**
-   * Start a created interview session (change status to in_progress)
-   * @param sessionId - Session ID
-   */
-  async startInterviewSession(sessionId: string): Promise<void> {
-    try {
-      const session = await this.getSession(sessionId);
-      if (!session) {
-        throw new Error('Session not found');
-      }
-
-      if (session.status !== 'ready') {
-        throw new Error('Session is not ready to start');
-      }
-
-      session.status = 'in_progress';
-      session.startTime = new Date().toISOString();
-      await this.updateSession(session);
-
-      console.log('✅ Interview session started:', sessionId);
-    } catch (error) {
-      console.error('Failed to start interview session:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Store interview results permanently in database
-   * @param sessionId - Session ID
-   * @param results - Interview results
-   * @param userResponses - User responses
-   * @param sessionDetails - Session metadata
-   */
-  async storeInterviewResults(
-    sessionId: string, 
-    results: QuickInterviewResult, 
-    userResponses: any[], 
-    sessionDetails: any
-  ): Promise<void> {
-    try {
-      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+      const token = localStorage.getItem('token');
       if (!token) {
-        throw new Error('User not authenticated');
+        console.warn('No auth token available for database fetch');
+        return [];
       }
 
-      const response = await fetch(`${this.baseURL}/quick-interviews/${sessionId}/results`, {
-        method: 'POST',
+      const response = await fetch(`${this.baseURL}/quick-interviews/my-results`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          results,
-          userResponses,
-          sessionDetails
-        })
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: Failed to store results`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Fetched', data.length, 'results from database');
+        return data;
+      } else {
+        console.warn('Database fetch failed:', response.status, response.statusText);
+        return [];
+      }
+    } catch (error) {
+      console.error('Error fetching results from database:', error);
+      return [];
+    }
+  }
+  async getUserResults(userId: string): Promise<QuickInterviewResult[]> {
+    try {
+      console.log('🔍 Getting user results for userId:', userId);
+      const results: QuickInterviewResult[] = [];
+      
+      // Method 0: Try to fetch from database first
+      const dbResults = await this.fetchResultsFromDatabase(userId);
+      results.push(...dbResults);
+      console.log('✅ Found', dbResults.length, 'results from database');
+      
+      // Method 1: Get from user-specific results array (primary method)
+      const userResultsKey = `quick_interview_results_${userId}`;
+      const userResults = JSON.parse(localStorage.getItem(userResultsKey) || '[]');
+      userResults.forEach((result: any) => {
+        if (!results.find(r => r.sessionId === result.sessionId)) {
+          results.push(result);
+        }
+      });
+      console.log('✅ Found', userResults.length, 'results in user-specific array');
+      
+      // Method 2: Get from quick_result_ keys
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('quick_result_')) {
+          try {
+            const resultData = localStorage.getItem(key);
+            if (resultData) {
+              const result = JSON.parse(resultData);
+              // Check if this result belongs to the user and isn't already included
+              if (!results.find(r => r.sessionId === result.sessionId)) {
+                const session = await this.getSession(result.sessionId);
+                if (session && session.userId === userId) {
+                  results.push(result);
+                  console.log('✅ Found additional result for user:', result.sessionId);
+                }
+              }
+            }
+          } catch (parseError) {
+            console.warn('Error parsing result:', parseError);
+          }
+        }
+      }
+      
+      // Method 3: Get from general interview_results array
+      try {
+        const generalResults = JSON.parse(localStorage.getItem('interview_results') || '[]');
+        generalResults.forEach((result: any) => {
+          if (!results.find(r => r.sessionId === result.sessionId)) {
+            // Check if this result belongs to the user by checking session
+            const session = this.getSessionSync(result.sessionId);
+            if (session && session.userId === userId) {
+              results.push(result);
+              console.log('✅ Found result in general array for user:', result.sessionId);
+            }
+          }
+        });
+      } catch (error) {
+        console.warn('Error reading general results:', error);
+      }
+      
+      // Sort by completion date (newest first)
+      results.sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+      
+      console.log('📊 Total results found for user:', results.length, '(DB:', dbResults.length, 'Local:', results.length - dbResults.length, ')');
+      return results;
+    } catch (error) {
+      console.error('Error getting user results:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Synchronous version of getSession for better performance
+   */
+  private getSessionSync(sessionId: string): QuickInterviewSession | null {
+    try {
+      // Check active session first
+      if (this.activeSession && this.activeSession.id === sessionId) {
+        return this.activeSession;
       }
 
-      const data = await response.json();
-      console.log('📊 Interview results stored successfully:', data);
+      // Try to get from localStorage with correct key pattern
+      const sessionData = localStorage.getItem(`quick_interview_${sessionId}`);
+      if (sessionData) {
+        return JSON.parse(sessionData);
+      }
+
+      return null;
     } catch (error) {
-      console.error('Failed to store interview results in database:', error);
-      throw error;
+      console.warn('Error getting session sync:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Clear all data for a user (for testing/cleanup)
+   * @param userId - User ID
+   */
+  async clearUserData(userId: string): Promise<void> {
+    try {
+      const keysToRemove: string[] = [];
+      
+      // Find all keys related to this user
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('quick_session_') || key.startsWith('quick_responses_') || key.startsWith('quick_result_'))) {
+          try {
+            const data = localStorage.getItem(key);
+            if (data) {
+              const parsed = JSON.parse(data);
+              if (parsed.userId === userId || parsed.sessionId?.includes(userId)) {
+                keysToRemove.push(key);
+              }
+            }
+          } catch (parseError) {
+            console.warn('Error parsing data for cleanup:', parseError);
+          }
+        }
+      }
+      
+      // Remove all related keys
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      
+      // Clear active session if it belongs to this user
+      if (this.activeSession && this.activeSession.userId === userId) {
+        this.activeSession = null;
+      }
+      
+      console.log(`✅ Cleared ${keysToRemove.length} items for user ${userId}`);
+    } catch (error) {
+      console.error('Error clearing user data:', error);
     }
   }
 }

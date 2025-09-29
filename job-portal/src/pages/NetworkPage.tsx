@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box,
   Container,
@@ -73,6 +73,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth, UserRole } from '../contexts/AuthContext';
 import FloatingContact from '../components/FloatingContact';
 import { toast } from 'react-toastify';
+import { networkCache, CACHE_KEYS } from '../utils/networkCache';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -86,6 +87,43 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
   </div>
 );
 
+// Skeleton components for Instagram-like loading
+const ConnectionSkeleton: React.FC = () => (
+  <Card sx={{ mb: 2 }}>
+    <CardContent>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Skeleton variant="circular" width={56} height={56} />
+        <Box sx={{ flex: 1 }}>
+          <Skeleton variant="text" width="60%" height={24} />
+          <Skeleton variant="text" width="40%" height={20} />
+          <Skeleton variant="text" width="30%" height={16} />
+        </Box>
+        <Skeleton variant="rectangular" width={100} height={36} />
+      </Box>
+    </CardContent>
+  </Card>
+);
+
+const SuggestionsSkeleton: React.FC = () => (
+  <Card sx={{ mb: 2 }}>
+    <CardContent>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+        <Skeleton variant="circular" width={48} height={48} />
+        <Box sx={{ flex: 1 }}>
+          <Skeleton variant="text" width="70%" height={20} />
+          <Skeleton variant="text" width="50%" height={16} />
+        </Box>
+        <Skeleton variant="rectangular" width={24} height={24} />
+      </Box>
+      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+        <Skeleton variant="chip" width={60} height={32} />
+        <Skeleton variant="chip" width={80} height={32} />
+        <Skeleton variant="chip" width={70} height={32} />
+      </Box>
+    </CardContent>
+  </Card>
+);
+
 const NetworkPage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -93,12 +131,19 @@ const NetworkPage: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const [currentTab, setCurrentTab] = useState(0);
+  
+  // Progressive loading states - like Instagram
   const [connections, setConnections] = useState<SocialConnection[]>([]);
+  const [connectionsLoading, setConnectionsLoading] = useState(false);
   const [pendingRequests, setPendingRequests] = useState<ConnectionRequest[]>([]);
+  const [pendingRequestsLoading, setPendingRequestsLoading] = useState(false);
   const [sentRequests, setSentRequests] = useState<SentRequest[]>([]);
+  const [sentRequestsLoading, setSentRequestsLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [requestingUsers, setRequestingUsers] = useState<Set<string>>(new Set());
@@ -116,14 +161,26 @@ const NetworkPage: React.FC = () => {
     sortBy: 'newest', // newest, connections, completion
   });
 
+  // Progressive loading effect - like Instagram's instant UI
   useEffect(() => {
-    loadNetworkData();
+    const loadDataProgressively = async () => {
+      // Show UI immediately, then load data
+      setInitialLoading(false);
+      
+      // Load data in background without blocking UI
+      setTimeout(() => {
+        loadNetworkData();
+      }, 50); // Small delay to ensure UI renders first
+    };
+    
+    loadDataProgressively();
   }, []);
 
-  // Filter and sort suggestions
-  const filteredSuggestions = (suggestions || [])
-    // Ensure each suggestion is a valid object with an _id
-    .filter((u: any) => Boolean(u && u._id))
+  // Memoized filtered suggestions for better performance
+  const filteredSuggestions = useMemo(() => {
+    return (suggestions || [])
+      // Ensure each suggestion is a valid object with an _id
+      .filter((u: any) => Boolean(u && u._id))
     .filter(user => {
       // Search query filter
       if (searchQuery) {
@@ -185,6 +242,7 @@ const NetworkPage: React.FC = () => {
         return new Date(b.createdAt || b.joinedAt || '').getTime() - new Date(a.createdAt || a.joinedAt || '').getTime();
     }
   });
+  }, [suggestions, searchQuery, filters]);
 
   // Filter management functions
   const handleFilterChange = (filterType: string, value: any) => {
@@ -244,42 +302,120 @@ const NetworkPage: React.FC = () => {
     return count;
   };
 
-  const loadNetworkData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  // Optimized progressive loading - like Instagram's approach
+  const loadNetworkData = useCallback(async () => {
+    setError(null);
 
-      const [connectionsRes, requestsRes, sentRequestsRes, suggestionsRes] = await Promise.all([
-        socialNetworkService.getConnections(),
-        socialNetworkService.getPendingRequests(),
-        socialNetworkService.getSentRequests(),
-        socialNetworkService.getConnectionSuggestions(20),
-      ]);
+    // Load connections first (most important) with caching
+    const loadConnections = async () => {
+      try {
+        setConnectionsLoading(true);
+        
+        // Check cache first
+        const cachedConnections = networkCache.get<SocialConnection[]>(CACHE_KEYS.CONNECTIONS);
+        if (cachedConnections) {
+          console.log('📦 Loading connections from cache');
+          setConnections(cachedConnections);
+          return;
+        }
 
-      // Handle direct array responses from services
-      const connectionsData = Array.isArray(connectionsRes) ? connectionsRes : (connectionsRes?.data || []);
-      const requestsData = Array.isArray(requestsRes) ? requestsRes : (requestsRes?.data || []);
-      const sentRequestsData = Array.isArray(sentRequestsRes) ? sentRequestsRes : (sentRequestsRes?.data || []);
-      const suggestionsData = Array.isArray(suggestionsRes) ? suggestionsRes : (suggestionsRes?.data || []);
+        const connectionsRes = await socialNetworkService.getConnections();
+        const connectionsData = Array.isArray(connectionsRes) ? connectionsRes : (connectionsRes?.data || []);
+        const validConnections = connectionsData.filter((conn: any) => conn?.user != null);
+        
+        // Cache the result
+        networkCache.set(CACHE_KEYS.CONNECTIONS, validConnections);
+        setConnections(validConnections);
+        console.log('Connections loaded:', validConnections.length);
+      } catch (err) {
+        console.error('Error loading connections:', err);
+      } finally {
+        setConnectionsLoading(false);
+      }
+    };
 
-      // Filter out connections with null or undefined user data
-      const validConnections = connectionsData.filter((conn: any) => conn?.user != null);
-      console.log('Connections loaded:', connectionsData.length, 'valid:', validConnections.length);
-      
-      // Also sanitize suggestions to avoid undefined/null items, and require a valid _id
-      const validSuggestions = (suggestionsData || []).filter((u: any) => Boolean(u && u._id));
+    // Load pending requests with caching
+    const loadPendingRequests = async () => {
+      try {
+        setPendingRequestsLoading(true);
+        
+        const cachedRequests = networkCache.get<ConnectionRequest[]>(CACHE_KEYS.PENDING_REQUESTS);
+        if (cachedRequests) {
+          console.log('📦 Loading pending requests from cache');
+          setPendingRequests(cachedRequests);
+          return;
+        }
 
-      setConnections(validConnections);
-      setPendingRequests(requestsData);
-      setSentRequests(sentRequestsData);
-      setSuggestions(validSuggestions);
-    } catch (err) {
-      setError('Failed to load network data. Please try again.');
-      console.error('Error loading network data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+        const requestsRes = await socialNetworkService.getPendingRequests();
+        const requestsData = Array.isArray(requestsRes) ? requestsRes : (requestsRes?.data || []);
+        
+        networkCache.set(CACHE_KEYS.PENDING_REQUESTS, requestsData, 2 * 60 * 1000); // 2 minutes cache
+        setPendingRequests(requestsData);
+      } catch (err) {
+        console.error('Error loading pending requests:', err);
+      } finally {
+        setPendingRequestsLoading(false);
+      }
+    };
+
+    // Load sent requests with caching
+    const loadSentRequests = async () => {
+      try {
+        setSentRequestsLoading(true);
+        
+        const cachedSentRequests = networkCache.get<SentRequest[][]>(CACHE_KEYS.SENT_REQUESTS);
+        if (cachedSentRequests) {
+          console.log('📦 Loading sent requests from cache');
+          setSentRequests(cachedSentRequests);
+          return;
+        }
+
+        const sentRequestsRes = await socialNetworkService.getSentRequests();
+        const sentRequestsData = Array.isArray(sentRequestsRes) ? sentRequestsRes : (sentRequestsRes?.data || []);
+        
+        networkCache.set(CACHE_KEYS.SENT_REQUESTS, sentRequestsData, 2 * 60 * 1000); // 2 minutes cache
+        setSentRequests(sentRequestsData);
+      } catch (err) {
+        console.error('Error loading sent requests:', err);
+      } finally {
+        setSentRequestsLoading(false);
+      }
+    };
+
+    // Load suggestions with caching (can be last since it's for discovery)
+    const loadSuggestions = async () => {
+      try {
+        setSuggestionsLoading(true);
+        
+        const cachedSuggestions = networkCache.get<any[]>(CACHE_KEYS.SUGGESTIONS);
+        if (cachedSuggestions) {
+          console.log('📦 Loading suggestions from cache');
+          setSuggestions(cachedSuggestions);
+          return;
+        }
+
+        const suggestionsRes = await socialNetworkService.getConnectionSuggestions(20);
+        const suggestionsData = Array.isArray(suggestionsRes) ? suggestionsRes : (suggestionsRes?.data || []);
+        const validSuggestions = suggestionsData.filter((u: any) => Boolean(u && u._id));
+        
+        networkCache.set(CACHE_KEYS.SUGGESTIONS, validSuggestions); // Use default TTL
+        setSuggestions(validSuggestions);
+        console.log('Suggestions loaded:', validSuggestions.length);
+      } catch (err) {
+        console.error('Error loading suggestions:', err);
+      } finally {
+        setSuggestionsLoading(false);
+      }
+    };
+
+    // Load data in parallel but with individual loading states
+    await Promise.allSettled([
+      loadConnections(),
+      loadPendingRequests(),
+      loadSentRequests(),
+      loadSuggestions(),
+    ]);
+  }, []);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
@@ -297,6 +433,10 @@ const NetworkPage: React.FC = () => {
       
       // Remove from suggestions (guard against bad items)
       setSuggestions(prev => (prev || []).filter((user: any) => user && user._id !== userId));
+      
+      // Invalidate related caches
+      networkCache.delete(CACHE_KEYS.SUGGESTIONS);
+      networkCache.delete(CACHE_KEYS.SENT_REQUESTS);
       
       if (userToAdd) {
         // Add to sent requests to show pending status
@@ -448,18 +588,19 @@ const NetworkPage: React.FC = () => {
            jobTitle.includes(query);
   });
 
-  if (loading) {
-    return (
-      <Container maxWidth="lg" sx={{ py: { xs: 2, md: 3 } }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', flexDirection: 'column', gap: 2 }}>
-          <CircularProgress size={60} thickness={4} />
-          <Typography variant="h6" color="text.secondary">
-            Loading your network...
-          </Typography>
-        </Box>
-      </Container>
-    );
-  }
+  // Only show loading screen for initial load (Instagram-style)
+ if (initialLoading) {
+   return (
+     <Container maxWidth="lg" sx={{ py: { xs: 2, md: 3 } }}>
+       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', flexDirection: 'column', gap: 2 }}>
+         <CircularProgress size={60} thickness={4} />
+         <Typography variant="h6" color="text.secondary">
+           Loading your network...
+         </Typography>
+       </Box>
+     </Container>
+   );
+ }
 
   return (
     <>
@@ -1043,7 +1184,23 @@ const NetworkPage: React.FC = () => {
           </Box>
 
           <Grid container spacing={2}>
-            {filteredConnections.map((connection) => (
+            {/* Skeleton loading for connections */}
+            {connectionsLoading ? (
+              Array.from({ length: 6 }).map((_, index) => (
+                <Grid item xs={12} sm={6} md={4} key={`skeleton-${index}`}>
+                  <Card sx={{ borderRadius: 2, height: '100%' }}>
+                    <CardContent sx={{ textAlign: 'center' }}>
+                      <Skeleton variant="circular" width={64} height={64} sx={{ mx: 'auto', mb: 2 }} />
+                      <Skeleton variant="text" width="70%" height={24} sx={{ mx: 'auto', mb: 1 }} />
+                      <Skeleton variant="text" width="50%" height={16} sx={{ mx: 'auto', mb: 1 }} />
+                      <Skeleton variant="text" width="40%" height={16} sx={{ mx: 'auto', mb: 2 }} />
+                      <Skeleton variant="rectangular" width={100} height={36} sx={{ mx: 'auto' }} />
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))
+            ) : (
+              filteredConnections.map((connection) => (
               <Grid item xs={12} sm={6} md={4} key={connection._id}>
                 <Card
                   component={motion.div}
@@ -1068,6 +1225,7 @@ const NetworkPage: React.FC = () => {
                         <Avatar
                           src={connection.user.profilePicture}
                           sx={{ width: 64, height: 64, mx: 'auto', mb: 2 }}
+                          loading="lazy"
                         >
                           {connection.user.firstName?.[0] || ''}{connection.user.lastName?.[0] || ''}
                         </Avatar>
@@ -1152,10 +1310,11 @@ const NetworkPage: React.FC = () => {
                   </CardContent>
                 </Card>
               </Grid>
-            ))}
+            ))
+          )}
           </Grid>
 
-          {filteredConnections.length === 0 && (
+          {!connectionsLoading && filteredConnections.length === 0 && (
             <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 2 }}>
               <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
                 {searchQuery ? 'No connections found' : 'No connections yet'}
@@ -1179,7 +1338,29 @@ const NetworkPage: React.FC = () => {
             </Typography>
             
             <Grid container spacing={2}>
-              {pendingRequests.map((request) => (
+              {/* Skeleton loading for pending requests */}
+              {pendingRequestsLoading ? (
+                Array.from({ length: 3 }).map((_, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={`pending-skeleton-${index}`}>
+                    <Card sx={{ borderRadius: 2 }}>
+                      <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                          <Skeleton variant="circular" width={48} height={48} />
+                          <Box sx={{ flex: 1 }}>
+                            <Skeleton variant="text" width="70%" height={20} />
+                            <Skeleton variant="text" width="50%" height={16} />
+                          </Box>
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Skeleton variant="rectangular" width={80} height={36} />
+                          <Skeleton variant="rectangular" width={80} height={36} />
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))
+              ) : (
+                pendingRequests.map((request) => (
                 <Grid item xs={12} sm={6} md={4} key={request._id}>
                   <Card
                     component={motion.div}
@@ -1209,6 +1390,7 @@ const NetworkPage: React.FC = () => {
                           border: '2px solid',
                           borderColor: 'success.main',
                         }}
+                        loading="lazy"
                       >
                         {request.requester.firstName[0]}{request.requester.lastName[0]}
                       </Avatar>
@@ -1281,10 +1463,11 @@ const NetworkPage: React.FC = () => {
                     </CardContent>
                   </Card>
                 </Grid>
-              ))}
+              ))
+              )}
             </Grid>
 
-            {pendingRequests.length === 0 && (
+            {!pendingRequestsLoading && pendingRequests.length === 0 && (
               <Paper sx={{ p: 3, textAlign: 'center', borderRadius: 2, mt: 2 }}>
                 <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
                   No incoming requests
@@ -1306,7 +1489,22 @@ const NetworkPage: React.FC = () => {
             </Typography>
             
             <Grid container spacing={2}>
-              {sentRequests.map((request) => (
+              {/* Skeleton loading for sent requests */}
+              {sentRequestsLoading ? (
+                Array.from({ length: 2 }).map((_, index) => (
+                  <Grid item xs={12} sm={6} md={4} key={`sent-skeleton-${index}`}>
+                    <Card sx={{ borderRadius: 2 }}>
+                      <CardContent sx={{ textAlign: 'center' }}>
+                        <Skeleton variant="circular" width={64} height={64} sx={{ mx: 'auto', mb: 2 }} />
+                        <Skeleton variant="text" width="70%" height={20} sx={{ mb: 1 }} />
+                        <Skeleton variant="text" width="50%" height={16} sx={{ mb: 2 }} />
+                        <Skeleton variant="rectangular" width={100} height={32} />
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))
+              ) : (
+                sentRequests.map((request) => (
                 <Grid item xs={12} sm={6} md={4} key={request._id}>
                   <Card
                     component={motion.div}
@@ -1336,6 +1534,7 @@ const NetworkPage: React.FC = () => {
                           border: '2px solid',
                           borderColor: 'warning.main',
                         }}
+                        loading="lazy"
                       >
                         {request.recipient.firstName[0]}{request.recipient.lastName[0]}
                       </Avatar>
@@ -1394,10 +1593,11 @@ const NetworkPage: React.FC = () => {
                     </CardContent>
                   </Card>
                 </Grid>
-              ))}
+              ))
+              )}
             </Grid>
 
-            {sentRequests.length === 0 && (
+            {!sentRequestsLoading && sentRequests.length === 0 && (
               <Paper sx={{ p: 3, textAlign: 'center', borderRadius: 2, mt: 2 }}>
                 <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
                   No sent requests
@@ -1650,7 +1850,16 @@ const NetworkPage: React.FC = () => {
             </Box>
           </Box>
 
-          {filteredSuggestions.length > 0 ? (
+          {/* Skeleton loading for suggestions */}
+          {suggestionsLoading ? (
+            <Grid container spacing={2}>
+              {Array.from({ length: 8 }).map((_, index) => (
+                <Grid item xs={12} sm={6} md={4} key={`suggestion-skeleton-${index}`}>
+                  <SuggestionsSkeleton />
+                </Grid>
+              ))}
+            </Grid>
+          ) : filteredSuggestions.length > 0 ? (
             <Grid container spacing={2}>
               {filteredSuggestions.map((user) => (
                 <Grid item xs={12} sm={6} md={4} key={user._id}>
@@ -1672,6 +1881,7 @@ const NetworkPage: React.FC = () => {
                       <Avatar
                         src={user.profilePicture}
                         sx={{ width: 64, height: 64, mx: 'auto', mb: 2 }}
+                        loading="lazy"
                       >
                         {user.firstName[0]}{user.lastName[0]}
                       </Avatar>
@@ -1832,7 +2042,7 @@ const NetworkPage: React.FC = () => {
             </Paper>
           )}
 
-          {suggestions.length === 0 && (
+          {!suggestionsLoading && suggestions.length === 0 && (
             <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 2 }}>
               <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
                 No suggestions available

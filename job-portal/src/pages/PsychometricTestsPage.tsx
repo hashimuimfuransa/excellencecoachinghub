@@ -150,7 +150,11 @@ const PsychometricTestsPage: React.FC = () => {
         setTimeRemaining(prev => prev - 1);
       }, 1000);
     } else if (timeRemaining === 0 && testInProgress) {
-      handleTestSubmit();
+      // Auto-submit when time runs out - this is handled by the TestTakingPage component
+      // The test taking logic is now in a separate component, so we just reset the state
+      setTestInProgress(false);
+      setCurrentSession(null);
+      setTimeRemaining(0);
     }
     return () => {
       if (interval) clearInterval(interval);

@@ -589,11 +589,10 @@ const Navbar: React.FC = () => {
                 ) : (
                   <Box sx={{ 
                     display: 'flex', 
-                    alignItems: 'center', 
+                    alignItems: isSmallTablet ? 'stretch' : 'center', 
                     gap: { xs: 1, sm: 1.5, md: 2, lg: 1.5, xl: 2 }, 
                     ml: { xs: 1, sm: 1.5, md: 2, lg: 1.5, xl: 2 },
-                    flexDirection: isSmallTablet ? 'column' : 'row',
-                    alignItems: isSmallTablet ? 'stretch' : 'center'
+                    flexDirection: isSmallTablet ? 'column' : 'row'
                   }}>
                     <Typography
                       variant="body2"

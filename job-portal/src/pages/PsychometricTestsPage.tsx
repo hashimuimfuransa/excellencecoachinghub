@@ -101,6 +101,50 @@ const PsychometricTestsPage: React.FC = () => {
 
   const [hasCompletedTests, setHasCompletedTests] = useState(false);
 
+  // Helper function to check popup permissions and open test
+  const openTestInNewTab = (testUrl: string, jobTitle: string) => {
+    try {
+      // First, try to open a test popup to check if popups are allowed
+      const testPopup = window.open('', '_blank', 'width=1,height=1,left=-1000,top=-1000');
+      
+      if (testPopup) {
+        // Popup was allowed, close the test popup and open the real test
+        testPopup.close();
+        
+        // Open the actual test
+        const testWindow = window.open(testUrl, '_blank');
+        
+        if (testWindow) {
+          return testWindow;
+        } else {
+          throw new Error('Failed to open test window');
+        }
+      } else {
+        // Popup was blocked
+        throw new Error('popup_blocked');
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message === 'popup_blocked') {
+        // Show popup permission dialog
+        setError(`Popup blocked! Please allow popups for this site to take the psychometric test for "${jobTitle}". 
+        
+To enable popups:
+1. Click the popup blocker icon in your browser's address bar
+2. Select "Always allow popups from this site"
+3. Refresh the page and try again
+
+Alternatively, you can:
+- Check your browser's popup settings
+- Disable popup blockers for this site
+- Try using a different browser`);
+        return null;
+      } else {
+        setError(`Failed to open test window: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        return null;
+      }
+    }
+  };
+
   useEffect(() => {
     loadJobs();
     loadTestHistory();
@@ -291,9 +335,9 @@ const PsychometricTestsPage: React.FC = () => {
       setTestInProgress(true);
       setCurrentSession(session);
       
-      // Open test in new tab
+      // Open test in new tab with popup permission check
       const testUrl = `/test-taking?sessionId=${session.sessionId}&jobTitle=${encodeURIComponent(job.title)}&company=${encodeURIComponent(job.company)}`;
-      const testWindow = window.open(testUrl, '_blank');
+      const testWindow = openTestInNewTab(testUrl, job.title);
       
       // Listen for test completion/window close
       if (testWindow) {
@@ -306,6 +350,10 @@ const PsychometricTestsPage: React.FC = () => {
             clearInterval(checkClosed);
           }
         }, 1000);
+      } else {
+        // Popup was blocked, reset the test state
+        setTestInProgress(false);
+        setCurrentSession(null);
       }
       
     } catch (error: any) {
@@ -584,9 +632,9 @@ const PsychometricTestsPage: React.FC = () => {
       setTestInProgress(true);
       setCurrentSession(session);
       
-      // Open test in new tab
+      // Open test in new tab with popup permission check
       const testUrl = `/test-taking?sessionId=${session.sessionId}&jobTitle=${encodeURIComponent(job.title)}&company=${encodeURIComponent(job.company)}&type=premium`;
-      const testWindow = window.open(testUrl, '_blank');
+      const testWindow = openTestInNewTab(testUrl, job.title);
       
       // Listen for test completion/window close
       if (testWindow) {
@@ -599,6 +647,10 @@ const PsychometricTestsPage: React.FC = () => {
             clearInterval(checkClosed);
           }
         }, 1000);
+      } else {
+        // Popup was blocked, reset the test state
+        setTestInProgress(false);
+        setCurrentSession(null);
       }
       
       console.log('🎯 Premium test started successfully!');
@@ -729,9 +781,18 @@ const PsychometricTestsPage: React.FC = () => {
         <Typography variant="h4" gutterBottom>
           Psychometric Assessments
         </Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
           Take job-specific psychometric tests to showcase your abilities to employers
         </Typography>
+        
+        {/* Popup Permission Notice */}
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <AlertTitle>Important: Popup Permission Required</AlertTitle>
+          <Typography variant="body2">
+            Psychometric tests open in a new tab/window. Please ensure your browser allows popups for this site.
+            If you see a popup blocker notification, click "Allow" to proceed with the test.
+          </Typography>
+        </Alert>
       </Box>
 
       {error && (

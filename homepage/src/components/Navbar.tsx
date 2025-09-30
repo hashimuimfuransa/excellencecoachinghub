@@ -36,7 +36,9 @@ import ThemeToggle from './ThemeToggle';
 const Navbar: React.FC = () => {
   const theme = useTheme();
   const { isDarkMode } = useThemeContext();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'lg'));
+  const isSmallTablet = useMediaQuery(theme.breakpoints.between('xs', 'md'));
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -99,7 +101,7 @@ const Navbar: React.FC = () => {
   const drawer = (
     <Box 
       sx={{ 
-        width: 280, 
+        width: { xs: 280, sm: 320, md: 350 }, 
         height: '100%',
         background: 'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5530 100%)',
         position: 'relative',
@@ -126,7 +128,7 @@ const Navbar: React.FC = () => {
       <Box sx={{ 
         position: 'relative',
         zIndex: 1,
-        p: 3, 
+        p: { xs: 2, sm: 2.5, md: 3 }, 
         borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
         display: 'flex', 
         alignItems: 'center', 
@@ -137,18 +139,8 @@ const Navbar: React.FC = () => {
             component="img"
             src="/logo1.png"
             alt="ECH Logo"
-            sx={{ height: 50, mr: 1 }}
+            sx={{ height: { xs: 40, sm: 45, md: 50 } }}
           />
-          <Typography
-            variant="h6"
-            sx={{
-              color: 'white',
-              fontWeight: 700,
-              fontSize: '1rem'
-            }}
-          >
-      
-          </Typography>
         </Box>
         <IconButton 
           onClick={handleDrawerToggle}
@@ -166,7 +158,7 @@ const Navbar: React.FC = () => {
       </Box>
       
       {/* Navigation Items */}
-      <List sx={{ pt: 2, position: 'relative', zIndex: 1 }}>
+      <List sx={{ pt: { xs: 1.5, sm: 2 }, position: 'relative', zIndex: 1 }}>
         {navItems.map((item, index) => (
           <motion.div
             key={item.label}
@@ -178,10 +170,11 @@ const Navbar: React.FC = () => {
               onClick={item.action} 
               sx={{ 
                 cursor: 'pointer',
-                mx: 2,
-                mb: 1,
+                mx: { xs: 1.5, sm: 2 },
+                mb: { xs: 0.75, sm: 1 },
                 borderRadius: '12px',
                 transition: 'all 0.3s ease',
+                py: { xs: 1, sm: 1.25 },
                 '&:hover': {
                   bgcolor: 'rgba(255, 255, 255, 0.08)',
                   transform: 'translateX(8px)',
@@ -211,7 +204,7 @@ const Navbar: React.FC = () => {
                     '& .MuiTypography-root': {
                       color: 'white',
                       fontWeight: 500,
-                      fontSize: '0.95rem'
+                      fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1rem' }
                     }
                   }}
                 />
@@ -221,7 +214,7 @@ const Navbar: React.FC = () => {
         ))}
         
         {/* Divider */}
-        <Box sx={{ mx: 3, my: 2, height: '1px', bgcolor: 'rgba(255, 255, 255, 0.1)' }} />
+        <Box sx={{ mx: { xs: 2, sm: 3 }, my: { xs: 1.5, sm: 2 }, height: '1px', bgcolor: 'rgba(255, 255, 255, 0.1)' }} />
         
         {/* Auth Section */}
         {!user ? (
@@ -235,10 +228,11 @@ const Navbar: React.FC = () => {
                 onClick={handleLogin} 
                 sx={{ 
                   cursor: 'pointer',
-                  mx: 2,
-                  mb: 1,
+                  mx: { xs: 1.5, sm: 2 },
+                  mb: { xs: 0.75, sm: 1 },
                   borderRadius: '12px',
                   transition: 'all 0.3s ease',
+                  py: { xs: 1, sm: 1.25 },
                   '&:hover': {
                     bgcolor: 'rgba(34, 197, 94, 0.2)',
                     transform: 'translateX(8px)',
@@ -249,7 +243,13 @@ const Navbar: React.FC = () => {
                   <Login sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
                   <ListItemText 
                     primary="Login"
-                    sx={{ '& .MuiTypography-root': { color: 'white', fontWeight: 500 } }}
+                    sx={{ 
+                      '& .MuiTypography-root': { 
+                        color: 'white', 
+                        fontWeight: 500,
+                        fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1rem' }
+                      } 
+                    }}
                   />
                 </Box>
               </ListItem>
@@ -264,11 +264,12 @@ const Navbar: React.FC = () => {
                 onClick={handleRegister} 
                 sx={{ 
                   cursor: 'pointer',
-                  mx: 2,
-                  mb: 1,
+                  mx: { xs: 1.5, sm: 2 },
+                  mb: { xs: 0.75, sm: 1 },
                   borderRadius: '12px',
                   background: 'linear-gradient(45deg, #22c55e, #16a34a)',
                   transition: 'all 0.3s ease',
+                  py: { xs: 1, sm: 1.25 },
                   '&:hover': {
                     background: 'linear-gradient(45deg, #16a34a, #15803d)',
                     transform: 'translateX(8px) scale(1.02)',
@@ -280,7 +281,13 @@ const Navbar: React.FC = () => {
                   <PersonAdd />
                   <ListItemText 
                     primary="Get Started"
-                    sx={{ '& .MuiTypography-root': { color: 'white', fontWeight: 600 } }}
+                    sx={{ 
+                      '& .MuiTypography-root': { 
+                        color: 'white', 
+                        fontWeight: 600,
+                        fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1rem' }
+                      } 
+                    }}
                   />
                 </Box>
               </ListItem>
@@ -293,15 +300,22 @@ const Navbar: React.FC = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3, delay: 0.6 }}
             >
-              <ListItem sx={{ mx: 2, mb: 1 }}>
+              <ListItem sx={{ mx: { xs: 1.5, sm: 2 }, mb: { xs: 0.75, sm: 1 }, py: { xs: 1, sm: 1.25 } }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, color: 'white' }}>
                   <AccountCircle sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
                   <ListItemText 
                     primary={`Welcome, ${user.firstName}!`}
                     secondary={user.email}
                     sx={{ 
-                      '& .MuiTypography-root': { color: 'white', fontWeight: 500 },
-                      '& .MuiTypography-body2': { color: 'rgba(255, 255, 255, 0.6)' }
+                      '& .MuiTypography-root': { 
+                        color: 'white', 
+                        fontWeight: 500,
+                        fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1rem' }
+                      },
+                      '& .MuiTypography-body2': { 
+                        color: 'rgba(255, 255, 255, 0.6)',
+                        fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.9rem' }
+                      }
                     }}
                   />
                 </Box>
@@ -317,10 +331,11 @@ const Navbar: React.FC = () => {
                 onClick={handleLogout} 
                 sx={{ 
                   cursor: 'pointer',
-                  mx: 2,
-                  mb: 1,
+                  mx: { xs: 1.5, sm: 2 },
+                  mb: { xs: 0.75, sm: 1 },
                   borderRadius: '12px',
                   transition: 'all 0.3s ease',
+                  py: { xs: 1, sm: 1.25 },
                   '&:hover': {
                     bgcolor: 'rgba(244, 67, 54, 0.2)',
                     transform: 'translateX(8px)',
@@ -331,7 +346,13 @@ const Navbar: React.FC = () => {
                   <ExitToApp sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
                   <ListItemText 
                     primary="Logout"
-                    sx={{ '& .MuiTypography-root': { color: 'white', fontWeight: 500 } }}
+                    sx={{ 
+                      '& .MuiTypography-root': { 
+                        color: 'white', 
+                        fontWeight: 500,
+                        fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1rem' }
+                      } 
+                    }}
                   />
                 </Box>
               </ListItem>
@@ -345,7 +366,7 @@ const Navbar: React.FC = () => {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3, delay: 0.8 }}
         >
-          <ListItem sx={{ mx: 2, mb: 1, justifyContent: 'center' }}>
+          <ListItem sx={{ mx: { xs: 1.5, sm: 2 }, mb: { xs: 0.75, sm: 1 }, justifyContent: 'center', py: { xs: 1, sm: 1.25 } }}>
             <ThemeToggle size="medium" sx={{ mx: 'auto' }} />
           </ListItem>
         </motion.div>
@@ -357,12 +378,15 @@ const Navbar: React.FC = () => {
         bottom: 0, 
         left: 0, 
         right: 0, 
-        p: 3, 
+        p: { xs: 2, sm: 2.5, md: 3 }, 
         borderTop: '1px solid rgba(255, 255, 255, 0.1)',
         textAlign: 'center',
         zIndex: 1
       }}>
-        <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
+        <Typography variant="caption" sx={{ 
+          color: 'rgba(255, 255, 255, 0.5)',
+          fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.8rem' }
+        }}>
           © 2024 Excellence Coaching Hub
         </Typography>
       </Box>
@@ -396,7 +420,12 @@ const Navbar: React.FC = () => {
         }}
       >
         <Container maxWidth="xl">
-          <Toolbar sx={{ justifyContent: 'space-between', py: { xs: 0.5, sm: 1 }, minHeight: { xs: 56, sm: 64 } }}>
+          <Toolbar sx={{ 
+            justifyContent: 'space-between', 
+            py: { xs: 0.5, sm: 0.75, md: 1, lg: 1, xl: 1.25 }, 
+            minHeight: { xs: 56, sm: 60, md: 64, lg: 64, xl: 68 },
+            px: { xs: 1, sm: 2, md: 3, lg: 3, xl: 4 }
+          }}>
             {/* Logo */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -416,53 +445,21 @@ const Navbar: React.FC = () => {
                   src="/logo1.png"
                   alt="Excellence Coaching Hub Logo"
                   sx={{
-                    height: { xs: 60, sm: 70, md: 80 },
-                    mr: { xs: 1.5, sm: 2 },
+                    height: { xs: 50, sm: 60, md: 70, lg: 80, xl: 85 },
                     transition: 'all 0.3s ease-in-out'
                   }}
                 />
-                <Typography
-                  variant="h6"
-                  component="div"
-                  sx={{
-                    fontWeight: 700,
-                    color: scrolled 
-                      ? isDarkMode 
-                        ? 'rgba(255, 255, 255, 0.9)' 
-                        : 'text.primary'
-                      : 'white',
-                    fontSize: { xs: '0.9rem', sm: '1.1rem', md: '1.25rem' },
-                    textShadow: scrolled ? 'none' : '0px 1px 2px rgba(0,0,0,0.3)',
-                    lineHeight: 1.2,
-                    display: { xs: 'none', sm: 'block' }
-                  }}
-                >
-            
-                </Typography>
-                <Typography
-                  variant="body1"
-                  component="div"
-                  sx={{
-                    fontWeight: 700,
-                    color: scrolled 
-                      ? isDarkMode 
-                        ? 'rgba(255, 255, 255, 0.9)' 
-                        : 'text.primary'
-                      : 'white',
-                    fontSize: '0.8rem',
-                    textShadow: scrolled ? 'none' : '0px 1px 2px rgba(0,0,0,0.3)',
-                    lineHeight: 1.2,
-                    display: { xs: 'block', sm: 'none' }
-                  }}
-                >
-                
-                </Typography>
               </Box>
             </motion.div>
 
             {/* Desktop Navigation */}
             {!isMobile && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: { xs: 1, sm: 2, md: 2.5, lg: 2, xl: 2.5 },
+                flexWrap: isTablet ? 'wrap' : 'nowrap'
+              }}>
                 {navItems.map((item, index) => (
                   <motion.div
                     key={item.label}
@@ -480,6 +477,10 @@ const Navbar: React.FC = () => {
                           : 'white',
                         fontWeight: 500,
                         textTransform: 'none',
+                        fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.85rem', lg: '0.85rem', xl: '0.9rem' },
+                        px: { xs: 1, sm: 1.5, md: 2, lg: 1.5, xl: 2 },
+                        py: { xs: 0.5, sm: 0.75, md: 1, lg: 0.75 },
+                        minWidth: 'auto',
                         '&:hover': {
                           bgcolor: scrolled 
                             ? isDarkMode 
@@ -505,7 +506,13 @@ const Navbar: React.FC = () => {
 
                 {/* Auth Buttons */}
                 {!user ? (
-                  <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: { xs: 0.5, sm: 1, lg: 1, xl: 1.5 }, 
+                    ml: { xs: 1, sm: 1.5, md: 2, lg: 1.5, xl: 2 },
+                    flexDirection: isSmallTablet ? 'column' : 'row',
+                    alignItems: isSmallTablet ? 'stretch' : 'center'
+                  }}>
                     <Button
                       component={motion.button}
                       whileHover={{ 
@@ -529,7 +536,10 @@ const Navbar: React.FC = () => {
                           : 'white',
                         borderWidth: '1px',
                         borderRadius: '4px',
-                        px: 2,
+                        px: { xs: 1.5, sm: 2, lg: 1.5, xl: 2 },
+                        py: { xs: 0.5, sm: 0.75, lg: 0.75, xl: 1 },
+                        fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.85rem', lg: '0.8rem', xl: '0.85rem' },
+                        minWidth: { xs: 'auto', sm: '80px', lg: '75px', xl: '80px' },
                         '&:hover': {
                           borderColor: scrolled 
                             ? isDarkMode 
@@ -561,7 +571,10 @@ const Navbar: React.FC = () => {
                       sx={{
                         bgcolor: scrolled ? 'primary.main' : 'secondary.main',
                         borderRadius: '4px',
-                        px: 2,
+                        px: { xs: 1.5, sm: 2, lg: 1.5, xl: 2 },
+                        py: { xs: 0.5, sm: 0.75, lg: 0.75, xl: 1 },
+                        fontSize: { xs: '0.75rem', sm: '0.8rem', md: '0.85rem', lg: '0.8rem', xl: '0.85rem' },
+                        minWidth: { xs: 'auto', sm: '100px', lg: '90px', xl: '100px' },
                         boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)',
                         '&:hover': {
                           bgcolor: scrolled ? 'primary.dark' : 'secondary.dark',
@@ -574,7 +587,14 @@ const Navbar: React.FC = () => {
                     </Button>
                   </Box>
                 ) : (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, ml: 2 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: { xs: 1, sm: 1.5, md: 2, lg: 1.5, xl: 2 }, 
+                    ml: { xs: 1, sm: 1.5, md: 2, lg: 1.5, xl: 2 },
+                    flexDirection: isSmallTablet ? 'column' : 'row',
+                    alignItems: isSmallTablet ? 'stretch' : 'center'
+                  }}>
                     <Typography
                       variant="body2"
                       sx={{ 
@@ -584,7 +604,9 @@ const Navbar: React.FC = () => {
                             : 'text.primary'
                           : 'white',
                         fontWeight: 500,
-                        textShadow: scrolled ? 'none' : '0px 1px 2px rgba(0,0,0,0.2)'
+                        fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.8rem', lg: '0.75rem', xl: '0.8rem' },
+                        textShadow: scrolled ? 'none' : '0px 1px 2px rgba(0,0,0,0.2)',
+                        display: { xs: 'none', sm: 'block' }
                       }}
                     >
                       Welcome, {user.firstName}!
@@ -612,6 +634,10 @@ const Navbar: React.FC = () => {
                           : 'white',
                         borderRadius: '4px',
                         borderWidth: '1px',
+                        px: { xs: 1.5, sm: 2, lg: 1.5, xl: 2 },
+                        py: { xs: 0.5, sm: 0.75, lg: 0.75, xl: 1 },
+                        fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.8rem', lg: '0.75rem', xl: '0.8rem' },
+                        minWidth: { xs: 'auto', sm: '80px', lg: '75px', xl: '80px' },
                         '&:hover': {
                           borderColor: scrolled 
                             ? isDarkMode 
@@ -670,10 +696,10 @@ const Navbar: React.FC = () => {
           keepMounted: true, // Better open performance on mobile.
         }}
         sx={{
-          display: { xs: 'block', md: 'none' },
+          display: { xs: 'block', lg: 'none' },
           '& .MuiDrawer-paper': { 
             boxSizing: 'border-box', 
-            width: 280,
+            width: { xs: 280, sm: 320, md: 350 },
             border: 'none',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
           },

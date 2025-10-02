@@ -351,6 +351,7 @@ export const useJobFilters = ({
         return false;
       });
     }
+    // If no categories are selected, show all opportunities (no filtering)
 
     // Companies filter
     if (filters.companies.length > 0) {

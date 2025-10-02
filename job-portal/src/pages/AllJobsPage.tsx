@@ -1264,7 +1264,7 @@ const AllJobsPage: React.FC = () => {
                       <Button 
                         variant="outlined" 
                         onClick={() => {
-                          clearAllFilters();
+                          clearFilters();
                         }}
                         sx={{ borderRadius: 3 }}
                       >

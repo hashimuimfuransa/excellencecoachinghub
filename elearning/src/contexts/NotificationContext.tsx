@@ -41,52 +41,27 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       setLoading(true);
       setError(null);
 
-      // Use Promise.allSettled to handle partial failures gracefully
-      const [notificationResult, unreadCountResult, statsResult] = await Promise.allSettled([
-        notificationService.getNotifications({ limit: 10, isRead: false }),
-        notificationService.getUnreadCount(),
-        notificationService.getNotificationStats()
+      // Only fetch unread count to reduce API calls
+      // Stats and full notifications can be fetched on demand
+      const unreadCountResult = await Promise.allSettled([
+        notificationService.getUnreadCount()
       ]);
 
-      // Handle notifications
-      if (notificationResult.status === 'fulfilled') {
-        setNotifications(notificationResult.value.notifications);
-        console.log('📥 NotificationContext: Loaded notifications:', notificationResult.value.notifications.length);
-      } else {
-        console.error('Failed to load notifications:', notificationResult.reason);
-        // Keep existing notifications if available
-      }
-
       // Handle unread count
-      if (unreadCountResult.status === 'fulfilled') {
-        setUnreadCount(unreadCountResult.value);
-        console.log('📥 NotificationContext: Unread count:', unreadCountResult.value);
+      if (unreadCountResult[0].status === 'fulfilled') {
+        setUnreadCount(unreadCountResult[0].value);
+        console.log('📥 NotificationContext: Unread count:', unreadCountResult[0].value);
       } else {
-        console.error('Failed to load unread count:', unreadCountResult.reason);
+        console.error('Failed to load unread count:', unreadCountResult[0].reason);
         // Keep existing count if available
-      }
-
-      // Handle stats
-      if (statsResult.status === 'fulfilled') {
-        setStats(statsResult.value);
-        console.log('📥 NotificationContext: Stats loaded');
-      } else {
-        console.error('Failed to load stats:', statsResult.reason);
-        // Keep existing stats if available
-      }
-
-      // Only set error if all requests failed
-      const allFailed = [notificationResult, unreadCountResult, statsResult].every(
-        result => result.status === 'rejected'
-      );
-      
-      if (allFailed) {
-        setError('Unable to load notification data. Please check your connection.');
       }
 
     } catch (err: any) {
       console.error('❌ NotificationContext: Unexpected error loading notifications:', err);
-      setError(err?.message || 'Failed to load notifications');
+      // Don't set error for rate limiting issues, just log them
+      if (!err?.message?.includes('429') && !err?.message?.includes('Too Many Requests')) {
+        setError(err?.message || 'Failed to load notifications');
+      }
     } finally {
       setLoading(false);
     }
@@ -235,12 +210,16 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   }, [user]);
 
-  // Set up real-time notification polling
+  // Set up real-time notification polling with exponential backoff
   useEffect(() => {
     if (!user) return;
 
-    // Poll for new notifications every 30 seconds
-    const pollInterval = setInterval(async () => {
+    let pollInterval = 60000; // Start with 1 minute
+    let maxInterval = 300000; // Max 5 minutes
+    let currentInterval = pollInterval;
+    let timeoutId: NodeJS.Timeout;
+
+    const pollForNotifications = async () => {
       try {
         const newUnreadCount = await notificationService.getUnreadCount();
         
@@ -251,14 +230,32 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
           // Update unread count even if it didn't increase
           setUnreadCount(newUnreadCount);
         }
-      } catch (err) {
+        
+        // Reset interval to normal on success
+        currentInterval = pollInterval;
+      } catch (err: any) {
         console.error('Error polling for notifications:', err);
+        
+        // If it's a rate limiting error, increase the interval
+        if (err?.message?.includes('429') || err?.message?.includes('Too Many Requests')) {
+          currentInterval = Math.min(currentInterval * 2, maxInterval);
+          console.log(`Rate limited, increasing poll interval to ${currentInterval}ms`);
+        }
         // Don't break the polling loop, just log the error
-        // The next poll attempt will try again
       }
-    }, 30000);
 
-    return () => clearInterval(pollInterval);
+      // Schedule next poll with current interval
+      timeoutId = setTimeout(pollForNotifications, currentInterval);
+    };
+
+    // Initial poll
+    pollForNotifications();
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [user, unreadCount]);
 
   // Simulate real-time notifications for demo purposes

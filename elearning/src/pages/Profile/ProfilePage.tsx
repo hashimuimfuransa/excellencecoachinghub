@@ -30,7 +30,20 @@ import {
   OutlinedInput,
   InputAdornment,
   CircularProgress,
-  Tooltip
+  Tooltip,
+  Select,
+  MenuItem,
+  FormControlLabel,
+  Checkbox,
+  Autocomplete,
+  Stack,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Stepper,
+  Step,
+  StepLabel,
+  StepContent
 } from '@mui/material';
 import {
   Edit,
@@ -52,12 +65,27 @@ import {
   Key,
   AccountCircle,
   Dashboard,
-  Analytics
+  Analytics,
+  School,
+  Work,
+  LocationOn,
+  Phone,
+  Language,
+  Psychology,
+  ExpandMore,
+  Add,
+  Delete,
+  CheckCircle,
+  Warning,
+  Info
 } from '@mui/icons-material';
 
 import { useAuth } from '../../hooks/useAuth';
 import { userService, UpdateProfileData, ChangePasswordData } from '../../services/userService';
-import { IUser } from '../../shared/types';
+import { studentProfileService, IUpdateStudentProfileData } from '../../services/studentProfileService';
+import { IUser, IStudentProfile, UserRole } from '../../shared/types';
+import ResponsiveDashboard from '../../components/Layout/ResponsiveDashboard';
+import { useResponsive } from '../../utils/responsive';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -85,6 +113,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other })
 
 const ProfilePage: React.FC = () => {
   const { user, updateUser } = useAuth();
+  const { isMobile, isTablet, isDesktop } = useResponsive();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -96,6 +125,16 @@ const ProfilePage: React.FC = () => {
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
     email: user?.email || ''
+  });
+
+  // Student profile state
+  const [studentProfile, setStudentProfile] = useState<IStudentProfile | null>(null);
+  const [editingStudentProfile, setEditingStudentProfile] = useState(false);
+  const [studentProfileData, setStudentProfileData] = useState<IUpdateStudentProfileData>({});
+  const [profileCompletion, setProfileCompletion] = useState({
+    percentage: 0,
+    missingFields: [] as string[],
+    isComplete: false
   });
 
   // Password change state
@@ -135,6 +174,70 @@ const ProfilePage: React.FC = () => {
     }
   }, [user]);
 
+  // Listen for profile update events to refresh data
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      // Reload profile data when updated
+      if (user) {
+        const loadStudentProfile = async () => {
+          const userRoleString = String(user?.role).toLowerCase();
+          const userIsStudent = user?.role === UserRole.STUDENT || user?.role === 'student' || userRoleString === 'student';
+          
+          if (userIsStudent) {
+            try {
+              const response = await studentProfileService.getMyProfile();
+              setStudentProfile(response.profile);
+              setProfileCompletion({
+                percentage: response.completionPercentage,
+                missingFields: response.missingFields,
+                isComplete: response.completionPercentage === 100
+              });
+            } catch (error) {
+              console.error('Failed to reload student profile:', error);
+            }
+          }
+        };
+        loadStudentProfile();
+      }
+    };
+
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+    };
+  }, [user]);
+
+  // Load student profile if user is a student
+  useEffect(() => {
+    const loadStudentProfile = async () => {
+      console.log('🔍 Loading student profile - User role:', user?.role);
+      const userRoleString = String(user?.role).toLowerCase();
+      const userIsStudent = user?.role === UserRole.STUDENT || user?.role === 'student' || userRoleString === 'student';
+      
+      if (userIsStudent) {
+        try {
+          console.log('✅ User is a student, loading profile...');
+          const response = await studentProfileService.getMyProfile();
+          setStudentProfile(response.profile);
+          setProfileCompletion({
+            percentage: response.completionPercentage,
+            missingFields: response.missingFields,
+            isComplete: response.completionPercentage === 100
+          });
+        } catch (error) {
+          console.error('Failed to load student profile:', error);
+          // Profile might not exist yet, that's okay
+        }
+      } else {
+        console.log('❌ User is not a student, skipping profile load. Role:', user?.role);
+      }
+    };
+
+    if (user) {
+      loadStudentProfile();
+    }
+  }, [user]);
+
   // Clear alerts after 5 seconds
   useEffect(() => {
     if (error || success) {
@@ -152,10 +255,21 @@ const ProfilePage: React.FC = () => {
 
   const handleProfileEdit = () => {
     setEditingProfile(true);
+    
+    // Also enable student profile editing if user is a student
+    if (isStudent) {
+      handleStudentProfileEdit();
+    }
   };
 
   const handleProfileCancel = () => {
     setEditingProfile(false);
+    
+    // Also cancel student profile editing if user is a student
+    if (isStudent) {
+      handleStudentProfileCancel();
+    }
+    
     if (user) {
       setProfileData({
         firstName: user.firstName,
@@ -173,9 +287,94 @@ const ProfilePage: React.FC = () => {
       const updatedUser = await userService.updateProfile(profileData);
       updateUser(updatedUser);
       setEditingProfile(false);
+      
+      // Also save student profile if user is a student and student profile is being edited
+      if (isStudent && editingStudentProfile) {
+        await handleStudentProfileSave();
+      }
+      
       setSuccess('Profile updated successfully');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Student profile handlers
+  const handleStudentProfileEdit = () => {
+    if (studentProfile) {
+      setStudentProfileData({
+        // Map to backend fields
+        age: studentProfile.age,
+        educationLevel: (studentProfile as any).educationLevel || studentProfile.currentEducationLevel,
+        jobInterests: (studentProfile as any).jobInterests || studentProfile.academicInterests || [],
+        careerGoals: Array.isArray(studentProfile.careerGoals) ? 
+                     studentProfile.careerGoals.join(', ') : 
+                     (studentProfile.careerGoals || ''),
+        // Additional fields
+        dateOfBirth: studentProfile.dateOfBirth,
+        gender: studentProfile.gender,
+        phone: studentProfile.phone,
+        address: studentProfile.address,
+        emergencyContact: studentProfile.emergencyContact,
+        currentEducationLevel: studentProfile.currentEducationLevel,
+        schoolName: studentProfile.schoolName,
+        fieldOfStudy: studentProfile.fieldOfStudy,
+        graduationYear: studentProfile.graduationYear,
+        gpa: studentProfile.gpa,
+        academicInterests: studentProfile.academicInterests || [],
+        preferredCareerPath: studentProfile.preferredCareerPath || [],
+        workExperience: studentProfile.workExperience || [],
+        skills: studentProfile.skills || [],
+        languages: studentProfile.languages || [],
+        preferredLearningStyle: studentProfile.preferredLearningStyle,
+        studySchedule: studentProfile.studySchedule,
+        learningGoals: studentProfile.learningGoals || []
+      });
+    }
+    setEditingStudentProfile(true);
+  };
+
+  const handleStudentProfileCancel = () => {
+    setEditingStudentProfile(false);
+    setStudentProfileData({});
+  };
+
+  const handleStudentProfileSave = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Validate profile data
+      const validation = studentProfileService.validateProfileData(studentProfileData);
+      if (!validation.isValid) {
+        setError(validation.errors.join(', '));
+        return;
+      }
+
+      // Calculate age if date of birth is provided
+      if (studentProfileData.dateOfBirth) {
+        studentProfileData.age = studentProfileService.calculateAge(studentProfileData.dateOfBirth);
+      }
+
+      const response = await studentProfileService.updateMyProfile(studentProfileData);
+      setStudentProfile(response.profile);
+      setProfileCompletion({
+        percentage: response.completionPercentage,
+        missingFields: response.missingFields,
+        isComplete: response.completionPercentage === 100
+      });
+      setEditingStudentProfile(false);
+      setStudentProfileData({});
+      setSuccess('Student profile updated successfully');
+      
+      // Force refresh of profile data
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('profileUpdated'));
+      }, 1000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update student profile');
     } finally {
       setLoading(false);
     }
@@ -283,23 +482,147 @@ const ProfilePage: React.FC = () => {
 
   if (!user) {
     return (
-      <Container>
+      <ResponsiveDashboard>
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
-      </Container>
+      </ResponsiveDashboard>
+    );
+  }
+
+  // More robust role detection with string comparison
+  const userRoleString = String(user.role || '').toLowerCase();
+  
+  // Proper role detection logic - NO FALLBACK
+  const isStudent = user.role === UserRole.STUDENT || user.role === 'student' || userRoleString === 'student';
+  const isTeacher = user.role === UserRole.TEACHER || user.role === 'teacher' || userRoleString === 'teacher';
+  const isAdmin = user.role === UserRole.ADMIN || user.role === 'admin' || userRoleString === 'admin';
+  
+  // Only show profile if user has a valid role
+  const hasValidRole = isStudent || isTeacher || isAdmin;
+  const finalIsStudent = isStudent;
+  const finalIsTeacher = isTeacher;
+  const finalIsAdmin = isAdmin;
+
+  // Debug logging for role detection
+  console.log('🔍 Profile Page - User Role Debug:', {
+    userRole: user.role,
+    userRoleType: typeof user.role,
+    userRoleString: String(user.role),
+    userRoleStringLower: userRoleString,
+    UserRoleEnum: UserRole,
+    STUDENT_VALUE: UserRole.STUDENT,
+    TEACHER_VALUE: UserRole.TEACHER,
+    ADMIN_VALUE: UserRole.ADMIN,
+    isStudent,
+    isTeacher,
+    isAdmin,
+    hasValidRole,
+    finalIsStudent,
+    finalIsTeacher,
+    finalIsAdmin,
+    userObject: user,
+    localStorageUser: localStorage.getItem('user'),
+    localStorageUserParsed: JSON.parse(localStorage.getItem('user') || '{}')
+  });
+
+  // Get appropriate title and description based on role
+  const getProfileTitle = () => {
+    if (finalIsStudent) return 'Student Profile';
+    if (finalIsTeacher) return 'Teacher Profile';
+    if (finalIsAdmin) return 'Admin Profile';
+    return 'Profile'; // Only for valid roles
+  };
+
+  const getProfileDescription = () => {
+    if (finalIsStudent) return 'Complete your student profile to get personalized learning recommendations';
+    if (finalIsTeacher) return 'Manage your teacher profile and account settings';
+    if (finalIsAdmin) return 'Manage your account settings and preferences';
+    return 'Manage your account settings and preferences'; // Only for valid roles
+  };
+
+  // If no valid role is detected, show error message
+  if (!hasValidRole) {
+    return (
+      <ResponsiveDashboard>
+        <Box mb={4}>
+          <Typography variant={isMobile ? "h5" : "h4"} gutterBottom color="error">
+            Profile Access Error
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Unable to determine your user role. Please contact support or try logging in again.
+          </Typography>
+          <Box mt={3}>
+            <Typography variant="body2" color="text.secondary">
+              Debug Information:
+            </Typography>
+            <Typography variant="caption" component="pre" sx={{ 
+              backgroundColor: 'grey.100', 
+              p: 2, 
+              borderRadius: 1, 
+              mt: 1,
+              fontSize: '0.75rem',
+              overflow: 'auto'
+            }}>
+              {JSON.stringify({
+                userRole: user.role,
+                userRoleType: typeof user.role,
+                userRoleString: String(user.role),
+                userRoleStringLower: userRoleString,
+                hasValidRole,
+                isStudent,
+                isTeacher,
+                isAdmin
+              }, null, 2)}
+            </Typography>
+          </Box>
+        </Box>
+      </ResponsiveDashboard>
     );
   }
 
   return (
-    <Container maxWidth="lg">
+    <ResponsiveDashboard>
       <Box mb={4}>
-        <Typography variant="h4" gutterBottom>
-          Admin Profile
+        <Typography variant={isMobile ? "h5" : "h4"} gutterBottom>
+          {getProfileTitle()}
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Manage your account settings and preferences
+          {getProfileDescription()}
         </Typography>
+        
+        {/* Profile Completion Progress for Students */}
+        {finalIsStudent && (
+          <Box mt={2}>
+            <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+              <Typography variant="body2" color="text.secondary">
+                Profile Completion
+              </Typography>
+              <Typography variant="body2" color="primary.main" fontWeight={600}>
+                {profileCompletion.percentage}%
+              </Typography>
+            </Box>
+            <LinearProgress
+              variant="determinate"
+              value={profileCompletion.percentage}
+              sx={{
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: 'grey.200',
+                '& .MuiLinearProgress-bar': {
+                  borderRadius: 4,
+                  backgroundColor: profileCompletion.percentage === 100 ? 'success.main' : 'primary.main'
+                }
+              }}
+            />
+            {profileCompletion.missingFields.length > 0 && (
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                Missing: {profileCompletion.missingFields.slice(0, 3).join(', ')}
+                {profileCompletion.missingFields.length > 3 && ` and ${profileCompletion.missingFields.length - 3} more`}
+              </Typography>
+            )}
+          </Box>
+        )}
       </Box>
 
       {/* Alerts */}
@@ -314,7 +637,7 @@ const ProfilePage: React.FC = () => {
         </Alert>
       )}
 
-      <Grid container spacing={3}>
+      <Grid container spacing={{ xs: 2, sm: 3 }}>
         {/* Profile Overview Card */}
         <Grid item xs={12} md={4}>
           <Card>
@@ -366,27 +689,41 @@ const ProfilePage: React.FC = () => {
                     <Typography variant="caption" display="block" sx={{ mb: 1 }}>
                       New avatar selected
                     </Typography>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={handleAvatarUpload}
-                      disabled={loading}
-                      sx={{ mr: 1 }}
-                      startIcon={loading ? <CircularProgress size={16} /> : <PhotoCamera />}
+                    <Box 
+                      display="flex" 
+                      flexDirection={{ xs: 'column', sm: 'row' }}
+                      gap={{ xs: 1, sm: 1 }}
+                      alignItems={{ xs: 'stretch', sm: 'center' }}
                     >
-                      {loading ? 'Uploading...' : 'Upload'}
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => {
-                        setAvatarFile(null);
-                        setAvatarPreview(null);
+                      <Button
+                        variant="contained"
+                        size="small"
+                        onClick={handleAvatarUpload}
+                        disabled={loading}
+                        startIcon={loading ? <CircularProgress size={16} /> : <PhotoCamera />}
+                        sx={{ 
+                        width: { xs: '100%', sm: 'auto' },
+                        minWidth: { xs: 'auto', sm: 120 }
                       }}
-                      disabled={loading}
-                    >
-                      Cancel
-                    </Button>
+                      >
+                        {loading ? 'Uploading...' : 'Upload'}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => {
+                          setAvatarFile(null);
+                          setAvatarPreview(null);
+                        }}
+                        disabled={loading}
+                        sx={{ 
+                        width: { xs: '100%', sm: 'auto' },
+                        minWidth: { xs: 'auto', sm: 120 }
+                      }}
+                      >
+                        Cancel
+                      </Button>
+                    </Box>
                   </Box>
                 )}
 
@@ -395,8 +732,18 @@ const ProfilePage: React.FC = () => {
                 </Typography>
 
                 <Chip
-                  icon={<AdminPanelSettings />}
-                  label="Administrator"
+                  icon={
+                    finalIsStudent ? <School /> : 
+                    finalIsTeacher ? <School /> : 
+                    finalIsAdmin ? <AdminPanelSettings /> : 
+                    <Person />
+                  }
+                  label={
+                    finalIsStudent ? "Student" : 
+                    finalIsTeacher ? "Teacher" : 
+                    finalIsAdmin ? "Administrator" : 
+                    "User"
+                  }
                   color="primary"
                   variant="outlined"
                   sx={{ mb: 2 }}
@@ -465,17 +812,9 @@ const ProfilePage: React.FC = () => {
                   <ListItemText
                     primary="Security Score"
                     secondary={
-                      <Box display="flex" alignItems="center" mt={1}>
-                        <LinearProgress
-                          variant="determinate"
-                          value={profileStats.securityScore}
-                          color={getSecurityScoreColor(profileStats.securityScore) as any}
-                          sx={{ flexGrow: 1, mr: 1 }}
-                        />
-                        <Typography variant="caption">
-                          {profileStats.securityScore}%
-                        </Typography>
-                      </Box>
+                      <Typography component="span" variant="body2" color="text.secondary">
+                        {profileStats.securityScore}%
+                      </Typography>
                     }
                   />
                 </ListItem>
@@ -492,9 +831,13 @@ const ProfilePage: React.FC = () => {
               onChange={handleTabChange}
               indicatorColor="primary"
               textColor="primary"
-              variant="fullWidth"
+              variant={isMobile ? "scrollable" : "fullWidth"}
+              scrollButtons="auto"
             >
               <Tab icon={<Person />} label="Personal Info" />
+              {finalIsStudent && <Tab icon={<School />} label="Academic Info" />}
+              {finalIsStudent && <Tab icon={<Work />} label="Career & Skills" />}
+              {finalIsStudent && <Tab icon={<Psychology />} label="Learning Preferences" />}
               <Tab icon={<Security />} label="Security" />
               <Tab icon={<Settings />} label="Preferences" />
               <Tab icon={<Analytics />} label="Activity" />
@@ -503,24 +846,43 @@ const ProfilePage: React.FC = () => {
             {/* Personal Information Tab */}
             <TabPanel value={currentTab} index={0}>
               <Box>
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                <Box 
+                  display="flex" 
+                  justifyContent="space-between" 
+                  alignItems={{ xs: 'flex-start', sm: 'center' }} 
+                  mb={3}
+                  flexDirection={{ xs: 'column', sm: 'row' }}
+                  gap={{ xs: 2, sm: 0 }}
+                >
                   <Typography variant="h6">Personal Information</Typography>
                   {!editingProfile ? (
                     <Button
                       variant="outlined"
                       startIcon={<Edit />}
                       onClick={handleProfileEdit}
+                      sx={{ 
+                        width: { xs: '100%', sm: 'auto' },
+                        minWidth: { xs: 'auto', sm: 120 }
+                      }}
                     >
                       Edit Profile
                     </Button>
                   ) : (
-                    <Box>
+                    <Box 
+                      display="flex" 
+                      flexDirection={{ xs: 'column', sm: 'row' }}
+                      gap={{ xs: 1, sm: 1 }}
+                      width={{ xs: '100%', sm: 'auto' }}
+                    >
                       <Button
                         variant="contained"
                         startIcon={<Save />}
                         onClick={handleProfileSave}
                         disabled={loading}
-                        sx={{ mr: 1 }}
+                        sx={{ 
+                          width: { xs: '100%', sm: 'auto' },
+                          minWidth: { xs: 'auto', sm: 100 }
+                        }}
                       >
                         Save
                       </Button>
@@ -528,6 +890,10 @@ const ProfilePage: React.FC = () => {
                         variant="outlined"
                         startIcon={<Cancel />}
                         onClick={handleProfileCancel}
+                        sx={{ 
+                          width: { xs: '100%', sm: 'auto' },
+                          minWidth: { xs: 'auto', sm: 100 }
+                        }}
                       >
                         Cancel
                       </Button>
@@ -535,7 +901,7 @@ const ProfilePage: React.FC = () => {
                   )}
                 </Box>
 
-                <Grid container spacing={3}>
+                <Grid container spacing={{ xs: 2, sm: 3 }}>
                   <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
@@ -571,7 +937,12 @@ const ProfilePage: React.FC = () => {
                     <TextField
                       fullWidth
                       label="Role"
-                      value="Administrator"
+                      value={
+                        finalIsStudent ? "Student" : 
+                        finalIsTeacher ? "Teacher" : 
+                        finalIsAdmin ? "Administrator" : 
+                        user.role || "User"
+                      }
                       disabled
                       variant="outlined"
                     />
@@ -585,12 +956,541 @@ const ProfilePage: React.FC = () => {
                       variant="outlined"
                     />
                   </Grid>
+                  
+                  {/* Student-specific personal information fields */}
+                  {isStudent && (
+                    <>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Date of Birth"
+                          type="date"
+                          value={editingStudentProfile ? (studentProfileData.dateOfBirth || '') : (studentProfile?.dateOfBirth || '')}
+                          onChange={(e) => setStudentProfileData({ ...studentProfileData, dateOfBirth: e.target.value })}
+                          disabled={!editingStudentProfile}
+                          variant="outlined"
+                          InputLabelProps={{ shrink: true }}
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <FormControl fullWidth>
+                          <InputLabel>Gender</InputLabel>
+                          <Select
+                            value={editingStudentProfile ? (studentProfileData.gender || '') : (studentProfile?.gender || '')}
+                            label="Gender"
+                            onChange={(e) => setStudentProfileData({ ...studentProfileData, gender: e.target.value as any })}
+                            disabled={!editingStudentProfile}
+                          >
+                            <MenuItem value="male">Male</MenuItem>
+                            <MenuItem value="female">Female</MenuItem>
+                            <MenuItem value="other">Other</MenuItem>
+                            <MenuItem value="prefer_not_to_say">Prefer not to say</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Phone Number"
+                          value={editingStudentProfile ? (studentProfileData.phone || '') : (studentProfile?.phone || '')}
+                          onChange={(e) => setStudentProfileData({ ...studentProfileData, phone: e.target.value })}
+                          disabled={!editingStudentProfile}
+                          variant="outlined"
+                          placeholder="+250 123 456 789"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Age"
+                          value={editingStudentProfile ? (studentProfileData.age || '') : (studentProfile?.age || '')}
+                          disabled
+                          variant="outlined"
+                          helperText="Calculated from date of birth"
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <TextField
+                          fullWidth
+                          label="Address"
+                          multiline
+                          rows={2}
+                          value={editingStudentProfile ? (studentProfileData.address?.street || '') : (studentProfile?.address?.street || '')}
+                          onChange={(e) => setStudentProfileData({ 
+                            ...studentProfileData, 
+                            address: { 
+                              ...studentProfileData.address, 
+                              street: e.target.value 
+                            } 
+                          })}
+                          disabled={!editingStudentProfile}
+                          variant="outlined"
+                          placeholder="Enter your address"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Emergency Contact Name"
+                          value={editingStudentProfile ? (studentProfileData.emergencyContact?.name || '') : (studentProfile?.emergencyContact?.name || '')}
+                          onChange={(e) => setStudentProfileData({ 
+                            ...studentProfileData, 
+                            emergencyContact: { 
+                              name: e.target.value,
+                              relationship: studentProfileData.emergencyContact?.relationship || '',
+                              phone: studentProfileData.emergencyContact?.phone || '',
+                              email: studentProfileData.emergencyContact?.email
+                            } 
+                          })}
+                          disabled={!editingStudentProfile}
+                          variant="outlined"
+                          placeholder="Emergency contact name"
+                        />
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Emergency Contact Phone"
+                          value={editingStudentProfile ? (studentProfileData.emergencyContact?.phone || '') : (studentProfile?.emergencyContact?.phone || '')}
+                          onChange={(e) => setStudentProfileData({ 
+                            ...studentProfileData, 
+                            emergencyContact: { 
+                              name: studentProfileData.emergencyContact?.name || '',
+                              relationship: studentProfileData.emergencyContact?.relationship || '',
+                              phone: e.target.value,
+                              email: studentProfileData.emergencyContact?.email
+                            } 
+                          })}
+                          disabled={!editingStudentProfile}
+                          variant="outlined"
+                          placeholder="Emergency contact phone"
+                        />
+                      </Grid>
+                    </>
+                  )}
                 </Grid>
               </Box>
             </TabPanel>
 
+            {/* Academic Information Tab - Students Only */}
+            {finalIsStudent && (
+              <TabPanel value={currentTab} index={1}>
+                <Box>
+                  <Box 
+                    display="flex" 
+                    justifyContent="space-between" 
+                    alignItems={{ xs: 'flex-start', sm: 'center' }} 
+                    mb={3}
+                    flexDirection={{ xs: 'column', sm: 'row' }}
+                    gap={{ xs: 2, sm: 0 }}
+                  >
+                    <Typography variant="h6">Academic Information</Typography>
+                    {!editingStudentProfile ? (
+                      <Button
+                        variant="outlined"
+                        startIcon={<Edit />}
+                        onClick={handleStudentProfileEdit}
+                        sx={{ minWidth: { xs: 'auto', sm: 140 } }}
+                      >
+                        Edit Academic Info
+                      </Button>
+                    ) : (
+                      <Box 
+                        display="flex" 
+                        flexDirection={{ xs: 'column', sm: 'row' }}
+                        gap={{ xs: 1, sm: 1 }}
+                        width={{ xs: '100%', sm: 'auto' }}
+                      >
+                        <Button
+                          variant="contained"
+                          startIcon={<Save />}
+                          onClick={handleStudentProfileSave}
+                          disabled={loading}
+                          sx={{ minWidth: { xs: 'auto', sm: 100 } }}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          startIcon={<Cancel />}
+                          onClick={handleStudentProfileCancel}
+                          sx={{ minWidth: { xs: 'auto', sm: 100 } }}
+                        >
+                          Cancel
+                        </Button>
+                      </Box>
+                    )}
+                  </Box>
+
+                  <Grid container spacing={{ xs: 2, sm: 3 }}>
+                    <Grid item xs={12} sm={6}>
+                      <FormControl fullWidth>
+                        <InputLabel>Current Education Level</InputLabel>
+                        <Select
+                          value={editingStudentProfile ? (studentProfileData.currentEducationLevel || '') : (studentProfile?.currentEducationLevel || '')}
+                          label="Current Education Level"
+                          onChange={(e) => setStudentProfileData({ ...studentProfileData, currentEducationLevel: e.target.value as any })}
+                          disabled={!editingStudentProfile}
+                        >
+                          <MenuItem value="high_school">High School</MenuItem>
+                          <MenuItem value="undergraduate">Undergraduate</MenuItem>
+                          <MenuItem value="graduate">Graduate</MenuItem>
+                          <MenuItem value="postgraduate">Postgraduate</MenuItem>
+                          <MenuItem value="other">Other</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="School/University Name"
+                        value={editingStudentProfile ? (studentProfileData.schoolName || '') : (studentProfile?.schoolName || '')}
+                        onChange={(e) => setStudentProfileData({ ...studentProfileData, schoolName: e.target.value })}
+                        disabled={!editingStudentProfile}
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Field of Study"
+                        value={editingStudentProfile ? (studentProfileData.fieldOfStudy || '') : (studentProfile?.fieldOfStudy || '')}
+                        onChange={(e) => setStudentProfileData({ ...studentProfileData, fieldOfStudy: e.target.value })}
+                        disabled={!editingStudentProfile}
+                        variant="outlined"
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Graduation Year"
+                        type="number"
+                        value={editingStudentProfile ? (studentProfileData.graduationYear || '') : (studentProfile?.graduationYear || '')}
+                        onChange={(e) => setStudentProfileData({ ...studentProfileData, graduationYear: parseInt(e.target.value) || undefined })}
+                        disabled={!editingStudentProfile}
+                        variant="outlined"
+                        inputProps={{ min: 1950, max: new Date().getFullYear() + 10 }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="GPA (0.0 - 4.0)"
+                        type="number"
+                        value={editingStudentProfile ? (studentProfileData.gpa || '') : (studentProfile?.gpa || '')}
+                        onChange={(e) => setStudentProfileData({ ...studentProfileData, gpa: parseFloat(e.target.value) || undefined })}
+                        disabled={!editingStudentProfile}
+                        variant="outlined"
+                        inputProps={{ min: 0, max: 4, step: 0.1 }}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Autocomplete
+                        multiple
+                        freeSolo
+                        options={['Mathematics', 'Science', 'Technology', 'Engineering', 'Business', 'Arts', 'Languages', 'History', 'Literature']}
+                        value={editingStudentProfile ? (studentProfileData.academicInterests || []) : (studentProfile?.academicInterests || [])}
+                        onChange={(event, newValue) => setStudentProfileData({ ...studentProfileData, academicInterests: newValue })}
+                        disabled={!editingStudentProfile}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Academic Interests"
+                            placeholder="Add your academic interests"
+                            variant="outlined"
+                          />
+                        )}
+                        renderTags={(value, getTagProps) =>
+                          value.map((option, index) => (
+                            <Chip
+                              variant="outlined"
+                              label={option}
+                              {...getTagProps({ index })}
+                              key={index}
+                            />
+                          ))
+                        }
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
+              </TabPanel>
+            )}
+
+            {/* Career & Skills Tab - Students Only */}
+            {finalIsStudent && (
+              <TabPanel value={currentTab} index={2}>
+                <Box>
+                  <Box 
+                    display="flex" 
+                    justifyContent="space-between" 
+                    alignItems={{ xs: 'flex-start', sm: 'center' }} 
+                    mb={3}
+                    flexDirection={{ xs: 'column', sm: 'row' }}
+                    gap={{ xs: 2, sm: 0 }}
+                  >
+                    <Typography variant="h6">Career & Skills</Typography>
+                    {!editingStudentProfile ? (
+                      <Button
+                        variant="outlined"
+                        startIcon={<Edit />}
+                        onClick={handleStudentProfileEdit}
+                        sx={{ minWidth: { xs: 'auto', sm: 130 } }}
+                      >
+                        Edit Career Info
+                      </Button>
+                    ) : (
+                      <Box 
+                        display="flex" 
+                        flexDirection={{ xs: 'column', sm: 'row' }}
+                        gap={{ xs: 1, sm: 1 }}
+                        width={{ xs: '100%', sm: 'auto' }}
+                      >
+                        <Button
+                          variant="contained"
+                          startIcon={<Save />}
+                          onClick={handleStudentProfileSave}
+                          disabled={loading}
+                          sx={{ minWidth: { xs: 'auto', sm: 100 } }}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          startIcon={<Cancel />}
+                          onClick={handleStudentProfileCancel}
+                          sx={{ minWidth: { xs: 'auto', sm: 100 } }}
+                        >
+                          Cancel
+                        </Button>
+                      </Box>
+                    )}
+                  </Box>
+
+                  <Grid container spacing={{ xs: 2, sm: 3 }}>
+                    <Grid item xs={12}>
+                      <TextField
+                        fullWidth
+                        label="Career Goals"
+                        multiline
+                        rows={3}
+                        value={editingStudentProfile ? (studentProfileData.careerGoals || '') : (studentProfile?.careerGoals || '')}
+                        onChange={(e) => setStudentProfileData({ ...studentProfileData, careerGoals: e.target.value })}
+                        disabled={!editingStudentProfile}
+                        variant="outlined"
+                        placeholder="Describe your career aspirations and goals..."
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Autocomplete
+                        multiple
+                        freeSolo
+                        options={['Software Development', 'Data Science', 'Business Management', 'Marketing', 'Design', 'Healthcare', 'Education', 'Finance', 'Engineering', 'Research']}
+                        value={editingStudentProfile ? (studentProfileData.preferredCareerPath || []) : (studentProfile?.preferredCareerPath || [])}
+                        onChange={(event, newValue) => setStudentProfileData({ ...studentProfileData, preferredCareerPath: newValue })}
+                        disabled={!editingStudentProfile}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Preferred Career Paths"
+                            placeholder="Add your preferred career paths"
+                            variant="outlined"
+                          />
+                        )}
+                        renderTags={(value, getTagProps) =>
+                          value.map((option, index) => (
+                            <Chip
+                              variant="outlined"
+                              label={option}
+                              {...getTagProps({ index })}
+                              key={index}
+                            />
+                          ))
+                        }
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Autocomplete
+                        multiple
+                        freeSolo
+                        options={['JavaScript', 'Python', 'Java', 'C++', 'React', 'Node.js', 'SQL', 'Communication', 'Leadership', 'Problem Solving', 'Teamwork', 'Project Management']}
+                        value={editingStudentProfile ? (studentProfileData.skills || []) : (studentProfile?.skills || [])}
+                        onChange={(event, newValue) => setStudentProfileData({ ...studentProfileData, skills: newValue })}
+                        disabled={!editingStudentProfile}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Skills"
+                            placeholder="Add your skills"
+                            variant="outlined"
+                          />
+                        )}
+                        renderTags={(value, getTagProps) =>
+                          value.map((option, index) => (
+                            <Chip
+                              variant="outlined"
+                              label={option}
+                              {...getTagProps({ index })}
+                              key={index}
+                            />
+                          ))
+                        }
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Autocomplete
+                        multiple
+                        freeSolo
+                        options={['English', 'French', 'Kinyarwanda', 'Swahili', 'Spanish', 'German', 'Chinese', 'Arabic']}
+                        value={editingStudentProfile ? (studentProfileData.languages || []) : (studentProfile?.languages || [])}
+                        onChange={(event, newValue) => setStudentProfileData({ ...studentProfileData, languages: newValue })}
+                        disabled={!editingStudentProfile}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Languages"
+                            placeholder="Add languages you speak"
+                            variant="outlined"
+                          />
+                        )}
+                        renderTags={(value, getTagProps) =>
+                          value.map((option, index) => (
+                            <Chip
+                              variant="outlined"
+                              label={option}
+                              {...getTagProps({ index })}
+                              key={index}
+                            />
+                          ))
+                        }
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
+              </TabPanel>
+            )}
+
+            {/* Learning Preferences Tab - Students Only */}
+            {finalIsStudent && (
+              <TabPanel value={currentTab} index={3}>
+                <Box>
+                  <Box 
+                    display="flex" 
+                    justifyContent="space-between" 
+                    alignItems={{ xs: 'flex-start', sm: 'center' }} 
+                    mb={3}
+                    flexDirection={{ xs: 'column', sm: 'row' }}
+                    gap={{ xs: 2, sm: 0 }}
+                  >
+                    <Typography variant="h6">Learning Preferences</Typography>
+                    {!editingStudentProfile ? (
+                      <Button
+                        variant="outlined"
+                        startIcon={<Edit />}
+                        onClick={handleStudentProfileEdit}
+                        sx={{ minWidth: { xs: 'auto', sm: 140 } }}
+                      >
+                        Edit Preferences
+                      </Button>
+                    ) : (
+                      <Box 
+                        display="flex" 
+                        flexDirection={{ xs: 'column', sm: 'row' }}
+                        gap={{ xs: 1, sm: 1 }}
+                        width={{ xs: '100%', sm: 'auto' }}
+                      >
+                        <Button
+                          variant="contained"
+                          startIcon={<Save />}
+                          onClick={handleStudentProfileSave}
+                          disabled={loading}
+                          sx={{ minWidth: { xs: 'auto', sm: 100 } }}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          startIcon={<Cancel />}
+                          onClick={handleStudentProfileCancel}
+                          sx={{ minWidth: { xs: 'auto', sm: 100 } }}
+                        >
+                          Cancel
+                        </Button>
+                      </Box>
+                    )}
+                  </Box>
+
+                  <Grid container spacing={{ xs: 2, sm: 3 }}>
+                    <Grid item xs={12} sm={6}>
+                      <FormControl fullWidth>
+                        <InputLabel>Preferred Learning Style</InputLabel>
+                        <Select
+                          value={editingStudentProfile ? (studentProfileData.preferredLearningStyle || '') : (studentProfile?.preferredLearningStyle || '')}
+                          label="Preferred Learning Style"
+                          onChange={(e) => setStudentProfileData({ ...studentProfileData, preferredLearningStyle: e.target.value as any })}
+                          disabled={!editingStudentProfile}
+                        >
+                          <MenuItem value="visual">Visual</MenuItem>
+                          <MenuItem value="auditory">Auditory</MenuItem>
+                          <MenuItem value="kinesthetic">Kinesthetic</MenuItem>
+                          <MenuItem value="reading_writing">Reading/Writing</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        fullWidth
+                        label="Study Hours Per Week"
+                        type="number"
+                        value={editingStudentProfile ? (studentProfileData.studySchedule?.studyHoursPerWeek || '') : (studentProfile?.studySchedule?.studyHoursPerWeek || '')}
+                        onChange={(e) => setStudentProfileData({ 
+                          ...studentProfileData, 
+                          studySchedule: { 
+                            preferredTime: studentProfileData.studySchedule?.preferredTime || '',
+                            studyHoursPerWeek: parseInt(e.target.value) || 0,
+                            availableDays: studentProfileData.studySchedule?.availableDays || []
+                          } 
+                        })}
+                        disabled={!editingStudentProfile}
+                        variant="outlined"
+                        inputProps={{ min: 0, max: 168 }}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Autocomplete
+                        multiple
+                        freeSolo
+                        options={['Improve technical skills', 'Career advancement', 'Personal interest', 'Academic requirements', 'Professional certification', 'Skill development']}
+                        value={editingStudentProfile ? (studentProfileData.learningGoals || []) : (studentProfile?.learningGoals || [])}
+                        onChange={(event, newValue) => setStudentProfileData({ ...studentProfileData, learningGoals: newValue })}
+                        disabled={!editingStudentProfile}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Learning Goals"
+                            placeholder="Add your learning goals"
+                            variant="outlined"
+                          />
+                        )}
+                        renderTags={(value, getTagProps) =>
+                          value.map((option, index) => (
+                            <Chip
+                              variant="outlined"
+                              label={option}
+                              {...getTagProps({ index })}
+                              key={index}
+                            />
+                          ))
+                        }
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
+              </TabPanel>
+            )}
+
             {/* Security Tab */}
-            <TabPanel value={currentTab} index={1}>
+            <TabPanel value={currentTab} index={finalIsStudent ? 4 : 1}>
               <Box>
                 <Typography variant="h6" gutterBottom>
                   Security Settings
@@ -671,7 +1571,7 @@ const ProfilePage: React.FC = () => {
             </TabPanel>
 
             {/* Preferences Tab */}
-            <TabPanel value={currentTab} index={2}>
+            <TabPanel value={currentTab} index={finalIsStudent ? 5 : 2}>
               <Box>
                 <Typography variant="h6" gutterBottom>
                   Account Preferences
@@ -717,7 +1617,7 @@ const ProfilePage: React.FC = () => {
             </TabPanel>
 
             {/* Activity Tab */}
-            <TabPanel value={currentTab} index={3}>
+            <TabPanel value={currentTab} index={finalIsStudent ? 6 : 3}>
               <Box>
                 <Typography variant="h6" gutterBottom>
                   Account Activity
@@ -846,7 +1746,7 @@ const ProfilePage: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </ResponsiveDashboard>
   );
 };
 

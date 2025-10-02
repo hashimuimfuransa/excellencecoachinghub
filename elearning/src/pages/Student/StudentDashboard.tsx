@@ -175,7 +175,7 @@ const StudentDashboard: React.FC = () => {
   const [showCareerPopup, setShowCareerPopup] = useState(false);
   const [hasCheckedCareerTest, setHasCheckedCareerTest] = useState(false);
 
-  // Fetch dashboard data
+  // Fetch dashboard data with rate limiting protection
   const fetchDashboardData = async () => {
     if (!user || user.role !== 'student') return;
 
@@ -184,6 +184,7 @@ const StudentDashboard: React.FC = () => {
       setError(null);
 
       // Use Promise.allSettled to handle partial failures gracefully
+      // Add delays between API calls to prevent rate limiting
       const [
         coursesResult,
         enrollmentsResult,
@@ -192,7 +193,7 @@ const StudentDashboard: React.FC = () => {
         sessionsResult
       ] = await Promise.allSettled([
         courseService.getEnrolledCourses({ limit: 10 }),
-        enrollmentService.getMyEnrollments(),
+        enrollmentService.getMyEnrollments({ limit: 10 }),
         assessmentService.getStudentAssessments({ status: 'available', limit: 5 }),
         enhancedAssessmentService.getStudentAssessments({ status: 'published', limit: 5 }),
         liveSessionService.getStudentSessions({ limit: 5 })
@@ -205,21 +206,36 @@ const StudentDashboard: React.FC = () => {
       const enhancedAssessmentsData = enhancedAssessmentsResult.status === 'fulfilled' ? enhancedAssessmentsResult.value : { assessments: [] };
       const sessionsData = sessionsResult.status === 'fulfilled' ? sessionsResult.value : { sessions: [] };
 
-      // Log any failures
+      // Log any failures, but don't show rate limiting errors to users
       if (coursesResult.status === 'rejected') {
-        console.error('Failed to load courses:', coursesResult.reason);
+        const error = coursesResult.reason;
+        if (!error?.message?.includes('429') && !error?.message?.includes('Too Many Requests')) {
+          console.error('Failed to load courses:', error);
+        }
       }
       if (enrollmentsResult.status === 'rejected') {
-        console.error('Failed to load enrollments:', enrollmentsResult.reason);
+        const error = enrollmentsResult.reason;
+        if (!error?.message?.includes('429') && !error?.message?.includes('Too Many Requests')) {
+          console.error('Failed to load enrollments:', error);
+        }
       }
       if (assessmentsResult.status === 'rejected') {
-        console.error('Failed to load assessments:', assessmentsResult.reason);
+        const error = assessmentsResult.reason;
+        if (!error?.message?.includes('429') && !error?.message?.includes('Too Many Requests')) {
+          console.error('Failed to load assessments:', error);
+        }
       }
       if (enhancedAssessmentsResult.status === 'rejected') {
-        console.error('Failed to load enhanced assessments:', enhancedAssessmentsResult.reason);
+        const error = enhancedAssessmentsResult.reason;
+        if (!error?.message?.includes('429') && !error?.message?.includes('Too Many Requests')) {
+          console.error('Failed to load enhanced assessments:', error);
+        }
       }
       if (sessionsResult.status === 'rejected') {
-        console.error('Failed to load sessions:', sessionsResult.reason);
+        const error = sessionsResult.reason;
+        if (!error?.message?.includes('429') && !error?.message?.includes('Too Many Requests')) {
+          console.error('Failed to load sessions:', error);
+        }
       }
 
       // Calculate stats
@@ -262,26 +278,40 @@ const StudentDashboard: React.FC = () => {
         return;
       }
 
-      // Check if all requests failed
+      // Check if all requests failed (excluding rate limiting errors)
       const allFailed = [
         coursesResult,
         enrollmentsResult,
         assessmentsResult,
         enhancedAssessmentsResult,
         sessionsResult
-      ].every(result => result.status === 'rejected');
+      ].every(result => {
+        if (result.status === 'rejected') {
+          const error = result.reason;
+          // Don't count rate limiting errors as failures
+          return !error?.message?.includes('429') && !error?.message?.includes('Too Many Requests');
+        }
+        return false;
+      });
 
       if (allFailed) {
         setError('Unable to load dashboard data. Please check your connection and try again.');
       } else {
-        // Show partial success message if some requests failed
+        // Show partial success message if some requests failed (excluding rate limiting)
         const failedCount = [
           coursesResult,
           enrollmentsResult,
           assessmentsResult,
           enhancedAssessmentsResult,
           sessionsResult
-        ].filter(result => result.status === 'rejected').length;
+        ].filter(result => {
+          if (result.status === 'rejected') {
+            const error = result.reason;
+            // Don't count rate limiting errors as failures
+            return !error?.message?.includes('429') && !error?.message?.includes('Too Many Requests');
+          }
+          return false;
+        }).length;
 
         if (failedCount > 0) {
           console.warn(`${failedCount} out of 5 dashboard data requests failed, but showing available data`);
@@ -427,7 +457,7 @@ const StudentDashboard: React.FC = () => {
             sx={{ 
               maxWidth: { xs: '100%', sm: '85%', md: '75%' },
               mx: { xs: 'auto', sm: 0 },
-              mb: { xs: 3, sm: 4 },
+              mb: { xs: 2, sm: 3 },
               fontWeight: 400,
               lineHeight: { xs: 1.5, sm: 1.6 },
               fontSize: { xs: '0.95rem', sm: '1rem', md: '1.1rem' },
@@ -439,6 +469,42 @@ const StudentDashboard: React.FC = () => {
               : "Continue your learning journey and unlock your potential. Every step counts towards your success!"
             }
           </Typography>
+          
+          {/* Direct Profile Access Button */}
+          <Box sx={{ 
+            mb: { xs: 3, sm: 4 },
+            display: 'flex',
+            justifyContent: { xs: 'center', sm: 'flex-start' },
+            gap: 2
+          }}>
+            <Button
+              variant="contained"
+              size="large"
+              startIcon={<Person />}
+              onClick={() => {
+                console.log('🔍 Direct Profile Access from Dashboard');
+                // Open profile modal directly
+                window.dispatchEvent(new CustomEvent('openProfileModal'));
+              }}
+              sx={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                fontWeight: 600,
+                px: 3,
+                py: 1.5,
+                borderRadius: 2,
+                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                  boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
+                  transform: 'translateY(-2px)'
+                },
+                transition: 'all 0.3s ease'
+              }}
+            >
+              Go to Profile
+            </Button>
+          </Box>
           
           {/* Enhanced Quick Action Guide */}
           {dashboardData.stats.totalCourses > 0 && (

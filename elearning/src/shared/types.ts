@@ -76,6 +76,84 @@ export interface IUser {
   updatedAt: Date;
 }
 
+// Student Profile Interface
+export interface IStudentProfile {
+  _id: string;
+  userId: string | {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  
+  // Personal Information
+  dateOfBirth?: string;
+  age?: number;
+  gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
+  phone?: string;
+  address?: IAddress;
+  emergencyContact?: {
+    name: string;
+    relationship: string;
+    phone: string;
+    email?: string;
+  };
+  
+  // Academic Information
+  currentEducationLevel?: 'high_school' | 'undergraduate' | 'graduate' | 'postgraduate' | 'other';
+  schoolName?: string;
+  fieldOfStudy?: string;
+  graduationYear?: number;
+  gpa?: number;
+  academicInterests?: string[];
+  
+  // Career Information
+  careerGoals?: string;
+  preferredCareerPath?: string[];
+  workExperience?: IWorkExperience[];
+  skills?: string[];
+  languages?: string[];
+  
+  // Learning Preferences
+  preferredLearningStyle?: 'visual' | 'auditory' | 'kinesthetic' | 'reading_writing';
+  studySchedule?: {
+    preferredTime: string;
+    studyHoursPerWeek: number;
+    availableDays: string[];
+  };
+  learningGoals?: string[];
+  
+  // Profile Status
+  profileCompletionPercentage: number;
+  isProfileComplete: boolean;
+  lastUpdated: Date;
+  
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Address Interface
+export interface IAddress {
+  street?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postalCode?: string;
+  sector?: string;
+  cell?: string;
+  village?: string;
+}
+
+// Work Experience Interface
+export interface IWorkExperience {
+  company: string;
+  position: string;
+  startDate: string;
+  endDate?: string;
+  description?: string;
+  isCurrent: boolean;
+}
+
 // Course Interface
 export interface ICourse {
   _id: string;

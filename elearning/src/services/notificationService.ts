@@ -142,8 +142,13 @@ class NotificationService {
     try {
       const response = await apiService.get('/notifications/unread-count');
       return (response.data as { count: number }).count;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching unread count:', error);
+      
+      // If it's a rate limiting error, throw it so the context can handle backoff
+      if (error?.response?.status === 429 || error?.message?.includes('429') || error?.message?.includes('Too Many Requests')) {
+        throw error;
+      }
       
       // If it's a network error, return 0 but don't throw
       // This prevents the notification context from breaking

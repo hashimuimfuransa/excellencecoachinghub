@@ -62,6 +62,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { getCourseImageUrl } from '../../utils/courseImageGenerator';
 import LearningTips from '../../components/Student/LearningTips';
 import HelpButton from '../../components/Student/HelpButton';
+import { studentProfileService } from '../../services/studentProfileService';
+import { UserRole } from '../../shared/types';
 
 // Styled Components for better visual appeal
 const StyledCard = styled(Card)(({ theme }) => ({
@@ -179,6 +181,15 @@ const StudentCourses: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [showWelcome, setShowWelcome] = useState(true);
 
+  // Profile completion state
+  const [profileCompletion, setProfileCompletion] = useState({
+    percentage: 0,
+    missingFields: [] as string[],
+    isComplete: false
+  });
+  const [showProfileAlert, setShowProfileAlert] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
+
   // Load courses
   const loadCourses = async () => {
     try {
@@ -218,10 +229,47 @@ const StudentCourses: React.FC = () => {
     }
   };
 
+  // Load student profile completion status
+  const loadProfileCompletion = async () => {
+    if (user?.role === UserRole.STUDENT) {
+      try {
+        setProfileLoading(true);
+        const response = await studentProfileService.getMyProfile();
+        setProfileCompletion({
+          percentage: response.completionPercentage,
+          missingFields: response.missingFields,
+          isComplete: response.completionPercentage === 100
+        });
+      } catch (error) {
+        console.error('Failed to load student profile:', error);
+        // Profile might not exist yet, that's okay
+      } finally {
+        setProfileLoading(false);
+      }
+    }
+  };
+
   // Load courses when tab changes or filters change
   useEffect(() => {
     loadCourses();
   }, [tabValue, searchTerm, categoryFilter]);
+
+  // Load profile completion on component mount
+  useEffect(() => {
+    loadProfileCompletion();
+  }, [user]);
+
+  // Listen for profile update events to refresh completion status
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      loadProfileCompletion();
+    };
+
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+    };
+  }, []);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -273,6 +321,94 @@ const StudentCourses: React.FC = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 2 }}>
+      {/* Profile Completion Alert for Students */}
+      {user?.role === UserRole.STUDENT && !profileCompletion.isComplete && showProfileAlert && (
+        <Fade in={showProfileAlert}>
+          <Paper
+            elevation={2}
+            sx={{
+              mb: 4,
+              p: 3,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              borderRadius: 3,
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Person sx={{ mr: 1 }} />
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Complete Your Profile
+                </Typography>
+              </Box>
+              <IconButton
+                size="small"
+                onClick={() => setShowProfileAlert(false)}
+                sx={{ color: 'white' }}
+              >
+                ✕
+              </IconButton>
+            </Box>
+            
+            <Typography variant="body2" sx={{ mb: 2, opacity: 0.9 }}>
+              Complete your profile to get personalized course recommendations and better learning experience.
+            </Typography>
+            
+            <Box sx={{ mb: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  Profile Completion
+                </Typography>
+                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  {profileCompletion.percentage}%
+                </Typography>
+              </Box>
+              <LinearProgress
+                variant="determinate"
+                value={profileCompletion.percentage}
+                sx={{
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  '& .MuiLinearProgress-bar': {
+                    backgroundColor: 'white'
+                  }
+                }}
+              />
+            </Box>
+            
+            {profileCompletion.missingFields.length > 0 && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
+                  Missing fields: {profileCompletion.missingFields.slice(0, 3).join(', ')}
+                  {profileCompletion.missingFields.length > 3 && ` and ${profileCompletion.missingFields.length - 3} more`}
+                </Typography>
+              </Box>
+            )}
+            
+            <ActionButton
+              variant="contained"
+              onClick={() => {
+                // Open profile modal directly
+                window.dispatchEvent(new CustomEvent('openProfileModal'));
+              }}
+              sx={{
+                backgroundColor: 'white',
+                color: '#667eea',
+                fontWeight: 600,
+                '&:hover': {
+                  backgroundColor: 'rgba(255,255,255,0.9)'
+                }
+              }}
+            >
+              Complete Profile
+            </ActionButton>
+          </Paper>
+        </Fade>
+      )}
+
       {/* Welcome Card */}
       {showWelcome && (
         <Fade in={showWelcome}>

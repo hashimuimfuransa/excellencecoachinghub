@@ -29,7 +29,10 @@ import {
   Popover,
   Grid,
   TextField,
-  InputAdornment
+  InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -66,7 +69,8 @@ import {
   LocalHospital,
   Engineering,
   Calculate,
-  Search
+  Search,
+  Close
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { useNotifications } from '../../hooks/useNotifications';
@@ -77,6 +81,7 @@ import { useResponsive, getDrawerWidth } from '../../utils/responsive';
 import { teacherProfileService } from '../../services/teacherProfileService';
 import CareerGuidancePopup from '../Career/CareerGuidancePopup';
 import careerGuidanceService from '../../services/careerGuidanceService';
+import ProfilePage from '../../pages/Profile/ProfilePage';
 
 // Responsive styled components
 const ResponsiveAppBar = styled(AppBar, {
@@ -162,6 +167,7 @@ interface NavigationItem {
   path: string;
   roles?: UserRole[];
   requiresApprovedProfile?: boolean;
+  onClick?: () => void;
 }
 
 const Layout: React.FC = () => {
@@ -178,6 +184,10 @@ const Layout: React.FC = () => {
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Profile modal state
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [profileRefreshKey, setProfileRefreshKey] = useState(0);
 
   const { user, logout } = useAuth();
   const { unreadCount } = useNotifications();
@@ -347,7 +357,17 @@ const Layout: React.FC = () => {
         { text: 'Leaderboard', icon: <EmojiEvents />, path: '/dashboard/student/leaderboard' },
         { text: 'Career Guidance', icon: <TrendingUp />, path: '/dashboard/student/career' },
         { text: 'AI Assistant', icon: <Psychology />, path: '/dashboard/student/ai-assistant' },
-        { text: 'Profile', icon: <Person />, path: '/dashboard/profile' }
+        { 
+          text: 'Profile', 
+          icon: <Person />, 
+          path: '/dashboard/profile',
+          onClick: () => {
+            console.log('🔍 Sidebar Profile Navigation - User role:', user?.role);
+            console.log('🔍 Sidebar Profile Navigation - Opening profile modal');
+            // Open profile directly without page navigation
+            handleProfileDirect();
+          }
+        }
       );
     }
 
@@ -357,6 +377,31 @@ const Layout: React.FC = () => {
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
+
+  const handleProfileDirect = () => {
+    setProfileRefreshKey(prev => prev + 1); // Force refresh
+    setProfileModalOpen(true);
+    setAnchorEl(null); // Close the profile menu
+  };
+
+  // Listen for custom events to open profile modal
+  useEffect(() => {
+    const handleOpenProfileModal = () => {
+      setProfileRefreshKey(prev => prev + 1); // Force refresh
+      setProfileModalOpen(true);
+    };
+
+    const handleProfileUpdated = () => {
+      setProfileRefreshKey(prev => prev + 1); // Force refresh after update
+    };
+
+    window.addEventListener('openProfileModal', handleOpenProfileModal);
+    window.addEventListener('profileUpdated', handleProfileUpdated);
+    return () => {
+      window.removeEventListener('openProfileModal', handleOpenProfileModal);
+      window.removeEventListener('profileUpdated', handleProfileUpdated);
+    };
+  }, []);
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -530,7 +575,15 @@ const Layout: React.FC = () => {
                 <Box sx={{ width: '100%' }}>
                   <ListItemButton
                     selected={isActivePath(item.path)}
-                    onClick={() => !isDisabled && handleNavigation(item.path)}
+                    onClick={() => {
+                      if (isDisabled) return;
+                      // Use custom onClick if provided, otherwise use default navigation
+                      if (item.onClick) {
+                        item.onClick();
+                      } else {
+                        handleNavigation(item.path);
+                      }
+                    }}
                     disabled={isDisabled}
                 sx={{
                   minHeight: { xs: 40, sm: 48 },
@@ -779,13 +832,12 @@ const Layout: React.FC = () => {
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
-        <MenuItem onClick={() => handleNavigation(
-          user?.role === UserRole.TEACHER
-            ? '/dashboard/teacher/profile/complete'
-            : user?.role === UserRole.ADMIN
-              ? '/dashboard/admin/profile'
-              : '/dashboard/profile'
-        )}>
+        <MenuItem onClick={() => {
+          console.log('🔍 Direct Profile Navigation - User role:', user?.role);
+          console.log('🔍 Direct Profile Navigation - Opening profile modal');
+          // Open profile directly without page navigation
+          handleProfileDirect();
+        }}>
           <Avatar src={user?.avatar}>
             {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
           </Avatar>
@@ -962,6 +1014,41 @@ const Layout: React.FC = () => {
           userFirstName={user?.firstName}
         />
       )}
+
+      {/* Profile Modal */}
+      <Dialog
+        open={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        maxWidth="lg"
+        fullWidth
+        fullScreen={isMobile}
+        keepMounted={false} // Don't keep component mounted when closed
+        sx={{
+          '& .MuiDialog-paper': {
+            borderRadius: isMobile ? 0 : 2,
+            maxHeight: '90vh',
+            overflow: 'hidden'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          pb: 1
+        }}>
+          <Typography variant="h6">Profile</Typography>
+          <IconButton
+            onClick={() => setProfileModalOpen(false)}
+            size="small"
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0, overflow: 'auto' }}>
+          <ProfilePage key={profileRefreshKey} />
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };

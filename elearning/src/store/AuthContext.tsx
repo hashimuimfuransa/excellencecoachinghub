@@ -103,10 +103,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const cachedUser = authService.getStoredUser();
             const token = authService.getToken();
 
+            console.log('🔍 Auth Context - Cached user:', cachedUser);
+
             if (cachedUser && token) {
               // Try to verify with server, but don't block the app if it fails
               try {
                 const user = await authService.getCurrentUser();
+                console.log('🔍 Auth Context - Server user:', user);
                 dispatch({ type: 'AUTH_SUCCESS', payload: { user, token } });
               } catch (serverError) {
                 console.warn('Server verification failed, using cached user data:', serverError);

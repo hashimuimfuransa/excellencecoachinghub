@@ -753,24 +753,28 @@ const PublicLayout: React.FC = () => {
             Dashboard
           </Typography>
         </MenuItem>
-        <MenuItem 
-          onClick={() => { handleProfileClose(); navigate('/dashboard/profile'); }}
-          sx={{
-            borderRadius: 2,
-            mx: 1,
-            my: 0.5,
-            '&:hover': {
-              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(147, 51, 234, 0.08) 100%)',
-              transform: 'translateX(4px)'
-            },
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <AccountCircle fontSize="small" sx={{ mr: 1.5, color: 'primary.main' }} />
-          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-            Profile
-          </Typography>
-        </MenuItem>
+       <MenuItem 
+         onClick={() => { 
+           handleProfileClose(); 
+           // Open profile modal directly
+           window.dispatchEvent(new CustomEvent('openProfileModal'));
+         }}
+         sx={{
+           borderRadius: 2,
+           mx: 1,
+           my: 0.5,
+           '&:hover': {
+             background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(147, 51, 234, 0.08) 100%)',
+             transform: 'translateX(4px)'
+           },
+           transition: 'all 0.2s ease'
+         }}
+       >
+         <AccountCircle fontSize="small" sx={{ mr: 1.5, color: 'primary.main' }} />
+         <Typography variant="body2" sx={{ fontWeight: 500 }}>
+           Profile
+         </Typography>
+       </MenuItem>
         <Divider sx={{ my: 1, borderColor: 'rgba(59, 130, 246, 0.1)' }} />
         <MenuItem 
           onClick={handleLogout}

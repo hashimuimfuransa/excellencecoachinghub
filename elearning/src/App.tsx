@@ -281,7 +281,7 @@ const App: React.FC = () => {
         <Route path="exam/:examId/take" element={<TakeExamPage />} />
         <Route path="exam/:examId/results" element={<ExamResultsPage />} />
         <Route path="exam-test" element={<ExamTestPage />} />
-        <Route path="profile" element={<ProfilePage />} />
+        {/* Profile route removed - using direct navigation */}
         <Route path="courses/:id/content" element={<CourseContent />} />
       </Route>
 

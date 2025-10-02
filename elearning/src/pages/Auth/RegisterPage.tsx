@@ -183,7 +183,14 @@ const RegisterPage: React.FC = () => {
   };
 
   const handleGoogleAuthError = (error: string) => {
-    setError(error);
+    console.error('🔍 Google Auth Error:', error);
+    
+    // Handle rate limiting errors with user-friendly message
+    if (error.includes('429') || error.includes('Too Many Requests') || error.includes('Server is currently busy')) {
+      setError('Server is currently busy. Please wait a moment and try again, or use email/password registration.');
+    } else {
+      setError(error);
+    }
   };
 
   const handleRoleSelectionSubmit = async (role: UserRole) => {
@@ -469,6 +476,24 @@ const RegisterPage: React.FC = () => {
               disabled={isLoading}
               variant="register"
             />
+            
+            {/* Retry button for rate limiting */}
+            {error && (error.includes('Server is currently busy') || error.includes('429')) && (
+              <Button
+                variant="outlined"
+                fullWidth
+                onClick={() => {
+                  setError(null);
+                  // Retry Google auth after a delay
+                  setTimeout(() => {
+                    handleGoogleAuth();
+                  }, 2000);
+                }}
+                sx={{ mt: 1 }}
+              >
+                Retry Google Sign-In
+              </Button>
+            )}
 
             {/* Divider */}
             <Divider sx={{ my: 2 }}>

@@ -9,6 +9,47 @@ export interface IStudentProfileDocument extends Document {
   certificates: string[];
   jobInterests: string[];
   careerGoals: string[];
+  // Additional fields
+  dateOfBirth?: Date;
+  gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
+  phone?: string;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    postalCode?: string;
+  };
+  emergencyContact?: {
+    name?: string;
+    relationship?: string;
+    phone?: string;
+    email?: string;
+  };
+  currentEducationLevel?: 'high_school' | 'undergraduate' | 'graduate' | 'postgraduate' | 'other';
+  schoolName?: string;
+  fieldOfStudy?: string;
+  graduationYear?: number;
+  gpa?: number;
+  academicInterests?: string[];
+  preferredCareerPath?: string[];
+  workExperience?: Array<{
+    company?: string;
+    position?: string;
+    startDate?: Date;
+    endDate?: Date;
+    description?: string;
+    isCurrent?: boolean;
+  }>;
+  skills?: string[];
+  languages?: string[];
+  preferredLearningStyle?: 'visual' | 'auditory' | 'kinesthetic' | 'reading_writing';
+  studySchedule?: {
+    preferredTime?: string;
+    studyHoursPerWeek?: number;
+    availableDays?: string[];
+  };
+  learningGoals?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,6 +95,94 @@ const studentProfileSchema = new Schema<IStudentProfileDocument>({
     type: String,
     trim: true,
     maxlength: [200, 'Career goal cannot exceed 200 characters']
+  }],
+  // Additional fields from frontend
+  dateOfBirth: {
+    type: Date
+  },
+  gender: {
+    type: String,
+    enum: ['male', 'female', 'other', 'prefer_not_to_say']
+  },
+  phone: {
+    type: String,
+    trim: true
+  },
+  address: {
+    street: String,
+    city: String,
+    state: String,
+    country: String,
+    postalCode: String
+  },
+  emergencyContact: {
+    name: String,
+    relationship: String,
+    phone: String,
+    email: String
+  },
+  currentEducationLevel: {
+    type: String,
+    enum: ['high_school', 'undergraduate', 'graduate', 'postgraduate', 'other']
+  },
+  schoolName: {
+    type: String,
+    trim: true
+  },
+  fieldOfStudy: {
+    type: String,
+    trim: true
+  },
+  graduationYear: {
+    type: Number,
+    min: 1950,
+    max: 2030
+  },
+  gpa: {
+    type: Number,
+    min: 0,
+    max: 4.0
+  },
+  academicInterests: [{
+    type: String,
+    trim: true
+  }],
+  preferredCareerPath: [{
+    type: String,
+    trim: true
+  }],
+  workExperience: [{
+    company: String,
+    position: String,
+    startDate: Date,
+    endDate: Date,
+    description: String,
+    isCurrent: Boolean
+  }],
+  skills: [{
+    type: String,
+    trim: true
+  }],
+  languages: [{
+    type: String,
+    trim: true
+  }],
+  preferredLearningStyle: {
+    type: String,
+    enum: ['visual', 'auditory', 'kinesthetic', 'reading_writing']
+  },
+  studySchedule: {
+    preferredTime: String,
+    studyHoursPerWeek: {
+      type: Number,
+      min: 0,
+      max: 168
+    },
+    availableDays: [String]
+  },
+  learningGoals: [{
+    type: String,
+    trim: true
   }]
 }, {
   timestamps: true,

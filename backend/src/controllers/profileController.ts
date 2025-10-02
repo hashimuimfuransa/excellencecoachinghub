@@ -248,11 +248,31 @@ export const createOrUpdateStudentProfile = async (req: AuthRequest, res: Respon
       age,
       educationLevel,
       jobInterests,
-      careerGoals
+      careerGoals,
+      // Additional fields from frontend
+      dateOfBirth,
+      gender,
+      phone,
+      address,
+      emergencyContact,
+      currentEducationLevel,
+      schoolName,
+      fieldOfStudy,
+      graduationYear,
+      gpa,
+      academicInterests,
+      preferredCareerPath,
+      workExperience,
+      skills,
+      languages,
+      preferredLearningStyle,
+      studySchedule,
+      learningGoals
     } = req.body;
 
-    // Validate education level
-    if (!Object.values(EducationLevel).includes(educationLevel)) {
+    // Validate education level (use currentEducationLevel if educationLevel is not provided)
+    const finalEducationLevel = educationLevel || currentEducationLevel;
+    if (finalEducationLevel && !Object.values(EducationLevel).includes(finalEducationLevel)) {
       return res.status(400).json({
         success: false,
         error: 'Invalid education level'
@@ -266,9 +286,28 @@ export const createOrUpdateStudentProfile = async (req: AuthRequest, res: Respon
       // Update existing profile
       Object.assign(profile, {
         age,
-        educationLevel,
-        jobInterests,
-        careerGoals
+        educationLevel: finalEducationLevel,
+        jobInterests: jobInterests || academicInterests || [],
+        careerGoals: Array.isArray(careerGoals) ? careerGoals : (careerGoals ? [careerGoals] : []),
+        // Additional fields
+        dateOfBirth,
+        gender,
+        phone,
+        address,
+        emergencyContact,
+        currentEducationLevel,
+        schoolName,
+        fieldOfStudy,
+        graduationYear,
+        gpa,
+        academicInterests: academicInterests || [],
+        preferredCareerPath: preferredCareerPath || [],
+        workExperience: workExperience || [],
+        skills: skills || [],
+        languages: languages || [],
+        preferredLearningStyle,
+        studySchedule,
+        learningGoals: learningGoals || []
       });
       await profile.save();
     } else {
@@ -276,9 +315,28 @@ export const createOrUpdateStudentProfile = async (req: AuthRequest, res: Respon
       profile = new StudentProfile({
         user: userId,
         age,
-        educationLevel,
-        jobInterests,
-        careerGoals,
+        educationLevel: finalEducationLevel || EducationLevel.HIGH_SCHOOL,
+        jobInterests: jobInterests || academicInterests || [],
+        careerGoals: Array.isArray(careerGoals) ? careerGoals : (careerGoals ? [careerGoals] : []),
+        // Additional fields
+        dateOfBirth,
+        gender,
+        phone,
+        address,
+        emergencyContact,
+        currentEducationLevel,
+        schoolName,
+        fieldOfStudy,
+        graduationYear,
+        gpa,
+        academicInterests: academicInterests || [],
+        preferredCareerPath: preferredCareerPath || [],
+        workExperience: workExperience || [],
+        skills: skills || [],
+        languages: languages || [],
+        preferredLearningStyle,
+        studySchedule,
+        learningGoals: learningGoals || [],
         completedCourses: [], // Will be populated from enrollments
         certificates: []
       });
@@ -402,6 +460,7 @@ export const getJobSeekerProfile = async (req: AuthRequest, res: Response) => {
 export const getStudentProfile = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.id;
+    const userRole = req.user?.role;
 
     if (!userId) {
       return res.status(401).json({
@@ -410,16 +469,37 @@ export const getStudentProfile = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const profile = await StudentProfile.findOne({ user: userId })
+    // Check if user is a student
+    if (userRole !== UserRole.STUDENT) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only students can access student profiles'
+      });
+    }
+
+    let profile = await StudentProfile.findOne({ user: userId })
       .populate('user', 'firstName lastName email avatar phone location bio')
       .populate('completedCourses', 'title description category')
       .populate('certificates');
 
+    // If no profile exists, create a basic one
     if (!profile) {
-      return res.status(404).json({
-        success: false,
-        error: 'Student profile not found'
+      profile = new StudentProfile({
+        user: userId,
+        age: undefined,
+        educationLevel: EducationLevel.HIGH_SCHOOL, // Default value
+        jobInterests: [],
+        careerGoals: [],
+        completedCourses: [],
+        certificates: []
       });
+      await profile.save();
+      
+      // Re-populate after saving
+      profile = await StudentProfile.findById(profile._id)
+        .populate('user', 'firstName lastName email avatar phone location bio')
+        .populate('completedCourses', 'title description category')
+        .populate('certificates');
     }
 
     // Ensure email and other user data is included

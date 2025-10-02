@@ -7,6 +7,7 @@ export interface IComment extends Document {
   content: string;
   parentComment?: mongoose.Types.ObjectId; // For nested comments/replies
   likes: mongoose.Types.ObjectId[];
+  repliesCount: number;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -39,6 +40,10 @@ const commentSchema = new Schema<IComment>({
     type: Schema.Types.ObjectId,
     ref: 'User'
   }],
+  repliesCount: {
+    type: Number,
+    default: 0
+  },
   isActive: {
     type: Boolean,
     default: true
@@ -64,6 +69,36 @@ commentSchema.virtual('replyCount', {
   foreignField: 'parentComment',
   count: true
 });
+
+// Static methods
+commentSchema.statics.findByPost = async function(postId: string) {
+  try {
+    const comments = await this.find({ 
+      post: postId, 
+      parentComment: { $exists: false } // Only top-level comments
+    })
+    .populate('author', 'firstName lastName profilePicture')
+    .sort({ createdAt: -1 });
+
+    return comments;
+  } catch (error) {
+    console.error('Error in findByPost:', error);
+    throw error;
+  }
+};
+
+commentSchema.statics.findReplies = async function(parentCommentId: string) {
+  try {
+    const replies = await this.find({ parentComment: parentCommentId })
+      .populate('author', 'firstName lastName profilePicture')
+      .sort({ createdAt: 1 }); // Oldest first for replies
+
+    return replies;
+  } catch (error) {
+    console.error('Error in findReplies:', error);
+    throw error;
+  }
+};
 
 // Ensure virtual fields are serialized
 commentSchema.set('toJSON', { virtuals: true });

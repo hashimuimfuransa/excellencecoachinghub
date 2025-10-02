@@ -12,7 +12,7 @@ async function testJobScraping() {
       
       const response = await axios.get(`http://localhost:5000/api/job-scraping/test-website/${website}`, {
         headers: {
-          'Authorization': 'Bearer YOUR_ADMIN_TOKEN_HERE' // Replace with actual token
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NzVhYjQ5YzQ4YjQ5YzQ4YjQ5YzQ4YjQiLCJlbWFpbCI6ImFkbWluQGV4Y2VsbGVuY2Vjb2FjaGluZ2h1Yi5jb20iLCJyb2xlIjoic3VwZXJfYWRtaW4iLCJpYXQiOjE3MzU4MzQwMDAsImV4cCI6MTczNTkyMDQwMH0.example_token' // Replace with actual admin token
         },
         timeout: 30000
       });

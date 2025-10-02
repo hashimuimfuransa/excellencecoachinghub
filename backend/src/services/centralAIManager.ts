@@ -1,5 +1,5 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { EventEmitter } from 'events';
+import axios from 'axios';
 
 // API Key Configuration for fallback support
 export interface APIKeyConfig {
@@ -34,9 +34,7 @@ export interface AIGenerationOptions {
 
 export class CentralAIManager extends EventEmitter {
   private static instance: CentralAIManager;
-  private genAI: GoogleGenerativeAI;
   private currentConfig: AIModelConfig;
-  private model: any;
   private isInitialized: boolean = false;
   private lastVersionCheck: string = '';
   private readonly VERSION_CHECK_INTERVAL_HOURS = 24;
@@ -64,13 +62,13 @@ export class CentralAIManager extends EventEmitter {
   private static readonly MODEL_CONFIGS: AIModelConfig[] = [
     // VERIFIED WORKING MODELS (ordered by preference - fastest first for quota conservation)
     {
-      name: 'gemini-1.5-flash',
-      version: '1.5-flash',
+      name: 'gemini-2.5-flash',
+      version: '2.5-flash',
       maxTokens: 8192,
       temperature: 0.4,
       topP: 0.8,
       topK: 40,
-      description: 'Gemini 1.5 Flash - Fast processing, lower quota usage, good accuracy',
+      description: 'Gemini 2.5 Flash - Latest fast model with best performance (v1beta API)',
       safetySettings: [
         {
           category: 'HARM_CATEGORY_HARASSMENT',
@@ -91,13 +89,13 @@ export class CentralAIManager extends EventEmitter {
       ]
     },
     {
-      name: 'gemini-1.5-pro',
-      version: '1.5-pro',
+      name: 'gemini-2.0-flash',
+      version: '2.0-flash',
       maxTokens: 8192,
       temperature: 0.4,
       topP: 0.8,
       topK: 40,
-      description: 'Gemini 1.5 Pro - Best accuracy and reasoning (higher quota usage)',
+      description: 'Gemini 2.0 Flash - Fast processing, good accuracy (v1beta API)',
       safetySettings: [
         {
           category: 'HARM_CATEGORY_HARASSMENT',
@@ -127,16 +125,14 @@ export class CentralAIManager extends EventEmitter {
     
     // Use the first available API key
     const currentAPIKey = this.getCurrentAPIKey();
-    this.genAI = new GoogleGenerativeAI(currentAPIKey.key);
     this.currentConfig = this.getBestAvailableModel();
-    this.initializeModel();
     this.isInitialized = true;
     
     console.log(`🤖 Central AI Manager initialized with ${this.apiKeys.length} API key(s)`);
-    console.log(`🔑 Active API Key: ${currentAPIKey.name}`);
+    console.log(`🔑 Active API Key: ${currentAPIKey?.name || 'Unknown'}`);
     this.emit('initialized', { 
       model: this.currentConfig.name,
-      apiKeyName: currentAPIKey.name,
+      apiKeyName: currentAPIKey?.name || 'Unknown',
       totalAPIKeys: this.apiKeys.length
     });
   }
@@ -211,7 +207,7 @@ export class CentralAIManager extends EventEmitter {
     
     // If all keys are exhausted, return the first one (will handle quota errors)
     this.currentAPIKeyIndex = 0;
-    return this.apiKeys[0];
+    return this.apiKeys[0] || { key: '', name: 'No Key', dailyLimit: 0, used: 0, lastReset: '', status: 'failed' as const };
   }
 
   /**
@@ -227,9 +223,6 @@ export class CentralAIManager extends EventEmitter {
       
       if (keyConfig.status === 'active' && keyConfig.used < keyConfig.dailyLimit) {
         // Switch to the new API key
-        this.genAI = new GoogleGenerativeAI(keyConfig.key);
-        this.initializeModel();
-        
         console.log(`🔄 Switched to API key: ${keyConfig.name}`);
         this.emit('apiKeySwitched', {
           from: this.apiKeys[originalIndex].name,
@@ -313,26 +306,81 @@ export class CentralAIManager extends EventEmitter {
     }
     
     // Fallback to the last config if all fail
-    return CentralAIManager.MODEL_CONFIGS[CentralAIManager.MODEL_CONFIGS.length - 1];
+    return CentralAIManager.MODEL_CONFIGS[CentralAIManager.MODEL_CONFIGS.length - 1] || {
+      name: 'gemini-2.0-flash',
+      version: '2.0-flash',
+      maxTokens: 8192,
+      temperature: 0.4,
+      topP: 0.8,
+      topK: 40,
+      description: 'Fallback model'
+    };
   }
 
-  private initializeModel(): void {
-    const modelConfig: any = {
-      model: this.currentConfig.name,
+  private getCurrentAPIKeyString(): string {
+    const currentKey = this.apiKeys[this.currentAPIKeyIndex];
+    return currentKey ? currentKey.key : '';
+  }
+
+  private getAPIUrl(): string {
+    return `https://generativelanguage.googleapis.com/v1beta/models/${this.currentConfig.name}:generateContent`;
+  }
+
+  private async makeHTTPRequest(prompt: string, options: AIGenerationOptions = {}): Promise<string> {
+    const apiKey = this.getCurrentAPIKeyString();
+    const url = this.getAPIUrl();
+    
+    // DEBUG: Log the exact model name being used
+    console.log(`🔍 DEBUG - Model name: "${this.currentConfig.name}"`);
+    console.log(`🔍 DEBUG - API URL: ${url}`);
+    
+    const requestBody: any = {
+      contents: [{
+        parts: [{
+          text: prompt
+        }]
+      }],
       generationConfig: {
-        temperature: this.currentConfig.temperature || 0.4,
+        temperature: options.temperature || this.currentConfig.temperature || 0.4,
         topP: this.currentConfig.topP || 0.8,
         topK: this.currentConfig.topK || 40,
-        maxOutputTokens: this.currentConfig.maxTokens || 8192,
+        maxOutputTokens: options.maxTokens || this.currentConfig.maxTokens || 8192,
       }
     };
 
     if (this.currentConfig.safetySettings) {
-      modelConfig.safetySettings = this.currentConfig.safetySettings;
+      requestBody.safetySettings = this.currentConfig.safetySettings;
     }
 
-    this.model = this.genAI.getGenerativeModel(modelConfig);
-    console.log(`🔧 Model initialized: ${this.currentConfig.name}`);
+    try {
+      // DEBUG: Log the exact URL being sent
+      const fullUrl = `${url}?key=${apiKey}`;
+      console.log(`🔍 DEBUG - Full API URL: ${fullUrl}`);
+      console.log(`🔍 DEBUG - Request body model: ${JSON.stringify(requestBody).substring(0, 200)}...`);
+      
+      const response = await axios.post(fullUrl, requestBody, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 60000 // Increased timeout to 60 seconds
+      });
+
+      if (response.data && response.data.candidates && response.data.candidates[0]) {
+        const candidate = response.data.candidates[0];
+        if (candidate.content && candidate.content.parts && candidate.content.parts[0]) {
+          return candidate.content.parts[0].text || '';
+        }
+      }
+
+      throw new Error('Invalid response format from Gemini API');
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const errorMessage = error.response?.data?.error?.message || error.message;
+        console.log(`🔍 DEBUG - Error response: ${JSON.stringify(error.response?.data)}`);
+        throw new Error(`Gemini API error: ${errorMessage}`);
+      }
+      throw error;
+    }
   }
 
   /**
@@ -344,9 +392,7 @@ export class CentralAIManager extends EventEmitter {
   ): Promise<string> {
     const {
       retries = 3,
-      timeout = 30000,
-      temperature,
-      maxTokens,
+      timeout = 60000, // Increased timeout to 60 seconds
       priority = 'normal'
     } = options;
 
@@ -434,35 +480,16 @@ export class CentralAIManager extends EventEmitter {
       try {
         console.log(`🤖 AI Generation attempt ${attempt}/${retries} using ${this.currentConfig.name} (Priority: ${priority})`);
         
-        // Create a copy of the model with custom parameters if provided
-        let currentModel = this.model;
-        if (temperature !== undefined || maxTokens !== undefined) {
-          const customConfig: any = {
-            model: this.currentConfig.name,
-            generationConfig: {
-              temperature: temperature || this.currentConfig.temperature || 0.4,
-              topP: this.currentConfig.topP || 0.8,
-              topK: this.currentConfig.topK || 40,
-              maxOutputTokens: maxTokens || this.currentConfig.maxTokens || 8192,
-            }
-          };
-
-          if (this.currentConfig.safetySettings) {
-            customConfig.safetySettings = this.currentConfig.safetySettings;
-          }
-
-          currentModel = this.genAI.getGenerativeModel(customConfig);
-        }
+        // Custom configuration is handled in makeHTTPRequest method
 
         const result = await Promise.race([
-          currentModel.generateContent(prompt),
+          this.makeHTTPRequest(prompt, options),
           new Promise((_, reject) => 
             setTimeout(() => reject(new Error('AI request timeout')), timeout)
           )
         ]) as any;
 
-        const response = await result.response;
-        const text = response.text();
+        const text = result;
         
         if (!text || text.trim().length === 0) {
           throw new Error('Empty response from AI model');
@@ -555,7 +582,6 @@ export class CentralAIManager extends EventEmitter {
       const previousModel = this.currentConfig.name;
       this.currentConfig = CentralAIManager.MODEL_CONFIGS[currentIndex + 1];
       console.log(`🔄 Falling back to model: ${this.currentConfig.name}`);
-      this.initializeModel();
       
       this.emit('modelFallback', { 
         from: previousModel, 
@@ -575,8 +601,7 @@ export class CentralAIManager extends EventEmitter {
       this.currentConfig.maxTokens = Math.max(2048, this.currentConfig.maxTokens - 1024);
     }
     
-    console.log(`🔧 Adjusted model parameters: temp=${this.currentConfig.temperature}, maxTokens=${this.currentConfig.maxTokens}`);
-    this.initializeModel();
+      console.log(`🔧 Adjusted model parameters: temp=${this.currentConfig.temperature}, maxTokens=${this.currentConfig.maxTokens}`);
     
     this.emit('parametersAdjusted', { 
       temperature: this.currentConfig.temperature,
@@ -637,7 +662,6 @@ export class CentralAIManager extends EventEmitter {
         // Temporarily switch to the newer model for testing
         const previousConfig = this.currentConfig;
         this.currentConfig = newerConfig;
-        this.initializeModel();
         
         // Test the newer model
         const isAvailable = await this.testModelAvailability();
@@ -655,7 +679,6 @@ export class CentralAIManager extends EventEmitter {
         } else {
           // Revert to previous config if test fails
           this.currentConfig = previousConfig;
-          this.initializeModel();
           console.log(`❌ Newer model ${newerConfig.name} not available, staying with ${previousConfig.name}`);
         }
         
@@ -687,7 +710,6 @@ export class CentralAIManager extends EventEmitter {
     try {
       console.log(`🔄 Attempting migration to ${modelName}...`);
       this.currentConfig = targetConfig;
-      this.initializeModel();
       
       // Test the target model
       const isAvailable = await this.testModelAvailability();
@@ -702,7 +724,6 @@ export class CentralAIManager extends EventEmitter {
       } else {
         // Revert on failure
         this.currentConfig = previousConfig;
-        this.initializeModel();
         console.error(`❌ Migration to ${modelName} failed, reverted to ${previousConfig.name}`);
         return false;
       }
@@ -710,7 +731,6 @@ export class CentralAIManager extends EventEmitter {
     } catch (error) {
       // Revert on error
       this.currentConfig = previousConfig;
-      this.initializeModel();
       console.error(`❌ Migration to ${modelName} failed with error:`, error);
       return false;
     }
@@ -810,8 +830,6 @@ export class CentralAIManager extends EventEmitter {
     
     const previousKey = this.apiKeys[this.currentAPIKeyIndex];
     this.currentAPIKeyIndex = targetIndex;
-    this.genAI = new GoogleGenerativeAI(targetKey.key);
-    this.initializeModel();
     
     console.log(`🔄 Manually switched to API key: ${keyName}`);
     this.emit('apiKeySwitched', {

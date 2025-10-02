@@ -720,7 +720,7 @@ const AllJobsPage: React.FC = () => {
       }}>
         {/* Hero Section */}
         <Box sx={{
-          minHeight: { xs: '35vh', sm: '40vh', md: '50vh' },
+          minHeight: { xs: '20vh', sm: '25vh', md: '30vh' },
           background: 'linear-gradient(135deg, #4ade80 0%, #16a34a 50%, #14532d 100%)',
           position: 'relative',
           backgroundSize: 'cover',

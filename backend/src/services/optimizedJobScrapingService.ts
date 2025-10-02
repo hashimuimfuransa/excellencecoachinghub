@@ -1313,6 +1313,91 @@ export class OptimizedJobScrapingService {
   }
 
   /**
+   * Extract content with iframe handling for job descriptions
+   */
+  private static async extractContentWithIframeHandling(page: any, url: string): Promise<string> {
+    try {
+      // First, get the main page content
+      let html = await page.content();
+      
+      // Check if the page contains iframes that might have job content
+      const iframes = await page.$$('iframe');
+      console.log(`🔍 Found ${iframes.length} iframes on ${url}`);
+      
+      if (iframes.length > 0) {
+        // Get all frames (including iframes)
+        const frames = page.frames();
+        console.log(`🔍 Found ${frames.length} total frames on ${url}`);
+        
+        // Look for frames that contain job-related content
+        for (const frame of frames) {
+          try {
+            const frameUrl = frame.url();
+            console.log(`🔍 Checking frame: ${frameUrl}`);
+            
+            // Skip external tracking frames
+            if (frameUrl.includes('googletagmanager.com') || 
+                frameUrl.includes('google-analytics.com') ||
+                frameUrl.includes('doubleclick.net') ||
+                frameUrl.includes('facebook.com') ||
+                frameUrl.includes('twitter.com')) {
+              continue;
+            }
+            
+            // Try to extract content from this frame
+            const frameContent = await frame.content();
+            
+            // Check if this frame has substantial content (likely job description)
+            if (frameContent && frameContent.length > 500) {
+              // Look for job-related selectors in the frame
+              const jobSelectors = [
+                '.job-description', '.vacancy-description', '.description', 
+                '.content', '.summary', 'main', 'article', 'body',
+                '.requirements', '.qualifications', '.responsibilities',
+                '.duties', '.skills', '.benefits'
+              ];
+              
+              let hasJobContent = false;
+              for (const selector of jobSelectors) {
+                try {
+                  const element = await frame.$(selector);
+                  if (element) {
+                    const text = await frame.evaluate((el: any) => el.textContent, element);
+                    if (text && text.length > 100) {
+                      hasJobContent = true;
+                      console.log(`✅ Found job content in frame with selector: ${selector}`);
+                      break;
+                    }
+                  }
+                } catch (selectorError) {
+                  // Continue to next selector
+                }
+              }
+              
+              if (hasJobContent) {
+                console.log(`✅ Using content from iframe: ${frameUrl}`);
+                return frameContent;
+              }
+            }
+          } catch (frameError) {
+            console.log(`⚠️ Error accessing frame: ${frameError.message}`);
+            continue;
+          }
+        }
+      }
+      
+      // If no iframe content found, return main page content
+      console.log(`📄 Using main page content for ${url}`);
+      return html;
+      
+    } catch (error) {
+      console.error(`❌ Error in iframe handling for ${url}:`, error);
+      // Fallback to main page content
+      return await page.content();
+    }
+  }
+
+  /**
    * Create system user for external jobs
    */
   private static async createSystemUser(): Promise<any> {
@@ -1320,6 +1405,7 @@ export class OptimizedJobScrapingService {
       firstName: 'Excellence',
       lastName: 'Coaching Hub',
       email: this.DEFAULT_EMPLOYER_EMAIL,
+      password: 'system_user_password_123', // Add required password field
       isEmailVerified: true,
       role: 'employer',
       companyName: 'Excellence Coaching Hub',
@@ -1457,7 +1543,8 @@ export class OptimizedJobScrapingService {
               console.log(`⚠️ Selector wait failed for ${url}, proceeding anyway...`);
             }
             
-            html = await page.content();
+            // Check for iframes and extract content from them
+            html = await this.extractContentWithIframeHandling(page, url);
           }
           
           await browser.close();
@@ -1885,17 +1972,44 @@ export class OptimizedJobScrapingService {
         }
       }
       
-      // Fallback: if description is poor, try to extract from main content areas
-      if (!description || description.length < 100 || description.includes('Toggle navigation')) {
+      // Fallback: if description is poor or contains iframe, try to extract from main content areas
+      if (!description || description.length < 100 || description.includes('Toggle navigation') || description.includes('<iframe')) {
         console.log('🔄 Using fallback description extraction...');
-        const fallbackSelectors = ['main', 'article', '.main-content', '.post', '.job-posting', '.content-wrapper'];
+        const fallbackSelectors = ['main', 'article', '.main-content', '.post', '.job-posting', '.content-wrapper', '.job-description', '.vacancy-description', '.description', '.content'];
         description = this.extractTextContent($, fallbackSelectors);
         
         // Clean up fallback description more aggressively
         if (description) {
           description = description.replace(/Toggle navigation.*?(?=\n|\r|$)/gi, '');
           description = description.replace(/Navigation.*?(?=\n|\r|$)/gi, '');
+          description = description.replace(/<iframe.*?<\/iframe>/gi, ''); // Remove iframe tags
+          description = description.replace(/<script.*?<\/script>/gi, ''); // Remove script tags
+          description = description.replace(/<style.*?<\/style>/gi, ''); // Remove style tags
           description = description.trim();
+        }
+        
+        // If still no good description, try to extract from body text
+        if (!description || description.length < 100) {
+          console.log('🔄 Extracting from body text...');
+          const bodyText = $('body').text();
+          if (bodyText && bodyText.length > 200) {
+            // Remove navigation and common non-content elements
+            const cleanedText = bodyText
+              .replace(/Toggle navigation.*?(?=\n|\r|$)/gi, '')
+              .replace(/Navigation.*?(?=\n|\r|$)/gi, '')
+              .replace(/Menu.*?(?=\n|\r|$)/gi, '')
+              .replace(/Login.*?(?=\n|\r|$)/gi, '')
+              .replace(/Sign up.*?(?=\n|\r|$)/gi, '')
+              .replace(/Cookie.*?(?=\n|\r|$)/gi, '')
+              .replace(/Privacy.*?(?=\n|\r|$)/gi, '')
+              .replace(/Terms.*?(?=\n|\r|$)/gi, '')
+              .trim();
+            
+            if (cleanedText.length > 200) {
+              description = cleanedText.substring(0, 2000); // Limit to 2000 chars
+              console.log(`📝 Extracted description from body text (${description.length} chars)`);
+            }
+          }
         }
       }
       

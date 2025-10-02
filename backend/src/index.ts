@@ -92,6 +92,7 @@ import jobCleanupRoutes from '@/routes/jobCleanupRoutes';
 import emailRoutes from '@/routes/emailRoutes';
 import sendGridWebhookRoutes from '@/routes/sendGridWebhookRoutes';
 import unsubscribeRoutes from '@/routes/unsubscribeRoutes';
+import communityRoutes from '@/routes/communityRoutes';
 
 // Social Network routes
 import postRoutes from '@/routes/postRoutes';
@@ -947,6 +948,7 @@ app.use('/api/admin/job-cleanup', jobCleanupRoutes);
 app.use('/api/email', emailRoutes); // SendGrid email routes (replaces EmailJS)
 app.use('/api/sendgrid', sendGridWebhookRoutes); // SendGrid webhook routes
 app.use('/api/unsubscribe', unsubscribeRoutes); // Unsubscribe routes
+app.use('/api/community', communityRoutes); // Community routes
 
 // Test Request routes
 app.use('/api/test-requests', testRequestRoutes);

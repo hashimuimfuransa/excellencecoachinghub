@@ -15,6 +15,9 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('🔑 API Request with token:', config.url, token.substring(0, 20) + '...');
+    } else {
+      console.warn('⚠️ API Request without token:', config.url);
     }
     return config;
   },

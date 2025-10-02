@@ -1,282 +1,104 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+import mongoose, { Document, Schema } from 'mongoose';
 
-export interface IPostDocument extends Document {
-  author: string; // User ID
+// Post interface
+export interface IPost extends Document {
+  author: mongoose.Types.ObjectId;
   content: string;
-  media?: {
-    type: 'image' | 'video';
-    url: string;
-    thumbnail?: string;
-  }[];
+  type: 'text' | 'achievement' | 'question' | 'announcement';
   tags: string[];
-  postType: 'text' | 'image' | 'video' | 'document' | 'job_post' | 'event' | 'training' | 'company_update';
-  relatedJob?: string; // Job ID if this is a job post
-  relatedEvent?: string; // Event ID if this is an event post
-  relatedCompany?: string; // Company ID if this is a company update
-  likes: string[]; // Array of User IDs who liked this post
-  likesCount: number;
-  commentsCount: number;
-  sharesCount: number;
-  visibility: 'public' | 'connections' | 'private';
-  isPinned: boolean;
-  isPromoted: boolean;
+  attachments: {
+    type: 'image' | 'video' | 'document';
+    url: string;
+    name: string;
+    size?: number;
+  }[];
+  likes: mongoose.Types.ObjectId[];
+  comments: mongoose.Types.ObjectId[];
+  shares: number;
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface IPostModel extends Model<IPostDocument> {
-  findPostsForFeed(userId: string, limit?: number, skip?: number): Promise<IPostDocument[]>;
-  findPostsByAuthor(authorId: string): Promise<IPostDocument[]>;
-  findJobPosts(limit?: number, skip?: number): Promise<IPostDocument[]>;
-}
-
-const postSchema = new Schema<IPostDocument>({
+// Post schema
+const postSchema = new Schema<IPost>({
   author: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: [true, 'Post author is required']
+    required: true
   },
   content: {
     type: String,
-    required: [true, 'Post content is required'],
+    required: true,
     trim: true,
-    maxlength: [5000, 'Post content cannot exceed 5000 characters']
+    maxlength: 2000
   },
-  media: [{
+  type: {
+    type: String,
+    enum: ['text', 'achievement', 'question', 'announcement'],
+    default: 'text'
+  },
+  tags: [{
+    type: String,
+    trim: true,
+    lowercase: true
+  }],
+  attachments: [{
     type: {
       type: String,
-      enum: ['image', 'video'],
+      enum: ['image', 'video', 'document'],
       required: true
     },
     url: {
       type: String,
-      required: true,
-      trim: true
+      required: true
     },
-    thumbnail: {
+    name: {
       type: String,
-      trim: true
+      required: true
+    },
+    size: {
+      type: Number
     }
   }],
-  tags: [{
-    type: String,
-    trim: true,
-    maxlength: [50, 'Tag cannot exceed 50 characters']
-  }],
-  postType: {
-    type: String,
-    enum: ['text', 'image', 'video', 'document', 'job_post', 'event', 'training', 'company_update'],
-    default: 'text',
-    required: true
-  },
-  relatedJob: {
-    type: Schema.Types.ObjectId,
-    ref: 'Job',
-    required: function(this: IPostDocument) {
-      return this.postType === 'job_post';
-    }
-  },
-  relatedEvent: {
-    type: Schema.Types.ObjectId,
-    ref: 'Event',
-    required: function(this: IPostDocument) {
-      return this.postType === 'event';
-    }
-  },
-  relatedCompany: {
-    type: Schema.Types.ObjectId,
-    ref: 'Company',
-    required: function(this: IPostDocument) {
-      return this.postType === 'company_update';
-    }
-  },
   likes: [{
     type: Schema.Types.ObjectId,
     ref: 'User'
   }],
-  likesCount: {
+  comments: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Comment'
+  }],
+  shares: {
     type: Number,
-    default: 0,
-    min: 0
+    default: 0
   },
-  commentsCount: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
-  sharesCount: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
-  visibility: {
-    type: String,
-    enum: ['public', 'connections', 'private'],
-    default: 'public'
-  },
-  isPinned: {
+  isActive: {
     type: Boolean,
-    default: false
-  },
-  isPromoted: {
-    type: Boolean,
-    default: false
+    default: true
   }
 }, {
-  timestamps: true,
-  toJSON: {
-    transform: function(doc, ret) {
-      delete ret.__v;
-      return ret;
-    }
-  }
+  timestamps: true
 });
 
-// Indexes for performance
+// Indexes
 postSchema.index({ author: 1, createdAt: -1 });
-postSchema.index({ postType: 1, createdAt: -1 });
 postSchema.index({ tags: 1 });
-postSchema.index({ visibility: 1, createdAt: -1 });
-postSchema.index({ isPromoted: 1, createdAt: -1 });
-postSchema.index({ relatedJob: 1 });
-postSchema.index({ createdAt: -1 }); // For general feed sorting
+postSchema.index({ type: 1 });
+postSchema.index({ createdAt: -1 });
 
-// Text search index
-postSchema.index({ 
-  content: 'text', 
-  tags: 'text' 
-}, {
-  weights: {
-    content: 10,
-    tags: 5
-  }
+// Virtual for like count
+postSchema.virtual('likeCount').get(function() {
+  return this.likes.length;
 });
 
-// Virtual to check if user liked this post
-postSchema.virtual('isLikedBy').get(function(this: IPostDocument) {
-  return (userId: string) => this.likes.includes(userId);
+// Virtual for comment count
+postSchema.virtual('commentCount').get(function() {
+  return this.comments.length;
 });
 
-// Static methods
-postSchema.statics.findPostsForFeed = async function(userId: string, limit = 20, skip = 0): Promise<IPostDocument[]> {
-  const mongoose = require('mongoose');
-  
-  // Get user's connections to prioritize their posts
-  const connections = await this.model('Connection').find({
-    $or: [
-      { requester: userId, status: 'accepted' },
-      { recipient: userId, status: 'accepted' }
-    ]
-  });
+// Ensure virtual fields are serialized
+postSchema.set('toJSON', { virtuals: true });
+postSchema.set('toObject', { virtuals: true });
 
-  const connectedUserIds = connections.map((conn: any) => {
-    return conn.requester.toString() === userId ? conn.recipient : conn.requester;
-  });
-
-  // Create aggregation pipeline to prioritize connected users' posts
-  const pipeline = [
-    {
-      $match: {
-        $or: [
-          { visibility: 'public' },
-          { author: new mongoose.Types.ObjectId(userId) },
-          { 
-            visibility: 'connections',
-            author: { $in: connectedUserIds.map((id: string) => new mongoose.Types.ObjectId(id)) }
-          }
-        ]
-      }
-    },
-    {
-      $addFields: {
-        priorityScore: {
-          $cond: [
-            { $in: ['$author', connectedUserIds.map((id: string) => new mongoose.Types.ObjectId(id))] },
-            3, // Connected users get priority 3
-            {
-              $cond: [
-                { $eq: ['$isPromoted', true] },
-                2, // Promoted posts get priority 2
-                1  // Regular posts get priority 1
-              ]
-            }
-          ]
-        }
-      }
-    },
-    {
-      $sort: {
-        isPinned: -1,
-        priorityScore: -1,
-        createdAt: -1
-      }
-    },
-    { $skip: skip },
-    { $limit: limit },
-    {
-      $lookup: {
-        from: 'users',
-        localField: 'author',
-        foreignField: '_id',
-        as: 'author',
-        pipeline: [
-          {
-            $project: {
-              firstName: 1,
-              lastName: 1,
-              profilePicture: 1,
-              company: 1,
-              jobTitle: 1
-            }
-          }
-        ]
-      }
-    },
-    {
-      $lookup: {
-        from: 'jobs',
-        localField: 'relatedJob',
-        foreignField: '_id',
-        as: 'relatedJob'
-      }
-    },
-    {
-      $lookup: {
-        from: 'events',
-        localField: 'relatedEvent',
-        foreignField: '_id',
-        as: 'relatedEvent'
-      }
-    },
-    {
-      $addFields: {
-        author: { $arrayElemAt: ['$author', 0] },
-        relatedJob: { $arrayElemAt: ['$relatedJob', 0] },
-        relatedEvent: { $arrayElemAt: ['$relatedEvent', 0] }
-      }
-    }
-  ];
-
-  return this.aggregate(pipeline);
-};
-
-postSchema.statics.findPostsByAuthor = function(authorId: string): Promise<IPostDocument[]> {
-  return this.find({ author: authorId })
-    .populate('author', 'firstName lastName profilePicture company jobTitle')
-    .populate('relatedJob', 'title company location jobType')
-    .sort({ createdAt: -1 });
-};
-
-postSchema.statics.findJobPosts = function(limit = 10, skip = 0): Promise<IPostDocument[]> {
-  return this.find({ 
-    postType: 'job_post',
-    visibility: 'public'
-  })
-  .populate('author', 'firstName lastName profilePicture company jobTitle')
-  .populate('relatedJob', 'title company location jobType salary applicationDeadline')
-  .sort({ isPromoted: -1, createdAt: -1 })
-  .skip(skip)
-  .limit(limit);
-};
-
-export const Post = mongoose.model<IPostDocument, IPostModel>('Post', postSchema);
+export const Post = mongoose.model<IPost>('Post', postSchema);

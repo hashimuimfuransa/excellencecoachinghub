@@ -330,6 +330,7 @@ const Layout: React.FC = () => {
         { text: 'Teacher Management', icon: <SupervisorAccount />, path: '/dashboard/admin/teachers' },
         { text: 'Student Management', icon: <Groups />, path: '/dashboard/admin/students' },
         { text: 'Course Management', icon: <School />, path: '/dashboard/admin/courses' },
+        { text: 'Community', icon: <Groups />, path: '/community/feed' },
         { text: 'Recordings Management', icon: <VideoLibrary />, path: '/dashboard/admin/recordings' },
         { text: 'Analytics & Reports', icon: <Analytics />, path: '/dashboard/admin/analytics' },
         { text: 'System Leaderboard', icon: <EmojiEvents />, path: '/dashboard/admin/leaderboard' },
@@ -344,6 +345,7 @@ const Layout: React.FC = () => {
         { text: 'Course Management', icon: <School />, path: '/dashboard/teacher/course-management', requiresApprovedProfile: true },
         { text: 'Create Course', icon: <Add />, path: '/dashboard/teacher/courses/create', requiresApprovedProfile: true },
         { text: 'Live Sessions', icon: <VideoCall />, path: '/dashboard/teacher/live-sessions', requiresApprovedProfile: true },
+        { text: 'Community', icon: <Groups />, path: '/community/feed' },
         { text: 'Student Management', icon: <ManageAccounts />, path: '/dashboard/teacher/student-management', requiresApprovedProfile: true },
         { text: 'Grades & Performance', icon: <Grade />, path: '/dashboard/teacher/grades', requiresApprovedProfile: true },
         { text: 'Analytics', icon: <Analytics />, path: '/dashboard/teacher/analytics', requiresApprovedProfile: true },
@@ -353,6 +355,7 @@ const Layout: React.FC = () => {
       roleSpecificItems.push(
         { text: 'My Courses', icon: <School />, path: '/dashboard/student/courses' },
         { text: '🔴 Live Sessions', icon: <VideoCall />, path: '/live-sessions' },
+        { text: 'Community', icon: <Groups />, path: '/community/feed' },
         { text: 'My Grades', icon: <Grade />, path: '/dashboard/student/grades' },
         { text: 'Leaderboard', icon: <EmojiEvents />, path: '/dashboard/student/leaderboard' },
         { text: 'Career Guidance', icon: <TrendingUp />, path: '/dashboard/student/career' },

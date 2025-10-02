@@ -33,6 +33,7 @@ import {
   alpha,
   styled
 } from '@mui/material';
+import UnifiedLearningPage from './UnifiedLearningPage';
 import {
   School,
   PlayArrow,
@@ -728,7 +729,7 @@ const StudentCourses: React.FC = () => {
                             variant="contained"
                             size="large"
                             startIcon={progress >= 100 ? <EmojiEvents /> : <PlayArrow />}
-                            onClick={() => navigate(`/course/${course._id}`)}
+                            onClick={() => navigate(`/course/${course._id}/learn`)}
                             sx={{ 
                               bgcolor: progress >= 100 ? 'success.main' : 'primary.main',
                               '&:hover': {
@@ -1012,7 +1013,7 @@ const StudentCourses: React.FC = () => {
                                 variant="contained"
                                 size="large"
                                 startIcon={enrollmentProgress >= 100 ? <EmojiEvents /> : <PlayArrow />}
-                                onClick={() => navigate(`/course/${course._id}`)}
+                                onClick={() => navigate(`/course/${course._id}/learn`)}
                                 sx={{ 
                                   bgcolor: enrollmentProgress >= 100 ? 'success.main' : 'primary.main',
                                   '&:hover': {
@@ -1042,7 +1043,7 @@ const StudentCourses: React.FC = () => {
                                 variant="contained"
                                 size="large"
                                 startIcon={<School />}
-                                onClick={() => handleEnroll(course._id)}
+                                onClick={() => navigate(`/course/${course._id}/enroll`)}
                               >
                                 🚀 Enroll Now
                               </ActionButton>

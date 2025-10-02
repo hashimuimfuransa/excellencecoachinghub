@@ -97,7 +97,7 @@ const uploadWithRetry = async (
       return await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error('Upload timeout - connection took too long'));
-        }, 120000); // 2 minute timeout per attempt
+        }, 60000); // 1 minute timeout per attempt
 
         cloudinary.uploader.upload_stream(
           options,
@@ -178,7 +178,8 @@ export const uploadMediaToCloudinary = async (
       public_id: publicId,
       folder: folder,
       resource_type: isVideo ? 'video' : isAudio ? 'video' : 'image', // Audio files use 'video' resource_type in Cloudinary
-      chunk_size: 6000000, // 6MB chunks for better reliability
+      chunk_size: 2000000, // 2MB chunks for faster uploads
+      timeout: 60000, // 60 second timeout
     };
 
     if (isVideo) {

@@ -48,6 +48,11 @@ import StudentCourses from './pages/Student/StudentCourses';
 import Assessments from './pages/Student/Assessments';
 import TakeAssessment from './pages/Student/TakeAssessment';
 import EnhancedAssessments from './pages/Student/EnhancedAssessments';
+import UnifiedLearningPage from './pages/Student/UnifiedLearningPage';
+import TeacherCourseDashboard from './pages/Teacher/TeacherCourseDashboard';
+import ContentStructureEditor from './pages/Teacher/ContentStructureEditor';
+import CourseEnrollmentSystem from './components/Course/CourseEnrollmentSystem';
+import CommunityRouter from './pages/Community/CommunityRouter';
 import EnhancedTakeAssessmentStudent from './pages/Student/EnhancedTakeAssessment';
 import EnhancedTakeAssessmentWithProctoring from './pages/Student/EnhancedTakeAssessmentWithProctoring';
 import ProctoringTest from './pages/Test/ProctoringTest';
@@ -171,6 +176,9 @@ const App: React.FC = () => {
         <Route path="terms" element={<div>Terms of Service - Coming Soon</div>} />
       </Route>
 
+      {/* Community routes with standalone layout (no public navbar/footer) */}
+      <Route path="community/*" element={<CommunityRouter />} />
+
       {/* Protected dashboard routes with authenticated layout */}
       <Route
         path="/dashboard"
@@ -220,9 +228,10 @@ const App: React.FC = () => {
           <Route path="profile/edit" element={<TeacherProfileComplete />} />
           
           {/* Protected teacher routes - require approved profile */}
-          <Route path="courses" element={<TeacherApprovalGuard><TeacherCourses /></TeacherApprovalGuard>} />
+          <Route path="courses" element={<TeacherApprovalGuard><TeacherCourseDashboard /></TeacherApprovalGuard>} />
           <Route path="courses/create" element={<TeacherApprovalGuard><CreateCourse /></TeacherApprovalGuard>} />
           <Route path="courses/:id/manage" element={<TeacherApprovalGuard><CourseManagement /></TeacherApprovalGuard>} />
+          <Route path="courses/:id/content" element={<TeacherApprovalGuard><ContentStructureEditor /></TeacherApprovalGuard>} />
           <Route path="courses/:courseId/materials" element={<TeacherApprovalGuard><CourseMaterials /></TeacherApprovalGuard>} />
           <Route path="live-sessions" element={<TeacherApprovalGuard><LiveSessions /></TeacherApprovalGuard>} />
           <Route path="live-sessions/create" element={<TeacherApprovalGuard><CreateLiveSession /></TeacherApprovalGuard>} />
@@ -254,6 +263,8 @@ const App: React.FC = () => {
           <Route path="course-content" element={<CourseContent />} />
           <Route path="course-content/:id" element={<CourseContent />} />
           <Route path="course/:id" element={<CourseViewPage />} />
+          <Route path="course/:id/learn" element={<UnifiedLearningPage />} />
+          <Route path="course/:id/enroll" element={<CourseEnrollmentSystem courseId="" onEnrollmentComplete={() => {}} />} />
           <Route path="course/:id/material" element={<CourseMaterialPage />} />
           <Route path="course/:id/live-sessions" element={<StudentLiveSessions />} />
           <Route path="course/:id/announcements" element={<CourseAnnouncementsPage />} />

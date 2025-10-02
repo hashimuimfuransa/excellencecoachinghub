@@ -1,38 +1,34 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+import mongoose, { Document, Schema } from 'mongoose';
 
-export interface ICommentDocument extends Document {
-  post: string; // Post ID
-  author: string; // User ID
+// Comment interface
+export interface IComment extends Document {
+  post: mongoose.Types.ObjectId;
+  author: mongoose.Types.ObjectId;
   content: string;
-  parentComment?: string; // For replies
-  likes: string[]; // Array of User IDs who liked this comment
-  likesCount: number;
-  repliesCount: number;
+  parentComment?: mongoose.Types.ObjectId; // For nested comments/replies
+  likes: mongoose.Types.ObjectId[];
+  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface ICommentModel extends Model<ICommentDocument> {
-  findByPost(postId: string): Promise<ICommentDocument[]>;
-  findReplies(commentId: string): Promise<ICommentDocument[]>;
-}
-
-const commentSchema = new Schema<ICommentDocument>({
+// Comment schema
+const commentSchema = new Schema<IComment>({
   post: {
     type: Schema.Types.ObjectId,
     ref: 'Post',
-    required: [true, 'Post reference is required']
+    required: true
   },
   author: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: [true, 'Comment author is required']
+    required: true
   },
   content: {
     type: String,
-    required: [true, 'Comment content is required'],
+    required: true,
     trim: true,
-    maxlength: [1000, 'Comment cannot exceed 1000 characters']
+    maxlength: 1000
   },
   parentComment: {
     type: Schema.Types.ObjectId,
@@ -43,45 +39,34 @@ const commentSchema = new Schema<ICommentDocument>({
     type: Schema.Types.ObjectId,
     ref: 'User'
   }],
-  likesCount: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
-  repliesCount: {
-    type: Number,
-    default: 0,
-    min: 0
+  isActive: {
+    type: Boolean,
+    default: true
   }
 }, {
-  timestamps: true,
-  toJSON: {
-    transform: function(doc, ret) {
-      delete ret.__v;
-      return ret;
-    }
-  }
+  timestamps: true
 });
 
-// Indexes for performance
-commentSchema.index({ post: 1, createdAt: 1 });
+// Indexes
+commentSchema.index({ post: 1, createdAt: -1 });
 commentSchema.index({ author: 1 });
 commentSchema.index({ parentComment: 1 });
 
-// Static methods
-commentSchema.statics.findByPost = function(postId: string): Promise<ICommentDocument[]> {
-  return this.find({ 
-    post: postId, 
-    parentComment: { $exists: false } 
-  })
-  .populate('author', 'firstName lastName profilePicture')
-  .sort({ createdAt: 1 });
-};
+// Virtual for like count
+commentSchema.virtual('likeCount').get(function() {
+  return this.likes.length;
+});
 
-commentSchema.statics.findReplies = function(commentId: string): Promise<ICommentDocument[]> {
-  return this.find({ parentComment: commentId })
-    .populate('author', 'firstName lastName profilePicture')
-    .sort({ createdAt: 1 });
-};
+// Virtual for reply count
+commentSchema.virtual('replyCount', {
+  ref: 'Comment',
+  localField: '_id',
+  foreignField: 'parentComment',
+  count: true
+});
 
-export const Comment = mongoose.model<ICommentDocument, ICommentModel>('Comment', commentSchema);
+// Ensure virtual fields are serialized
+commentSchema.set('toJSON', { virtuals: true });
+commentSchema.set('toObject', { virtuals: true });
+
+export const Comment = mongoose.model<IComment>('Comment', commentSchema);

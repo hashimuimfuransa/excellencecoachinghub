@@ -259,7 +259,8 @@ export const authService = {
         console.log('✅ Reset token generated, sending email via EmailJS...');
 
         // Send real email using EmailJS
-        const emailSent = await sendPasswordResetEmail(
+        const { emailService } = await import('./emailService');
+        const emailSent = await emailService.sendPasswordResetEmail(
           userData.email,
           userData.firstName,
           userData.resetToken
@@ -283,7 +284,8 @@ export const authService = {
   // Send password reset email using EmailJS (for future use)
   sendPasswordResetEmailJS: async (email: string, firstName: string, resetToken: string): Promise<void> => {
     try {
-      const emailSent = await sendPasswordResetEmail(email, firstName, resetToken);
+      const { emailService } = await import('./emailService');
+      const emailSent = await emailService.sendPasswordResetEmail(email, firstName, resetToken);
 
       if (!emailSent) {
         throw new Error('Failed to send password reset email');

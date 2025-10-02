@@ -326,13 +326,4 @@ export const teacherProfileService = {
     }
   },
 
-  // Get my profile (using the existing method but with better error handling)
-  getMyProfile: async (): Promise<{ success: boolean; data?: any; error?: string }> => {
-    try {
-      const response = await apiService.get<{ profile: ITeacherProfile }>('/teacher-profiles/my-profile');
-      return response;
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  }
 };

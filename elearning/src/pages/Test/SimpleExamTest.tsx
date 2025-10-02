@@ -22,6 +22,7 @@ const SafeButton: React.FC<{
   size?: 'small' | 'medium' | 'large';
   startIcon?: React.ReactNode;
   endIcon?: React.ReactNode;
+  sx?: any;
 }> = ({ 
   children, 
   onClick, 
@@ -31,6 +32,7 @@ const SafeButton: React.FC<{
   fullWidth = false,
   size = 'medium',
   startIcon,
+  sx,
   endIcon
 }) => {
   const [isHovered, setIsHovered] = React.useState(false);
@@ -60,6 +62,7 @@ const SafeButton: React.FC<{
       alignItems: 'center',
       justifyContent: 'center',
       gap: '8px',
+      ...sx,
       width: fullWidth ? '100%' : 'auto',
       transition: 'all 0.2s ease-in-out',
       fontFamily: 'inherit',

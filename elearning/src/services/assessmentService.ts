@@ -436,10 +436,10 @@ export const assessmentService = {
 
   // Debug method to check student info
   debugStudentInfo: async (): Promise<any> => {
-    const response = await apiService.get('/assessments/debug/student-info');
+    const response = await apiService.get<{ debug: any }>('/assessments/debug/student-info');
     
-    if (response.success) {
-      return response.debug;
+    if (response.success && response.data) {
+      return response.data.debug;
     }
     
     throw new Error(response.error || 'Failed to fetch debug info');
@@ -612,43 +612,6 @@ export const assessmentService = {
     }
   },
 
-  // Proctoring methods
-  saveAssessmentProgress: async (assessmentId: string, progressData: {
-    answers: any[];
-    currentQuestionIndex: number;
-    timeRemaining: number | null;
-    violations: string[];
-  }): Promise<void> => {
-    try {
-      const response = await apiService.post(`/assessments/${assessmentId}/progress`, progressData);
-      
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to save assessment progress');
-      }
-    } catch (error: any) {
-      console.error('Failed to save assessment progress:', error);
-      throw new Error(error.message || 'Failed to save assessment progress');
-    }
-  },
-
-  submitAssessment: async (assessmentId: string, submissionData: {
-    answers: any[];
-    submissionType: 'manual' | 'auto';
-    autoSubmitReason?: string;
-    violations: string[];
-    timeSpent: number;
-  }): Promise<void> => {
-    try {
-      const response = await apiService.post(`/assessments/${assessmentId}/submit`, submissionData);
-      
-      if (!response.success) {
-        throw new Error(response.error || 'Failed to submit assessment');
-      }
-    } catch (error: any) {
-      console.error('Failed to submit assessment:', error);
-      throw new Error(error.message || 'Failed to submit assessment');
-    }
-  },
 
   getAssessment: async (assessmentId: string): Promise<{ assessment: IAssessment }> => {
     try {

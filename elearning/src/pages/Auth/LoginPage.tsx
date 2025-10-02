@@ -19,7 +19,8 @@ import {
   VisibilityOff,
   Email,
   Lock,
-  Login as LoginIcon
+  Login as LoginIcon,
+  Home as HomeIcon
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
@@ -149,7 +150,14 @@ const LoginPage: React.FC = () => {
       const result = await googleAuthService.completeRegistration({
         role,
         platform: 'elearning',
-        googleUserData
+        email: googleUserData?.email || '',
+        firstName: googleUserData?.firstName || '',
+        lastName: googleUserData?.lastName || '',
+        googleId: googleUserData?.googleId || '',
+        googleUserData: {
+          ...googleUserData,
+          platform: 'elearning'
+        }
       });
 
       if (result.user && result.token) {
@@ -190,9 +198,32 @@ const LoginPage: React.FC = () => {
           sx={{
             padding: 4,
             width: '100%',
-            borderRadius: 2
+            borderRadius: 2,
+            position: 'relative'
           }}
         >
+          {/* Back to Home Button */}
+          <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}>
+            <Button
+              component={RouterLink}
+              to="/"
+              startIcon={<HomeIcon />}
+              variant="text"
+              size="small"
+              sx={{
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                color: 'primary.main',
+                fontSize: '0.7rem',
+                minWidth: 'auto',
+                p: 0.5
+              }}
+            >
+              Home
+            </Button>
+          </Box>
+
           {/* Header */}
           <Box textAlign="center" mb={3}>
             <Typography

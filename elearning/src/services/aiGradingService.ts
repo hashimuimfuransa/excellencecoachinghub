@@ -29,7 +29,7 @@ interface AIGradeResult {
   gradedAt: Date;
 }
 
-interface AssessmentGradeResult extends AIGradeResult {
+interface AssessmentGradeResult extends Omit<AIGradeResult, 'breakdown'> {
   breakdown: Array<{
     questionId: string;
     score: number;

@@ -379,138 +379,309 @@ const StudentDashboard: React.FC = () => {
 
   return (
     <ResponsiveDashboard>
-      {/* Header */}
+      {/* Enhanced Mobile-Responsive Welcome Section */}
       <Box sx={{ 
         mb: { xs: 3, sm: 4, md: 5 },
-        textAlign: { xs: 'center', sm: 'left' }
+        textAlign: { xs: 'center', sm: 'left' },
+        position: 'relative',
+        overflow: 'hidden'
       }}>
-        <Typography 
-          variant={isMobile ? "h4" : "h3"} 
-          component="h1" 
-          gutterBottom
-          sx={{ 
-            fontWeight: 700,
-            background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            mb: { xs: 1, sm: 2 },
-            fontSize: { xs: '1.8rem', sm: '2.2rem', md: '2.5rem' }
-          }}
-        >
-          Welcome back, {user?.firstName}! 🎓
-        </Typography>
-        <Typography 
-          variant={isMobile ? "body1" : "h6"} 
-          color="text.secondary"
-          sx={{ 
-            maxWidth: { xs: '100%', sm: '80%', md: '70%' },
-            mx: { xs: 'auto', sm: 0 },
-            mb: { xs: 2, sm: 3 },
-            fontWeight: 400,
-            lineHeight: 1.6
-          }}
-        >
-          {dashboardData.stats.totalCourses === 0 
-            ? "Ready to start learning? Explore our courses and begin your journey to excellence!"
-            : "Continue your learning journey and unlock your potential. Every step counts towards your success!"
-          }
-        </Typography>
+        {/* Background decoration for mobile */}
+        <Box sx={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: { xs: '100px', sm: '150px', md: '200px' },
+          height: { xs: '100px', sm: '150px', md: '200px' },
+          background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.1), rgba(33, 203, 243, 0.1))',
+          borderRadius: '50%',
+          transform: 'translate(30%, -30%)',
+          zIndex: 0,
+          display: { xs: 'block', md: 'none' }
+        }} />
         
-        {/* Quick Action Guide */}
-        {dashboardData.stats.totalCourses > 0 && (
-          <Box sx={{ 
-            mt: { xs: 2, sm: 3 }, 
-            p: { xs: 2, sm: 3 }, 
-            background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.08), rgba(33, 203, 243, 0.08))',
-            borderRadius: 3,
-            border: '1px solid rgba(33, 150, 243, 0.2)',
-            position: 'relative',
-            overflow: 'hidden',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '3px',
-              background: 'linear-gradient(90deg, #2196F3, #21CBF3)',
+        {/* Main welcome content */}
+        <Box sx={{ position: 'relative', zIndex: 1 }}>
+          <Typography 
+            variant={isMobile ? "h4" : "h3"} 
+            component="h1" 
+            gutterBottom
+            sx={{ 
+              fontWeight: 700,
+              background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              mb: { xs: 1, sm: 2 },
+              fontSize: { xs: '1.75rem', sm: '2.2rem', md: '2.5rem' },
+              lineHeight: { xs: 1.2, sm: 1.3 },
+              textAlign: { xs: 'center', sm: 'left' }
+            }}
+          >
+            Welcome back, {user?.firstName}! 🎓
+          </Typography>
+          
+          <Typography 
+            variant={isMobile ? "body1" : "h6"} 
+            color="text.secondary"
+            sx={{ 
+              maxWidth: { xs: '100%', sm: '85%', md: '75%' },
+              mx: { xs: 'auto', sm: 0 },
+              mb: { xs: 3, sm: 4 },
+              fontWeight: 400,
+              lineHeight: { xs: 1.5, sm: 1.6 },
+              fontSize: { xs: '0.95rem', sm: '1rem', md: '1.1rem' },
+              textAlign: { xs: 'center', sm: 'left' }
+            }}
+          >
+            {dashboardData.stats.totalCourses === 0 
+              ? "Ready to start your learning journey? Explore our courses and begin your path to excellence!"
+              : "Continue your learning journey and unlock your potential. Every step counts towards your success!"
             }
-          }}>
-            <Typography 
-              variant={isMobile ? "subtitle1" : "h6"} 
-              sx={{ 
-                fontWeight: 600, 
-                mb: { xs: 1.5, sm: 2 },
-                color: 'primary.main',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1
-              }}
-            >
-              🎯 What would you like to do today?
-            </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 1, sm: 2 }}>
-              <ResponsiveButton 
-                size={buttonSize}
-                variant="outlined" 
-                onClick={() => navigate('/dashboard/student/courses')}
+          </Typography>
+          
+          {/* Enhanced Quick Action Guide */}
+          {dashboardData.stats.totalCourses > 0 && (
+            <Box sx={{ 
+              mt: { xs: 2, sm: 3 }, 
+              p: { xs: 2.5, sm: 3, md: 3.5 }, 
+              background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.08), rgba(33, 203, 243, 0.08))',
+              borderRadius: { xs: 2, sm: 3 },
+              border: '1px solid rgba(33, 150, 243, 0.2)',
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: { xs: '0 2px 8px rgba(33, 150, 243, 0.1)', sm: '0 4px 16px rgba(33, 150, 243, 0.15)' },
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '3px',
+                background: 'linear-gradient(90deg, #2196F3, #21CBF3)',
+              }
+            }}>
+              <Typography 
+                variant={isMobile ? "subtitle1" : "h6"} 
                 sx={{ 
-                  bgcolor: 'white',
-                  borderColor: 'primary.main',
+                  fontWeight: 600, 
+                  mb: { xs: 2, sm: 2.5 },
                   color: 'primary.main',
-                  '&:hover': {
-                    bgcolor: 'primary.main',
-                    color: 'white',
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 4px 12px rgba(33, 150, 243, 0.3)'
-                  },
-                  transition: 'all 0.3s ease'
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: { xs: 'center', sm: 'flex-start' },
+                  gap: 1,
+                  fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' }
                 }}
               >
-                📚 Study Course Materials
-              </ResponsiveButton>
-              <ResponsiveButton 
-                size={buttonSize}
-                variant="outlined" 
-                onClick={() => navigate('/dashboard/student/assessments')}
+                🎯 What would you like to do today?
+              </Typography>
+              
+              <Stack 
+                direction={{ xs: 'column', sm: 'row' }} 
+                spacing={{ xs: 1.5, sm: 2 }}
                 sx={{ 
-                  bgcolor: 'white',
-                  borderColor: 'warning.main',
-                  color: 'warning.main',
-                  '&:hover': {
-                    bgcolor: 'warning.main',
-                    color: 'white',
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 4px 12px rgba(255, 152, 0, 0.3)'
-                  },
-                  transition: 'all 0.3s ease'
+                  alignItems: { xs: 'stretch', sm: 'center' },
+                  justifyContent: { xs: 'center', sm: 'flex-start' }
                 }}
               >
-                📝 Take Assessments
-              </ResponsiveButton>
-              <ResponsiveButton 
-                size={buttonSize}
-                variant="outlined" 
-                onClick={() => navigate('/dashboard/student/live-sessions')}
+                <ResponsiveButton 
+                  size={buttonSize}
+                  variant="outlined" 
+                  onClick={() => navigate('/dashboard/student/courses')}
+                  sx={{ 
+                    bgcolor: 'white',
+                    borderColor: 'primary.main',
+                    color: 'primary.main',
+                    minHeight: { xs: '44px', sm: '40px' },
+                    fontSize: { xs: '0.85rem', sm: '0.9rem' },
+                    fontWeight: 600,
+                    borderRadius: { xs: 2, sm: 2.5 },
+                    '&:hover': {
+                      bgcolor: 'primary.main',
+                      color: 'white',
+                      transform: { xs: 'none', sm: 'translateY(-2px)' },
+                      boxShadow: { xs: '0 2px 8px rgba(33, 150, 243, 0.3)', sm: '0 4px 12px rgba(33, 150, 243, 0.3)' }
+                    },
+                    transition: 'all 0.3s ease',
+                    '&:active': {
+                      transform: 'scale(0.98)'
+                    }
+                  }}
+                >
+                  📚 Study Materials
+                </ResponsiveButton>
+                
+                <ResponsiveButton 
+                  size={buttonSize}
+                  variant="outlined" 
+                  onClick={() => navigate('/dashboard/student/assessments')}
+                  sx={{ 
+                    bgcolor: 'white',
+                    borderColor: 'warning.main',
+                    color: 'warning.main',
+                    minHeight: { xs: '44px', sm: '40px' },
+                    fontSize: { xs: '0.85rem', sm: '0.9rem' },
+                    fontWeight: 600,
+                    borderRadius: { xs: 2, sm: 2.5 },
+                    '&:hover': {
+                      bgcolor: 'warning.main',
+                      color: 'white',
+                      transform: { xs: 'none', sm: 'translateY(-2px)' },
+                      boxShadow: { xs: '0 2px 8px rgba(255, 152, 0, 0.3)', sm: '0 4px 12px rgba(255, 152, 0, 0.3)' }
+                    },
+                    transition: 'all 0.3s ease',
+                    '&:active': {
+                      transform: 'scale(0.98)'
+                    }
+                  }}
+                >
+                  📝 Take Tests
+                </ResponsiveButton>
+                
+                <ResponsiveButton 
+                  size={buttonSize}
+                  variant="outlined" 
+                  onClick={() => navigate('/dashboard/student/live-sessions')}
+                  sx={{ 
+                    bgcolor: 'white',
+                    borderColor: 'success.main',
+                    color: 'success.main',
+                    minHeight: { xs: '44px', sm: '40px' },
+                    fontSize: { xs: '0.85rem', sm: '0.9rem' },
+                    fontWeight: 600,
+                    borderRadius: { xs: 2, sm: 2.5 },
+                    '&:hover': {
+                      bgcolor: 'success.main',
+                      color: 'white',
+                      transform: { xs: 'none', sm: 'translateY(-2px)' },
+                      boxShadow: { xs: '0 2px 8px rgba(76, 175, 80, 0.3)', sm: '0 4px 12px rgba(76, 175, 80, 0.3)' }
+                    },
+                    transition: 'all 0.3s ease',
+                    '&:active': {
+                      transform: 'scale(0.98)'
+                    }
+                  }}
+                >
+                  🎥 Live Sessions
+                </ResponsiveButton>
+              </Stack>
+            </Box>
+          )}
+          
+          {/* New user onboarding section */}
+          {dashboardData.stats.totalCourses === 0 && (
+            <Box sx={{ 
+              mt: { xs: 3, sm: 4 }, 
+              p: { xs: 2.5, sm: 3, md: 3.5 }, 
+              background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.08), rgba(139, 195, 74, 0.08))',
+              borderRadius: { xs: 2, sm: 3 },
+              border: '1px solid rgba(76, 175, 80, 0.2)',
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: { xs: '0 2px 8px rgba(76, 175, 80, 0.1)', sm: '0 4px 16px rgba(76, 175, 80, 0.15)' },
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '3px',
+                background: 'linear-gradient(90deg, #4CAF50, #8BC34A)',
+              }
+            }}>
+              <Typography 
+                variant={isMobile ? "subtitle1" : "h6"} 
                 sx={{ 
-                  bgcolor: 'white',
-                  borderColor: 'success.main',
+                  fontWeight: 600, 
+                  mb: { xs: 2, sm: 2.5 },
                   color: 'success.main',
-                  '&:hover': {
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: { xs: 'center', sm: 'flex-start' },
+                  gap: 1,
+                  fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' }
+                }}
+              >
+                🚀 Ready to get started?
+              </Typography>
+              
+              <Typography 
+                variant="body2" 
+                color="text.secondary"
+                sx={{ 
+                  mb: { xs: 2, sm: 2.5 },
+                  textAlign: { xs: 'center', sm: 'left' },
+                  lineHeight: 1.6,
+                  fontSize: { xs: '0.9rem', sm: '1rem' }
+                }}
+              >
+                Browse our comprehensive course catalog and start your learning journey today. 
+                Choose from programming, business, design, and many more subjects.
+              </Typography>
+              
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: { xs: 'center', sm: 'flex-start' },
+                gap: 2,
+                flexWrap: 'wrap'
+              }}>
+                <ResponsiveButton 
+                  size={buttonSize}
+                  variant="contained" 
+                  onClick={() => navigate('/courses')}
+                  sx={{ 
                     bgcolor: 'success.main',
                     color: 'white',
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)'
-                  },
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                🎥 Join Live Sessions
-              </ResponsiveButton>
-            </Stack>
-          </Box>
-        )}
+                    minHeight: { xs: '44px', sm: '40px' },
+                    fontSize: { xs: '0.9rem', sm: '1rem' },
+                    fontWeight: 600,
+                    borderRadius: { xs: 2, sm: 2.5 },
+                    px: { xs: 3, sm: 4 },
+                    '&:hover': {
+                      bgcolor: 'success.dark',
+                      transform: { xs: 'none', sm: 'translateY(-2px)' },
+                      boxShadow: { xs: '0 2px 8px rgba(76, 175, 80, 0.3)', sm: '0 4px 12px rgba(76, 175, 80, 0.3)' }
+                    },
+                    transition: 'all 0.3s ease',
+                    '&:active': {
+                      transform: 'scale(0.98)'
+                    }
+                  }}
+                >
+                  Browse Courses
+                </ResponsiveButton>
+                
+                <ResponsiveButton 
+                  size={buttonSize}
+                  variant="outlined" 
+                  onClick={() => navigate('/dashboard/student/career')}
+                  sx={{ 
+                    borderColor: 'success.main',
+                    color: 'success.main',
+                    minHeight: { xs: '44px', sm: '40px' },
+                    fontSize: { xs: '0.9rem', sm: '1rem' },
+                    fontWeight: 600,
+                    borderRadius: { xs: 2, sm: 2.5 },
+                    px: { xs: 3, sm: 4 },
+                    '&:hover': {
+                      bgcolor: 'success.main',
+                      color: 'white',
+                      transform: { xs: 'none', sm: 'translateY(-2px)' },
+                      boxShadow: { xs: '0 2px 8px rgba(76, 175, 80, 0.3)', sm: '0 4px 12px rgba(76, 175, 80, 0.3)' }
+                    },
+                    transition: 'all 0.3s ease',
+                    '&:active': {
+                      transform: 'scale(0.98)'
+                    }
+                  }}
+                >
+                  Career Guidance
+                </ResponsiveButton>
+              </Box>
+            </Box>
+          )}
+        </Box>
       </Box>
 
       {/* Stats Cards */}

@@ -60,7 +60,7 @@ const RoleSelectionModal: React.FC<RoleSelectionModalProps> = ({
       disableEscapeKeyDown={isLoading}
     >
       <DialogTitle>
-        <Typography variant="h6" align="center">
+        <Typography variant="h6" align="center" component="div">
           Welcome to Excellence Coaching Hub
         </Typography>
       </DialogTitle>

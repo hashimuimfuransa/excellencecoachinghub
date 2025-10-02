@@ -31,10 +31,10 @@ const ResponsiveContainer = styled(Container)(({ theme }) => ({
     paddingBottom: theme.spacing(2),
   },
   [theme.breakpoints.up('lg')]: {
-    paddingLeft: theme.spacing(4),
-    paddingRight: theme.spacing(4),
-    paddingTop: theme.spacing(3),
-    paddingBottom: theme.spacing(3),
+    paddingLeft: theme.spacing(2),  // Reduced from 4 to 2 for better space utilization
+    paddingRight: theme.spacing(2), // Reduced from 4 to 2 for better space utilization
+    paddingTop: theme.spacing(2),   // Reduced from 3 to 2 for better space utilization
+    paddingBottom: theme.spacing(2), // Reduced from 3 to 2 for better space utilization
   },
 }));
 
@@ -53,8 +53,8 @@ const ResponsiveGrid = styled(Grid)(({ theme }) => ({
       paddingRight: theme.spacing(1.5),
     },
     [theme.breakpoints.up('lg')]: {
-      paddingLeft: theme.spacing(2),
-      paddingRight: theme.spacing(2),
+      paddingLeft: theme.spacing(1),  // Reduced from 2 to 1 for better space utilization
+      paddingRight: theme.spacing(1), // Reduced from 2 to 1 for better space utilization
     },
   }
 }));
@@ -81,9 +81,9 @@ const ResponsiveDashboard: React.FC<ResponsiveDashboardProps> = ({
     
     if (isMobile) return 'sm';
     if (isTablet) return 'md';
-    if (isLaptop) return 'lg';
+    if (isLaptop) return 'xl';  // Increased from 'lg' to 'xl' for better space utilization
     if (isDesktop) return 'xl';
-    return 'lg';
+    return 'xl';  // Default to 'xl' for better desktop experience
   };
 
   // Determine grid spacing based on device

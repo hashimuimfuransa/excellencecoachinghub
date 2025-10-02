@@ -356,15 +356,6 @@ class AssignmentService {
     }
   }
 
-  // Get submission history
-  async getSubmissionHistory(assignmentId: string): Promise<any[]> {
-    try {
-      const response = await api.get(`/assignments/${assignmentId}/submission-history`);
-      return response.data.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch submission history');
-    }
-  }
 
   // Update AI grade
   async updateAIGrade(submissionId: string, aiGradeData: {
@@ -865,7 +856,7 @@ class AssignmentService {
       
       Object.entries(filters).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== '') {
-          queryParams.append(key, value.toString());
+          queryParams.append(key, String(value));
         }
       });
 

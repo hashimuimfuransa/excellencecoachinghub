@@ -199,7 +199,12 @@ export const recordingService = {
     recordingsByMonth: Array<{ month: string; count: number; size: number }>;
     topCourses: Array<{ courseId: string; courseTitle: string; recordingCount: number }>;
   }> => {
-    const response = await apiService.get('/admin/recordings/stats');
+    const response = await apiService.get<{
+      totalRecordings: number;
+      totalSize: number;
+      recordingsByMonth: Array<{ month: string; count: number; size: number }>;
+      topCourses: Array<{ courseId: string; courseTitle: string; recordingCount: number }>;
+    }>('/admin/recordings/stats');
     
     if (response.success && response.data) {
       return response.data;

@@ -98,6 +98,10 @@ class ProctoringService {
       // Initialize monitoring
       await this.initializeMonitoring(settings);
       
+      if (!this.currentSession) {
+        throw new Error('Failed to create proctoring session');
+      }
+      
       return this.currentSession;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Failed to start proctoring session');
@@ -212,7 +216,7 @@ class ProctoringService {
     try {
       // @ts-ignore - getDisplayMedia is supported in modern browsers
       this.screenStream = await navigator.mediaDevices.getDisplayMedia({
-        video: { mediaSource: 'screen' },
+        video: true,
         audio: true
       });
     } catch (error) {
@@ -320,7 +324,7 @@ class ProctoringService {
               if (analysis.violations.length > 0) {
                 analysis.violations.forEach(violation => {
                   this.reportViolation({
-                    type: violation.type,
+                    type: violation.type as 'tab_switch' | 'window_blur' | 'copy_paste' | 'multiple_faces' | 'no_face' | 'suspicious_movement' | 'external_device',
                     severity: violation.confidence > 0.8 ? 'high' : violation.confidence > 0.5 ? 'medium' : 'low',
                     description: violation.description,
                     aiConfidence: violation.confidence

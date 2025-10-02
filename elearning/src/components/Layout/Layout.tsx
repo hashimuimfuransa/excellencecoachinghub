@@ -24,7 +24,12 @@ import {
   SwipeableDrawer,
   Hidden,
   alpha,
-  Chip
+  Chip,
+  Button,
+  Popover,
+  Grid,
+  TextField,
+  InputAdornment
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -50,7 +55,18 @@ import {
   Grade,
   Leaderboard,
   EmojiEvents,
-  TrendingUp
+  TrendingUp,
+  Explore,
+  ExpandMore,
+  Computer,
+  Business,
+  Science,
+  Palette,
+  Language,
+  LocalHospital,
+  Engineering,
+  Calculate,
+  Search
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { useNotifications } from '../../hooks/useNotifications';
@@ -107,8 +123,12 @@ const ResponsiveMain = styled(Box, {
   padding: theme.spacing(0, 1, 2, 1), // Default padding for mobile
   paddingTop: `calc(56px + ${theme.spacing(1)})`, // AppBar height + spacing for mobile
   [theme.breakpoints.up('sm')]: {
-    padding: theme.spacing(0, 2, 3, 2), // Padding for tablet/desktop
-    paddingTop: `calc(64px + ${theme.spacing(2)})`, // AppBar height + spacing for desktop
+    padding: theme.spacing(0, 1, 2, 1), // Reduced padding for better space utilization
+    paddingTop: `calc(64px + ${theme.spacing(1)})`, // AppBar height + reduced spacing for desktop
+  },
+  [theme.breakpoints.up('lg')]: {
+    padding: theme.spacing(0, 0.5, 1.5, 0.5), // Further reduced padding for large screens
+    paddingTop: `calc(64px + ${theme.spacing(0.5)})`, // Minimal spacing for large screens
   },
 }));
 
@@ -152,6 +172,12 @@ const Layout: React.FC = () => {
   // Career guidance popup state
   const [showCareerPopup, setShowCareerPopup] = useState(false);
   const [hasCheckedCareerTest, setHasCheckedCareerTest] = useState(false);
+  
+  // Explore categories state
+  const [exploreAnchorEl, setExploreAnchorEl] = useState<null | HTMLElement>(null);
+  
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { user, logout } = useAuth();
   const { unreadCount } = useNotifications();
@@ -375,6 +401,44 @@ const Layout: React.FC = () => {
     setShowCareerPopup(false);
     navigate('/dashboard/student/career');
   };
+
+  // Explore categories handlers
+  const handleExploreClick = (event: React.MouseEvent<HTMLElement>) => {
+    setExploreAnchorEl(event.currentTarget);
+  };
+
+  const handleExploreClose = () => {
+    setExploreAnchorEl(null);
+  };
+
+  const handleCategoryClick = (category: string) => {
+    handleExploreClose();
+    navigate(`/courses?category=${encodeURIComponent(category)}`);
+  };
+
+  // Search handlers
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/courses?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
+
+  // Course categories data
+  const courseCategories = [
+    { name: 'Computer Science', icon: <Computer />, color: '#1976d2' },
+    { name: 'Business & Management', icon: <Business />, color: '#388e3c' },
+    { name: 'Data Science', icon: <Science />, color: '#f57c00' },
+    { name: 'Design & Creative', icon: <Palette />, color: '#9c27b0' },
+    { name: 'Languages', icon: <Language />, color: '#d32f2f' },
+    { name: 'Health & Medicine', icon: <LocalHospital />, color: '#00796b' },
+    { name: 'Engineering', icon: <Engineering />, color: '#5d4037' },
+    { name: 'Mathematics', icon: <Calculate />, color: '#303f9f' }
+  ];
 
   // Drawer content
   const drawer = (
@@ -600,6 +664,75 @@ const Layout: React.FC = () => {
             {user?.firstName} {user?.lastName}
           </Typography>
 
+          {/* Search Bar */}
+          <Box
+            component="form"
+            onSubmit={handleSearchSubmit}
+            sx={{
+              display: { xs: 'none', md: 'flex' },
+              alignItems: 'center',
+              mr: 2,
+              minWidth: 300,
+              maxWidth: 500
+            }}
+          >
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Find what you want to learn..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search sx={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+                  </InputAdornment>
+                ),
+                sx: {
+                  bgcolor: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: 2,
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderColor: 'rgba(255, 255, 255, 0.2)',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: 'rgba(255, 255, 255, 0.4)',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: 'rgba(255, 255, 255, 0.6)',
+                    },
+                  },
+                  '& .MuiInputBase-input': {
+                    color: 'white',
+                    '&::placeholder': {
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      opacity: 1,
+                    },
+                  },
+                }
+              }}
+            />
+          </Box>
+
+          {/* Explore Categories Button */}
+          <Button
+            variant="text"
+            color="inherit"
+            startIcon={<Explore />}
+            endIcon={<ExpandMore />}
+            onClick={handleExploreClick}
+            sx={{
+              mr: 2,
+              textTransform: 'none',
+              fontSize: '1rem',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.1)'
+              }
+            }}
+          >
+            Explore
+          </Button>
+
           {/* Profile Menu */}
           <Tooltip title="Account settings">
             <IconButton
@@ -671,6 +804,94 @@ const Layout: React.FC = () => {
           Logout
         </MenuItem>
       </Menu>
+
+      {/* Explore Categories Popover */}
+      <Popover
+        open={Boolean(exploreAnchorEl)}
+        anchorEl={exploreAnchorEl}
+        onClose={handleExploreClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: {
+            mt: 1,
+            minWidth: 400,
+            maxWidth: 600,
+            borderRadius: 2,
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
+          }
+        }}
+      >
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: '#333' }}>
+            Explore Learning Categories
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 3, color: '#666' }}>
+            Choose a category to discover courses that match your interests
+          </Typography>
+          
+          <Grid container spacing={2}>
+            {courseCategories.map((category, index) => (
+              <Grid item xs={6} sm={4} key={index}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={category.icon}
+                  onClick={() => handleCategoryClick(category.name)}
+                  sx={{
+                    p: 2,
+                    height: 'auto',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    textAlign: 'left',
+                    borderColor: category.color,
+                    color: category.color,
+                    '&:hover': {
+                      backgroundColor: `${category.color}10`,
+                      borderColor: category.color,
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 4px 12px ${category.color}30`
+                    },
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    {category.icon}
+                  </Box>
+                  <Typography variant="body2" sx={{ fontWeight: 500, lineHeight: 1.2 }}>
+                    {category.name}
+                  </Typography>
+                </Button>
+              </Grid>
+            ))}
+          </Grid>
+          
+          <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid #eee' }}>
+            <Button
+              fullWidth
+              variant="contained"
+              onClick={() => {
+                handleExploreClose();
+                navigate('/courses');
+              }}
+              sx={{
+                bgcolor: '#1976d2',
+                '&:hover': {
+                  bgcolor: '#1565c0'
+                }
+              }}
+            >
+              View All Courses
+            </Button>
+          </Box>
+        </Box>
+      </Popover>
 
       {/* Navigation Drawer */}
       <Box

@@ -96,8 +96,8 @@ class GradesService {
       if (filters.timeFilter && filters.timeFilter !== 'all') params.append('timeFilter', filters.timeFilter);
       if (filters.status && filters.status !== 'all') params.append('status', filters.status);
 
-      const response = await apiService.get(`${this.baseUrl}/student?${params.toString()}`);
-      return response?.grades || response?.data?.grades || [];
+      const response = await apiService.get<{ grades: StudentGrade[] }>(`${this.baseUrl}/student?${params.toString()}`);
+      return response?.data?.grades || [];
     } catch (error) {
       console.error('Failed to fetch student grades:', error);
       return [];
@@ -106,8 +106,8 @@ class GradesService {
 
   async getStudentGradesByCourse(courseId: string): Promise<StudentGrade[]> {
     try {
-      const response = await apiService.get(`${this.baseUrl}/student/course/${courseId}`);
-      return response?.grades || response?.data?.grades || [];
+      const response = await apiService.get<{ grades: StudentGrade[] }>(`${this.baseUrl}/student/course/${courseId}`);
+      return response?.data?.grades || [];
     } catch (error) {
       console.error('Failed to fetch student grades by course:', error);
       throw error;
@@ -117,8 +117,8 @@ class GradesService {
   async getCourseStats(courseId?: string): Promise<CourseStats> {
     try {
       const url = courseId ? `${this.baseUrl}/stats/course/${courseId}` : `${this.baseUrl}/stats`;
-      const response = await apiService.get(url);
-      return response?.stats || response?.data?.stats || {
+      const response = await apiService.get<{ stats: any }>(url);
+      return response?.data?.stats || {
         totalAssessments: 0,
         completedAssessments: 0,
         totalAssignments: 0,
@@ -160,9 +160,7 @@ class GradesService {
       console.log('Teacher grades response:', response);
       
       // Handle different response structures
-      if (response && response.grades) {
-        return response.grades;
-      } else if (response && response.data && response.data.grades) {
+      if (response && response.data && response.data.grades) {
         return response.data.grades;
       } else {
         console.warn('Unexpected response structure:', response);
@@ -185,9 +183,7 @@ class GradesService {
       console.log('Teacher course grades response:', response);
       
       // Handle different response structures
-      if (response && response.grades) {
-        return response.grades;
-      } else if (response && response.data && response.data.grades) {
+      if (response && response.data && response.data.grades) {
         return response.data.grades;
       } else {
         console.warn('Unexpected response structure:', response);
@@ -230,9 +226,7 @@ class GradesService {
       console.log('Leaderboard response:', response);
       
       // Handle different response structures
-      if (response && response.leaderboard) {
-        return response.leaderboard;
-      } else if (response && response.data && response.data.leaderboard) {
+      if (response && response.data && response.data.leaderboard) {
         return response.data.leaderboard;
       } else {
         return [];
@@ -309,8 +303,8 @@ class GradesService {
       if (filters.timeFilter && filters.timeFilter !== 'all') params.append('timeFilter', filters.timeFilter);
       if (filters.limit) params.append('limit', filters.limit.toString());
 
-      const response = await apiService.get(`${this.baseUrl}/admin/leaderboard?${params.toString()}`);
-      return response?.leaderboard || response?.data?.leaderboard || [];
+      const response = await apiService.get<{ leaderboard: any[] }>(`${this.baseUrl}/admin/leaderboard?${params.toString()}`);
+      return response?.data?.leaderboard || [];
     } catch (error) {
       console.error('Failed to fetch admin leaderboard:', error);
       throw error;
@@ -325,8 +319,8 @@ class GradesService {
       if (filters.timeFilter && filters.timeFilter !== 'all') params.append('timeFilter', filters.timeFilter);
       if (filters.status && filters.status !== 'all') params.append('status', filters.status);
 
-      const response = await apiService.get(`${this.baseUrl}/admin?${params.toString()}`);
-      return response?.grades || response?.data?.grades || [];
+      const response = await apiService.get<{ grades: any[] }>(`${this.baseUrl}/admin?${params.toString()}`);
+      return response?.data?.grades || [];
     } catch (error) {
       console.error('Failed to fetch admin grades:', error);
       throw error;

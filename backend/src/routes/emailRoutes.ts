@@ -124,7 +124,7 @@ router.post('/job-recommendations', async (req: Request, res: Response) => {
       
       if (!canSendEmail) {
         return res.status(429).json({
-          error: 'Job recommendation email already sent today for this user'
+          error: 'Job recommendation email already sent recently for this user (weekly frequency)'
         });
       }
     }
@@ -138,7 +138,8 @@ router.post('/job-recommendations', async (req: Request, res: Response) => {
         EmailType.JOB_RECOMMENDATIONS,
         {
           jobCount: jobs.length,
-          reason: 'manual_api_call'
+          reason: 'manual_api_call',
+          frequency: 'weekly'
         }
       );
     }

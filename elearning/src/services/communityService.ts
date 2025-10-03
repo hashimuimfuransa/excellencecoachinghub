@@ -341,7 +341,7 @@ class CommunityService {
 
   async sendMessage(chatId: string, messageData: {
     content: string;
-    messageType: 'text' | 'image' | 'file';
+    messageType: 'text' | 'image' | 'file' | 'audio';
     fileUrl?: string;
     fileName?: string;
     replyTo?: string;
@@ -356,6 +356,31 @@ class CommunityService {
 
   async deleteMessage(chatId: string, messageId: string): Promise<void> {
     await api.delete(`/chat/${chatId}/message/${messageId}`);
+  }
+
+  // File upload methods using Cloudinary like job portal
+  async uploadImage(file: File): Promise<{fileUrl: string}> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', 'chat');
+    const response = await api.post('/upload/media', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return { fileUrl: response.data.data.url };
+  }
+
+  async uploadAudio(file: File): Promise<{fileUrl: string}> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', 'chat');
+    const response = await api.post('/upload/media', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return { fileUrl: response.data.data.url };
   }
 
   // Search

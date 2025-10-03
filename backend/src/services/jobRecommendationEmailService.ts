@@ -12,7 +12,7 @@ import { sendJobRecommendationEmail } from './sendGridService';
  * - Backend sends emails directly using SendGrid API
  * - No frontend dependency for email sending
  * 
- * Sends daily email recommendations to users with complete profiles when new matching jobs are found
+ * Sends weekly email recommendations to users with complete profiles when new matching jobs are found
  */
 export class JobRecommendationEmailService {
   private static isRunning = false;
@@ -20,7 +20,7 @@ export class JobRecommendationEmailService {
   private static lastRunTime: Date | null = null;
 
   /**
-   * Start the daily job recommendation email scheduler
+   * Start the weekly job recommendation email scheduler
    */
   static start(): void {
     if (this.cronJob) {

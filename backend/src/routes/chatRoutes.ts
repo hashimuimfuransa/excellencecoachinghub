@@ -45,7 +45,7 @@ const sendMessageValidation = [
     .withMessage('Message content cannot be empty'),
   body('messageType')
     .optional()
-    .isIn(['text', 'file', 'image'])
+    .isIn(['text', 'file', 'image', 'audio'])
     .withMessage('Invalid message type'),
   body('replyTo')
     .optional()
@@ -621,5 +621,6 @@ router.get('/online-users', auth, async (req: Request, res: Response) => {
     });
   }
 });
+
 
 export default router;

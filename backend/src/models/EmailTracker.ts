@@ -153,7 +153,9 @@ EmailTrackerSchema.statics.recordEmailSent = async function(
           lastSentAt: now,
           lastResetDate: startOfDay,
           isActive: true,
-          ...(metadata && { metadata })
+          ...(metadata && { metadata }),
+          // Set frequency from metadata if provided (for job recommendations weekly frequency)
+          frequency: metadata?.frequency || 'daily'
         },
         $inc: { emailsSentToday: 1 }
       },

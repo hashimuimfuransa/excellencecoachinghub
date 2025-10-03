@@ -28,7 +28,8 @@ import {
   CircularProgress,
   Drawer,
   useMediaQuery,
-  Hidden
+  Hidden,
+  Fab
 } from '@mui/material';
 import {
   Send,
@@ -126,7 +127,13 @@ import {
   CopyAll,
   Menu as MenuIcon,
   Close,
-  ArrowBack
+  ArrowBack,
+  Mic,
+  MicOff,
+  Image,
+  PlayArrow,
+  Pause,
+  Stop
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { communityService, IUser } from '../../services/communityService';
@@ -182,9 +189,16 @@ interface Message {
   content: string;
   timestamp: string;
   isRead: boolean;
-  type: 'text' | 'system' | 'image' | 'file';
+  type: 'text' | 'system' | 'image' | 'file' | 'audio';
   attachments?: Attachment[];
   isOwn: boolean;
+  fileUrl?: string;
+  fileName?: string;
+  replyTo?: {
+    id: string;
+    content: string;
+    senderName: string;
+  };
 }
 
 interface Attachment {
@@ -241,6 +255,36 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
   const [allConversations, setAllConversations] = useState<any[]>([]);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  
+  // File upload and voice recording states
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+  const [sendingVoiceMessage, setSendingVoiceMessage] = useState(false);
+  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  
+  // Remove complex ref tracking - use simple job portal approach
+  
+  // File upload states
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [showFilePreview, setShowFilePreview] = useState(false);
+  
+  // Audio player refs for cleanup
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
+  
+  // Debug recording state changes
+  useEffect(() => {
+    console.log('Recording state changed:', { isRecording, recordingDuration, hasInterval: !!recordingIntervalRef.current });
+  }, [isRecording, recordingDuration]);
+  
 
   // Load contacts and messages
   useEffect(() => {
@@ -280,8 +324,8 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
               unreadCount: conv.unreadCount || 0,
               isGroup: conv.isGroup,
               groupMembers: conv.isGroup ? conv.participants.length : undefined,
-              isPinned: false,
-              isMuted: false
+            isPinned: false,
+            isMuted: false
             };
           });
         
@@ -395,14 +439,28 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
       }
     }, [user, selectedContact]);
 
-    // Cleanup socket on component unmount
-    useEffect(() => {
-      return () => {
-        if (socket) {
-          socket.disconnect();
-        }
-      };
-    }, []);
+  // Cleanup socket and recording on component unmount
+  useEffect(() => {
+    return () => {
+      if (socket) {
+        socket.disconnect();
+      }
+      // Cleanup recording resources
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+      }
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+      // Cleanup audio preview
+      if (audioPreviewRef.current) {
+        audioPreviewRef.current.pause();
+      }
+      if (audioPreviewUrl) {
+        URL.revokeObjectURL(audioPreviewUrl);
+      }
+    };
+  }, [socket, mediaRecorder, audioPreviewUrl]);
 
   // Load messages for selected contact
   const loadMessages = async (contactId: string) => {
@@ -431,9 +489,16 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
       
       // Transform backend messages to frontend format
       const messages: Message[] = messagesData.map((msg: any) => {
-        console.log('Processing message:', msg); // Debug log
+        console.log('Processing message:', {
+          id: msg._id,
+          type: msg.messageType,
+          content: msg.content,
+          fileUrl: msg.fileUrl,
+          fileName: msg.fileName,
+          raw: msg
+        }); // Enhanced debug log
         
-        return {
+        const messageContent = {
           id: msg._id.toString(),
           senderId: msg.sender?._id?.toString() || msg.sender?.toString() || user?._id,
           senderName: `${msg.sender?.firstName || ''} ${msg.sender?.lastName || ''}` || 'Unknown User',
@@ -443,12 +508,26 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
           isRead: msg.readBy?.includes(user?._id) || msg.isRead || false,
           type: msg.messageType || 'text',
           isOwn: (msg.sender?._id?.toString() === user?._id) || (msg.sender?.toString() === user?._id),
+          fileUrl: msg.fileUrl || msg.file?.url || msg.attachments?.[0]?.url,
+          fileName: msg.fileName || msg.file?.name || msg.attachments?.[0]?.name || 'Unknown File',
           replyTo: msg.replyTo ? {
             id: msg.replyTo._id.toString(),
             content: msg.replyTo.content,
             senderName: `${msg.replyTo.sender?.firstName} ${msg.replyTo.sender?.lastName}` || 'Unknown'
           } : undefined
         };
+        
+        // Special logging for audio messages
+        if (msg.messageType === 'audio') {
+          console.log('Audio message details:', {
+            hasFileUrl: !!messageContent.fileUrl,
+            fileUrl: messageContent.fileUrl,
+            fileName: messageContent.fileName,
+            content: messageContent.content
+          });
+        }
+        
+        return messageContent;
       });
 
       console.log('Processed messages:', messages); // Debug log
@@ -748,6 +827,281 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
     }
   };
 
+  // Voice recording functions (job portal implementation)
+  const startRecording = async () => {
+    // Prevent multiple recordings
+    if (isRecording || mediaRecorder) {
+      console.log('Recording already in progress, ignoring start request');
+      return;
+    }
+    
+    try {
+      console.log('Starting recording...');
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('Audio stream obtained');
+      
+      const mediaRecorder = new MediaRecorder(stream);
+      setMediaRecorder(mediaRecorder);
+      
+      const chunks: Blob[] = [];
+      
+      mediaRecorder.ondataavailable = (event) => {
+        console.log('Data available:', event.data.size, 'bytes');
+        chunks.push(event.data);
+      };
+      
+      mediaRecorder.onstart = () => {
+        console.log('MediaRecorder started successfully');
+      };
+      
+      mediaRecorder.onstop = async () => {
+        console.log('Recording stopped, chunks received:', chunks.length);
+        
+        // Only create audio blob if we have chunks
+        if (chunks.length > 0 && chunks.some(chunk => chunk.size > 0)) {
+          const blob = new Blob(chunks, { type: 'audio/webm;codecs=opus' });
+          console.log('Audio blob created, size:', blob.size, 'type:', blob.type);
+          
+          if (blob.size > 0) {
+            // Store audio chunks for later use
+            setAudioChunks(chunks);
+            
+            try {
+              // Upload to Cloudinary immediately for preview
+              console.log('Uploading audio to Cloudinary for preview...');
+              const uploadData = await communityService.uploadAudio(
+                new File([blob], `voice-${Date.now()}.webm`, { type: 'audio/webm' })
+              );
+              
+              console.log('Audio uploaded to Cloudinary:', uploadData.fileUrl);
+              setAudioPreviewUrl(uploadData.fileUrl);
+            } catch (error) {
+              console.error('Failed to upload audio to Cloudinary:', error);
+              // Fallback to blob URL if Cloudinary upload fails
+              const url = URL.createObjectURL(blob);
+              console.log('Using blob URL as fallback:', url);
+              setAudioPreviewUrl(url);
+            }
+          } else {
+            console.warn('Audio blob is empty, recording may have failed');
+          }
+        } else {
+          console.warn('No valid audio chunks received');
+        }
+        
+        stream.getTracks().forEach(track => {
+          track.stop();
+          console.log('Removed track:', track.kind);
+        });
+      };
+      
+      mediaRecorder.onerror = (event) => {
+        console.error('MediaRecorder error:', event);
+        setIsRecording(false);
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      // Start recording
+      mediaRecorder.start(1000); // Request data every second
+      setIsRecording(true);
+      setRecordingDuration(0);
+      
+      // Start duration counter - exactly like job portal
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+      
+      console.log('Recording started successfully', {
+        intervalSet: !!recordingIntervalRef.current,
+        mediaRecorderState: mediaRecorder.state,
+        isRecording: true
+      });
+      
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      alert('Microphone access denied. Please enable microphone permissions.');
+      setIsRecording(false);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+    }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+    }
+    
+    setIsRecording(false);
+    setRecordingDuration(0);
+    setAudioChunks([]);
+    
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
+    
+    if (audioPreviewUrl) {
+      URL.revokeObjectURL(audioPreviewUrl);
+      setAudioPreviewUrl(null);
+    }
+    
+    setMediaRecorder(null);
+  };
+
+  const sendVoiceMessage = async () => {
+    if (!audioChunks || audioChunks.length === 0 || !selectedContact || sendingVoiceMessage) return;
+
+    try {
+      setSendingVoiceMessage(true);
+      
+      const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+      const audioFile = new File([audioBlob], 'voice-message.webm', { type: 'audio/webm' });
+      
+      // Upload voice file
+      const uploadResult = await communityService.uploadAudio(audioFile);
+      
+      // Send message with audio reference (use 'file' type to match job portal)
+      const messageData = {
+        content: `🎤 Voice message (${Math.floor(recordingDuration / 60)}:${(recordingDuration % 60).toString().padStart(2, '0')})`,
+        messageType: 'file',
+        fileUrl: uploadResult.fileUrl,
+        fileName: uploadResult.fileName
+      };
+      
+      const messageResponse = await communityService.sendMessage(selectedContact.id, messageData);
+      
+      // Add to messages list
+      const responseData = messageResponse.data || messageResponse;
+      const message: Message = {
+        id: responseData._id.toString(),
+        senderId: responseData.sender?._id?.toString() || responseData.sender?.toString() || user?._id,
+        senderName: `${responseData.sender?.firstName || user?.firstName} ${responseData.sender?.lastName || user?.lastName}`,
+        senderAvatar: responseData.sender?.profilePicture || user?.profilePicture,
+        content: messageData.content,
+        timestamp: responseData.createdAt || new Date().toISOString(),
+        isRead: responseData.readBy?.includes(user?._id) || false,
+        type: 'file',
+        isOwn: responseData.sender?._id?.toString() === user?._id || responseData.sender?.toString() === user?._id,
+        fileUrl: uploadResult.fileUrl,
+        fileName: messageData.fileName
+      };
+
+      setMessages(prev => [...prev, message]);
+      
+      // Reset recording state
+      setAudioChunks([]);
+      setRecordingDuration(0);
+      
+      // Clean up preview URL
+      if (audioPreviewUrl) {
+        URL.revokeObjectURL(audioPreviewUrl);
+        setAudioPreviewUrl(null);
+      }
+      
+      setMediaRecorder(null);
+      
+      console.log('Voice message sent successfully');
+    } catch (error) {
+      console.error('Error sending voice message:', error);
+    } finally {
+      setSendingVoiceMessage(false);
+    }
+  };
+
+  // Image upload functions
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const isImage = file.type.startsWith('image/');
+      const isAudio = file.type.startsWith('audio/');
+      
+      if (isImage || isAudio) {
+        setSelectedFile(file);
+        
+        if (isImage) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            setFilePreview(e.target?.result as string);
+          };
+          reader.readAsDataURL(file);
+        }
+        
+        setShowFilePreview(true);
+      } else {
+        alert('Please select an image or audio file');
+      }
+    }
+  };
+
+  const sendImageMessage = async (file: File) => {
+    if (!selectedContact) return;
+    
+    try {
+      setSendingMessage(true);
+      
+      // Upload image file using service
+      const uploadData = await communityService.uploadImage(file);
+      
+      // Send message with audio reference
+      const messageData = {
+        content: 'Image',
+        messageType: 'image',
+        fileUrl: uploadData.fileUrl,
+        fileName: file.name
+      };
+      
+      const messageResponse = await communityService.sendMessage(selectedContact.id, messageData);
+      
+      // Add to messages list
+      const responseData = messageResponse.data || messageResponse;
+      const message: Message = {
+        id: responseData._id.toString(),
+        senderId: responseData.sender?._id?.toString() || responseData.sender?.toString() || user?._id,
+        senderName: `${responseData.sender?.firstName || user?.firstName} ${responseData.sender?.lastName || user?.lastName}`,
+        senderAvatar: responseData.sender?.profilePicture || user?.profilePicture,
+        content: 'Image',
+        timestamp: responseData.createdAt || new Date().toISOString(),
+        isRead: responseData.readBy?.includes(user?._id) || false,
+        type: 'image',
+        isOwn: responseData.sender?._id?.toString() === user?._id || responseData.sender?.toString() === user?._id,
+        fileUrl: uploadData.fileUrl,
+        fileName: file.name
+      };
+
+      setMessages(prev => [...prev, message]);
+      
+      // Clear file selection
+      setSelectedFile(null);
+      setFilePreview(null);
+      setShowFilePreview(false);
+      
+    } catch (error) {
+      console.error('Error sending image:', error);
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
+  const cancelFileUpload = () => {
+    setSelectedFile(null);
+    setFilePreview(null);
+    setShowFilePreview(false);
+  };
+
+  // Audio playback functions
+
+
+
   // Handle pagination for contacts
   const handleContactPageChange = (event: any, page: number) => {
     setContactPage(page);
@@ -891,16 +1245,16 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
             
             {/* Desktop Header */}
             {!isMobile && (
-              <CardContent sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                <Stack direction="row" alignItems="center" spacing={2}>
+            <CardContent sx={{ borderBottom: 1, borderColor: 'divider' }}>
+              <Stack direction="row" alignItems="center" spacing={2}>
                   <IconButton 
                     onClick={handleDrawerToggle} 
                     sx={{ display: { md: 'block', lg: 'none' } }}
                   >
                     <MenuIcon />
                   </IconButton>
-                  <Typography variant="h6" sx={{ fontWeight: 600, flexGrow: 1 }}>
-                    Messages
+                <Typography variant="h6" sx={{ fontWeight: 600, flexGrow: 1 }}>
+                  Messages
                 </Typography>
                 <Button
                   variant="outlined"
@@ -916,14 +1270,14 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
                 <IconButton>
                   <MoreVert />
                 </IconButton>
-                </Stack>
-              </CardContent>
+              </Stack>
+            </CardContent>
             )}
             
             <Box sx={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-              <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
-                <List sx={{ p: 0 }}>
-                  {contacts.map((contact) => (
+            <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
+              <List sx={{ p: 0 }}>
+                {contacts.map((contact) => (
                   <ListItem
                     key={contact.id}
                     sx={{ p: 0 }}
@@ -1010,8 +1364,8 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
                       </CardContent>
                     </ContactCard>
                   </ListItem>
-                  ))}
-                </List>
+                ))}
+              </List>
               </Box>
               
               {/* Pagination for contacts */}
@@ -1121,10 +1475,10 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
                     <>
                       <IconButton size={isMobile ? "large" : "medium"}>
                         <VideoCall fontSize={isMobile ? "medium" : "small"} />
-                      </IconButton>
+                    </IconButton>
                       <IconButton size={isMobile ? "large" : "medium"}>
                         <Phone fontSize={isMobile ? "medium" : "small"} />
-                      </IconButton>
+                    </IconButton>
                     </>
                   )}
                   <IconButton 
@@ -1135,7 +1489,7 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
                     }}
                   >
                     <Info fontSize={isMobile ? "medium" : "small"} />
-                  </IconButton>
+                    </IconButton>
                   <IconButton 
                     size={isMobile ? "large" : "medium"}
                     sx={{
@@ -1144,7 +1498,7 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
                     }}
                   >
                     <MoreVert fontSize={isMobile ? "medium" : "small"} />
-                  </IconButton>
+                    </IconButton>
                 </Stack>
               </Paper>
 
@@ -1177,9 +1531,9 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
                       )}
                       
                       <Tooltip title="Right-click for options">
-                        <ChatBubble 
-                          isOwn={message.isOwn} 
-                          isSystem={message.type === 'system'}
+                      <ChatBubble 
+                        isOwn={message.isOwn} 
+                        isSystem={message.type === 'system'}
                           onContextMenu={(e) => !message.type?.includes('system') && handleMessageMenu(e, message)}
                         >
                           <Box sx={{ cursor: 'context-menu' }}>
@@ -1200,16 +1554,113 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
                                 </Typography>
                               </Box>
                             )}
-                            <Typography variant="body2">
-                              {message.content}
-                            </Typography>
-                            <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 0.5 }}>
-                              <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                                {formatTimestamp(message.timestamp)}
-                              </Typography>
-                              {message.isOwn && (
-                                message.isRead ? <CheckCircle sx={{ fontSize: 16 }} /> : <CheckCircleOutline sx={{ fontSize: 16 }} />
-                              )}
+                            
+                            {/* Message content based on type */}
+                            {(message.type === 'file' && message.content.includes('Voice message')) ? (
+                              <Box sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: 1, 
+                                minWidth: 200,
+                                mb: 1,
+                              }}>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => {
+                                    console.log('Playing voice message:', message.fileUrl);
+                                    
+                                    // Stop any currently playing audio
+                                    if (playingAudioId && playingAudioId !== message.id) {
+                                      setPlayingAudioId(null);
+                                    }
+                                    
+                                    // Toggle play/pause for same audio
+                                    if (playingAudioId === message.id) {
+                                      setPlayingAudioId(null);
+                                      return;
+                                    }
+                                    
+                                    // Play new audio
+                                    setPlayingAudioId(message.id);
+                                    const audio = new Audio(message.fileUrl);
+                                    
+                                    // Handle audio events
+                                    audio.addEventListener('play', () => {
+                                      console.log('Playing:', message.id);
+                                      setPlayingAudioId(message.id);
+                                    });
+                                    
+                                    audio.addEventListener('pause', () => {
+                                      console.log('Paused:', message.id);
+                                      setPlayingAudioId(null);
+                                    });
+                                    
+                                    audio.addEventListener('ended', () => {
+                                      console.log('Ended:', message.id);
+                                      setPlayingAudioId(null);
+                                    });
+                                    
+                                    audio.addEventListener('error', () => {
+                                      console.log('Error:', message.id);
+                                      setPlayingAudioId(null);
+                                    });
+                                    
+                                    audio.play().catch(error => {
+                                      console.error('Error playing audio:', error);
+                                      setPlayingAudioId(null);
+                                    });
+                                  }}
+                                  disabled={!message.fileUrl}
+                                  sx={{
+                                    backgroundColor: message.isOwn 
+                                      ? 'rgba(255, 255, 255, 0.2)' 
+                                      : theme.palette.primary.main,
+                                    color: 'white',
+                                    '&:hover': {
+                                      backgroundColor: message.isOwn 
+                                        ? 'rgba(255, 255, 255, 0.3)' 
+                                        : theme.palette.primary.dark,
+                                    },
+                                    minWidth: 36,
+                                    minHeight: 36,
+                                  }}
+                                >
+                                  {playingAudioId === message.id ? <Pause fontSize="small" /> : <PlayArrow fontSize="small" />}
+                                </IconButton>
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                  {message.content}
+                                </Typography>
+                              </Box>
+                            ) : message.type === 'image' ? (
+                              <Box>
+                                <img 
+                                  src={message.fileUrl} 
+                                  alt="Message" 
+                                  style={{ 
+                                    maxWidth: '100%', 
+                                    height: 'auto', 
+                                    borderRadius: 8,
+                                    maxHeight: 300
+                                  }} 
+                                />
+                                {message.content !== 'Image' && (
+                                  <Typography variant="body2" sx={{ mt: 1 }}>
+                                    {message.content}
+                                  </Typography>
+                                )}
+                              </Box>
+                            ) : (
+                        <Typography variant="body2">
+                          {message.content}
+                        </Typography>
+                            )}
+                        <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 0.5 }}>
+                          <Typography variant="caption" sx={{ opacity: 0.7 }}>
+                            {formatTimestamp(message.timestamp)}
+                          </Typography>
+                          {message.isOwn && (
+                            message.isRead ? <CheckCircle sx={{ fontSize: 16 }} /> : <CheckCircleOutline sx={{ fontSize: 16 }} />
+                          )}
                               {!message.type?.includes('system') && (
                                 <Tooltip title="Message options">
                                   <IconButton 
@@ -1221,9 +1672,9 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
                                   </IconButton>
                                 </Tooltip>
                               )}
-                            </Stack>
+                        </Stack>
                           </Box>
-                        </ChatBubble>
+                      </ChatBubble>
                       </Tooltip>
                     </Box>
                   ))}
@@ -1247,6 +1698,176 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
                       ✕
                     </IconButton>
                   </Stack>
+                </Paper>
+              )}
+
+              {/* Voice Recording Preview */}
+              {audioChunks.length > 0 && !isRecording && (
+                <Paper sx={{ 
+                  p: 2, 
+                  mx: 2, 
+                  mb: 1, 
+                  borderRadius: 3, 
+                  background: 'linear-gradient(45deg, #ffffff, #f8f9ff)',
+                  border: '1px solid rgba(25, 118, 210, 0.2)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+              }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Fab
+                      size="small"
+                      onClick={isPlayingPreview ? 
+                        () => {
+                          if (audioPreviewRef.current) {
+                            audioPreviewRef.current.pause();
+                            audioPreviewRef.current.currentTime = 0;
+                          }
+                          setIsPlayingPreview(false);
+                        } : 
+                        () => {
+                          console.log('Preview play button clicked:', 'audioPreviewUrl:', audioPreviewUrl);
+                          if (!audioPreviewUrl) return;
+                          if (audioPreviewRef.current) {
+                            audioPreviewRef.current.pause();
+                          }
+                          const audio = new Audio(audioPreviewUrl);
+                          audioPreviewRef.current = audio;
+                          audio.addEventListener('play', () => setIsPlayingPreview(true));
+                          audio.addEventListener('pause', () => setIsPlayingPreview(false));
+                          audio.addEventListener('ended', () => setIsPlayingPreview(false));
+                          audio.play().catch(error => {
+                            console.error('Error playing preview:', error);
+                            setIsPlayingPreview(false);
+                          });
+                        }
+                      }
+                      disabled={!audioPreviewUrl}
+                      sx={{ 
+                        background: isPlayingPreview 
+                          ? 'linear-gradient(45deg, #f44336, #e53935)' 
+                          : 'linear-gradient(45deg, #2196f3, #21cbf3)',
+                        color: 'white',
+                        animation: isPlayingPreview ? 'play-pulse 1s infinite' : 'none',
+                        '@keyframes play-pulse': {
+                          '0%': {
+                            boxShadow: '0 0 0 0 rgba(33, 150, 243, 0.7)',
+                            transform: 'scale(1)'
+                          },
+                          '70%': {
+                            boxShadow: '0 0 0 10px rgba(33, 150, 243, 0)',
+                            transform: 'scale(1.1)'
+                          },
+                          '100%': {
+                            boxShadow: '0 0 0 0 rgba(33, 150, 243, 0)',
+                            transform: 'scale(1)'
+                          },
+                        },
+                        '&:hover': {
+                          transform: 'scale(1.05)',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+                        }
+                      }}
+                    >
+                      {isPlayingPreview ? <Pause /> : <PlayArrow />}
+                    </Fab>
+                    <Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Mic sx={{ fontSize: 16, color: 'primary.main' }} />
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                          Voice Message
+                        </Typography>
+                      </Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Duration: {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                        {isPlayingPreview ? ' • Playing' : ' • Tap to preview'}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="inherit"
+                      onClick={cancelRecording}
+                      sx={{ borderRadius: 2 }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      onClick={sendVoiceMessage}
+                      disabled={sendingMessage}
+                      sx={{ 
+                        borderRadius: 2,
+                        background: 'linear-gradient(45deg, #4caf50, #45a049)',
+                        '&:hover': {
+                          background: 'linear-gradient(45deg, #388e3c, #2e7d32)'
+                        }
+                      }}
+                    >
+                      {sendingMessage ? 'Sending...' : 'Send'}
+                    </Button>
+                  </Stack>
+                </Paper>
+              )}
+
+                    {/* File Preview */}
+              {showFilePreview && selectedFile && (
+                <Paper sx={{ 
+                  p: 2, 
+                  mx: 2, 
+                  mb: 1, 
+                  borderRadius: 2, 
+                  bgcolor: 'grey.50'
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    {selectedFile.type.startsWith('image/') && filePreview && (
+                      <Box>
+                        <img 
+                          src={filePreview} 
+                          alt="Preview" 
+                          style={{ 
+                            width: 60, 
+                            height: 60, 
+                            objectFit: 'cover', 
+                            borderRadius: 4 
+                          }} 
+                        />
+                      </Box>
+                    )}
+                    
+                    <Box sx={{ flexGrow: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {selectedFile.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                      </Typography>
+                    </Box>
+                    
+                    <Stack direction="row" spacing={1}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={cancelFileUpload}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        onClick={() => selectedFile && sendImageMessage(selectedFile)}
+                        disabled={sendingMessage}
+                          startIcon={selectedFile.type.startsWith('image/') ? <Image /> : <Mic />}
+                      >
+                        {sendingMessage ? 'Sending...' : 'Send'}
+                      </Button>
+                    </Stack>
+                  </Box>
                 </Paper>
               )}
 
@@ -1298,10 +1919,17 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
                         size="large"
                         sx={{ 
                           p: 1.5,
-                          minWidth: '48px', // Touch target
+                          minWidth: '48px',
                           minHeight: '48px'
                         }}
+                        component="label"
                       >
+                        <input
+                          type="file"
+                          hidden
+                          accept="image/*,audio/*"
+                          onChange={handleFileSelect}
+                        />
                         <AttachFile fontSize="medium" />
                       </IconButton>
                       <IconButton 
@@ -1314,6 +1942,19 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
                       >
                         <EmojiEmotions fontSize="medium" />
                       </IconButton>
+                  <IconButton 
+                    size={isMobile ? "large" : "medium"} 
+                    color={isRecording ? "error" : "primary"}
+                    onClick={isRecording ? stopRecording : startRecording}
+                    sx={{ 
+                      backgroundColor: isRecording ? theme.palette.error.light : theme.palette.action.hover,
+                      '&:hover': {
+                        backgroundColor: isRecording ? theme.palette.error.main : theme.palette.action.selected,
+                      }
+                    }}
+                  >
+                    {isRecording ? <MicOff /> : <Mic />}
+                  </IconButton>
                     </Stack>
                     
                     <Button
@@ -1340,7 +1981,13 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
                   alignItems="flex-end"
                   sx={{ display: { xs: 'none', sm: 'flex' } }}
                 >
-                  <IconButton size="medium">
+                  <IconButton size="medium" component="label">
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*,audio/*"
+                      onChange={handleFileSelect}
+                    />
                     <AttachFile />
                   </IconButton>
                   <TextField
@@ -1357,6 +2004,19 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
                       }
                     }}
                   />
+                  <IconButton 
+                    size="medium" 
+                    color={isRecording ? "error" : "primary"}
+                    onClick={isRecording ? stopRecording : startRecording}
+                    sx={{ 
+                      backgroundColor: isRecording ? theme.palette.error.light : theme.palette.action.hover,
+                      '&:hover': {
+                        backgroundColor: isRecording ? theme.palette.error.main : theme.palette.action.selected,
+                      }
+                    }}
+                  >
+                    {isRecording ? <MicOff /> : <Mic />}
+                  </IconButton>
                   <IconButton size="medium">
                     <EmojiEmotions />
                   </IconButton>
@@ -1375,6 +2035,137 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
                   </Button>
                 </Stack>
               </Paper>
+
+              {/* Voice Recording Interface (Job Portal Style) */}
+              {isRecording && (
+                <Box sx={{ 
+                  p: 2, 
+                  borderTop: 1, 
+                  borderColor: 'divider',
+                  background: theme.palette.mode === 'dark' 
+                    ? 'rgba(255,255,255,0.02)'
+                    : 'rgba(0,0,0,0.02)',
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ 
+                      width: 12, 
+                      height: 12, 
+                      borderRadius: '50%', 
+                      backgroundColor: theme.palette.error.main,
+                      animation: 'pulse 1s infinite',
+                      '@keyframes pulse': {
+                        '0%': {
+                          boxShadow: '0 0 0 0 rgba(244, 67, 54, 0.7)',
+                        },
+                        '70%': {
+                          boxShadow: '0 0 0 10px rgba(244, 67, 54, 0)',
+                        },
+                        '100%': {
+                          boxShadow: '0 0 0 0 rgba(244, 67, 54, 0)',
+                        },
+                      }
+                    }} />
+                    <Typography variant="body2" color="text.secondary" key={`recording-${recordingDuration}`}>
+                      Recording... {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                    <Button
+                      variant="contained"
+                      color="error"
+                      size="small"
+                      onClick={stopRecording}
+                      startIcon={<Stop />}
+                    >
+                      Stop Recording
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={cancelRecording}
+                    >
+                      Cancel
+                    </Button>
+                  </Box>
+                </Box>
+              )}
+
+              {/* Voice Message Preview (Job Portal Style) */}
+              {audioChunks.length > 0 && !isRecording && (
+                <Box sx={{ 
+                  p: 2, 
+                  borderTop: 1, 
+                  borderColor: 'divider',
+                  background: theme.palette.mode === 'dark' 
+                    ? 'rgba(255,255,255,0.02)'
+                    : 'rgba(0,0,0,0.02)',
+                }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Voice Message Ready ({Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')})
+                    {audioPreviewUrl && (
+                      <Chip 
+                        label="Preview Available" 
+                        size="small" 
+                        color="success" 
+                        sx={{ ml: 1, fontSize: '0.7rem' }}
+                      />
+                    )}
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={isPlayingPreview ? 
+                        () => {
+                          if (audioPreviewRef.current) {
+                            audioPreviewRef.current.pause();
+                            audioPreviewRef.current.currentTime = 0;
+                          }
+                          setIsPlayingPreview(false);
+                        } : 
+                        () => {
+                          console.log('Preview play button clicked:', 'audioPreviewUrl:', audioPreviewUrl);
+                          if (!audioPreviewUrl) return;
+                          if (audioPreviewRef.current) {
+                            audioPreviewRef.current.pause();
+                          }
+                          const audio = new Audio(audioPreviewUrl);
+                          audioPreviewRef.current = audio;
+                          audio.addEventListener('play', () => setIsPlayingPreview(true));
+                          audio.addEventListener('pause', () => setIsPlayingPreview(false));
+                          audio.addEventListener('ended', () => setIsPlayingPreview(false));
+                          audio.play().catch(error => {
+                            console.error('Error playing preview:', error);
+                            setIsPlayingPreview(false);
+                          });
+                        }
+                      }
+                      disabled={sendingVoiceMessage}
+                      startIcon={isPlayingPreview ? <Pause /> : <PlayArrow />}
+                      sx={{ minWidth: 'auto' }}
+                    >
+                      {isPlayingPreview ? 'Pause' : 'Preview'}
+                    </Button>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={sendVoiceMessage}
+                      disabled={sendingVoiceMessage}
+                      startIcon={sendingVoiceMessage ? <CircularProgress size={16} /> : <Send />}
+                    >
+                      {sendingVoiceMessage ? 'Sending...' : 'Send Voice Message'}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={cancelRecording}
+                      disabled={sendingVoiceMessage}
+                    >
+                      Cancel
+                    </Button>
+                  </Box>
+                </Box>
+              )}
             </ChatContainer>
           ) : (
             <Box sx={{ 
@@ -1389,10 +2180,10 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
             }}>
               <Typography variant="h6" color="text.secondary" gutterBottom>
                 {isMobile ? 'Tap on a contact to start chatting' : 'Select a conversation to start chatting'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
                 Choose from your contacts or start a new conversation
-              </Typography>
+                </Typography>
               {isMobile && (
                 <Button
                   variant="contained"
@@ -1403,7 +2194,7 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
                   Open Contacts
                 </Button>
               )}
-            </Box>
+              </Box>
           )}
         </Box>
       </Box>
@@ -1512,7 +2303,7 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
                               )}
                             </Stack>
                           </CardContent>
-                        </Card>
+            </Card>
                       </ListItem>
                     ))}
                   </List>

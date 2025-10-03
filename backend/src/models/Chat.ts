@@ -20,6 +20,7 @@ export interface IChat extends Document {
   isGroup: boolean;
   groupName?: string;
   groupAvatar?: string;
+  groupId?: mongoose.Types.ObjectId;
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -89,6 +90,10 @@ const chatSchema = new Schema<IChat>({
   },
   groupAvatar: {
     type: String,
+  },
+  groupId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Group',
   },
   createdBy: {
     type: Schema.Types.ObjectId,

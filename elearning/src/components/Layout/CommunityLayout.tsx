@@ -307,47 +307,61 @@ const CommunityLayout: React.FC<CommunityLayoutProps> = ({ children }) => {
           Quick Actions
         </Typography>
         <Stack spacing={1}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Add />}
-                    fullWidth
-                    onClick={() => navigate('/community/groups')}
-                    size="small"
-                  >
-                    Create Group
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Message />}
-                    fullWidth
-                    onClick={() => navigate('/community/chat')}
-                    size="small"
-                  >
-                    Start Chat
-                  </Button>
+          <Button
+            variant="outlined"
+            startIcon={<Add />}
+            fullWidth
+            onClick={() => navigate('/community/groups')}
+            size="small"
+          >
+            Create Group
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<Message />}
+            fullWidth
+            onClick={() => navigate('/community/chat')}
+            size="small"
+          >
+            Start Chat
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<School />}
+            fullWidth
+            color="primary"
+            onClick={() => navigate('/dashboard/student/courses')}
+            size="small"
+          >
+            Back to Learning Hub
+          </Button>
         </Stack>
       </Box>
 
       <Divider sx={{ mx: 2 }} />
 
-      {/* Stats */}
+      {/* Mini Learning Progress */}
       <Box sx={{ p: 2 }}>
         <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, px: 1 }}>
-          Your Stats
+          Learning Progress
         </Typography>
-        <Stack spacing={1}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1 }}>
-            <Typography variant="body2" color="text.secondary">Groups</Typography>
-            <Chip label="3" size="small" color="primary" />
+        <Stack spacing={1} sx={{ px: 1 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography variant="body2" color="text.secondary">Overall</Typography>
+            <Chip label="Keep going" size="small" color="success" variant="outlined" />
           </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1 }}>
-            <Typography variant="body2" color="text.secondary">Achievements</Typography>
-            <Chip label="12" size="small" color="warning" />
+          <Box sx={{ bgcolor: 'grey.100', height: 8, borderRadius: 9999, overflow: 'hidden' }}>
+            <Box sx={{ width: 'var(--progress, 45%)', height: '100%', bgcolor: 'success.main' }} />
           </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1 }}>
-            <Typography variant="body2" color="text.secondary">Points</Typography>
-            <Chip label="1,250" size="small" color="success" />
-          </Box>
+          <Typography variant="caption" color="text.secondary">Estimate based on your recent activity</Typography>
+          <Button
+            variant="text"
+            size="small"
+            onClick={() => navigate('/dashboard/student/courses')}
+            sx={{ alignSelf: 'flex-start' }}
+          >
+            Go to Learning Hub
+          </Button>
         </Stack>
       </Box>
     </Box>

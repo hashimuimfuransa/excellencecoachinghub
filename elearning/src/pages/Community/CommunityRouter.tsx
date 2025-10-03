@@ -7,6 +7,7 @@ import CommunityGroups from './CommunityGroups';
 import CommunityAchievements from './CommunityAchievements';
 import CommunityChat from './CommunityChat';
 import CommunityTeachers from './CommunityTeachers';
+import CommunityTrending from './CommunityTrending';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -34,7 +35,7 @@ const CommunityRouter: React.FC = () => {
           <Route path="achievements" element={<CommunityAchievements />} />
           <Route path="chat" element={<CommunityChat />} />
           <Route path="teachers" element={<CommunityTeachers />} />
-          <Route path="trending" element={<div>Trending Page - Coming Soon</div>} />
+          <Route path="trending" element={<CommunityTrending />} />
         </Routes>
       </CommunityLayout>
     </ProtectedRoute>

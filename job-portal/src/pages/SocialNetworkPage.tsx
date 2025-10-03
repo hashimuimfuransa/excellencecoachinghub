@@ -233,9 +233,16 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
     setLoading(true);
     setError(null);
         
-        // Load posts
-        const postsData = await socialNetworkService.getFeed();
-        setPosts(Array.isArray(postsData) ? postsData : postsData.data || []);
+        // Load posts from both local social feed and Learning Hub community
+        const [localFeed, learningHubFeed] = await Promise.all([
+          socialNetworkService.getFeed(),
+          socialNetworkService.getLearningHubFeed(1, 10)
+        ]);
+
+        const localPosts = Array.isArray(localFeed) ? localFeed : (localFeed?.data || []);
+        const hubPosts = Array.isArray(learningHubFeed) ? learningHubFeed : [];
+        // Merge feeds with Learning Hub posts first to highlight them
+        setPosts([ ...hubPosts, ...localPosts ]);
         
         // Load stories (with better error handling and fallback data)
         setStoriesLoading(true);

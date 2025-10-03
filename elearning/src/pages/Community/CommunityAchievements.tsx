@@ -202,6 +202,7 @@ import {
   Info
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
+import communityService, { IAchievement } from '../../services/communityService';
 
 // Styled Components
 const AchievementCard = styled(Card)(({ theme, isUnlocked }) => ({
@@ -285,191 +286,23 @@ const CommunityAchievements: React.FC<CommunityAchievementsProps> = () => {
     const loadData = async () => {
       try {
         setLoading(true);
-        
-        // Mock achievements data
-        const mockAchievements: Achievement[] = [
-          {
-            id: 'achievement-1',
-            title: 'First Steps',
-            description: 'Complete your first lesson',
-            icon: '🎯',
-            category: 'milestone',
-            points: 10,
-            isUnlocked: true,
-            unlockedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-            progress: 100,
-            requirements: [
-              {
-                type: 'lessons_completed',
-                target: 1,
-                current: 1,
-                description: 'Complete 1 lesson'
-              }
-            ],
-            rarity: 'common',
-            sharedBy: 1250,
-            likes: 89
-          },
-          {
-            id: 'achievement-2',
-            title: 'Quiz Master',
-            description: 'Score 80% or higher on 5 quizzes',
-            icon: '🏆',
-            category: 'learning',
-            points: 50,
-            isUnlocked: true,
-            unlockedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-            progress: 100,
-            requirements: [
-              {
-                type: 'quiz_score',
-                target: 5,
-                current: 5,
-                description: 'Score 80%+ on 5 quizzes'
-              }
-            ],
-            rarity: 'rare',
-            sharedBy: 890,
-            likes: 156
-          },
-          {
-            id: 'achievement-3',
-            title: 'Dedicated Learner',
-            description: 'Maintain a 7-day learning streak',
-            icon: '🔥',
-            category: 'engagement',
-            points: 100,
-            isUnlocked: true,
-            unlockedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-            progress: 100,
-            requirements: [
-              {
-                type: 'streak',
-                target: 7,
-                current: 7,
-                description: 'Maintain 7-day streak'
-              }
-            ],
-            rarity: 'epic',
-            sharedBy: 450,
-            likes: 234
-          },
-          {
-            id: 'achievement-4',
-            title: 'Knowledge Seeker',
-            description: 'Complete 25 lessons',
-            icon: '📚',
-            category: 'learning',
-            points: 75,
-            isUnlocked: false,
-            progress: 92,
-            requirements: [
-              {
-                type: 'lessons_completed',
-                target: 25,
-                current: 23,
-                description: 'Complete 25 lessons'
-              }
-            ],
-            rarity: 'rare',
-            sharedBy: 320,
-            likes: 67
-          },
-          {
-            id: 'achievement-5',
-            title: 'Time Master',
-            description: 'Spend 20 hours learning',
-            icon: '⏰',
-            category: 'engagement',
-            points: 150,
-            isUnlocked: false,
-            progress: 65,
-            requirements: [
-              {
-                type: 'time_spent',
-                target: 1200, // 20 hours in minutes
-                current: 780,
-                description: 'Spend 20 hours learning'
-              }
-            ],
-            rarity: 'epic',
-            sharedBy: 180,
-            likes: 45
-          },
-          {
-            id: 'achievement-6',
-            title: 'Perfectionist',
-            description: 'Achieve 95% average score',
-            icon: '💎',
-            category: 'learning',
-            points: 200,
-            isUnlocked: false,
-            progress: 89,
-            requirements: [
-              {
-                type: 'quiz_score',
-                target: 95,
-                current: 85,
-                description: 'Achieve 95% average score'
-              }
-            ],
-            rarity: 'legendary',
-            sharedBy: 95,
-            likes: 89
-          }
-        ];
 
-        // Mock leaderboard data
-        const mockLeaderboard: LeaderboardEntry[] = [
-          {
-            id: 'user-1',
-            name: 'Sarah Johnson',
-            avatar: '/avatars/sarah.jpg',
-            points: 2150,
-            achievements: 18,
-            rank: 1,
-            isCurrentUser: false
-          },
-          {
-            id: 'user-2',
-            name: 'Mike Chen',
-            avatar: '/avatars/mike.jpg',
-            points: 1980,
-            achievements: 16,
-            rank: 2,
-            isCurrentUser: false
-          },
+        const { achievements: achv } = await communityService.getAchievements(1, 24);
+        setAchievements(achv as unknown as Achievement[]);
+
+        // Simple placeholder leaderboard from achievements until backend provides it
+        const lb: LeaderboardEntry[] = [
           {
             id: user?._id || 'current-user',
             name: `${user?.firstName} ${user?.lastName}`,
             avatar: user?.profilePicture,
-            points: 1250,
-            achievements: 12,
-            rank: 3,
+            points: achv.reduce((sum: number, a: any) => sum + (a.isUnlocked ? a.points : 0), 0),
+            achievements: achv.filter((a: any) => a.isUnlocked).length,
+            rank: 1,
             isCurrentUser: true
-          },
-          {
-            id: 'user-3',
-            name: 'Alex Rodriguez',
-            avatar: '/avatars/alex.jpg',
-            points: 1100,
-            achievements: 10,
-            rank: 4,
-            isCurrentUser: false
-          },
-          {
-            id: 'user-4',
-            name: 'Emma Wilson',
-            avatar: '/avatars/emma.jpg',
-            points: 980,
-            achievements: 9,
-            rank: 5,
-            isCurrentUser: false
           }
         ];
-
-        setAchievements(mockAchievements);
-        setLeaderboard(mockLeaderboard);
+        setLeaderboard(lb);
       } catch (error) {
         console.error('Error loading achievements:', error);
       } finally {
@@ -481,17 +314,26 @@ const CommunityAchievements: React.FC<CommunityAchievementsProps> = () => {
   }, [user]);
 
   // Handle achievement actions
-  const handleShareAchievement = (achievementId: string) => {
-    // TODO: Implement sharing functionality
-    console.log('Sharing achievement:', achievementId);
+  const handleShareAchievement = async (achievementId: string) => {
+    try {
+      await communityService.shareAchievement(achievementId);
+      setAchievements(prev => prev.map(a => a.id === achievementId ? { ...a, sharedBy: (a.sharedBy || 0) + 1 } : a));
+    } catch (e) {
+      console.error('Failed to share achievement', e);
+    }
   };
 
-  const handleLikeAchievement = (achievementId: string) => {
-    setAchievements(prev => prev.map(achievement => 
-      achievement.id === achievementId 
-        ? { ...achievement, likes: (achievement.likes || 0) + 1 }
-        : achievement
-    ));
+  const handleLikeAchievement = async (achievementId: string) => {
+    try {
+      await communityService.likeAchievement(achievementId);
+      setAchievements(prev => prev.map(achievement => 
+        achievement.id === achievementId 
+          ? { ...achievement, likes: (achievement.likes || 0) + 1 }
+          : achievement
+      ));
+    } catch (e) {
+      console.error('Failed to like achievement', e);
+    }
   };
 
   const handleAchievementClick = (achievement: Achievement) => {
@@ -660,23 +502,70 @@ const CommunityAchievements: React.FC<CommunityAchievementsProps> = () => {
       ) : (
         <>
           {activeTab === 0 && (
-            <Grid container spacing={3}>
-              {achievements.map((achievement) => (
-                <Grid item xs={12} sm={6} md={4} key={achievement.id}>
-                  {renderAchievementCard(achievement)}
-                </Grid>
-              ))}
-            </Grid>
+            achievements.length === 0 ? (
+              <Paper sx={{ p: 4, textAlign: 'center', width: '100%' }}>
+                <EmojiEvents sx={{ fontSize: 56, color: 'warning.main', mb: 1 }} />
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                  No achievements available yet
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Achievements will appear here once they are configured by the admins.
+                </Typography>
+              </Paper>
+            ) : (
+              <Grid container spacing={3}>
+                {achievements.map((achievement) => (
+                  <Grid item xs={12} sm={6} md={4} key={achievement.id}>
+                    {renderAchievementCard(achievement)}
+                  </Grid>
+                ))}
+              </Grid>
+            )
           )}
 
           {activeTab === 1 && (
-            <Grid container spacing={3}>
-              {achievements.filter(a => a.isUnlocked).map((achievement) => (
-                <Grid item xs={12} sm={6} md={4} key={achievement.id}>
-                  {renderAchievementCard(achievement)}
+            (() => {
+              const unlocked = achievements.filter(a => a.isUnlocked);
+              if (unlocked.length === 0) {
+                return (
+                  <Paper sx={{ p: 4, textAlign: 'center', width: '100%' }}>
+                    <StarBorder sx={{ fontSize: 56, color: 'action.disabled', mb: 1 }} />
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                      You haven\'t unlocked any achievements yet
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Here\'s how to start earning achievements:
+                    </Typography>
+                    <List dense sx={{ maxWidth: 520, mx: 'auto', textAlign: 'left' }}>
+                      <ListItem>
+                        <ListItemText primary="Complete lessons to reach milestones" />
+                      </ListItem>
+                      <ListItem>
+                        <ListItemText primary="Score 80%+ on quizzes to unlock badges" />
+                      </ListItem>
+                      <ListItem>
+                        <ListItemText primary="Maintain a daily learning streak" />
+                      </ListItem>
+                      <ListItem>
+                        <ListItemText primary="Spend more time learning to gain engagement points" />
+                      </ListItem>
+                      <ListItem>
+                        <ListItemText primary="Participate in the community (posts, comments, shares)" />
+                      </ListItem>
+                    </List>
+                  </Paper>
+                );
+              }
+              return (
+                <Grid container spacing={3}>
+                  {unlocked.map((achievement) => (
+                    <Grid item xs={12} sm={6} md={4} key={achievement.id}>
+                      {renderAchievementCard(achievement)}
+                    </Grid>
+                  ))}
                 </Grid>
-              ))}
-            </Grid>
+              );
+            })()
           )}
 
           {activeTab === 2 && (

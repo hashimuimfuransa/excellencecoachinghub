@@ -1303,7 +1303,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
             </Typography>
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
             {/* Connect Button - Only show if not the current user's post */}
             {user && authorId && authorId !== user._id && (
               <Button
@@ -1334,6 +1334,18 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                 fontSize: '0.75rem'
               }}
             />
+            {/* Source marker for Learning Hub posts */}
+            {(post as any).source === 'learning_hub' && (
+              <Chip
+                label="From Learning Hub"
+                size="small"
+                sx={{
+                  bgcolor: alpha(theme.palette.success.main, 0.15),
+                  color: theme.palette.success.main,
+                  fontWeight: 600,
+                }}
+              />
+            )}
             <IconButton
               size="small"
               onClick={(e) => setMenuAnchor(e.currentTarget)}
@@ -1686,6 +1698,21 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
                   color: theme.palette.primary.main
                 }} />
               </IconButton>
+              {/* Link to e-learning community for Learning Hub posts */}
+              {(post as any).source === 'learning_hub' && (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  sx={{ ml: 1, textTransform: 'none', borderRadius: 2 }}
+                  onClick={() => {
+                    // Prefer known domain if available, fallback to relative
+                    const url = 'https://www.elearning.excellencecoachinghub.com/community';
+                    window.open(url, '_blank');
+                  }}
+                >
+                  Open in Community
+                </Button>
+              )}
             </Box>
           )}
         </Box>

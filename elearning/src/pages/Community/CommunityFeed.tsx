@@ -41,6 +41,7 @@ import {
   BookmarkBorder,
   Bookmark,
   MoreVert,
+  DeleteForever,
   Send,
   Image,
   VideoCall,
@@ -48,6 +49,7 @@ import {
   School,
   Group,
   TrendingUp,
+  Chat,
   Star,
   CheckCircle,
   Schedule,
@@ -68,6 +70,7 @@ import {
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { communityService, IPost } from '../../services/communityService';
 
 // Styled Components
@@ -97,6 +100,7 @@ interface CommunityFeedProps {}
 const CommunityFeed: React.FC<CommunityFeedProps> = () => {
   const theme = useTheme();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [createPostOpen, setCreatePostOpen] = useState(false);
@@ -146,6 +150,10 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
 
     loadPosts();
   }, [user]);
+
+  const goToLearningHub = () => {
+    navigate('/dashboard/student/courses');
+  };
 
   // Handle post actions
   const handleLike = async (postId: string) => {
@@ -320,6 +328,36 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
     setShareDialogOpen(true);
   };
 
+  const handleDeletePost = async (postId: string) => {
+    if (!window.confirm('Are you sure you want to delete this post?')) return;
+    try {
+      const res = await communityService.deletePost(postId);
+      if (res.success) {
+        setPosts(prev => prev.filter(p => p.id !== postId));
+        toast.success('Post deleted');
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      toast.error('Failed to delete post');
+    }
+  };
+
+  const handleStartChat = async (authorId: string, authorName: string) => {
+    try {
+      await communityService.createConversation([authorId], false);
+      toast.success(`Chat started with ${authorName}`);
+      // Navigate to chat view
+      // If chatId is needed for selection, backend would need to return it; for now go to chat list
+      (window as any).scrollTo({ top: 0, behavior: 'smooth' });
+      // using window to avoid importing navigate here unnecessarily
+      // but we already have navigate; use it directly
+      try { (navigate as any) && navigate('/community/chat'); } catch {}
+    } catch (e) {
+      console.error('Failed to start chat', e);
+      toast.error('Failed to start chat. Please try again.');
+    }
+  };
+
   const handleSharePost = async (platform: string) => {
     if (!selectedPost) return;
 
@@ -463,20 +501,33 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
       width: '100%'
     }}>
       {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' } }}>
-          Community Feed
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Connect with fellow learners and share your journey
-        </Typography>
+      <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' } }}>
+            Community Feed
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Connect with fellow learners and share your journey
+          </Typography>
+        </Box>
+        <Button variant="outlined" startIcon={<School />} onClick={goToLearningHub}>
+          Back to Learning Hub
+        </Button>
       </Box>
 
       {/* Create Post */}
       <CreatePostCard>
         <CardContent>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Avatar src={user?.profilePicture}>
+          <Stack 
+            direction={{ xs: 'column', sm: 'row' }} 
+            spacing={{ xs: 1.5, sm: 2 }} 
+            alignItems={{ xs: 'stretch', sm: 'center' }}
+          >
+            <Avatar 
+              src={user?.profilePicture}
+              sx={{ width: { xs: 36, sm: 40 }, height: { xs: 36, sm: 40 } }}
+
+            >
               {user?.firstName?.[0]}{user?.lastName?.[0]}
             </Avatar>
             <TextField
@@ -484,6 +535,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
               fullWidth
               multiline
               maxRows={3}
+              size="small"
               onClick={() => setCreatePostOpen(true)}
               sx={{
                 '& .MuiOutlinedInput-root': {
@@ -496,6 +548,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
               variant="contained"
               startIcon={<Add />}
               onClick={() => setCreatePostOpen(true)}
+              sx={{ width: { xs: '100%', sm: 'auto' } }}
             >
               Post
             </Button>
@@ -545,9 +598,25 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
                     {formatTimestamp(post.timestamp)}
                   </Typography>
                 </Box>
-                <IconButton size="small">
-                  <MoreVert />
-                </IconButton>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  {(user && (user._id === post.author.id || user.role === 'admin')) && (
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleDeletePost(post.id);
+                      }}
+                      title="Delete post"
+                    >
+                      <DeleteForever />
+                    </IconButton>
+                  )}
+                  <IconButton size="small">
+                    <MoreVert />
+                  </IconButton>
+                </Stack>
               </Stack>
 
               {/* Achievement Badge */}
@@ -660,6 +729,32 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
                     )}
                     <Typography variant="caption" sx={{ fontWeight: 500 }}>
                       {post.likes || 0}
+                    </Typography>
+                  </IconButton>
+
+                  <IconButton
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleStartChat(post.author.id, post.author.name);
+                    }}
+                    sx={{ 
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      borderRadius: 2,
+                      px: 1,
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        backgroundColor: 'info.light',
+                        color: 'info.main',
+                        transform: 'scale(1.05)'
+                      }
+                    }}
+                  >
+                    <Chat sx={{ fontSize: 20 }} />
+                    <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                      Chat
                     </Typography>
                   </IconButton>
 

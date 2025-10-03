@@ -3,8 +3,12 @@ import { Request, Response } from 'express';
 import { protect } from '../middleware/auth';
 import { Post } from '../models/Post';
 import { Comment } from '../models/Comment';
+import { Group } from '../models/Group';
+import { User } from '../models/User';
+import { Achievement, UserAchievement } from '../models/Achievement';
 import { uploadMediaToCloudinary } from '../config/cloudinary';
 import { upload } from '../utils/fileUpload';
+import mongoose from 'mongoose';
 
 const router = express.Router();
 
@@ -69,6 +73,118 @@ router.get('/posts', protect, async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching posts:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch posts' });
+  }
+});
+
+// Delete a post (author or admin only)
+router.delete('/posts/:postId', protect, async (req: Request, res: Response) => {
+  try {
+    const { postId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+      return res.status(400).json({ success: false, message: 'Invalid post ID' });
+    }
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ success: false, message: 'Post not found' });
+    }
+
+    // Allow if current user is the author or an admin
+    const isAuthor = post.author.toString() === req.user!._id.toString();
+    const isAdmin = req.user!.role === 'admin';
+    if (!isAuthor && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'Not authorized to delete this post' });
+    }
+
+    await Comment.deleteMany({ post: post._id });
+    await Post.findByIdAndDelete(postId);
+
+    res.json({ success: true, message: 'Post deleted successfully', data: { postId } });
+  } catch (error) {
+    console.error('Error deleting post:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete post' });
+  }
+});
+
+// Trending content (posts and groups)
+router.get('/trending', protect, async (req: Request, res: Response) => {
+  try {
+    const { limit = 10 } = req.query;
+    const max = Number(limit);
+
+    // Trending posts: sort by (likes + comments + shares) recent first
+    const posts = await Post.find({ isActive: true })
+      .populate('author', 'firstName lastName profilePicture role isEmailVerified')
+      .sort({
+        // prioritize engagement, then recency; Mongo cannot sort by expression easily, so fall back to likes then comments then shares then date
+        likeCount: -1,
+        commentCount: -1,
+        shares: -1,
+        createdAt: -1
+      })
+      .limit(max);
+
+    const formattedPosts = posts.map(post => ({
+      id: post._id.toString(),
+      author: {
+        id: post.author._id.toString(),
+        name: `${post.author.firstName} ${post.author.lastName}`,
+        avatar: post.author.profilePicture,
+        role: post.author.role,
+        verified: post.author.isEmailVerified
+      },
+      content: post.content,
+      type: post.type,
+      timestamp: post.createdAt.toISOString(),
+      likes: post.likeCount,
+      comments: post.commentCount,
+      shares: post.shares,
+      isLiked: post.likes.includes(req.user!._id),
+      isBookmarked: post.bookmarks ? post.bookmarks.includes(req.user!._id) : false,
+      tags: post.tags,
+      attachments: post.attachments
+    }));
+
+    // Trending groups: by memberCount and recent activity
+    const groups = await Group.find({ isActive: true })
+      .populate('createdBy', 'firstName lastName profilePicture')
+      .sort({ memberCount: -1, lastActivity: -1, updatedAt: -1 })
+      .limit(max);
+
+    const userId = req.user?.id;
+    const formattedGroups = groups.map(group => {
+      const userMember = group.members.find(member => member.userId.toString() === userId);
+      const isAdmin = group.createdBy._id.toString() === userId || userMember?.role === 'admin';
+      return {
+        id: group._id.toString(),
+        name: group.name,
+        description: group.description,
+        category: group.category,
+        avatar: group.avatar,
+        coverImage: group.cover_image,
+        memberCount: group.memberCount,
+        maxMembers: group.maxMembers,
+        isPrivate: group.isPrivate,
+        isJoined: !!userMember,
+        isAdmin,
+        isModerator: userMember?.role === 'moderator',
+        createdAt: group.createdAt.toISOString(),
+        lastActivity: group.lastActivity?.toISOString() || group.updatedAt.toISOString(),
+        tags: group.tags,
+        rules: group.rules,
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        posts: formattedPosts,
+        groups: formattedGroups
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching trending content:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch trending content' });
   }
 });
 
@@ -302,34 +418,75 @@ router.post('/teachers/:teacherId/follow', protect, async (req: Request, res: Re
 // Get community groups
 router.get('/groups', protect, async (req: Request, res: Response) => {
   try {
-    const { page = 1, limit = 12, category } = req.query;
+    const { page = 1, limit = 12, category, search } = req.query;
+    const userId = req.user?.id;
     const offset = (Number(page) - 1) * Number(limit);
 
-    // TODO: Replace with actual database query
-    const mockGroups = [
-      {
-        id: 'group-1',
-        name: 'React Developers',
-        description: 'A community for React developers to share knowledge and collaborate on projects.',
-        category: 'Programming',
-        memberCount: 1250,
-        isJoined: false,
-        coverImage: '/group-covers/react.jpg',
-        tags: ['react', 'javascript', 'frontend'],
-        recentActivity: 'New discussion about React 18 features',
-        lastActivity: new Date().toISOString()
-      }
-    ];
+    // Build query
+    const query: any = { isActive: true };
+    if (category) {
+      query.category = category;
+    }
+    if (search) {
+      query.$text = { $search: search as string };
+    }
+
+    // Get groups from database
+    const groups = await Group.find(query)
+      .populate('createdBy', 'firstName lastName profilePicture')
+      .populate('members.userId', 'firstName lastName profilePicture')
+      .sort({ lastActivity: -1 })
+      .skip(offset)
+      .limit(Number(limit));
+
+    // Check which groups user has joined
+    const userGroups = await Group.find({
+      'members.userId': userId,
+      isActive: true
+    }).select('_id');
+
+    const userGroupIds = new Set(userGroups.map(g => g._id.toString()));
+
+    // Format groups for frontend
+    const formattedGroups = groups.map(group => {
+      const userMember = group.members.find(member => member.userId.toString() === userId);
+      const isAdmin = group.createdBy._id.toString() === userId || userMember?.role === 'admin';
+      
+      return {
+        id: group._id.toString(),
+        name: group.name,
+        description: group.description,
+        category: group.category,
+        avatar: group.avatar,
+        coverImage: group.cover_image,
+        memberCount: group.memberCount,
+        maxMembers: group.maxMembers,
+        isPrivate: group.isPrivate,
+        isJoined: userGroupIds.has(group._id.toString()),
+        isAdmin: isAdmin,
+        isModerator: group.members.some(member => 
+          member.userId.toString() === userId && member.role === 'moderator'
+        ),
+        createdAt: group.createdAt.toISOString(),
+        lastActivity: group.lastActivity?.toISOString() || group.updatedAt.toISOString(),
+        tags: group.tags,
+        rules: group.rules,
+        joinCode: group.joinCode
+      };
+    });
+
+    // Get total count
+    const total = await Group.countDocuments(query);
 
     res.json({
       success: true,
       data: {
-        groups: mockGroups,
+        groups: formattedGroups,
         pagination: {
           page: Number(page),
           limit: Number(limit),
-          total: mockGroups.length,
-          totalPages: Math.ceil(mockGroups.length / Number(limit))
+          total,
+          totalPages: Math.ceil(total / Number(limit))
         }
       }
     });
@@ -339,21 +496,782 @@ router.get('/groups', protect, async (req: Request, res: Response) => {
   }
 });
 
-// Join/Leave group
+// Create group
+router.post('/groups', protect, async (req: Request, res: Response) => {
+  try {
+    const { name, description, category, isPrivate = false, tags = [] } = req.body;
+    const userId = req.user?.id;
+
+    // Validate required fields
+    if (!name || !description || !category) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name, description, and category are required'
+      });
+    }
+
+    // Check if group with same name exists
+    const existingGroup = await Group.findOne({ 
+      name: { $regex: new RegExp(`^${name}$`, 'i') }
+    });
+    if (existingGroup) {
+      return res.status(400).json({
+        success: false,
+        message: 'A group with this name already exists'
+      });
+    }
+
+    // Create group
+    const group = new Group({
+      name,
+      description,
+      category,
+      isPrivate,
+      tags,
+      createdBy: userId,
+      members: [{
+        userId,
+        role: 'admin',
+        joinedAt: new Date()
+      }]
+    });
+
+    await group.save();
+    await group.populate('createdBy', 'firstName lastName profilePicture');
+
+    // Format response
+    const formattedGroup = {
+      id: group._id.toString(),
+      name: group.name,
+      description: group.description,
+      category: group.category,
+      avatar: group.avatar,
+      coverImage: group.cover_image,
+      memberCount: group.memberCount,
+      maxMembers: group.maxMembers,
+      isPrivate: group.isPrivate,
+      isJoined: true,
+      isAdmin: true,
+      isModerator: false,
+      createdAt: group.createdAt.toISOString(),
+      lastActivity: group.lastActivity?.toISOString() || group.updatedAt.toISOString(),
+      tags: group.tags,
+      rules: group.rules
+    };
+
+    res.json({
+      success: true,
+      data: formattedGroup,
+      message: 'Group created successfully'
+    });
+  } catch (error) {
+    console.error('Error creating group:', error);
+    res.status(500).json({ success: false, message: 'Failed to create group' });
+  }
+});
+
+// Join group
 router.post('/groups/:groupId/join', protect, async (req: Request, res: Response) => {
   try {
     const { groupId } = req.params;
-    const { action } = req.body; // 'join' or 'leave'
+    const userId = req.user?.id;
 
-    // TODO: Replace with actual database operation
+    if (!mongoose.Types.ObjectId.isValid(groupId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid group ID'
+      });
+    }
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({
+        success: false,
+        message: 'Group not found'
+      });
+    }
+
+    // Check if user is already a member
+    const isAlreadyMember = group.members.some(member => member.userId.toString() === userId);
+    if (isAlreadyMember) {
+      return res.status(400).json({
+        success: false,
+        message: 'You are already a member of this group'
+      });
+    }
+
+    // Check if group is full
+    if (group.members.length >= group.maxMembers!) {
+      return res.status(400).json({
+        success: false,
+        message: 'Group is full'
+      });
+    }
+
+    // Add user to group
+    group.members.push({
+      userId,
+      role: 'member',
+      joinedAt: new Date()
+    });
+
+    group.lastActivity = new Date();
+    await group.save();
+
     res.json({
       success: true,
-      message: `Group ${action}ed successfully`,
-      data: { groupId, isJoined: action === 'join' }
+      message: 'Successfully joined group',
+      data: { groupId, isJoined: true }
     });
   } catch (error) {
     console.error('Error joining group:', error);
     res.status(500).json({ success: false, message: 'Failed to join group' });
+  }
+});
+
+// Leave group
+router.delete('/groups/:groupId/join', protect, async (req: Request, res: Response) => {
+  try {
+    const { groupId } = req.params;
+    const userId = req.user?.id;
+
+    if (!mongoose.Types.ObjectId.isValid(groupId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid group ID'
+      });
+    }
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({
+        success: false,
+        message: 'Group not found'
+      });
+    }
+
+    // Check if user is a member
+    const memberIndex = group.members.findIndex(member => member.userId.toString() === userId);
+    if (memberIndex === -1) {
+      return res.status(400).json({
+        success: false,
+        message: 'You are not a member of this group'
+      });
+    }
+
+    // Prevent admin from leaving if they're the only admin and group has other members
+    const member = group.members[memberIndex];
+    if (member.role === 'admin') {
+      const adminCount = group.members.filter(m => m.role === 'admin').length;
+      if (adminCount === 1 && group.members.length > 1) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot leave group as the only admin with active members'
+        });
+      }
+    }
+
+    // Remove user from group
+    group.members.splice(memberIndex, 1);
+    group.lastActivity = new Date();
+    await group.save();
+
+    res.json({
+      success: true,
+      message: 'Successfully left group',
+      data: { groupId, isJoined: false }
+    });
+  } catch (error) {
+    console.error('Error leaving group:', error);
+    res.status(500).json({ success: false, message: 'Failed to leave group' });
+  }
+});
+
+// Get my groups
+router.get('/groups/my', protect, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+
+    const groups = await Group.find({
+      'members.userId': userId,
+      isActive: true
+    })
+      .populate('createdBy', 'firstName lastName profilePicture')
+      .sort({ lastActivity: -1 });
+
+    const formattedGroups = groups.map(group => {
+      const currentUserMember = group.members.find(member => member.userId.toString() === userId);
+      const isAdmin = group.createdBy._id.toString() === userId || currentUserMember?.role === 'admin';
+      
+      console.log('User group admin check:', {
+        userId,
+        groupId: group._id.toString(),
+        groupName: group.name,
+        creatorId: group.createdBy._id.toString(),
+        userRole: currentUserMember?.role,
+        isAdmin
+      });
+      
+      return {
+        id: group._id.toString(),
+        name: group.name,
+        description: group.description,
+        category: group.category,
+        avatar: group.avatar,
+        coverImage: group.cover_image,
+        memberCount: group.memberCount,
+        maxMembers: group.maxMembers,
+        isPrivate: group.isPrivate,
+        isJoined: true,
+        isAdmin: isAdmin,
+        isModerator: currentUserMember?.role === 'moderator',
+        createdAt: group.createdAt.toISOString(),
+        lastActivity: group.lastActivity?.toISOString() || group.updatedAt.toISOString(),
+        tags: group.tags,
+        rules: group.rules,
+        joinCode: group.joinCode
+      };
+    });
+
+    res.json({
+      success: true,
+      data: formattedGroups
+    });
+  } catch (error) {
+    console.error('Error fetching user groups:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch your groups' });
+  }
+});
+
+// Join group by code (public endpoint)
+router.post('/groups/join-code/:joinCode', async (req: Request, res: Response) => {
+  try {
+    const { joinCode } = req.params;
+    const userId = req.headers.userid as string; // Frontend will send user ID in header
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID'
+      });
+    }
+
+    const group = await Group.findOne({ joinCode, isActive: true });
+    if (!group) {
+      return res.status(404).json({
+        success: false,
+        message: 'Group not found or invalid join code'
+      });
+    }
+
+    // Check if user is already a member
+    const isAlreadyMember = group.members.some(member => member.userId.toString() === userId);
+    if (isAlreadyMember) {
+      return res.status(400).json({
+        success: false,
+        message: 'You are already a member of this group'
+      });
+    }
+
+    // Check if group is full
+    if (group.members.length >= group.maxMembers!) {
+      return res.status(400).json({
+        success: false,
+        message: 'Group is full'
+      });
+    }
+
+    // Add user to group
+    group.members.push({
+      userId,
+      role: 'member',
+      joinedAt: new Date()
+    });
+
+    group.lastActivity = new Date();
+    await group.save();
+
+    res.json({
+      success: true,
+      message: 'Successfully joined group',
+      data: { 
+        groupId: group._id.toString(),
+        groupName: group.name,
+        isJoined: true 
+      }
+    });
+  } catch (error) {
+    console.error('Error joining group by code:', error);
+    res.status(500).json({ success: false, message: 'Failed to join group' });
+  }
+});
+
+// Get group members (admin only)
+router.get('/groups/:groupId/members', protect, async (req: Request, res: Response) => {
+  try {
+    const { groupId } = req.params;
+    const userId = req.user?.id;
+
+    if (!mongoose.Types.ObjectId.isValid(groupId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid group ID'
+      });
+    }
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({
+        success: false,
+        message: 'Group not found'
+      });
+    }
+
+    // Check if user is admin or moderator
+    const userRole = group.members.find(member => member.userId.toString() === userId)?.role;
+    if (!userRole || (userRole !== 'admin' && userRole !== 'moderator')) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin or moderator privileges required.'
+      });
+    }
+
+    // Get detailed member information
+    const memberDetails = await Promise.all(
+      group.members.map(async (member) => {
+        const user = await User.findById(member.userId)
+          .select('firstName lastName profilePicture email role isOnline lastSeen');
+        
+        return {
+          id: member.userId.toString(),
+          name: user ? `${user.firstName} ${user.lastName}` : 'Unknown User',
+          email: user?.email,
+          avatar: user?.profilePicture,
+          role: member.role,
+          joinedAt: member.joinedAt,
+          isOnline: user?.isOnline || false,
+          lastSeen: user?.lastSeen
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      data: {
+        groupName: group.name,
+        members: memberDetails
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching group members:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch group members' });
+  }
+});
+
+// Create group chat (admin only)
+router.post('/groups/:groupId/create-chat', protect, async (req: Request, res: Response) => {
+  try {
+    const { groupId } = req.params;
+    const userId = req.user?.id;
+
+    if (!mongoose.Types.ObjectId.isValid(groupId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid group ID'
+      });
+    }
+
+    const group = await Group.findById(groupId).populate('members.userId');
+    if (!group) {
+      return res.status(404).json({
+        success: false,
+        message: 'Group not found'
+      });
+    }
+
+    // Check if user is admin or moderator
+    const userMember = group.members.find(member => member.userId.toString() === userId);
+    const userRole = userMember?.role;
+    const isGroupCreator = group.createdBy.toString() === userId;
+    
+    console.log('Admin check debug:', {
+      userId,
+      groupId,
+      userRole,
+      isGroupCreator,
+      userMember: userMember ? 'found' : 'not found',
+      groupCreator: group.createdBy.toString()
+    });
+
+    // Allow if user is group creator OR has admin/moderator role
+    if (!isGroupCreator && (!userRole || (userRole !== 'admin' && userRole !== 'moderator'))) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin or moderator privileges required.'
+      });
+    }
+
+    // Import Chat model
+    const { Chat } = await import('../models/Chat');
+
+    // Check if chat already exists for this group
+    const existingChat = await Chat.findOne({ groupId, isGroup: true });
+    if (existingChat) {
+      return res.status(400).json({
+        success: false,
+        message: 'Group chat already exists'
+      });
+    }
+
+    // Create group chat
+    const chat = new Chat({
+      participants: group.members.map(member => member.userId),
+      isGroup: true,
+      groupName: group.name,
+      groupId: groupId,
+      createdBy: userId
+    });
+
+    await chat.save();
+    await chat.populate('participants', 'firstName lastName email profilePicture');
+
+    res.json({
+      success: true,
+      message: 'Group chat created successfully',
+      data: {
+        chatId: chat._id.toString(),
+        groupName: group.name,
+        participants: chat.participants.length
+      }
+    });
+  } catch (error) {
+    console.error('Error creating group chat:', error);
+    res.status(500).json({ success: false, message: 'Failed to create group chat' });
+  }
+});
+
+// Delete group (admin only)
+router.delete('/groups/:groupId', protect, async (req: Request, res: Response) => {
+  try {
+    const { groupId } = req.params;
+    const userId = req.user?.id;
+
+    if (!mongoose.Types.ObjectId.isValid(groupId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid group ID'
+      });
+    }
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({
+        success: false,
+        message: 'Group not found'
+      });
+    }
+
+    // Only allow the creator to delete the group
+    if (group.createdBy.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the group creator can delete the group'
+      });
+    }
+
+    // Delete the group and all related chat records
+    const { Chat } = await import('../models/Chat');
+    await Chat.deleteMany({ groupId: groupId });
+    
+    await Group.findByIdAndDelete(groupId);
+
+    res.json({
+      success: true,
+      message: 'Group deleted successfully',
+      data: { groupId }
+    });
+  } catch (error) {
+    console.error('Error deleting group:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete group' });
+  }
+});
+
+// Update group settings (admin only)
+router.put('/groups/:groupId', protect, async (req: Request, res: Response) => {
+  try {
+    const { groupId } = req.params;
+    const userId = req.user?.id;
+    const { name, description, category, isPrivate, tags, rules, maxMembers } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(groupId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid group ID'
+      });
+    }
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({
+        success: false,
+        message: 'Group not found'
+      });
+    }
+
+    // Only allow admin to update group settings
+    const userRole = group.members.find(member => member.userId.toString() === userId)?.role;
+    if (!userRole || userRole !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only group admins can update group settings'
+      });
+    }
+
+    // Update group properties
+    if (name !== undefined) group.name = name;
+    if (description !== undefined) group.description = description;
+    if (category !== undefined) group.category = category;
+    if (isPrivate !== undefined) group.isPrivate = isPrivate;
+    if (tags !== undefined) group.tags = tags;
+    if (rules !== undefined) group.rules = rules;
+    if (maxMembers !== undefined) group.maxMembers = Math.max(maxMembers, group.members.length);
+
+    group.lastActivity = new Date();
+    await group.save();
+    await group.populate('createdBy', 'firstName lastName profilePicture');
+
+    // Format response
+    const formattedGroup = {
+      id: group._id.toString(),
+      name: group.name,
+      description: group.description,
+      category: group.category,
+      avatar: group.avatar,
+      coverImage: group.cover_image,
+      memberCount: group.memberCount,
+      maxMembers: group.maxMembers,
+      isPrivate: group.isPrivate,
+      isJoined: true,
+      isAdmin: true,
+      isModerator: false,
+      createdAt: group.createdAt.toISOString(),
+      lastActivity: group.lastActivity?.toISOString() || group.updatedAt.toISOString(),
+      tags: group.tags,
+      rules: group.rules,
+      joinCode: group.joinCode
+    };
+
+    res.json({
+      success: true,
+      message: 'Group settings updated successfully',
+      data: formattedGroup
+    });
+  } catch (error) {
+    console.error('Error updating group:', error);
+    res.status(500).json({ success: false, message: 'Failed to update group' });
+  }
+});
+
+// Promote/Demote member (admin only)
+router.post('/groups/:groupId/members/:memberId/role', protect, async (req: Request, res: Response) => {
+  try {
+    const { groupId, memberId } = req.params;
+    const { newRole } = req.body;
+    const userId = req.user?.id;
+
+    if (!mongoose.Types.ObjectId.isValid(groupId) || !mongoose.Types.ObjectId.isValid(memberId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid group ID or member ID'
+      });
+    }
+
+    if (!['member', 'moderator', 'admin'].includes(newRole)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role. Must be member, moderator, or admin'
+      });
+    }
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({
+        success: false,
+        message: 'Group not found'
+      });
+    }
+
+    // Only allow admin to change member roles
+    const adminMember = group.members.find(member => member.userId.toString() === userId);
+    if (!adminMember || adminMember.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only group admins can change member roles'
+      });
+    }
+
+    // Find the member to update
+    const memberIndex = group.members.findIndex(member => member.userId.toString() === memberId);
+    if (memberIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Member not found in group'
+      });
+    }
+
+    // Prevent demoting the last admin
+    if (group.members[memberIndex].role === 'admin' && newRole !== 'admin') {
+      const adminCount = group.members.filter(m => m.role === 'admin').length;
+      if (adminCount === 1) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot demote the last admin'
+        });
+      }
+    }
+
+    // Update member role
+    group.members[memberIndex].role = newRole;
+    group.lastActivity = new Date();
+    await group.save();
+
+    res.json({
+      success: true,
+      message: `Member role updated to ${newRole}`,
+      data: { 
+        memberId, 
+        newRole,
+        groupId 
+      }
+    });
+  } catch (error) {
+    console.error('Error updating member role:', error);
+    res.status(500).json({ success: false, message: 'Failed to update member role' });
+  }
+});
+
+// Remove member from group (admin/moderator only)
+router.delete('/groups/:groupId/members/:memberId', protect, async (req: Request, res: Response) => {
+  try {
+    const { groupId, memberId } = req.params;
+    const userId = req.user?.id;
+
+    if (!mongoose.Types.ObjectId.isValid(groupId) || !mongoose.Types.ObjectId.isValid(memberId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid group ID or member ID'
+      });
+    }
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({
+        success: false,
+        message: 'Group not found'
+      });
+    }
+
+    // Allow admin or moderator to remove members
+    const userMember = group.members.find(member => member.userId.toString() === userId);
+    if (!userMember || (userMember.role !== 'admin' && userMember.role !== 'moderator')) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only group admins or moderators can remove members'
+      });
+    }
+
+    // Prevent removing members with higher roles
+    const targetMember = group.members.find(member => member.userId.toString() === memberId);
+    if (!targetMember) {
+      return res.status(404).json({
+        success: false,
+        message: 'Member not found in group'
+      });
+    }
+
+    if (userMember.role === 'moderator' && targetMember.role === 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Moderators cannot remove admins'
+      });
+    }
+
+    // Remove the member
+    group.members = group.members.filter(member => member.userId.toString() !== memberId);
+    group.lastActivity = new Date();
+    await group.save();
+
+    res.json({
+      success: true,
+      message: 'Member removed from group successfully',
+      data: { memberId, groupId }
+    });
+  } catch (error) {
+    console.error('Error removing member from group:', error);
+    res.status(500).json({ success: false, message: 'Failed to remove member from group' });
+  }
+});
+
+// Generate or refresh join code (admin only)
+router.post('/groups/:groupId/generate-join-code', protect, async (req: Request, res: Response) => {
+  try {
+    const { groupId } = req.params;
+    const userId = req.user?.id;
+
+    if (!mongoose.Types.ObjectId.isValid(groupId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid group ID'
+      });
+    }
+
+    const group = await Group.findById(groupId);
+    if (!group) {
+      return res.status(404).json({
+        success: false,
+        message: 'Group not found'
+      });
+    }
+
+    // Only allow admin to regenerate join code
+    const userMember = group.members.find(member => member.userId.toString() === userId);
+    const userRole = userMember?.role;
+    const isGroupCreator = group.createdBy.toString() === userId;
+
+    if (!isGroupCreator && (!userRole || userRole !== 'admin')) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only group admins can generate join codes'
+      });
+    }
+
+    // Generate new join code
+    const crypto = require('crypto');
+    group.joinCode = crypto.randomBytes(16).toString('hex');
+    group.lastActivity = new Date();
+    
+    await group.save();
+
+    res.json({
+      success: true,
+      message: 'Join code generated successfully',
+      data: {
+        joinCode: group.joinCode,
+        joinLink: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/community/groups/join/${group.joinCode}`,
+        groupId: group._id.toString(),
+        groupName: group.name
+      }
+    });
+  } catch (error) {
+    console.error('Error generating join code:', error);
+    res.status(500).json({ success: false, message: 'Failed to generate join code' });
   }
 });
 
@@ -362,36 +1280,155 @@ router.get('/achievements', protect, async (req: Request, res: Response) => {
   try {
     const { page = 1, limit = 12 } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
+    const userId = req.user!._id;
 
-    // TODO: Replace with actual database query
-    const mockAchievements = [
-      {
-        id: 'achievement-1',
-        title: 'First Course Completed',
-        description: 'Completed your first course on the platform',
-        icon: '🎓',
-        points: 50,
-        earnedAt: new Date().toISOString(),
-        category: 'Learning',
-        rarity: 'common'
-      }
-    ];
+    // Get all achievements
+    const achievements = await Achievement.find({ isActive: true })
+      .sort({ points: 1 })
+      .skip(offset)
+      .limit(Number(limit));
+
+    // Get user's achievement progress
+    const userAchievements = await UserAchievement.find({
+      userId: userId
+    }).populate('achievementId');
+
+    // Create a map for quick lookup
+    const userAchievementMap = new Map();
+    userAchievements.forEach(ua => {
+      userAchievementMap.set(ua.achievementId._id.toString(), ua);
+    });
+
+    // Format achievements for frontend
+    const formattedAchievements = achievements.map(achievement => {
+      const userAchievement = userAchievementMap.get(achievement._id.toString());
+
+      return {
+        id: achievement._id.toString(),
+        title: achievement.title,
+        description: achievement.description,
+        icon: achievement.icon,
+        category: achievement.category,
+        points: achievement.points,
+        isUnlocked: userAchievement?.isUnlocked || false,
+        unlockedAt: userAchievement?.unlockedAt?.toISOString(),
+        progress: userAchievement?.progress || 0,
+        requirements: achievement.requirements,
+        rarity: achievement.rarity,
+        sharedBy: userAchievement?.sharedBy || 0,
+        likes: userAchievement?.likes || 0
+      };
+    });
+
+    // Get total count
+    const total = await Achievement.countDocuments({ isActive: true });
 
     res.json({
       success: true,
       data: {
-        achievements: mockAchievements,
+        achievements: formattedAchievements,
         pagination: {
           page: Number(page),
           limit: Number(limit),
-          total: mockAchievements.length,
-          totalPages: Math.ceil(mockAchievements.length / Number(limit))
+          total,
+          totalPages: Math.ceil(total / Number(limit))
         }
       }
     });
   } catch (error) {
     console.error('Error fetching achievements:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch achievements' });
+  }
+});
+
+// Get my achievements (only with user progress/unlocked)
+router.get('/achievements/my', protect, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!._id;
+
+    const userAchievements = await UserAchievement.find({ userId })
+      .populate('achievementId');
+
+    const formatted = userAchievements.map(ua => ({
+      id: ua.achievementId instanceof mongoose.Types.ObjectId ? ua.achievementId.toString() : (ua.achievementId as any)._id.toString(),
+      title: (ua as any).achievementId.title,
+      description: (ua as any).achievementId.description,
+      icon: (ua as any).achievementId.icon,
+      category: (ua as any).achievementId.category,
+      points: (ua as any).achievementId.points,
+      isUnlocked: ua.isUnlocked,
+      unlockedAt: ua.unlockedAt ? ua.unlockedAt.toISOString() : undefined,
+      progress: ua.progress,
+      requirements: (ua as any).achievementId.requirements,
+      rarity: (ua as any).achievementId.rarity,
+      sharedBy: ua.sharedBy || 0,
+      likes: ua.likes || 0
+    }));
+
+    res.json({ success: true, data: formatted });
+  } catch (error) {
+    console.error('Error fetching my achievements:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch my achievements' });
+  }
+});
+
+// Like an achievement (increments likes on user's achievement progress row)
+router.post('/achievements/:achievementId/like', protect, async (req: Request, res: Response) => {
+  try {
+    const { achievementId } = req.params;
+    const userId = req.user!._id;
+
+    if (!mongoose.Types.ObjectId.isValid(achievementId)) {
+      return res.status(400).json({ success: false, message: 'Invalid achievement ID' });
+    }
+
+    // Ensure the achievement exists
+    const achievement = await Achievement.findById(achievementId);
+    if (!achievement) {
+      return res.status(404).json({ success: false, message: 'Achievement not found' });
+    }
+
+    // Find or create a user achievement row
+    const userAchievement = await UserAchievement.findOneAndUpdate(
+      { userId, achievementId },
+      { $inc: { likes: 1 } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    res.json({ success: true, data: { achievementId, likes: userAchievement.likes } });
+  } catch (error) {
+    console.error('Error liking achievement:', error);
+    res.status(500).json({ success: false, message: 'Failed to like achievement' });
+  }
+});
+
+// Share an achievement (increments share counter)
+router.post('/achievements/:achievementId/share', protect, async (req: Request, res: Response) => {
+  try {
+    const { achievementId } = req.params;
+    const userId = req.user!._id;
+
+    if (!mongoose.Types.ObjectId.isValid(achievementId)) {
+      return res.status(400).json({ success: false, message: 'Invalid achievement ID' });
+    }
+
+    // Ensure the achievement exists
+    const achievement = await Achievement.findById(achievementId);
+    if (!achievement) {
+      return res.status(404).json({ success: false, message: 'Achievement not found' });
+    }
+
+    // Find or create a user achievement row
+    const userAchievement = await UserAchievement.findOneAndUpdate(
+      { userId, achievementId },
+      { $inc: { sharedBy: 1 } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    res.json({ success: true, data: { achievementId, sharedBy: userAchievement.sharedBy } });
+  } catch (error) {
+    console.error('Error sharing achievement:', error);
+    res.status(500).json({ success: false, message: 'Failed to share achievement' });
   }
 });
 

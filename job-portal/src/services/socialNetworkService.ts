@@ -249,6 +249,65 @@ class SocialNetworkService {
     return posts;
   }
 
+  // Fetch posts from the Learning Hub community feed and map to SocialPost/Post shape
+  async getLearningHubFeed(page: number = 1, limit: number = 20) {
+    try {
+      const response = await api.get(`/community/posts`, {
+        params: { page, limit }
+      });
+
+      const payload = response.data?.data || response.data || {};
+      const items = payload.posts || payload || [];
+
+      // Map e-learning community posts to the job portal Post shape
+      const mapped = (Array.isArray(items) ? items : []).map((p: any) => {
+        const name = p?.author?.name || '';
+        const [firstName, ...rest] = name.split(' ');
+        const lastName = rest.join(' ');
+
+        const media = (p?.attachments || [])
+          .filter((a: any) => a && (a.type === 'image' || a.type === 'video'))
+          .map((a: any) => ({
+            type: a.type,
+            url: a.url,
+            thumbnail: a.thumbnail,
+          }));
+
+        return {
+          _id: p.id || p._id,
+          author: {
+            _id: p?.author?.id || p?.author?._id || 'unknown',
+            firstName: firstName || (p?.author?.firstName || ''),
+            lastName: lastName || (p?.author?.lastName || ''),
+            profilePicture: p?.author?.avatar || p?.author?.profilePicture,
+            company: '',
+            jobTitle: p?.author?.role === 'teacher' ? 'Teacher' : 'Student',
+          },
+          content: p?.content || '',
+          media: media,
+          tags: p?.tags || [],
+          postType: (p?.type === 'achievement' ? 'company_update' : 'text') as any,
+          likes: [],
+          likesCount: p?.likes || 0,
+          commentsCount: p?.comments || 0,
+          sharesCount: p?.shares || 0,
+          visibility: 'public',
+          isPinned: false,
+          isPromoted: false,
+          createdAt: p?.timestamp || p?.createdAt || new Date().toISOString(),
+          updatedAt: p?.updatedAt || p?.timestamp || new Date().toISOString(),
+          // mark source for UI annotation
+          source: 'learning_hub',
+        } as any;
+      });
+
+      return mapped;
+    } catch (error) {
+      console.error('Error fetching Learning Hub feed:', error);
+      return [];
+    }
+  }
+
   async createPost(postData: CreatePostData) {
     const response = await api.post('/posts/create', postData);
     return response.data.data || response.data;

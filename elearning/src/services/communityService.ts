@@ -154,6 +154,11 @@ export interface PostsResponse {
   limit: number;
 }
 
+export interface TrendingResponse {
+  posts: IPost[];
+  groups: IGroup[];
+}
+
 export interface GroupsResponse {
   groups: IGroup[];
   total: number;
@@ -209,6 +214,12 @@ class CommunityService {
     return response.data;
   }
 
+  async getTrending(limit = 10): Promise<TrendingResponse> {
+    const response = await api.get(`/community/trending?limit=${limit}`);
+    const payload = response.data?.data || response.data;
+    return payload as TrendingResponse;
+  }
+
   async createPost(postData: {
     content: string;
     type: 'text' | 'achievement' | 'question' | 'announcement';
@@ -247,15 +258,20 @@ class CommunityService {
     return response.data;
   }
 
+  async deletePost(postId: string): Promise<any> {
+    const response = await api.delete(`/community/posts/${postId}`);
+    return response.data;
+  }
+
   // Groups
   async getGroups(page = 1, limit = 20): Promise<GroupsResponse> {
     const response = await api.get(`/community/groups?page=${page}&limit=${limit}`);
-    return response.data;
+    return response.data.data || response.data;
   }
 
   async getMyGroups(): Promise<IGroup[]> {
     const response = await api.get('/community/groups/my');
-    return response.data;
+    return response.data.data || response.data;
   }
 
   async createGroup(groupData: {
@@ -266,7 +282,7 @@ class CommunityService {
     tags: string[];
   }): Promise<IGroup> {
     const response = await api.post('/community/groups', groupData);
-    return response.data;
+    return response.data.data || response.data;
   }
 
   async joinGroup(groupId: string): Promise<any> {
@@ -282,22 +298,32 @@ class CommunityService {
   // Achievements
   async getAchievements(page = 1, limit = 20): Promise<AchievementsResponse> {
     const response = await api.get(`/community/achievements?page=${page}&limit=${limit}`);
-    return response.data;
+    const payload = response.data?.data || response.data;
+    // Normalize to AchievementsResponse shape { achievements, total, page, limit }
+    if (payload?.achievements && payload?.pagination) {
+      return {
+        achievements: payload.achievements,
+        total: payload.pagination.total,
+        page: payload.pagination.page,
+        limit: payload.pagination.limit,
+      };
+    }
+    return payload;
   }
 
   async getMyAchievements(): Promise<IAchievement[]> {
     const response = await api.get('/community/achievements/my');
-    return response.data;
+    return response.data?.data || response.data;
   }
 
   async shareAchievement(achievementId: string): Promise<any> {
     const response = await api.post(`/community/achievements/${achievementId}/share`);
-    return response.data;
+    return response.data?.data || response.data;
   }
 
   async likeAchievement(achievementId: string): Promise<any> {
     const response = await api.post(`/community/achievements/${achievementId}/like`);
-    return response.data;
+    return response.data?.data || response.data;
   }
 
   // Teachers
@@ -463,6 +489,66 @@ class CommunityService {
       groupName,
       initialMessage
     });
+    return response.data.data;
+  }
+
+  // Group-specific methods
+  async getGroupChats(): Promise<any> {
+    const response = await api.get('/chat/conversations?type=group');
+    return response.data.data;
+  }
+
+  async joinGroupChat(groupId: string): Promise<any> {
+    const response = await api.post(`/chat/groups/${groupId}/join`);
+    return response.data.data;
+  }
+
+  async leaveGroupChat(groupId: string): Promise<any> {
+    const response = await api.delete(`/chat/groups/${groupId}/leave`);
+    return response.data.data;
+  }
+
+  async createGroupChat(groupId: string): Promise<any> {
+    const response = await api.post(`/community/groups/${groupId}/create-chat`);
+    return response.data.data;
+  }
+
+  async joinGroupByCode(joinCode: string, userId: string): Promise<any> {
+    const response = await api.post(`/community/groups/join-code/${joinCode}`, {}, {
+      headers: {
+        'userid': userId
+      }
+    });
+    return response.data.data;
+  }
+
+  async getGroupMembers(groupId: string): Promise<any> {
+    const response = await api.get(`/community/groups/${groupId}/members`);
+    return response.data.data;
+  }
+
+  async deleteGroup(groupId: string): Promise<any> {
+    const response = await api.delete(`/community/groups/${groupId}`);
+    return response.data.data;
+  }
+
+  async updateGroupSettings(groupId: string, settings: any): Promise<any> {
+    const response = await api.put(`/community/groups/${groupId}`, settings);
+    return response.data.data;
+  }
+
+  async updateMemberRole(groupId: string, memberId: string, newRole: string): Promise<any> {
+    const response = await api.post(`/community/groups/${groupId}/members/${memberId}/role`, { newRole });
+    return response.data.data;
+  }
+
+  async removeMember(groupId: string, memberId: string): Promise<any> {
+    const response = await api.delete(`/community/groups/${groupId}/members/${memberId}`);
+    return response.data.data;
+  }
+
+  async generateJoinCode(groupId: string): Promise<any> {
+    const response = await api.post(`/community/groups/${groupId}/generate-join-code`);
     return response.data.data;
   }
 

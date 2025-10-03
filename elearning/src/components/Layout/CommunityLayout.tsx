@@ -242,6 +242,7 @@ const CommunityLayout: React.FC<CommunityLayoutProps> = ({ children }) => {
     { text: 'Feed', icon: <HomeIcon />, path: 'feed' },
     { text: 'Groups', icon: <Group />, path: 'groups' },
     { text: 'Achievements', icon: <EmojiEvents />, path: 'achievements' },
+    { text: 'Opportunities', icon: <Work />, path: 'opportunities' },
     { text: 'Chat', icon: <Chat />, path: 'chat' },
     { text: 'Teachers', icon: <School />, path: 'teachers' },
     { text: 'Trending', icon: <TrendingUp />, path: 'trending' },

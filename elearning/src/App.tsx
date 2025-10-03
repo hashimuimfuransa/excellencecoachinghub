@@ -105,6 +105,7 @@ import AssignmentView from './pages/Student/AssignmentView';
 import CareerGuidancePage from './pages/Career/CareerGuidancePage';
 import CareerAssessmentFlow from './pages/Career/CareerAssessmentFlow';
 import CareerAssessmentResults from './pages/CareerAssessment/CareerAssessmentResults';
+import StudentOpportunitiesPage from './pages/Student/StudentOpportunities';
 
 
 // Import hooks
@@ -282,6 +283,7 @@ const App: React.FC = () => {
           <Route path="career" element={<CareerGuidancePage />} />
           <Route path="career/assessment/:assessmentId" element={<CareerAssessmentFlow />} />
           <Route path="career/assessment/:assessmentId/results" element={<CareerAssessmentResults />} />
+          <Route path="opportunities" element={<StudentOpportunitiesPage />} />
           <Route path="settings" element={<StudentSettings />} />
         </Route>
 

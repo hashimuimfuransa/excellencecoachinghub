@@ -70,7 +70,8 @@ import {
   Engineering,
   Calculate,
   Search,
-  Close
+  Close,
+  Work
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { useNotifications } from '../../hooks/useNotifications';
@@ -356,6 +357,7 @@ const Layout: React.FC = () => {
         { text: 'My Courses', icon: <School />, path: '/dashboard/student/courses' },
         { text: '🔴 Live Sessions', icon: <VideoCall />, path: '/live-sessions' },
         { text: 'Community', icon: <Groups />, path: '/community/feed' },
+        { text: 'Opportunities', icon: <Work />, path: '/dashboard/student/opportunities' },
         { text: 'My Grades', icon: <Grade />, path: '/dashboard/student/grades' },
         { text: 'Leaderboard', icon: <EmojiEvents />, path: '/dashboard/student/leaderboard' },
         { text: 'Career Guidance', icon: <TrendingUp />, path: '/dashboard/student/career' },

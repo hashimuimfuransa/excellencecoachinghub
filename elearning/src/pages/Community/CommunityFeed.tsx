@@ -66,7 +66,8 @@ import {
   KeyboardArrowDown,
   KeyboardArrowUp,
   UnfoldLess,
-  UnfoldMore
+  UnfoldMore,
+  Work
 } from '@mui/icons-material';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
@@ -514,6 +515,24 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
           Back to Learning Hub
         </Button>
       </Box>
+
+      {/* Opportunities Card - Shown for students with 40%+ profile completion */}
+      {user?.role === 'student' && (
+        <Card sx={{ mb: 2, borderRadius: 2, border: `1px solid ${theme.palette.success.light}`, background: alpha(theme.palette.success.main, 0.05) }}>
+          <CardContent>
+            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
+              <Work color="success" />
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>Career Opportunities</Typography>
+            </Stack>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Explore job opportunities on ExJobNet matched to your completed courses. Requires 40% profile completion and age 18+.
+            </Typography>
+            <Button variant="contained" color="success" onClick={() => navigate('/dashboard/student/opportunities')}>
+              View Opportunities
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Create Post */}
       <CreatePostCard>

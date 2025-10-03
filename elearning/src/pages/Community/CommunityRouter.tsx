@@ -5,6 +5,7 @@ import CommunityLayout from '../../components/Layout/CommunityLayout';
 import CommunityFeed from './CommunityFeed';
 import CommunityGroups from './CommunityGroups';
 import CommunityAchievements from './CommunityAchievements';
+import CommunityOpportunities from './CommunityOpportunities';
 import CommunityChat from './CommunityChat';
 import CommunityTeachers from './CommunityTeachers';
 import CommunityTrending from './CommunityTrending';
@@ -33,6 +34,7 @@ const CommunityRouter: React.FC = () => {
           <Route path="feed" element={<CommunityFeed />} />
           <Route path="groups" element={<CommunityGroups />} />
           <Route path="achievements" element={<CommunityAchievements />} />
+          <Route path="opportunities" element={<CommunityOpportunities />} />
           <Route path="chat" element={<CommunityChat />} />
           <Route path="teachers" element={<CommunityTeachers />} />
           <Route path="trending" element={<CommunityTrending />} />

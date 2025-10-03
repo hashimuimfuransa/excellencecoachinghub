@@ -83,6 +83,7 @@ import { teacherProfileService } from '../../services/teacherProfileService';
 import CareerGuidancePopup from '../Career/CareerGuidancePopup';
 import careerGuidanceService from '../../services/careerGuidanceService';
 import ProfilePage from '../../pages/Profile/ProfilePage';
+import BottomNavigationBar from '../BottomNavigationBar';
 
 // Responsive styled components
 const ResponsiveAppBar = styled(AppBar, {
@@ -359,6 +360,7 @@ const Layout: React.FC = () => {
         { text: 'Community', icon: <Groups />, path: '/community/feed' },
         { text: 'Opportunities', icon: <Work />, path: '/dashboard/student/opportunities' },
         { text: 'My Grades', icon: <Grade />, path: '/dashboard/student/grades' },
+        { text: 'Achievements', icon: <EmojiEvents />, path: '/dashboard/student/achievements' },
         { text: 'Leaderboard', icon: <EmojiEvents />, path: '/dashboard/student/leaderboard' },
         { text: 'Career Guidance', icon: <TrendingUp />, path: '/dashboard/student/career' },
         { text: 'AI Assistant', icon: <Psychology />, path: '/dashboard/student/ai-assistant' },
@@ -997,7 +999,15 @@ const Layout: React.FC = () => {
             }}
           />
         )}
-        <Outlet />
+        
+        {/* Main Content with Mobile Bottom Navigation Spacing */}
+        <Box sx={{ 
+          pb: { xs: '80px', md: 0 }, // Add bottom padding on mobile for bottom nav
+          minHeight: { xs: 'calc(100vh - 80px)', md: '100vh' },
+          marginBottom: { xs: 0, md: 0 }
+        }}>
+          <Outlet />
+        </Box>
 
         {/* Floating AI Assistant - Available for students */}
         {user?.role === UserRole.STUDENT && (
@@ -1054,6 +1064,21 @@ const Layout: React.FC = () => {
           <ProfilePage key={profileRefreshKey} />
         </DialogContent>
       </Dialog>
+
+      {/* Instagram-style Bottom Navigation - Mobile Only */}
+      <BottomNavigationBar 
+        unreadNotifications={unreadCount}
+        userRole={user?.role}
+        userName={`${user?.firstName} ${user?.lastName}`}
+        userAvatar={user?.profilePicture}
+        onCreatePost={() => {
+          // Post creation handled by modal in BottomNavigationBar
+        }}
+        onOpenProfile={() => {
+          // Open profile modal for students
+          handleProfileDirect();
+        }}
+      />
     </Box>
   );
 };

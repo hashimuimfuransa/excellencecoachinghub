@@ -193,6 +193,7 @@ import {
   Info
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
+import BottomNavigationBar from '../BottomNavigationBar';
 
 interface CommunityLayoutProps {
   children: React.ReactNode;
@@ -481,7 +482,16 @@ const CommunityLayout: React.FC<CommunityLayoutProps> = ({ children }) => {
         }}
       >
         <Toolbar />
-        {children}
+        
+        {/* Main Content with Mobile Bottom Navigation Spacing */}
+        <Box sx={{ 
+          pb: { xs: '80px', md: 0 }, // Add bottom padding on mobile for bottom nav
+          minHeight: { xs: 'calc(100vh - 144px)', md: 'calc(100vh - 64px)' },
+          marginBottom: { xs: 0, md: 0 }
+        }}>
+          {children}
+        </Box>
+        
       </Box>
 
       {/* Profile Menu */}
@@ -562,6 +572,16 @@ const CommunityLayout: React.FC<CommunityLayoutProps> = ({ children }) => {
           </Typography>
         </MenuItem>
       </Menu>
+
+      {/* Instagram-style Bottom Navigation - Mobile Only */}
+      <BottomNavigationBar 
+        userRole={user?.role}
+        userName={`${user?.firstName} ${user?.lastName}`}
+        userAvatar={user?.profilePicture}
+        onCreatePost={() => {
+          // Post creation handled by modal in BottomNavigationBar
+        }}
+      />
     </Box>
   );
 };

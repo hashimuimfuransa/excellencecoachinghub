@@ -217,7 +217,7 @@ What would you like to explore today?`,
         aria-label="AI Assistant"
         sx={{
           position: 'fixed',
-          bottom: 24,
+          bottom: { xs: 100, sm: 100, md: 24 }, // Adjusted for mobile bottom nav
           right: 24,
           zIndex: 1000,
           width: 64,

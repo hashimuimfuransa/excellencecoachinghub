@@ -58,9 +58,9 @@ const HelpButton: React.FC = () => {
         color="primary"
         sx={{
           position: 'fixed',
-          bottom: 24,
-          right: 24,
-          zIndex: 1000,
+          bottom: { xs: 100, sm: 100, md: 24 }, // Positioned above mobile bottom nav (60px + padding)
+          right: { xs: 96, sm: 96, md: 96 }, // Positioned to the left of AI Assistant (64px + 8px spacing)
+          zIndex: 1200, // Higher z-index to ensure it's above bottom nav
           boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.3)}`,
           '&:hover': {
             transform: 'scale(1.1)',

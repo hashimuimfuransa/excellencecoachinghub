@@ -30,8 +30,15 @@ import {
   Fade,
   Zoom,
   useTheme,
+  useMediaQuery,
   alpha,
-  styled
+  styled,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider
 } from '@mui/material';
 import UnifiedLearningPage from './UnifiedLearningPage';
 import {
@@ -55,7 +62,9 @@ import {
   AutoStories,
   Psychology,
   Explore,
-  LocalLibrary
+  LocalLibrary,
+  Menu,
+  ClearAll
 } from '@mui/icons-material';
 import { courseService, ICourse } from '../../services/courseService';
 import { enrollmentService, IEnrollment } from '../../services/enrollmentService';
@@ -166,10 +175,28 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, value, index, ...other })
   );
 };
 
+// Responsive button component for mobile optimization
+const ResponsiveButton = styled(Button)(({ theme }) => ({
+  [theme.breakpoints.down('md')]: {
+    fontSize: '0.875rem',
+    padding: theme.spacing(1, 2),
+    minWidth: 'auto',
+    '& .MuiSvgIcon-root': {
+      fontSize: '1.1rem',
+    },
+  },
+}));
+
 const StudentCourses: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const theme = useTheme();
+  
+  // Mobile responsive breakpoints
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
+  const buttonSize = isSmallMobile ? 'small' : isMobile ? 'medium' : 'large';
 
   // State management
   const [tabValue, setTabValue] = useState(0);
@@ -181,6 +208,9 @@ const StudentCourses: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [showWelcome, setShowWelcome] = useState(true);
+  
+  // Mobile drawer state
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   // Profile completion state
   const [profileCompletion, setProfileCompletion] = useState({
@@ -278,7 +308,15 @@ const StudentCourses: React.FC = () => {
 
   const handleEnroll = async (courseId: string) => {
     // Check if already enrolled
-    const isAlreadyEnrolled = enrollments.some(e => e.course?._id === courseId || e.course === courseId);
+    const isAlreadyEnrolled = enrollments.some(e => {
+      if (typeof e.course === 'object' && e.course && '_id' in e.course) {
+        return e.course._id === courseId;
+      }
+      if (typeof e.course === 'string') {
+        return e.course === courseId;
+      }
+      return false;
+    });
     if (isAlreadyEnrolled) {
       setError('You are already enrolled in this course');
       return;
@@ -299,8 +337,26 @@ const StudentCourses: React.FC = () => {
   };
 
   const getEnrollmentProgress = (courseId: string) => {
-    const enrollment = enrollments.find(e => e.course?._id === courseId);
-    return enrollment?.progress || 0;
+    const enrollment = enrollments.find(e => {
+      if (typeof e.course === 'object' && e.course && '_id' in e.course) {
+        return e.course._id === courseId;
+      }
+      if (typeof e.course === 'string') {
+        return e.course === courseId;
+      }
+      return false;
+    });
+    
+    if (!enrollment) return 0;
+    
+    // Handle both number and object progress formats
+    if (typeof enrollment.progress === 'number') {
+      return enrollment.progress;
+    } else if (typeof enrollment.progress === 'object' && enrollment.progress.totalProgress) {
+      return enrollment.progress.totalProgress;
+    }
+    
+    return 0;
   };
 
   // Helper function to get progress color
@@ -320,9 +376,109 @@ const StudentCourses: React.FC = () => {
     }
   };
 
+  const handleMobileTabChange = (newValue: number) => {
+    setTabValue(newValue);
+    setMobileDrawerOpen(false);
+  };
+
+  const toggleMobileDrawer = () => {
+    setMobileDrawerOpen(!mobileDrawerOpen);
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setCategoryFilter('');
+  };
+
   return (
-    <Container maxWidth="lg" sx={{ py: 2 }}>
-      {/* Profile Completion Alert for Students */}
+    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 1, sm: 2, md: 3 } }}>
+        {/* Mobile Header with Drawer Toggle */}
+        {isMobile && (
+          <Paper sx={{ mb: 2, p: 2, borderRadius: 2 }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between">
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                📚 Courses
+              </Typography>
+              <ResponsiveButton
+                variant="outlined"
+                startIcon={<Menu />}
+                onClick={toggleMobileDrawer}
+                size={buttonSize}
+              >
+                Menu
+              </ResponsiveButton>
+            </Stack>
+          </Paper>
+        )}
+
+        {/* Mobile Navigation Drawer */}
+        <Drawer
+          anchor="right"
+          open={mobileDrawerOpen}
+          onClose={() => setMobileDrawerOpen(false)}
+          sx={{
+            '& .MuiDrawer-paper': {
+              width: 280,
+              bgcolor: 'background.paper',
+            },
+          }}
+        >
+          <Box sx={{ p: 2 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+              📚 Course Navigation
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            <List>
+              <ListItem
+                button
+                onClick={() => handleMobileTabChange(0)}
+                sx={{
+                  bgcolor: tabValue === 0 ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
+                  borderRadius: 1,
+                  my: 0.5,
+                }}
+              >
+                <ListItemIcon>
+                  <MenuBook />
+                </ListItemIcon>
+                <ListItemText 
+                  primary="My Learning" 
+                  secondary="View enrolled courses"
+                />
+              </ListItem>
+              <ListItem
+                button
+                onClick={() => handleMobileTabChange(1)}
+                sx={{
+                  bgcolor: tabValue === 1 ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
+                  borderRadius: 1,
+                  my: 0.5,
+                }}
+              >
+                <ListItemIcon>
+                  <Explore />
+                </ListItemIcon>
+                <ListItemText 
+                  primary="Discover Courses" 
+                  secondary="Browse available courses"
+                />
+              </ListItem>
+            </List>
+            <Divider sx={{ my: 2 }} />
+            <ResponsiveButton
+              fullWidth
+              variant="outlined"
+              onClick={clearFilters}
+              startIcon={<ClearAll />}
+              size={buttonSize}
+            >
+              Clear Filters
+            </ResponsiveButton>
+          </Box>
+        </Drawer>
+
+        {/* Profile Completion Alert for Students */}
       {user?.role === UserRole.STUDENT && !profileCompletion.isComplete && showProfileAlert && (
         <Fade in={showProfileAlert}>
           <Paper
@@ -414,44 +570,73 @@ const StudentCourses: React.FC = () => {
       {showWelcome && (
         <Fade in={showWelcome}>
           <WelcomeCard elevation={0}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
-              <Box sx={{ zIndex: 1 }}>
-                <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
+            <Stack 
+              direction={{ xs: 'column', md: 'row' }} 
+              alignItems="center" 
+              justifyContent="space-between"
+              spacing={{ xs: 2, md: 0 }}
+            >
+              <Box sx={{ zIndex: 1, width: { xs: '100%', md: 'auto' } }}>
+                <Typography 
+                  variant={isSmallMobile ? 'h5' : isMobile ? 'h4' : 'h4'} 
+                  sx={{ fontWeight: 700, mb: 1, textAlign: { xs: 'center', md: 'left' } }}
+                >
                   🎓 Welcome to Your Learning Hub!
                 </Typography>
-                <Typography variant="h6" sx={{ opacity: 0.9, mb: 2 }}>
+                <Typography 
+                  variant={isMobile ? 'body1' : 'h6'} 
+                  sx={{ 
+                    opacity: 0.9, 
+                    mb: 2,
+                    textAlign: { xs: 'center', md: 'left' }
+                  }}
+                >
                   Hi {user?.firstName}! Ready to continue your learning journey?
                 </Typography>
-                <Stack direction="row" spacing={2}>
-                  <ActionButton 
+                <Stack 
+                  direction={{ xs: 'column', sm: 'row' }} 
+                  spacing={2}
+                  justifyContent={{ xs: 'center', md: 'flex-start' }}
+                >
+                  <ResponsiveButton 
                     variant="contained" 
                     sx={{ 
                       bgcolor: 'white', 
                       color: 'primary.main',
-                      '&:hover': { bgcolor: 'grey.100' }
+                      '&:hover': { bgcolor: 'grey.100' },
+                      minWidth: { xs: '100%', sm: 'auto' }
                     }}
                     startIcon={<PlayCircleOutline />}
                     onClick={() => setTabValue(0)}
+                    size={buttonSize}
                   >
                     Continue Learning
-                  </ActionButton>
-                  <ActionButton 
+                  </ResponsiveButton>
+                  <ResponsiveButton 
                     variant="outlined" 
                     sx={{ 
                       borderColor: 'white', 
                       color: 'white',
-                      '&:hover': { bgcolor: alpha(theme.palette.common.white, 0.1) }
+                      '&:hover': { bgcolor: alpha(theme.palette.common.white, 0.1) },
+                      minWidth: { xs: '100%', sm: 'auto' }
                     }}
                     startIcon={<Explore />}
                     onClick={() => setTabValue(1)}
+                    size={buttonSize}
                   >
                     Discover New Courses
-                  </ActionButton>
+                  </ResponsiveButton>
                 </Stack>
               </Box>
               <IconButton 
                 onClick={() => setShowWelcome(false)}
-                sx={{ color: 'white', opacity: 0.7 }}
+                sx={{ 
+                  color: 'white', 
+                  opacity: 0.7,
+                  position: 'absolute',
+                  top: { xs: 8, md: 16 },
+                  right: { xs: 8, md: 16 }
+                }}
               >
                 ✕
               </IconButton>
@@ -462,42 +647,96 @@ const StudentCourses: React.FC = () => {
 
       {/* Quick Stats */}
       {enrolledCourses.length > 0 && (
-        <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid container spacing={{ xs: 2, sm: 3 }} sx={{ mb: { xs: 3, md: 4 } }}>
           <Grid item xs={12} sm={4}>
             <ProgressCard>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <TrendingUp sx={{ fontSize: 40, color: 'success.main', mb: 1 }} />
-                <Typography variant="h4" sx={{ fontWeight: 700, color: 'success.main' }}>
-                  {Math.round(enrollments.reduce((sum, e) => sum + (e.progress || 0), 0) / enrollments.length || 0)}%
+              <CardContent sx={{ 
+                textAlign: 'center', 
+                p: { xs: 2, md: 3 },
+                '&:last-child': { pb: { xs: 2, md: 3 } }
+              }}>
+                <TrendingUp 
+                  sx={{ 
+                    fontSize: { xs: 32, md: 40 }, 
+                    color: 'success.main', 
+                    mb: 1 
+                  }} 
+                />
+                <Typography 
+                  variant={isMobile ? 'h5' : 'h4'} 
+                  sx={{ fontWeight: 700, color: 'success.main' }}
+                >
+                  {Math.round(enrollments.reduce((sum, e) => {
+                    const progress = typeof e.progress === 'number' ? e.progress : (e.progress?.totalProgress || 0);
+                    return sum + progress;
+                  }, 0) / enrollments.length || 0)}%
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Average Progress
+                <Typography 
+                  variant={isMobile ? 'caption' : 'body2'} 
+                  color="text.secondary"
+                >
+                  📈 Average Progress
                 </Typography>
               </CardContent>
             </ProgressCard>
           </Grid>
           <Grid item xs={12} sm={4}>
             <ProgressCard>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <EmojiEvents sx={{ fontSize: 40, color: 'warning.main', mb: 1 }} />
-                <Typography variant="h4" sx={{ fontWeight: 700, color: 'warning.main' }}>
-                  {enrollments.filter(e => (e.progress || 0) >= 100).length}
+              <CardContent sx={{ 
+                textAlign: 'center', 
+                p: { xs: 2, md: 3 },
+                '&:last-child': { pb: { xs: 2, md: 3 } }
+              }}>
+                <EmojiEvents 
+                  sx={{ 
+                    fontSize: { xs: 32, md: 40 }, 
+                    color: 'warning.main', 
+                    mb: 1 
+                  }} 
+                />
+                <Typography 
+                  variant={isMobile ? 'h5' : 'h4'} 
+                  sx={{ fontWeight: 700, color: 'warning.main' }}
+                >
+                  {enrollments.filter(e => {
+                    const progress = typeof e.progress === 'number' ? e.progress : (e.progress?.totalProgress || 0);
+                    return progress >= 100;
+                  }).length}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Completed Courses
+                <Typography 
+                  variant={isMobile ? 'caption' : 'body2'} 
+                  color="text.secondary"
+                >
+                  🏆 Completed Courses
                 </Typography>
               </CardContent>
             </ProgressCard>
           </Grid>
           <Grid item xs={12} sm={4}>
             <ProgressCard>
-              <CardContent sx={{ textAlign: 'center' }}>
-                <LocalLibrary sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
-                <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main' }}>
+              <CardContent sx={{ 
+                textAlign: 'center', 
+                p: { xs: 2, md: 3 },
+                '&:last-child': { pb: { xs: 2, md: 3 } }
+              }}>
+                <LocalLibrary 
+                  sx={{ 
+                    fontSize: { xs: 32, md: 40 }, 
+                    color: 'primary.main', 
+                    mb: 1 
+                  }} 
+                />
+                <Typography 
+                  variant={isMobile ? 'h5' : 'h4'} 
+                  sx={{ fontWeight: 700, color: 'primary.main' }}
+                >
                   {enrolledCourses.length}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Active Courses
+                <Typography 
+                  variant={isMobile ? 'caption' : 'body2'} 
+                  color="text.secondary"
+                >
+                  📚 Active Courses
                 </Typography>
               </CardContent>
             </ProgressCard>
@@ -505,49 +744,68 @@ const StudentCourses: React.FC = () => {
         </Grid>
       )}
 
-      {/* Navigation Tabs */}
-      <Paper sx={{ mb: 4, borderRadius: 3, overflow: 'hidden' }}>
-        <Tabs 
-          value={tabValue} 
-          onChange={handleTabChange}
-          variant="fullWidth"
-          sx={{
-            '& .MuiTab-root': {
-              textTransform: 'none',
-              fontSize: '1.1rem',
-              fontWeight: 600,
-              py: 2,
-            },
-            '& .MuiTabs-indicator': {
-              height: 4,
-              borderRadius: 2,
-            },
-          }}
-        >
-          <Tab 
-            icon={<MenuBook />} 
-            iconPosition="start"
-            label="📚 My Learning" 
-            sx={{ 
-              '&.Mui-selected': { 
-                color: 'primary.main',
-                bgcolor: alpha(theme.palette.primary.main, 0.05)
-              }
+      {/* Navigation Tabs - Hidden on Mobile */}
+      {!isMobile && (
+        <Paper sx={{ mb: 4, borderRadius: 3, overflow: 'hidden' }}>
+          <Tabs 
+            value={tabValue} 
+            onChange={handleTabChange}
+            variant="fullWidth"
+            sx={{
+              '& .MuiTab-root': {
+                textTransform: 'none',
+                fontSize: '1.1rem',
+                fontWeight: 600,
+                py: 2,
+              },
+              '& .MuiTabs-indicator': {
+                height: 4,
+                borderRadius: 2,
+              },
             }}
-          />
-          <Tab 
-            icon={<Explore />} 
-            iconPosition="start"
-            label="🔍 Discover Courses" 
-            sx={{ 
-              '&.Mui-selected': { 
-                color: 'primary.main',
-                bgcolor: alpha(theme.palette.primary.main, 0.05)
-              }
-            }}
-          />
-        </Tabs>
-      </Paper>
+          >
+            <Tab 
+              icon={<MenuBook />} 
+              iconPosition="start"
+              label="📚 My Learning" 
+              sx={{ 
+                '&.Mui-selected': { 
+                  color: 'primary.main',
+                  bgcolor: alpha(theme.palette.primary.main, 0.05)
+                }
+              }}
+            />
+            <Tab 
+              icon={<Explore />} 
+              iconPosition="start"
+              label="🔍 Discover Courses" 
+              sx={{ 
+                '&.Mui-selected': { 
+                  color: 'primary.main',
+                  bgcolor: alpha(theme.palette.primary.main, 0.05)
+                }
+              }}
+            />
+          </Tabs>
+        </Paper>
+      )}
+
+      {/* Mobile Tab Indicator */}
+      {isMobile && (
+        <Paper sx={{ 
+          mb: 3, 
+          p: 2, 
+          borderRadius: 2,
+          bgcolor: tabValue === 0 ? alpha(theme.palette.primary.main, 0.1) : alpha(theme.palette.secondary.main, 0.1)
+        }}>
+          <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
+            {tabValue === 0 ? <MenuBook /> : <Explore />}
+            <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
+              {tabValue === 0 ? '📚 My Learning' : '🔍 Discover Courses'}
+            </Typography>
+          </Stack>
+        </Paper>
+      )}
 
       {/* Error Alert */}
       {error && (
@@ -622,7 +880,7 @@ const StudentCourses: React.FC = () => {
               <LearningTips />
             )}
 
-            <Grid container spacing={3}>
+            <Grid container spacing={{ xs: 2, md: 3 }}>
               {enrolledCourses.map((course, index) => {
                 const progress = getEnrollmentProgress(course._id);
                 const progressColor = getProgressColor(progress);
@@ -635,20 +893,20 @@ const StudentCourses: React.FC = () => {
                         <Box sx={{ position: 'relative' }}>
                           <CardMedia
                             component="img"
-                            height="180"
+                            height={isMobile ? 160 : 180}
                             image={getCourseImageUrl(course)}
                             alt={course.title}
-                            sx={{ borderRadius: '16px 16px 0 0' }}
                           />
                           {progress >= 100 && (
                             <Chip
                               icon={<CheckCircle />}
-                              label="Completed!"
+                              label={isMobile ? "✅ Done" : "Completed!"}
                               color="success"
+                              size={isMobile ? 'small' : 'medium'}
                               sx={{
                                 position: 'absolute',
-                                top: 12,
-                                right: 12,
+                                top: { xs: 8, md: 12 },
+                                right: { xs: 8, md: 12 },
                                 fontWeight: 600,
                                 boxShadow: 2
                               }}
@@ -657,12 +915,13 @@ const StudentCourses: React.FC = () => {
                           {progress > 0 && progress < 100 && (
                             <Chip
                               icon={<PlayCircleOutline />}
-                              label="In Progress"
+                              label={isMobile ? "⏳ Ongoing" : "In Progress"}
                               color="primary"
+                              size={isMobile ? 'small' : 'medium'}
                               sx={{
                                 position: 'absolute',
-                                top: 12,
-                                right: 12,
+                                top: { xs: 8, md: 12 },
+                                right: { xs: 8, md: 12 },
                                 fontWeight: 600,
                                 boxShadow: 2
                               }}
@@ -670,8 +929,12 @@ const StudentCourses: React.FC = () => {
                           )}
                         </Box>
                         
-                        <CardContent sx={{ flexGrow: 1, p: 3 }}>
-                          <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+                        <CardContent sx={{ flexGrow: 1, p: { xs: 2, md: 3 } }}>
+                          <Typography 
+                            variant={isMobile ? 'subtitle1' : 'h6'} 
+                            gutterBottom 
+                            sx={{ fontWeight: 600, mb: 1 }}
+                          >
                             {course.title}
                           </Typography>
                           
@@ -723,11 +986,11 @@ const StudentCourses: React.FC = () => {
                           </Stack>
                         </CardContent>
                         
-                        <Box sx={{ p: 3, pt: 0 }}>
-                          <ActionButton
+                        <Box sx={{ p: { xs: 2, md: 3 }, pt: 0 }}>
+                          <ResponsiveButton
                             fullWidth
                             variant="contained"
-                            size="large"
+                            size={buttonSize}
                             startIcon={progress >= 100 ? <EmojiEvents /> : <PlayArrow />}
                             onClick={() => navigate(`/course/${course._id}/learn`)}
                             sx={{ 
@@ -739,7 +1002,7 @@ const StudentCourses: React.FC = () => {
                           >
                             {progress >= 100 ? '🏆 View Certificate' : 
                              progress > 0 ? '📖 Continue Learning' : '🚀 Start Course'}
-                          </ActionButton>
+                          </ResponsiveButton>
                         </Box>
                       </StyledCard>
                     </Zoom>
@@ -764,30 +1027,35 @@ const StudentCourses: React.FC = () => {
         </Box>
 
         {/* Search and Filters */}
-        <Paper sx={{ p: 3, mb: 4, borderRadius: 3, bgcolor: 'grey.50' }}>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+        <Paper sx={{ p: { xs: 2, md: 3 }, mb: 4, borderRadius: 3, bgcolor: 'grey.50' }}>
+          <Typography 
+            variant={isMobile ? 'subtitle1' : 'h6'} 
+            sx={{ mb: 2, fontWeight: 600, textAlign: { xs: 'center', md: 'left' } }}
+          >
             🎯 Find Your Perfect Course
           </Typography>
-          <Grid container spacing={3}>
+          <Grid container spacing={{ xs: 2, md: 3 }}>
             <Grid item xs={12} md={8}>
               <TextField
                 fullWidth
-                placeholder="What would you like to learn today? (e.g., Python, Design, Marketing...)"
+                placeholder={isMobile ? "What would you like to learn?" : "What would you like to learn today? (e.g., Python, Design, Marketing...)"}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 3,
                     bgcolor: 'white',
+                    fontSize: { xs: '0.95rem', md: '1rem' }
                   }
                 }}
                 InputProps={{
                   startAdornment: <Search sx={{ mr: 1, color: 'primary.main' }} />
                 }}
+                size={isMobile ? 'small' : 'medium'}
               />
             </Grid>
             <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
+              <FormControl fullWidth size={isMobile ? 'small' : 'medium'}>
                 <InputLabel>📂 Choose Category</InputLabel>
                 <Select
                   value={categoryFilter}
@@ -809,6 +1077,20 @@ const StudentCourses: React.FC = () => {
               </FormControl>
             </Grid>
           </Grid>
+          
+          {/* Clear Filters Button */}
+          {(searchTerm || categoryFilter) && (
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+              <ResponsiveButton
+                variant="outlined"
+                onClick={clearFilters}
+                startIcon={<ClearAll />}
+                size={buttonSize}
+              >
+                Clear All Filters
+              </ResponsiveButton>
+            </Box>
+          )}
         </Paper>
 
         {loading ? (
@@ -845,10 +1127,18 @@ const StudentCourses: React.FC = () => {
               </Typography>
             </Box>
             
-            <Grid container spacing={3}>
+            <Grid container spacing={{ xs: 2, md: 3 }}>
               {availableCourses.map((course, index) => {
                 const levelColor = getLevelColor(course.level);
-                const isEnrolled = enrollments.some(e => e.course?._id === course._id || e.course === course._id);
+                const isEnrolled = enrollments.some(e => {
+                  if (typeof e.course === 'object' && e.course && '_id' in e.course) {
+                    return e.course._id === course._id;
+                  }
+                  if (typeof e.course === 'string') {
+                    return e.course === course._id;
+                  }
+                  return false;
+                });
                 const enrollmentProgress = isEnrolled ? getEnrollmentProgress(course._id) : 0;
                 
                 return (
@@ -858,20 +1148,20 @@ const StudentCourses: React.FC = () => {
                         <Box sx={{ position: 'relative' }}>
                           <CardMedia
                             component="img"
-                            height="180"
+                            height={isMobile ? 160 : 180}
                             image={getCourseImageUrl(course)}
                             alt={course.title}
-                            sx={{ borderRadius: '16px 16px 0 0' }}
                           />
                           {isEnrolled ? (
                             <Chip
                               icon={<CheckCircle />}
-                              label={enrollmentProgress >= 100 ? "✅ Completed" : "📚 Enrolled"}
+                              label={enrollmentProgress >= 100 ? "✅ Done" : "📚 Enrolled"}
                               color={enrollmentProgress >= 100 ? "success" : "primary"}
+                              size={isMobile ? 'small' : 'medium'}
                               sx={{
                                 position: 'absolute',
-                                top: 12,
-                                left: 12,
+                                top: { xs: 8, md: 12 },
+                                left: { xs: 8, md: 12 },
                                 fontWeight: 600,
                                 boxShadow: 2
                               }}
@@ -880,10 +1170,11 @@ const StudentCourses: React.FC = () => {
                             <Chip
                               label="🆕 New"
                               color="secondary"
+                              size={isMobile ? 'small' : 'medium'}
                               sx={{
                                 position: 'absolute',
-                                top: 12,
-                                left: 12,
+                                top: { xs: 8, md: 12 },
+                                left: { xs: 8, md: 12 },
                                 fontWeight: 600,
                                 boxShadow: 2
                               }}
@@ -904,8 +1195,12 @@ const StudentCourses: React.FC = () => {
                           </Tooltip>
                         </Box>
                         
-                        <CardContent sx={{ flexGrow: 1, p: 3 }}>
-                          <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+                        <CardContent sx={{ flexGrow: 1, p: { xs: 2, md: 3 } }}>
+                          <Typography 
+                            variant={isMobile ? 'subtitle1' : 'h6'} 
+                            gutterBottom 
+                            sx={{ fontWeight: 600, mb: 1 }}
+                          >
                             {course.title}
                           </Typography>
                           
@@ -986,7 +1281,7 @@ const StudentCourses: React.FC = () => {
                           </Stack>
                         </CardContent>
                         
-                        <Box sx={{ p: 3, pt: 0 }}>
+                        <Box sx={{ p: { xs: 2, md: 3 }, pt: 0 }}>
                           {isEnrolled ? (
                             <>
                               {/* Show progress if enrolled */}
@@ -1008,10 +1303,10 @@ const StudentCourses: React.FC = () => {
                                 </Box>
                               )}
                               
-                              <ActionButton
+                              <ResponsiveButton
                                 fullWidth
                                 variant="contained"
-                                size="large"
+                                size={buttonSize}
                                 startIcon={enrollmentProgress >= 100 ? <EmojiEvents /> : <PlayArrow />}
                                 onClick={() => navigate(`/course/${course._id}/learn`)}
                                 sx={{ 
@@ -1023,9 +1318,9 @@ const StudentCourses: React.FC = () => {
                               >
                                 {enrollmentProgress >= 100 ? '🏆 View Certificate' : 
                                  enrollmentProgress > 0 ? '📖 Continue Learning' : '🚀 Start Course'}
-                              </ActionButton>
+                              </ResponsiveButton>
                               
-                              <ActionButton
+                              <ResponsiveButton
                                 fullWidth
                                 variant="outlined"
                                 size="small"
@@ -1034,20 +1329,20 @@ const StudentCourses: React.FC = () => {
                                 disabled
                               >
                                 ✅ Already Enrolled
-                              </ActionButton>
+                              </ResponsiveButton>
                             </>
                           ) : (
                             <>
-                              <ActionButton
+                              <ResponsiveButton
                                 fullWidth
                                 variant="contained"
-                                size="large"
+                                size={buttonSize}
                                 startIcon={<School />}
                                 onClick={() => navigate(`/course/${course._id}/enroll`)}
                               >
                                 🚀 Enroll Now
-                              </ActionButton>
-                              <ActionButton
+                              </ResponsiveButton>
+                              <ResponsiveButton
                                 fullWidth
                                 variant="outlined"
                                 size="small"
@@ -1055,7 +1350,7 @@ const StudentCourses: React.FC = () => {
                                 onClick={() => navigate(`/course-preview/${course._id}`)}
                               >
                                 👀 Preview Course
-                              </ActionButton>
+                              </ResponsiveButton>
                             </>
                           )}
                         </Box>
@@ -1071,7 +1366,8 @@ const StudentCourses: React.FC = () => {
 
       {/* Floating Help Button */}
       <HelpButton />
-    </Container>
+      </Container>
+    </Box>
   );
 };
 

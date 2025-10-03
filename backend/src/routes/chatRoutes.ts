@@ -327,6 +327,18 @@ router.post('/:chatId/message', auth, sendMessageValidation, validateRequest, as
 
     await message.save();
     await message.populate('sender', 'firstName lastName profilePicture');
+    
+    // Populate replyTo field if it exists for socket emission
+    if (replyTo) {
+      await message.populate('replyTo', 'content sender');
+      await message.populate({
+        path: 'replyTo',
+        populate: {
+          path: 'sender',
+          select: 'firstName lastName'
+        }
+      });
+    }
 
     // Update chat's last message and timestamp
     chat.lastMessage = message._id as any;
@@ -528,7 +540,7 @@ router.delete('/:chatId/message/:messageId', auth, param('chatId').isMongoId(), 
 // Search users to start chat with
 router.get('/users/search', auth, async (req: Request, res: Response) => {
   try {
-    const { query: searchQuery, type = 'all', excludeCurrentUser = true } = req.query;
+    const { query: searchQuery, type = 'all', excludeCurrentUser = true, limit } = req.query;
     const userId = req.user?.id;
 
     let searchFilter: any = {};
@@ -557,10 +569,19 @@ router.get('/users/search', auth, async (req: Request, res: Response) => {
       searchFilter._id = { $ne: userId };
     }
 
-    const users = await User.find(searchFilter)
+    // Set limit - if not specified, return all users
+    const limitNumber = limit ? parseInt(limit as string) : undefined;
+    
+    let query = User.find(searchFilter)
       .select('firstName lastName email profilePicture role isOnline lastSeen company')
-      .limit(20)
       .sort({ firstName: 1, lastName: 1 });
+    
+    // Only apply limit if specified
+    if (limitNumber) {
+      query = query.limit(limitNumber);
+    }
+
+    const users = await query;
 
     res.json({
       success: true,

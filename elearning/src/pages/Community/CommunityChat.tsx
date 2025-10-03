@@ -20,7 +20,15 @@ import {
   Badge,
   useTheme,
   alpha,
-  styled
+  styled,
+  Menu,
+  MenuItem,
+  Pagination,
+  Tooltip,
+  CircularProgress,
+  Drawer,
+  useMediaQuery,
+  Hidden
 } from '@mui/material';
 import {
   Send,
@@ -110,9 +118,19 @@ import {
   CloudDownload,
   SyncProblem,
   Error,
-  Info as InfoIcon
+  Info as InfoIcon,
+  Reply,
+  Delete as DeleteIcon,
+  Edit,
+  Forward,
+  CopyAll,
+  Menu as MenuIcon,
+  Close,
+  ArrowBack
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
+import { communityService, IUser } from '../../services/communityService';
+import { io } from 'socket.io-client';
 
 // Styled Components
 const ChatContainer = styled(Box)(({ theme }) => ({
@@ -200,11 +218,29 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
   const { user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
+  // Responsive breakpoints
+  const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  
   const [contacts, setContacts] = useState<ChatContact[]>([]);
   const [selectedContact, setSelectedContact] = useState<ChatContact | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showUserSearch, setShowUserSearch] = useState(false);
+  const [availableUsers, setAvailableUsers] = useState<IUser[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [socket, setSocket] = useState<any>(null);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [messageMenuAnchor, setMessageMenuAnchor] = useState<{message: Message | null, element: HTMLElement | null}>({message: null, element: null});
+  const [contactPage, setContactPage] = useState(1);
+  const [totalContacts, setTotalContacts] = useState(0);
+  const [contactsLimit] = useState(10);
+  const [allConversations, setAllConversations] = useState<any[]>([]);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Load contacts and messages
   useEffect(() => {
@@ -212,73 +248,58 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
       try {
         setLoading(true);
         
-        // Mock contacts data
-        const mockContacts: ChatContact[] = [
-          {
-            id: 'teacher-1',
-            name: 'Dr. Sarah Johnson',
-            avatar: '/avatars/sarah.jpg',
-            role: 'teacher',
-            isOnline: true,
-            lastSeen: new Date().toISOString(),
-            lastMessage: 'Great work on your latest assignment!',
-            lastMessageTime: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-            unreadCount: 2,
-            isGroup: false,
-            isPinned: true,
-            isMuted: false
-          },
-          {
-            id: 'group-1',
-            name: 'React Developers',
-            avatar: '/group-avatars/react.jpg',
-            role: 'student',
-            isOnline: false,
-            lastSeen: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-            lastMessage: 'Alex: Has anyone tried the new React 18 features?',
-            lastMessageTime: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-            unreadCount: 5,
-            isGroup: true,
-            groupMembers: 1250,
-            isPinned: false,
-            isMuted: false
-          },
-          {
-            id: 'student-1',
-            name: 'Mike Chen',
-            avatar: '/avatars/mike.jpg',
-            role: 'student',
-            isOnline: true,
-            lastSeen: new Date().toISOString(),
-            lastMessage: 'Thanks for the help with the project!',
-            lastMessageTime: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-            unreadCount: 0,
-            isGroup: false,
-            isPinned: false,
-            isMuted: false
-          },
-          {
-            id: 'group-2',
-            name: 'Data Science Beginners',
-            avatar: '/group-avatars/datascience.jpg',
-            role: 'student',
-            isOnline: false,
-            lastSeen: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-            lastMessage: 'Emma: Can someone explain pandas to me?',
-            lastMessageTime: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-            unreadCount: 0,
-            isGroup: true,
-            groupMembers: 850,
-            isPinned: false,
-            isMuted: true
-          }
-        ];
-
-        setContacts(mockContacts);
+        // Fetch real conversations from backend
+        const conversations = await communityService.getConversations();
+        console.log('Loaded conversations:', conversations); // Debug log
         
-        // Load messages for first contact
-        if (mockContacts.length > 0) {
-          loadMessages(mockContacts[0].id);
+        // Transform conversations to ChatContact format (only users with existing conversations)
+        const contacts: ChatContact[] = conversations
+          .filter((conv: any) => {
+            // Only include conversations that have participants with valid data
+            if (conv.isGroup) {
+              return conv.groupName && conv.groupName.trim() !== '';
+            } else {
+              // For direct chats, ensure we have a valid other participant
+              const otherParticipant = conv.participants.find((p: any) => p._id !== user?._id);
+              return otherParticipant && otherParticipant.firstName && otherParticipant.lastName;
+            }
+          })
+          .map((conv: any) => {
+            // For direct chats, find the other participant
+            const otherParticipant = conv.participants.find((p: any) => p._id !== user?._id);
+            
+            return {
+              id: conv._id.toString(),
+              name: conv.isGroup ? conv.groupName : `${otherParticipant.firstName} ${otherParticipant.lastName}`,
+              avatar: conv.isGroup ? conv.groupAvatar : otherParticipant?.profilePicture,
+              role: otherParticipant?.role || 'student',
+              isOnline: conv.participants.some((p: any) => p._id !== user?._id && p.isOnline),
+              lastSeen: otherParticipant?.lastSeen || new Date().toISOString(),
+              lastMessage: conv.lastMessage?.content || 'No messages yet',
+              lastMessageTime: conv.lastMessage?.createdAt || conv.updatedAt,
+              unreadCount: conv.unreadCount || 0,
+              isGroup: conv.isGroup,
+              groupMembers: conv.isGroup ? conv.participants.length : undefined,
+              isPinned: false,
+              isMuted: false
+            };
+          });
+        
+        console.log('Created contacts:', contacts); // Debug log
+        
+        // Store all conversations for pagination
+        setAllConversations(conversations);
+        setTotalContacts(contacts.length);
+        
+        // Only show first page of contacts initially
+        const currentContacts = contacts.slice(0, contactsLimit);
+        setContacts(currentContacts);
+        
+        // If no conversation is selected, auto-select the first one
+        if (currentContacts.length > 0) {
+          console.log('Auto selecting first contact:', currentContacts[0]); // Debug log
+          setSelectedContact(currentContacts[0]);
+          loadMessages(currentContacts[0].id);
         }
       } catch (error) {
         console.error('Error loading chat data:', error);
@@ -290,114 +311,237 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
     loadData();
   }, []);
 
+    // Load users when modal opens
+    useEffect(() => {
+      if (showUserSearch) {
+        loadAllUsers();
+      } else {
+        // Clear users and search when modal closes
+        setAvailableUsers([]);
+        setSearchQuery('');
+      }
+    }, [showUserSearch]);
+
+    // Initialize Socket.IO connection for real-time messaging
+    useEffect(() => {
+      if (user) {
+        const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+        const newSocket = io(backendUrl, {
+          auth: {
+            userId: user._id
+          }
+        });
+
+        setSocket(newSocket);
+
+        // Listen for new messages
+        newSocket.on('new-message', (data) => {
+          console.log('New message received:', data);
+          
+          // Only add message if it's for the currently selected chat
+          if (selectedContact && data.chatId === selectedContact.id) {
+            const message: Message = {
+              id: data.message._id.toString(),
+              senderId: data.message.sender._id?.toString() || data.message.sender?.toString() || user._id,
+              senderName: `${data.sender.firstName} ${data.sender.lastName}`,
+              senderAvatar: data.message.sender?.profilePicture || '',
+              content: data.message.content,
+              timestamp: data.message.createdAt,
+              isRead: data.message.readBy?.includes(user._id) || false,
+              type: data.message.messageType || 'text',
+              isOwn: (data.message.sender._id?.toString() === user._id) || (data.message.sender?.toString() === user._id),
+              replyTo: data.message.replyTo ? {
+                id: data.message.replyTo._id.toString(),
+                content: data.message.replyTo.content,
+                senderName: `${data.message.replyTo.sender?.firstName} ${data.message.replyTo.sender?.lastName}` || 'Unknown'
+              } : undefined
+            };
+
+            console.log('Adding message to chat:', message); // Debug log
+            
+            // Add message only if it's not a duplicate (avoid duplicates from our own messages)
+            setMessages(prev => {
+              const messageExists = prev.some(msg => msg.id === message.id);
+              if (messageExists) {
+                console.log('Message already exists, not adding duplicate');
+                return prev; // Don't add duplicate
+              }
+              return [...prev, message];
+            });
+          }
+
+          // Update contacts list with new message
+          setContacts(prev => prev.map(contact => {
+            if (contact.id === data.chatId) {
+              return {
+                ...contact,
+                lastMessage: data.message.content,
+                lastMessageTime: data.message.createdAt,
+                unreadCount: contact.unreadCount + 1
+              };
+            }
+            return contact;
+          }));
+        });
+
+        // Listen for join chat room
+        newSocket.on('connect', () => {
+          console.log('Connected to chat server');
+        });
+
+        return () => {
+          newSocket.disconnect();
+        };
+      }
+    }, [user, selectedContact]);
+
+    // Cleanup socket on component unmount
+    useEffect(() => {
+      return () => {
+        if (socket) {
+          socket.disconnect();
+        }
+      };
+    }, []);
+
   // Load messages for selected contact
   const loadMessages = async (contactId: string) => {
     try {
-      // Mock messages data
-      const mockMessages: Message[] = [
-        {
-          id: 'msg-1',
-          senderId: 'teacher-1',
-          senderName: 'Dr. Sarah Johnson',
-          senderAvatar: '/avatars/sarah.jpg',
-          content: 'Welcome to the course! I\'m excited to have you in my class.',
-          timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          isRead: true,
-          type: 'text',
-          isOwn: false
-        },
-        {
-          id: 'msg-2',
-          senderId: user?._id || 'current-user',
-          senderName: `${user?.firstName} ${user?.lastName}`,
-          senderAvatar: user?.profilePicture,
-          content: 'Thank you! I\'m looking forward to learning from you.',
-          timestamp: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-          isRead: true,
-          type: 'text',
-          isOwn: true
-        },
-        {
-          id: 'msg-3',
-          senderId: 'system',
-          senderName: 'System',
-          content: 'You can now send messages to your teacher',
-          timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          isRead: true,
-          type: 'system',
-          isOwn: false
-        },
-        {
-          id: 'msg-4',
-          senderId: 'teacher-1',
-          senderName: 'Dr. Sarah Johnson',
-          senderAvatar: '/avatars/sarah.jpg',
-          content: 'Great! Don\'t hesitate to reach out if you have any questions.',
-          timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          isRead: true,
-          type: 'text',
-          isOwn: false
-        },
-        {
-          id: 'msg-5',
-          senderId: 'teacher-1',
-          senderName: 'Dr. Sarah Johnson',
-          senderAvatar: '/avatars/sarah.jpg',
-          content: 'Reminder: The quiz for Chapter 1 is due tomorrow at 11:59 PM.',
-          timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-          isRead: false,
-          type: 'text',
-          isOwn: false
-        },
-        {
-          id: 'msg-6',
-          senderId: 'teacher-1',
-          senderName: 'Dr. Sarah Johnson',
-          senderAvatar: '/avatars/sarah.jpg',
-          content: 'Great work on your latest assignment!',
-          timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-          isRead: false,
-          type: 'text',
-          isOwn: false
-        }
-      ];
+      console.log('Loading messages for contact:', contactId); // Debug log
+      
+      // Only load messages for existing conversations
+      const messagesResponse = await communityService.getMessages(contactId, 1, 50);
+      
+      console.log('Messages response:', messagesResponse); // Debug log
+      
+      // Handle different response structures
+      const messagesData = messagesResponse.data || messagesResponse.messages || messagesResponse;
+      
+      if (!Array.isArray(messagesData)) {
+        console.error('Invalid messages response format:', messagesData);
+        setMessages([]);
+        return;
+      }
 
-      setMessages(mockMessages);
+      if (messagesData.length === 0) {
+        console.log('No messages found for contact:', contactId);
+        setMessages([]);
+        return;
+      }
+      
+      // Transform backend messages to frontend format
+      const messages: Message[] = messagesData.map((msg: any) => {
+        console.log('Processing message:', msg); // Debug log
+        
+        return {
+          id: msg._id.toString(),
+          senderId: msg.sender?._id?.toString() || msg.sender?.toString() || user?._id,
+          senderName: `${msg.sender?.firstName || ''} ${msg.sender?.lastName || ''}` || 'Unknown User',
+          senderAvatar: msg.sender?.profilePicture || '',
+          content: msg.content,
+          timestamp: msg.createdAt || msg.timestamp,
+          isRead: msg.readBy?.includes(user?._id) || msg.isRead || false,
+          type: msg.messageType || 'text',
+          isOwn: (msg.sender?._id?.toString() === user?._id) || (msg.sender?.toString() === user?._id),
+          replyTo: msg.replyTo ? {
+            id: msg.replyTo._id.toString(),
+            content: msg.replyTo.content,
+            senderName: `${msg.replyTo.sender?.firstName} ${msg.replyTo.sender?.lastName}` || 'Unknown'
+          } : undefined
+        };
+      });
+
+      console.log('Processed messages:', messages); // Debug log
+      setMessages(messages);
+      
     } catch (error) {
       console.error('Error loading messages:', error);
+      console.error('Error details:', error.response?.data || error.message);
+      setMessages([]);
     }
   };
 
   // Handle contact selection
   const handleContactSelect = (contact: ChatContact) => {
+    console.log('Selecting contact:', contact); // Debug log
     setSelectedContact(contact);
     loadMessages(contact.id);
     
+    // Join chat room for real-time updates
+    if (socket) {
+      socket.emit('join-chat', contact.id);
+    }
+    
     // Mark messages as read
-    setContacts(prev => prev.map(c => 
-      c.id === contact.id ? { ...c, unreadCount: 0 } : c
-    ));
+    markMessagesAsRead(contact.id);
   };
 
   // Handle sending message
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedContact) return;
 
+    console.log('About to send message:', {
+      message: newMessage,
+      replyingTo: replyingTo?.id,
+      replyingToContent: replyingTo?.content
+    }); // Debug log
+
+    setSendingMessage(true); // Start loading state
+
     try {
-      const message: Message = {
-        id: `msg-${Date.now()}`,
-        senderId: user?._id || 'current-user',
-        senderName: `${user?.firstName} ${user?.lastName}`,
-        senderAvatar: user?.profilePicture,
+      // Send message to backend
+      const messageData = {
         content: newMessage,
-        timestamp: new Date().toISOString(),
-        isRead: false,
-        type: 'text',
-        isOwn: true
+        messageType: 'text' as const,
+        ...(replyingTo && { replyTo: replyingTo.id })
+      };
+      
+      console.log('Sending message data:', messageData); // Debug log
+      console.log('Reply state:', replyingTo); // Debug log
+      
+      const messageResponse = await communityService.sendMessage(selectedContact.id, messageData);
+
+      console.log('Message response:', messageResponse); // Debug log
+
+      // The response structure should match the backend ChatMessage model
+      const responseData = messageResponse.data || messageResponse;
+      console.log('Response data structure:', responseData); // Debug log
+      
+      // Transform backend response to frontend format
+      const message: Message = {
+        id: responseData._id.toString(),
+        senderId: responseData.sender?._id?.toString() || responseData.sender?.toString() || user?._id,
+        senderName: `${responseData.sender?.firstName || user?.firstName} ${responseData.sender?.lastName || user?.lastName}`,
+        senderAvatar: responseData.sender?.profilePicture || user?.profilePicture,
+        content: responseData.content,
+        timestamp: responseData.createdAt || new Date().toISOString(),
+        isRead: responseData.readBy?.includes(user?._id) || false,
+        type: responseData.messageType || 'text',
+        isOwn: responseData.sender?._id?.toString() === user?._id || responseData.sender?.toString() === user?._id,
+        replyTo: responseData.replyTo ? {
+          id: responseData.replyTo._id.toString(),
+          content: responseData.replyTo.content,
+          senderName: `${responseData.replyTo.sender?.firstName} ${responseData.replyTo.sender?.lastName}` || 'Unknown'
+        } : undefined
       };
 
+      // Add message to local state immediately for instant UI update
       setMessages(prev => [...prev, message]);
+      
+      // Clear input and reply state IMMEDIATELY (before any potential errors)
       setNewMessage('');
+      setReplyingTo(null);
+      
+      console.log('Message sent successfully, input cleared'); // Debug log
+      
+      // Auto-scroll to bottom to show new message
+      setTimeout(() => {
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+      
+      setSendingMessage(false); // Clear loading state
       
       // Update contact's last message
       setContacts(prev => prev.map(contact => 
@@ -409,8 +553,39 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
             }
           : contact
       ));
+
+      // Emit message through socket for real-time updates
+      if (socket) {
+        socket.emit('send-message', {
+          chatId: selectedContact.id,
+          message: messageData,
+          sender: {
+            _id: user._id,
+            firstName: user.firstName,
+            lastName: user.lastName
+          },
+          replyTo: replyingTo ? {
+            _id: replyingTo.id,
+            content: replyingTo.content,
+            sender: {
+              _id: replyingTo.senderId,
+              firstName: replyingTo.senderName.split(' ')[0],
+              lastName: replyingTo.senderName.split(' ')[1] || ''
+            }
+          } : null
+        });
+      }
     } catch (error) {
       console.error('Error sending message:', error);
+      
+      // Even if there's an error, clear the input to prevent confusion
+      setNewMessage('');
+      setReplyingTo(null);
+      
+      // Show user feedback if needed
+      console.log('Message failed to send, but input cleared for retry');
+    } finally {
+      setSendingMessage(false); // Always clear loading state
     }
   };
 
@@ -420,6 +595,196 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
       event.preventDefault();
       handleSendMessage();
     }
+  };
+
+  // Load all users when modal opens
+  const loadAllUsers = async () => {
+    try {
+      setLoadingUsers(true);
+      const users = await communityService.getUsers({
+        // No limit specified to get all users
+      });
+      setAvailableUsers(users);
+    } catch (error) {
+      console.error('Error loading users:', error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+
+  // Filter users based on search query
+  const filteredUsers = availableUsers.filter(user => {
+    if (!searchQuery.trim()) return true;
+    
+    const query = searchQuery.toLowerCase();
+    return (
+      user.firstName.toLowerCase().includes(query) ||
+      user.lastName.toLowerCase().includes(query) ||
+      user.email.toLowerCase().includes(query) ||
+      (user.company && user.company.toLowerCase().includes(query))
+    );
+  });
+
+  // Start conversation with selected user
+  const handleStartConversation = async (userToChat: IUser) => {
+    try {
+      const conversation = await communityService.createConversation([userToChat._id], false, undefined, 'Hi! I started this conversation.');
+      
+      // Create new contact
+      const newContact: ChatContact = {
+        id: conversation._id.toString(),
+        name: `${userToChat.firstName} ${userToChat.lastName}`,
+        avatar: userToChat.profilePicture,
+        role: userToChat.role,
+        isOnline: userToChat.isOnline,
+        lastSeen: userToChat.lastSeen || new Date().toISOString(),
+        lastMessage: 'Hi! I started this conversation.',
+        lastMessageTime: new Date().toISOString(),
+        unreadCount: 0,
+        isGroup: false,
+        isPinned: false,
+        isMuted: false
+      };
+
+      // Add to contacts
+      setContacts(prev => [newContact, ...prev]);
+      setSelectedContact(newContact);
+      
+      // Clear search and close modal
+      setShowUserSearch(false);
+      setSearchQuery('');
+      setAvailableUsers([]);
+      
+      // Load messages for new conversation
+      loadMessages(newContact.id);
+      
+      // Join chat room for new conversation
+      if (socket) {
+        socket.emit('join-chat', newContact.id);
+      }
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+    }
+  };
+
+  // Mark messages as read when viewing a chat
+  const markMessagesAsRead = async (chatId: string) => {
+    try {
+      await communityService.markMessagesAsRead(chatId);
+      
+      // Update contacts to remove unread count
+      setContacts(prev => prev.map(contact => 
+        contact.id === chatId ? { ...contact, unreadCount: 0 } : contact
+      ));
+      
+      // Update messages to show as read
+      setMessages(prev => prev.map(msg => 
+        msg.senderId !== user?._id ? { ...msg, isRead: true } : msg
+      ));
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
+  };
+
+  // Handle message menu actions
+  const handleMessageMenu = (event: React.MouseEvent, message: Message) => {
+    event.preventDefault();
+    setMessageMenuAnchor({ message, element: event.currentTarget as HTMLElement });
+  };
+
+  const closeMessageMenu = () => {
+    setMessageMenuAnchor({ message: null, element: null });
+  };
+
+  const handleReply = () => {
+    console.log('Starting reply:', messageMenuAnchor.message); // Debug log
+    setReplyingTo(messageMenuAnchor.message);
+    closeMessageMenu();
+  };
+
+  const handleDeleteMessage = async () => {
+    const message = messageMenuAnchor.message;
+    if (!message || !selectedContact) return;
+
+    try {
+      await communityService.deleteMessage(selectedContact.id, message.id);
+      setMessages(prev => prev.filter(msg => msg.id !== message.id));
+      closeMessageMenu();
+    } catch (error) {
+      console.error('Error deleting message:', error);
+    }
+  };
+
+  const handleCopyMessage = () => {
+    navigator.clipboard.writeText(messageMenuAnchor.message?.content || '');
+    closeMessageMenu();
+  };
+
+  const cancelReply = () => {
+    setReplyingTo(null);
+  };
+
+  // Responsive drawer functions
+  const toggleDrawer = (open: boolean) => (event: KeyboardEvent | MouseEvent) => {
+    if (
+      event.type === 'keydown' &&
+      ((event as KeyboardEvent).key === 'Tab' ||
+        (event as KeyboardEvent).key === 'Shift')
+    ) {
+      return;
+    }
+    setDrawerOpen(open);
+  };
+
+  const handleDrawerToggle = () => {
+    setDrawerOpen(!drawerOpen);
+  };
+
+  const handleContactSelectMobile = (contact: ChatContact) => {
+    handleContactSelect(contact);
+    if (isMobile) {
+      setDrawerOpen(false); // Close drawer on mobile after selecting contact
+    }
+  };
+
+  // Handle pagination for contacts
+  const handleContactPageChange = (event: any, page: number) => {
+    setContactPage(page);
+    
+    // Transform stored conversations to contacts
+    const contacts: ChatContact[] = allConversations
+      .filter((conv: any) => {
+        if (conv.isGroup) {
+          return conv.groupName && conv.groupName.trim() !== '';
+        } else {
+          const otherParticipant = conv.participants.find((p: any) => p._id !== user?._id);
+          return otherParticipant && otherParticipant.firstName && otherParticipant.lastName;
+        }
+      })
+      .map((conv: any) => {
+        const otherParticipant = conv.participants.find((p: any) => p._id !== user?._id);
+        return {
+          id: conv._id.toString(),
+          name: conv.isGroup ? conv.groupName : `${otherParticipant.firstName} ${otherParticipant.lastName}`,
+          avatar: conv.isGroup ? conv.groupAvatar : otherParticipant?.profilePicture,
+          role: otherParticipant?.role || 'student',
+          isOnline: conv.participants.some((p: any) => p._id !== user?._id && p.isOnline),
+          lastSeen: otherParticipant?.lastSeen || new Date().toISOString(),
+          lastMessage: conv.lastMessage?.content || 'No messages yet',
+          lastMessageTime: conv.lastMessage?.createdAt || conv.updatedAt,
+          unreadCount: conv.unreadCount || 0,
+          isGroup: conv.isGroup,
+          groupMembers: conv.isGroup ? conv.participants.length : undefined,
+          isPinned: false,
+          isMuted: false
+        };
+      });
+
+    const startIndex = (page - 1) * contactsLimit;
+    const endIndex = startIndex + contactsLimit;
+    const paginatedContacts = contacts.slice(startIndex, endIndex);
+    setContacts(paginatedContacts);
   };
 
   // Format timestamp
@@ -455,28 +820,110 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
   }
 
   return (
-    <Box sx={{ p: 3, height: 'calc(100vh - 120px)' }}>
-      <Grid container spacing={3} sx={{ height: '100%' }}>
-        {/* Contacts Sidebar */}
-        <Grid item xs={12} md={4}>
-          <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <CardContent sx={{ borderBottom: 1, borderColor: 'divider' }}>
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <Typography variant="h6" sx={{ fontWeight: 600, flexGrow: 1 }}>
-                  Messages
+    <Box sx={{ 
+      p: { xs: 1, sm: 2, md: 3 }, 
+      height: { xs: '100vh', sm: 'calc(100vh - 120px)' },
+      overflow: 'hidden'
+    }}>
+      <Box sx={{ 
+        display: 'flex', 
+        height: '100%',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        
+        {/* Mobile Drawer for Contacts */}
+        <Drawer
+          variant={isMobile ? "temporary" : "permanent"}
+          open={drawerOpen || !isMobile}
+          onClose={toggleDrawer(false)}
+          sx={{
+            ...(isMobile && {
+              '& .MuiDrawer-paper': {
+                borderRadius: { xs: 0 },
+                height: '100%',
+                border: 'none'
+              },
+            }),
+            ...(!isMobile && {
+              position: 'static',
+              flexShrink: 0,
+              width: { md: '350px', lg: '400px' },
+              '& .MuiDrawer-paper': {
+                position: 'static',
+                border: 'none',
+                borderRight: 1,
+                borderColor: 'divider'
+              },
+            }),
+          }}
+        >
+          <Card sx={{ 
+            height: '100%', 
+            display: 'flex', 
+            flexDirection: 'column',
+            borderRadius: { xs: 0 },
+            width: { xs: '280px', sm: '320px', md: '350px', lg: '400px' },
+            boxShadow: 'none'
+          }}>
+            {/* Mobile Header with Close Button */}
+            {isMobile && (
+              <CardContent sx={{ borderBottom: 1, borderColor: 'divider', p: 2 }}>
+                <Stack direction="row" alignItems="center" spacing={2}>
+                  <IconButton onClick={() => setDrawerOpen(false)}>
+                    <ArrowBack />
+                  </IconButton>
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    Messages
+                  </Typography>
+                  <Box sx={{ flexGrow: 1 }} />
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<Group />}
+                    onClick={() => setShowUserSearch(true)}
+                  >
+                    Start Chat
+                  </Button>
+                </Stack>
+              </CardContent>
+            )}
+            
+            {/* Desktop Header */}
+            {!isMobile && (
+              <CardContent sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                <Stack direction="row" alignItems="center" spacing={2}>
+                  <IconButton 
+                    onClick={handleDrawerToggle} 
+                    sx={{ display: { md: 'block', lg: 'none' } }}
+                  >
+                    <MenuIcon />
+                  </IconButton>
+                  <Typography variant="h6" sx={{ fontWeight: 600, flexGrow: 1 }}>
+                    Messages
                 </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<Group />}
+                  onClick={() => setShowUserSearch(true)}
+                >
+                  Start Chat
+                </Button>
                 <IconButton>
                   <Search />
                 </IconButton>
                 <IconButton>
                   <MoreVert />
                 </IconButton>
-              </Stack>
-            </CardContent>
+                </Stack>
+              </CardContent>
+            )}
             
-            <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
-              <List sx={{ p: 0 }}>
-                {contacts.map((contact) => (
+            <Box sx={{ flexGrow: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+              <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
+                <List sx={{ p: 0 }}>
+                  {contacts.map((contact) => (
                   <ListItem
                     key={contact.id}
                     sx={{ p: 0 }}
@@ -487,7 +934,7 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
                     >
                       <CardContent
                         sx={{ p: 2, cursor: 'pointer' }}
-                        onClick={() => handleContactSelect(contact)}
+                        onClick={() => handleContactSelectMobile(contact)}
                       >
                         <Stack direction="row" spacing={2} alignItems="center">
                           <Badge
@@ -563,64 +1010,151 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
                       </CardContent>
                     </ContactCard>
                   </ListItem>
-                ))}
-              </List>
+                  ))}
+                </List>
+              </Box>
+              
+              {/* Pagination for contacts */}
+              {totalContacts > contactsLimit && (
+                <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+                  <Pagination
+                    count={Math.ceil(totalContacts / contactsLimit)}
+                    page={contactPage}
+                    onChange={handleContactPageChange}
+                    size="small"
+                    color="primary"
+                    showFirstButton
+                    showLastButton
+                  />
+                </Box>
+              )}
             </Box>
           </Card>
-        </Grid>
+        </Drawer>
 
-        {/* Chat Area */}
-        <Grid item xs={12} md={8}>
+        {/* Main Chat Area */}
+        <Box sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0 // Prevents flex overflow
+        }}>
           {selectedContact ? (
             <ChatContainer>
               {/* Chat Header */}
-              <Paper sx={{ p: 2, borderRadius: 0, borderBottom: 1, borderColor: 'divider' }}>
-                <Stack direction="row" alignItems="center" spacing={2}>
-                  <Avatar src={selectedContact.avatar}>
+              <Paper sx={{ 
+                p: 2, 
+                borderRadius: 0, 
+                borderBottom: 1, 
+                borderColor: 'divider',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <Stack direction="row" alignItems="center" spacing={{ xs: 1.5, sm: 2 }} sx={{ flexGrow: 1 }}>
+                  {/* Mobile Menu Button */}
+                  {isMobile && (
+                    <IconButton 
+                      onClick={() => setDrawerOpen(true)}
+                      size="large"
+                      sx={{ 
+                        minWidth: '48px',
+                        minHeight: '48px',
+                        p: 1
+                      }}
+                    >
+                      <MenuIcon fontSize="medium" />
+                    </IconButton>
+                  )}
+                  
+                  <Avatar 
+                    src={selectedContact.avatar}
+                    sx={{ 
+                      width: { xs: 40, sm: 44 }, 
+                      height: { xs: 40, sm: 44 } 
+                    }}
+                  >
                     {selectedContact.name.split(' ').map(n => n[0]).join('')}
                   </Avatar>
-                  <Box sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                    <Typography 
+                      variant={isMobile ? "subtitle1" : "h6"} 
+                      sx={{ 
+                        fontWeight: 600,
+                        fontSize: { xs: '1rem', sm: '1.25rem' },
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
                       {selectedContact.name}
                     </Typography>
-                    <Stack direction="row" alignItems="center" spacing={1}>
+                    <Stack direction="row" alignItems="center" spacing={{ xs: 0.5, sm: 1 }}>
                       <Chip
-                        label={selectedContact.role}
-                        size="small"
-                        color={selectedContact.role === 'teacher' ? 'primary' : 'default'}
+                        label={selectedContact.isOnline ? 'Online' : 'Offline'}
+                        size={isMobile ? "small" : "small"}
+                        color={selectedContact.isOnline ? 'success' : 'default'}
                         variant="outlined"
+                        sx={{ 
+                          height: { xs: 18, sm: 20 },
+                          fontSize: { xs: '0.625rem', sm: '0.75rem' }
+                        }}
                       />
-                      {selectedContact.isGroup && (
+                      {selectedContact.role && (
                         <Chip
-                          label={`${selectedContact.groupMembers} members`}
-                          size="small"
+                          label={selectedContact.role}
+                          size={isMobile ? "small" : "small"}
+                          color="primary"
                           variant="outlined"
+                          sx={{ 
+                            height: { xs: 18, sm: 20 },
+                            fontSize: { xs: '0.625rem', sm: '0.75rem' }
+                          }}
                         />
                       )}
-                      <Typography variant="caption" color="text.secondary">
-                        {selectedContact.isOnline ? 'Online' : `Last seen ${formatTimestamp(selectedContact.lastSeen)}`}
-                      </Typography>
                     </Stack>
                   </Box>
-                  <Stack direction="row" spacing={1}>
-                    <IconButton>
-                      <VideoCall />
-                    </IconButton>
-                    <IconButton>
-                      <Phone />
-                    </IconButton>
-                    <IconButton>
-                      <Info />
-                    </IconButton>
-                    <IconButton>
-                      <MoreVert />
-                    </IconButton>
-                  </Stack>
+                </Stack>
+
+                <Stack direction="row" spacing={{ xs: 0.5, sm: 1 }}>
+                  {!isMobile && (
+                    <>
+                      <IconButton size={isMobile ? "large" : "medium"}>
+                        <VideoCall fontSize={isMobile ? "medium" : "small"} />
+                      </IconButton>
+                      <IconButton size={isMobile ? "large" : "medium"}>
+                        <Phone fontSize={isMobile ? "medium" : "small"} />
+                      </IconButton>
+                    </>
+                  )}
+                  <IconButton 
+                    size={isMobile ? "large" : "medium"}
+                    sx={{
+                      minWidth: { xs: '48px', sm: 'auto' },
+                      minHeight: { xs: '48px', sm: 'auto' }
+                    }}
+                  >
+                    <Info fontSize={isMobile ? "medium" : "small"} />
+                  </IconButton>
+                  <IconButton 
+                    size={isMobile ? "large" : "medium"}
+                    sx={{
+                      minWidth: { xs: '48px', sm: 'auto' },
+                      minHeight: { xs: '48px', sm: 'auto' }
+                    }}
+                  >
+                    <MoreVert fontSize={isMobile ? "medium" : "small"} />
+                  </IconButton>
                 </Stack>
               </Paper>
 
-              {/* Messages */}
-              <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2 }}>
+              {/* Messages Area */}
+              <Box sx={{ 
+                flexGrow: 1, 
+                overflowY: 'auto', 
+                p: { xs: 1, sm: 2 }, 
+                minHeight: 0 
+              }}>
                 <Stack spacing={1}>
                   {messages.map((message) => (
                     <Box
@@ -642,32 +1176,171 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
                         </Stack>
                       )}
                       
-                      <ChatBubble 
-                        isOwn={message.isOwn} 
-                        isSystem={message.type === 'system'}
-                      >
-                        <Typography variant="body2">
-                          {message.content}
-                        </Typography>
-                        <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 0.5 }}>
-                          <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                            {formatTimestamp(message.timestamp)}
-                          </Typography>
-                          {message.isOwn && (
-                            message.isRead ? <CheckCircle sx={{ fontSize: 16 }} /> : <CheckCircleOutline sx={{ fontSize: 16 }} />
-                          )}
-                        </Stack>
-                      </ChatBubble>
+                      <Tooltip title="Right-click for options">
+                        <ChatBubble 
+                          isOwn={message.isOwn} 
+                          isSystem={message.type === 'system'}
+                          onContextMenu={(e) => !message.type?.includes('system') && handleMessageMenu(e, message)}
+                        >
+                          <Box sx={{ cursor: 'context-menu' }}>
+                            {/* Show reply reference */}
+                            {message.replyTo && (
+                              <Box sx={{ 
+                                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                borderRadius: 1,
+                                p: 1,
+                                mb: 1,
+                                borderLeft: `3px solid ${theme.palette.primary.main}`
+                              }}>
+                                <Typography variant="caption" color="primary" sx={{ fontWeight: 600 }}>
+                                  Replying to {message.replyTo.senderName}
+                                </Typography>
+                                <Typography variant="body2" sx={{ opacity: 0.7, mt: 0.5 }}>
+                                  {message.replyTo.content}
+                                </Typography>
+                              </Box>
+                            )}
+                            <Typography variant="body2">
+                              {message.content}
+                            </Typography>
+                            <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 0.5 }}>
+                              <Typography variant="caption" sx={{ opacity: 0.7 }}>
+                                {formatTimestamp(message.timestamp)}
+                              </Typography>
+                              {message.isOwn && (
+                                message.isRead ? <CheckCircle sx={{ fontSize: 16 }} /> : <CheckCircleOutline sx={{ fontSize: 16 }} />
+                              )}
+                              {!message.type?.includes('system') && (
+                                <Tooltip title="Message options">
+                                  <IconButton 
+                                    size="small" 
+                                    onClick={(e) => handleMessageMenu(e, message)}
+                                    sx={{ opacity: 0.5, '&:hover': { opacity: 1 } }}
+                                  >
+                                    <MoreVert fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                            </Stack>
+                          </Box>
+                        </ChatBubble>
+                      </Tooltip>
                     </Box>
                   ))}
                   <div ref={messagesEndRef} />
                 </Stack>
               </Box>
 
+              {/* Reply Indicator */}
+              {replyingTo && (
+                <Paper sx={{ p: 1, mx: 2, mb: 1, borderRadius: 2, bgcolor: 'grey.100' }}>
+                  <Stack direction='row' justifyContent='space-between' alignItems='center'>
+                    <Box>
+                      <Typography variant="caption" color="primary" sx={{ fontWeight: 600 }}>
+                        Replying to {replyingTo.senderName}
+                      </Typography>
+                      <Typography variant="body2" sx={{ opacity: 0.7 }}>
+                        "{replyingTo.content}"
+                      </Typography>
+                    </Box>
+                    <IconButton size="small" onClick={cancelReply}>
+                      ✕
+                    </IconButton>
+                  </Stack>
+                </Paper>
+              )}
+
               {/* Message Input */}
-              <Paper sx={{ p: 2, borderRadius: 0, borderTop: 1, borderColor: 'divider' }}>
-                <Stack direction="row" spacing={1} alignItems="flex-end">
-                  <IconButton>
+              <Paper sx={{ 
+                p: { xs: 2, sm: 2 }, 
+                borderRadius: 0, 
+                borderTop: 1, 
+                borderColor: 'divider',
+                position: 'sticky',
+                bottom: 0,
+                backgroundColor: 'background.paper',
+                zIndex: 1
+              }}>
+                {/* Mobile Layout */}
+                <Box sx={{ 
+                  display: { xs: 'block', sm: 'none' }
+                }}>
+                  {/* Mobile: Input field */}
+                  <TextField
+                    fullWidth
+                    placeholder="Type your message..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    multiline
+                    maxRows={2}
+                    sx={{
+                      mb: 1,
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        fontSize: '16px', // Prevents zoom on iOS
+                        '& input': {
+                          padding: { xs: '16px', sm: '14px' }
+                        }
+                      }
+                    }}
+                  />
+                  
+                  {/* Mobile: Action buttons */}
+                  <Stack 
+                    direction="row" 
+                    spacing={1}
+                    alignItems="center"
+                    justifyContent="space-between"
+                  >
+                    <Stack direction="row" spacing={0.5}>
+                      <IconButton 
+                        size="large"
+                        sx={{ 
+                          p: 1.5,
+                          minWidth: '48px', // Touch target
+                          minHeight: '48px'
+                        }}
+                      >
+                        <AttachFile fontSize="medium" />
+                      </IconButton>
+                      <IconButton 
+                        size="large"
+                        sx={{ 
+                          p: 1.5,
+                          minWidth: '48px',
+                          minHeight: '48px'
+                        }}
+                      >
+                        <EmojiEmotions fontSize="medium" />
+                      </IconButton>
+                    </Stack>
+                    
+                    <Button
+                      variant="contained"
+                      onClick={handleSendMessage}
+                      disabled={!newMessage.trim() || sendingMessage}
+                      sx={{ 
+                        borderRadius: 2,
+                        minWidth: '48px',
+                        minHeight: '48px',
+                        px: 3,
+                        py: 1
+                      }}
+                    >
+                      {sendingMessage ? <CircularProgress size={20} color="inherit" /> : <Send />}
+                    </Button>
+                  </Stack>
+                </Box>
+
+                {/* Desktop Layout */}
+                <Stack 
+                  direction="row" 
+                  spacing={1} 
+                  alignItems="flex-end"
+                  sx={{ display: { xs: 'none', sm: 'flex' } }}
+                >
+                  <IconButton size="medium">
                     <AttachFile />
                   </IconButton>
                   <TextField
@@ -684,35 +1357,203 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
                       }
                     }}
                   />
-                  <IconButton>
+                  <IconButton size="medium">
                     <EmojiEmotions />
                   </IconButton>
                   <Button
                     variant="contained"
-                    startIcon={<Send />}
+                    startIcon={sendingMessage ? <CircularProgress size={20} /> : <Send />}
                     onClick={handleSendMessage}
-                    disabled={!newMessage.trim()}
-                    sx={{ borderRadius: 3 }}
+                    disabled={!newMessage.trim() || sendingMessage}
+                    sx={{ 
+                      borderRadius: 3,
+                      minWidth: '80px',
+                      px: 3
+                    }}
                   >
-                    Send
+                    {sendingMessage ? 'Sending...' : 'Send'}
                   </Button>
                 </Stack>
               </Paper>
             </ChatContainer>
           ) : (
-            <Card sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="h6" color="text.secondary">
-                  Select a conversation to start chatting
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Choose from your contacts or groups to begin messaging
-                </Typography>
-              </Box>
-            </Card>
+            <Box sx={{ 
+              height: '100%', 
+              display: 'flex', 
+              flexDirection: 'column',
+              alignItems: 'center', 
+              justifyContent: 'center',
+              p: 3,
+              textAlign: 'center',
+              minHeight: 0
+            }}>
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                {isMobile ? 'Tap on a contact to start chatting' : 'Select a conversation to start chatting'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Choose from your contacts or start a new conversation
+              </Typography>
+              {isMobile && (
+                <Button
+                  variant="contained"
+                  onClick={() => setDrawerOpen(true)}
+                  sx={{ mt: 2 }}
+                  startIcon={<MenuIcon />}
+                >
+                  Open Contacts
+                </Button>
+              )}
+            </Box>
           )}
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
+
+      {/* User Search Modal */}
+      {showUserSearch && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setShowUserSearch(false)}
+        >
+          <Card
+            sx={{
+              width: { xs: '95vw', sm: '400px' },
+              maxWidth: { xs: '95vw', sm: '400px' },
+              maxHeight: { xs: '90vh', sm: '80vh' },
+              height: { xs: '85vh', sm: 'auto' },
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <CardContent sx={{ borderBottom: 1, borderColor: 'divider' }}>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Typography variant="h6" sx={{ fontWeight: 600, flexGrow: 1 }}>
+                  Start New Chat
+                </Typography>
+                <IconButton onClick={() => setShowUserSearch(false)}>
+                  ✕
+                </IconButton>
+              </Stack>
+              
+              <TextField
+                fullWidth
+                placeholder="Search users by name, email, or company..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                size="small"
+                sx={{ mt: 2 }}
+              />
+            </CardContent>
+
+            <Box sx={{ flexGrow: 1, overflowY: 'auto', maxHeight: '400px' }}>
+              {loadingUsers ? (
+                <Box sx={{ p: 3, textAlign: 'center' }}>
+                  <Typography color="text.secondary">Loading users...</Typography>
+                </Box>
+              ) : filteredUsers.length > 0 ? (
+                <>
+                  <Box sx={{ px: 2, py: 1, borderBottom: 1, borderColor: 'divider' }}>
+                    <Typography variant="caption" color="text.secondary">
+                      {filteredUsers.length} user{filteredUsers.length !== 1 ? 's' : ''} found
+                    </Typography>
+                  </Box>
+                  <List sx={{ p: 0 }}>
+                    {filteredUsers.map((userToChat) => (
+                      <ListItem key={userToChat._id} sx={{ px: 2 }}>
+                        <Card sx={{ width: '100%', cursor: 'pointer' }} onClick={() => handleStartConversation(userToChat)}>
+                          <CardContent sx={{ p: 2 }}>
+                            <Stack direction="row" spacing={2} alignItems="center">
+                              <Avatar src={userToChat.profilePicture}>
+                                {userToChat.firstName[0]}{userToChat.lastName[0]}
+                              </Avatar>
+                              <Box sx={{ flexGrow: 1 }}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                                  {userToChat.firstName} {userToChat.lastName}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  {userToChat.email}
+                                </Typography>
+                                <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                                  <Chip
+                                    label={userToChat.role}
+                                    size="small"
+                                    color={userToChat.role === 'teacher' ? 'primary' : 'default'}
+                                    variant="outlined"
+                                  />
+                                  {userToChat.company && (
+                                    <Chip
+                                      label={userToChat.company}
+                                      size="small"
+                                      variant="outlined"
+                                    />
+                                  )}
+                                </Stack>
+                              </Box>
+                              {userToChat.isOnline && (
+                                <Box
+                                  sx={{
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: '50%',
+                                    backgroundColor: 'success.main'
+                                  }}
+                                />
+                              )}
+                            </Stack>
+                          </CardContent>
+                        </Card>
+                      </ListItem>
+                    ))}
+                  </List>
+                </>
+              ) : (
+                <Box sx={{ p: 2, textAlign: 'center' }}>
+                  <Typography color="text.secondary">No users found matching "{searchQuery}"</Typography>
+                </Box>
+              )}
+            </Box>
+          </Card>
+        </div>
+      )}
+
+      {/* Message Context Menu */}
+      <Menu
+        anchorEl={messageMenuAnchor.element}
+        open={Boolean(messageMenuAnchor.element)}
+        onClose={closeMessageMenu}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+      >
+        <MenuItem onClick={handleReply}>
+          <Reply fontSize="small" sx={{ mr: 1 }} />
+          Reply
+        </MenuItem>
+        <MenuItem onClick={handleCopyMessage}>
+          <CopyAll fontSize="small" sx={{ mr: 1 }} />
+          Copy Text
+        </MenuItem>
+        <MenuItem onClick={handleDeleteMessage} disabled={!messageMenuAnchor.message?.isOwn} sx={{ color: 'error.main' }}>
+          <DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+          Delete Message
+        </MenuItem>
+      </Menu>
     </Box>
   );
 };

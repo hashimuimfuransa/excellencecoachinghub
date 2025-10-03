@@ -49,7 +49,7 @@ router.get('/posts', protect, async (req: Request, res: Response) => {
       comments: post.commentCount,
       shares: post.shares,
       isLiked: post.likes.includes(req.user!._id),
-      isBookmarked: false, // TODO: Implement bookmarks
+      isBookmarked: post.bookmarks ? post.bookmarks.includes(req.user!._id) : false,
       tags: post.tags,
       attachments: post.attachments
     }));
@@ -207,44 +207,71 @@ router.get('/teachers', protect, async (req: Request, res: Response) => {
     const { page = 1, limit = 12, search, specialty } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
-    // TODO: Replace with actual database query
-    const mockTeachers = [
-      {
-        id: 'teacher-1',
-        name: 'Dr. Sarah Johnson',
-        title: 'Senior Software Engineer & Educator',
-        avatar: '/avatars/sarah.jpg',
-        coverImage: '/teacher-covers/sarah.jpg',
-        bio: 'Passionate about teaching web development and helping students build real-world applications. 10+ years of experience in the tech industry.',
-        specialties: ['React', 'Node.js', 'JavaScript', 'Full-Stack Development'],
-        experience: 10,
-        rating: 4.9,
-        totalRatings: 1250,
-        studentsCount: 5000,
-        coursesCount: 15,
-        isOnline: true,
-        isVerified: true,
-        isFollowing: false,
-        location: 'San Francisco, CA',
-        education: ['PhD in Computer Science', 'MS in Software Engineering'],
-        certifications: ['AWS Certified Developer', 'Google Cloud Professional'],
-        socialLinks: {
-          website: 'https://sarahjohnson.dev',
-          linkedin: 'https://linkedin.com/in/sarahjohnson',
-          github: 'https://github.com/sarahjohnson'
-        }
+    // Build query for teachers
+    const query: any = { role: 'teacher' };
+    
+    if (search) {
+      query.$or = [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { company: { $regex: search, $options: 'i' } },
+        { bio: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    if (specialty) {
+      query.specializations = { $in: [specialty] };
+    }
+
+    // Import User model
+    const { User } = await import('../models/User');
+
+    const teachers = await User.find(query)
+      .select('firstName lastName email profilePicture role company bio specializations isOnline lastSeen')
+      .sort({ firstName: 1, lastName: 1 })
+      .skip(offset)
+      .limit(Number(limit));
+
+    // Get total count
+    const total = await User.countDocuments(query);
+
+    // Format teachers for frontend
+    const formattedTeachers = teachers.map(teacher => ({
+      id: teacher._id.toString(),
+      name: `${teacher.firstName} ${teacher.lastName}`,
+      title: teacher.company || 'Educator',
+      avatar: teacher.profilePicture,
+      coverImage: teacher.profilePicture,
+      bio: teacher.bio || `Passionate educator specializing in modern teaching methodologies.`,
+      specialties: teacher.specializations || ['Education', 'Student Development'],
+      experience: 5, // Default experience
+      rating: 4.5, // Default rating
+      totalRatings: 150, // Default ratings
+      studentsCount: 250, // Default student count
+      coursesCount: 8, // Default course count
+      isOnline: teacher.isOnline || false,
+      isVerified: teacher.emailVerified || false,
+      isFollowing: false, // TODO: Implement follow functionality
+      location: 'Various Locations',
+      education: ['Teaching Certification'],
+      certifications: ['Educational Specialist'],
+      socialLinks: {
+        linkedin: '#',
+        twitter: '#',
+        website: '#'
       }
-    ];
+    }));
 
     res.json({
       success: true,
       data: {
-        teachers: mockTeachers,
+        teachers: formattedTeachers,
         pagination: {
           page: Number(page),
           limit: Number(limit),
-          total: mockTeachers.length,
-          totalPages: Math.ceil(mockTeachers.length / Number(limit))
+          total,
+          totalPages: Math.ceil(total / Number(limit))
         }
       }
     });
@@ -406,11 +433,34 @@ router.post('/posts/:postId/bookmark', protect, async (req: Request, res: Respon
   try {
     const { postId } = req.params;
     const { action } = req.body; // 'bookmark' or 'unbookmark'
+    const userId = req.user!._id;
 
-    // TODO: Implement bookmark functionality with User model
+    const post = await Post.findById(postId);
+    if (!post) {
+      return res.status(404).json({ success: false, message: 'Post not found' });
+    }
+
+    // Check if user already bookmarked this post
+    const isBookmarked = post.bookmarks ? post.bookmarks.includes(userId) : false;
+
+    if (action === 'bookmark' && !isBookmarked) {
+      // Add bookmark
+      if (!post.bookmarks) {
+        post.bookmarks = [];
+      }
+      post.bookmarks.push(userId);
+      console.log('📌 Post bookmarked:', postId, 'by user:', userId);
+    } else if (action === 'unbookmark' && isBookmarked) {
+      // Remove bookmark
+      post.bookmarks = post.bookmarks.filter(id => !id.equals(userId));
+      console.log('🗑️ Bookmark removed:', postId, 'by user:', userId);
+    }
+
+    await post.save();
+
     res.json({
       success: true,
-      message: `Post ${action}ed successfully`,
+      message: `Post ${action}d successfully`,
       data: { postId, isBookmarked: action === 'bookmark' }
     });
   } catch (error) {
@@ -423,28 +473,21 @@ router.post('/posts/:postId/bookmark', protect, async (req: Request, res: Respon
 router.get('/posts/:postId/comments', protect, async (req: Request, res: Response) => {
   try {
     const { postId } = req.params;
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 20 } = req.query; // Increased limit to get all comments and replies
     const offset = (Number(page) - 1) * Number(limit);
 
-    const comments = await Comment.find({ 
+    // Fetch ALL comments for this post (both parent comments and replies)
+    const allComments = await Comment.find({ 
       post: postId, 
-      isActive: true,
-      parentComment: null // Only top-level comments
+      isActive: true
     })
       .populate('author', 'firstName lastName profilePicture role isEmailVerified')
-      .sort({ createdAt: -1 })
-      .skip(offset)
-      .limit(Number(limit));
+      .sort({ createdAt: -1 });
 
-    const total = await Comment.countDocuments({ 
-      post: postId, 
-      isActive: true,
-      parentComment: null 
-    });
-
-    // Format comments for frontend
-    const formattedComments = comments.map(comment => ({
+    // Format all comments
+    const formattedAllComments = allComments.map(comment => ({
       id: comment._id.toString(),
+      parentCommentId: comment.parentComment ? comment.parentComment.toString() : null,
       author: {
         id: comment.author._id.toString(),
         name: `${comment.author.firstName} ${comment.author.lastName}`,
@@ -456,13 +499,18 @@ router.get('/posts/:postId/comments', protect, async (req: Request, res: Respons
       timestamp: comment.createdAt.toISOString(),
       likes: comment.likeCount,
       isLiked: comment.likes.includes(req.user!._id),
-      replyCount: 0 // TODO: Implement reply count
+      replyCount: allComments.filter(c => c.parentComment?.equals(comment._id)).length
     }));
 
+    // Get top-level comments for pagination
+    const topLevelComments = formattedAllComments.filter(comment => !comment.parentComment_id);
+    const total = topLevelComments.length;
+
+    // Return all comments so frontend can organize them
     res.json({
       success: true,
       data: {
-        comments: formattedComments,
+        comments: formattedAllComments, // Return all comments including replies
         pagination: {
           page: Number(page),
           limit: Number(limit),

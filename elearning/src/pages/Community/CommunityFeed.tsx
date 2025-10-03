@@ -34,9 +34,11 @@ import {
 import {
   Add,
   EmojiEvents,
-  ThumbUp,
-  Comment,
+  Favorite,
+  FavoriteBorder,
+  ChatBubbleOutline,
   Share,
+  BookmarkBorder,
   Bookmark,
   MoreVert,
   Send,
@@ -58,8 +60,13 @@ import {
   AttachFile,
   CloudUpload,
   Delete,
-  PlayArrow
+  PlayArrow,
+  KeyboardArrowDown,
+  KeyboardArrowUp,
+  UnfoldLess,
+  UnfoldMore
 } from '@mui/icons-material';
+import { toast } from 'react-toastify';
 import { useAuth } from '../../hooks/useAuth';
 import { communityService, IPost } from '../../services/communityService';
 
@@ -107,6 +114,10 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
   const [commenting, setCommenting] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<any>(null);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [replyLoading, setReplyLoading] = useState(false);
+  const [minimizedReplies, setMinimizedReplies] = useState<{ [commentId: string]: boolean }>({});
 
   // Load posts
   useEffect(() => {
@@ -165,6 +176,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
       }
     } catch (error) {
       console.error('Error liking post:', error);
+      toast.error('Failed to update like. Please try again.');
     }
   };
 
@@ -180,6 +192,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
             ? { ...p, isBookmarked: false }
             : p
         ));
+        toast.success('Post bookmark removed!');
       } else {
         await communityService.bookmarkPost(postId);
         setPosts(prev => prev.map(p =>
@@ -187,9 +200,11 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
             ? { ...p, isBookmarked: true }
             : p
         ));
+        toast.success('Post bookmarked!');
       }
     } catch (error) {
       console.error('Error bookmarking post:', error);
+      toast.error('Failed to update bookmark. Please try again.');
     }
   };
 
@@ -208,13 +223,26 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
           const response = await communityService.getComments(postId);
           if (response.success) {
             console.log('Comments loaded:', response.data.comments);
+            
+            // Organize comments with their replies
+            const organizedComments = response.data.comments.map(comment => ({
+              ...comment,
+              replies: response.data.comments.filter(reply => 
+                reply.parentCommentId === comment.id
+              )
+            }));
+
+            // Only show top-level comments (those without parentCommentId)
+            const topLevelComments = organizedComments.filter(comment => !comment.parentCommentId);
+            
             setComments(prev => ({
               ...prev,
-              [postId]: response.data.comments
+              [postId]: topLevelComments
             }));
           }
         } catch (error) {
           console.error('Error loading comments:', error);
+          toast.error('Failed to load comments. Please try again.');
         }
       }
     }
@@ -238,12 +266,51 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
             ? { ...p, comments: p.comments + 1 }
             : p
         ));
+        toast.success('Comment posted successfully!');
       }
     } catch (error) {
       console.error('Error creating comment:', error);
+      toast.error('Failed to create comment. Please try again.');
     } finally {
       setCommenting(false);
     }
+  };
+
+  // Handle reply to comment
+  const handleReplyToComment = async (postId: string, parentCommentId: string) => {
+    if (!replyText.trim() || replyLoading) return;
+
+    setReplyLoading(true);
+    try {
+      const response = await communityService.createComment(postId, replyText, parentCommentId);
+      if (response.success) {
+        // Add the reply to the parent comment's replies array
+        setComments(prev => ({
+          ...prev,
+          [postId]: prev[postId]?.map(comment => 
+            comment.id === parentCommentId
+              ? { ...comment, replies: [...(comment.replies || []), response.data] }
+              : comment
+          ) || []
+        }));
+        setReplyText('');
+        setReplyingTo(null);
+        toast.success('Reply posted successfully!');
+      }
+    } catch (error) {
+      console.error('Error creating reply:', error);
+      toast.error('Failed to post reply. Please try again.');
+    } finally {
+      setReplyLoading(false);
+    }
+  };
+
+  // Handle minimize/expand replies
+  const toggleRepliesMinimized = (commentId: string) => {
+    setMinimizedReplies(prev => ({
+      ...prev,
+      [commentId]: !prev[commentId]
+    }));
   };
 
   // Handle sharing
@@ -267,9 +334,11 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
         setShareDialogOpen(false);
         setSelectedPost(null);
         console.log('✅ Post shared successfully');
+        toast.success('Post shared successfully!');
       }
     } catch (error) {
       console.error('Error sharing post:', error);
+      toast.error('Failed to share post. Please try again.');
     }
   };
 
@@ -380,9 +449,9 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
   const getPostTypeIcon = (type: string) => {
     switch (type) {
       case 'achievement': return <EmojiEvents />;
-      case 'question': return <Comment />;
+      case 'question': return <ChatBubbleOutline />;
       case 'announcement': return <School />;
-      default: return <Comment />;
+      default: return <ChatBubbleOutline />;
     }
   };
 
@@ -562,54 +631,111 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
               )}
 
               {/* Post Actions */}
-              <Stack direction="row" spacing={1} sx={{ pt: 1, borderTop: 1, borderColor: 'divider', flexWrap: 'wrap', gap: 0.5 }}>
-                <Button
-                  startIcon={<ThumbUp />}
-                  color={post.isLiked ? 'primary' : 'inherit'}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleLike(post.id);
-                  }}
-                  size="small"
-                  sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
-                >
-                  {post.likes}
-                </Button>
-                <Button
-                  startIcon={<Comment />}
-                  size="small"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleToggleComments(post.id);
-                  }}
-                  sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
-                >
-                  {post.comments}
-                </Button>
-                <Button
-                  startIcon={<Share />}
-                  size="small"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleShare(post);
-                  }}
-                  sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
-                >
-                  {post.shares}
-                </Button>
+              <Stack direction="row" spacing={1} sx={{ pt: 1, borderTop: 1, borderColor: 'divider', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+                  <IconButton
+                    color={post.isLiked ? 'error' : 'default'}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleLike(post.id);
+                    }}
+                    sx={{ 
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      borderRadius: 2,
+                      px: 1,
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        backgroundColor: post.isLiked ? 'error.light' : 'grey.100',
+                        transform: 'scale(1.05)'
+                      }
+                    }}
+                  >
+                    {post.isLiked ? (
+                      <Favorite sx={{ fontSize: 20, color: 'error.main' }} />
+                    ) : (
+                      <FavoriteBorder sx={{ fontSize: 20 }} />
+                    )}
+                    <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                      {post.likes || 0}
+                    </Typography>
+                  </IconButton>
+
+                  <IconButton
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleToggleComments(post.id);
+                    }}
+                    sx={{ 
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      borderRadius: 2,
+                      px: 1,
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        backgroundColor: 'primary.light',
+                        color: 'primary.main',
+                        transform: 'scale(1.05)'
+                      }
+                    }}
+                  >
+                    <ChatBubbleOutline sx={{ fontSize: 20 }} />
+                    <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                      {post.comments || 0}
+                    </Typography>
+                  </IconButton>
+
+                  <IconButton
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleShare(post);
+                    }}
+                    sx={{ 
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      borderRadius: 2,
+                      px: 1,
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        backgroundColor: 'success.light',
+                        color: 'success.main',
+                        transform: 'scale(1.05)'
+                      }
+                    }}
+                  >
+                    <Share sx={{ fontSize: 20 }} />
+                    <Typography variant="caption" sx={{ fontWeight: 500 }}>
+                      {post.shares || 0}
+                    </Typography>
+                  </IconButton>
+                </Stack>
+
                 <IconButton
-                  color={post.isBookmarked ? 'primary' : 'inherit'}
+                  color={post.isBookmarked ? 'warning' : 'default'}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     handleBookmark(post.id);
                   }}
-                  size="small"
+                  sx={{ 
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      backgroundColor: post.isBookmarked ? 'warning.light' : 'grey.100',
+                      transform: 'scale(1.05)'
+                    }
+                  }}
                 >
-                  <Bookmark />
+                  {post.isBookmarked ? (
+                    <Bookmark sx={{ fontSize: 20, color: 'warning.main' }} />
+                  ) : (
+                    <BookmarkBorder sx={{ fontSize: 20 }} />
+                  )}
                 </IconButton>
               </Stack>
 
@@ -646,36 +772,289 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
                   {comments[post.id] && comments[post.id].length > 0 && (
                     <Stack spacing={2}>
                       {comments[post.id].map((comment: any) => (
-                        <Box key={comment.id} sx={{ display: 'flex', gap: 1 }}>
-                          <Avatar 
-                            src={comment.author.avatar} 
-                            sx={{ width: 32, height: 32 }}
-                          >
-                            {comment.author.name.charAt(0)}
-                          </Avatar>
-                          <Box sx={{ flex: 1 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                              <Typography variant="body2" fontWeight={500}>
-                                {comment.author.name}
+                        <Box key={comment.id}>
+                          {/* Parent Comment */}
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Avatar 
+                              src={comment.author.avatar} 
+                              sx={{ width: 32, height: 32 }}
+                            >
+                              {comment.author.name.charAt(0)}
+                            </Avatar>
+                            <Box sx={{ flex: 1 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                <Typography variant="body2" fontWeight={500}>
+                                  {comment.author.name}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {formatTimestamp(comment.timestamp)}
+                                </Typography>
+                              </Box>
+                              <Typography variant="body2" sx={{ mb: 1 }}>
+                                {comment.content}
                               </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {formatTimestamp(comment.timestamp)}
+                              <Stack direction="row" spacing={1}>
+                                <IconButton
+                                  size="small"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    try {
+                                      if (comment.isLiked) {
+                                        await communityService.unlikeComment(comment.id);
+                                      } else {
+                                        await communityService.likeComment(comment.id);
+                                      }
+                                      
+                                      // Update comment in local state
+                                      setComments(prev => ({
+                                        ...prev,
+                                        [post.id]: prev[post.id]?.map(c => 
+                                          c.id === comment.id 
+                                            ? { 
+                                                ...c, 
+                                                isLiked: !c.isLiked, 
+                                                likes: c.likes + (c.isLiked ? -1 : 1)
+                                              }
+                                            : c
+                                        ) || []
+                                      }));
+                                      
+                                      toast.success(comment.isLiked ? 'Comment unliked!' : 'Comment liked!');
+                                    } catch (error) {
+                                      console.error('Error liking comment:', error);
+                                      toast.error('Failed to like comment');
+                                    }
+                                  }}
+                                  sx={{ 
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                    borderRadius: 1,
+                                    px: 1,
+                                    py: 0.5,
+                                    transition: 'all 0.2s ease',
+                                    '&:hover': {
+                                      backgroundColor: comment.isLiked ? 'error.light' : 'grey.100',
+                                      transform: 'scale(1.05)'
+                                    }
+                                  }}
+                                >
+                                  {comment.isLiked ? (
+                                    <Favorite sx={{ fontSize: 16, color: 'error.main' }} />
+                                  ) : (
+                                    <FavoriteBorder sx={{ fontSize: 16 }} />
+                                  )}
+                                  <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>
+                                    {comment.likes || 0}
+                                  </Typography>
+                                </IconButton>
+
+                                <IconButton
+                                  size="small"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setReplyingTo(replyingTo === comment.id ? null : comment.id);
+                                    if (replyingTo !== comment.id) {
+                                      setReplyText('');
+                                    }
+                                  }}
+                                  sx={{ 
+                                    borderRadius: 1,
+                                    px: 1,
+                                    py: 0.5,
+                                    transition: 'all 0.2s ease',
+                                    '&:hover': {
+                                      backgroundColor: 'primary.light',
+                                      color: 'primary.main',
+                                      transform: 'scale(1.05)'
+                                    }
+                                  }}
+                                >
+                                  <ChatBubbleOutline sx={{ fontSize: 14 }} />
+                                </IconButton>
+
+                                {/* Minimize/Expand Replies Button */}
+                                {comment.replies && comment.replies.length > 0 && (
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleRepliesMinimized(comment.id);
+                                    }}
+                                    sx={{ 
+                                      borderRadius: 1,
+                                      px: 1,
+                                      py: 0.5,
+                                      transition: 'all 0.2s ease',
+                                      '&:hover': {
+                                        backgroundColor: 'grey.200',
+                                        transform: 'scale(1.05)'
+                                      }
+                                    }}
+                                    title={minimizedReplies[comment.id] ? 'Show replies' : 'Hide replies'}
+                                  >
+                                    {minimizedReplies[comment.id] ? (
+                                      <KeyboardArrowDown sx={{ fontSize: 14 }} />
+                                    ) : (
+                                      <KeyboardArrowUp sx={{ fontSize: 14 }} />
+                                    )}
+                                    <Typography variant="caption" sx={{ fontSize: '0.65rem', ml: 0.5 }}>
+                                      {comment.replies.length}
+                                    </Typography>
+                                  </IconButton>
+                                )}
+                              </Stack>
+
+                              {/* Reply Input */}
+                              {replyingTo === comment.id && (
+                                <Box sx={{ mt: 2, ml: 4, p: 1, backgroundColor: 'grey.50', borderRadius: 1 }}>
+                                  <TextField
+                                    fullWidth
+                                    placeholder={`Reply to ${comment.author.name}...`}
+                                    value={replyText}
+                                    onChange={(e) => setReplyText(e.target.value)}
+                                    size="small"
+                                    multiline
+                                    rows={2}
+                                    sx={{ mb: 1 }}
+                                  />
+                                  <Stack direction="row" justifyContent="flex-end" spacing={1}>
+                                    <Button 
+                                      size="small" 
+                                      onClick={() => {
+                                        setReplyingTo(null);
+                                        setReplyText('');
+                                      }}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button
+                                      variant="contained"
+                                      size="small"
+                                      onClick={() => handleReplyToComment(post.id, comment.id)}
+                                      disabled={!replyText.trim() || replyLoading}
+                                    >
+                                      {replyLoading ? 'Posting...' : 'Reply'}
+                                    </Button>
+                                  </Stack>
+                                </Box>
+                              )}
+                            </Box>
+                          </Box>
+
+                          {/* Replies */}
+                          {comment.replies && comment.replies.length > 0 && !minimizedReplies[comment.id] && (
+                            <Stack spacing={1} sx={{ mt: 2, ml: 6, borderLeft: 2, borderColor: 'grey.200', pl: 2 }}>
+                              {comment.replies.map((reply: any) => (
+                                <Box key={reply.id} sx={{ display: 'flex', gap: 1 }}>
+                                  <Avatar 
+                                    src={reply.author.avatar} 
+                                    sx={{ width: 24, height: 24 }}
+                                  >
+                                    {reply.author.name.charAt(0)}
+                                  </Avatar>
+                                  <Box sx={{ flex: 1 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                      <Typography variant="caption" fontWeight={500}>
+                                        {reply.author.name}
+                                      </Typography>
+                                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                        {formatTimestamp(reply.timestamp)}
+                                      </Typography>
+                                    </Box>
+                                    <Typography variant="caption" sx={{ mb: 1 }}>
+                                      {reply.content}
+                                    </Typography>
+                                    <Stack direction="row" spacing={1}>
+                                      <IconButton
+                                        size="small"
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          try {
+                                            if (reply.isLiked) {
+                                              await communityService.unlikeComment(reply.id);
+                                            } else {
+                                              await communityService.likeComment(reply.id);
+                                            }
+                                            
+                                            // Update reply in local state
+                                            setComments(prev => ({
+                                              ...prev,
+                                              [post.id]: prev[post.id]?.map(c => 
+                                                c.id === comment.id
+                                                  ? {
+                                                      ...c,
+                                                      replies: c.replies?.map(r =>
+                                                        r.id === reply.id
+                                                          ? { ...r, isLiked: !r.isLiked, likes: r.likes + (r.isLiked ? -1 : 1) }
+                                                          : r
+                                                      ) || []
+                                                    }
+                                                  : c
+                                              ) || []
+                                            }));
+                                            
+                                            toast.success(reply.isLiked ? 'Reply unliked!' : 'Reply liked!');
+                                          } catch (error) {
+                                            console.error('Error liking reply:', error);
+                                            toast.error('Failed to like reply');
+                                          }
+                                        }}
+                                        sx={{ 
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: 0.5,
+                                          borderRadius: 1,
+                                          px: 1,
+                                          py: 0.5,
+                                          transition: 'all 0.2s ease',
+                                          '&:hover': {
+                                            backgroundColor: reply.isLiked ? 'error.light' : 'grey.100',
+                                            transform: 'scale(1.05)'
+                                          }
+                                        }}
+                                      >
+                                        {reply.isLiked ? (
+                                          <Favorite sx={{ fontSize: 14, color: 'error.main' }} />
+                                        ) : (
+                                          <FavoriteBorder sx={{ fontSize: 14 }} />
+                                        )}
+                                        <Typography variant="caption" sx={{ fontSize: '0.65rem' }}>
+                                          {reply.likes || 0}
+                                        </Typography>
+                                      </IconButton>
+                                    </Stack>
+                                  </Box>
+                                </Box>
+                              ))}
+                            </Stack>
+                          )}
+
+                          {/* Minimized Replies Indicator */}
+                          {comment.replies && comment.replies.length > 0 && minimizedReplies[comment.id] && (
+                            <Box sx={{ mt: 1, ml: 6, py: 1, px: 2, backgroundColor: 'grey.100', borderRadius: 1, borderLeft: 2, borderColor: 'grey.300' }}>
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', fontStyle: 'italic' }}>
+                                {comment.replies.length} {comment.replies.length === 1 ? 'reply' : 'replies'} hidden - 
+                                <Button 
+                                  size="small" 
+                                  onClick={() => toggleRepliesMinimized(comment.id)}
+                                  sx={{ 
+                                    minWidth: 'auto',
+                                    p: 0,
+                                    ml: 0.5,
+                                    textDecoration: 'none',
+                                    fontSize: '0.7rem',
+                                    color: 'primary.main',
+                                    '&:hover': {
+                                      textDecoration: 'underline'
+                                    }
+                                  }}
+                                >
+                                  Click to show
+                                </Button>
                               </Typography>
                             </Box>
-                            <Typography variant="body2" sx={{ mb: 1 }}>
-                              {comment.content}
-                            </Typography>
-                            <Stack direction="row" spacing={1}>
-                              <Button
-                                size="small"
-                                startIcon={<ThumbUp />}
-                                color={comment.isLiked ? 'primary' : 'inherit'}
-                                sx={{ fontSize: '0.75rem' }}
-                              >
-                                {comment.likes}
-                              </Button>
-                            </Stack>
-                          </Box>
+                          )}
                         </Box>
                       ))}
                     </Stack>

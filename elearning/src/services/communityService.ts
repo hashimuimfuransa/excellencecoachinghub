@@ -187,6 +187,20 @@ export interface ContactsResponse {
   total: number;
 }
 
+export interface IUser {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  profilePicture?: string;
+  role: 'student' | 'teacher' | 'admin';
+  isOnline: boolean;
+  lastSeen?: string;
+  company?: string;
+  bio?: string;
+  specializations?: string[];
+}
+
 // Community Service
 class CommunityService {
   // Posts
@@ -205,12 +219,14 @@ class CommunityService {
     return response.data;
   }
 
-  async likePost(postId: string): Promise<void> {
-    await api.post(`/community/posts/${postId}/like`, { action: 'like' });
+  async likePost(postId: string): Promise<any> {
+    const response = await api.post(`/community/posts/${postId}/like`, { action: 'like' });
+    return response.data;
   }
 
-  async unlikePost(postId: string): Promise<void> {
-    await api.post(`/community/posts/${postId}/like`, { action: 'unlike' });
+  async unlikePost(postId: string): Promise<any> {
+    const response = await api.post(`/community/posts/${postId}/like`, { action: 'unlike' });
+    return response.data;
   }
 
   async sharePost(postId: string, platform: string = 'internal', message?: string): Promise<any> {
@@ -221,12 +237,14 @@ class CommunityService {
     return response.data;
   }
 
-  async bookmarkPost(postId: string): Promise<void> {
-    await api.post(`/community/posts/${postId}/bookmark`, { action: 'bookmark' });
+  async bookmarkPost(postId: string): Promise<any> {
+    const response = await api.post(`/community/posts/${postId}/bookmark`, { action: 'bookmark' });
+    return response.data;
   }
 
-  async unbookmarkPost(postId: string): Promise<void> {
-    await api.post(`/community/posts/${postId}/bookmark`, { action: 'unbookmark' });
+  async unbookmarkPost(postId: string): Promise<any> {
+    const response = await api.post(`/community/posts/${postId}/bookmark`, { action: 'unbookmark' });
+    return response.data;
   }
 
   // Groups
@@ -251,12 +269,14 @@ class CommunityService {
     return response.data;
   }
 
-  async joinGroup(groupId: string): Promise<void> {
-    await api.post(`/community/groups/${groupId}/join`);
+  async joinGroup(groupId: string): Promise<any> {
+    const response = await api.post(`/community/groups/${groupId}/join`);
+    return response.data;
   }
 
-  async leaveGroup(groupId: string): Promise<void> {
-    await api.delete(`/community/groups/${groupId}/leave`);
+  async leaveGroup(groupId: string): Promise<any> {
+    const response = await api.delete(`/community/groups/${groupId}/leave`);
+    return response.data;
   }
 
   // Achievements
@@ -270,12 +290,14 @@ class CommunityService {
     return response.data;
   }
 
-  async shareAchievement(achievementId: string): Promise<void> {
-    await api.post(`/community/achievements/${achievementId}/share`);
+  async shareAchievement(achievementId: string): Promise<any> {
+    const response = await api.post(`/community/achievements/${achievementId}/share`);
+    return response.data;
   }
 
-  async likeAchievement(achievementId: string): Promise<void> {
-    await api.post(`/community/achievements/${achievementId}/like`);
+  async likeAchievement(achievementId: string): Promise<any> {
+    const response = await api.post(`/community/achievements/${achievementId}/like`);
+    return response.data;
   }
 
   // Teachers
@@ -296,12 +318,14 @@ class CommunityService {
     return response.data;
   }
 
-  async followTeacher(teacherId: string): Promise<void> {
-    await api.post(`/community/teachers/${teacherId}/follow`);
+  async followTeacher(teacherId: string): Promise<any> {
+    const response = await api.post(`/community/teachers/${teacherId}/follow`);
+    return response.data;
   }
 
-  async unfollowTeacher(teacherId: string): Promise<void> {
-    await api.delete(`/community/teachers/${teacherId}/follow`);
+  async unfollowTeacher(teacherId: string): Promise<any> {
+    const response = await api.delete(`/community/teachers/${teacherId}/follow`);
+    return response.data;
   }
 
   // Chat
@@ -310,22 +334,28 @@ class CommunityService {
     return response.data;
   }
 
-  async getMessages(contactId: string, page = 1, limit = 50): Promise<MessagesResponse> {
-    const response = await api.get(`/community/chat/contacts/${contactId}/messages?page=${page}&limit=${limit}`);
+  async getMessages(chatId: string, page = 1, limit = 50): Promise<MessagesResponse> {
+    const response = await api.get(`/chat/${chatId}/messages?page=${page}&limit=${limit}`);
     return response.data;
   }
 
-  async sendMessage(contactId: string, messageData: {
+  async sendMessage(chatId: string, messageData: {
     content: string;
-    type: 'text' | 'image' | 'file';
-    attachments?: any[];
-  }): Promise<IMessage> {
-    const response = await api.post(`/community/chat/contacts/${contactId}/messages`, messageData);
+    messageType: 'text' | 'image' | 'file';
+    fileUrl?: string;
+    fileName?: string;
+    replyTo?: string;
+  }): Promise<any> { 
+    const response = await api.post(`/chat/${chatId}/message`, messageData);
     return response.data;
   }
 
-  async markMessagesAsRead(contactId: string): Promise<void> {
-    await api.put(`/community/chat/contacts/${contactId}/read`);
+  async markMessagesAsRead(chatId: string): Promise<void> {
+    await api.put(`/chat/${chatId}/read`);
+  }
+
+  async deleteMessage(chatId: string, messageId: string): Promise<void> {
+    await api.delete(`/chat/${chatId}/message/${messageId}`);
   }
 
   // Search
@@ -350,12 +380,14 @@ class CommunityService {
     return response.data;
   }
 
-  async markNotificationAsRead(notificationId: string): Promise<void> {
-    await api.put(`/community/notifications/${notificationId}/read`);
+  async markNotificationAsRead(notificationId: string): Promise<any> {
+    const response = await api.put(`/community/notifications/${notificationId}/read`);
+    return response.data;
   }
 
-  async markAllNotificationsAsRead(): Promise<void> {
-    await api.put('/community/notifications/read-all');
+  async markAllNotificationsAsRead(): Promise<any> {
+    const response = await api.put('/community/notifications/read-all');
+    return response.data;
   }
 
   // File upload
@@ -371,6 +403,42 @@ class CommunityService {
       },
     });
     return response.data;
+  }
+
+  // User management for chat
+  async getUsers(params?: {
+    query?: string;
+    role?: 'student' | 'teacher';
+    limit?: number;
+  }): Promise<IUser[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.query) searchParams.append('query', params.query);
+    if (params?.role) searchParams.append('type', params.role);
+    if (params?.limit) searchParams.append('limit', params.limit.toString());
+    
+    const response = await api.get(`/chat/users/search?${searchParams.toString()}`);
+    return response.data.data;
+  }
+
+  async getOnlineUsers(): Promise<IUser[]> {
+    const response = await api.get('/chat/online-users');
+    return response.data.data;
+  }
+
+  // Chat conversation management
+  async getConversations(): Promise<any[]> {
+    const response = await api.get('/chat/conversations');
+    return response.data.data;
+  }
+
+  async createConversation(participantIds: string[], isGroup: boolean = false, groupName?: string, initialMessage?: string): Promise<any> {
+    const response = await api.post('/chat/create', {
+      participantIds,
+      isGroup,
+      groupName,
+      initialMessage
+    });
+    return response.data.data;
   }
 
   // Comments

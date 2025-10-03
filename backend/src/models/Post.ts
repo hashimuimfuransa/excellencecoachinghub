@@ -20,6 +20,7 @@ export interface IPost extends Document {
   }[];
   likes: mongoose.Types.ObjectId[];
   comments: mongoose.Types.ObjectId[];
+  bookmarks: mongoose.Types.ObjectId[];
   shares: number;
   sharesCount: number;
   likesCount: number;
@@ -96,9 +97,13 @@ const postSchema = new Schema<IPost>({
     type: Schema.Types.ObjectId,
     ref: 'User'
   }],
-  comments: [{
+  comments: [{ 
     type: Schema.Types.ObjectId,
-    ref: 'Comment'
+    ref: 'Comment' 
+  }],
+  bookmarks: [{
+    type: Schema.Types.ObjectId,
+    ref: 'User'
   }],
   shares: {
     type: Number,

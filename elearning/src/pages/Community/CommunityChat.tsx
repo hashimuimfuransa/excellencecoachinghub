@@ -445,10 +445,7 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
       if (socket) {
         socket.disconnect();
       }
-      // Cleanup recording resources
-      if (mediaRecorder && mediaRecorder.state === 'recording') {
-        mediaRecorder.stop();
-      }
+      // Cleanup recording resources on unmount
       if (recordingIntervalRef.current) {
         clearInterval(recordingIntervalRef.current);
       }
@@ -460,7 +457,7 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
         URL.revokeObjectURL(audioPreviewUrl);
       }
     };
-  }, [socket, mediaRecorder, audioPreviewUrl]);
+  }, [socket, audioPreviewUrl]);
 
   // Load messages for selected contact
   const loadMessages = async (contactId: string) => {
@@ -847,7 +844,10 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
       
       mediaRecorder.ondataavailable = (event) => {
         console.log('Data available:', event.data.size, 'bytes');
-        chunks.push(event.data);
+        if (event.data.size > 0) {
+          chunks.push(event.data);
+          setAudioChunks(prev => [...prev, event.data]);
+        }
       };
       
       mediaRecorder.onstart = () => {
@@ -863,8 +863,7 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
           console.log('Audio blob created, size:', blob.size, 'type:', blob.type);
           
           if (blob.size > 0) {
-            // Store audio chunks for later use
-            setAudioChunks(chunks);
+            // Audio chunks already stored during recording
             
             try {
               // Upload to Cloudinary immediately for preview
@@ -902,20 +901,34 @@ const CommunityChat: React.FC<CommunityChatProps> = () => {
       };
       
       // Start recording
-      mediaRecorder.start(1000); // Request data every second
+      mediaRecorder.start();
       setIsRecording(true);
       setRecordingDuration(0);
       
       // Start duration counter - exactly like job portal
+      console.log('Setting up timer...');
       recordingIntervalRef.current = setInterval(() => {
-        setRecordingDuration(prev => prev + 1);
+        setRecordingDuration(prev => {
+          const newDuration = prev + 1;
+          console.log('Timer tick - updating duration to:', newDuration);
+          return newDuration;
+        });
       }, 1000);
       
       console.log('Recording started successfully', {
         intervalSet: !!recordingIntervalRef.current,
         mediaRecorderState: mediaRecorder.state,
-        isRecording: true
+        isRecording: true,
+        intervalId: recordingIntervalRef.current
       });
+      
+      // Force immediate test of timer
+      setTimeout(() => {
+        console.log('Timer test - 2 sec later:', {
+          hasInterval: !!recordingIntervalRef.current,
+          currentDuration: recordingDuration
+        });
+      }, 2000);
       
     } catch (error) {
       console.error('Error accessing microphone:', error);

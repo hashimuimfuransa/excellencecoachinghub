@@ -78,6 +78,8 @@ const UserManagement: React.FC = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [roleChangeDialogOpen, setRoleChangeDialogOpen] = useState(false);
+  const [pendingRoleChange, setPendingRoleChange] = useState<{userId: string, oldRole: string, newRole: string} | null>(null);
 
   // Create user form state
   const [createUserForm, setCreateUserForm] = useState({
@@ -362,6 +364,7 @@ const UserManagement: React.FC = () => {
 
   // Validate edit user form
   const validateEditUserForm = () => {
+    console.log('🔍 Validating edit user form:', editUserForm);
     const errors: Record<string, string> = {};
 
     if (!editUserForm.firstName.trim()) {
@@ -391,41 +394,121 @@ const UserManagement: React.FC = () => {
       }
     }
 
+    // Role-specific validation
+    if (editUserForm.role && !Object.values(UserRole).includes(editUserForm.role)) {
+      errors.role = 'Invalid role selected';
+    }
+
+    // Prevent changing current user's own role to non-admin
+    if (selectedUser && currentUser?._id === selectedUser._id && editUserForm.role !== UserRole.ADMIN) {
+      errors.role = 'You cannot change your own role from Admin';
+    }
+
+    console.log('🔍 Validation errors:', errors);
     setEditUserErrors(errors);
-    return Object.keys(errors).length === 0;
+    const isValid = Object.keys(errors).length === 0;
+    console.log('🔍 Form is valid:', isValid);
+    return isValid;
   };
 
   // Handle edit user form submission
   const handleEditUserSubmit = async () => {
+    console.log('🎯 Edit User Submit clicked!', {
+      selectedUser: selectedUser?._id,
+      editUserForm,
+      validationPassed: validateEditUserForm()
+    });
+
     if (!validateEditUserForm() || !selectedUser) {
+      console.log('❌ Validation failed or no selected user');
       return;
     }
+
+    // Check if role is being changed
+    const isRoleChanging = selectedUser.role !== editUserForm.role;
+    
+    if (isRoleChanging) {
+      console.log('🔄 Role change detected:', {
+        from: selectedUser.role,
+        to: editUserForm.role
+      });
+      
+      // Show role change confirmation dialog
+      setPendingRoleChange({
+        userId: selectedUser._id,
+        oldRole: selectedUser.role,
+        newRole: editUserForm.role
+      });
+      setRoleChangeDialogOpen(true);
+      return;
+    }
+
+    // Proceed with regular update if no role change
+    await performUserUpdate();
+  };
+
+  // Perform the actual user update
+  const performUserUpdate = async () => {
+    if (!selectedUser) return;
 
     try {
       setEditUserLoading(true);
       setError(null);
 
-      await userService.updateUser(selectedUser._id, {
+      console.log('🔄 Updating user with data:', {
+        userId: selectedUser._id,
+        updateData: {
+          firstName: editUserForm.firstName.trim(),
+          lastName: editUserForm.lastName.trim(),
+          email: editUserForm.email.trim().toLowerCase(),
+          role: editUserForm.role
+        }
+      });
+
+      const result = await userService.updateUser(selectedUser._id, {
         firstName: editUserForm.firstName.trim(),
         lastName: editUserForm.lastName.trim(),
         email: editUserForm.email.trim().toLowerCase(),
         role: editUserForm.role
       });
 
+      console.log('✅ User update successful:', result);
+
       setSuccess(`User "${editUserForm.firstName} ${editUserForm.lastName}" updated successfully!`);
 
       setEditDialogOpen(false);
+      setRoleChangeDialogOpen(false);
+      setPendingRoleChange(null);
       loadUsers();
     } catch (err) {
+      console.error('❌ User update failed:', err);
       setError(err instanceof Error ? err.message : 'Failed to update user');
     } finally {
       setEditUserLoading(false);
     }
   };
 
+  // Handle role change confirmation
+  const handleRoleChangeConfirm = async () => {
+    await performUserUpdate();
+  };
+
+  // Handle role change cancellation
+  const handleRoleChangeCancel = () => {
+    setRoleChangeDialogOpen(false);
+    setPendingRoleChange(null);
+  };
+
   // Handle edit user form changes
   const handleEditUserFormChange = (field: string, value: any) => {
-    setEditUserForm(prev => ({ ...prev, [field]: value }));
+    console.log(`📝 Form field '${field}' changed:`, value);
+    
+    setEditUserForm(prev => {
+      const newForm = { ...prev, [field]: value };
+      console.log('📝 Updated form state:', newForm);
+      return newForm;
+    });
+    
     // Clear error for this field when user starts typing
     if (editUserErrors[field]) {
       setEditUserErrors(prev => ({ ...prev, [field]: '' }));
@@ -931,17 +1014,56 @@ const UserManagement: React.FC = () => {
                   <InputLabel>Role</InputLabel>
                   <Select
                     value={editUserForm.role}
-                    onChange={(e) => handleEditUserFormChange('role', e.target.value)}
+                    onChange={(e) => {
+                      console.log('🔄 Role changed from', editUserForm.role, 'to', e.target.value);
+                      handleEditUserFormChange('role', e.target.value);
+                    }}
                     label="Role"
                     disabled={editUserLoading}
                   >
-                    <MenuItem value={UserRole.STUDENT}>Student</MenuItem>
-                    <MenuItem value={UserRole.TEACHER}>Teacher</MenuItem>
-                    <MenuItem value={UserRole.ADMIN}>Admin</MenuItem>
+                    <MenuItem value={UserRole.STUDENT}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Box sx={{ 
+                          width: 12, 
+                          height: 12, 
+                          borderRadius: '50%', 
+                          bgcolor: 'info.main', 
+                          mr: 1 
+                        }} />
+                        Student
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value={UserRole.TEACHER}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Box sx={{ 
+                          width: 12, 
+                          height: 12, 
+                          borderRadius: '50%', 
+                          bgcolor: 'warning.main', 
+                          mr: 1 
+                        }} />
+                        Teacher
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value={UserRole.ADMIN}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Box sx={{ 
+                          width: 12, 
+                          height: 12, 
+                          borderRadius: '50%', 
+                          bgcolor: 'error.main', 
+                          mr: 1 
+                        }} />
+                        Admin
+                      </Box>
+                    </MenuItem>
                   </Select>
                   {editUserErrors.role && (
                     <FormHelperText>{editUserErrors.role}</FormHelperText>
                   )}
+                  <FormHelperText>
+                    Current role: {selectedUser?.role} → New role: {editUserForm.role}
+                  </FormHelperText>
                 </FormControl>
               </Grid>
             </Grid>
@@ -956,11 +1078,76 @@ const UserManagement: React.FC = () => {
           </Button>
           <Button
             variant="contained"
-            onClick={handleEditUserSubmit}
+            onClick={(e) => {
+              console.log('🔘 Save Changes button clicked!', e);
+              handleEditUserSubmit();
+            }}
             disabled={editUserLoading}
             startIcon={editUserLoading ? <CircularProgress size={20} /> : <Edit />}
           >
             {editUserLoading ? 'Updating...' : 'Update User'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Role Change Confirmation Dialog */}
+      <Dialog
+        open={roleChangeDialogOpen}
+        onClose={handleRoleChangeCancel}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Confirm Role Change
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                ⚠️ Important: Role Change Detected
+              </Typography>
+              <Typography variant="body2">
+                You are about to change the user's role from <strong>{pendingRoleChange?.oldRole}</strong> to <strong>{pendingRoleChange?.newRole}</strong>.
+              </Typography>
+            </Alert>
+            
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              <strong>This change will:</strong>
+            </Typography>
+            
+            <Box component="ul" sx={{ pl: 2, mb: 2 }}>
+              <li>Immediately update the user's permissions and access levels</li>
+              <li>Change their dashboard navigation and available features</li>
+              <li>Affect their ability to access certain parts of the system</li>
+              <li>Require the user to log out and log back in to see changes</li>
+            </Box>
+
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                <strong>Note:</strong> The user will need to refresh their browser or log out and back in to see the new role permissions.
+              </Typography>
+            </Alert>
+
+            <Typography variant="body2" color="text.secondary">
+              Are you sure you want to proceed with this role change?
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={handleRoleChangeCancel}
+            disabled={editUserLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="warning"
+            onClick={handleRoleChangeConfirm}
+            disabled={editUserLoading}
+            startIcon={editUserLoading ? <CircularProgress size={20} /> : <Edit />}
+          >
+            {editUserLoading ? 'Updating...' : 'Confirm Role Change'}
           </Button>
         </DialogActions>
       </Dialog>

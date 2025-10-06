@@ -2503,8 +2503,6 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
             </Box>
       </Container>
 
-      {/* Mobile Footer Navigation */}
-      {isMobile && <MobileFooterNavbar />}
 
 
           {/* Error Display */}

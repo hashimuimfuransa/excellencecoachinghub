@@ -98,12 +98,36 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartX, setDragStartX] = useState(0);
   const [dragOffset, setDragOffset] = useState(0);
+  const [isTextExpanded, setIsTextExpanded] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<{ [key: number]: HTMLVideoElement | null }>({});
   const mediaContainerRef = useRef<HTMLDivElement>(null);
 
   // Precompute authorId to avoid undefined access
   const authorId = post?.author?._id;
+
+  // Text formatting helper
+  const formatPostText = (text: string) => {
+    if (!text) return '';
+    
+    // Split text into paragraphs and clean up
+    return text
+      .split('\n')
+      .map(paragraph => paragraph.trim())
+      .filter(paragraph => paragraph.length > 0)
+      .join('\n\n');
+  };
+
+  // Check if text should be truncated (more than 300 characters)
+  const shouldTruncateText = (text: string) => {
+    return text && text.length > 300;
+  };
+
+  // Get truncated text
+  const getTruncatedText = (text: string) => {
+    if (!shouldTruncateText(text)) return text;
+    return text.substring(0, 300) + '...';
+  };
 
   // Update like state when post or user changes
   useEffect(() => {
@@ -1177,43 +1201,62 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
         transition: { duration: 0.3 }
       }}
       sx={{
-        mb: { xs: 3, sm: 3.5, md: 4, lg: 4.5 }, // Enhanced spacing for larger posts
-        borderRadius: { xs: 3, sm: 4, md: 4, lg: 5 }, // More rounded corners
+        mb: { xs: 3, sm: 3.5, md: 4, lg: 4.5 },
+        borderRadius: { xs: 4, sm: 5, md: 6, lg: 7 },
         background: theme.palette.mode === 'dark' 
-          ? 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.02) 100%)'
-          : 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(248,250,252,1) 50%, rgba(240,244,248,1) 100%)',
-        border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(102, 126, 234, 0.08)'}`,
+          ? 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 100%)'
+          : 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(248,250,252,0.95) 50%, rgba(240,244,248,0.9) 100%)',
+        border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(102, 126, 234, 0.12)'}`,
         boxShadow: theme.palette.mode === 'dark' 
-          ? '0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05)' 
-          : '0 8px 32px rgba(102, 126, 234, 0.1), 0 0 0 1px rgba(102, 126, 234, 0.05)',
+          ? '0 12px 40px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.08)' 
+          : '0 12px 40px rgba(102, 126, 234, 0.15), 0 4px 16px rgba(102, 126, 234, 0.08), 0 0 0 1px rgba(102, 126, 234, 0.08)',
         width: '100%',
-        maxWidth: '100%', // Full width to take advantage of larger grid space
+        maxWidth: '100%',
         minWidth: 0,
         overflow: 'hidden',
         position: 'relative',
-        // Remove height restrictions to let content flow naturally
         minHeight: { 
-          xs: '320px', // Larger minimum height for better content display
+          xs: '320px',
           sm: '350px', 
           md: '400px', 
           lg: '420px', 
           xl: '450px'
         },
-        // No scale transforms - let posts be full size
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        backdropFilter: 'blur(20px)',
         '&::before': {
           content: '""',
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
-          height: 3,
-          background: 'linear-gradient(90deg, #667eea 0%, #764ba2 50%, #4facfe 100%)',
-          borderRadius: '5px 5px 0 0',
-          opacity: 0.8,
+          height: 4,
+          background: 'linear-gradient(90deg, #667eea 0%, #764ba2 30%, #4facfe 60%, #00d4ff 100%)',
+          borderRadius: '7px 7px 0 0',
+          opacity: 0.9,
+          transition: 'opacity 0.3s ease',
+        },
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.02) 0%, rgba(118, 75, 162, 0.02) 50%, rgba(79, 172, 254, 0.02) 100%)',
+          opacity: 0,
+          transition: 'opacity 0.3s ease',
+          pointerEvents: 'none',
         },
         '&:hover': {
+          transform: 'translateY(-4px)',
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 20px 60px rgba(0,0,0,0.5), 0 8px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.12)' 
+            : '0 20px 60px rgba(102, 126, 234, 0.2), 0 8px 24px rgba(102, 126, 234, 0.12), 0 0 0 1px rgba(102, 126, 234, 0.12)',
           '&::before': {
+            opacity: 1,
+          },
+          '&::after': {
             opacity: 1,
           }
         }
@@ -1231,43 +1274,82 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
         zIndex: 1,
       }}>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: { xs: 2.5, sm: 2.5, md: 3 } }}>
-          <Avatar
-            src={post?.author?.profilePicture || undefined}
-            sx={{ 
-              width: { xs: 48, sm: 52, md: 56, lg: 60 }, // Larger, more prominent avatars
-              height: { xs: 48, sm: 52, md: 56, lg: 60 }, 
-              mr: { xs: 2, sm: 2.2, md: 2.5, lg: 3 }, // Enhanced margin progression
-              cursor: 'pointer',
-              boxShadow: theme.palette.mode === 'dark'
-                ? '0 4px 16px rgba(0,0,0,0.3)'
-                : '0 4px 16px rgba(102, 126, 234, 0.2)',
-              border: `2px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(102, 126, 234, 0.1)'}`,
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              '&:hover': {
-                transform: 'scale(1.08) translateY(-2px)',
+          <Box sx={{ position: 'relative' }}>
+            <Avatar
+              src={post?.author?.profilePicture || undefined}
+              sx={{ 
+                width: { xs: 52, sm: 56, md: 60, lg: 64 },
+                height: { xs: 52, sm: 56, md: 60, lg: 64 }, 
+                mr: { xs: 2.5, sm: 3, md: 3.5, lg: 4 },
+                cursor: 'pointer',
                 boxShadow: theme.palette.mode === 'dark'
-                  ? '0 6px 20px rgba(0,0,0,0.4)'
-                  : '0 6px 20px rgba(102, 126, 234, 0.25)',
-              }
-            }}
-            onClick={handleViewProfile}
-          >
-            {(post?.author?.firstName?.[0] || '')}{(post?.author?.lastName?.[0] || '')}
-          </Avatar>
+                  ? '0 6px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1)'
+                  : '0 6px 20px rgba(102, 126, 234, 0.25), 0 0 0 1px rgba(102, 126, 234, 0.15)',
+                border: `3px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(102, 126, 234, 0.2)'}`,
+                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                background: theme.palette.mode === 'dark'
+                  ? 'linear-gradient(135deg, rgba(102, 126, 234, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%)'
+                  : 'linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(118, 75, 162, 0.9) 100%)',
+                '&:hover': {
+                  transform: 'scale(1.1) translateY(-3px)',
+                  boxShadow: theme.palette.mode === 'dark'
+                    ? '0 8px 25px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.2)'
+                    : '0 8px 25px rgba(102, 126, 234, 0.3), 0 0 0 2px rgba(102, 126, 234, 0.25)',
+                }
+              }}
+              onClick={handleViewProfile}
+            >
+              {(post?.author?.firstName?.[0] || '')}{(post?.author?.lastName?.[0] || '')}
+            </Avatar>
+            {/* Online status indicator */}
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: 4,
+                right: 4,
+                width: 14,
+                height: 14,
+                borderRadius: '50%',
+                backgroundColor: '#4ade80',
+                border: `3px solid ${theme.palette.background.paper}`,
+                boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                animation: 'pulse 2s infinite',
+                '@keyframes pulse': {
+                  '0%': {
+                    boxShadow: '0 0 0 0 rgba(74, 222, 128, 0.7)',
+                  },
+                  '70%': {
+                    boxShadow: '0 0 0 6px rgba(74, 222, 128, 0)',
+                  },
+                  '100%': {
+                    boxShadow: '0 0 0 0 rgba(74, 222, 128, 0)',
+                  },
+                },
+              }}
+            />
+          </Box>
           
           <Box sx={{ flexGrow: 1, minWidth: 0 }}>
             <Typography 
               variant="h6" 
               sx={{ 
                 fontWeight: 700, 
-                fontSize: { xs: '1rem', sm: '1.1rem', md: '1.15rem', lg: '1.2rem' }, // Larger, more prominent text
+                fontSize: { xs: '1.1rem', sm: '1.2rem', md: '1.25rem', lg: '1.3rem' },
                 cursor: 'pointer',
-                lineHeight: 1.3,
-                color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,0,0.87)',
-                transition: 'all 0.2s ease-in-out',
+                lineHeight: 1.2,
+                background: theme.palette.mode === 'dark'
+                  ? 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.8) 100%)'
+                  : 'linear-gradient(135deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
-                  color: 'primary.main',
-                  transform: 'translateX(2px)',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  transform: 'translateX(3px)',
                 }
               }}
               onClick={handleViewProfile}
@@ -1277,12 +1359,18 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
             {post?.author?.jobTitle && (
               <Typography 
                 variant="body2" 
-                color="text.secondary"
                 sx={{ 
-                  fontSize: { xs: '0.875rem', sm: '0.9rem', md: '0.95rem' },
+                  fontSize: { xs: '0.9rem', sm: '0.95rem', md: '1rem' },
                   fontWeight: 500,
                   mt: 0.5,
                   lineHeight: 1.4,
+                  color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)',
+                  background: theme.palette.mode === 'dark'
+                    ? 'linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.5) 100%)'
+                    : 'linear-gradient(135deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.4) 100%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
                 }}
               >
                 {post?.author?.jobTitle} {post?.author?.company && `at ${post?.author?.company}`}
@@ -1290,13 +1378,19 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
             )}
             <Typography 
               variant="caption" 
-              color="text.secondary"
               sx={{
-                fontSize: { xs: '0.75rem', sm: '0.8rem' },
+                fontSize: { xs: '0.8rem', sm: '0.85rem' },
                 fontWeight: 500,
                 mt: 0.5,
                 display: 'block',
                 opacity: 0.8,
+                color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
+                background: theme.palette.mode === 'dark'
+                  ? 'linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.3) 100%)'
+                  : 'linear-gradient(135deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.3) 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
               }}
             >
               {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
@@ -1328,10 +1422,17 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
               label={post.postType ? post.postType.replace('_', ' ').toUpperCase() : 'TEXT'}
               size="small"
               sx={{
-                backgroundColor: getPostTypeColor(post.postType || 'text'),
+                background: `linear-gradient(135deg, ${getPostTypeColor(post.postType || 'text')} 0%, ${getPostTypeColor(post.postType || 'text')}dd 100%)`,
                 color: '#ffffff',
                 fontWeight: 600,
-                fontSize: '0.75rem'
+                fontSize: '0.75rem',
+                boxShadow: `0 2px 8px ${getPostTypeColor(post.postType || 'text')}40`,
+                border: `1px solid ${getPostTypeColor(post.postType || 'text')}30`,
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-1px)',
+                  boxShadow: `0 4px 12px ${getPostTypeColor(post.postType || 'text')}60`,
+                }
               }}
             />
             {/* Source marker for Learning Hub posts */}
@@ -1356,31 +1457,117 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
         </Box>
 
         {/* Post Content */}
-        <Typography variant="body1" sx={{ 
-          mb: { xs: 1, sm: 1, md: 1 }, // More compact margins on very small tablets
-          lineHeight: { xs: 1.3, sm: 1.4, md: 1.5 }, // Much tighter on very small tablets
-          fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.9rem' }, // Much smaller on very small tablets
-          wordWrap: 'break-word',
-          overflowWrap: 'break-word',
-          hyphens: 'auto',
-          maxWidth: '100%'
+        <Box sx={{ 
+          mb: { xs: 2, sm: 2.5, md: 3 },
+          position: 'relative',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 3,
+            background: 'linear-gradient(180deg, #667eea 0%, #764ba2 50%, #4facfe 100%)',
+            borderRadius: '0 2px 2px 0',
+            opacity: 0.6,
+          }
         }}>
-          {post.content}
-        </Typography>
+          <Typography 
+            variant="body1" 
+            sx={{ 
+              mb: 1,
+              pl: 2,
+              lineHeight: { xs: 1.6, sm: 1.7, md: 1.8 },
+              fontSize: { xs: '0.95rem', sm: '1rem', md: '1.05rem' },
+              wordWrap: 'break-word',
+              overflowWrap: 'break-word',
+              hyphens: 'auto',
+              maxWidth: '100%',
+              whiteSpace: 'pre-line',
+              color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.85)',
+              fontWeight: 400,
+              letterSpacing: '0.01em',
+              textAlign: 'justify',
+            }}
+          >
+            {isTextExpanded || !shouldTruncateText(post.content) 
+              ? formatPostText(post.content) 
+              : getTruncatedText(formatPostText(post.content))
+            }
+          </Typography>
+          
+          {/* View More/Less Button */}
+          {shouldTruncateText(post.content) && (
+            <Button
+              variant="text"
+              size="small"
+              onClick={() => setIsTextExpanded(!isTextExpanded)}
+              sx={{
+                p: 0,
+                pl: 2,
+                minWidth: 'auto',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                textTransform: 'none',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  backgroundColor: 'transparent',
+                  transform: 'translateX(3px)',
+                  background: 'linear-gradient(135deg, #4facfe 0%, #00d4ff 100%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }
+              }}
+            >
+              {isTextExpanded ? 'View Less' : 'View More'}
+            </Button>
+          )}
+        </Box>
 
         {/* Media Gallery */}
         {renderMediaGallery()}
 
         {/* Tags */}
         {post.tags.length > 0 && (
-          <Box sx={{ mb: 2 }}>
+          <Box sx={{ 
+            mb: 2,
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 1,
+            alignItems: 'center',
+          }}>
             {post.tags.map((tag, index) => (
               <Chip
                 key={index}
                 label={`#${tag}`}
                 size="small"
                 variant="outlined"
-                sx={{ mr: 1, mb: 1 }}
+                sx={{ 
+                  mr: 1, 
+                  mb: 1,
+                  background: theme.palette.mode === 'dark'
+                    ? 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)'
+                    : 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(102, 126, 234, 0.3)' : 'rgba(102, 126, 234, 0.2)'}`,
+                  color: theme.palette.mode === 'dark' ? 'rgba(102, 126, 234, 0.9)' : 'rgba(102, 126, 234, 0.8)',
+                  fontWeight: 500,
+                  fontSize: '0.75rem',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-1px)',
+                    background: theme.palette.mode === 'dark'
+                      ? 'linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%)'
+                      : 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
+                    boxShadow: theme.palette.mode === 'dark'
+                      ? '0 2px 8px rgba(102, 126, 234, 0.3)'
+                      : '0 2px 8px rgba(102, 126, 234, 0.2)',
+                  }
+                }}
               />
             ))}
           </Box>

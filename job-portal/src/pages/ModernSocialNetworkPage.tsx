@@ -802,8 +802,6 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
         </Grid>
       </Container>
 
-      {/* Mobile Footer Navigation */}
-      {isMobile && <MobileFooterNavbar />}
 
       {/* Floating Action Button for Create Post - Mobile */}
       {isMobile && (

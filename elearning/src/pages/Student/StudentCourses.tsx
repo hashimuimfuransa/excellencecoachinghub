@@ -38,10 +38,7 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  Divider,
-  Dialog,
-  DialogTitle,
-  DialogContent
+  Divider
 } from '@mui/material';
 import UnifiedLearningPage from './UnifiedLearningPage';
 import {
@@ -78,7 +75,6 @@ import LearningTips from '../../components/Student/LearningTips';
 import HelpButton from '../../components/Student/HelpButton';
 import { studentProfileService } from '../../services/studentProfileService';
 import { UserRole } from '../../shared/types';
-import ProfilePage from '../Profile/ProfilePage';
 
 // Styled Components for better visual appeal
 const StyledCard = styled(Card)(({ theme }) => ({

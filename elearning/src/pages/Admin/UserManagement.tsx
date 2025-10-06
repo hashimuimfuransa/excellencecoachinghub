@@ -93,6 +93,16 @@ const UserManagement: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [createUserLoading, setCreateUserLoading] = useState(false);
 
+  // Edit user form state
+  const [editUserForm, setEditUserForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    role: UserRole.STUDENT
+  });
+  const [editUserErrors, setEditUserErrors] = useState<Record<string, string>>({});
+  const [editUserLoading, setEditUserLoading] = useState(false);
+
   // Load users
   const loadUsers = async () => {
     try {
@@ -158,7 +168,16 @@ const UserManagement: React.FC = () => {
 
   // Handle user actions
   const handleEditUser = () => {
-    setEditDialogOpen(true);
+    if (selectedUser) {
+      setEditUserForm({
+        firstName: selectedUser.firstName,
+        lastName: selectedUser.lastName,
+        email: selectedUser.email,
+        role: selectedUser.role
+      });
+      setEditUserErrors({});
+      setEditDialogOpen(true);
+    }
     handleMenuClose();
   };
 
@@ -339,6 +358,90 @@ const UserManagement: React.FC = () => {
   const handleCreateDialogClose = () => {
     setCreateDialogOpen(false);
     resetCreateUserForm();
+  };
+
+  // Validate edit user form
+  const validateEditUserForm = () => {
+    const errors: Record<string, string> = {};
+
+    if (!editUserForm.firstName.trim()) {
+      errors.firstName = 'First name is required';
+    } else if (editUserForm.firstName.trim().length > 50) {
+      errors.firstName = 'First name cannot exceed 50 characters';
+    }
+
+    if (!editUserForm.lastName.trim()) {
+      errors.lastName = 'Last name is required';
+    } else if (editUserForm.lastName.trim().length > 50) {
+      errors.lastName = 'Last name cannot exceed 50 characters';
+    }
+
+    if (!editUserForm.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editUserForm.email)) {
+      errors.email = 'Please enter a valid email address';
+    } else {
+      // Check if email already exists in current users list (excluding current user)
+      const emailExists = users.some(user =>
+        user.email.toLowerCase() === editUserForm.email.trim().toLowerCase() &&
+        user._id !== selectedUser?._id
+      );
+      if (emailExists) {
+        errors.email = 'A user with this email address already exists';
+      }
+    }
+
+    setEditUserErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Handle edit user form submission
+  const handleEditUserSubmit = async () => {
+    if (!validateEditUserForm() || !selectedUser) {
+      return;
+    }
+
+    try {
+      setEditUserLoading(true);
+      setError(null);
+
+      await userService.updateUser(selectedUser._id, {
+        firstName: editUserForm.firstName.trim(),
+        lastName: editUserForm.lastName.trim(),
+        email: editUserForm.email.trim().toLowerCase(),
+        role: editUserForm.role
+      });
+
+      setSuccess(`User "${editUserForm.firstName} ${editUserForm.lastName}" updated successfully!`);
+
+      setEditDialogOpen(false);
+      loadUsers();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update user');
+    } finally {
+      setEditUserLoading(false);
+    }
+  };
+
+  // Handle edit user form changes
+  const handleEditUserFormChange = (field: string, value: any) => {
+    setEditUserForm(prev => ({ ...prev, [field]: value }));
+    // Clear error for this field when user starts typing
+    if (editUserErrors[field]) {
+      setEditUserErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  // Handle edit dialog close
+  const handleEditDialogClose = () => {
+    setEditDialogOpen(false);
+    setEditUserForm({
+      firstName: '',
+      lastName: '',
+      email: '',
+      role: UserRole.STUDENT
+    });
+    setEditUserErrors({});
   };
 
   // Generate random password
@@ -767,6 +870,97 @@ const UserManagement: React.FC = () => {
             startIcon={createUserLoading ? <CircularProgress size={20} /> : <PersonAdd />}
           >
             {createUserLoading ? 'Creating...' : 'Create User'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog
+        open={editDialogOpen}
+        onClose={handleEditDialogClose}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Edit User
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Update user information and role. Changes will take effect immediately.
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="First Name"
+                  value={editUserForm.firstName}
+                  onChange={(e) => handleEditUserFormChange('firstName', e.target.value)}
+                  error={!!editUserErrors.firstName}
+                  helperText={editUserErrors.firstName || `${editUserForm.firstName.length}/50 characters`}
+                  disabled={editUserLoading}
+                  inputProps={{ maxLength: 50 }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Last Name"
+                  value={editUserForm.lastName}
+                  onChange={(e) => handleEditUserFormChange('lastName', e.target.value)}
+                  error={!!editUserErrors.lastName}
+                  helperText={editUserErrors.lastName || `${editUserForm.lastName.length}/50 characters`}
+                  disabled={editUserLoading}
+                  inputProps={{ maxLength: 50 }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Email Address"
+                  type="email"
+                  value={editUserForm.email}
+                  onChange={(e) => handleEditUserFormChange('email', e.target.value)}
+                  error={!!editUserErrors.email}
+                  helperText={editUserErrors.email}
+                  disabled={editUserLoading}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControl fullWidth error={!!editUserErrors.role}>
+                  <InputLabel>Role</InputLabel>
+                  <Select
+                    value={editUserForm.role}
+                    onChange={(e) => handleEditUserFormChange('role', e.target.value)}
+                    label="Role"
+                    disabled={editUserLoading}
+                  >
+                    <MenuItem value={UserRole.STUDENT}>Student</MenuItem>
+                    <MenuItem value={UserRole.TEACHER}>Teacher</MenuItem>
+                    <MenuItem value={UserRole.ADMIN}>Admin</MenuItem>
+                  </Select>
+                  {editUserErrors.role && (
+                    <FormHelperText>{editUserErrors.role}</FormHelperText>
+                  )}
+                </FormControl>
+              </Grid>
+            </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={handleEditDialogClose}
+            disabled={editUserLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleEditUserSubmit}
+            disabled={editUserLoading}
+            startIcon={editUserLoading ? <CircularProgress size={20} /> : <Edit />}
+          >
+            {editUserLoading ? 'Updating...' : 'Update User'}
           </Button>
         </DialogActions>
       </Dialog>

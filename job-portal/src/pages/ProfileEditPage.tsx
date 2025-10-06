@@ -91,9 +91,8 @@ const ProfileEditPage: React.FC = () => {
   // CV Builder popup handlers
   const handleCVBuilderClose = () => {
     setShowCVBuilderPopup(false);
-    if (profile) {
-      markCVBuilderDismissed(profile._id);
-    }
+    // REMOVED: markCVBuilderDismissed(profile._id) - we want popup to show every time
+    console.log('🚫 CV Builder popup closed - will show again on next visit if no CV exists');
   };
 
   const handleCVBuilderAction = () => {

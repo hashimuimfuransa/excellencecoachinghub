@@ -199,7 +199,7 @@ const ProfileCompletionPopup: React.FC<ProfileCompletionPopupProps> = ({
                   mt: 0.5,
                 }}
               >
-                Help others discover your professional story
+                Complete your profile to at least 70% to unlock all features
               </Typography>
             </Box>
           </Box>
@@ -289,8 +289,8 @@ const ProfileCompletionPopup: React.FC<ProfileCompletionPopupProps> = ({
             }}
           >
             {completionPercentage < 40 && 'Complete basic information to improve your profile visibility'}
-            {completionPercentage >= 40 && completionPercentage < 70 && 'Good start! Add more details to stand out to employers'}
-            {completionPercentage >= 70 && completionPercentage < 90 && 'Great profile! A few more details will make it perfect'}
+            {completionPercentage >= 40 && completionPercentage < 70 && 'Good start! You need 70% completion to unlock all features'}
+            {completionPercentage >= 70 && completionPercentage < 90 && 'Great! You\'ve reached the 70% minimum. A few more details will make it perfect'}
             {completionPercentage >= 90 && 'Excellent! Your profile is comprehensive and attractive to employers'}
           </Typography>
         </Box>
@@ -339,7 +339,7 @@ const ProfileCompletionPopup: React.FC<ProfileCompletionPopupProps> = ({
             gutterBottom
             sx={{ fontSize: isMobile ? '0.9rem' : '1rem' }}
           >
-            Why Complete Your Profile?
+            Why Complete Your Profile to 70%?
           </Typography>
           <List dense>
             <ListItem sx={{ py: 0.5, px: 0 }}>
@@ -371,7 +371,7 @@ const ProfileCompletionPopup: React.FC<ProfileCompletionPopupProps> = ({
                 <CheckCircle color="success" fontSize="small" />
               </ListItemIcon>
               <ListItemText
-                primary="Access to premium features and tools"
+                primary="Unlock all platform features (requires 70% completion)"
                 primaryTypographyProps={{ 
                   variant: 'body2',
                   sx: { fontSize: isMobile ? '0.8rem' : '0.875rem' }

@@ -350,25 +350,39 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
 
   // Check for profile completion popup on mount
   useEffect(() => {
+    console.log('🔍 SocialNetworkPage - Profile completion check triggered');
+    console.log('👤 User data:', user);
+    
     if (user) {
       const shouldShowProfile = shouldShowProfileCompletionPopup(user);
       const shouldShowCV = shouldShowCVBuilderPopup(user);
       
+      console.log('📊 Profile completion check results:', {
+        shouldShowProfile,
+        shouldShowCV,
+        userCompletion: user ? 'User exists' : 'No user'
+      });
+      
       // Show profile completion popup first if needed
       if (shouldShowProfile) {
+        console.log('✅ Showing profile completion popup');
         setShowProfileCompletionPopup(true);
       } else if (shouldShowCV) {
+        console.log('✅ Showing CV builder popup');
         setShowCVBuilderPopup(true);
+      } else {
+        console.log('ℹ️ No popup needed');
       }
+    } else {
+      console.log('❌ No user data available');
     }
   }, [user]);
 
   // Handler functions
   const handleProfileCompletionClose = () => {
     setShowProfileCompletionPopup(false);
-    if (user) {
-      markProfileCompletionDismissed(user._id);
-    }
+    // REMOVED: markProfileCompletionDismissed(user._id) - we want popup to show every time
+    console.log('🚫 Profile completion popup closed - will show again on next visit if profile still incomplete');
   };
 
   const handleProfileCompletionAction = () => {
@@ -378,9 +392,8 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
 
   const handleCVBuilderClose = () => {
     setShowCVBuilderPopup(false);
-    if (user) {
-      markCVBuilderDismissed(user._id);
-    }
+    // REMOVED: markCVBuilderDismissed(user._id) - we want popup to show every time
+    console.log('🚫 CV Builder popup closed - will show again on next visit if no CV exists');
   };
 
   const handleCVBuilderAction = () => {

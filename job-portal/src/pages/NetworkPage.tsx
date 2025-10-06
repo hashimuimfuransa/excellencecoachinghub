@@ -64,6 +64,7 @@ import {
   SupervisorAccount,
   GroupAdd,
   AssignmentInd,
+  Refresh,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { SocialConnection, ConnectionRequest, SentRequest } from '../types/social';
@@ -72,8 +73,11 @@ import { chatService } from '../services/chatService';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, UserRole } from '../contexts/AuthContext';
 import FloatingContact from '../components/FloatingContact';
+import ProfileCompletionPopup from '../components/ProfileCompletionPopup';
+import CVBuilderPopup from '../components/CVBuilderPopup';
 import { toast } from 'react-toastify';
 import { networkCache, CACHE_KEYS } from '../utils/networkCache';
+import { shouldShowProfileCompletionPopup, shouldShowCVBuilderPopup, markProfileCompletionDismissed, markCVBuilderDismissed } from '../utils/profileCompletionUtils';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -127,7 +131,7 @@ const SuggestionsSkeleton: React.FC = () => (
 const NetworkPage: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { hasRole } = useAuth();
+  const { user, hasRole } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const [currentTab, setCurrentTab] = useState(0);
@@ -168,6 +172,10 @@ const NetworkPage: React.FC = () => {
     sortBy: 'newest', // newest, connections, completion
   });
 
+  // Profile completion popup states
+  const [showProfileCompletionPopup, setShowProfileCompletionPopup] = useState(false);
+  const [showCVBuilderPopup, setShowCVBuilderPopup] = useState(false);
+
   // Progressive loading effect - like Instagram's instant UI
   useEffect(() => {
     const loadDataProgressively = async () => {
@@ -189,6 +197,21 @@ const NetworkPage: React.FC = () => {
       loadAllUsers();
     }
   }, [currentTab]);
+
+  // Check for profile completion popup on mount
+  useEffect(() => {
+    if (user) {
+      const shouldShowProfile = shouldShowProfileCompletionPopup(user);
+      const shouldShowCV = shouldShowCVBuilderPopup(user);
+      
+      // Show profile completion popup first if needed
+      if (shouldShowProfile) {
+        setShowProfileCompletionPopup(true);
+      } else if (shouldShowCV) {
+        setShowCVBuilderPopup(true);
+      }
+    }
+  }, [user]);
 
   // Memoized filtered suggestions for better performance
   const filteredSuggestions = useMemo(() => {
@@ -584,6 +607,34 @@ const NetworkPage: React.FC = () => {
     } else {
       navigate(`/app/profile/view/${user._id}`);
     }
+  };
+
+  // Profile completion popup handlers
+  const handleProfileCompletionClose = () => {
+    setShowProfileCompletionPopup(false);
+    // REMOVED: markProfileCompletionDismissed(user._id) - we want popup to show every time
+    console.log('🚫 Profile completion popup closed - will show again on next visit if profile still incomplete');
+  };
+
+  const handleProfileCompletionAction = () => {
+    setShowProfileCompletionPopup(false);
+    navigate('/app/profile/edit');
+  };
+
+  const handleCVBuilderClose = () => {
+    setShowCVBuilderPopup(false);
+    // REMOVED: markCVBuilderDismissed(user._id) - we want popup to show every time
+    console.log('🚫 CV Builder popup closed - will show again on next visit if no CV exists');
+  };
+
+  const handleCVBuilderAction = () => {
+    setShowCVBuilderPopup(false);
+    navigate('/app/cv-builder');
+  };
+
+  const handleCVBuilderContinueProfile = () => {
+    setShowCVBuilderPopup(false);
+    navigate('/app/profile/edit');
   };
 
   // Load all users for browsing
@@ -2466,6 +2517,27 @@ const NetworkPage: React.FC = () => {
       </motion.div>
 
       </Container>
+
+      {/* Profile Completion Popup */}
+      {user && (
+        <ProfileCompletionPopup
+          open={showProfileCompletionPopup}
+          onClose={handleProfileCompletionClose}
+          onCompleteProfile={handleProfileCompletionAction}
+          user={user}
+        />
+      )}
+
+      {/* CV Builder Popup */}
+      {user && (
+        <CVBuilderPopup
+          open={showCVBuilderPopup}
+          onClose={handleCVBuilderClose}
+          onBuildCV={handleCVBuilderAction}
+          onContinueProfile={handleCVBuilderContinueProfile}
+          user={user}
+        />
+      )}
 
       {/* Floating Contact - Fixed position, always visible like the message icon */}
       <FloatingContact />

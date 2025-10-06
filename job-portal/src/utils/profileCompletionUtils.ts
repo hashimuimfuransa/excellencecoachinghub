@@ -13,28 +13,24 @@ export interface ProfileCompletionCheck {
  * Returns true if profile is incomplete and should show popup
  */
 export const shouldShowProfileCompletionPopup = (user: User | null): boolean => {
-  if (!user) return false;
+  console.log('🔍 shouldShowProfileCompletionPopup called with user:', user);
   
-  const check = checkProfileCompletion(user);
-  
-  // Show popup if completion is less than 60% and user hasn't dismissed it recently
-  const shouldShow = check.completionPercentage < 60;
-  
-  // Check if user has dismissed the popup recently (within 24 hours)
-  const dismissedKey = `profile_completion_dismissed_${user._id}`;
-  const dismissedTime = localStorage.getItem(dismissedKey);
-  
-  if (dismissedTime) {
-    const dismissedDate = new Date(dismissedTime);
-    const now = new Date();
-    const hoursSinceDismissed = (now.getTime() - dismissedDate.getTime()) / (1000 * 60 * 60);
-    
-    // Don't show popup if dismissed within last 24 hours
-    if (hoursSinceDismissed < 24) {
-      return false;
-    }
+  if (!user) {
+    console.log('❌ No user provided');
+    return false;
   }
   
+  const check = checkProfileCompletion(user);
+  console.log('📊 Profile completion check:', check);
+  
+  // Show popup if completion is less than 70% - ALWAYS show for incomplete profiles
+  const shouldShow = check.completionPercentage < 70;
+  console.log('📈 Completion percentage:', check.completionPercentage, 'Should show (need 70%+):', shouldShow);
+  
+  // REMOVED: 24-hour dismissal logic - popup should show every time for incomplete profiles
+  // This ensures users are always reminded to complete their profile when visiting network page
+  
+  console.log('✅ Final result - should show popup:', shouldShow);
   return shouldShow;
 };
 
@@ -42,29 +38,34 @@ export const shouldShowProfileCompletionPopup = (user: User | null): boolean => 
  * Check if user has a CV and should show CV builder popup
  */
 export const shouldShowCVBuilderPopup = (user: User | null): boolean => {
-  if (!user) return false;
+  console.log('🔍 shouldShowCVBuilderPopup called with user:', user);
+  
+  if (!user) {
+    console.log('❌ No user provided');
+    return false;
+  }
   
   // Check if user has CV file
   const hasCV = user.cvFile && user.cvFile.trim() !== '';
+  console.log('📄 User has CV:', hasCV, 'CV file:', user.cvFile);
   
-  // Check if user has dismissed CV popup recently
-  const dismissedKey = `cv_builder_dismissed_${user._id}`;
-  const dismissedTime = localStorage.getItem(dismissedKey);
+  // REMOVED: 48-hour dismissal logic - popup should show every time for users without CV
+  // This ensures users are always reminded to build their CV when visiting profile edit page
   
-  if (dismissedTime) {
-    const dismissedDate = new Date(dismissedTime);
-    const now = new Date();
-    const hoursSinceDismissed = (now.getTime() - dismissedDate.getTime()) / (1000 * 60 * 60);
-    
-    // Don't show popup if dismissed within last 48 hours
-    if (hoursSinceDismissed < 48) {
-      return false;
-    }
-  }
-  
-  // Show CV popup if no CV exists and profile is reasonably complete (at least 30%)
+  // Show CV popup if no CV exists - removed profile completion requirement
+  // Users should be encouraged to build CV regardless of profile completion level
   const profileCheck = checkProfileCompletion(user);
-  return !hasCV && profileCheck.completionPercentage >= 30;
+  const shouldShow = !hasCV; // Show CV popup for any user without a CV file
+  
+  console.log('📊 CV Builder check results:', {
+    hasCV,
+    profileCompletion: profileCheck.completionPercentage,
+    shouldShow,
+    reason: hasCV ? 'User already has CV' : 'User needs CV'
+  });
+  
+  console.log('✅ Final result - should show CV popup:', shouldShow);
+  return shouldShow;
 };
 
 /**
@@ -122,7 +123,7 @@ export const checkProfileCompletion = (user: User): ProfileCompletionCheck => {
   let status: ProfileCompletionStatus;
   if (completionPercentage < 30) {
     status = ProfileCompletionStatus.INCOMPLETE;
-  } else if (completionPercentage < 60) {
+  } else if (completionPercentage < 70) {
     status = ProfileCompletionStatus.BASIC;
   } else if (completionPercentage < 90) {
     status = ProfileCompletionStatus.INTERMEDIATE;
@@ -135,7 +136,7 @@ export const checkProfileCompletion = (user: User): ProfileCompletionCheck => {
     completionPercentage,
     status,
     missingFields,
-    shouldShowPopup: completionPercentage < 60,
+    shouldShowPopup: completionPercentage < 70, // Updated to 70% threshold
   };
 };
 

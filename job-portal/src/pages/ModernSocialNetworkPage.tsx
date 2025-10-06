@@ -296,9 +296,8 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
   // Popup handlers
   const handleProfileCompletionClose = () => {
     setShowProfileCompletionPopup(false);
-    if (user) {
-      markProfileCompletionDismissed(user._id);
-    }
+    // REMOVED: markProfileCompletionDismissed(user._id) - we want popup to show every time
+    console.log('🚫 Profile completion popup closed - will show again on next visit if profile still incomplete');
   };
 
   const handleProfileCompletionAction = () => {
@@ -308,9 +307,8 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
 
   const handleCVBuilderClose = () => {
     setShowCVBuilderPopup(false);
-    if (user) {
-      markCVBuilderDismissed(user._id);
-    }
+    // REMOVED: markCVBuilderDismissed(user._id) - we want popup to show every time
+    console.log('🚫 CV Builder popup closed - will show again on next visit if no CV exists');
   };
 
   const handleCVBuilderAction = () => {

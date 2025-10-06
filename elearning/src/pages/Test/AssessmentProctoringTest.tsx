@@ -184,7 +184,7 @@ const AssessmentProctoringTest: React.FC = () => {
             addTestResult('Assessment Flow', 'pending', 'Opening student assessment page...');
             
             setTimeout(() => {
-              navigate('/dashboard/student/courses');
+              navigate('/courses');
               addTestResult('Assessment Flow', 'success', 'Navigated to student courses');
             }, 1000);
           } else if (user?.role === 'admin') {
@@ -290,7 +290,7 @@ const AssessmentProctoringTest: React.FC = () => {
                 <Button
                   variant="contained"
                   fullWidth
-                  onClick={() => navigate('/dashboard/student/courses')}
+                  onClick={() => navigate('/courses')}
                   disabled={user?.role !== 'student'}
                 >
                   Take Assessment

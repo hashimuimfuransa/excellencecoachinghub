@@ -497,6 +497,17 @@ const App: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      
+      {/* Standalone Student Courses Page - Outside Dashboard Layout */}
+      <Route
+        path="/courses"
+        element={
+          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+            <StudentCourses />
+          </ProtectedRoute>
+        }
+      />
+      
       {/* 404 route */}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

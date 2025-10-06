@@ -38,7 +38,10 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  Divider
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent
 } from '@mui/material';
 import UnifiedLearningPage from './UnifiedLearningPage';
 import {
@@ -64,7 +67,8 @@ import {
   Explore,
   LocalLibrary,
   Menu,
-  ClearAll
+  ClearAll,
+  Close
 } from '@mui/icons-material';
 import { courseService, ICourse } from '../../services/courseService';
 import { enrollmentService, IEnrollment } from '../../services/enrollmentService';
@@ -74,6 +78,7 @@ import LearningTips from '../../components/Student/LearningTips';
 import HelpButton from '../../components/Student/HelpButton';
 import { studentProfileService } from '../../services/studentProfileService';
 import { UserRole } from '../../shared/types';
+import ProfilePage from '../Profile/ProfilePage';
 
 // Styled Components for better visual appeal
 const StyledCard = styled(Card)(({ theme }) => ({
@@ -191,6 +196,9 @@ const StudentCourses: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const theme = useTheme();
+  
+  // Debug log to verify component is loading
+  console.log('🎓 StudentCourses component loaded - Modern version active!');
   
   // Mobile responsive breakpoints
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -391,20 +399,70 @@ const StudentCourses: React.FC = () => {
   };
 
   return (
-    <Box sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
-      <Container maxWidth="lg" sx={{ py: { xs: 1, sm: 2, md: 3 } }}>
+    <Box sx={{ 
+      bgcolor: 'background.default', 
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+      position: 'relative',
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '300px',
+        background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(124, 58, 237, 0.1) 50%, rgba(236, 72, 153, 0.1) 100%)',
+        zIndex: 0,
+      }
+    }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 1, sm: 2, md: 3 }, position: 'relative', zIndex: 1 }}>
+        {/* Modern Design Indicator */}
+        <Box sx={{ 
+          position: 'fixed', 
+          top: 10, 
+          right: 10, 
+          zIndex: 9999,
+          background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #ec4899 100%)',
+          color: 'white',
+          px: 2,
+          py: 1,
+          borderRadius: 2,
+          fontSize: '0.75rem',
+          fontWeight: 600,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+        }}>
+          ✨ Modern Design Active
+        </Box>
+        
         {/* Mobile Header with Drawer Toggle */}
         {isMobile && (
-          <Paper sx={{ mb: 2, p: 2, borderRadius: 2 }}>
+          <Paper sx={{ 
+            mb: 2, 
+            p: 2, 
+            borderRadius: 3,
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+          }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between">
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                📚 Courses
+              <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                🎓 Excellence Hub
               </Typography>
               <ResponsiveButton
                 variant="outlined"
                 startIcon={<Menu />}
                 onClick={toggleMobileDrawer}
                 size={buttonSize}
+                sx={{
+                  borderRadius: 2,
+                  borderColor: 'primary.main',
+                  color: 'primary.main',
+                  '&:hover': {
+                    backgroundColor: 'primary.main',
+                    color: 'white'
+                  }
+                }}
               >
                 Menu
               </ResponsiveButton>
@@ -482,15 +540,28 @@ const StudentCourses: React.FC = () => {
       {user?.role === UserRole.STUDENT && !profileCompletion.isComplete && showProfileAlert && (
         <Fade in={showProfileAlert}>
           <Paper
-            elevation={2}
+            elevation={0}
             sx={{
               mb: 4,
-              p: 3,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              p: 4,
+              background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.95) 0%, rgba(124, 58, 237, 0.95) 50%, rgba(236, 72, 153, 0.95) 100%)',
               color: 'white',
-              borderRadius: 3,
+              borderRadius: 4,
               position: 'relative',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              boxShadow: '0 20px 40px rgba(37, 99, 235, 0.3)',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: -50,
+                right: -50,
+                width: 200,
+                height: 200,
+                background: 'radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%)',
+                borderRadius: '50%',
+              }
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
@@ -548,7 +619,8 @@ const StudentCourses: React.FC = () => {
             <ActionButton
               variant="contained"
               onClick={() => {
-                // Open profile modal directly
+                console.log('🎯 Complete Profile button clicked!');
+                // Use the same event system as the Layout component
                 window.dispatchEvent(new CustomEvent('openProfileModal'));
               }}
               sx={{
@@ -569,7 +641,12 @@ const StudentCourses: React.FC = () => {
       {/* Welcome Card */}
       {showWelcome && (
         <Fade in={showWelcome}>
-          <WelcomeCard elevation={0}>
+          <WelcomeCard elevation={0} sx={{
+            background: 'linear-gradient(135deg, rgba(37, 99, 235, 0.95) 0%, rgba(124, 58, 237, 0.95) 50%, rgba(236, 72, 153, 0.95) 100%)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            boxShadow: '0 20px 40px rgba(37, 99, 235, 0.3)',
+          }}>
             <Stack 
               direction={{ xs: 'column', md: 'row' }} 
               alignItems="center" 
@@ -1027,7 +1104,15 @@ const StudentCourses: React.FC = () => {
         </Box>
 
         {/* Search and Filters */}
-        <Paper sx={{ p: { xs: 2, md: 3 }, mb: 4, borderRadius: 3, bgcolor: 'grey.50' }}>
+        <Paper sx={{ 
+          p: { xs: 3, md: 4 }, 
+          mb: 4, 
+          borderRadius: 4, 
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+        }}>
           <Typography 
             variant={isMobile ? 'subtitle1' : 'h6'} 
             sx={{ mb: 2, fontWeight: 600, textAlign: { xs: 'center', md: 'left' } }}
@@ -1044,8 +1129,18 @@ const StudentCourses: React.FC = () => {
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 3,
-                    bgcolor: 'white',
-                    fontSize: { xs: '0.95rem', md: '1rem' }
+                    bgcolor: 'rgba(255, 255, 255, 0.9)',
+                    fontSize: { xs: '0.95rem', md: '1rem' },
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    '&:hover': {
+                      borderColor: 'primary.main',
+                      boxShadow: '0 4px 12px rgba(37, 99, 235, 0.15)'
+                    },
+                    '&.Mui-focused': {
+                      borderColor: 'primary.main',
+                      boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
+                    }
                   }
                 }}
                 InputProps={{
@@ -1063,7 +1158,17 @@ const StudentCourses: React.FC = () => {
                   onChange={(e) => setCategoryFilter(e.target.value)}
                   sx={{
                     borderRadius: 3,
-                    bgcolor: 'white',
+                    bgcolor: 'rgba(255, 255, 255, 0.9)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    '&:hover': {
+                      borderColor: 'primary.main',
+                      boxShadow: '0 4px 12px rgba(37, 99, 235, 0.15)'
+                    },
+                    '&.Mui-focused': {
+                      borderColor: 'primary.main',
+                      boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
+                    }
                   }}
                 >
                   <MenuItem value="">🌟 All Categories</MenuItem>
@@ -1366,6 +1471,7 @@ const StudentCourses: React.FC = () => {
 
       {/* Floating Help Button */}
       <HelpButton />
+      
       </Container>
     </Box>
   );

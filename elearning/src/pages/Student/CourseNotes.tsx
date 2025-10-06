@@ -324,7 +324,7 @@ const CourseNotes: React.FC = () => {
           </Typography>
           <Button
             startIcon={<ArrowBack />}
-            onClick={() => navigate('/dashboard/student/courses')}
+            onClick={() => navigate('/courses')}
           >
             Back to Courses
           </Button>

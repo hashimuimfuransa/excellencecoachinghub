@@ -653,7 +653,7 @@ const StudentLiveSessions: React.FC = () => {
                 {recordingsLoading && <CircularProgress size={24} sx={{ mt: 2 }} />}
                 <ActionButton
                   variant="outlined"
-                  onClick={() => navigate('/dashboard/student/courses')}
+                  onClick={() => navigate('/courses')}
                   startIcon={<VideoCall />}
                 >
                   🎓 View My Courses
@@ -675,7 +675,7 @@ const StudentLiveSessions: React.FC = () => {
                         <RecordingCard
                           session={recording}
                           onPlay={handlePlayRecording}
-                          onViewInCourse={(courseId) => navigate(`/dashboard/student/courses/${courseId}/content`)}
+                          onViewInCourse={(courseId) => navigate(`/course/${courseId}`)}
                           showProgress={true}
                         />
                       ) : (
@@ -774,7 +774,7 @@ const StudentLiveSessions: React.FC = () => {
               </Typography>
               <ActionButton
                 variant="outlined"
-                onClick={() => navigate('/dashboard/student/courses')}
+                onClick={() => navigate('/courses')}
                 startIcon={<VideoCall />}
               >
                 🎓 View My Courses
@@ -968,7 +968,7 @@ const StudentLiveSessions: React.FC = () => {
                           <Tooltip title="View in course content">
                             <IconButton
                               color="success"
-                              onClick={() => navigate(`/dashboard/student/courses/${session.course._id}/content`)}
+                              onClick={() => navigate(`/course/${session.course._id}`)}
                               sx={{ 
                                 border: 1, 
                                 borderColor: 'success.main',

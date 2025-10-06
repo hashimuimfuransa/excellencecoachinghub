@@ -262,7 +262,7 @@ const CourseContent: React.FC = () => {
         </Alert>
         <Button
           startIcon={<ArrowBack />}
-          onClick={() => navigate('/courses')}
+          onClick={() => navigate('/dashboard/student/courses')}
           variant="outlined"
         >
           Back to Courses

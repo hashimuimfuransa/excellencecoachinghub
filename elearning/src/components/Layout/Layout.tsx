@@ -97,6 +97,11 @@ const ResponsiveAppBar = styled(AppBar, {
     width: '100%',
     marginLeft: 0,
   },
+  // Attractive gradient navbar styling
+  background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #ec4899 100%)',
+  color: '#ffffff',
+  boxShadow: '0 8px 24px rgba(124, 58, 237, 0.25)',
+  borderBottom: '1px solid rgba(255,255,255,0.12)'
 }));
 
 const ResponsiveDrawer = styled(Box, {

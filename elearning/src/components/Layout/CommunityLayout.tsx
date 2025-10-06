@@ -332,7 +332,7 @@ const CommunityLayout: React.FC<CommunityLayoutProps> = ({ children }) => {
             startIcon={<School />}
             fullWidth
             color="primary"
-            onClick={() => navigate('/dashboard/student/courses')}
+            onClick={() => navigate('/courses')}
             size="small"
           >
             Back to Learning Hub
@@ -359,7 +359,7 @@ const CommunityLayout: React.FC<CommunityLayoutProps> = ({ children }) => {
           <Button
             variant="text"
             size="small"
-            onClick={() => navigate('/dashboard/student/courses')}
+            onClick={() => navigate('/courses')}
             sx={{ alignSelf: 'flex-start' }}
           >
             Go to Learning Hub
@@ -377,11 +377,11 @@ const CommunityLayout: React.FC<CommunityLayoutProps> = ({ children }) => {
         sx={{
           width: { md: `calc(100% - 280px)` },
           ml: { md: '280px' },
-          bgcolor: 'background.paper',
-          color: 'text.primary',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #ec4899 100%)',
+          color: 'common.white',
+          boxShadow: '0 8px 24px rgba(124, 58, 237, 0.25)',
           borderBottom: 1,
-          borderColor: 'divider',
+          borderColor: 'rgba(255,255,255,0.12)',
         }}
       >
         <Toolbar>

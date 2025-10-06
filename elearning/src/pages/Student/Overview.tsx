@@ -210,7 +210,7 @@ const StudentOverview: React.FC = () => {
                 <Typography variant="h6">My Courses</Typography>
                 <Button 
                   size="small" 
-                  onClick={() => navigate('/dashboard/student/courses')}
+                  onClick={() => navigate('/courses')}
                 >
                   View All
                 </Button>
@@ -370,7 +370,7 @@ const StudentOverview: React.FC = () => {
                     fullWidth
                     variant="outlined"
                     startIcon={<School />}
-                    onClick={() => navigate('/dashboard/student/courses')}
+                    onClick={() => navigate('/courses')}
                   >
                     Browse Courses
                   </Button>

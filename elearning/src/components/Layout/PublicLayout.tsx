@@ -202,23 +202,10 @@ const PublicLayout: React.FC = () => {
         position="fixed"
         elevation={0}
         sx={{
-          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%)',
-          backdropFilter: 'blur(30px)',
-          borderBottom: '1px solid',
-          borderColor: 'rgba(59, 130, 246, 0.1)',
-          color: 'text.primary',
-          boxShadow: '0 4px 32px rgba(59, 130, 246, 0.12)',
-          zIndex: 1300,
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'linear-gradient(90deg, rgba(59, 130, 246, 0.02) 0%, rgba(147, 51, 234, 0.02) 50%, rgba(236, 72, 153, 0.02) 100%)',
-            pointerEvents: 'none'
-          }
+          background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #ec4899 100%)',
+          color: 'common.white',
+          boxShadow: '0 8px 24px rgba(124, 58, 237, 0.25)',
+          zIndex: 1300
         }}
       >
         <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 1 }}>
@@ -245,24 +232,19 @@ const PublicLayout: React.FC = () => {
               }}
               onClick={() => navigate('/')}
             >
-              <Box
-                sx={{
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center',
-                  p: { xs: 0.5, sm: 0.75, md: 1 },
-                  borderRadius: 2,
-                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%)',
-                  border: '1px solid rgba(59, 130, 246, 0.2)'
-                }}
-              >
+            <Box
+              sx={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
                 <img
                   src="/logo.webp"
                   alt="Excellence Hub Logo"
                   style={{ 
-                    height: '24px', 
-                    width: 'auto',
-                    filter: 'drop-shadow(0 2px 4px rgba(59, 130, 246, 0.2))'
+                  height: '24px', 
+                  width: 'auto'
                   }}
                 />
               </Box>

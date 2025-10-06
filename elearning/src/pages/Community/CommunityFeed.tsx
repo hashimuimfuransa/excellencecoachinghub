@@ -153,7 +153,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = () => {
   }, [user]);
 
   const goToLearningHub = () => {
-    navigate('/dashboard/student/courses');
+    navigate('/courses');
   };
 
   // Handle post actions

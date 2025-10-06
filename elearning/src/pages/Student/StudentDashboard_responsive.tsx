@@ -453,7 +453,7 @@ const StudentDashboard: React.FC = () => {
                 <ResponsiveButton 
                   size={buttonSize}
                   variant="outlined"
-                  onClick={() => navigate('/dashboard/student/courses')}
+                  onClick={() => navigate('/courses')}
                   sx={{ 
                     minWidth: { xs: '100%', sm: 'auto' },
                     alignSelf: { xs: 'stretch', sm: 'auto' }
@@ -487,7 +487,7 @@ const StudentDashboard: React.FC = () => {
                   <ResponsiveButton
                     variant="contained"
                     startIcon={<School />}
-                    onClick={() => navigate('/dashboard/student/courses')}
+                    onClick={() => navigate('/courses')}
                     size={buttonSize}
                   >
                     Browse Courses

@@ -252,7 +252,7 @@ const CourseViewPage: React.FC = () => {
         </Alert>
         <Button
           startIcon={<ArrowBack />}
-          onClick={() => navigate('/dashboard/student/courses')}
+          onClick={() => navigate('/courses')}
           variant="outlined"
         >
           Back to My Courses
@@ -308,7 +308,7 @@ const CourseViewPage: React.FC = () => {
       <Box sx={{ mb: 4 }}>
         <Button
           startIcon={<ArrowBack />}
-          onClick={() => navigate('/dashboard/student/courses')}
+          onClick={() => navigate('/courses')}
           sx={{ mb: 2 }}
         >
           Back to My Courses

@@ -1346,7 +1346,7 @@ const StudentOpportunitiesPage: React.FC = () => {
                               size='small'
                               onClick={() => {
                                 // Navigate to course details or enroll
-                                window.location.href = '/dashboard/student/courses';
+                                window.location.href = '/courses';
                               }}
                               variant="outlined"
                               sx={{ 

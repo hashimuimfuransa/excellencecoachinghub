@@ -345,7 +345,7 @@ const EnhancedCourseViewPage: React.FC = () => {
           </Alert>
           <Button
             startIcon={<ArrowBack />}
-            onClick={() => navigate('/dashboard/student/courses')}
+            onClick={() => navigate('/courses')}
             variant="contained"
             sx={{ borderRadius: 2 }}
           >
@@ -394,7 +394,7 @@ const EnhancedCourseViewPage: React.FC = () => {
           <IconButton
             edge="start"
             color="inherit"
-            onClick={() => navigate('/dashboard/student/courses')}
+            onClick={() => navigate('/courses')}
             sx={{ mr: 2 }}
           >
             <ArrowBack />

@@ -557,7 +557,7 @@ const CareerGuidancePage: React.FC = () => {
 
                 <ActionButton 
                   variant="outlined"
-                  onClick={() => navigate('/dashboard/student/courses')}
+                  onClick={() => navigate('/courses')}
                   sx={{ mt: 2 }}
                 >
                   Explore All Courses

@@ -992,7 +992,7 @@ const CourseMaterialPage: React.FC = () => {
                   <Link 
                     color="inherit" 
                     href="#" 
-                    onClick={() => navigate('/dashboard/student/courses')}
+                    onClick={() => navigate('/courses')}
                     sx={{ 
                       display: 'flex', 
                       alignItems: 'center',

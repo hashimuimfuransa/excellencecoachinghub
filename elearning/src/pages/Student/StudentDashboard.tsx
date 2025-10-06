@@ -274,7 +274,7 @@ const StudentDashboard: React.FC = () => {
 
       // Check if student has no enrolled courses - redirect to course enrollment
       if (totalCourses === 0 && enrollments.length === 0) {
-        navigate('/courses');
+        navigate('/dashboard/student/courses');
         return;
       }
 
@@ -554,7 +554,7 @@ const StudentDashboard: React.FC = () => {
                 <ResponsiveButton 
                   size={buttonSize}
                   variant="outlined" 
-                  onClick={() => navigate('/dashboard/student/courses')}
+                  onClick={() => navigate('/courses')}
                   sx={{ 
                     bgcolor: 'white',
                     borderColor: 'primary.main',
@@ -922,7 +922,7 @@ const StudentDashboard: React.FC = () => {
                 <ResponsiveButton 
                   size={buttonSize}
                   variant="outlined"
-                  onClick={() => navigate('/dashboard/student/courses')}
+                  onClick={() => navigate('/courses')}
                   sx={{ 
                     minWidth: { xs: '100%', sm: 'auto' },
                     alignSelf: { xs: 'stretch', sm: 'auto' },
@@ -966,7 +966,7 @@ const StudentDashboard: React.FC = () => {
                   <ResponsiveButton
                     variant="contained"
                     startIcon={<School />}
-                    onClick={() => navigate('/dashboard/student/courses')}
+                    onClick={() => navigate('/courses')}
                     size={buttonSize}
                   >
                     Browse Courses

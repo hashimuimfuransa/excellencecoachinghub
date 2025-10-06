@@ -14,7 +14,9 @@ import {
   Slide,
   Grow,
   Stack,
-  Divider
+  Divider,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -26,6 +28,7 @@ import {
 import { TransitionProps } from '@mui/material/transitions';
 import { useNavigate } from 'react-router-dom';
 import { SafeSlideUp } from '../utils/transitionFix';
+import { useTheme as useCustomTheme } from '../contexts/ThemeContext';
 
 interface AccountTypeModalProps {
   open: boolean;
@@ -45,33 +48,46 @@ const AccountTypeModal: React.FC<AccountTypeModalProps> = ({
   const [selectedType, setSelectedType] = useState<string>('');
   const [hoveredType, setHoveredType] = useState<string>('');
   const navigate = useNavigate();
+  const theme = useTheme();
+  const { mode } = useCustomTheme();
+  const isDark = mode === 'dark';
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
 
-  const accountTypes = [
+  const getAccountTypes = () => [
     {
       id: 'employer',
       title: 'Employer',
       description: 'Post jobs, find qualified candidates, and manage your recruitment process',
-      icon: <BusinessIcon sx={{ fontSize: 40, color: '#ffffff' }} />,
-      gradient: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
+      icon: <BusinessIcon sx={{ fontSize: isMobile ? 30 : 40, color: '#ffffff' }} />,
+      gradient: isDark 
+        ? 'linear-gradient(135deg, #66BB6A 0%, #4CAF50 100%)'
+        : 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
       features: ['Post unlimited jobs', 'Access to candidate database', 'Recruitment analytics', 'Priority support']
     },
     {
       id: 'job_seeker',
       title: 'Job Seeker',
       description: 'Find jobs matching your skills and experience, prepare for interviews',
-      icon: <PersonIcon sx={{ fontSize: 40, color: '#ffffff' }} />,
-      gradient: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)',
+      icon: <PersonIcon sx={{ fontSize: isMobile ? 30 : 40, color: '#ffffff' }} />,
+      gradient: isDark 
+        ? 'linear-gradient(135deg, #81C784 0%, #66BB6A 100%)'
+        : 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)',
       features: ['Browse thousands of jobs', 'Smart job matching', 'Resume builder', 'Interview preparation']
     },
     {
       id: 'student',
       title: 'Student',
       description: 'Access courses, get certified, and find internships or entry-level positions',
-      icon: <SchoolIcon sx={{ fontSize: 40, color: '#ffffff' }} />,
-      gradient: 'linear-gradient(135deg, #f57c00 0%, #e65100 100%)',
+      icon: <SchoolIcon sx={{ fontSize: isMobile ? 30 : 40, color: '#ffffff' }} />,
+      gradient: isDark 
+        ? 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)'
+        : 'linear-gradient(135deg, #f57c00 0%, #e65100 100%)',
       features: ['Access to courses', 'Certification programs', 'Internship opportunities', 'Career guidance']
     }
   ];
+
+  const accountTypes = getAccountTypes();
 
   const handleContinue = () => {
     if (!selectedType) return;
@@ -95,15 +111,24 @@ const AccountTypeModal: React.FC<AccountTypeModalProps> = ({
       open={open}
       onClose={onClose}
       TransitionComponent={Transition}
-      maxWidth="md"
+      maxWidth={isMobile ? 'sm' : 'md'}
       fullWidth
+      fullScreen={isMobile}
       PaperProps={{
         sx: {
-          borderRadius: 3,
-          background: 'linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%)',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.15)',
+          borderRadius: isMobile ? 0 : 3,
+          background: isDark 
+            ? 'linear-gradient(145deg, rgba(30, 30, 30, 0.95) 0%, rgba(45, 45, 45, 0.95) 100%)'
+            : 'linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%)',
+          boxShadow: isDark
+            ? '0 20px 60px rgba(0, 0, 0, 0.5)'
+            : '0 20px 60px rgba(0, 0, 0, 0.15)',
           position: 'relative',
           overflow: 'hidden',
+          backdropFilter: 'blur(20px)',
+          border: isDark 
+            ? '1px solid rgba(102, 187, 106, 0.2)' 
+            : '1px solid rgba(255, 255, 255, 0.2)',
           '&::before': {
             content: '""',
             position: 'absolute',
@@ -111,37 +136,48 @@ const AccountTypeModal: React.FC<AccountTypeModalProps> = ({
             left: 0,
             right: 0,
             height: 4,
-            background: 'linear-gradient(90deg, #2e7d32, #1976d2, #f57c00)',
+            background: isDark 
+              ? 'linear-gradient(90deg, #66BB6A, #81C784, #4CAF50)'
+              : 'linear-gradient(90deg, #2e7d32, #1976d2, #f57c00)',
           }
         }
       }}
     >
       <DialogTitle sx={{ 
-        pb: 1,
-        pt: 3,
-        px: 3,
-        position: 'relative'
+        pb: isMobile ? 2 : 1,
+        pt: isMobile ? 4 : 3,
+        px: isMobile ? 2 : 3,
+        position: 'relative',
+        background: isDark 
+          ? 'linear-gradient(45deg, rgba(102, 187, 106, 0.1) 0%, rgba(129, 199, 132, 0.1) 100%)'
+          : 'linear-gradient(45deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
+        borderBottom: isDark 
+          ? '1px solid rgba(102, 187, 106, 0.2)' 
+          : '1px solid rgba(102, 126, 234, 0.2)',
       }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Box>
             <Typography 
-              variant="h4" 
+              variant={isMobile ? "h5" : "h4"}
               component="h2" 
               sx={{ 
                 fontWeight: 700,
-                background: 'linear-gradient(45deg, #2e7d32, #1976d2)',
+                background: isDark 
+                  ? 'linear-gradient(45deg, #66BB6A, #81C784)'
+                  : 'linear-gradient(45deg, #2e7d32, #1976d2)',
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
-                mb: 1
+                mb: 1,
+                fontSize: isMobile ? '1.5rem' : '2rem'
               }}
             >
               Choose Your Account Type
             </Typography>
             <Typography 
-              variant="body1" 
+              variant={isMobile ? "body2" : "body1"}
               color="text.secondary"
-              sx={{ fontSize: '1.1rem' }}
+              sx={{ fontSize: isMobile ? '0.9rem' : '1.1rem' }}
             >
               Select the option that best describes your professional status
             </Typography>
@@ -149,10 +185,12 @@ const AccountTypeModal: React.FC<AccountTypeModalProps> = ({
           <IconButton
             onClick={onClose}
             sx={{ 
-              color: 'text.secondary',
+              color: isDark ? '#66BB6A' : 'text.secondary',
               '&:hover': { 
-                backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                color: 'text.primary' 
+                backgroundColor: isDark 
+                  ? 'rgba(102, 187, 106, 0.1)' 
+                  : 'rgba(0, 0, 0, 0.05)',
+                color: isDark ? '#4CAF50' : 'text.primary' 
               }
             }}
           >
@@ -161,11 +199,20 @@ const AccountTypeModal: React.FC<AccountTypeModalProps> = ({
         </Box>
       </DialogTitle>
 
-      <DialogContent sx={{ px: 3, py: 2 }}>
+      <DialogContent sx={{ 
+        px: isMobile ? 2 : 3, 
+        py: isMobile ? 2 : 2,
+        overflow: 'auto',
+        maxHeight: isMobile ? 'calc(100vh - 200px)' : '70vh'
+      }}>
         <Box sx={{ 
           display: 'grid', 
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-          gap: 2,
+          gridTemplateColumns: { 
+            xs: '1fr', 
+            sm: isTablet ? '1fr' : 'repeat(2, 1fr)', 
+            md: 'repeat(3, 1fr)' 
+          },
+          gap: isMobile ? 1.5 : 2,
           mb: 3
         }}>
           {accountTypes.map((type, index) => (
@@ -185,16 +232,24 @@ const AccountTypeModal: React.FC<AccountTypeModalProps> = ({
                   borderImage: selectedType === type.id 
                     ? type.gradient + ' 1'
                     : 'none',
-                  borderRadius: '16px',
+                  borderRadius: isMobile ? '12px' : '16px',
                   background: selectedType === type.id 
-                    ? 'linear-gradient(white, white) padding-box, ' + type.gradient + ' border-box'
-                    : 'white',
+                    ? (isDark 
+                        ? 'linear-gradient(rgba(30, 30, 30, 0.95), rgba(30, 30, 30, 0.95)) padding-box, ' + type.gradient + ' border-box'
+                        : 'linear-gradient(white, white) padding-box, ' + type.gradient + ' border-box')
+                    : (isDark ? 'rgba(30, 30, 30, 0.8)' : 'white'),
                   boxShadow: selectedType === type.id
-                    ? '0 8px 30px rgba(0, 0, 0, 0.12)'
-                    : '0 2px 10px rgba(0, 0, 0, 0.08)',
+                    ? (isDark 
+                        ? '0 8px 30px rgba(102, 187, 106, 0.3)'
+                        : '0 8px 30px rgba(0, 0, 0, 0.12)')
+                    : (isDark 
+                        ? '0 2px 10px rgba(0, 0, 0, 0.3)'
+                        : '0 2px 10px rgba(0, 0, 0, 0.08)'),
                   '&:hover': {
                     transform: 'scale(1.02)',
-                    boxShadow: '0 8px 30px rgba(0, 0, 0, 0.15)',
+                    boxShadow: isDark
+                      ? '0 8px 30px rgba(102, 187, 106, 0.4)'
+                      : '0 8px 30px rgba(0, 0, 0, 0.15)',
                   }
                 }}
               >
@@ -204,12 +259,17 @@ const AccountTypeModal: React.FC<AccountTypeModalProps> = ({
                   onMouseLeave={() => setHoveredType('')}
                   sx={{ p: 0, height: '100%' }}
                 >
-                  <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    <Box sx={{ textAlign: 'center', mb: 2 }}>
+                  <CardContent sx={{ 
+                    p: isMobile ? 2 : 3, 
+                    height: '100%', 
+                    display: 'flex', 
+                    flexDirection: 'column' 
+                  }}>
+                    <Box sx={{ textAlign: 'center', mb: isMobile ? 1.5 : 2 }}>
                       <Box
                         sx={{
-                          width: 80,
-                          height: 80,
+                          width: isMobile ? 60 : 80,
+                          height: isMobile ? 60 : 80,
                           borderRadius: '50%',
                           background: type.gradient,
                           display: 'flex',
@@ -225,54 +285,57 @@ const AccountTypeModal: React.FC<AccountTypeModalProps> = ({
                         {type.icon}
                       </Box>
                       <Typography 
-                        variant="h6" 
+                        variant={isMobile ? "subtitle1" : "h6"}
                         sx={{ 
                           fontWeight: 700,
                           mb: 1,
-                          color: selectedType === type.id ? 'primary.main' : 'text.primary'
+                          color: selectedType === type.id 
+                            ? (isDark ? '#66BB6A' : 'primary.main') 
+                            : 'text.primary'
                         }}
                       >
                         {type.title}
                       </Typography>
                       <Typography 
-                        variant="body2" 
+                        variant={isMobile ? "caption" : "body2"}
                         color="text.secondary"
                         sx={{ 
                           lineHeight: 1.5,
-                          fontSize: '0.95rem',
-                          mb: 2
+                          fontSize: isMobile ? '0.8rem' : '0.95rem',
+                          mb: isMobile ? 1.5 : 2
                         }}
                       >
                         {type.description}
                       </Typography>
                     </Box>
 
-                    <Divider sx={{ my: 1.5 }} />
+                    <Divider sx={{ my: isMobile ? 1 : 1.5 }} />
 
                     <Box sx={{ mt: 'auto' }}>
                       <Typography 
-                        variant="subtitle2" 
+                        variant={isMobile ? "caption" : "subtitle2"}
                         sx={{ 
                           fontWeight: 600,
                           mb: 1,
-                          color: 'text.primary'
+                          color: 'text.primary',
+                          fontSize: isMobile ? '0.75rem' : '0.875rem'
                         }}
                       >
                         Key Features:
                       </Typography>
-                      <Stack spacing={0.5}>
+                      <Stack spacing={isMobile ? 0.3 : 0.5}>
                         {type.features.map((feature, idx) => (
                           <Typography 
                             key={idx}
                             variant="caption" 
                             sx={{ 
-                              fontSize: '0.8rem',
+                              fontSize: isMobile ? '0.7rem' : '0.8rem',
                               color: 'text.secondary',
                               display: 'flex',
                               alignItems: 'center',
                               '&::before': {
                                 content: '"✓"',
-                                color: 'success.main',
+                                color: isDark ? '#66BB6A' : 'success.main',
                                 fontWeight: 'bold',
                                 marginRight: '6px'
                               }
@@ -294,14 +357,25 @@ const AccountTypeModal: React.FC<AccountTypeModalProps> = ({
           <Grow in={!!selectedType} timeout={300}>
             <Box
               sx={{
-                p: 2,
+                p: isMobile ? 1.5 : 2,
                 borderRadius: 2,
-                background: 'linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%)',
-                border: '1px solid #c8e6c8',
+                background: isDark 
+                  ? 'linear-gradient(135deg, rgba(102, 187, 106, 0.15) 0%, rgba(129, 199, 132, 0.15) 100%)'
+                  : 'linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%)',
+                border: isDark 
+                  ? '1px solid rgba(102, 187, 106, 0.3)' 
+                  : '1px solid #c8e6c8',
                 textAlign: 'center'
               }}
             >
-              <Typography variant="body1" sx={{ fontWeight: 500, color: 'success.dark' }}>
+              <Typography 
+                variant={isMobile ? "body2" : "body1"} 
+                sx={{ 
+                  fontWeight: 500, 
+                  color: isDark ? '#66BB6A' : 'success.dark',
+                  fontSize: isMobile ? '0.85rem' : '1rem'
+                }}
+              >
                 ✓ Great choice! You'll be creating a{' '}
                 <strong>{accountTypes.find(t => t.id === selectedType)?.title}</strong> account
               </Typography>
@@ -310,14 +384,30 @@ const AccountTypeModal: React.FC<AccountTypeModalProps> = ({
         )}
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 3, pt: 1 }}>
+      <DialogActions sx={{ 
+        px: isMobile ? 2 : 3, 
+        pb: isMobile ? 3 : 3, 
+        pt: 1,
+        background: isDark 
+          ? 'linear-gradient(45deg, rgba(102, 187, 106, 0.05) 0%, rgba(129, 199, 132, 0.05) 100%)'
+          : 'linear-gradient(45deg, rgba(102, 126, 234, 0.03) 0%, rgba(118, 75, 162, 0.03) 100%)',
+        borderTop: isDark 
+          ? '1px solid rgba(102, 187, 106, 0.2)' 
+          : '1px solid rgba(102, 126, 234, 0.2)',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: isMobile ? 1 : 0
+      }}>
         <Button
           onClick={onClose}
           variant="text"
           sx={{ 
-            mr: 2,
-            color: 'text.secondary',
-            '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.05)' }
+            mr: isMobile ? 0 : 2,
+            color: isDark ? '#66BB6A' : 'text.secondary',
+            '&:hover': { 
+              backgroundColor: isDark 
+                ? 'rgba(102, 187, 106, 0.1)' 
+                : 'rgba(0, 0, 0, 0.05)' 
+            }
           }}
         >
           Cancel
@@ -329,24 +419,32 @@ const AccountTypeModal: React.FC<AccountTypeModalProps> = ({
           endIcon={<ArrowForwardIcon />}
           sx={{
             background: selectedType 
-              ? accountTypes.find(t => t.id === selectedType)?.gradient || 'linear-gradient(45deg, #2e7d32, #1976d2)'
+              ? accountTypes.find(t => t.id === selectedType)?.gradient || (isDark ? 'linear-gradient(45deg, #66BB6A, #81C784)' : 'linear-gradient(45deg, #2e7d32, #1976d2)')
               : 'rgba(0, 0, 0, 0.12)',
             color: 'white',
             fontWeight: 600,
-            px: 3,
-            py: 1,
+            px: isMobile ? 2 : 3,
+            py: isMobile ? 1.5 : 1,
             borderRadius: 2,
             textTransform: 'none',
+            fontSize: isMobile ? '0.9rem' : '1rem',
+            width: isMobile ? '100%' : 'auto',
             '&:hover': {
               background: selectedType 
-                ? accountTypes.find(t => t.id === selectedType)?.gradient || 'linear-gradient(45deg, #1b5e20, #1565c0)'
+                ? accountTypes.find(t => t.id === selectedType)?.gradient || (isDark ? 'linear-gradient(45deg, #4CAF50, #66BB6A)' : 'linear-gradient(45deg, #1b5e20, #1565c0)')
                 : 'rgba(0, 0, 0, 0.12)',
               transform: 'translateY(-1px)',
-              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)',
+              boxShadow: isDark
+                ? '0 4px 15px rgba(102, 187, 106, 0.4)'
+                : '0 4px 15px rgba(0, 0, 0, 0.2)',
             },
             '&:disabled': {
-              background: 'rgba(0, 0, 0, 0.12)',
-              color: 'rgba(0, 0, 0, 0.26)',
+              background: isDark 
+                ? 'rgba(102, 187, 106, 0.2)' 
+                : 'rgba(0, 0, 0, 0.12)',
+              color: isDark 
+                ? 'rgba(102, 187, 106, 0.5)' 
+                : 'rgba(0, 0, 0, 0.26)',
             }
           }}
         >

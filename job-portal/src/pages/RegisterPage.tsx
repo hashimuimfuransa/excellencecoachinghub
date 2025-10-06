@@ -49,7 +49,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../contexts/AuthContext';
 import { useTheme as useCustomTheme } from '../contexts/ThemeContext';
 import FloatingContact from '../components/FloatingContact';
-import PasswordValidation, { getPasswordValidationErrors } from '../components/PasswordValidation';
+import PasswordValidation, { getPasswordValidationErrors, isPasswordAcceptable } from '../components/PasswordValidation';
 import GoogleRoleSelectionModal from '../components/GoogleRoleSelectionModal';
 import MobileGoogleSignIn from '../components/MobileGoogleSignIn';
 
@@ -181,9 +181,9 @@ const RegisterPage: React.FC = () => {
       return;
     }
 
-    // Enhanced password validation
-    const passwordErrors = getPasswordValidationErrors(formData.password);
-    if (passwordErrors.length > 0) {
+    // Enhanced password validation with tolerance for medium passwords
+    if (!isPasswordAcceptable(formData.password)) {
+      const passwordErrors = getPasswordValidationErrors(formData.password);
       const errorMessage = "Please improve your password:\n\n" + 
         passwordErrors.map(err => `• ${err}`).join('\n');
       setError(errorMessage);
@@ -550,22 +550,33 @@ const RegisterPage: React.FC = () => {
                                 } : {},
                                 '&:hover': {
                                   transform: 'translateY(-4px)',
-                                  boxShadow: '0 8px 25px rgba(102, 126, 234, 0.2)',
-                                  borderColor: '#667eea',
+                                  boxShadow: mode === 'dark'
+                                    ? '0 8px 25px rgba(102, 187, 106, 0.3)'
+                                    : '0 8px 25px rgba(102, 126, 234, 0.2)',
+                                  borderColor: mode === 'dark' ? '#66BB6A' : '#667eea',
                                 }
                               }}
                               onClick={() => setFormData({...formData, role: option.value})}
                             >
                               <Avatar
                                 sx={{
-                                  bgcolor: formData.role === option.value ? '#667eea' : 'rgba(102, 126, 234, 0.1)',
+                                  bgcolor: formData.role === option.value 
+                                    ? (mode === 'dark' ? '#66BB6A' : '#667eea')
+                                    : (mode === 'dark' ? 'rgba(102, 187, 106, 0.2)' : 'rgba(102, 126, 234, 0.1)'),
                                   width: 50,
                                   height: 50,
                                   mb: 1.5,
                                   transition: 'all 0.3s ease',
+                                  boxShadow: formData.role === option.value 
+                                    ? (mode === 'dark'
+                                        ? '0 4px 20px rgba(102, 187, 106, 0.4)'
+                                        : '0 4px 20px rgba(102, 126, 234, 0.4)')
+                                    : 'none',
                                   '& .MuiSvgIcon-root': {
                                     fontSize: '1.4rem',
-                                    color: formData.role === option.value ? 'white' : '#667eea'
+                                    color: formData.role === option.value 
+                                      ? 'white' 
+                                      : (mode === 'dark' ? '#66BB6A' : '#667eea')
                                   }
                                 }}
                               >
@@ -576,7 +587,9 @@ const RegisterPage: React.FC = () => {
                                 gutterBottom 
                                 fontWeight="600"
                                 sx={{
-                                  color: formData.role === option.value ? '#667eea' : 'text.primary',
+                                  color: formData.role === option.value 
+                                    ? (mode === 'dark' ? '#66BB6A' : '#667eea')
+                                    : 'text.primary',
                                   mb: 1,
                                   fontSize: '1rem'
                                 }}
@@ -863,169 +876,192 @@ const RegisterPage: React.FC = () => {
                 <Slide direction="right" in={mounted} timeout={800}>
                   <Box>
                     <Typography 
-                      variant="h5" 
+                      variant={isMobile ? "h6" : "h5"}
                       gutterBottom 
                       sx={{ 
-                        mb: 4, 
+                        mb: isMobile ? 3 : 4, 
                         textAlign: 'center',
                         fontWeight: 700,
-                        color: 'text.primary'
+                        color: 'text.primary',
+                        fontSize: isMobile ? '1.25rem' : '1.5rem'
                       }}
                     >
                       Secure Your Account
                     </Typography>
                     
                     <Box sx={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-                      gap: { xs: 3, md: 4 }
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: isMobile ? 2 : 3
                     }}>
-                      <Box>
-                        <TextField
-                          required
-                          fullWidth
-                          name="password"
-                          label="Password"
-                          type={showPassword ? 'text' : 'password'}
-                          id="password"
-                          autoComplete="new-password"
-                          value={formData.password}
-                          onChange={handleChange}
-                          disabled={loading}
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <Lock sx={{ color: mode === 'dark' ? '#66BB6A' : '#667eea' }} />
-                              </InputAdornment>
-                            ),
-                            endAdornment: (
-                              <InputAdornment position="end">
-                                <IconButton
-                                  aria-label="toggle password visibility"
-                                  onClick={handleTogglePasswordVisibility}
-                                  edge="end"
-                                  sx={{
-                                    color: mode === 'dark' ? '#66BB6A' : '#667eea',
-                                    '&:hover': {
-                                      backgroundColor: mode === 'dark' 
-                                        ? 'rgba(102, 187, 106, 0.1)' 
-                                        : 'rgba(102, 126, 234, 0.1)',
-                                    }
-                                  }}
-                                >
-                                  {showPassword ? <VisibilityOff /> : <Visibility />}
-                                </IconButton>
-                              </InputAdornment>
-                            )
-                          }}
-                          sx={{ 
-                            '& .MuiOutlinedInput-root': {
-                              borderRadius: 3,
-                              backgroundColor: mode === 'dark' 
-                                ? 'rgba(102, 187, 106, 0.1)' 
-                                : 'rgba(102, 126, 234, 0.05)',
-                              '& fieldset': {
-                                borderColor: mode === 'dark' 
-                                  ? 'rgba(102, 187, 106, 0.3)' 
-                                  : 'rgba(102, 126, 234, 0.2)',
-                                borderWidth: 2,
-                              },
-                              '&:hover fieldset': {
-                                borderColor: mode === 'dark' 
-                                  ? 'rgba(102, 187, 106, 0.5)' 
-                                  : 'rgba(102, 126, 234, 0.4)',
-                              },
-                              '&.Mui-focused fieldset': {
-                                borderColor: mode === 'dark' ? '#66BB6A' : '#667eea',
-                              },
-                              transition: 'all 0.3s ease'
-                            },
-                            '& .MuiInputLabel-root': {
-                              color: mode === 'dark' ? '#66BB6A' : '#667eea',
-                              fontWeight: 600,
-                              '&.Mui-focused': {
+                      {/* Password Field */}
+                      <TextField
+                        required
+                        fullWidth
+                        name="password"
+                        label="Password"
+                        type={showPassword ? 'text' : 'password'}
+                        id="password"
+                        autoComplete="new-password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        disabled={loading}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Lock sx={{ 
                                 color: mode === 'dark' ? '#66BB6A' : '#667eea',
-                              }
-                            }
-                          }}
-                        />
-                      </Box>
-                      <Box>
-                        <TextField
-                          required
-                          fullWidth
-                          name="confirmPassword"
-                          label="Confirm Password"
-                          type={showConfirmPassword ? 'text' : 'password'}
-                          id="confirmPassword"
-                          value={formData.confirmPassword}
-                          onChange={handleChange}
-                          disabled={loading}
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <Lock sx={{ color: mode === 'dark' ? '#66BB6A' : '#667eea' }} />
-                              </InputAdornment>
-                            ),
-                            endAdornment: (
-                              <InputAdornment position="end">
-                                <IconButton
-                                  aria-label="toggle password visibility"
-                                  onClick={handleToggleConfirmPasswordVisibility}
-                                  edge="end"
-                                  sx={{
-                                    color: mode === 'dark' ? '#66BB6A' : '#667eea',
-                                    '&:hover': {
-                                      backgroundColor: mode === 'dark' 
-                                        ? 'rgba(102, 187, 106, 0.1)' 
-                                        : 'rgba(102, 126, 234, 0.1)',
-                                    }
-                                  }}
-                                >
-                                  {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                                </IconButton>
-                              </InputAdornment>
-                            )
-                          }}
-                          sx={{ 
-                            '& .MuiOutlinedInput-root': {
-                              borderRadius: 3,
-                              backgroundColor: mode === 'dark' 
-                                ? 'rgba(102, 187, 106, 0.1)' 
-                                : 'rgba(102, 126, 234, 0.05)',
-                              '& fieldset': {
-                                borderColor: mode === 'dark' 
-                                  ? 'rgba(102, 187, 106, 0.3)' 
-                                  : 'rgba(102, 126, 234, 0.2)',
-                                borderWidth: 2,
-                              },
-                              '&:hover fieldset': {
-                                borderColor: mode === 'dark' 
-                                  ? 'rgba(102, 187, 106, 0.5)' 
-                                  : 'rgba(102, 126, 234, 0.4)',
-                              },
-                              '&.Mui-focused fieldset': {
-                                borderColor: mode === 'dark' ? '#66BB6A' : '#667eea',
-                              },
-                              transition: 'all 0.3s ease'
+                                fontSize: isMobile ? '1.2rem' : '1.5rem'
+                              }} />
+                            </InputAdornment>
+                          ),
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                aria-label="toggle password visibility"
+                                onClick={handleTogglePasswordVisibility}
+                                edge="end"
+                                size={isMobile ? "small" : "medium"}
+                                sx={{
+                                  color: mode === 'dark' ? '#66BB6A' : '#667eea',
+                                  '&:hover': {
+                                    backgroundColor: mode === 'dark' 
+                                      ? 'rgba(102, 187, 106, 0.1)' 
+                                      : 'rgba(102, 126, 234, 0.1)',
+                                  }
+                                }}
+                              >
+                                {showPassword ? <VisibilityOff /> : <Visibility />}
+                              </IconButton>
+                            </InputAdornment>
+                          )
+                        }}
+                        sx={{ 
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: isMobile ? 2 : 3,
+                            backgroundColor: mode === 'dark' 
+                              ? 'rgba(102, 187, 106, 0.1)' 
+                              : 'rgba(102, 126, 234, 0.05)',
+                            minHeight: isMobile ? '48px' : '56px',
+                            '& fieldset': {
+                              borderColor: mode === 'dark' 
+                                ? 'rgba(102, 187, 106, 0.3)' 
+                                : 'rgba(102, 126, 234, 0.2)',
+                              borderWidth: 2,
                             },
-                            '& .MuiInputLabel-root': {
+                            '&:hover fieldset': {
+                              borderColor: mode === 'dark' 
+                                ? 'rgba(102, 187, 106, 0.5)' 
+                                : 'rgba(102, 126, 234, 0.4)',
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: mode === 'dark' ? '#66BB6A' : '#667eea',
+                            },
+                            transition: 'all 0.3s ease'
+                          },
+                          '& .MuiInputLabel-root': {
+                            color: mode === 'dark' ? '#66BB6A' : '#667eea',
+                            fontWeight: 600,
+                            fontSize: isMobile ? '0.9rem' : '1rem',
+                            '&.Mui-focused': {
                               color: mode === 'dark' ? '#66BB6A' : '#667eea',
-                              fontWeight: 600,
-                              '&.Mui-focused': {
-                                color: mode === 'dark' ? '#66BB6A' : '#667eea',
-                              }
                             }
-                          }}
-                        />
-                      </Box>
-                      <Box sx={{ gridColumn: { xs: '1', md: '1 / -1' } }}>
+                          }
+                        }}
+                      />
+
+                      {/* Confirm Password Field */}
+                      <TextField
+                        required
+                        fullWidth
+                        name="confirmPassword"
+                        label="Confirm Password"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        id="confirmPassword"
+                        value={formData.confirmPassword}
+                        onChange={handleChange}
+                        disabled={loading}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Lock sx={{ 
+                                color: mode === 'dark' ? '#66BB6A' : '#667eea',
+                                fontSize: isMobile ? '1.2rem' : '1.5rem'
+                              }} />
+                            </InputAdornment>
+                          ),
+                          endAdornment: (
+                            <InputAdornment position="end">
+                              <IconButton
+                                aria-label="toggle password visibility"
+                                onClick={handleToggleConfirmPasswordVisibility}
+                                edge="end"
+                                size={isMobile ? "small" : "medium"}
+                                sx={{
+                                  color: mode === 'dark' ? '#66BB6A' : '#667eea',
+                                  '&:hover': {
+                                    backgroundColor: mode === 'dark' 
+                                      ? 'rgba(102, 187, 106, 0.1)' 
+                                      : 'rgba(102, 126, 234, 0.1)',
+                                  }
+                                }}
+                              >
+                                {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                              </IconButton>
+                            </InputAdornment>
+                          )
+                        }}
+                        sx={{ 
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: isMobile ? 2 : 3,
+                            backgroundColor: mode === 'dark' 
+                              ? 'rgba(102, 187, 106, 0.1)' 
+                              : 'rgba(102, 126, 234, 0.05)',
+                            minHeight: isMobile ? '48px' : '56px',
+                            '& fieldset': {
+                              borderColor: mode === 'dark' 
+                                ? 'rgba(102, 187, 106, 0.3)' 
+                                : 'rgba(102, 126, 234, 0.2)',
+                              borderWidth: 2,
+                            },
+                            '&:hover fieldset': {
+                              borderColor: mode === 'dark' 
+                                ? 'rgba(102, 187, 106, 0.5)' 
+                                : 'rgba(102, 126, 234, 0.4)',
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: mode === 'dark' ? '#66BB6A' : '#667eea',
+                            },
+                            transition: 'all 0.3s ease'
+                          },
+                          '& .MuiInputLabel-root': {
+                            color: mode === 'dark' ? '#66BB6A' : '#667eea',
+                            fontWeight: 600,
+                            fontSize: isMobile ? '0.9rem' : '1rem',
+                            '&.Mui-focused': {
+                              color: mode === 'dark' ? '#66BB6A' : '#667eea',
+                            }
+                          }
+                        }}
+                      />
+
+                      {/* Password Validation */}
+                      <Box sx={{ mt: isMobile ? 1 : 2 }}>
                         <PasswordValidation 
                           password={formData.password}
                           show={formData.password.length > 0}
                         />
                         {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                          <Alert severity="error" sx={{ mt: 1 }}>
+                          <Alert 
+                            severity="error" 
+                            sx={{ 
+                              mt: 1,
+                              fontSize: isMobile ? '0.8rem' : '0.875rem',
+                              '& .MuiAlert-message': {
+                                fontSize: isMobile ? '0.8rem' : '0.875rem'
+                              }
+                            }}
+                          >
                             Passwords do not match
                           </Alert>
                         )}
@@ -1275,7 +1311,13 @@ const RegisterPage: React.FC = () => {
               </Box>
             
             {/* Mobile Navigation Buttons */}
-            <Box sx={{ display: { xs: 'flex', md: 'none' }, justifyContent: 'space-between', mt: 5 }}>
+            <Box sx={{ 
+              display: { xs: 'flex', md: 'none' }, 
+              flexDirection: 'column',
+              gap: 2,
+              mt: 4,
+              px: 2
+            }}>
                 <Button
                   variant="outlined"
                   onClick={handleBack}
@@ -1286,15 +1328,18 @@ const RegisterPage: React.FC = () => {
                     borderWidth: 2,
                     px: 4,
                     py: 1.5,
-                    borderColor: '#667eea',
-                    color: '#667eea',
+                    borderColor: mode === 'dark' ? '#66BB6A' : '#667eea',
+                    color: mode === 'dark' ? '#66BB6A' : '#667eea',
                     fontWeight: 600,
+                    fontSize: '1rem',
                     '&:hover': {
                       borderWidth: 2,
-                      borderColor: '#5a6fd8',
-                      color: '#5a6fd8',
+                      borderColor: mode === 'dark' ? '#4CAF50' : '#5a6fd8',
+                      color: mode === 'dark' ? '#4CAF50' : '#5a6fd8',
                       transform: 'translateY(-2px)',
-                      boxShadow: '0 8px 25px rgba(102, 126, 234, 0.2)'
+                      boxShadow: mode === 'dark'
+                        ? '0 8px 25px rgba(102, 187, 106, 0.3)'
+                        : '0 8px 25px rgba(102, 126, 234, 0.2)'
                     },
                     '&:disabled': {
                       borderColor: 'rgba(0, 0, 0, 0.12)',
@@ -1318,16 +1363,27 @@ const RegisterPage: React.FC = () => {
                       borderRadius: 3,
                       fontSize: '1rem',
                       fontWeight: 'bold',
-                      background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-                      boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)',
+                      background: mode === 'dark'
+                        ? 'linear-gradient(45deg, #66BB6A 30%, #81C784 90%)'
+                        : 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                      boxShadow: mode === 'dark'
+                        ? '0 8px 25px rgba(102, 187, 106, 0.4)'
+                        : '0 8px 25px rgba(102, 126, 234, 0.4)',
                       textTransform: 'none',
+                      color: mode === 'dark' ? '#000000' : '#ffffff',
                       '&:hover': {
-                        background: 'linear-gradient(45deg, #5a6fd8 30%, #694a9e 90%)',
+                        background: mode === 'dark'
+                          ? 'linear-gradient(45deg, #4CAF50 30%, #66BB6A 90%)'
+                          : 'linear-gradient(45deg, #5a6fd8 30%, #694a9e 90%)',
                         transform: 'translateY(-3px)',
-                        boxShadow: '0 12px 35px rgba(102, 126, 234, 0.5)',
+                        boxShadow: mode === 'dark'
+                          ? '0 12px 35px rgba(102, 187, 106, 0.5)'
+                          : '0 12px 35px rgba(102, 126, 234, 0.5)',
                       },
                       '&:disabled': {
-                        background: 'linear-gradient(45deg, #ccc 30%, #999 90%)',
+                        background: mode === 'dark'
+                          ? 'linear-gradient(45deg, #555555 30%, #333333 90%)'
+                          : 'linear-gradient(45deg, #ccc 30%, #999 90%)',
                         transform: 'none',
                         boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
                       },
@@ -1366,12 +1422,21 @@ const RegisterPage: React.FC = () => {
                       fontSize: '1rem',
                       fontWeight: 'bold',
                       textTransform: 'none',
-                      background: 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
-                      boxShadow: '0 8px 25px rgba(102, 126, 234, 0.4)',
+                      background: mode === 'dark'
+                        ? 'linear-gradient(45deg, #66BB6A 30%, #81C784 90%)'
+                        : 'linear-gradient(45deg, #667eea 30%, #764ba2 90%)',
+                      boxShadow: mode === 'dark'
+                        ? '0 8px 25px rgba(102, 187, 106, 0.4)'
+                        : '0 8px 25px rgba(102, 126, 234, 0.4)',
+                      color: mode === 'dark' ? '#000000' : '#ffffff',
                       '&:hover': {
-                        background: 'linear-gradient(45deg, #5a6fd8 30%, #694a9e 90%)',
+                        background: mode === 'dark'
+                          ? 'linear-gradient(45deg, #4CAF50 30%, #66BB6A 90%)'
+                          : 'linear-gradient(45deg, #5a6fd8 30%, #694a9e 90%)',
                         transform: 'translateY(-3px)',
-                        boxShadow: '0 12px 35px rgba(102, 126, 234, 0.5)',
+                        boxShadow: mode === 'dark'
+                          ? '0 12px 35px rgba(102, 187, 106, 0.5)'
+                          : '0 12px 35px rgba(102, 126, 234, 0.5)',
                       },
                       transition: 'all 0.3s ease'
                     }}

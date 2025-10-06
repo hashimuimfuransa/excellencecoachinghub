@@ -10,8 +10,18 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, roles }) => {
-  const { isAuthenticated, isLoading, user, hasAnyRole } = useAuth();
   const location = useLocation();
+  
+  // Safe useAuth hook with error handling
+  let authContext = null;
+  try {
+    authContext = useAuth();
+  } catch (error) {
+    console.warn('ProtectedRoute: useAuth not available, redirecting to login');
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  const { isAuthenticated, isLoading, user, hasAnyRole } = authContext;
 
   if (isLoading) {
     return (

@@ -103,8 +103,11 @@ import PostCard from '../components/social/PostCard';
 import MobileCreatePost from '../components/social/MobileCreatePost';
 import CreateStory from '../components/social/CreateStory';
 import StoryViewer from '../components/social/StoryViewer';
+import ProfileCompletionPopup from '../components/ProfileCompletionPopup';
+import CVBuilderPopup from '../components/CVBuilderPopup';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'react-toastify';
+import { shouldShowProfileCompletionPopup, shouldShowCVBuilderPopup, markProfileCompletionDismissed, markCVBuilderDismissed } from '../utils/profileCompletionUtils';
 
 // Styled components for modern design
 const StyledSearchBar = styled(Paper)(({ theme }) => ({
@@ -225,6 +228,8 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
   const [suggestedConnections, setSuggestedConnections] = useState<any[]>([]);
   const [connectionsLoading, setConnectionsLoading] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [showProfileCompletionPopup, setShowProfileCompletionPopup] = useState(false);
+  const [showCVBuilderPopup, setShowCVBuilderPopup] = useState(false);
 
   // Load posts and stories on component mount
   useEffect(() => {
@@ -343,7 +348,51 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
     loadData();
   }, []);
 
+  // Check for profile completion popup on mount
+  useEffect(() => {
+    if (user) {
+      const shouldShowProfile = shouldShowProfileCompletionPopup(user);
+      const shouldShowCV = shouldShowCVBuilderPopup(user);
+      
+      // Show profile completion popup first if needed
+      if (shouldShowProfile) {
+        setShowProfileCompletionPopup(true);
+      } else if (shouldShowCV) {
+        setShowCVBuilderPopup(true);
+      }
+    }
+  }, [user]);
+
   // Handler functions
+  const handleProfileCompletionClose = () => {
+    setShowProfileCompletionPopup(false);
+    if (user) {
+      markProfileCompletionDismissed(user._id);
+    }
+  };
+
+  const handleProfileCompletionAction = () => {
+    setShowProfileCompletionPopup(false);
+    navigate('/app/profile/edit');
+  };
+
+  const handleCVBuilderClose = () => {
+    setShowCVBuilderPopup(false);
+    if (user) {
+      markCVBuilderDismissed(user._id);
+    }
+  };
+
+  const handleCVBuilderAction = () => {
+    setShowCVBuilderPopup(false);
+    navigate('/app/cv-builder');
+  };
+
+  const handleCVBuilderContinueProfile = () => {
+    setShowCVBuilderPopup(false);
+    navigate('/app/profile/edit');
+  };
+
   const handleConnect = async (userId: string) => {
     try {
       console.log('🔗 Sending connection request to:', userId);
@@ -2730,6 +2779,27 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Profile Completion Popup */}
+      {user && (
+        <ProfileCompletionPopup
+          open={showProfileCompletionPopup}
+          onClose={handleProfileCompletionClose}
+          onCompleteProfile={handleProfileCompletionAction}
+          user={user}
+        />
+      )}
+
+      {/* CV Builder Popup */}
+      {user && (
+        <CVBuilderPopup
+          open={showCVBuilderPopup}
+          onClose={handleCVBuilderClose}
+          onBuildCV={handleCVBuilderAction}
+          onContinueProfile={handleCVBuilderContinueProfile}
+          user={user}
+        />
+      )}
     </Box>
   );
 };

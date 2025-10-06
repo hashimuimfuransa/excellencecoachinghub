@@ -43,8 +43,10 @@ api.interceptors.request.use(
 // Rate limiting state management - per request instead of global
 const requestRetryCounts = new Map<string, number>();
 const pendingRequests = new Map<string, Promise<any>>();
-const MAX_RETRY_ATTEMPTS = 3;
-const RATE_LIMIT_RETRY_DELAYS = [1000, 3000, 5000]; // Progressive delays in ms
+const MAX_RETRY_ATTEMPTS = 5; // Increased retry attempts
+const RATE_LIMIT_RETRY_DELAYS = [2000, 5000, 10000, 20000, 30000]; // Exponential backoff delays in ms
+const REQUEST_QUEUE = new Map<string, Array<() => Promise<any>>>();
+const isProcessingQueue = new Set<string>();
 
 // Helper function to get request key
 const getRequestKey = (config: any): string => {
@@ -114,23 +116,28 @@ api.interceptors.response.use(
       pendingRequests.delete(error.config._requestKey);
     }
     
-    // Handle 429 Rate Limiting errors
+    // Handle 429 Rate Limiting errors with improved exponential backoff
     if (error.response?.status === 429) {
       const currentRetryCount = getRetryCount(error.config);
       const nextAttempt = currentRetryCount + 1;
+      const retryAfter = error.response?.headers?.['retry-after'] || 'unknown';
       
       console.warn('🚨 Rate limit exceeded (429). Attempting retry...', {
         attempt: nextAttempt,
         maxAttempts: MAX_RETRY_ATTEMPTS,
-        retryAfter: error.response?.headers?.['retry-after'] || 'unknown',
+        retryAfter,
         requestUrl: error.config?.url
       });
       
       if (currentRetryCount < MAX_RETRY_ATTEMPTS) {
-        const delay = RATE_LIMIT_RETRY_DELAYS[currentRetryCount] || 5000;
+        // Use exponential backoff with jitter to prevent thundering herd
+        const baseDelay = RATE_LIMIT_RETRY_DELAYS[currentRetryCount] || 30000;
+        const jitter = Math.random() * 1000; // Add random jitter up to 1 second
+        const delay = baseDelay + jitter;
+        
         incrementRetryCount(error.config);
         
-        console.log(`⏳ Waiting ${delay}ms before retry attempt ${nextAttempt}/${MAX_RETRY_ATTEMPTS} for ${error.config?.url}`);
+        console.log(`⏳ Waiting ${Math.round(delay)}ms before retry attempt ${nextAttempt}/${MAX_RETRY_ATTEMPTS} for ${error.config?.url}`);
         
         // Return a promise that will retry after delay
         return new Promise((resolve, reject) => {
@@ -148,7 +155,10 @@ api.interceptors.response.use(
         });
         resetRetryCount(error.config); // Reset for future requests
         
-        // Create a user-friendly error message
+        // Create a user-friendly error message with specific guidance
+        const retryAfterSeconds = parseInt(retryAfter) || 60;
+        const retryAfterMinutes = Math.ceil(retryAfterSeconds / 60);
+        
         const customError = {
           ...error,
           response: {
@@ -156,8 +166,10 @@ api.interceptors.response.use(
             data: {
               success: false,
               error: 'Rate limit exceeded',
-              message: 'Too many requests. Please wait a moment and try again.',
-              retryAfter: error.response?.headers?.['retry-after'] || 60
+              message: `Too many requests. Please wait ${retryAfterMinutes} minute${retryAfterMinutes > 1 ? 's' : ''} and try again. If the problem persists, check your network connection.`,
+              retryAfter: retryAfterSeconds,
+              userFriendly: true,
+              action: 'Please refresh the page or try again later'
             }
           }
         };
@@ -275,6 +287,35 @@ export const apiGet = async <T>(url: string, params?: any, signal?: AbortSignal)
     return response.data;
   } catch (error: any) {
     console.error(`API GET Error for ${url}:`, error);
+    
+    // Enhanced error handling for user-friendly messages
+    if (error.response?.data?.userFriendly) {
+      throw new Error(error.response.data.message);
+    }
+    
+    // Handle network errors
+    if (error.code === 'NETWORK_ERROR' || !error.response) {
+      throw new Error('Network connection failed. Please check your internet connection and try again.');
+    }
+    
+    // Handle rate limiting errors
+    if (error.response?.status === 429) {
+      const retryAfter = error.response?.data?.retryAfter || 60;
+      const minutes = Math.ceil(retryAfter / 60);
+      throw new Error(`Too many requests. Please wait ${minutes} minute${minutes > 1 ? 's' : ''} and try again.`);
+    }
+    
+    // Handle server errors
+    if (error.response?.status >= 500) {
+      throw new Error('Server is temporarily unavailable. Please try again in a few moments.');
+    }
+    
+    // Handle client errors
+    if (error.response?.status >= 400 && error.response?.status < 500) {
+      const message = error.response?.data?.message || error.response?.data?.error || 'Request failed';
+      throw new Error(message);
+    }
+    
     throw error;
   }
 };

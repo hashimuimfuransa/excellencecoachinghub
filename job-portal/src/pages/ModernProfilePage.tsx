@@ -182,12 +182,14 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme as useCustomTheme } from '../contexts/ThemeContext';
 import { userService } from '../services/userService';
-import { socialNetworkService } from '../services/socialNetworkService';
 import { enhancedStoryService } from '../services/enhancedStoryService';
+import { socialNetworkService } from '../services/socialNetworkService';
 import type { User } from '../types/user';
 import { useNavigate, useParams } from 'react-router-dom';
-import { validateProfileSimple } from '../utils/simpleProfileValidation';
+import { checkProfileCompletion, ProfileCompletionCheck } from '../utils/profileCompletionUtils';
 import CreateStory from '../components/social/CreateStory';
+import CVBuilderPopup from '../components/CVBuilderPopup';
+import { shouldShowCVBuilderPopup, markCVBuilderDismissed } from '../utils/profileCompletionUtils';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -222,53 +224,46 @@ const ModernProfilePage: React.FC = () => {
   const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'));
   const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
   
-  // State management
-  const [loading, setLoading] = useState(false);
-  const [profile, setProfile] = useState<User | null>(null);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [profileValidation, setProfileValidation] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState(0);
-  const [editMode, setEditMode] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  // Check if viewing own profile and determine target user ID
+  const isOwnProfile = !userId || userId === user?._id;
+  const targetUserId = userId || user?._id;
   
-  // Social features state
+  // State for profile data
+  const [profile, setProfile] = useState<User | null>(null);
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [connections, setConnections] = useState<any[]>([]);
   const [suggestedConnections, setSuggestedConnections] = useState<any[]>([]);
   const [userStories, setUserStories] = useState<any[]>([]);
-  const [postsLoading, setPostsLoading] = useState(false);
-  const [connectionsLoading, setConnectionsLoading] = useState(false);
-  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
-  const [storiesLoading, setStoriesLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  
+  // Loading states for different sections (for compatibility with existing code)
+  const postsLoading = loading;
+  const connectionsLoading = loading;
+  const suggestionsLoading = loading;
+  const storiesLoading = loading;
+  
+  // Additional state management
+  const [successMessage, setSuccessMessage] = useState('');
+  const [profileValidation, setProfileValidation] = useState<ProfileCompletionCheck | null>(null);
+  const [activeTab, setActiveTab] = useState(0);
+  const [editMode, setEditMode] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [showCreateStory, setShowCreateStory] = useState(false);
   
   // Dialog states
   const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null);
   const [connectionMenuAnchor, setConnectionMenuAnchor] = useState<null | HTMLElement>(null);
   const [shareMenuAnchor, setShareMenuAnchor] = useState<null | HTMLElement>(null);
+  const [showCVBuilderPopup, setShowCVBuilderPopup] = useState(false);
   
-  // Check if viewing own profile
-  const isOwnProfile = !userId || userId === user?._id;
-  const targetUserId = userId || user?._id;
-
+  // Load profile data using the same method as Profile Edit Page
   useEffect(() => {
     if (targetUserId) {
       loadUserProfile();
-      loadUserPosts();
-      loadConnections();
-      loadSuggestedConnections();
-      loadUserStories();
     }
   }, [targetUserId]);
-
-  useEffect(() => {
-    if (profile) {
-      const validation = validateProfileSimple(profile);
-      setProfileValidation(validation);
-    }
-  }, [profile]);
 
   const loadUserProfile = async () => {
     if (!targetUserId) return;
@@ -276,7 +271,21 @@ const ModernProfilePage: React.FC = () => {
     setLoading(true);
     try {
       const userProfile = await userService.getUserProfile(targetUserId);
+      console.log('🔍 Modern Profile Page - Profile data received:', userProfile);
+      
+      // Debug individual fields
+      const requiredFields = ['firstName', 'lastName', 'email', 'phone', 'location', 'jobTitle', 'company', 'bio', 'skills', 'experience', 'education'];
+      console.log('🔍 Modern Profile Page - Field analysis:');
+      requiredFields.forEach(field => {
+        const value = userProfile[field as keyof User];
+        const hasValue = value && (!Array.isArray(value) || value.length > 0) && (typeof value !== 'string' || value.trim() !== '');
+        console.log(`  ${field}: ${hasValue ? '✅' : '❌'} (${JSON.stringify(value)})`);
+      });
+      
+      const validation = checkProfileCompletion(userProfile);
+      console.log('📊 Modern Profile Page - Validation result:', validation);
       setProfile(userProfile);
+      setProfileValidation(validation);
     } catch (error) {
       console.error('Error loading profile:', error);
       setErrorMessage('Failed to load profile data');
@@ -285,55 +294,21 @@ const ModernProfilePage: React.FC = () => {
     }
   };
 
-  const loadUserPosts = async () => {
-    if (!targetUserId) return;
-    
-    setPostsLoading(true);
-    try {
-      const posts = await socialNetworkService.getUserPosts(targetUserId);
-      const safePosts = Array.isArray(posts) ? posts.map(post => ({
-        ...post,
-        likes: post.likes || [],
-        likesCount: post.likesCount || 0,
-        commentsCount: post.commentsCount || 0,
-        sharesCount: post.sharesCount || 0,
-        author: post.author || {},
-        visibility: post.visibility || 'private'
-      })) : [];
-      setUserPosts(safePosts);
-    } catch (error) {
-      console.error('Error loading posts:', error);
-      setUserPosts([]);
-    } finally {
-      setPostsLoading(false);
+  // Check for CV builder popup when profile is loaded
+  useEffect(() => {
+    if (profile && isOwnProfile) {
+      // Show CV builder popup if user doesn't have a CV and profile is reasonably complete
+      const shouldShowCV = shouldShowCVBuilderPopup(profile);
+      if (shouldShowCV) {
+        // Delay the popup slightly to let the page load
+        const timer = setTimeout(() => {
+          setShowCVBuilderPopup(true);
+        }, 1500);
+        return () => clearTimeout(timer);
+      }
     }
-  };
+  }, [profile, isOwnProfile]);
 
-  const loadConnections = async () => {
-    setConnectionsLoading(true);
-    try {
-      const userConnections = await socialNetworkService.getConnections();
-      setConnections(Array.isArray(userConnections) ? userConnections : []);
-    } catch (error) {
-      console.error('Error loading connections:', error);
-      setConnections([]);
-    } finally {
-      setConnectionsLoading(false);
-    }
-  };
-
-  const loadSuggestedConnections = async () => {
-    setSuggestionsLoading(true);
-    try {
-      const suggestions = await socialNetworkService.getSuggestedConnections();
-      setSuggestedConnections(Array.isArray(suggestions) ? suggestions : []);
-    } catch (error) {
-      console.error('Error loading suggested connections:', error);
-      setSuggestedConnections([]);
-    } finally {
-      setSuggestionsLoading(false);
-    }
-  };
 
   // Profile sharing functionality
   const handleShareProfile = async () => {
@@ -482,6 +457,24 @@ const ModernProfilePage: React.FC = () => {
     setConnectionMenuAnchor(null);
   };
 
+  // CV Builder popup handlers
+  const handleCVBuilderClose = () => {
+    setShowCVBuilderPopup(false);
+    if (profile) {
+      markCVBuilderDismissed(profile._id);
+    }
+  };
+
+  const handleCVBuilderAction = () => {
+    setShowCVBuilderPopup(false);
+    navigate('/app/cv-builder');
+  };
+
+  const handleCVBuilderContinueProfile = () => {
+    setShowCVBuilderPopup(false);
+    navigate('/app/profile/edit');
+  };
+
   const getCompletionIcon = (percentage: number) => {
     if (percentage >= 80) return <CheckCircle color="success" />;
     if (percentage >= 50) return <TrendingUp color="info" />;
@@ -608,30 +601,57 @@ const ModernProfilePage: React.FC = () => {
               </Typography>
             </Box>
             
-            {/* Theme Switcher Button */}
-            <Tooltip title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}>
-              <IconButton
-                onClick={toggleTheme}
-                sx={{
-                  borderRadius: 2,
-                  bgcolor: alpha(theme.palette.background.paper, 0.8),
-                  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                  backdropFilter: 'blur(8px)',
-                  '&:hover': {
-                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                    transform: 'scale(1.05)',
-                    boxShadow: `0 4px 15px ${alpha(theme.palette.primary.main, 0.15)}`,
-                  },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                }}
-              >
-                {mode === 'dark' ? (
-                  <LightMode sx={{ color: theme.palette.warning.main }} />
-                ) : (
-                  <DarkMode sx={{ color: theme.palette.primary.main }} />
-                )}
-              </IconButton>
-            </Tooltip>
+            {/* Action Buttons */}
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              {/* Refresh Button */}
+              <Tooltip title="Refresh data">
+                <IconButton
+                  onClick={() => {
+                    // Use the loadUserProfile function
+                    loadUserProfile();
+                  }}
+                  sx={{
+                    borderRadius: 2,
+                    bgcolor: alpha(theme.palette.background.paper, 0.8),
+                    border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                    backdropFilter: 'blur(8px)',
+                    '&:hover': {
+                      bgcolor: alpha(theme.palette.success.main, 0.1),
+                      transform: 'scale(1.05)',
+                      boxShadow: `0 4px 15px ${alpha(theme.palette.success.main, 0.15)}`,
+                    },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  }}
+                >
+                  <Refresh sx={{ color: theme.palette.success.main }} />
+                </IconButton>
+              </Tooltip>
+
+              {/* Theme Switcher Button */}
+              <Tooltip title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}>
+                <IconButton
+                  onClick={toggleTheme}
+                  sx={{
+                    borderRadius: 2,
+                    bgcolor: alpha(theme.palette.background.paper, 0.8),
+                    border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                    backdropFilter: 'blur(8px)',
+                    '&:hover': {
+                      bgcolor: alpha(theme.palette.primary.main, 0.1),
+                      transform: 'scale(1.05)',
+                      boxShadow: `0 4px 15px ${alpha(theme.palette.primary.main, 0.15)}`,
+                    },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  }}
+                >
+                  {mode === 'dark' ? (
+                    <LightMode sx={{ color: theme.palette.warning.main }} />
+                  ) : (
+                    <DarkMode sx={{ color: theme.palette.primary.main }} />
+                  )}
+                </IconButton>
+              </Tooltip>
+            </Box>
           </Box>
         </Box>
 
@@ -655,9 +675,36 @@ const ModernProfilePage: React.FC = () => {
               mb: { xs: 2, sm: 3 },
               mx: { xs: 0, sm: 0 }
             }} 
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => {
+                  // Use the loadUserProfile function
+                  loadUserProfile();
+                }}
+                sx={{ textTransform: 'none' }}
+              >
+                Retry
+              </Button>
+            }
             onClose={() => setErrorMessage('')}
           >
-            {errorMessage}
+            <Box>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                {errorMessage}
+              </Typography>
+              {errorMessage.includes('Too many requests') && (
+                <Typography variant="caption" color="text.secondary">
+                  💡 Tip: Try refreshing the page or wait a few minutes before retrying
+                </Typography>
+              )}
+              {errorMessage.includes('Network connection failed') && (
+                <Typography variant="caption" color="text.secondary">
+                  💡 Tip: Check your internet connection and try again
+                </Typography>
+              )}
+            </Box>
           </Alert>
         )}
 
@@ -2076,6 +2123,17 @@ const ModernProfilePage: React.FC = () => {
           setShowCreateStory(false);
         }}
       />
+
+      {/* CV Builder Popup */}
+      {profile && (
+        <CVBuilderPopup
+          open={showCVBuilderPopup}
+          onClose={handleCVBuilderClose}
+          onBuildCV={handleCVBuilderAction}
+          onContinueProfile={handleCVBuilderContinueProfile}
+          user={profile}
+        />
+      )}
 
       {/* Share Profile Menu */}
       <Menu

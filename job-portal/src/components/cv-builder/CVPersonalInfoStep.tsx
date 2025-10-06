@@ -77,9 +77,15 @@ const CVPersonalInfoStep: React.FC<CVPersonalInfoStepProps> = ({
           <Card 
             elevation={0}
             sx={{ 
-              border: `1px solid ${theme.palette.divider}`,
+              border: theme.palette.mode === 'dark'
+                ? '1px solid rgba(255, 255, 255, 0.08)'
+                : `1px solid ${theme.palette.divider}`,
               borderRadius: 2,
-              height: 'fit-content'
+              height: 'fit-content',
+              bgcolor: theme.palette.mode === 'dark'
+                ? 'rgba(30, 30, 30, 0.8)'
+                : 'background.paper',
+              backdropFilter: 'blur(20px)',
             }}
           >
             <CardContent sx={{ p: { xs: 2, md: 3 } }}>
@@ -223,12 +229,18 @@ const CVPersonalInfoStep: React.FC<CVPersonalInfoStepProps> = ({
           <Card 
             elevation={0}
             sx={{ 
-              border: `1px solid ${theme.palette.divider}`,
+              border: theme.palette.mode === 'dark'
+                ? '1px solid rgba(255, 255, 255, 0.08)'
+                : `1px solid ${theme.palette.divider}`,
               borderRadius: 2,
               height: 'fit-content',
               minHeight: { xs: 'auto', md: '320px' },
               display: 'flex',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              bgcolor: theme.palette.mode === 'dark'
+                ? 'rgba(30, 30, 30, 0.8)'
+                : 'background.paper',
+              backdropFilter: 'blur(20px)',
             }}
           >
             <CardContent sx={{ 
@@ -360,9 +372,14 @@ const CVPersonalInfoStep: React.FC<CVPersonalInfoStepProps> = ({
               elevation={0}
               sx={{ 
                 mt: 2, 
-                bgcolor: theme.palette.grey[50],
-                border: `1px solid ${theme.palette.divider}`,
-                borderRadius: 2
+                bgcolor: theme.palette.mode === 'dark'
+                  ? 'rgba(30, 30, 30, 0.8)'
+                  : theme.palette.grey[50],
+                border: theme.palette.mode === 'dark'
+                  ? '1px solid rgba(255, 255, 255, 0.08)'
+                  : `1px solid ${theme.palette.divider}`,
+                borderRadius: 2,
+                backdropFilter: 'blur(20px)',
               }}
             >
               <CardContent sx={{ p: 2 }}>

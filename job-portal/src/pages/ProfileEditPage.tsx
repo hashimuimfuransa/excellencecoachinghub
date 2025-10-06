@@ -5,7 +5,8 @@ import {
   Box,
   Alert,
   LinearProgress,
-  IconButton
+  IconButton,
+  Button
 } from '@mui/material';
 import {
   Edit,
@@ -16,15 +17,18 @@ import { userService } from '../services/userService';
 import type { User } from '../types/user';
 import { useNavigate, useParams } from 'react-router-dom';
 import ComprehensiveProfileForm from '../components/ComprehensiveProfileForm';
+import CVBuilderPopup from '../components/CVBuilderPopup';
+import { shouldShowCVBuilderPopup, markCVBuilderDismissed, checkProfileCompletion } from '../utils/profileCompletionUtils';
 
 const ProfileEditPage: React.FC = () => {
   const { user, updateUser, setUserData } = useAuth();
   const navigate = useNavigate();
   const { userId } = useParams();
   const [loading, setLoading] = useState(false);
-  const [profile, setProfile] = useState<User | null>(user);
+  const [profile, setProfile] = useState<User | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [showCVBuilderPopup, setShowCVBuilderPopup] = useState(false);
 
   // Check if viewing own profile
   const isOwnProfile = !userId || userId === user?._id;
@@ -36,12 +40,41 @@ const ProfileEditPage: React.FC = () => {
     }
   }, [targetUserId]);
 
+  // Check for CV builder popup when profile is loaded
+  useEffect(() => {
+    if (profile && isOwnProfile) {
+      // Show CV builder popup if user doesn't have a CV and profile is reasonably complete
+      const shouldShowCV = shouldShowCVBuilderPopup(profile);
+      
+      if (shouldShowCV) {
+        // Delay the popup slightly to let the page load
+        const timer = setTimeout(() => {
+          setShowCVBuilderPopup(true);
+        }, 1000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [profile, isOwnProfile]);
+
   const loadUserProfile = async () => {
     if (!targetUserId) return;
     
     setLoading(true);
     try {
       const userProfile = await userService.getUserProfile(targetUserId);
+      console.log('🔍 Profile Edit Page - Profile data received:', userProfile);
+      
+      // Debug individual fields
+      const requiredFields = ['firstName', 'lastName', 'email', 'phone', 'location', 'jobTitle', 'company', 'bio', 'skills', 'experience', 'education'];
+      console.log('🔍 Profile Edit Page - Field analysis:');
+      requiredFields.forEach(field => {
+        const value = userProfile[field as keyof User];
+        const hasValue = value && (!Array.isArray(value) || value.length > 0) && (typeof value !== 'string' || value.trim() !== '');
+        console.log(`  ${field}: ${hasValue ? '✅' : '❌'} (${JSON.stringify(value)})`);
+      });
+      
+      const validation = checkProfileCompletion(userProfile);
+      console.log('📊 Profile Edit Page - Validation result:', validation);
       setProfile(userProfile);
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -53,6 +86,24 @@ const ProfileEditPage: React.FC = () => {
 
   const handleBack = () => {
     navigate('/app/profile');
+  };
+
+  // CV Builder popup handlers
+  const handleCVBuilderClose = () => {
+    setShowCVBuilderPopup(false);
+    if (profile) {
+      markCVBuilderDismissed(profile._id);
+    }
+  };
+
+  const handleCVBuilderAction = () => {
+    setShowCVBuilderPopup(false);
+    navigate('/app/cv-builder');
+  };
+
+  const handleCVBuilderContinueProfile = () => {
+    setShowCVBuilderPopup(false);
+    // Stay on the profile page to continue completing it
   };
 
   const handleProfileSave = async (updatedData: Partial<User>) => {
@@ -141,6 +192,18 @@ const ProfileEditPage: React.FC = () => {
         onSave={handleProfileSave}
         loading={loading}
       />
+
+
+      {/* CV Builder Popup */}
+      {profile && (
+        <CVBuilderPopup
+          open={showCVBuilderPopup}
+          onClose={handleCVBuilderClose}
+          onBuildCV={handleCVBuilderAction}
+          onContinueProfile={handleCVBuilderContinueProfile}
+          user={profile}
+        />
+      )}
     </Container>
   );
 };

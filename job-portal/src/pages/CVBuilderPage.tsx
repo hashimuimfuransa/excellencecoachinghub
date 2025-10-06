@@ -350,7 +350,10 @@ const CVBuilderPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
+    <Box sx={{ 
+      minHeight: '100vh', 
+      bgcolor: theme.palette.mode === 'dark' ? 'background.default' : 'grey.50' 
+    }}>
       {/* Loading Backdrop */}
       <Backdrop open={loading} sx={{ zIndex: theme.zIndex.drawer + 1 }}>
         <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
@@ -362,7 +365,19 @@ const CVBuilderPage: React.FC = () => {
       </Backdrop>
 
       {/* Header */}
-      <AppBar position="sticky" elevation={0}>
+      <AppBar 
+        position="sticky" 
+        elevation={0}
+        sx={{
+          bgcolor: theme.palette.mode === 'dark' 
+            ? 'rgba(18, 18, 18, 0.95)' 
+            : 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: theme.palette.mode === 'dark' 
+            ? '1px solid rgba(255, 255, 255, 0.08)' 
+            : '1px solid rgba(0, 0, 0, 0.08)',
+        }}
+      >
         <Toolbar>
           <IconButton
             edge="start"
@@ -404,7 +419,21 @@ const CVBuilderPage: React.FC = () => {
           {/* Stepper Sidebar - Hidden on mobile */}
           {!isMobile && (
             <Grid item xs={12} md={3}>
-              <Paper elevation={2} sx={{ p: 3, position: 'sticky', top: 100 }}>
+              <Paper 
+                elevation={2} 
+                sx={{ 
+                  p: 3, 
+                  position: 'sticky', 
+                  top: 100,
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(30, 30, 30, 0.8)' 
+                    : 'background.paper',
+                  border: theme.palette.mode === 'dark' 
+                    ? '1px solid rgba(255, 255, 255, 0.08)' 
+                    : '1px solid rgba(0, 0, 0, 0.08)',
+                  backdropFilter: 'blur(20px)',
+                }}
+              >
                 <Typography variant="h6" gutterBottom>
                   Steps
                 </Typography>
@@ -426,12 +455,21 @@ const CVBuilderPage: React.FC = () => {
                               width: 24,
                               height: 24,
                               borderRadius: '50%',
-                              bgcolor: completed ? 'success.main' : active ? 'primary.main' : 'grey.300',
+                              bgcolor: completed 
+                                ? 'success.main' 
+                                : active 
+                                  ? 'primary.main' 
+                                  : theme.palette.mode === 'dark' 
+                                    ? 'grey.600' 
+                                    : 'grey.300',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               color: 'white',
                               fontSize: '0.75rem',
+                              border: theme.palette.mode === 'dark' && !completed && !active
+                                ? '1px solid rgba(255, 255, 255, 0.2)'
+                                : 'none',
                             }}
                           >
                             {completed ? <CheckCircle sx={{ fontSize: 16 }} /> : index + 1}
@@ -452,7 +490,20 @@ const CVBuilderPage: React.FC = () => {
 
           {/* Main Content */}
           <Grid item xs={12} md={isMobile ? 12 : 9}>
-            <Paper elevation={2} sx={{ p: 4, minHeight: 600 }}>
+            <Paper 
+              elevation={2} 
+              sx={{ 
+                p: 4, 
+                minHeight: 600,
+                bgcolor: theme.palette.mode === 'dark' 
+                  ? 'rgba(30, 30, 30, 0.8)' 
+                  : 'background.paper',
+                border: theme.palette.mode === 'dark' 
+                  ? '1px solid rgba(255, 255, 255, 0.08)' 
+                  : '1px solid rgba(0, 0, 0, 0.08)',
+                backdropFilter: 'blur(20px)',
+              }}
+            >
               <Box sx={{ mb: 4 }}>
                 <Typography variant="h4" gutterBottom>
                   {steps[activeStep].label}

@@ -448,9 +448,24 @@ const OptimizedCVBuilder: React.FC<OptimizedCVBuilderProps> = ({
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50' }}>
+    <Box sx={{ 
+      minHeight: '100vh', 
+      bgcolor: theme.palette.mode === 'dark' ? 'background.default' : 'grey.50' 
+    }}>
       {/* Header */}
-      <AppBar position="sticky" elevation={1} sx={{ bgcolor: 'primary.main' }}>
+      <AppBar 
+        position="sticky" 
+        elevation={1} 
+        sx={{ 
+          bgcolor: theme.palette.mode === 'dark' 
+            ? 'rgba(18, 18, 18, 0.95)' 
+            : 'primary.main',
+          backdropFilter: 'blur(20px)',
+          borderBottom: theme.palette.mode === 'dark' 
+            ? '1px solid rgba(255, 255, 255, 0.08)' 
+            : 'none',
+        }}
+      >
         <Toolbar sx={{ px: { xs: 1, sm: 2 } }}>
           {onClose && (
             <IconButton 
@@ -512,12 +527,31 @@ const OptimizedCVBuilder: React.FC<OptimizedCVBuilderProps> = ({
         
         {/* Mobile Progress Indicator */}
         {isMobile && (
-          <Box sx={{ px: 2, py: 1, bgcolor: 'primary.dark' }}>
+          <Box sx={{ 
+            px: 2, 
+            py: 1, 
+            bgcolor: theme.palette.mode === 'dark' 
+              ? 'rgba(30, 30, 30, 0.8)' 
+              : 'primary.dark',
+            borderTop: theme.palette.mode === 'dark' 
+              ? '1px solid rgba(255, 255, 255, 0.08)' 
+              : 'none',
+          }}>
             <Box display="flex" justifyContent="space-between" alignItems="center">
-              <Typography variant="caption" sx={{ color: 'primary.contrastText', opacity: 0.9 }}>
+              <Typography variant="caption" sx={{ 
+                color: theme.palette.mode === 'dark' 
+                  ? 'text.primary' 
+                  : 'primary.contrastText', 
+                opacity: 0.9 
+              }}>
                 Step {activeStep + 1} of {steps.length}
               </Typography>
-              <Typography variant="caption" sx={{ color: 'primary.contrastText', fontWeight: 600 }}>
+              <Typography variant="caption" sx={{ 
+                color: theme.palette.mode === 'dark' 
+                  ? 'text.primary' 
+                  : 'primary.contrastText', 
+                fontWeight: 600 
+              }}>
                 {Math.round(calculateProgress)}% Complete
               </Typography>
             </Box>
@@ -550,6 +584,13 @@ const OptimizedCVBuilder: React.FC<OptimizedCVBuilderProps> = ({
               maxWidth: '100%',
               overflow: 'hidden',
               minWidth: 0,
+              bgcolor: theme.palette.mode === 'dark' 
+                ? 'rgba(30, 30, 30, 0.8)' 
+                : 'background.paper',
+              border: theme.palette.mode === 'dark' 
+                ? '1px solid rgba(255, 255, 255, 0.08)' 
+                : '1px solid rgba(0, 0, 0, 0.08)',
+              backdropFilter: 'blur(20px)',
               // Ensure text areas inside are properly contained
               '& .MuiTextField-root': {
                 maxWidth: '100%',
@@ -621,7 +662,14 @@ const OptimizedCVBuilder: React.FC<OptimizedCVBuilderProps> = ({
               position: 'sticky', 
               bottom: { xs: 16, sm: 0 },
               zIndex: 1000,
-              borderRadius: { xs: 2, sm: 1 }
+              borderRadius: { xs: 2, sm: 1 },
+              bgcolor: theme.palette.mode === 'dark' 
+                ? 'rgba(30, 30, 30, 0.8)' 
+                : 'background.paper',
+              border: theme.palette.mode === 'dark' 
+                ? '1px solid rgba(255, 255, 255, 0.08)' 
+                : '1px solid rgba(0, 0, 0, 0.08)',
+              backdropFilter: 'blur(20px)',
             }}>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button
@@ -662,7 +710,20 @@ const OptimizedCVBuilder: React.FC<OptimizedCVBuilderProps> = ({
                   <Typography variant="subtitle1">{step.label}</Typography>
                 </StepLabel>
                 <StepContent>
-                  <Paper elevation={0} sx={{ p: 3, bgcolor: 'grey.50', mb: 2 }}>
+                  <Paper 
+                    elevation={0} 
+                    sx={{ 
+                      p: 3, 
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(30, 30, 30, 0.8)' 
+                        : 'grey.50', 
+                      mb: 2,
+                      border: theme.palette.mode === 'dark' 
+                        ? '1px solid rgba(255, 255, 255, 0.08)' 
+                        : '1px solid rgba(0, 0, 0, 0.08)',
+                      backdropFilter: 'blur(20px)',
+                    }}
+                  >
                     <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
                       {step.description}
                     </Typography>
@@ -749,7 +810,16 @@ const OptimizedCVBuilder: React.FC<OptimizedCVBuilderProps> = ({
         autoHideDuration={null}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert severity="success" variant="filled">
+        <Alert 
+          severity="success" 
+          variant="filled"
+          sx={{
+            bgcolor: theme.palette.mode === 'dark' 
+              ? 'success.dark' 
+              : 'success.main',
+            color: 'white',
+          }}
+        >
           {saveMessage}
         </Alert>
       </Snackbar>
@@ -779,6 +849,13 @@ const OptimizedCVBuilder: React.FC<OptimizedCVBuilderProps> = ({
         sx={{
           '& .MuiDialog-paper': {
             height: '90vh',
+            bgcolor: theme.palette.mode === 'dark' 
+              ? 'rgba(30, 30, 30, 0.95)' 
+              : 'background.paper',
+            border: theme.palette.mode === 'dark' 
+              ? '1px solid rgba(255, 255, 255, 0.08)' 
+              : '1px solid rgba(0, 0, 0, 0.08)',
+            backdropFilter: 'blur(20px)',
           }
         }}
       >
@@ -874,6 +951,17 @@ const OptimizedCVBuilder: React.FC<OptimizedCVBuilderProps> = ({
         onClose={() => setShowDownloadOptions(false)}
         maxWidth="sm"
         fullWidth
+        sx={{
+          '& .MuiDialog-paper': {
+            bgcolor: theme.palette.mode === 'dark' 
+              ? 'rgba(30, 30, 30, 0.95)' 
+              : 'background.paper',
+            border: theme.palette.mode === 'dark' 
+              ? '1px solid rgba(255, 255, 255, 0.08)' 
+              : '1px solid rgba(0, 0, 0, 0.08)',
+            backdropFilter: 'blur(20px)',
+          }
+        }}
       >
         <DialogTitle>
           <Box display="flex" alignItems="center" justifyContent="space-between">

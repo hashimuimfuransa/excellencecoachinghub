@@ -462,9 +462,25 @@ const EnhancedCVBuilder: React.FC<EnhancedCVBuilderProps> = ({
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ 
+      minHeight: '100vh', 
+      bgcolor: theme.palette.mode === 'dark' ? 'background.default' : 'grey.50' 
+    }}>
       {/* App Bar */}
-      <AppBar position="sticky" color="default" elevation={1}>
+      <AppBar 
+        position="sticky" 
+        color="default" 
+        elevation={1}
+        sx={{
+          bgcolor: theme.palette.mode === 'dark' 
+            ? 'rgba(18, 18, 18, 0.95)' 
+            : 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: theme.palette.mode === 'dark' 
+            ? '1px solid rgba(255, 255, 255, 0.08)' 
+            : '1px solid rgba(0, 0, 0, 0.08)',
+        }}
+      >
         <Toolbar>
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Enhanced CV Builder
@@ -508,7 +524,17 @@ const EnhancedCVBuilder: React.FC<EnhancedCVBuilderProps> = ({
             {isMobile ? (
               /* Mobile Stepper */
               <Box>
-                <Paper sx={{ p: 2, mb: 2 }}>
+                <Paper sx={{ 
+                  p: 2, 
+                  mb: 2,
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(30, 30, 30, 0.8)' 
+                    : 'background.paper',
+                  border: theme.palette.mode === 'dark' 
+                    ? '1px solid rgba(255, 255, 255, 0.08)' 
+                    : '1px solid rgba(0, 0, 0, 0.08)',
+                  backdropFilter: 'blur(20px)',
+                }}>
                   <Typography variant="h6" gutterBottom>
                     Step {activeStep + 1} of {steps.length}
                   </Typography>
@@ -525,7 +551,17 @@ const EnhancedCVBuilder: React.FC<EnhancedCVBuilderProps> = ({
                   />
                 </Paper>
                 
-                <Paper sx={{ p: 3, mb: 2 }}>
+                <Paper sx={{ 
+                  p: 3, 
+                  mb: 2,
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(30, 30, 30, 0.8)' 
+                    : 'background.paper',
+                  border: theme.palette.mode === 'dark' 
+                    ? '1px solid rgba(255, 255, 255, 0.08)' 
+                    : '1px solid rgba(0, 0, 0, 0.08)',
+                  backdropFilter: 'blur(20px)',
+                }}>
                   {renderStepContent(activeStep)}
                 </Paper>
                 
@@ -566,7 +602,20 @@ const EnhancedCVBuilder: React.FC<EnhancedCVBuilderProps> = ({
                         {step.description}
                       </Typography>
                       
-                      <Paper elevation={0} sx={{ p: 3, bgcolor: 'grey.50', mb: 2 }}>
+                      <Paper 
+                        elevation={0} 
+                        sx={{ 
+                          p: 3, 
+                          bgcolor: theme.palette.mode === 'dark' 
+                            ? 'rgba(30, 30, 30, 0.8)' 
+                            : 'grey.50', 
+                          mb: 2,
+                          border: theme.palette.mode === 'dark' 
+                            ? '1px solid rgba(255, 255, 255, 0.08)' 
+                            : '1px solid rgba(0, 0, 0, 0.08)',
+                          backdropFilter: 'blur(20px)',
+                        }}
+                      >
                         {renderStepContent(index)}
                       </Paper>
                       
@@ -622,9 +671,12 @@ const EnhancedCVBuilder: React.FC<EnhancedCVBuilderProps> = ({
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
         sx={{
           '& .MuiSnackbarContent-root': {
-            backgroundColor: saveMessage?.includes('Section saved') ? 'success.main' : 'primary.main',
+            backgroundColor: theme.palette.mode === 'dark'
+              ? (saveMessage?.includes('Section saved') ? 'success.dark' : 'primary.dark')
+              : (saveMessage?.includes('Section saved') ? 'success.main' : 'primary.main'),
             minWidth: 'auto',
-            fontSize: '0.875rem'
+            fontSize: '0.875rem',
+            color: 'white',
           }
         }}
       />

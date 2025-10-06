@@ -7,7 +7,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
-import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
 import hpp from 'hpp';
 import { createServer } from 'http';
@@ -137,8 +136,6 @@ const io = new Server(server, {
   }
 });
 
-// Trust proxy for rate limiting
-app.set('trust proxy', 1);
 
 // Disable ETag to prevent 304 responses for AI matched jobs
 app.set('etag', false);
@@ -245,18 +242,6 @@ app.use(helmet({
   // Cross-Origin Resource Policy
   crossOriginResourcePolicy: {
     policy: 'cross-origin'
-  },
-
-  // Permissions Policy (Feature Policy)
-  permissionsPolicy: {
-    camera: ['self'],
-    microphone: ['self'],
-    geolocation: ['self'],
-    payment: ['self'],
-    usb: ['none'],
-    magnetometer: ['none'],
-    gyroscope: ['self'],
-    accelerometer: ['self']
   }
 }));
 
@@ -284,70 +269,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Enhanced Rate limiting with different limits for different endpoints
-const createRateLimiter = (windowMs: number, max: number, message: string) => {
-  return rateLimit({
-    windowMs,
-    max,
-    message: {
-      error: message,
-      retryAfter: Math.ceil(windowMs / 1000)
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-    handler: (req, res) => {
-      res.status(429).json({
-        success: false,
-        error: message,
-        retryAfter: Math.ceil(windowMs / 1000)
-      });
-    }
-  });
-};
-
-// General API rate limiting - More lenient for development
-const generalLimiter = createRateLimiter(
-  parseInt(process.env['RATE_LIMIT_WINDOW_MS'] || '900000'), // 15 minutes
-  parseInt(process.env['RATE_LIMIT_MAX_REQUESTS'] || '1000'), // 1000 requests per 15 minutes (increased for dev)
-  'Too many requests from this IP, please try again later.'
-);
-
-// Strict rate limiting for authentication endpoints
-const authLimiter = createRateLimiter(
-  15 * 60 * 1000, // 15 minutes
-  5, // 5 attempts per 15 minutes
-  'Too many authentication attempts. Please try again later.'
-);
-
-// Password reset rate limiting
-const passwordResetLimiter = createRateLimiter(
-  60 * 60 * 1000, // 1 hour
-  3, // 3 attempts per hour
-  'Too many password reset attempts. Please try again later.'
-);
-
-// Email sending rate limiting
-const emailLimiter = createRateLimiter(
-  60 * 60 * 1000, // 1 hour
-  10, // 10 emails per hour
-  'Too many email requests. Please try again later.'
-);
-
-// CV Builder rate limiting - More lenient for template loading and exports
-const cvBuilderLimiter = createRateLimiter(
-  5 * 60 * 1000, // 5 minutes
-  200, // 200 requests per 5 minutes
-  'Too many CV builder requests. Please try again later.'
-);
-
-// Apply rate limiters
-app.use('/api/', generalLimiter);
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/register', authLimiter);
-app.use('/api/auth/forgot-password', passwordResetLimiter);
-app.use('/api/auth/reset-password', passwordResetLimiter);
-app.use('/api/email/', emailLimiter);
-app.use('/api/cv-builder/', cvBuilderLimiter);
 
 // CORS middleware already applied earlier
 
@@ -1067,8 +988,8 @@ app.get('/api/placeholder/:width/:height', (req, res) => {
   // Create a simple SVG placeholder
   const svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
     <rect width="100%" height="100%" fill="#2c3e50"/>
-    <circle cx="${parseInt(width)/2}" cy="${parseInt(height)/2 - 20}" r="40" fill="#34495e"/>
-    <text x="${parseInt(width)/2}" y="${parseInt(height)/2 + 30}" font-family="Arial" font-size="16" fill="white" text-anchor="middle">AI Avatar Loading...</text>
+    <circle cx="${parseInt(width as string)/2}" cy="${parseInt(height as string)/2 - 20}" r="40" fill="#34495e"/>
+    <text x="${parseInt(width as string)/2}" y="${parseInt(height as string)/2 + 30}" font-family="Arial" font-size="16" fill="white" text-anchor="middle">AI Avatar Loading...</text>
   </svg>`;
   
   res.set('Content-Type', 'image/svg+xml');

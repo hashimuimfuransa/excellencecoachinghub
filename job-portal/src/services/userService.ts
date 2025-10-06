@@ -18,7 +18,32 @@ async function apiGet<T>(url: string, params?: Record<string, any>): Promise<T> 
     return response.data;
   } catch (error: any) {
     console.error(`API GET ${url} error:`, error);
-    throw new Error(error.response?.data?.message || error.message || 'Network error');
+    
+    // Enhanced error handling with user-friendly messages
+    if (error.response?.data?.userFriendly) {
+      throw new Error(error.response.data.message);
+    }
+    
+    // Handle rate limiting errors
+    if (error.response?.status === 429) {
+      const retryAfter = error.response?.data?.retryAfter || 60;
+      const minutes = Math.ceil(retryAfter / 60);
+      throw new Error(`Too many requests. Please wait ${minutes} minute${minutes > 1 ? 's' : ''} and try again.`);
+    }
+    
+    // Handle network errors
+    if (error.code === 'NETWORK_ERROR' || !error.response) {
+      throw new Error('Network connection failed. Please check your internet connection and try again.');
+    }
+    
+    // Handle server errors
+    if (error.response?.status >= 500) {
+      throw new Error('Server is temporarily unavailable. Please try again in a few moments.');
+    }
+    
+    // Default error message
+    const message = error.response?.data?.message || error.message || 'Network error';
+    throw new Error(message);
   }
 }
 

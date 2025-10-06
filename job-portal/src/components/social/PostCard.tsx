@@ -75,6 +75,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
   const { user } = useAuth();
   const navigate = useNavigate();
   const globalVideo = useGlobalVideo();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
   const [liked, setLiked] = useState(post.likes?.includes(user?._id || '') || false);
   const [likesCount, setLikesCount] = useState(post.likesCount || 0);
@@ -118,15 +119,48 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
       .join('\n\n');
   };
 
-  // Check if text should be truncated (more than 300 characters)
+  // Check if text should be truncated based on line count
   const shouldTruncateText = (text: string) => {
-    return text && text.length > 300;
+    if (!text) return false;
+    
+    // Count lines by splitting on newlines and checking for wrapping
+    const lines = text.split('\n').filter(line => line.trim().length > 0);
+    const totalLines = lines.reduce((acc, line) => {
+      // Estimate lines based on character count and container width
+      const estimatedLines = Math.ceil(line.length / (isMobile ? 35 : isTablet ? 45 : 55));
+      return acc + Math.max(1, estimatedLines);
+    }, 0);
+    
+    // Show "View More" if more than 2 lines
+    return totalLines > 2;
   };
 
-  // Get truncated text
+  // Get truncated text based on line count
   const getTruncatedText = (text: string) => {
     if (!shouldTruncateText(text)) return text;
-    return text.substring(0, 300) + '...';
+    
+    const lines = text.split('\n').filter(line => line.trim().length > 0);
+    let truncatedLines = [];
+    let currentLineCount = 0;
+    const maxLines = 2;
+    
+    for (const line of lines) {
+      const estimatedLines = Math.ceil(line.length / (isMobile ? 35 : isTablet ? 45 : 55));
+      
+      if (currentLineCount + estimatedLines <= maxLines) {
+        truncatedLines.push(line);
+        currentLineCount += estimatedLines;
+      } else {
+        // If adding this line would exceed max lines, truncate it
+        const remainingChars = (maxLines - currentLineCount) * (isMobile ? 35 : isTablet ? 45 : 55);
+        if (remainingChars > 0) {
+          truncatedLines.push(line.substring(0, remainingChars) + '...');
+        }
+        break;
+      }
+    }
+    
+    return truncatedLines.join('\n');
   };
 
   // Update like state when post or user changes
@@ -1475,8 +1509,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
           <Typography 
             variant="body1" 
             sx={{ 
-              mb: 1,
+              mb: shouldTruncateText(post.content) ? 1 : 0,
               pl: 2,
+              pr: 1,
               lineHeight: { xs: 1.6, sm: 1.7, md: 1.8 },
               fontSize: { xs: '0.95rem', sm: '1rem', md: '1.05rem' },
               wordWrap: 'break-word',
@@ -1487,7 +1522,14 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
               color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.85)',
               fontWeight: 400,
               letterSpacing: '0.01em',
-              textAlign: 'justify',
+              textAlign: 'left',
+              // Better text organization
+              display: 'block',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              // Responsive spacing
+              mt: { xs: 0.5, sm: 1 },
+              mb: { xs: 1, sm: 1.5 },
             }}
           >
             {isTextExpanded || !shouldTruncateText(post.content) 
@@ -1498,34 +1540,35 @@ const PostCard: React.FC<PostCardProps> = ({ post, onPostUpdate, onPostDelete })
           
           {/* View More/Less Button */}
           {shouldTruncateText(post.content) && (
-            <Button
-              variant="text"
-              size="small"
-              onClick={() => setIsTextExpanded(!isTextExpanded)}
-              sx={{
-                p: 0,
-                pl: 2,
-                minWidth: 'auto',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                textTransform: 'none',
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  backgroundColor: 'transparent',
-                  transform: 'translateX(3px)',
-                  background: 'linear-gradient(135deg, #4facfe 0%, #00d4ff 100%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }
-              }}
-            >
-              {isTextExpanded ? 'View Less' : 'View More'}
-            </Button>
+            <Box sx={{ pl: 2, mt: 1 }}>
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => setIsTextExpanded(!isTextExpanded)}
+                sx={{
+                  p: { xs: 0.5, sm: 1 },
+                  minWidth: 'auto',
+                  fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.9rem' },
+                  fontWeight: 600,
+                  color: theme.palette.primary.main,
+                  textTransform: 'none',
+                  borderRadius: 2,
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    backgroundColor: theme.palette.mode === 'dark' 
+                      ? 'rgba(255,255,255,0.1)' 
+                      : 'rgba(0,0,0,0.05)',
+                    transform: 'translateX(2px)',
+                    color: theme.palette.primary.dark,
+                  },
+                  // Better mobile touch target
+                  minHeight: { xs: 32, sm: 36 },
+                  px: { xs: 1, sm: 1.5 },
+                }}
+              >
+                {isTextExpanded ? 'Show Less' : 'Show More'}
+              </Button>
+            </Box>
           )}
         </Box>
 

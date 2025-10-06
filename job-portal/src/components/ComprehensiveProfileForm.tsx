@@ -78,7 +78,7 @@ import {
   EducationLevel,
   JobType
 } from '../types/user';
-import { validateProfileSimple } from '../utils/simpleProfileValidation';
+import { checkProfileCompletion } from '../utils/profileCompletionUtils';
 import { uploadCV } from '../utils/simpleFileUpload';
 import { uploadCVWithFetch } from '../utils/fetchUpload';
 import { uploadCVRenderWorkaround } from '../utils/renderUpload';
@@ -132,14 +132,99 @@ const industries = [
 ];
 
 const commonSkills = [
-  'JavaScript', 'Python', 'Java', 'React', 'Node.js', 'SQL', 'AWS',
-  'Project Management', 'Data Analysis', 'Machine Learning', 'UI/UX Design',
-  'Marketing', 'Sales', 'Customer Service', 'Leadership', 'Communication'
+  // Technical Skills
+  'JavaScript', 'Python', 'Java', 'React', 'Node.js', 'SQL', 'AWS', 'Azure', 'Docker', 'Kubernetes',
+  'TypeScript', 'Angular', 'Vue.js', 'PHP', 'C++', 'C#', '.NET', 'Ruby', 'Go', 'Rust',
+  'HTML', 'CSS', 'SASS', 'LESS', 'Bootstrap', 'Tailwind CSS', 'jQuery', 'Express.js',
+  'MongoDB', 'PostgreSQL', 'MySQL', 'Redis', 'Elasticsearch', 'GraphQL', 'REST API',
+  'Git', 'GitHub', 'GitLab', 'Bitbucket', 'Jenkins', 'CI/CD', 'DevOps', 'Linux',
+  
+  // Data & Analytics
+  'Data Analysis', 'Machine Learning', 'Deep Learning', 'TensorFlow', 'PyTorch', 'Pandas', 'NumPy',
+  'R', 'MATLAB', 'Tableau', 'Power BI', 'Excel', 'Google Analytics', 'Data Visualization',
+  'Statistics', 'Business Intelligence', 'ETL', 'Data Mining', 'Big Data', 'Hadoop', 'Spark',
+  
+  // Design & Creative
+  'UI/UX Design', 'Adobe Photoshop', 'Adobe Illustrator', 'Figma', 'Sketch', 'InVision',
+  'Adobe XD', 'Canva', 'Adobe Premiere Pro', 'Final Cut Pro', 'Video Editing', 'Graphic Design',
+  'Web Design', 'Mobile App Design', 'Prototyping', 'Wireframing', 'User Research',
+  
+  // Project Management & Business
+  'Project Management', 'Agile', 'Scrum', 'Kanban', 'Jira', 'Confluence', 'Trello', 'Asana',
+  'Microsoft Project', 'PMI', 'PRINCE2', 'Lean Six Sigma', 'Process Improvement',
+  'Business Analysis', 'Requirements Gathering', 'Stakeholder Management', 'Risk Management',
+  
+  // Marketing & Sales
+  'Digital Marketing', 'SEO', 'SEM', 'Google Ads', 'Facebook Ads', 'Content Marketing',
+  'Social Media Marketing', 'Email Marketing', 'Marketing Automation', 'HubSpot', 'Salesforce',
+  'CRM', 'Lead Generation', 'Sales', 'Business Development', 'Account Management',
+  'Brand Management', 'Public Relations', 'Event Planning', 'Market Research',
+  
+  // Communication & Soft Skills
+  'Communication', 'Public Speaking', 'Presentation Skills', 'Technical Writing',
+  'Documentation', 'Training', 'Mentoring', 'Team Building', 'Conflict Resolution',
+  'Negotiation', 'Customer Service', 'Client Relations', 'Cross-functional Collaboration',
+  
+  // Leadership & Management
+  'Leadership', 'Team Management', 'People Management', 'Strategic Planning',
+  'Change Management', 'Performance Management', 'Talent Acquisition', 'HR',
+  'Budget Management', 'Financial Planning', 'Operations Management',
+  
+  // Industry-Specific Skills
+  'Healthcare', 'Finance', 'Banking', 'Insurance', 'Real Estate', 'Legal', 'Compliance',
+  'Quality Assurance', 'Testing', 'QA Automation', 'Selenium', 'Cypress', 'Jest',
+  'Cybersecurity', 'Information Security', 'Network Security', 'Penetration Testing',
+  'Blockchain', 'Cryptocurrency', 'Smart Contracts', 'Solidity',
+  
+  // Languages & International
+  'English', 'Spanish', 'French', 'German', 'Chinese', 'Japanese', 'Portuguese',
+  'Russian', 'Arabic', 'Hindi', 'Italian', 'Dutch', 'Korean', 'Swedish', 'Norwegian',
+  
+  // Soft Skills & Personal Development
+  'Problem Solving', 'Critical Thinking', 'Analytical Skills', 'Time Management',
+  'Organization', 'Adaptability', 'Creativity', 'Innovation', 'Attention to Detail',
+  'Multitasking', 'Stress Management', 'Emotional Intelligence', 'Cultural Awareness',
+  
+  // Tools & Software
+  'Microsoft Office', 'Google Workspace', 'Slack', 'Zoom', 'Microsoft Teams',
+  'Adobe Creative Suite', 'Sketch', 'Figma', 'Notion', 'Evernote', 'Monday.com',
+  'Zapier', 'IFTTT', 'Automation', 'Workflow Optimization'
 ];
 
 const languages = [
-  'English', 'Spanish', 'French', 'German', 'Chinese', 'Japanese',
-  'Portuguese', 'Russian', 'Arabic', 'Hindi', 'Italian', 'Dutch'
+  // Major World Languages
+  'English', 'Spanish', 'French', 'German', 'Chinese (Mandarin)', 'Chinese (Cantonese)', 
+  'Japanese', 'Korean', 'Portuguese', 'Russian', 'Arabic', 'Hindi', 'Italian', 'Dutch',
+  
+  // European Languages
+  'Swedish', 'Norwegian', 'Danish', 'Finnish', 'Polish', 'Czech', 'Hungarian', 'Romanian',
+  'Bulgarian', 'Croatian', 'Serbian', 'Slovak', 'Slovenian', 'Lithuanian', 'Latvian',
+  'Estonian', 'Greek', 'Turkish', 'Ukrainian', 'Belarusian', 'Moldovan',
+  
+  // Asian Languages
+  'Thai', 'Vietnamese', 'Indonesian', 'Malay', 'Tagalog', 'Tamil', 'Telugu', 'Bengali',
+  'Punjabi', 'Gujarati', 'Marathi', 'Urdu', 'Sinhala', 'Burmese', 'Khmer', 'Lao',
+  'Mongolian', 'Tibetan', 'Nepali', 'Sinhalese',
+  
+  // African Languages
+  'Swahili', 'Amharic', 'Yoruba', 'Igbo', 'Hausa', 'Zulu', 'Xhosa', 'Afrikaans',
+  'Somali', 'Tigrinya', 'Oromo', 'Wolof', 'Fulani', 'Akan', 'Kinyarwanda',
+  
+  // Middle Eastern Languages
+  'Persian (Farsi)', 'Hebrew', 'Kurdish', 'Pashto', 'Dari', 'Tajik', 'Uzbek',
+  'Kazakh', 'Kyrgyz', 'Turkmen', 'Azerbaijani', 'Georgian', 'Armenian',
+  
+  // American Languages
+  'Quechua', 'Guarani', 'Nahuatl', 'Aymara', 'Mapudungun', 'Tupi', 'Carib',
+  
+  // Sign Languages
+  'American Sign Language (ASL)', 'British Sign Language (BSL)', 'French Sign Language',
+  'German Sign Language', 'Japanese Sign Language', 'Chinese Sign Language',
+  
+  // Other Languages
+  'Esperanto', 'Latin', 'Ancient Greek', 'Sanskrit', 'Yiddish', 'Ladino',
+  'Catalan', 'Basque', 'Galician', 'Welsh', 'Irish Gaelic', 'Scottish Gaelic',
+  'Breton', 'Corsican', 'Maltese', 'Icelandic', 'Faroese', 'Luxembourgish'
 ];
 
 const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
@@ -200,7 +285,7 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
           return;
         }
         
-        const result = validateProfileSimple(combinedUserData);
+        const result = checkProfileCompletion(combinedUserData);
         console.log('📊 ComprehensiveProfileForm validation result:', result);
         setValidationResult(result);
       } catch (error) {
@@ -1359,6 +1444,10 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
               <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Code /> Skills
               </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Add any skills you have - technical, soft skills, tools, languages, or industry-specific knowledge. 
+                You can type custom skills or select from suggestions.
+              </Typography>
               <Autocomplete
                 multiple
                 options={commonSkills}
@@ -1369,23 +1458,63 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
                   value.map((option, index) => {
                     const { key, ...tagProps } = getTagProps({ index });
                     return (
-                      <Chip key={key} variant="outlined" label={option} {...tagProps} />
+                      <Chip 
+                        key={key} 
+                        variant="outlined" 
+                        label={option} 
+                        {...tagProps}
+                        sx={{ 
+                          mb: 1,
+                          '&:hover': {
+                            backgroundColor: 'primary.light',
+                            color: 'primary.contrastText'
+                          }
+                        }}
+                      />
                     );
                   })
                 }
                 renderInput={(params) => (
-                  <TextField {...params} label="Skills" placeholder="Add your skills" />
+                  <TextField 
+                    {...params} 
+                    label="Skills" 
+                    placeholder="Type to add skills (e.g., 'Communication', 'Python', 'Project Management')"
+                    helperText="Add as many skills as you want - there's no limit!"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        minHeight: '56px',
+                        alignItems: 'flex-start',
+                        paddingTop: '8px'
+                      }
+                    }}
+                  />
                 )}
+                sx={{
+                  '& .MuiAutocomplete-tag': {
+                    margin: '4px 4px 4px 0'
+                  }
+                }}
               />
+              <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  💡 <strong>Tip:</strong> Include a mix of technical skills (programming languages, tools), 
+                  soft skills (communication, leadership), and industry knowledge to showcase your full potential.
+                </Typography>
+              </Box>
             </Grid>
             
             <Grid item xs={12}>
               <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Language /> Languages
               </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Add any languages you speak, including dialects, sign languages, or programming languages. 
+                You can type custom languages or select from suggestions.
+              </Typography>
               <Autocomplete
                 multiple
                 options={languages}
+                freeSolo
                 value={(formData.languages || []).map(lang => lang.language)}
                 onChange={(_, value) => {
                   const languageObjects = value.map(lang => ({
@@ -1398,14 +1527,50 @@ const ComprehensiveProfileForm: React.FC<ComprehensiveProfileFormProps> = ({
                   value.map((option, index) => {
                     const { key, ...tagProps } = getTagProps({ index });
                     return (
-                      <Chip key={key} variant="outlined" label={option} {...tagProps} />
+                      <Chip 
+                        key={key} 
+                        variant="outlined" 
+                        label={option} 
+                        {...tagProps}
+                        sx={{ 
+                          mb: 1,
+                          '&:hover': {
+                            backgroundColor: 'secondary.light',
+                            color: 'secondary.contrastText'
+                          }
+                        }}
+                      />
                     );
                   })
                 }
                 renderInput={(params) => (
-                  <TextField {...params} label="Languages" placeholder="Add languages you speak" />
+                  <TextField 
+                    {...params} 
+                    label="Languages" 
+                    placeholder="Type to add languages (e.g., 'English', 'Spanish', 'American Sign Language')"
+                    helperText="Add as many languages as you want - there's no limit!"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        minHeight: '56px',
+                        alignItems: 'flex-start',
+                        paddingTop: '8px'
+                      }
+                    }}
+                  />
                 )}
+                sx={{
+                  '& .MuiAutocomplete-tag': {
+                    margin: '4px 4px 4px 0'
+                  }
+                }}
               />
+              <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  🌍 <strong>Tip:</strong> Include all languages you speak, including native languages, 
+                  foreign languages, dialects, sign languages, and even programming languages. 
+                  This helps employers understand your communication abilities and cultural background.
+                </Typography>
+              </Box>
             </Grid>
             
             {/* Social Media Links Section */}

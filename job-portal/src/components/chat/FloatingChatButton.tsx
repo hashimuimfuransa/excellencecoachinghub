@@ -15,7 +15,17 @@ import { useAuth } from '../../contexts/AuthContext';
 const FloatingChatButton: React.FC = () => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  
+  // Safe useAuth hook with error handling
+  let user = null;
+  try {
+    const authContext = useAuth();
+    user = authContext.user;
+  } catch (error) {
+    console.warn('FloatingChatButton: useAuth not available, component will not render');
+    return null;
+  }
+  
   const [unreadCount, setUnreadCount] = useState(0);
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 

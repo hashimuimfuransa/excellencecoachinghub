@@ -81,6 +81,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { SocialPost } from '../types/social';
 import MobileFooterNavbar from '../components/MobileFooterNavbar';
+import ProfileCompletionPopup from '../components/ProfileCompletionPopup';
+import CVBuilderPopup from '../components/CVBuilderPopup';
+import { shouldShowProfileCompletionPopup, shouldShowCVBuilderPopup, markProfileCompletionDismissed, markCVBuilderDismissed } from '../utils/profileCompletionUtils';
 
 // Styled components for modern design
 const StyledSearchBar = styled(Paper)(({ theme }) => ({
@@ -158,6 +161,9 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
   const [searchValue, setSearchValue] = useState('');
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState('home');
+  const [showProfileCompletionPopup, setShowProfileCompletionPopup] = useState(false);
+  const [showCVBuilderPopup, setShowCVBuilderPopup] = useState(false);
+  const [isTextExpanded, setIsTextExpanded] = useState(false);
 
   // Sample data for stories
   const stories = [
@@ -259,6 +265,21 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
     loadFeed();
   }, []);
 
+  // Check for profile completion popup on mount
+  useEffect(() => {
+    if (user) {
+      const shouldShowProfile = shouldShowProfileCompletionPopup(user);
+      const shouldShowCV = shouldShowCVBuilderPopup(user);
+      
+      // Show profile completion popup first if needed
+      if (shouldShowProfile) {
+        setShowProfileCompletionPopup(true);
+      } else if (shouldShowCV) {
+        setShowCVBuilderPopup(true);
+      }
+    }
+  }, [user]);
+
   const loadFeed = async () => {
     setLoading(true);
     try {
@@ -270,6 +291,36 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Popup handlers
+  const handleProfileCompletionClose = () => {
+    setShowProfileCompletionPopup(false);
+    if (user) {
+      markProfileCompletionDismissed(user._id);
+    }
+  };
+
+  const handleProfileCompletionAction = () => {
+    setShowProfileCompletionPopup(false);
+    navigate('/app/profile/edit');
+  };
+
+  const handleCVBuilderClose = () => {
+    setShowCVBuilderPopup(false);
+    if (user) {
+      markCVBuilderDismissed(user._id);
+    }
+  };
+
+  const handleCVBuilderAction = () => {
+    setShowCVBuilderPopup(false);
+    navigate('/app/cv-builder');
+  };
+
+  const handleCVBuilderContinueProfile = () => {
+    setShowCVBuilderPopup(false);
+    navigate('/app/profile/edit');
   };
 
   const handlePostLike = (postId: string) => {
@@ -436,9 +487,89 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
           </Box>
 
           {/* Post Content */}
-          <Typography variant="body1" sx={{ mb: 2, lineHeight: 1.5 }}>
-            {post.content}
-          </Typography>
+          <Box sx={{ mb: 2 }}>
+            {(() => {
+              // Calculate if text should be truncated based on line count
+              const lines = post.content.split('\n').filter(line => line.trim().length > 0);
+              const totalLines = lines.reduce((acc, line) => {
+                const estimatedLines = Math.ceil(line.length / (isMobile ? 35 : isTablet ? 45 : 55));
+                return acc + Math.max(1, estimatedLines);
+              }, 0);
+              const shouldTruncate = totalLines > 2;
+              
+              // Get truncated text
+              const getTruncatedText = (text: string) => {
+                if (!shouldTruncate) return text;
+                
+                const lines = text.split('\n').filter(line => line.trim().length > 0);
+                let truncatedLines = [];
+                let currentLineCount = 0;
+                const maxLines = 2;
+                
+                for (const line of lines) {
+                  const estimatedLines = Math.ceil(line.length / (isMobile ? 35 : isTablet ? 45 : 55));
+                  
+                  if (currentLineCount + estimatedLines <= maxLines) {
+                    truncatedLines.push(line);
+                    currentLineCount += estimatedLines;
+                  } else {
+                    const remainingChars = (maxLines - currentLineCount) * (isMobile ? 35 : isTablet ? 45 : 55);
+                    if (remainingChars > 0) {
+                      truncatedLines.push(line.substring(0, remainingChars) + '...');
+                    }
+                    break;
+                  }
+                }
+                
+                return truncatedLines.join('\n');
+              };
+              
+              return (
+                <>
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      lineHeight: 1.6,
+                      wordWrap: 'break-word',
+                      overflowWrap: 'break-word',
+                      whiteSpace: 'pre-line',
+                      color: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.85)',
+                      fontSize: { xs: '0.95rem', sm: '1rem' },
+                      mb: shouldTruncate ? 1 : 0,
+                    }}
+                  >
+                    {isTextExpanded || !shouldTruncate 
+                      ? post.content 
+                      : getTruncatedText(post.content)
+                    }
+                  </Typography>
+                  
+                  {/* View More/Less Button for multi-line content */}
+                  {shouldTruncate && (
+                    <Button
+                      variant="text"
+                      size="small"
+                      onClick={() => setIsTextExpanded(!isTextExpanded)}
+                      sx={{
+                        p: 0,
+                        minWidth: 'auto',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        color: theme.palette.primary.main,
+                        textTransform: 'none',
+                        '&:hover': {
+                          backgroundColor: 'transparent',
+                          color: theme.palette.primary.dark,
+                        }
+                      }}
+                    >
+                      {isTextExpanded ? 'Show Less' : 'Show More'}
+                    </Button>
+                  )}
+                </>
+              );
+            })()}
+          </Box>
 
           {/* Post Tags */}
           {post.tags.length > 0 && (
@@ -824,6 +955,27 @@ const ModernSocialNetworkPage: React.FC<ModernSocialNetworkPageProps> = () => {
         <Alert severity="error" sx={{ mt: 2 }}>
           {error}
         </Alert>
+      )}
+
+      {/* Profile Completion Popup */}
+      {user && (
+        <ProfileCompletionPopup
+          open={showProfileCompletionPopup}
+          onClose={handleProfileCompletionClose}
+          onCompleteProfile={handleProfileCompletionAction}
+          user={user}
+        />
+      )}
+
+      {/* CV Builder Popup */}
+      {user && (
+        <CVBuilderPopup
+          open={showCVBuilderPopup}
+          onClose={handleCVBuilderClose}
+          onBuildCV={handleCVBuilderAction}
+          onContinueProfile={handleCVBuilderContinueProfile}
+          user={user}
+        />
       )}
     </Box>
   );

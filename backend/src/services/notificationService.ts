@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 
 export interface NotificationData {
   recipient: string;
-  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'event_reminder' | 'payment_approved' | 'payment_rejected' | 'payment_success' | 'payment_failed' | 'test_request_created' | 'test_request_approved' | 'test_request_rejected' | 'tests_generated' | 'application_update';
+  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'event_reminder' | 'payment_approved' | 'payment_rejected' | 'payment_success' | 'payment_failed' | 'test_request_created' | 'test_request_approved' | 'test_request_rejected' | 'tests_generated' | 'application_update' | 'teacher_profile_approved' | 'teacher_profile_rejected' | 'course_approved' | 'course_rejected';
   title: string;
   message: string;
   data?: {
@@ -19,6 +19,12 @@ export interface NotificationData {
     requestId?: string;
     applicationId?: string;
     url?: string;
+    adminId?: string;
+    adminName?: string;
+    feedback?: string;
+    reason?: string;
+    courseId?: string;
+    courseTitle?: string;
   };
 }
 
@@ -114,7 +120,18 @@ class NotificationServiceClass {
           eventId: data.data.eventId ? new mongoose.Types.ObjectId(data.data.eventId) : undefined,
           paymentRequestId: data.data.paymentRequestId ? new mongoose.Types.ObjectId(data.data.paymentRequestId) : undefined,
           testType: data.data.testType,
-          url: data.data.url
+          url: data.data.url,
+          applicationId: data.data.applicationId ? new mongoose.Types.ObjectId(data.data.applicationId) : undefined,
+          jobTitle: data.data.jobTitle,
+          applicantName: data.data.applicantName,
+          applicantEmail: data.data.applicantEmail,
+          status: data.data.status,
+        adminId: data.data.adminId ? new mongoose.Types.ObjectId(data.data.adminId) : undefined,
+        adminName: data.data.adminName,
+        feedback: data.data.feedback,
+        reason: data.data.reason,
+        courseId: data.data.courseId ? new mongoose.Types.ObjectId(data.data.courseId) : undefined,
+        courseTitle: data.data.courseTitle
         } : undefined
       });
 
@@ -246,6 +263,61 @@ class NotificationServiceClass {
         paymentRequestId,
         testType,
         url: '/app/psychometric-tests'
+      }
+    });
+  }
+
+  /**
+   * Send teacher profile status notification
+   */
+  async notifyTeacherProfileStatus(
+    teacherId: string,
+    status: 'approved' | 'rejected',
+    adminId: string,
+    feedback?: string,
+    reason?: string
+  ): Promise<void> {
+    const isApproved = status === 'approved';
+    
+    await this.sendRealTimeNotification({
+      recipient: teacherId,
+      type: isApproved ? 'teacher_profile_approved' : 'teacher_profile_rejected',
+      title: isApproved ? '🎉 Teacher Profile Approved!' : '📋 Teacher Profile Update',
+      message: isApproved 
+        ? `Congratulations! Your teacher profile has been approved. You can now access all teacher features.${feedback ? `\n\nAdmin Feedback: ${feedback}` : ''}`
+        : `Your teacher profile needs some updates before approval.${reason ? `\n\nReason: ${reason}` : ''}${feedback ? `\n\nAdmin Feedback: ${feedback}` : ''}`,
+      data: {
+        adminId,
+        feedback,
+        reason,
+        url: '/dashboard/teacher/profile'
+      }
+    });
+  }
+
+  // Notify teacher about course status change
+  async notifyTeacherCourseStatus(
+    teacherId: string,
+    courseId: string,
+    courseTitle: string,
+    status: 'approved' | 'rejected',
+    adminId: string,
+    feedback?: string
+  ): Promise<void> {
+    const isApproved = status === 'approved';
+    await this.sendRealTimeNotification({
+      recipient: teacherId,
+      type: isApproved ? 'course_approved' : 'course_rejected',
+      title: isApproved ? '🎉 Course Approved!' : '📋 Course Review Update',
+      message: isApproved 
+        ? `Congratulations! Your course "${courseTitle}" has been approved and is now live for students to enroll.${feedback ? `\n\nAdmin Feedback: ${feedback}` : ''}`
+        : `Your course "${courseTitle}" needs some updates before approval.${feedback ? `\n\nAdmin Feedback: ${feedback}` : ''}`,
+      data: {
+        courseId,
+        courseTitle,
+        adminId,
+        feedback,
+        url: isApproved ? '/dashboard/teacher/courses' : '/dashboard/teacher/courses'
       }
     });
   }

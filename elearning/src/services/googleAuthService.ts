@@ -54,6 +54,7 @@ export interface GoogleCompleteRegistrationData {
   firstName: string;
   lastName: string;
   googleId: string;
+  profilePicture?: string;
   googleUserData: {
     email: string;
     firstName: string;

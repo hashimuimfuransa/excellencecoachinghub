@@ -108,8 +108,8 @@ const googleRegistrationValidation = [
     .isLength({ min: 1, max: 50 })
     .withMessage('Last name must be between 1 and 50 characters'),
   body('role')
-    .isIn(['student', 'teacher', 'professional', 'employer'])
-    .withMessage('Role must be student, teacher, professional, or employer'),
+    .isIn(['student', 'teacher', 'admin'])
+    .withMessage('Role must be student, teacher, or admin'),
   body('googleId')
     .notEmpty()
     .withMessage('Google ID is required'),

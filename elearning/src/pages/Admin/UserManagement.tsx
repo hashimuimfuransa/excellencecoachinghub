@@ -228,6 +228,7 @@ const UserManagement: React.FC = () => {
   const getRoleColor = (role: UserRole) => {
     switch (role) {
       case UserRole.ADMIN:
+      case UserRole.SUPER_ADMIN:
         return 'error';
       case UserRole.TEACHER:
         return 'warning';
@@ -400,8 +401,8 @@ const UserManagement: React.FC = () => {
     }
 
     // Prevent changing current user's own role to non-admin
-    if (selectedUser && currentUser?._id === selectedUser._id && editUserForm.role !== UserRole.ADMIN) {
-      errors.role = 'You cannot change your own role from Admin';
+    if (selectedUser && currentUser?._id === selectedUser._id && editUserForm.role !== UserRole.ADMIN && editUserForm.role !== UserRole.SUPER_ADMIN) {
+      errors.role = 'You cannot change your own role from Admin/Super Admin';
     }
 
     console.log('🔍 Validation errors:', errors);
@@ -624,6 +625,7 @@ const UserManagement: React.FC = () => {
               >
                 <MenuItem value="">All Roles</MenuItem>
                 <MenuItem value={UserRole.ADMIN}>Admin</MenuItem>
+                <MenuItem value={UserRole.SUPER_ADMIN}>Super Admin</MenuItem>
                 <MenuItem value={UserRole.TEACHER}>Teacher</MenuItem>
                 <MenuItem value={UserRole.STUDENT}>Student</MenuItem>
               </Select>
@@ -872,6 +874,7 @@ const UserManagement: React.FC = () => {
                     <MenuItem value={UserRole.STUDENT}>Student</MenuItem>
                     <MenuItem value={UserRole.TEACHER}>Teacher</MenuItem>
                     <MenuItem value={UserRole.ADMIN}>Admin</MenuItem>
+                    <MenuItem value={UserRole.SUPER_ADMIN}>Super Admin</MenuItem>
                   </Select>
                   {createUserErrors.role && (
                     <FormHelperText>{createUserErrors.role}</FormHelperText>
@@ -1055,6 +1058,18 @@ const UserManagement: React.FC = () => {
                           mr: 1 
                         }} />
                         Admin
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value={UserRole.SUPER_ADMIN}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Box sx={{ 
+                          width: 12, 
+                          height: 12, 
+                          borderRadius: '50%', 
+                          bgcolor: 'error.dark', 
+                          mr: 1 
+                        }} />
+                        Super Admin
                       </Box>
                     </MenuItem>
                   </Select>

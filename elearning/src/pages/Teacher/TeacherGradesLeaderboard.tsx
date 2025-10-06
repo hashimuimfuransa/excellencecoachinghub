@@ -89,7 +89,7 @@ const TeacherGradesLeaderboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme?.breakpoints?.down?.('md') || '(max-width: 900px)');
   
   // State
   const [loading, setLoading] = useState(true);

@@ -145,6 +145,12 @@ class NotificationService {
     } catch (error: any) {
       console.error('Error fetching unread count:', error);
       
+      // If it's a 401 error, the user is not authenticated
+      if (error?.response?.status === 401) {
+        console.warn('User not authenticated, returning 0 unread count');
+        return 0;
+      }
+      
       // If it's a rate limiting error, throw it so the context can handle backoff
       if (error?.response?.status === 429 || error?.message?.includes('429') || error?.message?.includes('Too Many Requests')) {
         throw error;

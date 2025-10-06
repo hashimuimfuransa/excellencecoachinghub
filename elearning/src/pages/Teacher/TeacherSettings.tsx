@@ -173,7 +173,7 @@ interface UserSettings {
 const TeacherSettings: React.FC = () => {
   const { user } = useAuth();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme?.breakpoints?.down?.('md') || '(max-width: 900px)');
   
   const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(true);

@@ -172,13 +172,32 @@ export interface IProfileActionData {
 export const teacherProfileService = {
   // Get my teacher profile (for logged-in teacher)
   getMyProfile: async (): Promise<ITeacherProfile> => {
-    const response = await apiService.get<{ profile: ITeacherProfile }>('/teacher-profiles/my-profile');
-    
-    if (response.success && response.data) {
-      return response.data.profile;
+    try {
+      console.log('🚀🚀🚀 GET MY PROFILE CALLED FROM teacherProfileService 🚀🚀🚀');
+      console.log('🔍 Frontend: Making API call to /teacher-profiles/my-profile');
+      const response = await apiService.get<{ profile: ITeacherProfile }>('/teacher-profiles/my-profile');
+      console.log('🔍 Frontend: API response received:', response);
+      console.log('🔍 Frontend: Response success:', response.success);
+      console.log('🔍 Frontend: Response data:', response.data);
+      console.log('🔍 Frontend: Response data keys:', response.data ? Object.keys(response.data) : 'No data');
+      console.log('🔍 Frontend: Profile object:', response.data?.profile);
+      console.log('🔍 Frontend: Profile keys:', response.data?.profile ? Object.keys(response.data.profile) : 'No profile');
+      console.log('🔍 Frontend: Profile status:', response.data?.profile?.profileStatus);
+      
+      if (response.success && response.data) {
+        console.log('✅ Frontend: Profile data extracted successfully:', response.data.profile);
+        console.log('✅ Frontend: Profile status extracted:', response.data.profile.profileStatus);
+        return response.data.profile;
+      }
+      
+      console.error('❌ Frontend: Invalid response format:', response);
+      throw new Error(response.error || 'Failed to fetch teacher profile');
+    } catch (error: any) {
+      console.error('❌ Frontend: Error in getMyProfile:', error);
+      console.error('❌ Frontend: Error message:', error.message);
+      console.error('❌ Frontend: Error stack:', error.stack);
+      throw error;
     }
-    
-    throw new Error(response.error || 'Failed to fetch teacher profile');
   },
 
   // Update my teacher profile

@@ -10,12 +10,37 @@ import { uploadDocumentToCloudinary } from '../config/cloudinary';
 // Get teacher profile (for the logged-in teacher)
 export const getMyProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    console.log('=== GET MY PROFILE REQUEST ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('User ID:', req.user?._id);
+    console.log('User role:', req.user?.role);
+    console.log('User email:', req.user?.email);
+    console.log('User firstName:', req.user?.firstName);
+    console.log('User lastName:', req.user?.lastName);
+    console.log('Full req.user object:', JSON.stringify(req.user, null, 2));
+    
     const userId = req.user?._id;
     
-    let profile = await TeacherProfile.findByUserId(userId);
+    if (!userId) {
+      console.error('❌ No user ID found in request');
+      res.status(400).json({
+        success: false,
+        error: 'User ID not found in request'
+      });
+      return;
+    }
     
-    // If profile doesn't exist, create an incomplete one
-    if (!profile) {
+    console.log('🔍 Searching for profile with userId:', userId);
+    let profile = await TeacherProfile.findByUserId(userId);
+    console.log('🔍 Profile found:', profile ? 'YES' : 'NO');
+    
+    if (profile) {
+      console.log('🔍 Profile ID:', profile._id);
+      console.log('🔍 Profile userId:', profile.userId);
+      console.log('🔍 Profile status:', profile.profileStatus);
+      console.log('🔍 Profile keys:', Object.keys(profile.toObject()));
+    } else {
+      console.log('🔍 No profile found, creating new one...');
       profile = new TeacherProfile({
         userId,
         specialization: [],
@@ -32,11 +57,18 @@ export const getMyProfile = async (req: Request, res: Response, next: NextFuncti
       await profile.save();
     }
 
+    console.log('✅ Profile retrieved successfully:', profile._id);
+    console.log('🔍 Backend: Profile object keys:', Object.keys(profile.toObject()));
+    console.log('🔍 Backend: Profile status:', profile.profileStatus);
+    console.log('🔍 Backend: Profile status type:', typeof profile.profileStatus);
+    console.log('🔍 Backend: Full profile object:', JSON.stringify(profile.toObject(), null, 2));
+    
     res.status(200).json({
       success: true,
       data: { profile }
     });
   } catch (error) {
+    console.error('❌ Error in getMyProfile:', error);
     next(error);
   }
 };
@@ -527,16 +559,34 @@ export const uploadCV = async (req: Request, res: Response, next: NextFunction):
 // Submit profile for review
 export const submitProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    console.log('=== SUBMIT PROFILE REQUEST ===');
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('User ID:', req.user?._id);
+    console.log('User role:', req.user?.role);
+    
     const userId = req.user?._id;
+    
+    if (!userId) {
+      console.error('❌ No user ID found in request');
+      res.status(400).json({
+        success: false,
+        error: 'User ID not found in request'
+      });
+      return;
+    }
     
     const profile = await TeacherProfile.findOne({ userId });
     if (!profile) {
+      console.error('❌ Profile not found for user:', userId);
       res.status(404).json({
         success: false,
         error: 'Profile not found'
       });
       return;
     }
+
+    console.log('📋 Profile found:', profile._id);
+    console.log('📋 Profile status:', profile.profileStatus);
 
     // Validate required fields for submission
     const requiredFields = [
@@ -550,10 +600,14 @@ export const submitProfile = async (req: Request, res: Response, next: NextFunct
 
     const missingFields = requiredFields.filter(field => {
       const value = profile[field as keyof typeof profile];
+      console.log(`📋 Field ${field}:`, value);
       return !value || (Array.isArray(value) && value.length === 0);
     });
 
+    console.log('📋 Missing fields:', missingFields);
+
     if (missingFields.length > 0) {
+      console.error('❌ Profile incomplete, missing fields:', missingFields);
       res.status(400).json({
         success: false,
         error: 'Profile incomplete',
@@ -568,6 +622,8 @@ export const submitProfile = async (req: Request, res: Response, next: NextFunct
     profile.submittedAt = new Date();
     await profile.save();
 
+    console.log('✅ Profile status updated to pending');
+
     // Send submission confirmation email
     try {
       const user = await User.findById(userId);
@@ -576,6 +632,7 @@ export const submitProfile = async (req: Request, res: Response, next: NextFunct
           teacherName: `${user.firstName} ${user.lastName}`,
           teacherEmail: user.email
         });
+        console.log('✅ Submission confirmation email sent');
       }
     } catch (emailError) {
       console.error('❌ Failed to send submission confirmation email:', emailError);
@@ -588,6 +645,7 @@ export const submitProfile = async (req: Request, res: Response, next: NextFunct
       message: 'Profile submitted for review successfully'
     });
   } catch (error) {
+    console.error('❌ Error in submitProfile:', error);
     next(error);
   }
 };

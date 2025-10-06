@@ -225,24 +225,38 @@ import { UserRole } from '../../shared/types';
 import ResponsiveDashboard from '../../components/Layout/ResponsiveDashboard';
 import { useResponsive } from '../../utils/responsive';
 
-// Styled Components
-const EditorCard = styled(Card)(({ theme }) => ({
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  borderRadius: theme.spacing(2),
-  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-}));
+// Styled Components with defensive theme handling
+const EditorCard = styled(Card)(({ theme }) => {
+  // Defensive theme handling
+  const primaryColor = theme?.palette?.primary?.main || '#22c55e';
+  const spacing = theme?.spacing || ((value: number) => `${value * 8}px`);
+  
+  return {
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    borderRadius: spacing(2),
+    border: `1px solid ${alpha(primaryColor, 0.1)}`,
+  };
+});
 
-const ChapterCard = styled(Paper)(({ theme }) => ({
-  marginBottom: theme.spacing(2),
-  borderRadius: theme.spacing(2),
-  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-  '&:hover': {
-    borderColor: theme.palette.primary.main,
-    boxShadow: theme.shadows[4],
-  },
-}));
+const ChapterCard = styled(Paper)(({ theme }) => {
+  // Defensive theme handling
+  const primaryColor = theme?.palette?.primary?.main || '#22c55e';
+  const dividerColor = theme?.palette?.divider || '#e2e8f0';
+  const spacing = theme?.spacing || ((value: number) => `${value * 8}px`);
+  const shadows = theme?.shadows || ['none', 'none', 'none', 'none', 'none'];
+  
+  return {
+    marginBottom: spacing(2),
+    borderRadius: spacing(2),
+    border: `1px solid ${alpha(dividerColor, 0.1)}`,
+    '&:hover': {
+      borderColor: primaryColor,
+      boxShadow: shadows[4] || '0 2px 4px rgba(0,0,0,0.1)',
+    },
+  };
+});
 
 // Interfaces
 interface Chapter {

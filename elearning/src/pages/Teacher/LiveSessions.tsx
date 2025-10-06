@@ -86,7 +86,8 @@ import {
   VolumeUp,
   VolumeOff
 } from '@mui/icons-material';
-import { useAuth } from '../../store/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
+import { useTeacherProfile } from '../../contexts/TeacherProfileContext';
 import { liveSessionService, ILiveSession } from '../../services/liveSessionService';
 import { recordedSessionService, IRecordedSession } from '../../services/recordedSessionService';
 
@@ -142,13 +143,14 @@ interface RecordedSession {
 const LiveSessions: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { profile, loading: profileLoading, error: profileError } = useTeacherProfile();
   const [searchParams] = useSearchParams();
   const theme = useTheme();
   
-  // Responsive breakpoints
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down('lg'));
+  // Responsive breakpoints with defensive theme handling
+  const isMobile = useMediaQuery(theme?.breakpoints?.down?.('sm') || '(max-width: 600px)');
+  const isTablet = useMediaQuery(theme?.breakpoints?.down?.('md') || '(max-width: 900px)');
+  const isSmallScreen = useMediaQuery(theme?.breakpoints?.down?.('lg') || '(max-width: 1200px)');
 
   // State management
   const [sessions, setSessions] = useState<ILiveSession[]>([]);
@@ -188,9 +190,12 @@ const LiveSessions: React.FC = () => {
 
   // Load sessions
   useEffect(() => {
+    console.log('🔍 LiveSessions: Profile loaded:', profile);
+    console.log('🔍 LiveSessions: Profile loading:', profileLoading);
+    console.log('🔍 LiveSessions: Profile error:', profileError);
     loadSessions();
     loadRecordedSessions();
-  }, [tabValue, courseIdFilter]);
+  }, [tabValue, courseIdFilter, profile]);
 
   const loadSessions = async () => {
     try {
@@ -1331,7 +1336,7 @@ const LiveSessions: React.FC = () => {
                 minWidth: { xs: 80, sm: 100, md: 120 },
                 fontWeight: 600,
                 fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                padding: { xs: theme.spacing(1, 1), sm: theme.spacing(1.5, 2) }
+                padding: { xs: theme?.spacing?.(1, 1) || '8px', sm: theme?.spacing?.(1.5, 2) || '12px 16px' }
               },
               '& .MuiTabs-scrollButtons': {
                 '&.Mui-disabled': { opacity: 0.3 }
@@ -1720,7 +1725,7 @@ const LiveSessions: React.FC = () => {
             position: 'fixed', 
             bottom: { xs: 16, sm: 24 }, 
             right: { xs: 16, sm: 24 },
-            zIndex: theme.zIndex.speedDial
+            zIndex: theme?.zIndex?.speedDial || 1000
           }}
           onClick={() => navigate('/dashboard/teacher/live-sessions/create')}
         >
@@ -1736,7 +1741,7 @@ const LiveSessions: React.FC = () => {
             bottom: 0, 
             left: 0, 
             right: 0,
-            zIndex: theme.zIndex.appBar,
+            zIndex: theme?.zIndex?.appBar || 1100,
             borderRadius: 0,
             borderTop: 1,
             borderColor: 'divider'

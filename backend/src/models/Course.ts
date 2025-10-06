@@ -1,11 +1,24 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 import { CourseStatus } from '../types';
 
+// Course chapter interface
+export interface ICourseChapter {
+  _id?: string;
+  title: string;
+  description?: string;
+  order: number;
+  estimatedTimeMinutes: number;
+  lessons: ICourseContent[];
+  isRequired: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 // Course content interface for lessons, videos, etc.
 export interface ICourseContent {
   _id?: string;
   title: string;
-  type: 'video' | 'document' | 'quiz' | 'assignment' | 'live_session';
+  type: 'video' | 'document' | 'quiz' | 'assignment' | 'live_session' | 'reading' | 'exercise';
   content?: string; // For text content
   fileUrl?: string; // For uploaded files
   videoUrl?: string; // For video content
@@ -13,6 +26,7 @@ export interface ICourseContent {
   order: number;
   isRequired: boolean;
   liveSessionId?: mongoose.Types.ObjectId; // Reference to live session for recorded sessions
+  chapterId?: mongoose.Types.ObjectId; // Reference to parent chapter
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -35,12 +49,25 @@ export interface ICourseDocument extends Document {
   rating: number;
   ratingCount: number;
   content: ICourseContent[];
+  chapters: ICourseChapter[];
   prerequisites: string[];
   learningOutcomes: string[];
+  targetAudience: string[];
+  courseObjectives: string[];
+  assessmentMethods: string[];
+  resources: string[];
+  totalEstimatedTime: number; // Total course time in hours
+  weeklyTimeCommitment: number; // Hours per week
+  courseFormat: 'self_paced' | 'instructor_led' | 'hybrid';
+  language: string;
+  difficultyLevel: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+  certificationOffered: boolean;
+  certificateRequirements: string[];
   isPublished: boolean;
   publishedAt?: Date;
   enrollmentDeadline?: Date; // When enrollment closes
   courseStartDate?: Date; // When the course actually starts
+  courseEndDate?: Date; // When the course ends
   approvedBy?: mongoose.Types.ObjectId;
   approvedAt?: Date;
   rejectionReason?: string;
@@ -65,6 +92,41 @@ export interface ICourseModel extends Model<ICourseDocument> {
   searchCourses(query: string): Promise<ICourseDocument[]>;
 }
 
+// Course chapter schema
+const courseChapterSchema = new Schema<ICourseChapter>({
+  title: {
+    type: String,
+    required: [true, 'Chapter title is required'],
+    trim: true,
+    maxlength: [200, 'Chapter title cannot exceed 200 characters']
+  },
+  description: {
+    type: String,
+    trim: true,
+    maxlength: [1000, 'Chapter description cannot exceed 1000 characters']
+  },
+  order: {
+    type: Number,
+    required: [true, 'Chapter order is required'],
+    min: [0, 'Order cannot be negative']
+  },
+  estimatedTimeMinutes: {
+    type: Number,
+    required: [true, 'Estimated time is required'],
+    min: [0, 'Estimated time cannot be negative']
+  },
+  lessons: [{
+    type: Schema.Types.ObjectId,
+    ref: 'CourseContent'
+  }],
+  isRequired: {
+    type: Boolean,
+    default: true
+  }
+}, {
+  timestamps: true
+});
+
 // Course content schema
 const courseContentSchema = new Schema<ICourseContent>({
   title: {
@@ -75,7 +137,7 @@ const courseContentSchema = new Schema<ICourseContent>({
   },
   type: {
     type: String,
-    enum: ['video', 'document', 'quiz', 'assignment', 'live_session'],
+    enum: ['video', 'document', 'quiz', 'assignment', 'live_session', 'reading', 'exercise'],
     required: [true, 'Content type is required']
   },
   content: {
@@ -107,6 +169,11 @@ const courseContentSchema = new Schema<ICourseContent>({
   liveSessionId: {
     type: Schema.Types.ObjectId,
     ref: 'LiveSession',
+    default: null
+  },
+  chapterId: {
+    type: Schema.Types.ObjectId,
+    ref: 'CourseChapter',
     default: null
   }
 }, {
@@ -194,6 +261,7 @@ const courseSchema = new Schema<ICourseDocument>({
     min: [0, 'Rating count cannot be negative']
   },
   content: [courseContentSchema],
+  chapters: [courseChapterSchema],
   prerequisites: [{
     type: String,
     trim: true,
@@ -204,6 +272,65 @@ const courseSchema = new Schema<ICourseDocument>({
     trim: true,
     maxlength: [200, 'Learning outcome cannot exceed 200 characters']
   }],
+  targetAudience: [{
+    type: String,
+    trim: true,
+    maxlength: [200, 'Target audience cannot exceed 200 characters']
+  }],
+  courseObjectives: [{
+    type: String,
+    trim: true,
+    maxlength: [200, 'Course objective cannot exceed 200 characters']
+  }],
+  assessmentMethods: [{
+    type: String,
+    trim: true,
+    maxlength: [200, 'Assessment method cannot exceed 200 characters']
+  }],
+  resources: [{
+    type: String,
+    trim: true,
+    maxlength: [500, 'Resource cannot exceed 500 characters']
+  }],
+  totalEstimatedTime: {
+    type: Number,
+    default: 0,
+    min: [0, 'Total estimated time cannot be negative']
+  },
+  weeklyTimeCommitment: {
+    type: Number,
+    default: 0,
+    min: [0, 'Weekly time commitment cannot be negative']
+  },
+  courseFormat: {
+    type: String,
+    enum: ['self_paced', 'instructor_led', 'hybrid'],
+    default: 'self_paced'
+  },
+  language: {
+    type: String,
+    default: 'English',
+    trim: true,
+    maxlength: [50, 'Language cannot exceed 50 characters']
+  },
+  difficultyLevel: {
+    type: String,
+    enum: ['beginner', 'intermediate', 'advanced', 'expert'],
+    default: 'beginner'
+  },
+  certificationOffered: {
+    type: Boolean,
+    default: false
+  },
+  certificateRequirements: [{
+    type: String,
+    trim: true,
+    maxlength: [200, 'Certificate requirement cannot exceed 200 characters']
+  }],
+  courseEndDate: {
+    type: Date,
+    default: null
+  },
   isPublished: {
     type: Boolean,
     default: false

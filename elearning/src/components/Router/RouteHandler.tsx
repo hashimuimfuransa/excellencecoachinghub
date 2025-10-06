@@ -22,7 +22,7 @@ const RouteHandler: React.FC = () => {
 
     // If user is authenticated but on wrong dashboard
     if (user && path === '/dashboard') {
-      const redirectPath = user.role === 'admin' 
+      const redirectPath = user.role === 'admin' || user.role === 'super_admin'
         ? '/dashboard/admin'
         : user.role === 'teacher'
         ? '/dashboard/teacher'
@@ -45,6 +45,8 @@ const RouteHandler: React.FC = () => {
         ? '/dashboard/student/settings' 
         : user?.role === 'teacher'
         ? '/dashboard/teacher/settings'
+        : user?.role === 'admin' || user?.role === 'super_admin'
+        ? '/dashboard/admin/settings'
         : '/dashboard/settings'
     };
 

@@ -237,31 +237,45 @@ import { UserRole } from '../../shared/types';
 import ResponsiveDashboard from '../../components/Layout/ResponsiveDashboard';
 import { useResponsive } from '../../utils/responsive';
 
-// Styled Components
-const DashboardCard = styled(Card)(({ theme }) => ({
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  borderRadius: theme.spacing(2),
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-  '&:hover': {
-    transform: 'translateY(-4px)',
-    boxShadow: `0 12px 40px ${alpha(theme.palette.primary.main, 0.15)}`,
-    borderColor: theme.palette.primary.main,
-  },
-}));
+// Styled Components with defensive theme handling
+const DashboardCard = styled(Card)(({ theme }) => {
+  // Defensive theme handling
+  const primaryColor = theme?.palette?.primary?.main || '#22c55e';
+  const spacing = theme?.spacing || ((value: number) => `${value * 8}px`);
+  
+  return {
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    borderRadius: spacing(2),
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    border: `1px solid ${alpha(primaryColor, 0.1)}`,
+    '&:hover': {
+      transform: 'translateY(-4px)',
+      boxShadow: `0 12px 40px ${alpha(primaryColor, 0.15)}`,
+      borderColor: primaryColor,
+    },
+  };
+});
 
-const StatsCard = styled(Card)(({ theme }) => ({
-  background: `linear-gradient(135deg, ${theme.palette.primary.main}08, ${theme.palette.secondary.main}08)`,
-  border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-  borderRadius: theme.spacing(2),
-  transition: 'all 0.3s ease',
-  '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: theme.shadows[8],
-  },
-}));
+const StatsCard = styled(Card)(({ theme }) => {
+  // Defensive theme handling
+  const primaryColor = theme?.palette?.primary?.main || '#22c55e';
+  const secondaryColor = theme?.palette?.secondary?.main || '#dc004e';
+  const spacing = theme?.spacing || ((value: number) => `${value * 8}px`);
+  const shadows = theme?.shadows || ['none', 'none', 'none', 'none', 'none', 'none', 'none', 'none', 'none'];
+  
+  return {
+    background: `linear-gradient(135deg, ${primaryColor}08, ${secondaryColor}08)`,
+    border: `1px solid ${alpha(primaryColor, 0.2)}`,
+    borderRadius: spacing(2),
+    transition: 'all 0.3s ease',
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: shadows[8] || '0 4px 8px rgba(0,0,0,0.1)',
+    },
+  };
+});
 
 // Interfaces
 interface CourseStats {

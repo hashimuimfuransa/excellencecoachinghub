@@ -47,7 +47,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { courseService, ICourse } from '../../services/courseService';
 import { CourseStatus } from '../../shared/types';
-import { teacherProfileService } from '../../services/teacherProfileService';
 
 const TeacherCourses: React.FC = () => {
   const { user } = useAuth();
@@ -121,53 +120,9 @@ const TeacherCourses: React.FC = () => {
     });
   };
 
-  // Check teacher profile status before creating course
-  const handleCreateCourse = async () => {
-    try {
-      // Check if teacher profile exists and is approved
-      const profile = await teacherProfileService.getMyProfile();
-
-      if (!profile) {
-        setError('Please create your teacher profile before creating courses.');
-        setTimeout(() => {
-          navigate('/dashboard/teacher/profile/complete');
-        }, 3000);
-        return;
-      }
-
-      if (profile.profileStatus !== 'approved') {
-        let message = '';
-        switch (profile.profileStatus) {
-          case 'incomplete':
-            message = 'Please complete your teacher profile before creating courses.';
-            break;
-          case 'pending':
-            message = 'Your teacher profile is pending approval. You cannot create courses until your profile is approved.';
-            break;
-          case 'rejected':
-            message = 'Your teacher profile has been rejected. Please update your profile and resubmit for approval.';
-            break;
-          default:
-            message = 'Your teacher profile is not approved. Please contact support.';
-        }
-
-        setError(message);
-
-        if (profile.profileStatus === 'incomplete' || profile.profileStatus === 'rejected') {
-          setTimeout(() => {
-            navigate('/dashboard/teacher/profile/complete');
-          }, 3000);
-        }
-        return;
-      }
-
-      // Profile is approved, navigate to create course
-      navigate('/dashboard/teacher/courses/create');
-
-    } catch (err: any) {
-      console.error('Error checking teacher profile:', err);
-      setError('Unable to verify teacher profile status. Please try again.');
-    }
+  // Navigate to create course page
+  const handleCreateCourse = () => {
+    navigate('/dashboard/teacher/courses/create');
   };
 
   // Event handlers

@@ -199,6 +199,11 @@ const RegisterPage: React.FC = () => {
       const result = await googleAuthService.completeRegistration({
         role,
         platform: 'elearning',
+        email: googleUserData?.email || '',
+        firstName: googleUserData?.firstName || '',
+        lastName: googleUserData?.lastName || '',
+        googleId: googleUserData?.googleId || '',
+        profilePicture: googleUserData?.profilePicture || '',
         googleUserData
       });
 

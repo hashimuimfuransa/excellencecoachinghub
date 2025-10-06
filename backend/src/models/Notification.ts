@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface INotification extends Document {
   recipient: mongoose.Types.ObjectId;
-  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'job_recommendations' | 'event_reminder' | 'payment_approved' | 'payment_rejected' | 'payment_success' | 'payment_failed' | 'test_request_approved' | 'test_request_rejected' | 'tests_generated' | 'application_received' | 'application_status_update';
+  type: 'connection_accepted' | 'connection_request' | 'message' | 'job_match' | 'job_recommendations' | 'event_reminder' | 'payment_approved' | 'payment_rejected' | 'payment_success' | 'payment_failed' | 'test_request_approved' | 'test_request_rejected' | 'tests_generated' | 'application_received' | 'application_status_update' | 'teacher_profile_approved' | 'teacher_profile_rejected' | 'course_approved' | 'course_rejected';
   title: string;
   message: string;
   data?: {
@@ -20,6 +20,12 @@ export interface INotification extends Document {
     applicantName?: string;
     applicantEmail?: string;
     status?: string;
+    adminId?: mongoose.Types.ObjectId;
+    adminName?: string;
+    feedback?: string;
+    reason?: string;
+    courseId?: mongoose.Types.ObjectId;
+    courseTitle?: string;
   };
   isRead: boolean;
   createdAt: Date;
@@ -35,7 +41,7 @@ const NotificationSchema = new Schema<INotification>({
   },
   type: {
     type: String,
-    enum: ['connection_accepted', 'connection_request', 'message', 'job_match', 'job_recommendations', 'event_reminder', 'payment_approved', 'payment_rejected', 'payment_success', 'payment_failed', 'test_request_approved', 'test_request_rejected', 'tests_generated', 'application_received', 'application_status_update'],
+    enum: ['connection_accepted', 'connection_request', 'message', 'job_match', 'job_recommendations', 'event_reminder', 'payment_approved', 'payment_rejected', 'payment_success', 'payment_failed', 'test_request_approved', 'test_request_rejected', 'tests_generated', 'application_received', 'application_status_update', 'teacher_profile_approved', 'teacher_profile_rejected', 'course_approved', 'course_rejected'],
     required: true
   },
   title: {
@@ -62,7 +68,13 @@ const NotificationSchema = new Schema<INotification>({
     jobTitle: { type: String },
     applicantName: { type: String },
     applicantEmail: { type: String },
-    status: { type: String }
+    status: { type: String },
+    adminId: { type: Schema.Types.ObjectId, ref: 'User' },
+    adminName: { type: String },
+    feedback: { type: String },
+    reason: { type: String },
+    courseId: { type: Schema.Types.ObjectId, ref: 'Course' },
+    courseTitle: { type: String }
   },
   isRead: {
     type: Boolean,

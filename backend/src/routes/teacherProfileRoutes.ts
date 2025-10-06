@@ -41,7 +41,12 @@ const updateProfileValidation = [
     .withMessage('Please provide a valid phone number'),
   body('dateOfBirth')
     .optional()
-    .isISO8601()
+    .custom((value) => {
+      if (!value) return true;
+      // Accept both ISO strings and other date formats
+      const date = new Date(value);
+      return !isNaN(date.getTime());
+    })
     .withMessage('Date of birth must be a valid date'),
   body('specialization')
     .optional()
@@ -59,10 +64,12 @@ const updateProfileValidation = [
     .withMessage('Bio cannot exceed 2000 characters'),
   body('experience')
     .optional()
-    .isNumeric()
-    .withMessage('Experience must be a number')
-    .isInt({ min: 0 })
-    .withMessage('Experience cannot be negative'),
+    .custom((value) => {
+      if (value === undefined || value === null || value === '') return true;
+      const numValue = Number(value);
+      return !isNaN(numValue) && numValue >= 0;
+    })
+    .withMessage('Experience must be a valid number'),
   body('education')
     .optional()
     .isArray()
@@ -79,10 +86,12 @@ const updateProfileValidation = [
     .withMessage('Institution is required'),
   body('education.*.year')
     .optional({ checkFalsy: true })
-    .isNumeric()
-    .withMessage('Year must be a number')
-    .isInt({ min: 1950, max: new Date().getFullYear() + 10 })
-    .withMessage('Year must be between 1950 and current year + 10'),
+    .custom((value) => {
+      if (!value) return true;
+      const numValue = Number(value);
+      return !isNaN(numValue) && numValue >= 1950 && numValue <= new Date().getFullYear() + 10;
+    })
+    .withMessage('Year must be a valid number between 1950 and current year + 10'),
   body('skills')
     .optional()
     .isArray()
@@ -110,10 +119,12 @@ const updateProfileValidation = [
     .withMessage('Each preferred level must be Beginner, Intermediate, or Advanced'),
   body('hourlyRate')
     .optional()
-    .isNumeric()
-    .withMessage('Hourly rate must be a number')
-    .isFloat({ min: 0 })
-    .withMessage('Hourly rate cannot be negative'),
+    .custom((value) => {
+      if (value === undefined || value === null || value === '') return true;
+      const numValue = Number(value);
+      return !isNaN(numValue) && numValue >= 0;
+    })
+    .withMessage('Hourly rate must be a valid number'),
   body('nationalId')
     .optional({ checkFalsy: true })
     .trim()
@@ -128,10 +139,12 @@ const updateProfileValidation = [
     .withMessage('Payment type must be per_hour or per_month'),
   body('monthlyRate')
     .optional()
-    .isNumeric()
-    .withMessage('Monthly rate must be a number')
-    .isFloat({ min: 0 })
-    .withMessage('Monthly rate cannot be negative'),
+    .custom((value) => {
+      if (value === undefined || value === null || value === '') return true;
+      const numValue = Number(value);
+      return !isNaN(numValue) && numValue >= 0;
+    })
+    .withMessage('Monthly rate must be a valid number'),
   body('address.province')
     .optional()
     .trim()

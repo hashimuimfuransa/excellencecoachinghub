@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { teacherProfileService } from '../services/teacherProfileService';
+import { TeacherProfileProvider } from '../contexts/TeacherProfileContext';
 import { 
   Box, 
   Card, 
@@ -52,15 +53,36 @@ const TeacherProfileGuard: React.FC<TeacherProfileGuardProps> = ({ children }) =
       }
 
       try {
-        const response = await teacherProfileService.getMyProfile();
-        if (response.success) {
-          setProfileStatus(response.data.profile.profileStatus);
-        } else {
-          setError('Failed to load profile status');
-        }
+        console.log('🔍 TeacherProfileGuard: Checking profile status for user:', user._id);
+        const profile = await teacherProfileService.getMyProfile();
+        console.log('🔍 TeacherProfileGuard: Profile loaded:', profile);
+        setProfileStatus(profile.profileStatus);
       } catch (err: any) {
-        console.error('Error checking profile status:', err);
-        setError(err.message || 'Failed to check profile status');
+        console.error('❌ TeacherProfileGuard: Error checking profile status:', err);
+        console.error('❌ TeacherProfileGuard: Error details:', {
+          message: err.message,
+          status: err.response?.status,
+          data: err.response?.data
+        });
+        
+        // Handle specific error cases
+        if (err.response?.status === 404 || err.message?.includes('Profile not found')) {
+          // If no profile exists, treat as incomplete
+          console.log('🔍 TeacherProfileGuard: No profile found, treating as incomplete');
+          setProfileStatus('incomplete');
+        } else if (err.response?.status === 401 || err.message?.includes('User ID not found')) {
+          // Authentication issue
+          console.log('🔍 TeacherProfileGuard: Authentication issue');
+          setError('Authentication required. Please log in again.');
+        } else if (err.message?.includes('Unable to connect to server')) {
+          // Server connection issue
+          console.log('🔍 TeacherProfileGuard: Server connection issue');
+          setError('Unable to connect to server. Please check your connection and try again.');
+        } else {
+          // Other errors - treat as incomplete to allow user to proceed
+          console.log('🔍 TeacherProfileGuard: Other error, treating as incomplete');
+          setProfileStatus('incomplete');
+        }
       } finally {
         setLoading(false);
       }
@@ -103,11 +125,15 @@ const TeacherProfileGuard: React.FC<TeacherProfileGuardProps> = ({ children }) =
 
   // Check profile status and block access if needed
   if (profileStatus !== 'approved') {
-    return <ProfileStatusBlock profileStatus={profileStatus} />;
+    return <ProfileStatusBlock profileStatus={profileStatus || 'incomplete'} />;
   }
 
   // Profile is approved, allow access
-  return <>{children}</>;
+  return (
+    <TeacherProfileProvider>
+      {children}
+    </TeacherProfileProvider>
+  );
 };
 
 interface ProfileStatusBlockProps {
@@ -116,7 +142,8 @@ interface ProfileStatusBlockProps {
 
 const ProfileStatusBlock: React.FC<ProfileStatusBlockProps> = ({ profileStatus }) => {
   const getStatusInfo = () => {
-    switch (profileStatus) {
+    const status = profileStatus || 'incomplete';
+    switch (status) {
       case 'incomplete':
         return {
           icon: <Edit color="warning" sx={{ fontSize: 48 }} />,
@@ -177,7 +204,7 @@ const ProfileStatusBlock: React.FC<ProfileStatusBlockProps> = ({ profileStatus }
               </Typography>
               
               <Chip 
-                label={`Status: ${profileStatus?.charAt(0).toUpperCase() + profileStatus?.slice(1)}`}
+                label={`Status: ${(profileStatus || 'incomplete').charAt(0).toUpperCase() + (profileStatus || 'incomplete').slice(1)}`}
                 color={statusInfo.color}
                 sx={{ mb: 3, px: 2, py: 1, fontSize: '1rem' }}
               />
@@ -186,7 +213,7 @@ const ProfileStatusBlock: React.FC<ProfileStatusBlockProps> = ({ profileStatus }
                 {statusInfo.message}
               </Typography>
 
-              {profileStatus === 'incomplete' && (
+              {(profileStatus || 'incomplete') === 'incomplete' && (
                 <Alert severity="info" sx={{ mb: 3, textAlign: 'left' }}>
                   <Typography variant="h6" gutterBottom>📋 Required Information:</Typography>
                   <Box component="ul" sx={{ pl: 2 }}>
@@ -200,7 +227,7 @@ const ProfileStatusBlock: React.FC<ProfileStatusBlockProps> = ({ profileStatus }
                 </Alert>
               )}
 
-              {profileStatus === 'pending' && (
+              {(profileStatus || 'incomplete') === 'pending' && (
                 <Alert severity="info" sx={{ mb: 3, textAlign: 'left' }}>
                   <Typography variant="h6" gutterBottom>⏱️ What's Next:</Typography>
                   <Box component="ul" sx={{ pl: 2 }}>
@@ -212,7 +239,7 @@ const ProfileStatusBlock: React.FC<ProfileStatusBlockProps> = ({ profileStatus }
                 </Alert>
               )}
 
-              {profileStatus === 'rejected' && (
+              {(profileStatus || 'incomplete') === 'rejected' && (
                 <Alert severity="warning" sx={{ mb: 3, textAlign: 'left' }}>
                   <Typography variant="h6" gutterBottom>🔄 Next Steps:</Typography>
                   <Box component="ul" sx={{ pl: 2 }}>

@@ -27,11 +27,14 @@ import {
   Divider,
   IconButton
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import {
   Person,
   School,
   MenuBook,
   CloudUpload,
+  CloudDownload,
   Check,
   Warning,
   Delete,
@@ -96,6 +99,7 @@ const TeacherProfileComplete: React.FC = () => {
   // Profile picture upload
   const [profilePicture, setProfilePicture] = useState<File | null>(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState<string | null>(null);
+  const [profilePictureUploading, setProfilePictureUploading] = useState(false);
 
   const steps = [
     { label: 'Personal Info', icon: <Person /> },
@@ -103,6 +107,10 @@ const TeacherProfileComplete: React.FC = () => {
     { label: 'Teaching', icon: <MenuBook /> },
     { label: 'Documents', icon: <CloudUpload /> }
   ];
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme?.breakpoints?.down?.('sm') || '(max-width:600px)');
+  const isTablet = useMediaQuery(theme?.breakpoints?.down?.('md') || '(max-width:900px)');
 
   useEffect(() => {
     loadProfile();
@@ -116,49 +124,51 @@ const TeacherProfileComplete: React.FC = () => {
 
   const loadProfile = async () => {
     try {
-      const response = await teacherProfileService.getMyProfile();
-      if (response.success) {
-        const profileData = response.data.profile;
-        setProfile(profileData);
-        
-        // Populate form with existing data
-        setFormData({
-          phone: profileData.phone || '',
-          dateOfBirth: profileData.dateOfBirth ? profileData.dateOfBirth.split('T')[0] : '',
-          nationalId: profileData.nationalId || '',
-          address: {
-            province: profileData.address?.province || '',
-            district: profileData.address?.district || '',
-            sector: profileData.address?.sector || '',
-            cell: profileData.address?.cell || '',
-            village: profileData.address?.village || '',
-            country: profileData.address?.country || 'Rwanda'
-          },
-          specialization: profileData.specialization || [],
-          bio: profileData.bio || '',
-          experience: profileData.experience || 0,
-          education: profileData.education || [],
-          certifications: profileData.certifications || [],
-          skills: profileData.skills || [],
-          languages: profileData.languages || [],
-          teachingAreas: profileData.teachingAreas || [],
-          preferredLevels: profileData.preferredLevels || [],
-          hourlyRate: profileData.hourlyRate || 0,
-          paymentType: profileData.paymentType || 'per_hour',
-          monthlyRate: profileData.monthlyRate || 0,
-          socialLinks: {
-            linkedin: profileData.socialLinks?.linkedin || '',
-            github: profileData.socialLinks?.github || '',
-            portfolio: profileData.socialLinks?.portfolio || '',
-            website: profileData.socialLinks?.website || ''
-          }
-        });
-
-        if (profileData.profilePicture) {
-          setProfilePicturePreview(profileData.profilePicture);
+      console.log('🔍 Loading teacher profile...');
+      const profileData = await teacherProfileService.getMyProfile();
+      console.log('🔍 Profile loaded:', profileData);
+      console.log('🔍 CV Document:', profileData.cvDocument);
+      
+      setProfile(profileData);
+      
+      // Populate form with existing data
+      setFormData({
+        phone: profileData.phone || '',
+        dateOfBirth: profileData.dateOfBirth ? profileData.dateOfBirth.split('T')[0] : '',
+        nationalId: profileData.nationalId || '',
+        address: {
+          province: profileData.address?.province || '',
+          district: profileData.address?.district || '',
+          sector: profileData.address?.sector || '',
+          cell: profileData.address?.cell || '',
+          village: profileData.address?.village || '',
+          country: profileData.address?.country || 'Rwanda'
+        },
+        specialization: profileData.specialization || [],
+        bio: profileData.bio || '',
+        experience: profileData.experience || 0,
+        education: profileData.education || [],
+        certifications: profileData.certifications || [],
+        skills: profileData.skills || [],
+        languages: profileData.languages || [],
+        teachingAreas: profileData.teachingAreas || [],
+        preferredLevels: profileData.preferredLevels || [],
+        hourlyRate: profileData.hourlyRate || 0,
+        paymentType: profileData.paymentType || 'per_hour',
+        monthlyRate: profileData.monthlyRate || 0,
+        socialLinks: {
+          linkedin: profileData.socialLinks?.linkedin || '',
+          github: profileData.socialLinks?.github || '',
+          portfolio: profileData.socialLinks?.portfolio || '',
+          website: profileData.socialLinks?.website || ''
         }
+      });
+
+      if (profileData.profilePicture) {
+        setProfilePicturePreview(profileData.profilePicture);
       }
     } catch (err: any) {
+      console.error('❌ Error loading profile:', err);
       setError(err.message || 'Failed to load profile');
     } finally {
       setLoading(false);
@@ -219,6 +229,11 @@ const TeacherProfileComplete: React.FC = () => {
   const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      console.log('📸 Profile picture selected:', file.name, 'Size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
+      
+      // Clear any previous errors
+      setError(null);
+      
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
         setError('Profile picture must be less than 5MB');
         return;
@@ -233,6 +248,7 @@ const TeacherProfileComplete: React.FC = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         setProfilePicturePreview(e.target?.result as string);
+        console.log('📸 Profile picture preview loaded');
       };
       reader.readAsDataURL(file);
     }
@@ -256,6 +272,7 @@ const TeacherProfileComplete: React.FC = () => {
       }
 
       setCvFile(file);
+      console.log('📄 CV file selected:', file.name, 'Size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
       setSuccess('CV file selected successfully. Click "Upload CV Now" to save it.');
     }
   };
@@ -263,20 +280,27 @@ const TeacherProfileComplete: React.FC = () => {
   const uploadCV = async () => {
     if (!cvFile) return;
 
+    console.log('📄 Starting CV upload...', cvFile.name);
     setCvUploading(true);
     try {
       const formData = new FormData();
       formData.append('cv', cvFile);
 
+      console.log('📄 Uploading CV to server...');
       const response = await teacherProfileService.uploadCV(formData);
+      console.log('📄 CV upload response:', response);
+      
       if (response.success) {
+        console.log('✅ CV uploaded successfully');
         setSuccess('CV uploaded successfully');
         setCvFile(null);
         await loadProfile(); // Reload to get updated CV info
       } else {
+        console.error('❌ CV upload failed:', response.error);
         setError(response.error || 'Failed to upload CV');
       }
     } catch (err: any) {
+      console.error('❌ CV upload error:', err);
       setError(err.message || 'Failed to upload CV');
     } finally {
       setCvUploading(false);
@@ -291,23 +315,43 @@ const TeacherProfileComplete: React.FC = () => {
     try {
       // Upload profile picture if selected
       if (profilePicture) {
-        const pictureFormData = new FormData();
-        pictureFormData.append('profilePicture', profilePicture);
+        console.log('📸 Uploading profile picture...');
+        setProfilePictureUploading(true);
         
-        const uploadResponse = await teacherProfileService.uploadProfilePicture(pictureFormData);
-        if (uploadResponse.success) {
-          formData.profilePicture = uploadResponse.data.profilePicture;
+        try {
+          const pictureFormData = new FormData();
+          pictureFormData.append('profilePicture', profilePicture);
+          
+          const uploadResponse = await teacherProfileService.uploadProfilePicture(pictureFormData);
+          console.log('📸 Profile picture upload response:', uploadResponse);
+          
+          if (uploadResponse.success) {
+            console.log('✅ Profile picture uploaded successfully');
+            formData.profilePicture = uploadResponse.data.profilePicture;
+          } else {
+            console.error('❌ Profile picture upload failed:', uploadResponse.error);
+            setError(uploadResponse.error || 'Failed to upload profile picture');
+            return;
+          }
+        } finally {
+          setProfilePictureUploading(false);
         }
       }
 
+      console.log('💾 Saving profile data...');
       const response = await teacherProfileService.updateProfile(formData);
+      console.log('💾 Profile save response:', response);
+      
       if (response.success) {
+        console.log('✅ Profile saved successfully');
         setSuccess('Profile saved successfully');
         await loadProfile();
       } else {
+        console.error('❌ Profile save failed:', response.error);
         setError(response.error || 'Failed to save profile');
       }
     } catch (err: any) {
+      console.error('❌ Profile save error:', err);
       setError(err.message || 'Failed to save profile');
     } finally {
       setSaving(false);
@@ -358,7 +402,7 @@ const TeacherProfileComplete: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, md: 4 } }}>
       <Card elevation={2}>
         <CardHeader
           title={
@@ -408,8 +452,8 @@ const TeacherProfileComplete: React.FC = () => {
           )}
 
           {/* Step Navigation */}
-          <Box sx={{ mb: 4 }}>
-            <Stepper activeStep={activeStep} alternativeLabel>
+          <Box sx={{ mb: { xs: 2, md: 4 } }}>
+            <Stepper activeStep={activeStep} alternativeLabel={!isMobile} orientation={isMobile ? 'vertical' : 'horizontal'}>
               {steps.map((step, index) => (
                 <Step key={step.label}>
                   <StepLabel 
@@ -427,8 +471,8 @@ const TeacherProfileComplete: React.FC = () => {
           {/* Step Content */}
           {activeStep === 0 && (
             <Grid container spacing={3}>
-              <Grid item md={6}>
-                <Paper elevation={1} sx={{ p: 3, height: '100%' }}>
+              <Grid item xs={12} md={6}>
+                <Paper elevation={1} sx={{ p: { xs: 2, md: 3 }, height: '100%' }}>
                   <Typography variant="h6" gutterBottom>
                     <Person sx={{ mr: 1, verticalAlign: 'middle' }} />
                     Personal Information
@@ -438,7 +482,7 @@ const TeacherProfileComplete: React.FC = () => {
                   <Box sx={{ textAlign: 'center', mb: 3 }}>
                     <Avatar
                       src={profilePicturePreview || undefined}
-                      sx={{ width: 120, height: 120, mx: 'auto', mb: 2 }}
+                      sx={{ width: { xs: 96, md: 120 }, height: { xs: 96, md: 120 }, mx: 'auto', mb: 2 }}
                     >
                       {user?.firstName?.[0]}
                     </Avatar>
@@ -448,14 +492,62 @@ const TeacherProfileComplete: React.FC = () => {
                       id="profile-picture-upload"
                       type="file"
                       onChange={handleProfilePictureChange}
+                      disabled={profilePictureUploading}
                     />
-                    <label htmlFor="profile-picture-upload">
-                      <Button variant="outlined" component="span" startIcon={<CloudUpload />}>
-                        Upload Photo
-                      </Button>
-                    </label>
-                    <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                      Upload a professional photo (max 5MB)
+                    
+                    {profilePicturePreview ? (
+                      <Box sx={{ mb: 2 }}>
+                        <Alert severity="success" sx={{ mb: 2 }}>
+                          <Box display="flex" alignItems="center" justifyContent="space-between">
+                            <Box>
+                              <Box display="flex" alignItems="center">
+                                <Check sx={{ mr: 1, color: 'success.main' }} />
+                                <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                                  Profile picture selected
+                                </Typography>
+                              </Box>
+                              <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                                {profilePicture ? `File: ${profilePicture.name}` : 'Current profile picture'}
+                              </Typography>
+                            </Box>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={profilePictureUploading ? <CircularProgress size={16} /> : <CloudUpload />}
+                              onClick={() => document.getElementById('profile-picture-upload')?.click()}
+                              disabled={profilePictureUploading}
+                            >
+                              {profilePictureUploading ? 'Uploading...' : 'Replace'}
+                            </Button>
+                          </Box>
+                        </Alert>
+                      </Box>
+                    ) : (
+                      <Box sx={{ mb: 2 }}>
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                          <Typography variant="body2" sx={{ mb: 2, fontWeight: 'medium' }}>
+                            📸 Profile Picture
+                          </Typography>
+                          <Typography variant="body2" sx={{ mb: 2 }}>
+                            Upload a professional photo to complete your profile.
+                          </Typography>
+                          <label htmlFor="profile-picture-upload">
+                            <Button 
+                              variant="contained" 
+                              component="span" 
+                              startIcon={profilePictureUploading ? <CircularProgress size={16} /> : <CloudUpload />}
+                              fullWidth
+                              disabled={profilePictureUploading}
+                            >
+                              {profilePictureUploading ? 'Uploading...' : 'Choose Photo'}
+                            </Button>
+                          </label>
+                        </Alert>
+                      </Box>
+                    )}
+                    
+                    <Typography variant="caption" display="block" color="text.secondary">
+                      Accepted formats: JPG, PNG, GIF (Max 5MB)
                     </Typography>
                   </Box>
 
@@ -490,8 +582,8 @@ const TeacherProfileComplete: React.FC = () => {
                 </Paper>
               </Grid>
 
-              <Grid item md={6}>
-                <Paper elevation={1} sx={{ p: 3, height: '100%' }}>
+              <Grid item xs={12} md={6}>
+                <Paper elevation={1} sx={{ p: { xs: 2, md: 3 }, height: '100%' }}>
                   <Typography variant="h6" gutterBottom>
                     Address Information
                   </Typography>
@@ -592,8 +684,8 @@ const TeacherProfileComplete: React.FC = () => {
           {/* Step 2: Professional Information */}
           {activeStep === 1 && (
             <Grid container spacing={3}>
-              <Grid item md={6}>
-                <Paper elevation={1} sx={{ p: 3, height: '100%' }}>
+              <Grid item xs={12} md={7}>
+                <Paper elevation={1} sx={{ p: { xs: 2, md: 3 } }}>
                   <Typography variant="h6" gutterBottom>
                     <School sx={{ mr: 1, verticalAlign: 'middle' }} />
                     Professional Details
@@ -691,8 +783,8 @@ const TeacherProfileComplete: React.FC = () => {
                 </Paper>
               </Grid>
 
-              <Grid item md={6}>
-                <Paper elevation={1} sx={{ p: 3, height: '100%' }}>
+              <Grid item xs={12} md={5}>
+                <Paper elevation={1} sx={{ p: { xs: 2, md: 3 } }}>
                   <Typography variant="h6" gutterBottom>
                     Education & Social Links
                   </Typography>
@@ -827,8 +919,8 @@ const TeacherProfileComplete: React.FC = () => {
           {/* Step 3: Teaching Information */}
           {activeStep === 2 && (
             <Grid container spacing={3}>
-              <Grid item md={6}>
-                <Paper elevation={1} sx={{ p: 3, height: '100%' }}>
+              <Grid item xs={12}>
+                <Paper elevation={1} sx={{ p: { xs: 2, md: 3 } }}>
                   <Typography variant="h6" gutterBottom>
                     <MenuBook sx={{ mr: 1, verticalAlign: 'middle' }} />
                     Teaching Preferences
@@ -945,25 +1037,40 @@ const TeacherProfileComplete: React.FC = () => {
                     {profile?.cvDocument ? (
                       <Alert severity="success" sx={{ mb: 2 }}>
                         <Box display="flex" alignItems="center" justifyContent="space-between">
-                          <Box>
-                            <Box display="flex" alignItems="center">
-                              <Check sx={{ mr: 1 }} />
+                          <Box flex={1}>
+                            <Box display="flex" alignItems="center" sx={{ mb: 1 }}>
+                              <Check sx={{ mr: 1, color: 'success.main' }} />
                               <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
                                 CV uploaded: {profile.cvDocument.originalName}
                               </Typography>
                             </Box>
-                            <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                            <Typography variant="caption" display="block" sx={{ mb: 1 }}>
                               Uploaded on: {new Date(profile.cvDocument.uploadedAt).toLocaleDateString()}
                             </Typography>
+                            <Typography variant="caption" display="block" color="text.secondary">
+                              File size: {profile.cvDocument.filename}
+                            </Typography>
                           </Box>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            startIcon={<CloudUpload />}
-                            onClick={() => document.getElementById('cv-upload')?.click()}
-                          >
-                            Replace CV
-                          </Button>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              color="primary"
+                              startIcon={<CloudDownload />}
+                              onClick={() => window.open(profile.cvDocument.url, '_blank')}
+                              sx={{ minWidth: 'auto' }}
+                            >
+                              View
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<CloudUpload />}
+                              onClick={() => document.getElementById('cv-upload')?.click()}
+                            >
+                              Replace
+                            </Button>
+                          </Box>
                         </Box>
                       </Alert>
                     ) : (
@@ -1060,13 +1167,14 @@ const TeacherProfileComplete: React.FC = () => {
           )}
 
           {/* Navigation Buttons */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 4 }}>
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, mt: 4 }}>
             <Button
               variant="outlined"
               onClick={() => setActiveStep(Math.max(0, activeStep - 1))}
               disabled={activeStep === 0}
+              fullWidth={isMobile}
             >
-              Previous
+              Back
             </Button>
 
             <Box>
@@ -1084,6 +1192,7 @@ const TeacherProfileComplete: React.FC = () => {
                 <Button
                   variant="contained"
                   onClick={() => setActiveStep(Math.min(3, activeStep + 1))}
+                  fullWidth={isMobile}
                 >
                   Next
                 </Button>

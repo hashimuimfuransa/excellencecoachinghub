@@ -468,7 +468,7 @@ const TeacherAssessmentManagement: React.FC = () => {
                         borderColor: 'primary.main',
                         '&:hover': {
                           backgroundColor: 'primary.50',
-                          borderColor: 'primary.dark'
+                          borderColor: 'primary.main'
                         }
                       }}
                     >

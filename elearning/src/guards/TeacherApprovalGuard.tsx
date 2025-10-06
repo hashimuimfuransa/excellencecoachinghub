@@ -36,12 +36,8 @@ const TeacherApprovalGuard: React.FC<TeacherApprovalGuardProps> = ({ children })
       }
 
       try {
-        const response = await teacherProfileService.getMyProfile();
-        if (response.success) {
-          setProfileStatus(response.data.profile.profileStatus);
-        } else {
-          setError('Failed to load profile status');
-        }
+        const profile = await teacherProfileService.getMyProfile();
+        setProfileStatus(profile.profileStatus);
       } catch (err: any) {
         console.error('Error checking profile status:', err);
         setError(err.message || 'Failed to check profile status');
@@ -85,6 +81,23 @@ const TeacherApprovalGuard: React.FC<TeacherApprovalGuardProps> = ({ children })
     return <>{children}</>;
   }
 
+  // For pending teachers, allow some features
+  if (profileStatus === 'pending') {
+    const pendingAllowedPaths = [
+      '/dashboard/teacher/courses',
+      '/dashboard/teacher/courses/create',
+      '/dashboard/teacher/analytics'
+    ];
+    
+    const isAllowedPath = pendingAllowedPaths.some(path => 
+      location.pathname.startsWith(path)
+    );
+    
+    if (isAllowedPath) {
+      return <>{children}</>;
+    }
+  }
+
   // Profile not approved, show access denied
   return (
     <Container maxWidth="md" sx={{ mt: 8, mb: 4 }}>
@@ -93,11 +106,14 @@ const TeacherApprovalGuard: React.FC<TeacherApprovalGuardProps> = ({ children })
           <Warning sx={{ fontSize: 64, color: 'warning.main', mb: 3 }} />
           
           <Typography variant="h4" component="h2" gutterBottom>
-            Profile Approval Required
+            {profileStatus === 'pending' ? 'Limited Access' : 'Profile Approval Required'}
           </Typography>
           
           <Typography variant="h6" color="text.secondary" paragraph>
-            You need an approved teacher profile to access this feature.
+            {profileStatus === 'pending' 
+              ? 'Some features are restricted while your profile is under review.'
+              : 'You need an approved teacher profile to access this feature.'
+            }
           </Typography>
 
           <Typography variant="body1" paragraph>
@@ -123,6 +139,22 @@ const TeacherApprovalGuard: React.FC<TeacherApprovalGuardProps> = ({ children })
                 Your profile is currently being reviewed by our admin team. 
                 This typically takes 1-3 business days. You'll receive an email 
                 notification once the review is complete.
+              </Typography>
+              <Typography sx={{ mt: 2, fontWeight: 'bold' }}>
+                You can currently access:
+              </Typography>
+              <Typography component="ul" sx={{ mt: 1, pl: 2 }}>
+                <li>Course Management</li>
+                <li>Create Course</li>
+                <li>Analytics Dashboard</li>
+              </Typography>
+              <Typography sx={{ mt: 2, fontWeight: 'bold' }}>
+                Full access will be available after approval:
+              </Typography>
+              <Typography component="ul" sx={{ mt: 1, pl: 2 }}>
+                <li>Live Sessions</li>
+                <li>Student Management</li>
+                <li>Grades & Performance</li>
               </Typography>
             </Alert>
           )}

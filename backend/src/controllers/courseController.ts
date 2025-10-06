@@ -5,6 +5,7 @@ import { UserProgress } from '../models/UserProgress';
 import { CourseEnrollment } from '../models/CourseEnrollment';
 import { validationResult } from 'express-validator';
 import { notificationService } from '../services/notificationService';
+import { CourseNotificationService } from '../services/courseNotificationService';
 import { CourseStatus } from '../../../shared/types';
 
 // Get all courses with filtering and pagination (Teachers see their own, Admins see all)
@@ -298,6 +299,7 @@ export const approveCourse = async (req: Request, res: Response, next: NextFunct
 
     // Notify instructor about course approval
     try {
+      // Send in-app notification
       await notificationService.notifyTeacherCourseStatus(
         course.instructor.toString(),
         course._id.toString(),
@@ -306,7 +308,21 @@ export const approveCourse = async (req: Request, res: Response, next: NextFunct
         (req.user?._id as any)?.toString() || '',
         feedback
       );
-      console.log(`✅ Notified instructor about course approval: ${course.title}`);
+      console.log(`✅ Sent in-app notification for course approval: ${course.title}`);
+
+      // Send SendGrid email notification
+      const instructor = await User.findById(course.instructor);
+      if (instructor) {
+        await CourseNotificationService.sendCourseApprovalNotification({
+          teacherName: `${instructor.firstName} ${instructor.lastName}`,
+          teacherEmail: instructor.email,
+          courseTitle: course.title,
+          courseId: course._id.toString(),
+          adminName: req.user?.firstName ? `${req.user.firstName} ${req.user.lastName}` : 'Admin',
+          adminFeedback: feedback
+        });
+        console.log(`✅ Sent SendGrid email for course approval: ${course.title}`);
+      }
     } catch (notificationError) {
       console.error('❌ Failed to send course approval notification:', notificationError);
       // Don't fail the request if notification fails
@@ -348,6 +364,7 @@ export const rejectCourse = async (req: Request, res: Response, next: NextFuncti
 
     // Notify instructor about course rejection
     try {
+      // Send in-app notification
       await notificationService.notifyTeacherCourseStatus(
         course.instructor.toString(),
         course._id.toString(),
@@ -356,7 +373,21 @@ export const rejectCourse = async (req: Request, res: Response, next: NextFuncti
         (req.user?._id as any)?.toString() || '',
         feedback
       );
-      console.log(`✅ Notified instructor about course rejection: ${course.title}`);
+      console.log(`✅ Sent in-app notification for course rejection: ${course.title}`);
+
+      // Send SendGrid email notification
+      const instructor = await User.findById(course.instructor);
+      if (instructor) {
+        await CourseNotificationService.sendCourseRejectionNotification({
+          teacherName: `${instructor.firstName} ${instructor.lastName}`,
+          teacherEmail: instructor.email,
+          courseTitle: course.title,
+          courseId: course._id.toString(),
+          adminName: req.user?.firstName ? `${req.user.firstName} ${req.user.lastName}` : 'Admin',
+          adminFeedback: feedback
+        });
+        console.log(`✅ Sent SendGrid email for course rejection: ${course.title}`);
+      }
     } catch (notificationError) {
       console.error('❌ Failed to send course rejection notification:', notificationError);
       // Don't fail the request if notification fails

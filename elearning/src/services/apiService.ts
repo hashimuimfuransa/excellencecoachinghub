@@ -3,6 +3,11 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 // API configuration
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
+console.log('🔧 API Service Configuration:');
+console.log('📡 API Base URL:', API_BASE_URL);
+console.log('🌐 Environment API URL:', process.env.REACT_APP_API_URL);
+console.log('🔧 Current environment:', process.env.NODE_ENV);
+
 // Create axios instance
 const axiosInstance: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -18,10 +23,15 @@ axiosInstance.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('🔑 API Request with token:', config.url, token.substring(0, 20) + '...');
+    } else {
+      console.warn('⚠️ API Request without token:', config.url);
     }
+    console.log('📡 Full API Request URL:', config.baseURL + config.url);
     return config;
   },
   (error) => {
+    console.error('❌ Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -29,11 +39,18 @@ axiosInstance.interceptors.request.use(
 // Response interceptor to handle errors
 axiosInstance.interceptors.response.use(
   (response: AxiosResponse) => {
+    console.log('✅ API Response received:', response.config.url, 'Status:', response.status);
+    console.log('📦 Response data:', response.data);
     return response;
   },
   (error) => {
+    console.error('❌ API Response error:', error.config?.url, 'Status:', error.response?.status);
+    console.error('❌ Error data:', error.response?.data);
+    console.error('❌ Error message:', error.message);
+    
     if (error.response?.status === 401) {
       // Token expired or invalid
+      console.log('🔐 Token expired, redirecting to login');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';

@@ -71,7 +71,8 @@ import {
   PieChart,
   EmojiEvents
 } from '@mui/icons-material';
-import { useAuth } from '../../store/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
+import { useTeacherProfile } from '../../contexts/TeacherProfileContext';
 import { apiService } from '../../services/apiService';
 
 interface TabPanelProps {
@@ -164,8 +165,9 @@ interface TeacherStudentsData {
 
 const StudentManagement: React.FC = () => {
   const { user } = useAuth();
+  const { profile, loading: profileLoading, error: profileError } = useTeacherProfile();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme?.breakpoints?.down?.('md') || '(max-width: 900px)');
   
   const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -183,8 +185,11 @@ const StudentManagement: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
+    console.log('🔍 StudentManagement: Profile loaded:', profile);
+    console.log('🔍 StudentManagement: Profile loading:', profileLoading);
+    console.log('🔍 StudentManagement: Profile error:', profileError);
     fetchStudentsData();
-  }, []);
+  }, [profile]);
 
   useEffect(() => {
     if (studentsData) {
@@ -828,7 +833,7 @@ const StudentManagement: React.FC = () => {
                         '&:hover': {
                           boxShadow: 6,
                           transform: 'translateY(-4px)',
-                          borderColor: isTopThree ? 'warning.dark' : 'primary.main'
+                          borderColor: isTopThree ? 'warning.main' : 'primary.main'
                         }
                       }}
                     >

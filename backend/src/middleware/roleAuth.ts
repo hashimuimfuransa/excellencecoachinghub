@@ -5,6 +5,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: {
+        _id: string;
         id: string;
         email: string;
         role: string;
@@ -69,8 +70,8 @@ export const authorizeOwnerOrRole = (allowedRoles: string[] = ['admin', 'teacher
       // Get the resource owner ID from request params or body
       const resourceOwnerId = req.params.userId || req.body.userId || req.params.id;
       
-      // Allow if user is the owner of the resource
-      if (resourceOwnerId && req.user.id === resourceOwnerId) {
+      // Allow if user is the owner of the resource (check both _id and id for compatibility)
+      if (resourceOwnerId && (req.user._id === resourceOwnerId || req.user.id === resourceOwnerId)) {
         next();
         return;
       }

@@ -181,7 +181,7 @@ const ProfilePage: React.FC = () => {
       if (user) {
         const loadStudentProfile = async () => {
           const userRoleString = String(user?.role).toLowerCase();
-          const userIsStudent = user?.role === UserRole.STUDENT || user?.role === 'student' || userRoleString === 'student';
+          const userIsStudent = user?.role === UserRole.STUDENT || userRoleString === 'student';
           
           if (userIsStudent) {
             try {
@@ -212,7 +212,7 @@ const ProfilePage: React.FC = () => {
     const loadStudentProfile = async () => {
       console.log('🔍 Loading student profile - User role:', user?.role);
       const userRoleString = String(user?.role).toLowerCase();
-      const userIsStudent = user?.role === UserRole.STUDENT || user?.role === 'student' || userRoleString === 'student';
+      const userIsStudent = user?.role === UserRole.STUDENT || userRoleString === 'student';
       
       if (userIsStudent) {
         try {
@@ -494,9 +494,9 @@ const ProfilePage: React.FC = () => {
   const userRoleString = String(user.role || '').toLowerCase();
   
   // Proper role detection logic - NO FALLBACK
-  const isStudent = user.role === UserRole.STUDENT || user.role === 'student' || userRoleString === 'student';
-  const isTeacher = user.role === UserRole.TEACHER || user.role === 'teacher' || userRoleString === 'teacher';
-  const isAdmin = user.role === UserRole.ADMIN || user.role === 'admin' || userRoleString === 'admin';
+  const isStudent = user.role === UserRole.STUDENT || userRoleString === 'student';
+  const isTeacher = user.role === UserRole.TEACHER || userRoleString === 'teacher';
+  const isAdmin = user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN || userRoleString === 'admin' || userRoleString === 'super_admin';
   
   // Only show profile if user has a valid role
   const hasValidRole = isStudent || isTeacher || isAdmin;

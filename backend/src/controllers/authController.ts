@@ -573,6 +573,9 @@ export const googleAuth = async (req: Request, res: Response, next: NextFunction
 // @access  Public
 export const googleCompleteRegistration = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    console.log('🔍 Google Complete Registration - Request body:', req.body);
+    console.log('🔍 Google Complete Registration - Request headers:', req.headers);
+    
     const { 
       email, 
       firstName, 
@@ -584,6 +587,18 @@ export const googleCompleteRegistration = async (req: Request, res: Response, ne
       isEmailVerified = true,
       platform 
     } = req.body;
+
+    console.log('🔍 Google Complete Registration - Extracted data:', {
+      email,
+      firstName,
+      lastName,
+      role,
+      googleId,
+      profilePicture,
+      provider,
+      isEmailVerified,
+      platform
+    });
 
     // Check if user already exists
     let user = await User.findOne({ 

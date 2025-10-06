@@ -37,14 +37,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Check role-based access
   if (requiredRole && user.role !== requiredRole) {
-    // Redirect to appropriate dashboard based on user role
-    const redirectPath = user.role === UserRole.ADMIN
-      ? '/dashboard/admin'
-      : user.role === UserRole.TEACHER
-      ? '/dashboard/teacher'
-      : '/dashboard/student';
+    // Handle super admin as admin for elearning
+    const isSuperAdminAsAdmin = user.role === UserRole.SUPER_ADMIN && requiredRole === UserRole.ADMIN;
+    
+    if (!isSuperAdminAsAdmin) {
+      // Redirect to appropriate dashboard based on user role
+      const redirectPath = user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN
+        ? '/dashboard/admin'
+        : user.role === UserRole.TEACHER
+        ? '/dashboard/teacher'
+        : '/dashboard/student';
 
-    return <Navigate to={redirectPath} replace />;
+      return <Navigate to={redirectPath} replace />;
+    }
   }
 
   return <>{children}</>;

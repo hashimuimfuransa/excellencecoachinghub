@@ -165,6 +165,7 @@ const LoginPage: React.FC = () => {
         firstName: googleUserData?.firstName || '',
         lastName: googleUserData?.lastName || '',
         googleId: googleUserData?.googleId || '',
+        profilePicture: googleUserData?.profilePicture || '',
         googleUserData: {
           ...googleUserData,
           platform: 'elearning'

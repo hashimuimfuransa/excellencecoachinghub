@@ -1,4 +1,6 @@
-import { createTheme, ThemeOptions } from '@mui/material/styles';
+import React from 'react';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
 
 // Define explicit color values
 const colors = {
@@ -40,11 +42,10 @@ const colors = {
   },
 };
 
-// Create a bulletproof theme with explicit overrides
-export const theme = createTheme({
+// Create bulletproof theme
+const bulletproofTheme = createTheme({
   palette: {
     mode: 'light',
-    // Add dark variants for all colors to prevent undefined errors
     primary: {
       ...colors.primary,
       dark: colors.primary.dark,
@@ -344,19 +345,6 @@ export const theme = createTheme({
   },
 });
 
-// Create dark theme (simplified)
-export const darkTheme = createTheme({
-  palette: {
-    mode: 'dark',
-    primary: colors.primary,
-    secondary: colors.secondary,
-    error: colors.error,
-    warning: colors.warning,
-    info: colors.info,
-    success: colors.success,
-  },
-});
-
 // Theme validation function
 const validateTheme = (themeObject: any) => {
   const requiredPaths = [
@@ -389,11 +377,27 @@ const validateTheme = (themeObject: any) => {
 };
 
 // Validate the theme
-validateTheme(theme);
+validateTheme(bulletproofTheme);
 
 // Ensure theme is properly created
-console.log('Theme created successfully with bulletproof overrides');
-console.log('Primary color:', theme.palette.primary.main);
-console.log('Primary dark color:', theme.palette.primary.dark);
-console.log('Success color:', theme.palette.success.main);
-console.log('Error color:', theme.palette.error.main);
+console.log('🛡️ Bulletproof Theme created successfully');
+console.log('Primary color:', bulletproofTheme.palette.primary.main);
+console.log('Primary dark color:', bulletproofTheme.palette.primary.dark);
+console.log('Success color:', bulletproofTheme.palette.success.main);
+console.log('Error color:', bulletproofTheme.palette.error.main);
+
+interface BulletproofThemeProviderProps {
+  children: React.ReactNode;
+}
+
+const BulletproofThemeProvider: React.FC<BulletproofThemeProviderProps> = ({ children }) => {
+  return (
+    <ThemeProvider theme={bulletproofTheme}>
+      <CssBaseline />
+      {children}
+    </ThemeProvider>
+  );
+};
+
+export default BulletproofThemeProvider;
+export { bulletproofTheme };

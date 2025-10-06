@@ -1,3 +1,5 @@
+console.log('🚀🚀🚀 LAYOUT.TSX FILE LOADED 🚀🚀🚀');
+
 import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -176,9 +178,15 @@ interface NavigationItem {
 }
 
 const Layout: React.FC = () => {
+  console.log('🚀🚀🚀 LAYOUT COMPONENT FUNCTION CALLED 🚀🚀🚀');
+  console.log('🔍 LAYOUT COMPONENT RENDERING - START');
+  
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [teacherProfileStatus, setTeacherProfileStatus] = useState<string | null>(null);
+  
+  // Debug initial state
+  console.log('🔍 Layout: Initial teacherProfileStatus state:', teacherProfileStatus);
   
   // Explore categories state
   const [exploreAnchorEl, setExploreAnchorEl] = useState<null | HTMLElement>(null);
@@ -202,18 +210,42 @@ const Layout: React.FC = () => {
     const loadTeacherProfileStatus = async () => {
       if (user?.role === UserRole.TEACHER) {
         try {
-          const response = await teacherProfileService.getMyProfile();
-          if (response.success) {
-            setTeacherProfileStatus(response.data.profile.profileStatus);
-          }
-        } catch (error) {
-          console.error('Failed to load teacher profile status:', error);
+          console.log('🚀🚀🚀 LAYOUT: LOADING TEACHER PROFILE STATUS 🚀🚀🚀');
+          console.log('🔍 Loading teacher profile status in Layout...');
+          console.log('🔍 User:', user);
+          console.log('🔍 User role:', user?.role);
+          console.log('🔍 User ID:', user?._id);
+          console.log('🔍 User email:', user?.email);
+          console.log('🔍 User firstName:', user?.firstName);
+          console.log('🔍 User lastName:', user?.lastName);
+          console.log('🔍 Full user object:', JSON.stringify(user, null, 2));
+          
+          const profile = await teacherProfileService.getMyProfile();
+          console.log('🔍 Profile loaded in Layout:', profile);
+          console.log('🔍 Profile keys:', Object.keys(profile));
+          console.log('🔍 Profile status field:', profile.profileStatus);
+          console.log('🔍 Profile status type:', typeof profile.profileStatus);
+          console.log('🔍 Profile status value:', JSON.stringify(profile.profileStatus));
+          console.log('🔍 Setting teacherProfileStatus to:', profile.profileStatus);
+          setTeacherProfileStatus(profile.profileStatus);
+          console.log('🔍 teacherProfileStatus set successfully');
+        } catch (error: any) {
+          console.error('❌ Failed to load teacher profile status:', error);
+          console.error('❌ Error message:', error.message);
+          console.error('❌ Error stack:', error.stack);
+          console.error('❌ Error response:', error.response);
         }
       }
     };
 
     loadTeacherProfileStatus();
   }, [user]);
+
+  // Debug teacherProfileStatus changes
+  useEffect(() => {
+    console.log('🔍 Layout: teacherProfileStatus changed to:', teacherProfileStatus);
+    console.log('🔍 Layout: teacherProfileStatus type:', typeof teacherProfileStatus);
+  }, [teacherProfileStatus]);
   
   // Dynamic drawer width based on device
   const drawerWidths = getDrawerWidth();
@@ -230,7 +262,7 @@ const Layout: React.FC = () => {
 
     const roleSpecificItems: NavigationItem[] = [];
 
-    if (user?.role === UserRole.ADMIN) {
+    if (user?.role === UserRole.ADMIN || user?.role === UserRole.SUPER_ADMIN) {
       roleSpecificItems.push(
         { text: 'User Management', icon: <People />, path: '/dashboard/admin/users' },
         { text: 'Teacher Management', icon: <SupervisorAccount />, path: '/dashboard/admin/teachers' },
@@ -462,14 +494,46 @@ const Layout: React.FC = () => {
       >
         {getNavigationItems().map((item) => {
           const isLiveSession = item.text.includes('Live Sessions');
-          const isDisabled = item.requiresApprovedProfile && 
-                           user?.role === UserRole.TEACHER && 
-                           teacherProfileStatus !== 'approved';
+          
+          // More nuanced access control
+          let isDisabled = false;
+          if (item.requiresApprovedProfile && user?.role === UserRole.TEACHER) {
+            if (teacherProfileStatus === 'incomplete' || teacherProfileStatus === 'rejected') {
+              isDisabled = true;
+            } else if (teacherProfileStatus === 'pending') {
+              // Allow some features for pending teachers, but not all
+              const pendingAllowedFeatures = [
+                'Course Management',
+                'Create Course',
+                'Analytics'
+              ];
+              isDisabled = !pendingAllowedFeatures.includes(item.text);
+            }
+          }
+          
+          // Debug logging
+          if (item.requiresApprovedProfile && user?.role === UserRole.TEACHER) {
+            console.log(`🔍 Navigation item "${item.text}":`, {
+              requiresApprovedProfile: item.requiresApprovedProfile,
+              userRole: user?.role,
+              teacherProfileStatus,
+              teacherProfileStatusType: typeof teacherProfileStatus,
+              teacherProfileStatusValue: JSON.stringify(teacherProfileStatus),
+              isDisabled,
+              reason: teacherProfileStatus === 'pending' ? 'Some features restricted for pending approval' : 'Profile not approved'
+            });
+          }
           
           return (
             <ResponsiveListItem key={item.text} disablePadding>
               <Tooltip 
-                title={isDisabled ? 'Complete and get your profile approved to access this feature' : ''}
+                title={
+                  isDisabled ? (
+                    teacherProfileStatus === 'pending' 
+                      ? 'This feature requires full profile approval. Your profile is under review.'
+                      : 'Complete and get your profile approved to access this feature'
+                  ) : ''
+                }
                 placement="right"
               >
                 <Box sx={{ width: '100%' }}>
@@ -581,7 +645,7 @@ const Layout: React.FC = () => {
         </ListItem>
 
         {/* Only show Settings for Admin users */}
-        {user?.role === UserRole.ADMIN && (
+        {(user?.role === UserRole.ADMIN || user?.role === UserRole.SUPER_ADMIN) && (
           <ListItem disablePadding>
             <ListItemButton onClick={() => handleNavigation('/dashboard/admin/settings')}>
               <ListItemIcon>
@@ -744,7 +808,7 @@ const Layout: React.FC = () => {
           Profile
         </MenuItem>
         {/* Only show Settings for Admin users */}
-        {user?.role === UserRole.ADMIN && (
+        {(user?.role === UserRole.ADMIN || user?.role === UserRole.SUPER_ADMIN) && (
           <MenuItem onClick={() => handleNavigation('/dashboard/admin/settings')}>
             <Settings fontSize="small" sx={{ mr: 1 }} />
             Settings

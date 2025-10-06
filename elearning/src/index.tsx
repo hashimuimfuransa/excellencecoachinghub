@@ -3,14 +3,12 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { ReactQueryDevtools } from 'react-query/devtools';
-import { ThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './theme-override.css';
 
 import App from './App';
-import { theme } from './utils/theme';
+import BulletproofThemeProvider from './components/Theme/BulletproofThemeProvider';
 import { AuthProvider } from './store/AuthContext';
 import { SocketProvider } from './store/SocketContext';
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -37,8 +35,7 @@ root.render(
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <ThemeProvider theme={theme}>
-            <CssBaseline />
+          <BulletproofThemeProvider>
             <AuthProvider>
               <SocketProvider>
                 <NotificationProvider>
@@ -58,7 +55,7 @@ root.render(
                 </NotificationProvider>
               </SocketProvider>
             </AuthProvider>
-          </ThemeProvider>
+          </BulletproofThemeProvider>
         </BrowserRouter>
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>

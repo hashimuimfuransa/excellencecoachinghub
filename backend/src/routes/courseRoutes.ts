@@ -49,6 +49,35 @@ const createCourseValidation = [
   body('level')
     .isIn(['Beginner', 'Intermediate', 'Advanced', 'beginner', 'intermediate', 'advanced'])
     .withMessage('Level must be Beginner, Intermediate, or Advanced'),
+  body('difficultyLevel')
+    .optional()
+    .isIn(['beginner', 'intermediate', 'advanced', 'expert'])
+    .withMessage('Difficulty level must be beginner, intermediate, advanced, or expert'),
+  body('courseFormat')
+    .optional()
+    .isIn(['self_paced', 'instructor_led', 'hybrid'])
+    .withMessage('Course format must be self_paced, instructor_led, or hybrid'),
+  body('language')
+    .optional()
+    .trim()
+    .isLength({ max: 50 })
+    .withMessage('Language cannot exceed 50 characters'),
+  body('totalEstimatedTime')
+    .optional()
+    .isNumeric()
+    .withMessage('Total estimated time must be a number')
+    .isFloat({ min: 0 })
+    .withMessage('Total estimated time cannot be negative'),
+  body('weeklyTimeCommitment')
+    .optional()
+    .isNumeric()
+    .withMessage('Weekly time commitment must be a number')
+    .isFloat({ min: 0 })
+    .withMessage('Weekly time commitment cannot be negative'),
+  body('certificationOffered')
+    .optional()
+    .isBoolean()
+    .withMessage('Certification offered must be a boolean'),
   // Price will be set during approval process
   body('duration')
     .isNumeric()
@@ -145,8 +174,8 @@ const assignModeratorValidation = [
 // Student routes
 router.get('/enrolled', authorize(UserRole.STUDENT), getEnrolledCourses);
 
-// Routes accessible by teachers and admins
-router.get('/', authorize(UserRole.TEACHER, UserRole.ADMIN), getAllCourses);
+// Routes accessible by teachers, admins, and super admins
+router.get('/', authorize(UserRole.TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN), getAllCourses);
 
 // Admin-only routes (must be before /:id route to avoid conflicts)
 router.get('/stats', requireAdmin, getCourseStats);
@@ -156,7 +185,7 @@ router.get('/stats', requireAdmin, getCourseStats);
 router.get('/:id', getCourseById);
 
 // Teacher-specific routes (requires approved teacher profile)
-router.post('/', authorize(UserRole.TEACHER), requireApprovedTeacher, createCourseValidation, validateRequest, createCourse);
+router.post('/', authorize(UserRole.TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN), requireApprovedTeacher, createCourseValidation, validateRequest, createCourse);
 router.put('/:id', requireAdmin, updateCourseValidation, validateRequest, updateCourse);
 router.delete('/:id', requireAdmin, deleteCourse);
 router.put('/:id/approve', requireAdmin, approveCourseValidation, validateRequest, approveCourse);

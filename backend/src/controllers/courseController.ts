@@ -647,3 +647,233 @@ export const getEnrolledCourses = async (req: Request, res: Response, next: Next
     next(error);
   }
 };
+
+// Get enrolled students for a specific course (for teachers)
+export const getCourseEnrolledStudents = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const courseId = req.params.courseId;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const skip = (page - 1) * limit;
+
+    // Verify the course exists and get instructor info
+    const course = await Course.findById(courseId).populate('instructor', 'firstName lastName email');
+    if (!course) {
+      res.status(404).json({
+        success: false,
+        error: 'Course not found'
+      });
+      return;
+    }
+
+    // Check if the requesting user is the instructor or an admin
+    const requestingUserId = req.user._id.toString();
+    const instructorId = course.instructor._id.toString();
+    const isInstructor = requestingUserId === instructorId;
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'super_admin';
+
+    if (!isInstructor && !isAdmin) {
+      res.status(403).json({
+        success: false,
+        error: 'Access denied. Only course instructors and admins can view enrolled students.'
+      });
+      return;
+    }
+
+    // Get enrollments for this course
+    const enrollments = await CourseEnrollment.find({
+      course: courseId,
+      isActive: true,
+      paymentStatus: { $in: ['completed', 'pending'] } // Include both completed and pending
+    })
+      .populate({
+        path: 'student',
+        select: 'firstName lastName email createdAt'
+      })
+      .sort({ enrolledAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Format the response
+    const students = enrollments.map(enrollment => ({
+      _id: enrollment.student._id,
+      firstName: enrollment.student.firstName,
+      lastName: enrollment.student.lastName,
+      email: enrollment.student.email,
+      enrolledAt: enrollment.enrolledAt,
+      enrollmentType: enrollment.enrollmentType,
+      paymentStatus: enrollment.paymentStatus,
+      progress: {
+        totalProgress: enrollment.progress?.totalProgress || 0,
+        lastAccessedAt: enrollment.progress?.lastAccessedAt,
+        completedLessons: enrollment.progress?.completedLessons?.length || 0,
+        completedAssignments: enrollment.progress?.completedAssignments?.length || 0
+      },
+      accessPermissions: enrollment.accessPermissions
+    }));
+
+    // Get total count
+    const totalEnrollments = await CourseEnrollment.countDocuments({
+      course: courseId,
+      isActive: true,
+      paymentStatus: { $in: ['completed', 'pending'] }
+    });
+    const totalPages = Math.ceil(totalEnrollments / limit);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        course: {
+          _id: course._id,
+          title: course.title,
+          instructor: course.instructor
+        },
+        students,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalStudents: totalEnrollments,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching enrolled students:', error);
+    next(error);
+  }
+};
+
+// Get teacher dashboard statistics
+export const getTeacherDashboardStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const teacherId = req.user._id.toString();
+
+    // Get teacher's courses
+    const courses = await Course.find({ instructor: teacherId });
+    const approvedCourses = courses.filter(course => course.status === CourseStatus.APPROVED);
+    
+    // Get total enrolled students across all courses
+    const courseIds = courses.map(course => course._id);
+    const totalEnrollments = await CourseEnrollment.countDocuments({
+      course: { $in: courseIds },
+      isActive: true,
+      paymentStatus: { $in: ['completed', 'pending'] }
+    });
+
+    // Get unique students (students enrolled in any of teacher's courses)
+    const uniqueStudents = await CourseEnrollment.distinct('student', {
+      course: { $in: courseIds },
+      isActive: true,
+      paymentStatus: { $in: ['completed', 'pending'] }
+    });
+
+    // Get live sessions count (you might need to implement this based on your live session model)
+    // For now, we'll estimate based on courses
+    const liveSessionsCount = approvedCourses.length; // Assuming each course has live sessions
+
+    // Calculate average completion rate
+    const enrollmentsWithProgress = await CourseEnrollment.find({
+      course: { $in: courseIds },
+      isActive: true,
+      paymentStatus: { $in: ['completed', 'pending'] }
+    }).select('progress');
+
+    const totalProgress = enrollmentsWithProgress.reduce((sum, enrollment) => {
+      return sum + (enrollment.progress?.totalProgress || 0);
+    }, 0);
+
+    const averageCompletionRate = enrollmentsWithProgress.length > 0 
+      ? Math.round(totalProgress / enrollmentsWithProgress.length) 
+      : 0;
+
+    // Get recent enrollments (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const recentEnrollments = await CourseEnrollment.countDocuments({
+      course: { $in: courseIds },
+      isActive: true,
+      enrolledAt: { $gte: thirtyDaysAgo }
+    });
+
+    // Get course completion stats
+    const completedCourses = enrollmentsWithProgress.filter(
+      enrollment => enrollment.progress?.totalProgress >= 100
+    ).length;
+
+    // Get pending courses (waiting for approval)
+    const pendingCourses = courses.filter(course => course.status === CourseStatus.PENDING);
+
+    // Get rejected courses
+    const rejectedCourses = courses.filter(course => course.status === CourseStatus.REJECTED);
+
+    // Calculate total earnings (if you have payment tracking)
+    const totalEarnings = await CourseEnrollment.aggregate([
+      {
+        $match: {
+          course: { $in: courseIds },
+          isActive: true,
+          paymentStatus: 'completed'
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$paymentAmount' }
+        }
+      }
+    ]);
+
+    const earnings = totalEarnings.length > 0 ? totalEarnings[0].total : 0;
+
+    // Get recent activity (recent enrollments with student details)
+    const recentActivity = await CourseEnrollment.find({
+      course: { $in: courseIds },
+      isActive: true,
+      enrolledAt: { $gte: thirtyDaysAgo }
+    })
+      .populate('student', 'firstName lastName email')
+      .populate('course', 'title')
+      .sort({ enrolledAt: -1 })
+      .limit(5);
+
+    const formattedRecentActivity = recentActivity.map(enrollment => ({
+      type: 'enrollment',
+      message: `${enrollment.student.firstName} ${enrollment.student.lastName} enrolled in ${enrollment.course.title}`,
+      timestamp: enrollment.enrolledAt,
+      student: enrollment.student,
+      course: enrollment.course
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        overview: {
+          totalCourses: courses.length,
+          activeCourses: approvedCourses.length,
+          pendingCourses: pendingCourses.length,
+          rejectedCourses: rejectedCourses.length,
+          totalStudents: uniqueStudents.length,
+          totalEnrollments: totalEnrollments,
+          liveSessionsCount: liveSessionsCount,
+          averageCompletionRate: averageCompletionRate,
+          completedCourses: completedCourses,
+          recentEnrollments: recentEnrollments,
+          totalEarnings: earnings
+        },
+        recentActivity: formattedRecentActivity,
+        courses: approvedCourses.map(course => ({
+          _id: course._id,
+          title: course.title,
+          status: course.status,
+          enrollmentCount: course.enrollmentCount || 0,
+          createdAt: course.createdAt
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching teacher dashboard stats:', error);
+    next(error);
+  }
+};

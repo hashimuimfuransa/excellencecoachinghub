@@ -10,7 +10,9 @@ import {
   getCourseStats,
   assignModerator,
   createCourse,
-  getEnrolledCourses
+  getEnrolledCourses,
+  getCourseEnrolledStudents,
+  getTeacherDashboardStats
 } from '../controllers/courseController';
 import { getCourseMaterials } from '../controllers/courseMaterialsController';
 import { protect, authorize } from '../middleware/auth';
@@ -194,5 +196,11 @@ router.put('/:id/assign-moderator', requireAdmin, assignModeratorValidation, val
 
 // Course materials route
 router.get('/:courseId/materials', getCourseMaterials);
+
+// Get enrolled students for a course (teachers and admins only)
+router.get('/:courseId/enrolled-students', authorize(UserRole.TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN), getCourseEnrolledStudents);
+
+// Get teacher dashboard statistics
+router.get('/teacher/dashboard-stats', authorize(UserRole.TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN), getTeacherDashboardStats);
 
 export default router;

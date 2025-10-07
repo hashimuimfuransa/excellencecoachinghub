@@ -335,15 +335,10 @@ const CourseDetailPage: React.FC = () => {
                       <Typography variant="body2" color="text.secondary">
                         Pricing
                       </Typography>
-                      {course.notesPrice > 0 || course.liveSessionPrice > 0 ? (
-                        <Box>
-                          <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
-                            Notes: ${course.notesPrice || 0}
-                          </Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
-                            Live: ${course.liveSessionPrice || 0}
-                          </Typography>
-                        </Box>
+                      {course.price > 0 ? (
+                        <Typography variant="h6" fontWeight="bold" color="primary.main">
+                          ${course.price}
+                        </Typography>
                       ) : (
                         <Typography variant="h6" fontWeight="bold" color="success.main">
                           FREE
@@ -542,7 +537,7 @@ const CourseDetailPage: React.FC = () => {
             Are you sure you want to enroll in "{course.title}"?
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Notes Access: ${course.notesPrice || 0} • Live Sessions: ${course.liveSessionPrice || 0}
+            Course Price: {course.price > 0 ? `$${course.price}` : 'FREE'}
           </Typography>
         </DialogContent>
         <DialogActions>

@@ -33,7 +33,8 @@ import {
   VideoCall,
   PlayArrow,
   TrendingUp,
-  Notifications
+  Notifications,
+  Person
 } from '@mui/icons-material';
 
 import { useAuth } from '../../store/AuthContext';

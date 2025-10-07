@@ -1346,12 +1346,25 @@ const StudentCourses: React.FC = () => {
                           {/* Price and Rating */}
                           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
                             <Box>
-                              <Typography variant="h5" color="primary.main" sx={{ fontWeight: 700 }}>
-                                ${course.price || '49'}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                💰 One-time payment
-                              </Typography>
+                              {course.price > 0 ? (
+                                <>
+                                  <Typography variant="h5" color="primary.main" sx={{ fontWeight: 700 }}>
+                                    ${course.price}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    💰 One-time payment
+                                  </Typography>
+                                </>
+                              ) : (
+                                <>
+                                  <Typography variant="h5" color="success.main" sx={{ fontWeight: 700 }}>
+                                    FREE
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    🎉 No cost to enroll
+                                  </Typography>
+                                </>
+                              )}
                             </Box>
                             <Box display="flex" alignItems="center">
                               <Stack direction="row" spacing={0.5}>

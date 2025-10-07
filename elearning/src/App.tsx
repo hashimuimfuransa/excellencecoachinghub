@@ -339,6 +339,15 @@ const App: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      {/* Course Enrollment Page (outside dashboard) */}
+      <Route
+        path="/course/:id/enroll"
+        element={
+          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+            <CourseEnrollmentPage />
+          </ProtectedRoute>
+        }
+      />
       {/* Enhanced Course View (outside dashboard) */}
       <Route
         path="/course/:id"

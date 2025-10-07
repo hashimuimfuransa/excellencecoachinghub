@@ -290,5 +290,177 @@ export const courseService = {
     }
 
     throw new Error(response.error || 'Failed to fetch enrolled courses');
+  },
+
+  // Get enrolled students for a course (teachers only)
+  getCourseEnrolledStudents: async (courseId: string, page: number = 1, limit: number = 50): Promise<{
+    course: {
+      _id: string;
+      title: string;
+      instructor: {
+        _id: string;
+        firstName: string;
+        lastName: string;
+        email: string;
+      };
+    };
+    students: Array<{
+      _id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      enrolledAt: string;
+      enrollmentType: 'notes' | 'live_sessions' | 'both';
+      paymentStatus: 'pending' | 'completed' | 'failed' | 'refunded';
+      progress: {
+        totalProgress: number;
+        lastAccessedAt?: string;
+        completedLessons: number;
+        completedAssignments: number;
+      };
+      accessPermissions: {
+        canAccessNotes: boolean;
+        canAccessLiveSessions: boolean;
+        canDownloadMaterials: boolean;
+        canSubmitAssignments: boolean;
+      };
+    }>;
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalStudents: number;
+      hasNextPage: boolean;
+      hasPrevPage: boolean;
+    };
+  }> => {
+    const response = await apiService.get<{
+      course: {
+        _id: string;
+        title: string;
+        instructor: {
+          _id: string;
+          firstName: string;
+          lastName: string;
+          email: string;
+        };
+      };
+      students: Array<{
+        _id: string;
+        firstName: string;
+        lastName: string;
+        email: string;
+        enrolledAt: string;
+        enrollmentType: 'notes' | 'live_sessions' | 'both';
+        paymentStatus: 'pending' | 'completed' | 'failed' | 'refunded';
+        progress: {
+          totalProgress: number;
+          lastAccessedAt?: string;
+          completedLessons: number;
+          completedAssignments: number;
+        };
+        accessPermissions: {
+          canAccessNotes: boolean;
+          canAccessLiveSessions: boolean;
+          canDownloadMaterials: boolean;
+          canSubmitAssignments: boolean;
+        };
+      }>;
+      pagination: {
+        currentPage: number;
+        totalPages: number;
+        totalStudents: number;
+        hasNextPage: boolean;
+        hasPrevPage: boolean;
+      };
+    }>(`/courses/${courseId}/enrolled-students?page=${page}&limit=${limit}`);
+
+    if (response.success && response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.error || 'Failed to fetch enrolled students');
+  },
+
+  // Get teacher dashboard statistics
+  getTeacherDashboardStats: async (): Promise<{
+    overview: {
+      totalCourses: number;
+      activeCourses: number;
+      pendingCourses: number;
+      rejectedCourses: number;
+      totalStudents: number;
+      totalEnrollments: number;
+      liveSessionsCount: number;
+      averageCompletionRate: number;
+      completedCourses: number;
+      recentEnrollments: number;
+      totalEarnings: number;
+    };
+    recentActivity: Array<{
+      type: string;
+      message: string;
+      timestamp: string;
+      student: {
+        _id: string;
+        firstName: string;
+        lastName: string;
+        email: string;
+      };
+      course: {
+        _id: string;
+        title: string;
+      };
+    }>;
+    courses: Array<{
+      _id: string;
+      title: string;
+      status: string;
+      enrollmentCount: number;
+      createdAt: string;
+    }>;
+  }> => {
+    const response = await apiService.get<{
+      overview: {
+        totalCourses: number;
+        activeCourses: number;
+        pendingCourses: number;
+        rejectedCourses: number;
+        totalStudents: number;
+        totalEnrollments: number;
+        liveSessionsCount: number;
+        averageCompletionRate: number;
+        completedCourses: number;
+        recentEnrollments: number;
+        totalEarnings: number;
+      };
+      recentActivity: Array<{
+        type: string;
+        message: string;
+        timestamp: string;
+        student: {
+          _id: string;
+          firstName: string;
+          lastName: string;
+          email: string;
+        };
+        course: {
+          _id: string;
+          title: string;
+        };
+      }>;
+      courses: Array<{
+        _id: string;
+        title: string;
+        status: string;
+        enrollmentCount: number;
+        createdAt: string;
+      }>;
+    }>('/courses/teacher/dashboard-stats');
+
+    if (response.success && response.data) {
+      return response.data;
+    }
+
+    throw new Error(response.error || 'Failed to fetch teacher dashboard statistics');
   }
 };

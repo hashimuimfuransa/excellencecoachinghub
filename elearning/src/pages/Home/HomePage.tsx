@@ -803,12 +803,12 @@ const FeaturedCoursesSection: React.FC = () => {
 
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <Box>
-                          {course.notesPrice > 0 || course.liveSessionPrice > 0 ? (
+                          {course.price > 0 ? (
                             <Typography
                               variant="h6"
                               sx={{ fontWeight: 700, color: 'primary.main' }}
                             >
-                              From ${Math.min(course.notesPrice || 0, course.liveSessionPrice || 0)}
+                              ${course.price}
                             </Typography>
                           ) : (
                             <Typography

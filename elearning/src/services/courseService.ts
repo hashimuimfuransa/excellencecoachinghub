@@ -26,9 +26,7 @@ export interface ICourse {
   category: string;
   level: 'beginner' | 'intermediate' | 'advanced';
   status: CourseStatus;
-  price: number; // Legacy field
-  notesPrice: number;
-  liveSessionPrice: number;
+  price: number;
   duration: number;
   enrolledStudents: string[];
   students: string[];
@@ -94,8 +92,7 @@ export interface UpdateCourseData {
 
 export interface CourseActionData {
   feedback?: string;
-  notesPrice?: number;
-  liveSessionPrice?: number;
+  price?: number;
 }
 
 export const courseService = {

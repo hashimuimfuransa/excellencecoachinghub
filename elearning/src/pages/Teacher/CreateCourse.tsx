@@ -19,7 +19,8 @@ import {
   Step,
   StepLabel,
   Paper,
-  Divider
+  Divider,
+  Autocomplete
 } from '@mui/material';
 import {
   Save,
@@ -38,16 +39,75 @@ import { courseService } from '../../services/courseService';
 const steps = ['Basic Information', 'Course Details', 'Review & Submit'];
 
 const categories = [
-  'Programming',
-  'Web Development',
-  'Data Science',
-  'Mobile Development',
-  'DevOps',
-  'Cybersecurity',
-  'AI/Machine Learning',
-  'Database',
-  'Cloud Computing',
-  'UI/UX Design'
+  // Programming Languages
+  'JavaScript', 'Python', 'Java', 'C++', 'C#', 'PHP', 'Ruby', 'Go', 'Rust', 'Swift', 'Kotlin', 'TypeScript',
+  
+  // Web Development
+  'Web Development', 'Frontend Development', 'Backend Development', 'Full Stack Development',
+  'HTML', 'CSS', 'React', 'Vue.js', 'Angular', 'Node.js', 'Express.js', 'Next.js', 'Nuxt.js',
+  
+  // Mobile Development
+  'Mobile Development', 'iOS Development', 'Android Development', 'React Native', 'Flutter',
+  'Xamarin', 'Ionic', 'Cordova',
+  
+  // Data Science & AI
+  'Data Science', 'Machine Learning', 'Artificial Intelligence', 'Deep Learning', 'Data Analysis',
+  'Data Visualization', 'Statistics', 'R Programming', 'TensorFlow', 'PyTorch', 'Pandas', 'NumPy',
+  
+  // Cloud & DevOps
+  'Cloud Computing', 'AWS', 'Azure', 'Google Cloud', 'DevOps', 'Docker', 'Kubernetes', 'CI/CD',
+  'Jenkins', 'GitLab', 'GitHub Actions', 'Terraform', 'Ansible',
+  
+  // Cybersecurity
+  'Cybersecurity', 'Ethical Hacking', 'Penetration Testing', 'Network Security', 'Information Security',
+  'Cryptography', 'Security Analysis', 'Risk Management',
+  
+  // Database
+  'Database', 'SQL', 'MySQL', 'PostgreSQL', 'MongoDB', 'Redis', 'Elasticsearch', 'Database Design',
+  'Data Modeling', 'Database Administration',
+  
+  // Design & UI/UX
+  'UI/UX Design', 'Graphic Design', 'Web Design', 'User Interface Design', 'User Experience Design',
+  'Adobe Photoshop', 'Adobe Illustrator', 'Figma', 'Sketch', 'Adobe XD', 'Prototyping',
+  
+  // Business & Marketing
+  'Digital Marketing', 'SEO', 'SEM', 'Social Media Marketing', 'Content Marketing', 'Email Marketing',
+  'Analytics', 'Google Analytics', 'Facebook Ads', 'Google Ads', 'Marketing Strategy',
+  
+  // Project Management
+  'Project Management', 'Agile', 'Scrum', 'Kanban', 'Jira', 'Trello', 'Asana', 'Product Management',
+  
+  // Finance & Accounting
+  'Finance', 'Accounting', 'Financial Analysis', 'Investment', 'Trading', 'Cryptocurrency',
+  'Blockchain', 'Personal Finance', 'Corporate Finance',
+  
+  // Language Learning
+  'English', 'Spanish', 'French', 'German', 'Chinese', 'Japanese', 'Korean', 'Portuguese',
+  'Italian', 'Russian', 'Arabic', 'Hindi',
+  
+  // Creative Arts
+  'Photography', 'Video Editing', 'Music Production', 'Digital Art', 'Animation', '3D Modeling',
+  'Blender', 'After Effects', 'Premiere Pro', 'Final Cut Pro',
+  
+  // Health & Fitness
+  'Fitness', 'Yoga', 'Nutrition', 'Mental Health', 'Meditation', 'Weight Loss', 'Muscle Building',
+  'Cardio Training', 'Strength Training',
+  
+  // Academic Subjects
+  'Mathematics', 'Physics', 'Chemistry', 'Biology', 'History', 'Geography', 'Literature',
+  'Philosophy', 'Psychology', 'Sociology', 'Economics', 'Political Science',
+  
+  // Professional Skills
+  'Communication Skills', 'Leadership', 'Public Speaking', 'Writing', 'Presentation Skills',
+  'Time Management', 'Critical Thinking', 'Problem Solving', 'Negotiation', 'Team Building',
+  
+  // Technology Trends
+  'Blockchain Development', 'Web3', 'NFT', 'Metaverse', 'IoT', 'Edge Computing', 'Quantum Computing',
+  'AR/VR Development', 'Game Development', 'Unity', 'Unreal Engine',
+  
+  // Other Categories
+  'Entrepreneurship', 'Startup', 'E-commerce', 'Online Business', 'Freelancing', 'Remote Work',
+  'Career Development', 'Resume Writing', 'Interview Skills', 'Networking'
 ];
 
 const CreateCourse: React.FC = () => {
@@ -268,20 +328,44 @@ const CreateCourse: React.FC = () => {
                   </Grid>
                   
                   <Grid item xs={12} md={6}>
-                    <FormControl fullWidth>
-                      <InputLabel>Category *</InputLabel>
-                      <Select
-                        value={formData.category}
-                        label="Category *"
-                        onChange={(e) => handleInputChange('category', e.target.value)}
-                      >
-                        {categories.map((category) => (
-                          <MenuItem key={category} value={category}>
-                            {category}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+                    <Autocomplete
+                      freeSolo
+                      options={categories}
+                      value={formData.category}
+                      onChange={(event, newValue) => {
+                        handleInputChange('category', newValue || '');
+                      }}
+                      onInputChange={(event, newInputValue) => {
+                        handleInputChange('category', newInputValue);
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Category *"
+                          placeholder="Type or select a category..."
+                          helperText="Type to search or enter a custom category"
+                          required
+                        />
+                      )}
+                      renderOption={(props, option) => (
+                        <Box component="li" {...props}>
+                          {option}
+                        </Box>
+                      )}
+                      filterOptions={(options, { inputValue }) => {
+                        const filtered = options.filter(option =>
+                          option.toLowerCase().includes(inputValue.toLowerCase())
+                        );
+                        // If no matches and user typed something, add their input as an option
+                        if (inputValue && !filtered.includes(inputValue)) {
+                          filtered.push(inputValue);
+                        }
+                        return filtered;
+                      }}
+                    />
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                      💡 You can type any category you want! Start typing to see suggestions or create your own.
+                    </Typography>
                   </Grid>
                   
                   <Grid item xs={12} md={6}>
@@ -478,7 +562,6 @@ const CreateCourse: React.FC = () => {
                         <Typography variant="body2"><strong>Title:</strong> {formData.title}</Typography>
                         <Typography variant="body2"><strong>Category:</strong> {formData.category}</Typography>
                         <Typography variant="body2"><strong>Level:</strong> {formData.level}</Typography>
-                        <Typography variant="body2"><strong>Price:</strong> ${formData.price}</Typography>
                         <Typography variant="body2"><strong>Duration:</strong> {formData.duration} hours</Typography>
                       </CardContent>
                     </Card>

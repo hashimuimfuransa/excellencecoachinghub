@@ -24,21 +24,10 @@ import {
   CalendarToday
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
-import { useTeacherProfile } from '../../contexts/TeacherProfileContext';
 import { Link } from 'react-router-dom';
-import TeacherProfileGuard from '../../guards/TeacherProfileGuard';
 
 const TeacherDashboardContent: React.FC = () => {
   const { user } = useAuth();
-  const { profile, loading, error } = useTeacherProfile();
-
-  if (loading) {
-    return (
-      <Container maxWidth="lg" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-        <CircularProgress />
-      </Container>
-    );
-  }
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -52,32 +41,27 @@ const TeacherDashboardContent: React.FC = () => {
         </Typography>
       </Box>
 
-      {/* Profile Status Card */}
+      {/* Welcome Card */}
       <Card elevation={2} sx={{ mb: 4 }}>
         <CardContent sx={{ p: 3 }}>
           <Grid container spacing={3} alignItems="center">
             <Grid item xs={12} md={8}>
               <Box display="flex" alignItems="center" gap={2} mb={2}>
-                <CheckCircle color="success" sx={{ fontSize: 32 }} />
+                <Person color="primary" sx={{ fontSize: 32 }} />
                 <Typography variant="h5" component="h2">
-                  Profile Approved
+                  Welcome to Your Teaching Dashboard
                 </Typography>
               </Box>
               <Typography variant="body1" color="text.secondary" paragraph>
-                Congratulations! Your teacher profile has been approved. You now have access to all teaching features.
+                Manage your courses, students, and teaching activities from this central hub.
               </Typography>
-              <Chip 
-                label="Status: Approved" 
-                color="success" 
-                sx={{ mb: 2 }}
-              />
             </Grid>
             <Grid item xs={12} md={4} textAlign="right">
               <Button 
                 variant="contained" 
                 color="primary"
                 component={Link}
-                to="/dashboard/teacher/profile/complete"
+                to="/dashboard/teacher/profile"
                 startIcon={<Person />}
               >
                 View Profile
@@ -221,22 +205,12 @@ const TeacherDashboardContent: React.FC = () => {
           </Typography>
         </CardContent>
       </Card>
-
-      {error && (
-        <Alert severity="error" sx={{ mt: 4 }}>
-          {error}
-        </Alert>
-      )}
     </Container>
   );
 };
 
 const TeacherDashboard: React.FC = () => {
-  return (
-    <TeacherProfileGuard>
-      <TeacherDashboardContent />
-    </TeacherProfileGuard>
-  );
+  return <TeacherDashboardContent />;
 };
 
 export default TeacherDashboard;

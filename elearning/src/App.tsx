@@ -26,8 +26,6 @@ import AdminDashboard from './pages/Admin/AdminDashboard';
 import TeacherDashboard from './pages/Teacher/TeacherDashboard';
 import TeacherProfile from './pages/Teacher/TeacherProfile';
 import TeacherProfileComplete from './pages/Teacher/TeacherProfileComplete';
-import TeacherProfileGuard from './guards/TeacherProfileGuard';
-import TeacherApprovalGuard from './guards/TeacherApprovalGuard';
 import TeacherCourses from './pages/Teacher/TeacherCourses';
 import CourseManagement from './pages/Teacher/CourseManagement';
 import CourseContent from './pages/Student/CourseContent';
@@ -56,7 +54,7 @@ import CommunityRouter from './pages/Community/CommunityRouter';
 import EnhancedTakeAssessmentStudent from './pages/Student/EnhancedTakeAssessment';
 import EnhancedTakeAssessmentWithProctoring from './pages/Student/EnhancedTakeAssessmentWithProctoring';
 import ProctoringTest from './pages/Test/ProctoringTest';
-import TeacherProfileGuardTest from './pages/Test/TeacherProfileGuardTest';
+import AssessmentProctoringTest from './pages/Test/AssessmentProctoringTest';
 import StudentLiveSessions from './pages/Student/LiveSessions';
 import StudentLiveSessionRoom from './pages/Student/LiveSessionRoom';
 import Progress from './pages/Student/Progress';
@@ -162,7 +160,6 @@ const App: React.FC = () => {
         <Route path="/test-email" element={<TestEmailPage />} />
         <Route path="/email-demo" element={<EmailSystemDemo />} />
         <Route path="/test-assessment-proctoring" element={<AssessmentProctoringTest />} />
-        <Route path="/test-teacher-profile-guard" element={<TeacherProfileGuardTest />} />
 
 
 
@@ -229,25 +226,25 @@ const App: React.FC = () => {
           <Route path="profile/complete" element={<TeacherProfileComplete />} />
           <Route path="profile/edit" element={<TeacherProfileComplete />} />
           
-          {/* Protected teacher routes - require profile completion */}
-          <Route path="courses" element={<TeacherProfileGuard><TeacherCourseDashboard /></TeacherProfileGuard>} />
-          <Route path="courses/create" element={<TeacherProfileGuard><CreateCourse /></TeacherProfileGuard>} />
-          <Route path="courses/:id/manage" element={<TeacherProfileGuard><CourseManagement /></TeacherProfileGuard>} />
-          <Route path="courses/:id/content" element={<TeacherProfileGuard><ContentStructureEditor /></TeacherProfileGuard>} />
-          <Route path="courses/:courseId/materials" element={<TeacherProfileGuard><CourseMaterials /></TeacherProfileGuard>} />
-          <Route path="live-sessions" element={<TeacherProfileGuard><LiveSessions /></TeacherProfileGuard>} />
-          <Route path="live-sessions/create" element={<TeacherProfileGuard><CreateLiveSession /></TeacherProfileGuard>} />
-          <Route path="live-sessions/:id/room" element={<TeacherProfileGuard><LiveSessionRoom /></TeacherProfileGuard>} />
-          <Route path="students" element={<TeacherProfileGuard><TeacherStudents /></TeacherProfileGuard>} />
-          <Route path="student-management" element={<TeacherProfileGuard><StudentManagement /></TeacherProfileGuard>} />
-          <Route path="analytics" element={<TeacherProfileGuard><TeacherAnalytics /></TeacherProfileGuard>} />
-          <Route path="recorded-session/:sessionId" element={<TeacherProfileGuard><RecordedSessionDetails /></TeacherProfileGuard>} />
-          <Route path="grades" element={<TeacherProfileGuard><TeacherGradesLeaderboard /></TeacherProfileGuard>} />
-          <Route path="grades/:courseId" element={<TeacherProfileGuard><TeacherGradesLeaderboard /></TeacherProfileGuard>} />
-          <Route path="course-management" element={<TeacherProfileGuard><CourseManagementSelection /></TeacherProfileGuard>} />
-          <Route path="assignments/:assignmentId/grading" element={<TeacherProfileGuard><AssignmentGradingDashboard /></TeacherProfileGuard>} />
+          {/* Teacher routes */}
+          <Route path="courses" element={<TeacherCourseDashboard />} />
+          <Route path="courses/create" element={<CreateCourse />} />
+          <Route path="courses/:id/manage" element={<CourseManagement />} />
+          <Route path="courses/:id/content" element={<ContentStructureEditor />} />
+          <Route path="courses/:courseId/materials" element={<CourseMaterials />} />
+          <Route path="live-sessions" element={<LiveSessions />} />
+          <Route path="live-sessions/create" element={<CreateLiveSession />} />
+          <Route path="live-sessions/:id/room" element={<LiveSessionRoom />} />
+          <Route path="students" element={<TeacherStudents />} />
+          <Route path="student-management" element={<StudentManagement />} />
+          <Route path="analytics" element={<TeacherAnalytics />} />
+          <Route path="recorded-session/:sessionId" element={<RecordedSessionDetails />} />
+          <Route path="grades" element={<TeacherGradesLeaderboard />} />
+          <Route path="grades/:courseId" element={<TeacherGradesLeaderboard />} />
+          <Route path="course-management" element={<CourseManagementSelection />} />
+          <Route path="assignments/:assignmentId/grading" element={<AssignmentGradingDashboard />} />
           <Route path="settings" element={<TeacherSettings />} />
-          <Route path="test" element={<TeacherProfileGuard><TestPage /></TeacherProfileGuard>} />
+          <Route path="test" element={<TestPage />} />
         </Route>
 
         {/* Student Dashboard Routes */}

@@ -87,7 +87,6 @@ import {
   VolumeOff
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
-import { useTeacherProfile } from '../../contexts/TeacherProfileContext';
 import { liveSessionService, ILiveSession } from '../../services/liveSessionService';
 import { recordedSessionService, IRecordedSession } from '../../services/recordedSessionService';
 
@@ -143,7 +142,6 @@ interface RecordedSession {
 const LiveSessions: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { profile, loading: profileLoading, error: profileError } = useTeacherProfile();
   const [searchParams] = useSearchParams();
   const theme = useTheme();
   
@@ -190,12 +188,9 @@ const LiveSessions: React.FC = () => {
 
   // Load sessions
   useEffect(() => {
-    console.log('🔍 LiveSessions: Profile loaded:', profile);
-    console.log('🔍 LiveSessions: Profile loading:', profileLoading);
-    console.log('🔍 LiveSessions: Profile error:', profileError);
     loadSessions();
     loadRecordedSessions();
-  }, [tabValue, courseIdFilter, profile]);
+  }, [tabValue, courseIdFilter]);
 
   const loadSessions = async () => {
     try {

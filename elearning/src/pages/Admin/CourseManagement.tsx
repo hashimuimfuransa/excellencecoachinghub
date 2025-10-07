@@ -81,8 +81,7 @@ const CourseManagement: React.FC = () => {
   const [rejectFeedback, setRejectFeedback] = useState('');
   
   // Price setting states
-  const [notesPrice, setNotesPrice] = useState<number>(0);
-  const [liveSessionPrice, setLiveSessionPrice] = useState<number>(0);
+  const [coursePrice, setCoursePrice] = useState<number>(0);
 
   // Load courses and statistics
   const loadCourses = useCallback(async () => {
@@ -148,7 +147,7 @@ const CourseManagement: React.FC = () => {
   // Handle course actions
   const handleViewCourse = () => {
     setViewDialogOpen(true);
-    handleMenuClose();
+    setAnchorEl(null); // Close menu but keep selectedCourse
   };
 
   const handleApproveCourse = () => {
@@ -185,8 +184,7 @@ const CourseManagement: React.FC = () => {
     if (selectedCourse) {
       try {
         await courseService.approveCourse(selectedCourse._id, {
-          notesPrice,
-          liveSessionPrice
+          price: coursePrice
         });
         setSuccess('Course approved successfully with pricing set');
         loadCourses();
@@ -198,8 +196,7 @@ const CourseManagement: React.FC = () => {
     }
     setApproveDialogOpen(false);
     setSelectedCourse(null);
-    setNotesPrice(0);
-    setLiveSessionPrice(0);
+    setCoursePrice(0);
   };
 
   // Confirm reject course
@@ -524,15 +521,10 @@ const CourseManagement: React.FC = () => {
                     </TableCell>
                     <TableCell>{course.enrollmentCount || 0}</TableCell>
                     <TableCell>
-                      {course.notesPrice > 0 || course.liveSessionPrice > 0 ? (
-                        <Box>
-                          <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                            Notes: ${course.notesPrice || 0}
-                          </Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                            Live: ${course.liveSessionPrice || 0}
-                          </Typography>
-                        </Box>
+                      {course.price > 0 ? (
+                        <Typography variant="body2" fontWeight="medium">
+                          ${course.price}
+                        </Typography>
                       ) : (
                         <Chip label="FREE" color="success" size="small" />
                       )}
@@ -596,7 +588,10 @@ const CourseManagement: React.FC = () => {
       </Menu>
 
       {/* View Course Dialog */}
-      <Dialog open={viewDialogOpen} onClose={() => setViewDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={viewDialogOpen} onClose={() => {
+        setViewDialogOpen(false);
+        setSelectedCourse(null);
+      }} maxWidth="md" fullWidth>
         <DialogTitle>Course Details</DialogTitle>
         <DialogContent>
           {selectedCourse && (
@@ -623,10 +618,7 @@ const CourseManagement: React.FC = () => {
                   <Typography variant="body2"><strong>Duration:</strong> {selectedCourse.duration} hours</Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <Typography variant="body2"><strong>Notes Price:</strong> ${selectedCourse.notesPrice || 0}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2"><strong>Live Sessions Price:</strong> ${selectedCourse.liveSessionPrice || 0}</Typography>
+                  <Typography variant="body2"><strong>Price:</strong> ${selectedCourse.price || 0}</Typography>
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="body2"><strong>Enrollments:</strong> {selectedCourse.enrollmentCount || 0}</Typography>
@@ -721,7 +713,10 @@ const CourseManagement: React.FC = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setViewDialogOpen(false)}>Close</Button>
+          <Button onClick={() => {
+            setViewDialogOpen(false);
+            setSelectedCourse(null);
+          }}>Close</Button>
         </DialogActions>
       </Dialog>
 
@@ -729,42 +724,26 @@ const CourseManagement: React.FC = () => {
       <Dialog open={approveDialogOpen} onClose={() => {
         setApproveDialogOpen(false);
         setSelectedCourse(null);
-        setNotesPrice(0);
-        setLiveSessionPrice(0);
+        setCoursePrice(0);
       }} maxWidth="sm" fullWidth>
-        <DialogTitle>Approve Course & Set Pricing</DialogTitle>
+        <DialogTitle>Approve Course & Set Price</DialogTitle>
         <DialogContent>
           <Typography variant="body1" sx={{ mb: 3 }}>
-            Approve the course "{selectedCourse?.title}" and set pricing for different access types.
+            Approve the course "{selectedCourse?.title}" and set the course price.
           </Typography>
           
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Notes & Materials Price"
+                label="Course Price"
                 type="number"
-                value={notesPrice}
-                onChange={(e) => setNotesPrice(Number(e.target.value))}
+                value={coursePrice}
+                onChange={(e) => setCoursePrice(Number(e.target.value))}
                 InputProps={{
                   startAdornment: <InputAdornment position="start">$</InputAdornment>,
                 }}
-                helperText="Price for accessing course notes, materials, and assignments"
-                inputProps={{ min: 0, step: 0.01 }}
-              />
-            </Grid>
-            
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Live Sessions Price"
-                type="number"
-                value={liveSessionPrice}
-                onChange={(e) => setLiveSessionPrice(Number(e.target.value))}
-                InputProps={{
-                  startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                }}
-                helperText="Price for accessing live sessions and recordings"
+                helperText="Set to $0 for free course access"
                 inputProps={{ min: 0, step: 0.01 }}
               />
             </Grid>
@@ -772,10 +751,10 @@ const CourseManagement: React.FC = () => {
             <Grid item xs={12}>
               <Box sx={{ p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
                 <Typography variant="body2" color="info.contrastText">
-                  💡 <strong>Pricing Tips:</strong>
-                  <br />• Set to $0 for free access
-                  <br />• Students can purchase notes only, live sessions only, or both
-                  <br />• Bundle pricing (both) offers 20% discount on live sessions
+                  💡 <strong>Pricing Information:</strong>
+                  <br />• Set to $0 for free course access
+                  <br />• Students will have access to all course materials and live sessions
+                  <br />• Price includes complete course content and live session recordings
                 </Typography>
               </Box>
             </Grid>
@@ -785,15 +764,14 @@ const CourseManagement: React.FC = () => {
           <Button onClick={() => {
             setApproveDialogOpen(false);
             setSelectedCourse(null);
-            setNotesPrice(0);
-            setLiveSessionPrice(0);
+            setCoursePrice(0);
           }}>Cancel</Button>
           <Button
             color="success"
             variant="contained"
             onClick={confirmApproveCourse}
           >
-            Approve & Set Pricing
+            Approve & Set Price
           </Button>
         </DialogActions>
       </Dialog>

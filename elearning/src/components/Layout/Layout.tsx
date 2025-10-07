@@ -81,7 +81,6 @@ import { UserRole } from '../../shared/types';
 import EmailVerificationBanner from '../Auth/EmailVerificationBanner';
 import FloatingAIAssistant from '../FloatingAIAssistant';
 import { useResponsive, getDrawerWidth } from '../../utils/responsive';
-import { teacherProfileService } from '../../services/teacherProfileService';
 import ProfilePage from '../../pages/Profile/ProfilePage';
 import BottomNavigationBar from '../BottomNavigationBar';
 
@@ -173,7 +172,6 @@ interface NavigationItem {
   icon: React.ReactElement;
   path: string;
   roles?: UserRole[];
-  requiresApprovedProfile?: boolean;
   onClick?: () => void;
 }
 
@@ -183,10 +181,6 @@ const Layout: React.FC = () => {
   
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [teacherProfileStatus, setTeacherProfileStatus] = useState<string | null>(null);
-  
-  // Debug initial state
-  console.log('🔍 Layout: Initial teacherProfileStatus state:', teacherProfileStatus);
   
   // Explore categories state
   const [exploreAnchorEl, setExploreAnchorEl] = useState<null | HTMLElement>(null);
@@ -205,47 +199,6 @@ const Layout: React.FC = () => {
   const theme = useTheme();
   const { isMobile, isTablet, isLaptop, isDesktop } = useResponsive();
 
-  // Load teacher profile status if user is a teacher
-  useEffect(() => {
-    const loadTeacherProfileStatus = async () => {
-      if (user?.role === UserRole.TEACHER) {
-        try {
-          console.log('🚀🚀🚀 LAYOUT: LOADING TEACHER PROFILE STATUS 🚀🚀🚀');
-          console.log('🔍 Loading teacher profile status in Layout...');
-          console.log('🔍 User:', user);
-          console.log('🔍 User role:', user?.role);
-          console.log('🔍 User ID:', user?._id);
-          console.log('🔍 User email:', user?.email);
-          console.log('🔍 User firstName:', user?.firstName);
-          console.log('🔍 User lastName:', user?.lastName);
-          console.log('🔍 Full user object:', JSON.stringify(user, null, 2));
-          
-          const profile = await teacherProfileService.getMyProfile();
-          console.log('🔍 Profile loaded in Layout:', profile);
-          console.log('🔍 Profile keys:', Object.keys(profile));
-          console.log('🔍 Profile status field:', profile.profileStatus);
-          console.log('🔍 Profile status type:', typeof profile.profileStatus);
-          console.log('🔍 Profile status value:', JSON.stringify(profile.profileStatus));
-          console.log('🔍 Setting teacherProfileStatus to:', profile.profileStatus);
-          setTeacherProfileStatus(profile.profileStatus);
-          console.log('🔍 teacherProfileStatus set successfully');
-        } catch (error: any) {
-          console.error('❌ Failed to load teacher profile status:', error);
-          console.error('❌ Error message:', error.message);
-          console.error('❌ Error stack:', error.stack);
-          console.error('❌ Error response:', error.response);
-        }
-      }
-    };
-
-    loadTeacherProfileStatus();
-  }, [user]);
-
-  // Debug teacherProfileStatus changes
-  useEffect(() => {
-    console.log('🔍 Layout: teacherProfileStatus changed to:', teacherProfileStatus);
-    console.log('🔍 Layout: teacherProfileStatus type:', typeof teacherProfileStatus);
-  }, [teacherProfileStatus]);
   
   // Dynamic drawer width based on device
   const drawerWidths = getDrawerWidth();
@@ -280,13 +233,13 @@ const Layout: React.FC = () => {
       );
     } else if (user?.role === UserRole.TEACHER) {
       roleSpecificItems.push(
-        { text: 'Course Management', icon: <School />, path: '/dashboard/teacher/course-management', requiresApprovedProfile: true },
-        { text: 'Create Course', icon: <Add />, path: '/dashboard/teacher/courses/create', requiresApprovedProfile: true },
-        { text: 'Live Sessions', icon: <VideoCall />, path: '/dashboard/teacher/live-sessions', requiresApprovedProfile: true },
+        { text: 'Course Management', icon: <School />, path: '/dashboard/teacher/course-management' },
+        { text: 'Create Course', icon: <Add />, path: '/dashboard/teacher/courses/create' },
+        { text: 'Live Sessions', icon: <VideoCall />, path: '/dashboard/teacher/live-sessions' },
         { text: 'Community', icon: <Groups />, path: '/community/feed' },
-        { text: 'Student Management', icon: <ManageAccounts />, path: '/dashboard/teacher/student-management', requiresApprovedProfile: true },
-        { text: 'Grades & Performance', icon: <Grade />, path: '/dashboard/teacher/grades', requiresApprovedProfile: true },
-        { text: 'Analytics', icon: <Analytics />, path: '/dashboard/teacher/analytics', requiresApprovedProfile: true },
+        { text: 'Student Management', icon: <ManageAccounts />, path: '/dashboard/teacher/student-management' },
+        { text: 'Grades & Performance', icon: <Grade />, path: '/dashboard/teacher/grades' },
+        { text: 'Analytics', icon: <Analytics />, path: '/dashboard/teacher/analytics' },
         { text: 'Profile', icon: <Person />, path: '/dashboard/teacher/profile/complete' }
       );
     } else if (user?.role === UserRole.STUDENT) {
@@ -453,33 +406,6 @@ const Layout: React.FC = () => {
           {user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'} Portal
         </Typography>
         
-        {/* Teacher Profile Status Indicator */}
-        {user?.role === UserRole.TEACHER && teacherProfileStatus && (
-          <Box sx={{ mt: 1 }}>
-            <Chip
-              label={
-                teacherProfileStatus === 'approved' ? '✅ Approved' :
-                teacherProfileStatus === 'pending' ? '⏳ Under Review' :
-                teacherProfileStatus === 'rejected' ? '❌ Needs Update' :
-                '📝 Incomplete'
-              }
-              size="small"
-              color={
-                teacherProfileStatus === 'approved' ? 'success' :
-                teacherProfileStatus === 'pending' ? 'info' :
-                teacherProfileStatus === 'rejected' ? 'error' :
-                'warning'
-              }
-              variant="outlined"
-              sx={{ 
-                fontSize: '0.65rem',
-                height: 20,
-                cursor: 'pointer'
-              }}
-              onClick={() => navigate('/dashboard/teacher/profile/complete')}
-            />
-          </Box>
-        )}
       </Box>
 
       {/* Navigation Items */}
@@ -495,45 +421,13 @@ const Layout: React.FC = () => {
         {getNavigationItems().map((item) => {
           const isLiveSession = item.text.includes('Live Sessions');
           
-          // More nuanced access control
-          let isDisabled = false;
-          if (item.requiresApprovedProfile && user?.role === UserRole.TEACHER) {
-            if (teacherProfileStatus === 'incomplete' || teacherProfileStatus === 'rejected') {
-              isDisabled = true;
-            } else if (teacherProfileStatus === 'pending') {
-              // Allow some features for pending teachers, but not all
-              const pendingAllowedFeatures = [
-                'Course Management',
-                'Create Course',
-                'Analytics'
-              ];
-              isDisabled = !pendingAllowedFeatures.includes(item.text);
-            }
-          }
-          
-          // Debug logging
-          if (item.requiresApprovedProfile && user?.role === UserRole.TEACHER) {
-            console.log(`🔍 Navigation item "${item.text}":`, {
-              requiresApprovedProfile: item.requiresApprovedProfile,
-              userRole: user?.role,
-              teacherProfileStatus,
-              teacherProfileStatusType: typeof teacherProfileStatus,
-              teacherProfileStatusValue: JSON.stringify(teacherProfileStatus),
-              isDisabled,
-              reason: teacherProfileStatus === 'pending' ? 'Some features restricted for pending approval' : 'Profile not approved'
-            });
-          }
+          // No profile status checks - all features accessible
+          const isDisabled = false;
           
           return (
             <ResponsiveListItem key={item.text} disablePadding>
               <Tooltip 
-                title={
-                  isDisabled ? (
-                    teacherProfileStatus === 'pending' 
-                      ? 'This feature requires full profile approval. Your profile is under review.'
-                      : 'Complete and get your profile approved to access this feature'
-                  ) : ''
-                }
+                title={isDisabled ? 'This feature is currently disabled' : ''}
                 placement="right"
               >
                 <Box sx={{ width: '100%' }}>
@@ -556,13 +450,13 @@ const Layout: React.FC = () => {
                   mx: { xs: 0.5, sm: 1 },
                   mb: 0.5,
                   // Disabled styling
-                  ...(isDisabled && {
+                  ...(isDisabled ? {
                     opacity: 0.5,
                     cursor: 'not-allowed',
                     '&:hover': {
                       backgroundColor: 'transparent',
                     },
-                  }),
+                  } : {}),
                   // Special styling for Live Sessions
                   ...(isLiveSession && !isDisabled && {
                     background: `linear-gradient(135deg, ${alpha(theme.palette.error.main, 0.1)}, ${alpha(theme.palette.error.main, 0.05)})`,
@@ -1017,13 +911,9 @@ const Layout: React.FC = () => {
         unreadNotifications={unreadCount}
         userRole={user?.role}
         userName={`${user?.firstName} ${user?.lastName}`}
-        userAvatar={user?.profilePicture}
+        userAvatar={undefined}
         onCreatePost={() => {
           // Post creation handled by modal in BottomNavigationBar
-        }}
-        onOpenProfile={() => {
-          // Open profile modal for students
-          handleProfileDirect();
         }}
       />
     </Box>

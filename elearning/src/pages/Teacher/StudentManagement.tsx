@@ -72,7 +72,6 @@ import {
   EmojiEvents
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
-import { useTeacherProfile } from '../../contexts/TeacherProfileContext';
 import { apiService } from '../../services/apiService';
 
 interface TabPanelProps {
@@ -165,7 +164,6 @@ interface TeacherStudentsData {
 
 const StudentManagement: React.FC = () => {
   const { user } = useAuth();
-  const { profile, loading: profileLoading, error: profileError } = useTeacherProfile();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme?.breakpoints?.down?.('md') || '(max-width: 900px)');
   
@@ -185,11 +183,8 @@ const StudentManagement: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
-    console.log('🔍 StudentManagement: Profile loaded:', profile);
-    console.log('🔍 StudentManagement: Profile loading:', profileLoading);
-    console.log('🔍 StudentManagement: Profile error:', profileError);
     fetchStudentsData();
-  }, [profile]);
+  }, []);
 
   useEffect(() => {
     if (studentsData) {

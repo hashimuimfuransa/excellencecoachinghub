@@ -34,7 +34,7 @@ import {
   Info,
 } from '@mui/icons-material';
 import { User, ProfileCompletionStatus } from '../types/user';
-import { validateProfileSimple } from '../utils/simpleProfileValidation';
+import { checkProfileCompletion } from '../utils/profileCompletionUtils';
 
 interface ProfileCompletionPopupProps {
   open: boolean;
@@ -52,8 +52,11 @@ const ProfileCompletionPopup: React.FC<ProfileCompletionPopupProps> = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
-  const validationResult = validateProfileSimple(user);
-  const { completionPercentage, status, missingFields, recommendations } = validationResult;
+  const validationResult = checkProfileCompletion(user);
+  const { completionPercentage, status, missingFields } = validationResult;
+  
+  // Generate simple recommendations based on missing fields
+  const recommendations = missingFields.map(field => `Add your ${field.toLowerCase()}`);
 
   const getStatusColor = (status: ProfileCompletionStatus) => {
     switch (status) {
@@ -199,7 +202,7 @@ const ProfileCompletionPopup: React.FC<ProfileCompletionPopupProps> = ({
                   mt: 0.5,
                 }}
               >
-                Complete your profile to at least 70% to unlock all features
+                Complete your profile to at least 80% to unlock all features
               </Typography>
             </Box>
           </Box>
@@ -289,8 +292,8 @@ const ProfileCompletionPopup: React.FC<ProfileCompletionPopupProps> = ({
             }}
           >
             {completionPercentage < 40 && 'Complete basic information to improve your profile visibility'}
-            {completionPercentage >= 40 && completionPercentage < 70 && 'Good start! You need 70% completion to unlock all features'}
-            {completionPercentage >= 70 && completionPercentage < 90 && 'Great! You\'ve reached the 70% minimum. A few more details will make it perfect'}
+            {completionPercentage >= 40 && completionPercentage < 80 && 'Good start! You need 80% completion to unlock all features'}
+            {completionPercentage >= 80 && completionPercentage < 90 && 'Great! You\'ve reached the 80% minimum. A few more details will make it perfect'}
             {completionPercentage >= 90 && 'Excellent! Your profile is comprehensive and attractive to employers'}
           </Typography>
         </Box>
@@ -339,7 +342,7 @@ const ProfileCompletionPopup: React.FC<ProfileCompletionPopupProps> = ({
             gutterBottom
             sx={{ fontSize: isMobile ? '0.9rem' : '1rem' }}
           >
-            Why Complete Your Profile to 70%?
+            Why Complete Your Profile to 80%?
           </Typography>
           <List dense>
             <ListItem sx={{ py: 0.5, px: 0 }}>
@@ -371,7 +374,7 @@ const ProfileCompletionPopup: React.FC<ProfileCompletionPopupProps> = ({
                 <CheckCircle color="success" fontSize="small" />
               </ListItemIcon>
               <ListItemText
-                primary="Unlock all platform features (requires 70% completion)"
+                primary="Unlock all platform features (requires 80% completion)"
                 primaryTypographyProps={{ 
                   variant: 'body2',
                   sx: { fontSize: isMobile ? '0.8rem' : '0.875rem' }

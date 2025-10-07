@@ -188,8 +188,8 @@ const ProfileCompletion: React.FC<ProfileCompletionProps> = ({
           />
           <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
             {completionPercentage < 40 && 'Complete basic information to improve your profile'}
-            {completionPercentage >= 40 && completionPercentage < 70 && 'Good start! Add more details to stand out'}
-            {completionPercentage >= 70 && completionPercentage < 90 && 'Great profile! A few more details will make it perfect'}
+            {completionPercentage >= 40 && completionPercentage < 80 && 'Good start! Add more details to stand out'}
+            {completionPercentage >= 80 && completionPercentage < 90 && 'Great profile! A few more details will make it perfect'}
             {completionPercentage >= 90 && 'Excellent! Your profile is comprehensive and attractive to employers'}
           </Typography>
         </Box>
@@ -380,8 +380,8 @@ const ProfileCompletion: React.FC<ProfileCompletionProps> = ({
               }}
             >
               {completionPercentage < 40 ? '🚀 Complete Your Profile Now' : 
-               completionPercentage < 70 ? '⭐ Improve Your Profile' : 
-               completionPercentage < 80 ? '✨ Perfect Your Profile' : 
+               completionPercentage < 80 ? '⭐ Improve Your Profile' : 
+               completionPercentage < 90 ? '✨ Perfect Your Profile' : 
                '🎯 Update Profile'}
             </Button>
           </Box>

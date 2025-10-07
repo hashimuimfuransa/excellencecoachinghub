@@ -388,7 +388,7 @@ router.get('/suggestions', protect, asyncHandler(async (req: AuthRequest, res: R
 
   console.log(`Found ${eligibleUsers.length} eligible users before profile filtering`);
 
-  // Filter by profile completion (70% minimum) and prioritize
+  // Filter by profile completion (80% minimum) and prioritize
   const completedProfileUsers = eligibleUsers.filter(user => {
     const completion = calculateProfileCompletion(user);
     const meets = meetsProfileRequirement(user);

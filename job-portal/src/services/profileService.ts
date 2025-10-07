@@ -70,7 +70,7 @@ class ProfileService {
       nextSteps.push('Add a professional job title and bio');
     }
     
-    if (validation.completionPercentage < 70) {
+    if (validation.completionPercentage < 80) {
       nextSteps.push('Upload your resume');
       nextSteps.push('Add your education background');
       nextSteps.push('List your key skills');

@@ -541,7 +541,7 @@ const EmployerCompanyProfilePage: React.FC = () => {
     }
   };
 
-  const isSubmittable = profile.completionPercentage >= 70;
+  const isSubmittable = profile.completionPercentage >= 80;
 
   if (loading) {
     return (
@@ -590,11 +590,11 @@ const EmployerCompanyProfilePage: React.FC = () => {
             variant="determinate"
             value={profile.completionPercentage}
             sx={{ height: 8, borderRadius: 4 }}
-            color={profile.completionPercentage >= 70 ? 'success' : 'primary'}
+            color={profile.completionPercentage >= 80 ? 'success' : 'primary'}
           />
-          {profile.completionPercentage < 70 && (
+          {profile.completionPercentage < 80 && (
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-              Complete at least 70% to submit for approval
+              Complete at least 80% to submit for approval
             </Typography>
           )}
         </Box>

@@ -123,14 +123,14 @@ export const validateProfile = (user: IUserDocument): ProfileValidationResult =>
   const canAccessFeatures = {
     psychometricTests: completionPercentage >= 40,
     aiInterviews: completionPercentage >= 60,
-    premiumJobs: completionPercentage >= 70
+    premiumJobs: completionPercentage >= 80
   };
 
   // Add general recommendations based on completion percentage
   if (completionPercentage < 50) {
     recommendations.push('Complete basic profile information to apply for jobs');
   }
-  if (completionPercentage < 70) {
+  if (completionPercentage < 80) {
     recommendations.push('Add detailed work experience to attract more employers');
   }
   if (!user.socialLinks?.linkedin) {
@@ -166,7 +166,7 @@ export const getNextSteps = (user: IUserDocument): string[] => {
     nextSteps.push('Add a professional job title and bio');
   }
   
-  if (validation.completionPercentage < 70) {
+  if (validation.completionPercentage < 80) {
     nextSteps.push('Upload your resume');
     nextSteps.push('Add your education background');
     nextSteps.push('List your key skills (at least 3)');

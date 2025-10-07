@@ -1303,7 +1303,7 @@ export const getCandidates = async (req: AuthRequest, res: Response) => {
     let matchCondition: any = {
       role: { $in: ['student', 'professional', 'job_seeker'] },
       $or: [
-        { 'profileCompletion.percentage': { $gte: 70 } }, // Users with 70%+ profile completion
+        { 'profileCompletion.percentage': { $gte: 80 } }, // Users with 80%+ profile completion
         { 
           $and: [
             { firstName: { $exists: true, $ne: '' } },

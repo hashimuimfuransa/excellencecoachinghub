@@ -180,6 +180,9 @@ export const uploadMediaToCloudinary = async (
       resource_type: isVideo ? 'video' : isAudio ? 'video' : 'image', // Audio files use 'video' resource_type in Cloudinary
       chunk_size: 2000000, // 2MB chunks for faster uploads
       timeout: 60000, // 60 second timeout
+      // Remove upload_preset to use signed uploads with API credentials
+      use_filename: true,
+      unique_filename: true
     };
 
     if (isVideo) {
@@ -288,6 +291,9 @@ export const uploadToCloudinary = async (
         {
           public_id: publicId,
           folder: folder,
+          // Remove upload_preset to use signed uploads with API credentials
+          use_filename: true,
+          unique_filename: true,
           transformation: [
             {
               width: 400,
@@ -431,6 +437,9 @@ export const uploadVideoToCloudinary = async (
           public_id: publicId,
           folder: folder,
           resource_type: 'video',
+          // Remove upload_preset to use signed uploads with API credentials
+          use_filename: true,
+          unique_filename: true,
           transformation: [
             {
               quality: 'auto:good',
@@ -538,7 +547,8 @@ export const uploadDocumentToCloudinary = async (
           public_id: publicId,
           folder: folder,
           resource_type: 'raw',
-          use_filename: false,
+          // Remove upload_preset to use signed uploads with API credentials
+          use_filename: true,
           unique_filename: true,
         },
         (error, result) => {
@@ -551,7 +561,8 @@ export const uploadDocumentToCloudinary = async (
                 public_id: publicId + '_auto',
                 folder: folder,
                 resource_type: 'auto',
-                use_filename: false,
+                // Remove upload_preset to use signed uploads with API credentials
+                use_filename: true,
                 unique_filename: true,
               },
               (error2, result2) => {
@@ -564,7 +575,8 @@ export const uploadDocumentToCloudinary = async (
                       public_id: publicId + '_image',
                       folder: folder,
                       resource_type: 'image',
-                      use_filename: false,
+                      // Remove upload_preset to use signed uploads with API credentials
+                      use_filename: true,
                       unique_filename: true,
                     },
                     (error3, result3) => {

@@ -1,71 +1,20 @@
-import { Router } from 'express';
-import { body, param } from 'express-validator';
-import { validateRequest } from '../middleware/validateRequest';
-import { protect, authorize } from '../middleware/auth';
-import { UserRole } from '../../../shared/types';
-import {
-  markContentCompleted,
-  getCourseProgress,
-  getUserProgress,
-  getUserStats,
-  removeCompletedContent
+import express from 'express';
+import { 
+  markMaterialCompleted,
+  getStudentCourseProgress,
+  getStudentWeekProgress,
+  markAssessmentCompleted,
+  markAssignmentCompleted
 } from '../controllers/progressController';
+import { auth } from '../middleware/auth';
 
-const router = Router();
+const router = express.Router();
 
-// Validation middleware
-const courseIdValidation = [
-  param('courseId')
-    .isMongoId()
-    .withMessage('Invalid course ID')
-];
-
-const contentIdValidation = [
-  param('contentId')
-    .notEmpty()
-    .withMessage('Content ID is required')
-];
-
-// Student progress routes
-router.post(
-  '/courses/:courseId/content/:contentId/complete',
-  protect,
-  authorize(UserRole.STUDENT),
-  [...courseIdValidation, ...contentIdValidation],
-  validateRequest,
-  markContentCompleted
-);
-
-router.delete(
-  '/courses/:courseId/content/:contentId/complete',
-  protect,
-  authorize(UserRole.STUDENT),
-  [...courseIdValidation, ...contentIdValidation],
-  validateRequest,
-  removeCompletedContent
-);
-
-router.get(
-  '/courses/:courseId',
-  protect,
-  authorize(UserRole.STUDENT),
-  courseIdValidation,
-  validateRequest,
-  getCourseProgress
-);
-
-router.get(
-  '/my-progress',
-  protect,
-  authorize(UserRole.STUDENT),
-  getUserProgress
-);
-
-router.get(
-  '/my-stats',
-  protect,
-  authorize(UserRole.STUDENT),
-  getUserStats
-);
+// Progress tracking routes
+router.post('/weeks/:weekId/materials/:materialId/complete', auth, markMaterialCompleted);
+router.get('/courses/:courseId/progress', auth, getStudentCourseProgress);
+router.get('/weeks/:weekId/progress', auth, getStudentWeekProgress);
+router.post('/weeks/:weekId/assessment/complete', auth, markAssessmentCompleted);
+router.post('/weeks/:weekId/assignment/complete', auth, markAssignmentCompleted);
 
 export default router;

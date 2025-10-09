@@ -67,7 +67,7 @@ export const progressService = {
 
   // Get progress for a specific course
   getCourseProgress: async (courseId: string): Promise<IUserProgress> => {
-    const response = await apiService.get<IUserProgress>(`/progress/courses/${courseId}`);
+    const response = await apiService.get<IUserProgress>(`/progress/courses/${courseId}/progress`);
     
     if (response.success && response.data) {
       return {

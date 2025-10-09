@@ -1,5 +1,7 @@
 import { apiService } from './api';
 import { IUser } from '../shared/types';
+import { testEnvironmentVariables } from '../utils/envTest';
+import config from '../config/env';
 
 declare global {
   interface Window {
@@ -23,9 +25,35 @@ declare global {
   }
 }
 
-// Google OAuth configuration - use environment variable or fallback
-// Note: CRA uses process.env, not import.meta.env
-const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '192720000772-1qkm1i0lmg52b17vaslf0gm56lll3p0m.apps.googleusercontent.com';
+// Function to get Google Client ID dynamically
+const getGoogleClientId = (): string => {
+  // Use centralized config
+  const clientId = config.googleClientId || '192720000772-1qkm1i0lmg52b17vaslf0gm56lll3p0m.apps.googleusercontent.com';
+
+  // Debug environment variable loading
+  console.log('🔍 Environment Debug:', {
+    'config.googleClientId': config.googleClientId,
+    'process.env.REACT_APP_GOOGLE_CLIENT_ID': process.env.REACT_APP_GOOGLE_CLIENT_ID,
+    'NODE_ENV': process.env.NODE_ENV,
+    'All REACT_APP_ vars': Object.keys(process.env).filter(key => key.startsWith('REACT_APP_')),
+    'window.location.hostname': window.location.hostname,
+    'Final client ID': clientId ? `${clientId.substring(0, 20)}...` : 'NOT SET'
+  });
+
+  // Force reload environment variables if they're not loaded
+  if (!config.googleClientId || config.googleClientId === 'your_google_client_id_here') {
+    console.warn('⚠️ Environment variable not loaded properly, using fallback');
+    console.warn('💡 This usually means the development server needs to be restarted');
+  }
+
+  return clientId;
+};
+
+// Validate client ID format
+const isValidClientId = (clientId: string): boolean => {
+  // Google OAuth client IDs typically end with .apps.googleusercontent.com
+  return clientId.includes('.apps.googleusercontent.com') && clientId.length > 20;
+};
 
 // Rate limiting for Google auth requests
 let lastGoogleAuthRequest = 0;
@@ -73,7 +101,29 @@ class GoogleAuthService {
   constructor() {
     console.log('🚀 E-learning Google Auth Service initialized');
     console.log('🌍 Current hostname:', window.location.hostname);
-    console.log('🔧 Google Client ID:', GOOGLE_CLIENT_ID ? `${GOOGLE_CLIENT_ID.substring(0, 20)}...` : 'NOT SET');
+    
+    // Test environment variables
+    const envTest = testEnvironmentVariables();
+    console.log('🧪 Environment test result:', envTest);
+    
+    // Get client ID dynamically
+    const clientId = getGoogleClientId();
+    console.log('🔧 Google Client ID:', clientId ? `${clientId.substring(0, 20)}...` : 'NOT SET');
+    
+    // Validate client ID
+    if (!clientId) {
+      console.error('❌ Google Client ID is not set!');
+      console.error('💡 Create a .env file in the elearning directory with:');
+      console.error('   REACT_APP_GOOGLE_CLIENT_ID=your_actual_client_id_here');
+      return;
+    }
+    
+    if (!isValidClientId(clientId)) {
+      console.error('❌ Invalid Google Client ID format!');
+      console.error('💡 Client ID should end with .apps.googleusercontent.com');
+      console.error('💡 Current ID:', clientId);
+      return;
+    }
     
     // Check for OAuth configuration issues
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
@@ -90,9 +140,10 @@ class GoogleAuthService {
       console.warn('   3. Use a production domain for testing');
       
       // Check if using the hardcoded client ID
-      if (GOOGLE_CLIENT_ID === '192720000772-1qkm1i0lmg52b17vaslf0gm56lll3p0m.apps.googleusercontent.com') {
+      if (clientId === '192720000772-1qkm1i0lmg52b17vaslf0gm56lll3p0m.apps.googleusercontent.com') {
         console.warn('⚠️ Using hardcoded Google Client ID - this may not be configured for localhost');
-        console.warn('💡 Create a .env file in the elearning directory with:');
+        console.warn('💡 This client ID might not be configured for your domain');
+        console.warn('💡 Create a .env file in the elearning directory with your own client ID:');
         console.warn('   REACT_APP_GOOGLE_CLIENT_ID=your_actual_client_id_here');
       }
     }
@@ -168,6 +219,12 @@ class GoogleAuthService {
   private async initialize(): Promise<void> {
     if (this.isInitialized) return;
     if (this.initPromise) return this.initPromise;
+
+    // Get client ID dynamically and validate before initialization
+    const clientId = getGoogleClientId();
+    if (!clientId || !isValidClientId(clientId)) {
+      throw new Error('Invalid or missing Google Client ID. Please check your configuration.');
+    }
 
     this.initPromise = this.waitForGoogleScript();
     await this.initPromise;
@@ -271,8 +328,9 @@ class GoogleAuthService {
       return new Promise((resolve) => {
         // Initialize Google Sign-In with better error handling
         try {
+          const clientId = getGoogleClientId();
           window.google.accounts.id.initialize({
-            client_id: GOOGLE_CLIENT_ID,
+            client_id: clientId,
             callback: async (response: any) => {
               try {
                 if (response.credential) {
@@ -345,6 +403,12 @@ class GoogleAuthService {
     buttonContainer.innerHTML = '';
 
     try {
+      // Get and validate client ID before rendering button
+      const clientId = getGoogleClientId();
+      if (!clientId || !isValidClientId(clientId)) {
+        throw new Error('Invalid Google Client ID');
+      }
+
       window.google.accounts.id.renderButton(buttonContainer, {
         theme: 'outline',
         size: 'large',
@@ -353,14 +417,30 @@ class GoogleAuthService {
         text: 'signin_with',
         width: '300'
       });
-    } catch (error) {
-      console.error('Failed to render Google button:', error);
-      // Fallback: create a simple button that triggers the auth flow
+    } catch (error: any) {
+      console.error('❌ Failed to render Google button:', error);
+      
+      // Show user-friendly error message
       buttonContainer.innerHTML = `
-        <button onclick="window.google.accounts.id.prompt()" 
-                style="padding: 12px 24px; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">
-          Continue with Google
-        </button>
+        <div style="text-align: center; padding: 20px;">
+          <h3 style="color: #d32f2f; margin: 0 0 10px 0;">Google Sign-In Error</h3>
+          <p style="color: #666; margin: 0 0 15px 0; font-size: 14px;">
+            ${error.message || 'Google Sign-In is not properly configured'}
+          </p>
+          <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 10px; margin: 10px 0;">
+            <strong>To fix this:</strong>
+            <ol style="text-align: left; margin: 10px 0 0 0; padding-left: 20px;">
+              <li>Create a .env file in the elearning directory</li>
+              <li>Add: REACT_APP_GOOGLE_CLIENT_ID=your_client_id</li>
+              <li>Configure the client ID in Google Cloud Console</li>
+              <li>Add your domain to authorized origins</li>
+            </ol>
+          </div>
+          <button onclick="this.parentElement.parentElement.remove()" 
+                  style="padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+            Close
+          </button>
+        </div>
       `;
     }
 

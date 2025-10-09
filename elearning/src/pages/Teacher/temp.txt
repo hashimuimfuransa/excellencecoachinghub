@@ -1,0 +1,214 @@
+        console.log(`🔍 Polling processing status for course: ${courseId} (attempt ${attempts + 1})`);
+        const statusResponse = await largeDocumentService.getProcessingStatus(courseId!);
+        console.log(`📊 Processing status response:`, statusResponse);
+        
+        // Find any processing materials for this course
+        const processingMaterials = statusResponse.processingMaterials || [];
+        console.log(`🎯 Found ${processingMaterials.length} processing materials`);
+        
+        if (processingMaterials.length > 0) {
+          // Get the most recent processing material
+          const latestMaterial = processingMaterials[processingMaterials.length - 1];
+          console.log(`📈 Latest material progress: ${latestMaterial.processingProgress}%, Status: ${latestMaterial.processingStatus}`);
+          
+          setProcessingProgress(latestMaterial.processingProgress || 0);
+          
+          // Calculate estimated time remaining - ULTRA FAST
+          if (processingStartTime && latestMaterial.processingProgress > 0) {
+            const elapsedTime = Date.now() - processingStartTime;
+            const estimatedTotalTime = (elapsedTime / latestMaterial.processingProgress) * 100;
+            const remainingTime = estimatedTotalTime - elapsedTime;
+            
+            if (remainingTime > 0) {
+              const seconds = Math.ceil(remainingTime / 1000);
+              if (seconds < 30) {
+                setEstimatedTimeRemaining(`${seconds} seconds remaining`);
+              } else if (seconds < 60) {
+                setEstimatedTimeRemaining(`${Math.ceil(seconds / 10) * 10} seconds remaining`);
+              } else {
+                const minutes = Math.ceil(remainingTime / 60000);
+                setEstimatedTimeRemaining(`${minutes} min remaining`);
+              }
+            } else {
+              setEstimatedTimeRemaining('Almost done...');
+            }
+          }
+          
+          if (latestMaterial.processingStatus === 'completed') {
+            console.log(`✅ Processing completed for latest material`);
+            
+            // Reload completed materials to get the latest data
+            try {
+              const processedMaterialsData = await largeDocumentService.getProcessedCourseMaterials(courseId!);
+              const completedMaterial = processedMaterialsData.processedMaterials.find((m: any) => 
+                m.originalFileName === latestMaterial.originalFileName
+              );
+              
+              if (completedMaterial) {
+                // Add the completed material to the materials list
+                const aiProcessedMaterial = {
+                  _id: completedMaterial._id || `ai-material-${Date.now()}`, // Ensure unique ID
+                  title: completedMaterial.originalFileName,
+                  description: `AI-processed document with ${completedMaterial.totalSubUnits} sub-units`,
+                  type: 'document',
+                  order: 1,
+                  url: completedMaterial.originalFileUrl,
+                  createdAt: completedMaterial.createdAt,
+                  isAIProcessed: true,
+                  processingStatus: 'completed',
+                  isPublished: completedMaterial.isPublished,
+                  totalSubUnits: completedMaterial.totalSubUnits,
+                  estimatedTotalReadingTime: completedMaterial.estimatedTotalReadingTime,
+                  difficultyLevel: completedMaterial.difficultyLevel,
+                  topics: completedMaterial.topics,
+                  keywords: completedMaterial.keywords
+                };
+                
+                setMaterials(prev => {
+                  // Check if material already exists to avoid duplicates
+                  const exists = prev.some(m => m._id === aiProcessedMaterial._id);
+                  if (exists) {
+                    console.log(`⚠️ Material already exists, skipping: ${completedMaterial.originalFileName}`);
+                    return prev;
+                  }
+                  console.log(`📚 Added completed material to list: ${completedMaterial.originalFileName}`);
+                  return [...prev, aiProcessedMaterial];
+                });
+              }
+            } catch (error) {
+              console.error('Error loading completed material:', error);
+            }
+            
+            setIsProcessing(false);
+            setProcessingProgress(0);
+            setProcessingStartTime(null);
+            setEstimatedTimeRemaining('');
+            
+            // Show success notification
+            setError(null); // Clear any previous errors
+            console.log(`🎉 DIRECT processing completed successfully!`);
+            
+            return;
+          } else if (latestMaterial.processingStatus === 'failed') {
+            console.log(`❌ Processing failed for latest material`);
+            // Processing failed
+            setMaterials(prev => prev.map(m => 
+              m.materialId === frontendMaterialId 
+                ? { ...m, processingStatus: 'failed', processingError: latestMaterial.processingError }
+                : m
+            ));
+            setIsProcessing(false);
+            setProcessingProgress(0);
+            setProcessingStartTime(null);
+            setEstimatedTimeRemaining('');
+            setError(`Processing failed: ${latestMaterial.processingError}`);
+            return;
+          }
+        } else {
+          console.log(`⏳ No processing materials found yet, continuing to poll...`);
+        }
+        
+        attempts++;
+        if (attempts < maxAttempts) {
+          // ULTRA fast polling for maximum responsiveness
+          setTimeout(poll, 1000); // Poll every 1 second instead of 2
+        } else {
+          console.log(`⏰ Polling timeout reached for course: ${courseId}`);
+          setIsProcessing(false);
+          setProcessingProgress(0);
+          setProcessingStartTime(null);
+          setEstimatedTimeRemaining('');
+          setError('Processing is taking longer than expected. The document is still being processed in the background.');
+        }
+      } catch (err) {
+        console.error('Error polling processing status:', err);
+        setIsProcessing(false);
+        setProcessingProgress(0);
+        setProcessingStartTime(null);
+        setEstimatedTimeRemaining('');
+      }
+    };
+    
+    poll();
+  };
+  */
+
+  const getFileIcon = (type: string) => {
+    switch (type) {
+      case 'document': return <Description />;
+      case 'pdf': return <PictureAsPdf />;
+      case 'video': return <VideoFile />;
+      case 'audio': return <AudioFile />;
+      case 'image': return <PictureAsPdf />;
+      default: return <InsertDriveFile />;
+    }
+  };
+
+  // Live Sessions management functions
+  const handleAddSession = () => {
+    setEditingSession(null);
+    setSessionForm({
+      title: '',
+      description: '',
+      scheduledTime: '',
+      duration: 60,
+      agenda: '',
+      maxParticipants: 50,
+      isRecorded: true,
+      chatEnabled: true,
+      handRaiseEnabled: true,
+      screenShareEnabled: true,
+      attendanceRequired: true
+    });
+    setSessionDialogOpen(true);
+  };
+
+  const handleEditSession = (session: any) => {
+    setEditingSession(session);
+    setSessionForm({
+      title: session.title,
+      description: session.description,
+      scheduledTime: session.scheduledTime,
+      duration: session.duration,
+      agenda: session.agenda || '',
+      maxParticipants: session.maxParticipants,
+      isRecorded: session.isRecorded,
+      chatEnabled: session.chatEnabled,
+      handRaiseEnabled: session.handRaiseEnabled,
+      screenShareEnabled: session.screenShareEnabled,
+      attendanceRequired: session.attendanceRequired
+    });
+    setSessionDialogOpen(true);
+  };
+
+  const handleDeleteSession = (sessionId: string) => {
+    setLiveSessions(prev => prev.filter(s => s._id !== sessionId));
+  };
+
+  const handleSaveSession = () => {
+    if (editingSession) {
+      // Update existing session
+      setLiveSessions(prev => prev.map(s => 
+        s._id === editingSession._id 
+          ? { ...s, ...sessionForm, updatedAt: new Date().toISOString() }
+          : s
+      ));
+    } else {
+      // Add new session
+      const newSession = {
+        _id: Date.now().toString(),
+        ...sessionForm,
+        status: 'scheduled',
+        participants: 0,
+        createdAt: new Date().toISOString()
+      };
+      setLiveSessions(prev => [...prev, newSession]);
+    }
+    setSessionDialogOpen(false);
+  };
+
+  const handleStartSession = (sessionId: string) => {
+    // Navigate to live session room
+    navigate(`/video-session/teacher/${sessionId}`);
+  };
+

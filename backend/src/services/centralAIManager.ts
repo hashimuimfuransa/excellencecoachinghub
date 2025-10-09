@@ -47,8 +47,8 @@ export class CentralAIManager extends EventEmitter {
   private dailyRequestLimit: number = 300; // Reduced due to quota issues
   private minuteRequestCount: number = 0;
   private lastMinuteReset: number = Date.now();
-  private readonly MINUTE_REQUEST_LIMIT = 2; // Very conservative for free tier
-  private readonly MIN_REQUEST_INTERVAL = 30000; // 30 seconds between requests
+  private readonly MINUTE_REQUEST_LIMIT = 3; // Increased for faster processing
+  private readonly MIN_REQUEST_INTERVAL = 15000; // Reduced to 15 seconds for faster processing
   private lastRequestTime: number = 0;
   private requestQueue: Array<{
     resolve: (value: string) => void;
@@ -64,8 +64,8 @@ export class CentralAIManager extends EventEmitter {
     {
       name: 'gemini-2.5-flash',
       version: '2.5-flash',
-      maxTokens: 8192,
-      temperature: 0.4,
+      maxTokens: 4096, // Reduced for faster processing
+      temperature: 0.3, // Lower temperature for faster, more consistent responses
       topP: 0.8,
       topK: 40,
       description: 'Gemini 2.5 Flash - Latest fast model with best performance (v1beta API)',
@@ -91,8 +91,8 @@ export class CentralAIManager extends EventEmitter {
     {
       name: 'gemini-2.0-flash',
       version: '2.0-flash',
-      maxTokens: 8192,
-      temperature: 0.4,
+      maxTokens: 4096, // Reduced for faster processing
+      temperature: 0.3, // Lower temperature for faster, more consistent responses
       topP: 0.8,
       topK: 40,
       description: 'Gemini 2.0 Flash - Fast processing, good accuracy (v1beta API)',

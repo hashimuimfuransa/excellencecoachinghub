@@ -6,7 +6,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-import { cloudinary } from '../config/cloudinary';
+import cloudinary from '../config/cloudinary';
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -51,6 +51,165 @@ export const upload = multer({
   fileFilter,
   limits: {
     fileSize: 500 * 1024 * 1024 // 500MB limit
+  }
+});
+
+// @desc    Proxy PDF requests with authentication
+// @route   GET /api/materials/pdf-proxy
+// @access  Private
+export const proxyPDF = asyncHandler(async (req: Request, res: Response) => {
+  const { url } = req.query;
+  const user = req.user;
+
+  if (!user) {
+    res.status(401).json({
+      success: false,
+      error: 'User not authenticated'
+    });
+    return;
+  }
+
+  if (!url || typeof url !== 'string') {
+    res.status(400).json({
+      success: false,
+      error: 'PDF URL is required'
+    });
+    return;
+  }
+
+  try {
+    // Fetch the PDF from the provided URL
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; PDF-Proxy/1.0)',
+        'Accept': 'application/pdf,application/octet-stream,*/*'
+      }
+    });
+
+    if (!response.ok) {
+      res.status(response.status).json({
+        success: false,
+        error: `Failed to fetch PDF: ${response.statusText}`
+      });
+      return;
+    }
+
+    // Get the PDF content
+    const pdfBuffer = await response.arrayBuffer();
+    
+    // Set appropriate headers
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Length', pdfBuffer.byteLength);
+    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+    
+    // Send the PDF
+    res.send(Buffer.from(pdfBuffer));
+
+  } catch (error) {
+    console.error('Error proxying PDF:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to proxy PDF request'
+    });
+  }
+});
+
+// @desc    Proxy document requests with authentication (for all document types)
+// @route   GET /api/documents/proxy
+// @access  Private
+export const proxyDocument = asyncHandler(async (req: Request, res: Response) => {
+  const { url } = req.query;
+  const user = req.user;
+
+  if (!user) {
+    res.status(401).json({
+      success: false,
+      error: 'User not authenticated'
+    });
+    return;
+  }
+
+  if (!url || typeof url !== 'string') {
+    res.status(400).json({
+      success: false,
+      error: 'Document URL is required'
+    });
+    return;
+  }
+
+  try {
+    console.log('Proxying document request for URL:', url);
+    
+    // Fetch the document from the provided URL
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; Document-Proxy/1.0)',
+        'Accept': 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,application/octet-stream,*/*'
+      }
+    });
+
+    if (!response.ok) {
+      console.error('Failed to fetch document:', response.status, response.statusText);
+      res.status(response.status).json({
+        success: false,
+        error: `Failed to fetch document: ${response.statusText}`
+      });
+      return;
+    }
+
+    // Get the document content
+    const documentBuffer = await response.arrayBuffer();
+    
+    // Determine content type from response or URL
+    let contentType = response.headers.get('content-type') || 'application/octet-stream';
+    
+    // If content type is not set, try to determine from URL
+    if (contentType === 'application/octet-stream' || !contentType) {
+      const urlLower = url.toLowerCase();
+      if (urlLower.includes('.pdf')) {
+        contentType = 'application/pdf';
+      } else if (urlLower.includes('.docx')) {
+        contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      } else if (urlLower.includes('.doc')) {
+        contentType = 'application/msword';
+      } else if (urlLower.includes('.pptx')) {
+        contentType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+      } else if (urlLower.includes('.ppt')) {
+        contentType = 'application/vnd.ms-powerpoint';
+      } else if (urlLower.includes('.xlsx')) {
+        contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      } else if (urlLower.includes('.xls')) {
+        contentType = 'application/vnd.ms-excel';
+      } else if (urlLower.includes('.txt')) {
+        contentType = 'text/plain';
+      }
+    }
+    
+    // Set appropriate headers
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Length', documentBuffer.byteLength);
+    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    
+    console.log('Successfully proxied document:', {
+      url,
+      contentType,
+      size: documentBuffer.byteLength
+    });
+    
+    // Send the document
+    res.send(Buffer.from(documentBuffer));
+
+  } catch (error) {
+    console.error('Error proxying document:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to proxy document request'
+    });
   }
 });
 
@@ -164,11 +323,14 @@ export const addCourseMaterial = asyncHandler(async (req: Request, res: Response
     // Handle file upload if present
     if (req.file) {
       try {
-        // Upload to Cloudinary
+        // Upload to Cloudinary with public preset
         const result = await cloudinary.uploader.upload(req.file.path, {
           folder: `course-materials/${courseId}`,
           resource_type: 'auto', // Automatically detect file type
-          public_id: `${uuidv4()}-${Date.now()}`
+          public_id: `${uuidv4()}-${Date.now()}`,
+          upload_preset: 'upload-public', // Use public upload preset
+          use_filename: true,
+          unique_filename: true
         });
 
         if (type === 'video') {
@@ -299,11 +461,14 @@ export const updateCourseMaterial = asyncHandler(async (req: Request, res: Respo
           }
         }
 
-        // Upload new file to Cloudinary
+        // Upload new file to Cloudinary with public preset
         const result = await cloudinary.uploader.upload(req.file.path, {
           folder: `course-materials/${courseId}`,
           resource_type: 'auto',
-          public_id: `${uuidv4()}-${Date.now()}`
+          public_id: `${uuidv4()}-${Date.now()}`,
+          upload_preset: 'upload-public', // Use public upload preset
+          use_filename: true,
+          unique_filename: true
         });
 
         if (type === 'video') {

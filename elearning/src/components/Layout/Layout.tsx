@@ -1,5 +1,3 @@
-console.log('🚀🚀🚀 LAYOUT.TSX FILE LOADED 🚀🚀🚀');
-
 import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -176,8 +174,6 @@ interface NavigationItem {
 }
 
 const Layout: React.FC = () => {
-  console.log('🚀🚀🚀 LAYOUT COMPONENT FUNCTION CALLED 🚀🚀🚀');
-  console.log('🔍 LAYOUT COMPONENT RENDERING - START');
   
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -233,8 +229,7 @@ const Layout: React.FC = () => {
       );
     } else if (user?.role === UserRole.TEACHER) {
       roleSpecificItems.push(
-        { text: 'Course Management', icon: <School />, path: '/dashboard/teacher/course-management' },
-        { text: 'Create Course', icon: <Add />, path: '/dashboard/teacher/courses/create' },
+        { text: 'My Courses', icon: <School />, path: '/dashboard/teacher/courses' },
         { text: 'Live Sessions', icon: <VideoCall />, path: '/dashboard/teacher/live-sessions' },
         { text: 'Community', icon: <Groups />, path: '/community/feed' },
         { text: 'Student Management', icon: <ManageAccounts />, path: '/dashboard/teacher/student-management' },

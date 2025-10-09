@@ -989,7 +989,7 @@ const StudentDashboard: React.FC = () => {
                           <ResponsiveButton
                             size={buttonSize}
                             variant="outlined"
-                            onClick={() => navigate(`/course/${course._id}/learn`)}
+                            onClick={() => navigate(`/dashboard/student/course/${course._id}/learn`)}
                             sx={{ 
                               minWidth: { xs: '100%', sm: 'auto' },
                               mt: { xs: 1, sm: 0 }

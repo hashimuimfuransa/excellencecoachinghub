@@ -23,6 +23,8 @@ declare global {
       HMS_SECRET: string;
       OPENAI_API_KEY: string;
       GEMINI_API_KEY: string;
+      PDFTRON_LICENSE_KEY: string;
+      GOOGLE_CLIENT_ID: string;
     }
   }
 }

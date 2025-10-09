@@ -58,6 +58,9 @@ import courseContentRoutes from '@/routes/courseContentRoutes';
 import courseNotesRoutes from '@/routes/courseNotesRoutes';
 import courseMaterialsRoutes from '@/routes/courseMaterials';
 import assignmentRoutes from '@/routes/assignmentRoutes';
+import weekRoutes from '@/routes/weekRoutes';
+import progressRoutes from '@/routes/progressRoutes';
+import uploadRoutes from '@/routes/uploadRoutes';
 import announcementRoutes from '@/routes/announcementRoutes';
 import recordedSessionRoutes from '@/routes/recordedSessions';
 import gradesRoutes from '@/routes/gradesRoutes';
@@ -77,6 +80,7 @@ import speechRoutes from '@/routes/speechRoutes';
 import jobCertificateRoutes from '@/routes/jobCertificateRoutes';
 import profileRoutes from '@/routes/profileRoutes';
 import uploadRoutes from '@/routes/uploadRoutes';
+import documentProcessorRoutes from '@/routes/documentProcessorRoutes';
 import recordingRoutes from '@/routes/recordingRoutes';
 import employerRoutes from '@/routes/employerRoutes';
 import testRequestRoutes from '@/routes/testRequestRoutes';
@@ -92,6 +96,7 @@ import emailRoutes from '@/routes/emailRoutes';
 import sendGridWebhookRoutes from '@/routes/sendGridWebhookRoutes';
 import unsubscribeRoutes from '@/routes/unsubscribeRoutes';
 import communityRoutes from '@/routes/communityRoutes';
+import annotationRoutes from '@/routes/annotationRoutes';
 
 // Social Network routes
 import postRoutes from '@/routes/postRoutes';
@@ -127,13 +132,17 @@ const io = new Server(server, {
       'https://exjobnet.com', // Updated job portal domain
       'https://excellencecoachinghub.com',
       'https://elearning.excellencecoachinghub.com',
-       'https://exjobnet.excellencecoachinghub.com'
-      ,       // Add root domain too
+      'https://exjobnet.excellencecoachinghub.com',
       process.env['FRONTEND_URL'] || 'http://localhost:3000'
     ],
     methods: ['GET', 'POST'],
-    credentials: true
-  }
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
+  },
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+  pingTimeout: 60000,
+  pingInterval: 25000
 });
 
 
@@ -837,6 +846,10 @@ app.use('/api/course-content', courseContentRoutes);
 app.use('/api/course-notes', courseNotesRoutes);
 app.use('/api/course-materials', courseMaterialsRoutes);
 app.use('/api/assignments', assignmentRoutes);
+app.use('/api/weeks', weekRoutes);
+app.use('/api/progress', progressRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/documents', documentProcessorRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/recorded-sessions', recordedSessionRoutes);
 app.use('/api/grades', gradesRoutes);
@@ -980,6 +993,9 @@ app.use('/api/employer', employerRoutes);
 
 // Super Admin routes
 app.use('/api/admin', superAdminRoutes);
+
+// Annotation routes
+app.use('/api/annotations', annotationRoutes);
 
 // Placeholder image endpoint for avatar videos
 app.get('/api/placeholder/:width/:height', (req, res) => {

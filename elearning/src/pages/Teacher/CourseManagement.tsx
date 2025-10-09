@@ -1,68 +1,66 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import {
   Container,
   Typography,
   Box,
   Card,
   CardContent,
-  Grid,
   Button,
-  Tabs,
-  Tab,
-  Alert,
-  CircularProgress,
+  Grid,
   Chip,
-  Avatar,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  ListItemSecondaryAction,
   IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
-  FormControl,
-  InputLabel,
   Select,
   MenuItem,
+  FormControl,
+  InputLabel,
+  Tabs,
+  Tab,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  Alert,
+  CircularProgress,
+  Divider,
+  Avatar,
+  Badge,
   Paper,
-  Tooltip
+  Tooltip,
+  Breadcrumbs,
+  Link
 } from '@mui/material';
 import {
-  ArrowBack,
-  VideoCall,
-  Assignment,
-  Quiz,
-  Note,
-  People,
-  Analytics,
-  Settings,
-  PlayArrow,
   Add,
   Edit,
   Delete,
   Visibility,
-  Schedule,
-  School,
-  AttachMoney,
-  Star,
-  Upload,
   Download,
-  Send,
-  Folder,
-  CloudUpload,
+  VideoCall,
+  Assignment,
+  Quiz,
+  PlayArrow,
   Description,
-  AutoAwesome
+  PictureAsPdf,
+  VideoFile,
+  AudioFile,
+  InsertDriveFile,
+  Close,
+  MenuBook
 } from '@mui/icons-material';
-import { useAuth } from '../../store/AuthContext';
-import { courseService, ICourse } from '../../services/courseService';
-import { courseContentService, ICourseContent } from '../../services/courseContentService';
-import { assessmentService, IAssessment } from '../../services/assessmentService';
-import { CourseStatus } from '../../shared/types';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import { courseService } from '../../services/courseService';
+import { liveSessionService } from '../../services/liveSessionService';
+import { assignmentService } from '../../services/assignmentService';
+import { assessmentService } from '../../services/assessmentService';
+import { Week, WeekMaterial } from '../../services/weekService';
+import DocumentProcessor from '../../components/CourseMaterials/DocumentProcessor';
+import CourseMaterials from '../../components/CourseMaterials/CourseMaterials';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -77,8 +75,8 @@ function TabPanel(props: TabPanelProps) {
     <div
       role="tabpanel"
       hidden={value !== index}
-      id={`course-tabpanel-${index}`}
-      aria-labelledby={`course-tab-${index}`}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
       {...other}
     >
       {value === index && (
@@ -90,1693 +88,1843 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
+function a11yProps(index: number) {
+  return {
+    id: `simple-tab-${index}`,
+    'aria-controls': `simple-tabpanel-${index}`,
+  };
+}
+
 const CourseManagement: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // State management
-  const [course, setCourse] = useState<ICourse | null>(null);
-  const [courseContent, setCourseContent] = useState<ICourseContent[]>([]);
-  const [assessments, setAssessments] = useState<IAssessment[]>([]);
+  // Course data state
+  const [courseData, setCourseData] = useState<any>(null);
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [liveSessions, setLiveSessions] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [assessments, setAssessments] = useState<any[]>([]);
+  const [youtubeVideos, setYoutubeVideos] = useState<any[]>([]);
+  
+  // Week management state
+  const [weeks, setWeeks] = useState<Week[]>([]);
+  const [selectedWeek, setSelectedWeek] = useState<Week | null>(null);
+
+  // UI state
+  const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [contentLoading, setContentLoading] = useState(false);
-  const [assessmentsLoading, setAssessmentsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [tabValue, setTabValue] = useState(0);
-  
-  // Dialog states
-  const [noteDialogOpen, setNoteDialogOpen] = useState(false);
+
+  // Material dialog state
+  const [materialDialogOpen, setMaterialDialogOpen] = useState(false);
+  const [editingMaterial, setEditingMaterial] = useState<any>(null);
+  const [materialForm, setMaterialForm] = useState({
+    title: '',
+    description: '',
+    type: 'document',
+    order: 1,
+    url: '',
+    file: null as File | null
+  });
+
+  // Live session dialog state
+  const [sessionDialogOpen, setSessionDialogOpen] = useState(false);
+  const [editingSession, setEditingSession] = useState<any>(null);
+  const [sessionForm, setSessionForm] = useState({
+    title: '',
+    description: '',
+    scheduledTime: '',
+    duration: 60,
+    maxParticipants: 50,
+    agenda: '',
+    recordingEnabled: true,
+    chatEnabled: true,
+    handRaiseEnabled: true,
+    screenShareEnabled: true,
+    attendanceEnabled: true
+  });
+
+  // Assignment dialog state
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
-  const [liveSessionDialogOpen, setLiveSessionDialogOpen] = useState(false);
-  const [uploadAssessmentDialogOpen, setUploadAssessmentDialogOpen] = useState(false);
-  const [uploadToExistingDialogOpen, setUploadToExistingDialogOpen] = useState(false);
-  
-  // Form states
-  const [noteTitle, setNoteTitle] = useState('');
-  const [noteContent, setNoteContent] = useState('');
-  const [assignmentTitle, setAssignmentTitle] = useState('');
-  const [assignmentDescription, setAssignmentDescription] = useState('');
-  const [assignmentDueDate, setAssignmentDueDate] = useState('');
-  const [assignmentPoints, setAssignmentPoints] = useState('100');
-  const [assignmentInstructions, setAssignmentInstructions] = useState('');
-  
-  // Assignment document upload states
-  const [assignmentDocument, setAssignmentDocument] = useState<File | null>(null);
-  const [uploadingAssignmentDoc, setUploadingAssignmentDoc] = useState(false);
-  const [selectedAssignmentForUpload, setSelectedAssignmentForUpload] = useState<ICourseContent | null>(null);
-  const [assignmentUploadDialogOpen, setAssignmentUploadDialogOpen] = useState(false);
-  
-  // Assessment upload states
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [assessmentTitle, setAssessmentTitle] = useState('');
-  const [assessmentDescription, setAssessmentDescription] = useState('');
-  const [assessmentType, setAssessmentType] = useState<'quiz' | 'assignment' | 'exam' | 'project' | 'homework'>('exam');
-  const [extractingQuestions, setExtractingQuestions] = useState(false);
-  
-  // Upload to existing assessment states
-  const [selectedAssessment, setSelectedAssessment] = useState<IAssessment | null>(null);
-  const [existingUploadFile, setExistingUploadFile] = useState<File | null>(null);
-  const [addingToExisting, setAddingToExisting] = useState(false);
+  const [editingAssignment, setEditingAssignment] = useState<any>(null);
+  const [assignmentForm, setAssignmentForm] = useState({
+    title: '',
+    description: '',
+    dueDate: '',
+    points: 100,
+    type: 'essay',
+    instructions: '',
+    attachments: [],
+    rubric: '',
+    allowLateSubmission: false,
+    latePenalty: 0
+  });
 
-  // Load course details and content
+  // Assessment dialog state
+  const [assessmentDialogOpen, setAssessmentDialogOpen] = useState(false);
+  const [editingAssessment, setEditingAssessment] = useState<any>(null);
+  const [assessmentForm, setAssessmentForm] = useState({
+    title: '',
+    description: '',
+    dueDate: '',
+    points: 100,
+    type: 'quiz',
+    timeLimit: 60,
+    questions: [],
+    passingScore: 70,
+    attempts: 3,
+    randomizeQuestions: false,
+    showResultsImmediately: true,
+    requireProctoring: false
+  });
+
+  // YouTube video dialog state
+  const [videoDialogOpen, setVideoDialogOpen] = useState(false);
+  const [editingVideo, setEditingVideo] = useState<any>(null);
+  const [videoForm, setVideoForm] = useState({
+    title: '',
+    description: '',
+    url: '',
+    duration: '',
+    thumbnail: '',
+    order: 0,
+    isPublished: false
+  });
+
+  // Material deletion state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [materialToDelete, setMaterialToDelete] = useState<any>(null);
+  const [deleting, setDeleting] = useState(false);
+  
+  // Week dialog state
+  const [weekDialogOpen, setWeekDialogOpen] = useState(false);
+  const [editingWeek, setEditingWeek] = useState<Week | null>(null);
+  const [weekForm, setWeekForm] = useState({
+    title: '',
+    description: '',
+    weekNumber: 1,
+    startDate: '',
+    endDate: '',
+    isPublished: false
+  });
+  
+  // Week material dialog state
+  const [weekMaterialDialogOpen, setWeekMaterialDialogOpen] = useState(false);
+  const [editingWeekMaterial, setEditingWeekMaterial] = useState<WeekMaterial | null>(null);
+  const [weekMaterialForm, setWeekMaterialForm] = useState({
+    title: '',
+    description: '',
+    type: 'document' as 'document' | 'video' | 'audio' | 'link' | 'quiz',
+    url: '',
+    order: 1,
+    estimatedDuration: 30,
+    isRequired: true,
+    isPublished: true
+  });
+
+  // Load course data
   useEffect(() => {
-    const loadCourse = async () => {
-      if (!id || !user) return;
-
-      try {
-        setLoading(true);
-        setError(null);
-
-        const courseData = await courseService.getCourseById(id);
-        setCourse(courseData);
-
-        // Load course content
-        try {
-          const contentData = await courseContentService.getCourseContent(id);
-          setCourseContent(contentData.content);
-        } catch (contentError) {
-          // Content might not exist yet, which is fine
-          setCourseContent([]);
-        }
-
-        // Load assessments for this course
-        try {
-          const assessmentData = await assessmentService.getTeacherAssessments({ courseId: id });
-          setAssessments(assessmentData.assessments);
-        } catch (assessmentError) {
-          // Assessments might not exist yet, which is fine
-          setAssessments([]);
-        }
-      } catch (err: any) {
-        setError(err.message || 'Failed to load course');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadCourse();
-  }, [id, user]);
-
-  // Handle tab change
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
-
-  // Get user-friendly status display
-  const getStatusDisplay = (status: CourseStatus) => {
-    switch (status) {
-      case CourseStatus.DRAFT:
-        return 'Draft';
-      case CourseStatus.PENDING_APPROVAL:
-        return 'Pending Approval';
-      case CourseStatus.APPROVED:
-        return 'Approved';
-      case CourseStatus.REJECTED:
-        return 'Rejected';
-      case CourseStatus.ARCHIVED:
-        return 'Archived';
-      default:
-        return status;
+    if (courseId) {
+      loadCourse();
     }
-  };
+  }, [courseId]);
 
-  // Handle start live session
-  const handleStartLiveSession = () => {
-    if (course) {
-      // Navigate to live session creation/management
-      navigate(`/dashboard/teacher/live-sessions/create?courseId=${course._id}`);
-    }
-  };
-
-  // Handle add note
-  const handleAddNote = async () => {
-    if (!course || !noteTitle.trim() || !noteContent.trim()) return;
-
+  const loadCourse = async () => {
     try {
-      setContentLoading(true);
-      const newNote = await courseContentService.addNote(course._id, noteTitle, noteContent);
-      setCourseContent(prev => [...prev, newNote]);
-      setSuccess('Note added successfully!');
-      setNoteDialogOpen(false);
-      setNoteTitle('');
-      setNoteContent('');
-    } catch (err: any) {
-      setError(err.message || 'Failed to add note');
-    } finally {
-      setContentLoading(false);
-    }
-  };
+      setLoading(true);
+      setError(null);
 
-  // Handle add assignment
-  const handleAddAssignment = async () => {
-    if (!course || !assignmentTitle.trim() || !assignmentDescription.trim()) return;
+      // Dynamically import weekService to avoid potential circular import issues
+      const { weekService } = await import('../../services/weekService');
 
-    try {
-      setContentLoading(true);
-      const newAssignment = await courseContentService.addEnhancedAssignment(
-        course._id, 
-        assignmentTitle, 
-        assignmentDescription, 
-        assignmentDueDate,
-        parseInt(assignmentPoints) || 100,
-        assignmentInstructions,
-        assignmentDocument
-      );
-      setCourseContent(prev => [...prev, newAssignment]);
-      setSuccess('Assignment created successfully!');
-      setAssignmentDialogOpen(false);
-      setAssignmentTitle('');
-      setAssignmentDescription('');
-      setAssignmentDueDate('');
-      setAssignmentPoints('100');
-      setAssignmentInstructions('');
-      setAssignmentDocument(null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to create assignment');
-    } finally {
-      setContentLoading(false);
-    }
-  };
+      // Load main course data
+      const course = await courseService.getCourseById(courseId!);
+      setCourseData(course);
 
-  // Handle file upload for assessment
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Check file type
-      const allowedTypes = [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'text/plain'
-      ];
+      // Extract materials and YouTube videos from course content
+      const courseMaterials = course.content || [];
+      setMaterials(courseMaterials);
+
+      // Load live sessions
+      const sessions = await liveSessionService.getCourseSessions(courseId!);
+      setLiveSessions(sessions || []);
+
+      // Load assignments
+      const assignmentsData = await assignmentService.getCourseAssignments(courseId!);
+      setAssignments(assignmentsData || []);
+
+      // Load assessments
+      const assessmentsData = await assessmentService.getCourseAssessments(courseId!);
+      setAssessments(assessmentsData || []);
       
-      if (!allowedTypes.includes(file.type)) {
-        setError('Please upload a PDF, Word document, or text file');
-        return;
-      }
+      // Load weeks
+      const weeksData = await weekService.getCourseWeeks(courseId!);
+      setWeeks(weeksData || []);
 
-      // Check file size (10MB limit)
-      if (file.size > 10 * 1024 * 1024) {
-        setError('File size must be less than 10MB');
-        return;
-      }
+      // Load YouTube videos (filtered from course materials)
+      const youtubeVideosData = courseMaterials
+        .filter((material: any) => material.type === 'video' && material.url?.includes('youtube'))
+        .map((material: any) => ({
+          _id: material._id,
+          title: material.title,
+          description: material.description,
+          url: material.url,
+          duration: material.duration || 'Unknown',
+          thumbnail: material.thumbnail || '',
+          order: material.order || 0,
+          isPublished: material.isPublished || false
+        }));
+      setYoutubeVideos(youtubeVideosData);
 
-      setUploadedFile(file);
-      setError(null);
+    } catch (err: any) {
+      console.error('Error loading course:', err);
+      setError(err.message || 'Failed to load course data');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Remove uploaded file
-  const removeUploadedFile = () => {
-    setUploadedFile(null);
+  // Material management functions
+  const handleAddMaterial = () => {
+    setEditingMaterial(null);
+    setMaterialForm({
+      title: '',
+      description: '',
+      type: 'document',
+      order: 1,
+      url: '',
+      file: null
+    });
+    setMaterialDialogOpen(true);
   };
 
-  // Handle create assessment from uploaded document
-  const handleCreateAssessmentFromDocument = async () => {
-    if (!course || !assessmentTitle.trim() || !uploadedFile) return;
+  const handleEditMaterial = (material: any) => {
+    setEditingMaterial(material);
+    setMaterialForm({
+      title: material.title,
+      description: material.description,
+      type: material.type,
+      order: material.order,
+      url: material.url,
+      file: null
+    });
+    setMaterialDialogOpen(true);
+  };
+
+  const handleDeleteMaterial = (material: any) => {
+    setMaterialToDelete(material);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteMaterial = async () => {
+    if (!materialToDelete) return;
 
     try {
-      setExtractingQuestions(true);
-      setAssessmentsLoading(true);
-      setError(null);
+      setDeleting(true);
+      
+      // Remove from frontend state
+      setMaterials(prev => prev.filter(m => m._id !== materialToDelete._id));
+      
+      console.log(`✅ Material deleted successfully: ${materialToDelete.title}`);
+      setDeleteDialogOpen(false);
+      setMaterialToDelete(null);
+    } catch (err: any) {
+      console.error('Error deleting material:', err);
+      setError(err.message || 'Failed to delete material');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
-      const assessmentData = {
-        title: assessmentTitle,
-        description: assessmentDescription,
-        course: course._id,
-        type: assessmentType,
-        questions: [],
-        attempts: 1,
-        instructions: 'Please read all questions carefully before answering.',
-        allowLateSubmission: false,
-        randomizeQuestions: false,
-        randomizeOptions: false,
-        showResultsImmediately: true,
-        showCorrectAnswers: true,
-        requireProctoring: false,
-        passingScore: 70,
-        isPublished: false
+  const cancelDeleteMaterial = () => {
+    setDeleteDialogOpen(false);
+    setMaterialToDelete(null);
+  };
+
+  const handleSaveMaterial = async () => {
+    if (!courseId) {
+      setError('Course ID is required');
+      return;
+    }
+
+    try {
+      if (editingMaterial) {
+        // Update existing material
+        setMaterials(prev => prev.map(m => 
+          m._id === editingMaterial._id 
+            ? { ...m, ...materialForm, updatedAt: new Date().toISOString() }
+            : m
+        ));
+      } else {
+        // Add new material
+        const newMaterial = {
+          _id: Date.now().toString(),
+          ...materialForm,
+          createdAt: new Date().toISOString()
+        };
+
+        // Add the material to the list
+        setMaterials(prev => [...prev, newMaterial]);
+      }
+      setMaterialDialogOpen(false);
+    } catch (err: any) {
+      console.error('Error saving material:', err);
+      setError(err.message || 'Failed to save material');
+    }
+  };
+
+  // Week management functions
+  const handleAddWeek = () => {
+    setEditingWeek(null);
+    setWeekForm({
+      title: '',
+      description: '',
+      weekNumber: weeks.length + 1,
+      startDate: '',
+      endDate: '',
+      isPublished: false
+    });
+    setWeekDialogOpen(true);
+  };
+
+  const handleEditWeek = (week: Week) => {
+    setEditingWeek(week);
+    setWeekForm({
+      title: week.title,
+      description: week.description,
+      weekNumber: week.weekNumber,
+      startDate: week.startDate.split('T')[0],
+      endDate: week.endDate.split('T')[0],
+      isPublished: week.isPublished
+    });
+    setWeekDialogOpen(true);
+  };
+
+  const handleDeleteWeek = async (week: Week) => {
+    try {
+      const { weekService } = await import('../../services/weekService');
+      await weekService.deleteWeek(week._id);
+      setWeeks(prev => prev.filter(w => w._id !== week._id));
+    } catch (err: any) {
+      console.error('Error deleting week:', err);
+      setError(err.message || 'Failed to delete week');
+    }
+  };
+
+  const handleSaveWeek = async () => {
+    if (!courseId) {
+      setError('Course ID is required');
+      return;
+    }
+
+    try {
+      const { weekService } = await import('../../services/weekService');
+      if (editingWeek) {
+        const updatedWeek = await weekService.updateWeek(editingWeek._id, weekForm);
+        setWeeks(prev => prev.map(w => w._id === editingWeek._id ? updatedWeek : w));
+      } else {
+        const newWeek = await weekService.createWeek(courseId, weekForm);
+        setWeeks(prev => [...prev, newWeek]);
+      }
+      setWeekDialogOpen(false);
+    } catch (err: any) {
+      console.error('Error saving week:', err);
+      setError(err.message || 'Failed to save week');
+    }
+  };
+
+  const handleToggleWeekPublish = async (week: Week) => {
+    try {
+      const { weekService } = await import('../../services/weekService');
+      const updatedWeek = await weekService.toggleWeekPublish(week._id, !week.isPublished);
+      setWeeks(prev => prev.map(w => w._id === week._id ? updatedWeek : w));
+    } catch (err: any) {
+      console.error('Error toggling week publish:', err);
+      setError(err.message || 'Failed to update week');
+    }
+  };
+
+  // Week material management functions
+  const handleAddWeekMaterial = (week: Week) => {
+    setSelectedWeek(week);
+    setEditingWeekMaterial(null);
+    setWeekMaterialForm({
+      title: '',
+      description: '',
+      type: 'document' as const,
+      url: '',
+      order: week.materials.length + 1,
+      estimatedDuration: 30,
+      isRequired: true,
+      isPublished: true
+    });
+    setWeekMaterialDialogOpen(true);
+  };
+
+  const handleEditWeekMaterial = (week: Week, material: WeekMaterial) => {
+    setSelectedWeek(week);
+    setEditingWeekMaterial(material);
+    setWeekMaterialForm({
+      title: material.title,
+      description: material.description,
+      type: material.type as 'document' | 'video' | 'audio' | 'link' | 'quiz',
+      url: material.url || '',
+      order: material.order,
+      estimatedDuration: material.estimatedDuration,
+      isRequired: material.isRequired,
+      isPublished: material.isPublished
+    });
+    setWeekMaterialDialogOpen(true);
+  };
+
+  const handleDeleteWeekMaterial = async (week: Week, material: WeekMaterial) => {
+    try {
+      const { weekService } = await import('../../services/weekService');
+      await weekService.deleteWeekMaterial(week._id, material._id);
+      setWeeks(prev => prev.map(w => 
+        w._id === week._id 
+          ? { ...w, materials: w.materials.filter(m => m._id !== material._id) }
+          : w
+      ));
+    } catch (err: any) {
+      console.error('Error deleting week material:', err);
+      setError(err.message || 'Failed to delete material');
+    }
+  };
+
+  const handleSaveWeekMaterial = async () => {
+    if (!selectedWeek) {
+      setError('No week selected');
+      return;
+    }
+
+    try {
+      const { weekService } = await import('../../services/weekService');
+      if (editingWeekMaterial) {
+        const updatedMaterial = await weekService.updateWeekMaterial(
+          selectedWeek._id, 
+          editingWeekMaterial._id, 
+          weekMaterialForm
+        );
+        setWeeks(prev => prev.map(w => 
+          w._id === selectedWeek._id 
+            ? { ...w, materials: w.materials.map(m => m._id === editingWeekMaterial._id ? updatedMaterial : m) }
+            : w
+        ));
+      } else {
+        const newMaterial = await weekService.addWeekMaterial(selectedWeek._id, weekMaterialForm);
+        setWeeks(prev => prev.map(w => 
+          w._id === selectedWeek._id 
+            ? { ...w, materials: [...w.materials, newMaterial] }
+            : w
+        ));
+      }
+      setWeekMaterialDialogOpen(false);
+    } catch (err: any) {
+      console.error('Error saving week material:', err);
+      setError(err.message || 'Failed to save material');
+    }
+  };
+
+  // Helper function to get file icon based on material type
+  const getFileIcon = (type: string) => {
+    switch (type) {
+      case 'document': return <Description />;
+      case 'pdf': return <PictureAsPdf />;
+      case 'video': return <VideoFile />;
+      case 'audio': return <AudioFile />;
+      case 'image': return <PictureAsPdf />;
+      case 'structured_notes': return <MenuBook />;
+      default: return <InsertDriveFile />;
+    }
+  };
+
+  // Live session management functions
+  const handleAddSession = () => {
+    setEditingSession(null);
+    setSessionForm({
+      title: '',
+      description: '',
+      scheduledTime: '',
+      duration: 60,
+      maxParticipants: 50,
+      agenda: '',
+      recordingEnabled: true,
+      chatEnabled: true,
+      handRaiseEnabled: true,
+      screenShareEnabled: true,
+      attendanceEnabled: true
+    });
+    setSessionDialogOpen(true);
+  };
+
+  const handleEditSession = (session: any) => {
+    setEditingSession(session);
+    setSessionForm({
+      title: session.title,
+      description: session.description,
+      scheduledTime: session.scheduledTime,
+      duration: session.duration,
+      maxParticipants: session.maxParticipants,
+      agenda: session.agenda,
+      recordingEnabled: session.recordingEnabled,
+      chatEnabled: session.chatEnabled,
+      handRaiseEnabled: session.handRaiseEnabled,
+      screenShareEnabled: session.screenShareEnabled,
+      attendanceEnabled: session.attendanceEnabled
+    });
+    setSessionDialogOpen(true);
+  };
+
+  const handleDeleteSession = (session: any) => {
+    setLiveSessions(prev => prev.filter(s => s._id !== session._id));
+  };
+
+  const handleSaveSession = () => {
+    if (editingSession) {
+      setLiveSessions(prev => prev.map(s => 
+        s._id === editingSession._id 
+          ? { ...s, ...sessionForm, updatedAt: new Date().toISOString() }
+          : s
+      ));
+    } else {
+      const newSession = {
+        _id: Date.now().toString(),
+        ...sessionForm,
+        createdAt: new Date().toISOString()
       };
+      setLiveSessions(prev => [...prev, newSession]);
+    }
+    setSessionDialogOpen(false);
+  };
 
-      const newAssessment = await assessmentService.createAssessment(assessmentData, uploadedFile);
+  const handleStartSession = (sessionId: string) => {
+    // Navigate to live session room
+    navigate(`/video-session/teacher/${sessionId}`);
+  };
+
+  const getSessionStatusColor = (status: string) => {
+    switch (status) {
+      case 'scheduled': return 'primary';
+      case 'live': return 'success';
+      case 'ended': return 'default';
+      case 'cancelled': return 'error';
+      default: return 'default';
+    }
+  };
+
+  const formatSessionTime = (time: string) => {
+    return new Date(time).toLocaleString();
+  };
+
+  // Assignment management functions
+  const handleAddAssignment = () => {
+    setEditingAssignment(null);
+    setAssignmentForm({
+      title: '',
+      description: '',
+      dueDate: '',
+      points: 100,
+      type: 'essay',
+      instructions: '',
+      attachments: [],
+      rubric: '',
+      allowLateSubmission: false,
+      latePenalty: 0
+    });
+    setAssignmentDialogOpen(true);
+  };
+
+  const handleEditAssignment = (assignment: any) => {
+    setEditingAssignment(assignment);
+    setAssignmentForm({
+      title: assignment.title,
+      description: assignment.description,
+      dueDate: assignment.dueDate,
+      points: assignment.points,
+      type: assignment.type,
+      instructions: assignment.instructions,
+      attachments: assignment.attachments,
+      rubric: assignment.rubric,
+      allowLateSubmission: assignment.allowLateSubmission,
+      latePenalty: assignment.latePenalty
+    });
+    setAssignmentDialogOpen(true);
+  };
+
+  const handleDeleteAssignment = (assignment: any) => {
+    setAssignments(prev => prev.filter(a => a._id !== assignment._id));
+  };
+
+  const handleSaveAssignment = () => {
+    if (editingAssignment) {
+      setAssignments(prev => prev.map(a => 
+        a._id === editingAssignment._id 
+          ? { ...a, ...assignmentForm, updatedAt: new Date().toISOString() }
+          : a
+      ));
+    } else {
+      const newAssignment = {
+        _id: Date.now().toString(),
+        ...assignmentForm,
+        createdAt: new Date().toISOString()
+      };
+      setAssignments(prev => [...prev, newAssignment]);
+    }
+    setAssignmentDialogOpen(false);
+  };
+
+  const getAssignmentTypeColor = (type: string) => {
+    switch (type) {
+      case 'essay': return 'primary';
+      case 'project': return 'secondary';
+      case 'presentation': return 'success';
+      default: return 'default';
+    }
+  };
+
+  const formatDueDate = (date: string) => {
+    return new Date(date).toLocaleDateString();
+  };
+
+  // Assessment management functions
+  const handleAddAssessment = () => {
+    setEditingAssessment(null);
+    setAssessmentForm({
+      title: '',
+      description: '',
+      dueDate: '',
+      points: 100,
+      type: 'quiz',
+      timeLimit: 60,
+      questions: [],
+      passingScore: 70,
+      attempts: 3,
+      randomizeQuestions: false,
+      showResultsImmediately: true,
+      requireProctoring: false
+    });
+    setAssessmentDialogOpen(true);
+  };
+
+  const handleEditAssessment = (assessment: any) => {
+    setEditingAssessment(assessment);
+    setAssessmentForm({
+      title: assessment.title,
+      description: assessment.description,
+      dueDate: assessment.dueDate,
+      points: assessment.points,
+      type: assessment.type,
+      timeLimit: assessment.timeLimit,
+      questions: assessment.questions,
+      passingScore: assessment.passingScore,
+      attempts: assessment.attempts,
+      randomizeQuestions: assessment.randomizeQuestions,
+      showResultsImmediately: assessment.showResultsImmediately,
+      requireProctoring: assessment.requireProctoring
+    });
+    setAssessmentDialogOpen(true);
+  };
+
+  const handleDeleteAssessment = (assessment: any) => {
+    setAssessments(prev => prev.filter(a => a._id !== assessment._id));
+  };
+
+  const handleSaveAssessment = () => {
+    if (editingAssessment) {
+      setAssessments(prev => prev.map(a => 
+        a._id === editingAssessment._id 
+          ? { ...a, ...assessmentForm, updatedAt: new Date().toISOString() }
+          : a
+      ));
+    } else {
+      const newAssessment = {
+        _id: Date.now().toString(),
+        ...assessmentForm,
+        createdAt: new Date().toISOString()
+      };
       setAssessments(prev => [...prev, newAssessment]);
-      setSuccess(`Assessment "${assessmentTitle}" created successfully with AI-extracted questions!`);
-      
-      // Reset form
-      setUploadAssessmentDialogOpen(false);
-      setAssessmentTitle('');
-      setAssessmentDescription('');
-      setAssessmentType('exam');
-      setUploadedFile(null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to create assessment from document');
-    } finally {
-      setExtractingQuestions(false);
-      setAssessmentsLoading(false);
+    }
+    setAssessmentDialogOpen(false);
+  };
+
+  const getAssessmentTypeColor = (type: string) => {
+    switch (type) {
+      case 'quiz': return 'primary';
+      case 'exam': return 'secondary';
+      case 'test': return 'success';
+      default: return 'default';
     }
   };
 
-  // Handle file upload for existing assessment
-  const handleExistingFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Check file type
-      const allowedTypes = [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'text/plain'
-      ];
-      
-      if (!allowedTypes.includes(file.type)) {
-        setError('Please upload a PDF, Word document, or text file');
-        return;
-      }
+  // YouTube video management functions
+  const handleAddVideo = () => {
+    setEditingVideo(null);
+    setVideoForm({
+      title: '',
+      description: '',
+      url: '',
+      duration: '',
+      thumbnail: '',
+      order: 0,
+      isPublished: false
+    });
+    setVideoDialogOpen(true);
+  };
 
-      // Check file size (10MB limit)
-      if (file.size > 10 * 1024 * 1024) {
-        setError('File size must be less than 10MB');
-        return;
-      }
+  const handleEditVideo = (video: any) => {
+    setEditingVideo(video);
+    setVideoForm({
+      title: video.title,
+      description: video.description,
+      url: video.url,
+      duration: video.duration,
+      thumbnail: video.thumbnail,
+      order: video.order,
+      isPublished: video.isPublished
+    });
+    setVideoDialogOpen(true);
+  };
 
-      setExistingUploadFile(file);
-      setError(null);
+  const handleDeleteVideo = (video: any) => {
+    setYoutubeVideos(prev => prev.filter(v => v._id !== video._id));
+  };
+
+  const handleSaveVideo = () => {
+    if (editingVideo) {
+      setYoutubeVideos(prev => prev.map(v => 
+        v._id === editingVideo._id 
+          ? { ...v, ...videoForm, updatedAt: new Date().toISOString() }
+          : v
+      ));
+    } else {
+      const newVideo = {
+        _id: Date.now().toString(),
+        ...videoForm,
+        createdAt: new Date().toISOString()
+      };
+      setYoutubeVideos(prev => [...prev, newVideo]);
     }
+    setVideoDialogOpen(false);
   };
 
-  // Remove uploaded file for existing assessment
-  const removeExistingUploadFile = () => {
-    setExistingUploadFile(null);
+  const extractVideoId = (url: string) => {
+    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+    return match ? match[1] : null;
   };
 
-  // Handle opening upload dialog for existing assessment
-  const handleUploadToExisting = (assessment: IAssessment) => {
-    setSelectedAssessment(assessment);
-    setUploadToExistingDialogOpen(true);
+  const getVideoThumbnail = (url: string) => {
+    const videoId = extractVideoId(url);
+    return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : '';
   };
 
-  // Handle adding questions to existing assessment
-  const handleAddQuestionsToExisting = async () => {
-    if (!selectedAssessment || !existingUploadFile) return;
-
-    try {
-      setAddingToExisting(true);
-      setError(null);
-
-      const updatedAssessment = await assessmentService.addQuestionsFromDocument(
-        selectedAssessment._id,
-        existingUploadFile
-      );
-
-      // Update the assessment in the list
-      setAssessments(prev => 
-        prev.map(assessment => 
-          assessment._id === selectedAssessment._id ? updatedAssessment : assessment
-        )
-      );
-
-      setSuccess(`Successfully added questions to "${selectedAssessment.title}"!`);
-      
-      // Reset form
-      setUploadToExistingDialogOpen(false);
-      setSelectedAssessment(null);
-      setExistingUploadFile(null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to add questions to assessment');
-    } finally {
-      setAddingToExisting(false);
-    }
-  };
-
-  // Handle assignment document upload
-  const handleAssignmentDocumentUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Check file type
-      const allowedTypes = [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'text/plain',
-        'image/jpeg',
-        'image/png',
-        'image/gif'
-      ];
-      
-      if (!allowedTypes.includes(file.type)) {
-        setError('Please upload a PDF, Word document, text file, or image');
-        return;
-      }
-
-      // Check file size (10MB limit)
-      if (file.size > 10 * 1024 * 1024) {
-        setError('File size must be less than 10MB');
-        return;
-      }
-
-      setAssignmentDocument(file);
-      setError(null);
-    }
-  };
-
-  // Remove assignment document
-  const removeAssignmentDocument = () => {
-    setAssignmentDocument(null);
-  };
-
-  // Handle opening upload dialog for existing assignment
-  const handleUploadToAssignment = (assignment: ICourseContent) => {
-    setSelectedAssignmentForUpload(assignment);
-    setAssignmentUploadDialogOpen(true);
-  };
-
-  // Handle uploading document to existing assignment
-  const handleUploadDocumentToAssignment = async () => {
-    if (!selectedAssignmentForUpload || !assignmentDocument) return;
-
-    try {
-      setUploadingAssignmentDoc(true);
-      setError(null);
-
-      const updatedAssignment = await courseContentService.uploadAssignmentDocument(
-        course!._id,
-        selectedAssignmentForUpload._id!,
-        assignmentDocument
-      );
-
-      // Update the assignment in the list
-      setCourseContent(prev => 
-        prev.map(content => 
-          content._id === selectedAssignmentForUpload._id ? updatedAssignment : content
-        )
-      );
-
-      setSuccess(`Document uploaded successfully to "${selectedAssignmentForUpload.title}"!`);
-      
-      // Reset form
-      setAssignmentUploadDialogOpen(false);
-      setSelectedAssignmentForUpload(null);
-      setAssignmentDocument(null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to upload document to assignment');
-    } finally {
-      setUploadingAssignmentDoc(false);
-    }
+  const formatDuration = (duration: string) => {
+    return duration || 'Unknown';
   };
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
       </Container>
     );
   }
 
-  if (error && !course) {
+  if (error) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Alert severity="error" sx={{ mb: 3 }}>
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
-        <Button
-          startIcon={<ArrowBack />}
-          onClick={() => navigate('/dashboard/teacher/courses')}
-          variant="outlined"
-        >
-          Back to Courses
+        <Button variant="contained" onClick={loadCourse}>
+          Retry
         </Button>
       </Container>
     );
   }
 
-  if (!course) {
+  if (!courseData) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Alert severity="info">
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="warning">
           Course not found
         </Alert>
-        <Button
-          startIcon={<ArrowBack />}
-          onClick={() => navigate('/dashboard/teacher/courses')}
-          variant="outlined"
-          sx={{ mt: 2 }}
-        >
-          Back to Courses
-        </Button>
       </Container>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Button
-          startIcon={<ArrowBack />}
-          onClick={() => navigate('/dashboard/teacher/courses')}
-          sx={{ mb: 2 }}
-        >
-          Back to Courses
-        </Button>
-
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-          <Box>
-            <Typography variant="h4" gutterBottom>
-              {course.title}
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-              <Chip
-                label={getStatusDisplay(course.status)}
-                color={
-                  course.status === CourseStatus.APPROVED ? 'success' : 
-                  course.status === CourseStatus.PENDING_APPROVAL ? 'warning' : 
-                  'error'
-                }
-              />
-              <Chip label={course.category} variant="outlined" />
-              <Chip label={course.level} variant="outlined" />
-            </Box>
-          </Box>
-          
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              variant="contained"
-              startIcon={<VideoCall />}
-              onClick={handleStartLiveSession}
-              color="primary"
-            >
-              Start Live Session
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<Visibility />}
-              onClick={() => navigate(`/courses/${course._id}`)}
-            >
-              Preview Course
-            </Button>
-          </Box>
-        </Box>
-
-        {/* Success/Error Messages */}
-        {success && (
-          <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
-            {success}
-          </Alert>
-        )}
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
+      <Box sx={{ mb: 3 }}>
+        <Breadcrumbs sx={{ mb: 2 }}>
+          <Link color="inherit" href="/dashboard/teacher/courses">
+            My Courses
+          </Link>
+          <Typography color="text.primary">{courseData.title}</Typography>
+        </Breadcrumbs>
+        
+        <Typography variant="h4" component="h1" gutterBottom>
+          {courseData.title} - Course Management
+        </Typography>
+        <Typography variant="subtitle1" color="text.secondary">
+          Manage course materials, live sessions, assignments, and assessments
+        </Typography>
       </Box>
 
-      {/* Course Stats */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <People color="primary" sx={{ mr: 2 }} />
-                <Box>
-                  <Typography variant="h5">{course.enrollmentCount || 0}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Enrolled Students
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+      {/* Error/Success Messages */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
 
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Star color="warning" sx={{ mr: 2 }} />
-                <Box>
-                  <Typography variant="h5">{course.rating?.toFixed(1) || 'N/A'}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Average Rating
-                  </Typography>
-                </Box>
+      {/* Course Overview */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} md={8}>
+              <Typography variant="h6" gutterBottom>
+                {courseData.title}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                {courseData.description}
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Chip label={`${materials.length} Materials`} size="small" />
+                <Chip label={`${liveSessions.length} Live Sessions`} size="small" />
+                <Chip label={`${assignments.length} Assignments`} size="small" />
+                <Chip label={`${assessments.length} Assessments`} size="small" />
+                <Chip label={`${youtubeVideos.length} Videos`} size="small" />
               </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Schedule color="info" sx={{ mr: 2 }} />
-                <Box>
-                  <Typography variant="h5">{course.duration}h</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Course Duration
-                  </Typography>
-                </Box>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                <Button
+                  variant="outlined"
+                  onClick={() => {/* Preview course */}}
+                >
+                  Preview Course
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={() => {/* Course settings */}}
+                >
+                  Course Settings
+                </Button>
               </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
 
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <AttachMoney color="success" sx={{ mr: 2 }} />
-                <Box>
-                  <Typography variant="h5">${course.price}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Course Price
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Main Content Tabs */}
-      <Card>
+      {/* Tabs */}
+      <Paper sx={{ width: '100%' }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={tabValue} onChange={handleTabChange} aria-label="course management tabs">
-            <Tab label="Overview" icon={<School />} />
-            <Tab label="Materials" icon={<Folder />} />
-            <Tab label="Content & Notes" icon={<Note />} />
-            <Tab label="Assignments" icon={<Assignment />} />
-            <Tab label="Assessments" icon={<Quiz />} />
-            <Tab label="Students" icon={<People />} />
-            <Tab label="Analytics" icon={<Analytics />} />
-            <Tab label="Settings" icon={<Settings />} />
+          <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+            <Tab label="Weeks" {...a11yProps(0)} />
+            <Tab label="Live Sessions" {...a11yProps(1)} />
+            <Tab label="Assignments" {...a11yProps(2)} />
+            <Tab label="Assessments" {...a11yProps(3)} />
+            <Tab label="Videos" {...a11yProps(4)} />
+            <Tab label="Preview" {...a11yProps(5)} />
           </Tabs>
         </Box>
 
-        {/* Overview Tab */}
-        <TabPanel value={tabValue} index={0}>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={8}>
-              <Typography variant="h6" gutterBottom>
-                Course Description
-              </Typography>
-              <Typography variant="body1" paragraph>
-                {course.description}
-              </Typography>
-
-              <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-                Learning Outcomes
-              </Typography>
-              <List>
-                {course.learningOutcomes?.map((outcome, index) => (
-                  <ListItem key={index}>
-                    <ListItemIcon>
-                      <School color="primary" />
-                    </ListItemIcon>
-                    <ListItemText primary={outcome} />
-                  </ListItem>
-                )) || (
-                  <ListItem>
-                    <ListItemText primary="No learning outcomes defined yet" />
-                  </ListItem>
-                )}
-              </List>
-            </Grid>
-
-            <Grid item xs={12} md={4}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                  Quick Actions
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <Button
-                    variant="outlined"
-                    startIcon={<VideoCall />}
-                    onClick={handleStartLiveSession}
-                    fullWidth
-                  >
-                    Start Live Session
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Note />}
-                    onClick={() => setNoteDialogOpen(true)}
-                    fullWidth
-                  >
-                    Add Course Note
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Assignment />}
-                    onClick={() => setAssignmentDialogOpen(true)}
-                    fullWidth
-                  >
-                    Create Assignment
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Quiz />}
-                    onClick={() => navigate(`/dashboard/teacher/assessments/create?courseId=${course._id}`)}
-                    fullWidth
-                  >
-                    Create Assessment
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<CloudUpload />}
-                    onClick={() => setUploadAssessmentDialogOpen(true)}
-                    fullWidth
-                    sx={{ 
-                      background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-                      color: 'white',
-                      '&:hover': {
-                        background: 'linear-gradient(45deg, #1976D2 30%, #1CB5E0 90%)',
-                      }
-                    }}
-                  >
-                    <AutoAwesome sx={{ mr: 1 }} />
-                    AI Upload Assessment
-                  </Button>
-                </Box>
-              </Paper>
-            </Grid>
-          </Grid>
-        </TabPanel>
-
-        {/* Content & Notes Tab */}
-        <TabPanel value={tabValue} index={1}>
-          {/* Materials Tab */}
-          <Box>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-              <Typography variant="h6">Course Materials</Typography>
-              <Button
-                variant="contained"
-                startIcon={<Add />}
-                onClick={() => navigate(`/dashboard/teacher/courses/${id}/materials`)}
-              >
-                Manage Materials
-              </Button>
-            </Box>
-            
-            <Alert severity="info" sx={{ mb: 2 }}>
-              Upload videos, documents, and other learning resources for your students. 
-              Click "Manage Materials" to add, edit, or organize course materials.
-            </Alert>
-            
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="body1" color="textSecondary">
-                Materials management has been moved to a dedicated page for better organization and file handling.
-              </Typography>
-            </Paper>
-          </Box>
-        </TabPanel>
-
-        <TabPanel value={tabValue} index={3}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h6">
-              Course Content & Notes
-            </Typography>
+        {/* Weeks Tab */}
+        <TabPanel value={activeTab} index={0}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">Course Weeks</Typography>
             <Button
               variant="contained"
               startIcon={<Add />}
-              onClick={() => setNoteDialogOpen(true)}
+              onClick={handleAddWeek}
             >
-              Add Note
+              Add Week
             </Button>
           </Box>
 
           <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Course Materials
-                </Typography>
-                <List>
-                  <ListItem>
-                    <ListItemIcon>
-                      <Upload />
-                    </ListItemIcon>
-                    <ListItemText 
-                      primary="Upload Course Materials"
-                      secondary="Add videos, documents, and other resources"
-                    />
-                    <ListItemSecondaryAction>
-                      <IconButton>
-                        <Add />
-                      </IconButton>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                </List>
-              </Paper>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Course Notes
-                </Typography>
-                <List>
-                  {courseContent.filter(content => content.type === 'document').length === 0 ? (
-                    <ListItem>
-                      <ListItemText 
-                        primary="No notes added yet"
-                        secondary="Add notes for your students to read"
-                      />
-                    </ListItem>
-                  ) : (
-                    courseContent
-                      .filter(content => content.type === 'document')
-                      .map((note) => (
-                        <ListItem key={note._id}>
-                          <ListItemIcon>
-                            <Note color="primary" />
-                          </ListItemIcon>
-                          <ListItemText 
-                            primary={note.title}
-                            secondary={`Created: ${new Date(note.createdAt || '').toLocaleDateString()}`}
+            {weeks.map((week, index) => (
+              <Grid item xs={12} key={week._id || `week-${index}`}>
+                <Card>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="h6" gutterBottom>
+                          Week {week.weekNumber}: {week.title}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" paragraph>
+                          {week.description}
+                        </Typography>
+                        
+                        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                          <Chip 
+                            label={`${week.materials.length} Materials`} 
+                            size="small" 
+                            color="primary" 
+                            variant="outlined" 
                           />
-                          <ListItemSecondaryAction>
-                            <IconButton size="small">
-                              <Edit />
-                            </IconButton>
-                            <IconButton size="small" color="error">
-                              <Delete />
-                            </IconButton>
-                          </ListItemSecondaryAction>
-                        </ListItem>
-                      ))
-                  )}
-                </List>
-              </Paper>
-            </Grid>
+                          <Chip 
+                            label={`${new Date(week.startDate).toLocaleDateString()} - ${new Date(week.endDate).toLocaleDateString()}`} 
+                            size="small" 
+                            variant="outlined" 
+                          />
+                          <Chip 
+                            label={week.isPublished ? 'Published' : 'Draft'} 
+                            size="small" 
+                            color={week.isPublished ? 'success' : 'warning'} 
+                            variant="outlined" 
+                          />
+                          {week.assessment && (
+                            <Chip 
+                              label="Has Assessment" 
+                              size="small" 
+                              color="secondary" 
+                              variant="outlined" 
+                            />
+                          )}
+                          {week.assignment && (
+                            <Chip 
+                              label="Has Assignment" 
+                              size="small" 
+                              color="info" 
+                              variant="outlined" 
+                            />
+                          )}
+                        </Box>
+
+                        {/* Week Materials */}
+                        <Typography variant="subtitle2" gutterBottom>
+                          Materials ({week.materials.length}):
+                        </Typography>
+                        <List dense>
+                          {week.materials.map((material, materialIndex) => (
+                            <ListItem key={material._id || `material-${materialIndex}`} divider>
+                              <Avatar sx={{ mr: 2, width: 32, height: 32 }}>
+                                {getFileIcon(material.type)}
+                              </Avatar>
+                              <ListItemText
+                                primary={material.title}
+                                secondary={
+                                  <Box>
+                                    <Typography variant="caption" display="block">
+                                      {material.description}
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
+                                      <Chip 
+                                        label={material.type === 'structured_notes' ? 'AI Notes' : material.type} 
+                                        size="small" 
+                                        variant="outlined" 
+                                        color={material.type === 'structured_notes' ? 'success' : 'default'}
+                                      />
+                                      <Chip label={`${material.estimatedDuration} min`} size="small" variant="outlined" />
+                                      {material.type === 'structured_notes' && material.content?.structuredNotes && (
+                                        <Chip 
+                                          label={`${material.content.structuredNotes.sections.length} sections`} 
+                                          size="small" 
+                                          variant="outlined" 
+                                          color="info"
+                                        />
+                                      )}
+                                      {material.isRequired && (
+                                        <Chip label="Required" size="small" color="error" variant="outlined" />
+                                      )}
+                                    </Box>
+                                  </Box>
+                                }
+                              />
+                              <ListItemSecondaryAction>
+                                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleEditWeekMaterial(week, material)}
+                                    title="Edit Material"
+                                  >
+                                    <Edit />
+                                  </IconButton>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleDeleteWeekMaterial(week, material)}
+                                    title="Delete Material"
+                                    color="error"
+                                  >
+                                    <Delete />
+                                  </IconButton>
+                                </Box>
+                              </ListItemSecondaryAction>
+                            </ListItem>
+                          ))}
+                        </List>
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<Add />}
+                        onClick={() => handleAddWeekMaterial(week)}
+                      >
+                        Add Material
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={() => handleEditWeek(week)}
+                      >
+                        Edit Week
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={() => handleToggleWeekPublish(week)}
+                        color={week.isPublished ? 'warning' : 'success'}
+                      >
+                        {week.isPublished ? 'Unpublish' : 'Publish'}
+                      </Button>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDeleteWeek(week)}
+                        color="error"
+                      >
+                        <Delete />
+                      </IconButton>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+          
+          {/* Material Upload Section */}
+          <Box sx={{ mt: 4 }}>
+            <Typography variant="h6" gutterBottom>
+              Upload Materials to Weeks
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              Upload files that will be automatically added to the selected week's materials.
+            </Typography>
+            
+            {weeks.length > 0 ? (
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                {weeks.map((week) => (
+                  <Card key={week._id} variant="outlined" sx={{ minWidth: 300 }}>
+                    <CardContent>
+                      <Typography variant="subtitle1" gutterBottom>
+                        Week {week.weekNumber}: {week.title}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" paragraph>
+                        {week.description}
+                      </Typography>
+                      
+                      <DocumentProcessor
+                        courseId={courseId}
+                        weekId={week._id}
+                        onProcessingComplete={async (result) => {
+                          try {
+                            console.log('🔄 Processing complete, saving to week:', {
+                              weekId: week._id,
+                              materialTitle: result.material!.title,
+                              hasStructuredNotes: !!result.material!.content.structuredNotes,
+                              sectionsCount: result.material!.content.structuredNotes?.sections.length
+                            });
+
+                            // Dynamically import weekService
+                            const { weekService } = await import('../../services/weekService');
+                            
+                            // Prepare material data
+                            const materialData = {
+                              title: result.material!.title,
+                              description: result.material!.description,
+                              type: 'structured_notes' as const,
+                              url: '', // No URL needed for structured notes
+                              order: week.materials.length + 1,
+                              estimatedDuration: result.material!.content.structuredNotes.metadata.estimatedReadingTime,
+                              isRequired: true,
+                              isPublished: week.isPublished, // Inherit week's published status
+                              content: result.material!.content // Store the structured content
+                            };
+
+                            console.log('📤 Saving material data:', {
+                              ...materialData,
+                              contentPreview: {
+                                hasStructuredNotes: !!materialData.content.structuredNotes,
+                                sectionsCount: materialData.content.structuredNotes?.sections.length,
+                                keyPointsCount: materialData.content.structuredNotes?.keyPoints.length
+                              }
+                            });
+                            
+                            // Save processed material to the database
+                            const savedMaterial = await weekService.addWeekMaterial(week._id, materialData);
+                            
+                            console.log('✅ Material saved successfully:', {
+                              materialId: savedMaterial._id,
+                              title: savedMaterial.title,
+                              type: savedMaterial.type,
+                              hasContent: !!savedMaterial.content
+                            });
+                            
+                            // Update frontend state
+                            setWeeks(prev => prev.map(w => 
+                              w._id === week._id 
+                                ? { ...w, materials: [...w.materials, savedMaterial] }
+                                : w
+                            ));
+                          } catch (err: any) {
+                            console.error('❌ Error saving processed material to week:', err);
+                            setError(err.message || 'Failed to save processed material to week');
+                          }
+                        }}
+                        onProcessingError={(error) => {
+                          setError(error);
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+                ))}
+              </Box>
+            ) : (
+              <Alert severity="info">
+                Create at least one week before uploading materials.
+              </Alert>
+            )}
+          </Box>
+        </TabPanel>
+
+        {/* Live Sessions Tab */}
+        <TabPanel value={activeTab} index={1}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">Live Sessions</Typography>
+            <Button
+              variant="contained"
+              startIcon={<VideoCall />}
+              onClick={handleAddSession}
+            >
+              Schedule Session
+            </Button>
+          </Box>
+
+          <Grid container spacing={2}>
+            {liveSessions.map((session, index) => (
+              <Grid item xs={12} md={6} lg={4} key={session._id || `session-${index}`}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      {session.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" paragraph>
+                      {session.description}
+                    </Typography>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="body2">
+                        <strong>Scheduled:</strong> {formatSessionTime(session.scheduledTime)}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Duration:</strong> {session.duration} minutes
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Max Participants:</strong> {session.maxParticipants}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        startIcon={<PlayArrow />}
+                        onClick={() => handleStartSession(session._id)}
+                      >
+                        Start Session
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={() => handleEditSession(session)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={() => {/* View session details */}}
+                      >
+                        View
+                      </Button>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDeleteSession(session)}
+                        color="error"
+                      >
+                        <Delete />
+                      </IconButton>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
           </Grid>
         </TabPanel>
 
         {/* Assignments Tab */}
-        <TabPanel value={tabValue} index={3}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h6">
-              Assignments
-            </Typography>
+        <TabPanel value={activeTab} index={2}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">Assignments</Typography>
             <Button
               variant="contained"
-              startIcon={<Add />}
-              onClick={() => setAssignmentDialogOpen(true)}
+              startIcon={<Assignment />}
+              onClick={handleAddAssignment}
             >
               Create Assignment
             </Button>
           </Box>
 
-          <Paper sx={{ p: 2 }}>
-            {courseContent.filter(content => content.type === 'assignment').length === 0 ? (
-              <Typography variant="body1" color="text.secondary" textAlign="center">
-                No assignments created yet. Create your first assignment to engage students.
-              </Typography>
-            ) : (
-              <Grid container spacing={2}>
-                {courseContent
-                  .filter(content => content.type === 'assignment')
-                  .map((assignment) => {
-                    const assignmentData = assignment.content ? JSON.parse(assignment.content) : {};
-                    return (
-                      <Grid item xs={12} key={assignment._id}>
-                        <Card sx={{ p: 2 }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <Box sx={{ flex: 1 }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                <Assignment color="primary" />
-                                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                  {assignment.title}
-                                </Typography>
-                                {assignmentData.points && (
-                                  <Chip 
-                                    label={`${assignmentData.points} pts`} 
-                                    size="small" 
-                                    color="primary" 
-                                    variant="outlined"
-                                  />
-                                )}
-                              </Box>
-                              
-                              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                {assignmentData.description}
-                              </Typography>
-                              
-                              {assignmentData.instructions && (
-                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontStyle: 'italic' }}>
-                                  Instructions: {assignmentData.instructions}
-                                </Typography>
-                              )}
-                              
-                              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-                                {assignmentData.dueDate && (
-                                  <Typography variant="caption" color="text.secondary">
-                                    Due: {new Date(assignmentData.dueDate).toLocaleDateString()}
-                                  </Typography>
-                                )}
-                                
-                                {assignment.fileUrl && (
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                    <Description fontSize="small" color="primary" />
-                                    <Typography variant="caption" color="primary">
-                                      Document attached
-                                    </Typography>
-                                  </Box>
-                                )}
-                              </Box>
-                            </Box>
-                            
-                            <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
-                              <Tooltip title="Upload assignment document">
-                                <IconButton 
-                                  size="small" 
-                                  onClick={() => handleUploadToAssignment(assignment)}
-                                  sx={{ 
-                                    color: 'success.main',
-                                    '&:hover': { backgroundColor: 'success.50' }
-                                  }}
-                                >
-                                  <Upload />
-                                </IconButton>
-                              </Tooltip>
-                              
-                              {assignment.fileUrl && (
-                                <Tooltip title="Download assignment document">
-                                  <IconButton 
-                                    size="small" 
-                                    component="a"
-                                    href={assignment.fileUrl}
-                                    target="_blank"
-                                    sx={{ 
-                                      color: 'info.main',
-                                      '&:hover': { backgroundColor: 'info.50' }
-                                    }}
-                                  >
-                                    <Download />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                              
-                              <Tooltip title="View submissions">
-                                <IconButton 
-                                  size="small"
-                                  onClick={() => navigate(`/dashboard/teacher/assignments/${assignment._id}/submissions`)}
-                                  sx={{ 
-                                    color: 'primary.main',
-                                    '&:hover': { backgroundColor: 'primary.50' }
-                                  }}
-                                >
-                                  <Visibility />
-                                </IconButton>
-                              </Tooltip>
-                              
-                              <Tooltip title="Edit assignment">
-                                <IconButton size="small">
-                                  <Edit />
-                                </IconButton>
-                              </Tooltip>
-                              
-                              <Tooltip title="Delete assignment">
-                                <IconButton size="small" color="error">
-                                  <Delete />
-                                </IconButton>
-                              </Tooltip>
-                            </Box>
-                          </Box>
-                        </Card>
-                      </Grid>
-                    );
-                  })
-                }
+          <Grid container spacing={2}>
+            {assignments.map((assignment, index) => (
+              <Grid item xs={12} md={6} lg={4} key={assignment._id || `assignment-${index}`}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      {assignment.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" paragraph>
+                      {assignment.description}
+                    </Typography>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="body2">
+                        <strong>Due Date:</strong> {formatDueDate(assignment.dueDate)}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Points:</strong> {assignment.points}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Type:</strong> {assignment.type}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Button
+                        size="small"
+                        onClick={() => {/* View assignment details */}}
+                      >
+                        View
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={() => {/* View submissions */}}
+                      >
+                        Submissions
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={() => handleEditAssignment(assignment)}
+                      >
+                        Edit
+                      </Button>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDeleteAssignment(assignment)}
+                        color="error"
+                      >
+                        <Delete />
+                      </IconButton>
+                    </Box>
+                  </CardContent>
+                </Card>
               </Grid>
-            )}
-          </Paper>
+            ))}
+          </Grid>
         </TabPanel>
 
         {/* Assessments Tab */}
-        <TabPanel value={tabValue} index={3}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h6">
-              Assessments & Quizzes ({assessments.length})
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                variant="outlined"
-                startIcon={<Add />}
-                onClick={() => navigate(`/dashboard/teacher/assessments/create?courseId=${course._id}`)}
-              >
-                Create Assessment
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<CloudUpload />}
-                onClick={() => setUploadAssessmentDialogOpen(true)}
-                sx={{ 
-                  background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-                  '&:hover': {
-                    background: 'linear-gradient(45deg, #1976D2 30%, #1CB5E0 90%)',
-                  }
-                }}
-              >
-                <AutoAwesome sx={{ mr: 1 }} />
-                AI Upload
-              </Button>
-            </Box>
+        <TabPanel value={activeTab} index={3}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">Assessments</Typography>
+            <Button
+              variant="contained"
+              startIcon={<Quiz />}
+              onClick={handleAddAssessment}
+            >
+              Create Assessment
+            </Button>
           </Box>
 
-          {assessmentsLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : assessments.length === 0 ? (
-            <Paper sx={{ p: 4, textAlign: 'center' }}>
-              <Description sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-              <Typography variant="h6" gutterBottom>
-                No assessments created yet
-              </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                Create assessments to test student knowledge. You can create them manually or upload documents for AI extraction.
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<Add />}
-                  onClick={() => navigate(`/dashboard/teacher/assessments/create?courseId=${course._id}`)}
-                >
-                  Create Manually
-                </Button>
-                <Button
-                  variant="contained"
-                  startIcon={<CloudUpload />}
-                  onClick={() => setUploadAssessmentDialogOpen(true)}
-                  sx={{ 
-                    background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-                    '&:hover': {
-                      background: 'linear-gradient(45deg, #1976D2 30%, #1CB5E0 90%)',
-                    }
-                  }}
-                >
-                  <AutoAwesome sx={{ mr: 1 }} />
-                  Upload & Extract
-                </Button>
-              </Box>
-            </Paper>
-          ) : (
-            <Grid container spacing={2}>
-              {assessments.map((assessment) => (
-                <Grid item xs={12} md={6} key={assessment._id}>
-                  <Card sx={{ height: '100%' }}>
-                    <CardContent>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                        <Box>
-                          <Typography variant="h6" gutterBottom>
+          <Grid container spacing={2}>
+            {assessments.map((assessment, index) => (
+              <Grid item xs={12} md={6} lg={4} key={assessment._id || `assessment-${index}`}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      {assessment.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" paragraph>
+                      {assessment.description}
+                    </Typography>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="body2">
+                        <strong>Due Date:</strong> {formatDueDate(assessment.dueDate)}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Points:</strong> {assessment.points}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Type:</strong> {assessment.type}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Time Limit:</strong> {assessment.timeLimit} minutes
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Button
+                        size="small"
+                        onClick={() => {/* View assessment details */}}
+                      >
+                        View
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={() => {/* View submissions */}}
+                      >
+                        Submissions
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={() => handleEditAssessment(assessment)}
+                      >
+                        Edit
+                      </Button>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDeleteAssessment(assessment)}
+                        color="error"
+                      >
+                        <Delete />
+                      </IconButton>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </TabPanel>
+
+        {/* Videos Tab */}
+        <TabPanel value={activeTab} index={4}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">YouTube Videos</Typography>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={handleAddVideo}
+            >
+              Add Video
+            </Button>
+          </Box>
+
+          <Grid container spacing={2}>
+            {youtubeVideos.map((video, index) => (
+              <Grid item xs={12} md={6} lg={4} key={video._id || `video-${index}`}>
+                <Card>
+                  <CardContent>
+                    <Box sx={{ mb: 2 }}>
+                      <img
+                        src={getVideoThumbnail(video.url)}
+                        alt={video.title}
+                        style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: '4px' }}
+                      />
+                    </Box>
+                    <Typography variant="h6" gutterBottom>
+                      {video.title}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" paragraph>
+                      {video.description}
+                    </Typography>
+                    <Box sx={{ mb: 2 }}>
+                      <Typography variant="body2">
+                        <strong>Duration:</strong> {formatDuration(video.duration)}
+                      </Typography>
+                      <Typography variant="body2">
+                        <strong>Order:</strong> {video.order}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        startIcon={<PlayArrow />}
+                        onClick={() => {/* Preview video */}}
+                      >
+                        Preview
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={() => handleEditVideo(video)}
+                      >
+                        Edit
+                      </Button>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDeleteVideo(video)}
+                        color="error"
+                      >
+                        <Delete />
+                      </IconButton>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </TabPanel>
+
+        {/* Preview Tab */}
+        <TabPanel value={activeTab} index={5}>
+          <Typography variant="h6" gutterBottom>
+            Course Preview - Student View
+          </Typography>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            This is how students will see your course content.
+          </Typography>
+
+          {/* Course Content Preview */}
+          <Box sx={{ mt: 3 }}>
+            {/* Materials Section */}
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Course Materials ({materials.length})
+                </Typography>
+                <List>
+                  {materials.slice(0, 3).map((material, index) => (
+                    <ListItem key={material._id || `preview-material-${index}`}>
+                      <Avatar sx={{ mr: 2 }}>
+                        {getFileIcon(material.type)}
+                      </Avatar>
+                      <ListItemText
+                        primary={material.title}
+                        secondary={material.description}
+                      />
+                    </ListItem>
+                  ))}
+                  {materials.length > 3 && (
+                    <ListItem>
+                      <Typography variant="body2" color="text.secondary">
+                        ... and {materials.length - 3} more materials
+                      </Typography>
+                    </ListItem>
+                  )}
+                </List>
+              </CardContent>
+            </Card>
+
+            {/* Live Sessions Section */}
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Live Sessions ({liveSessions.length})
+                </Typography>
+                <Grid container spacing={2}>
+                  {liveSessions.slice(0, 2).map((session, index) => (
+                    <Grid item xs={12} md={6} key={session._id || `preview-session-${index}`}>
+                      <Card variant="outlined">
+                        <CardContent>
+                          <Typography variant="subtitle1" gutterBottom>
+                            {session.title}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {formatSessionTime(session.scheduledTime)}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              </CardContent>
+            </Card>
+
+            {/* Assignments Section */}
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Assignments ({assignments.length})
+                </Typography>
+                <Grid container spacing={2}>
+                  {assignments.slice(0, 2).map((assignment, index) => (
+                    <Grid item xs={12} md={6} key={assignment._id || `preview-assignment-${index}`}>
+                      <Card variant="outlined">
+                        <CardContent>
+                          <Typography variant="subtitle1" gutterBottom>
+                            {assignment.title}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Due: {formatDueDate(assignment.dueDate)}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              </CardContent>
+            </Card>
+
+            {/* Assessments Section */}
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Assessments ({assessments.length})
+                </Typography>
+                <Grid container spacing={2}>
+                  {assessments.slice(0, 2).map((assessment, index) => (
+                    <Grid item xs={12} md={6} key={assessment._id || `preview-assessment-${index}`}>
+                      <Card variant="outlined">
+                        <CardContent>
+                          <Typography variant="subtitle1" gutterBottom>
                             {assessment.title}
                           </Typography>
-                          <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                            <Chip 
-                              label={assessment.type.charAt(0).toUpperCase() + assessment.type.slice(1)} 
-                              size="small" 
-                              color="primary" 
-                            />
-                            <Chip 
-                              label={assessment.isPublished ? 'Published' : 'Draft'} 
-                              size="small" 
-                              color={assessment.isPublished ? 'success' : 'default'} 
-                            />
-                          </Box>
-                        </Box>
-                        <IconButton
-                          size="small"
-                          onClick={() => navigate(`/dashboard/teacher/assessments/${assessment._id}`)}
-                        >
-                          <Visibility />
-                        </IconButton>
-                      </Box>
-                      
-                      {assessment.description && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                          {assessment.description.length > 100 
-                            ? `${assessment.description.substring(0, 100)}...` 
-                            : assessment.description
-                          }
-                        </Typography>
-                      )}
-                      
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">
-                            {assessment.questions?.length || 0} Questions • {assessment.totalPoints || 0} Points
+                          <Typography variant="body2" color="text.secondary">
+                            Due: {formatDueDate(assessment.dueDate)}
                           </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <Tooltip title="Upload document to add more questions with AI">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleUploadToExisting(assessment)}
-                              sx={{ 
-                                color: 'primary.main',
-                                '&:hover': {
-                                  backgroundColor: 'primary.50'
-                                }
-                              }}
-                            >
-                              <CloudUpload />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Edit assessment">
-                            <IconButton
-                              size="small"
-                              onClick={() => navigate(`/dashboard/teacher/assessments/${assessment._id}/edit`)}
-                            >
-                              <Edit />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="View submissions">
-                            <IconButton
-                              size="small"
-                              onClick={() => navigate(`/dashboard/teacher/assessments/${assessment._id}/submissions`)}
-                            >
-                              <Assignment />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </Box>
-                    </CardContent>
-                  </Card>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
                 </Grid>
-              ))}
-            </Grid>
-          )}
-        </TabPanel>
+              </CardContent>
+            </Card>
 
-        {/* Students Tab */}
-        <TabPanel value={tabValue} index={4}>
-          <Typography variant="h6" gutterBottom>
-            Enrolled Students ({course.enrollmentCount || 0})
-          </Typography>
-
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="body1" color="text.secondary" textAlign="center">
-              {course.enrollmentCount === 0 
-                ? 'No students enrolled yet.'
-                : 'Student management features coming soon.'
-              }
-            </Typography>
-          </Paper>
-        </TabPanel>
-
-        {/* Analytics Tab */}
-        <TabPanel value={tabValue} index={5}>
-          <Typography variant="h6" gutterBottom>
-            Course Analytics
-          </Typography>
-
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Enrollment Trends
+            {/* YouTube Videos Section */}
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Tutorial Videos ({youtubeVideos.length})
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Analytics dashboard coming soon
-                </Typography>
-              </Paper>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Student Progress
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Progress tracking coming soon
-                </Typography>
-              </Paper>
-            </Grid>
-          </Grid>
-        </TabPanel>
-
-        {/* Settings Tab */}
-        <TabPanel value={tabValue} index={6}>
-          <Typography variant="h6" gutterBottom>
-            Course Settings
-          </Typography>
-
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Course Information
-                </Typography>
-                <Button
-                  variant="outlined"
-                  startIcon={<Edit />}
-                  onClick={() => navigate(`/dashboard/teacher/courses/${course._id}/edit`)}
-                >
-                  Edit Course Details
-                </Button>
-              </Paper>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="subtitle1" gutterBottom>
-                  Course Status
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Current status: {getStatusDisplay(course.status)}
-                </Typography>
-              </Paper>
-            </Grid>
-          </Grid>
-        </TabPanel>
-      </Card>
-
-      {/* Add Note Dialog */}
-      <Dialog open={noteDialogOpen} onClose={() => setNoteDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Add Course Note</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Note Title"
-            fullWidth
-            variant="outlined"
-            value={noteTitle}
-            onChange={(e) => setNoteTitle(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="dense"
-            label="Note Content"
-            fullWidth
-            multiline
-            rows={6}
-            variant="outlined"
-            value={noteContent}
-            onChange={(e) => setNoteContent(e.target.value)}
-            placeholder="Write your note content here. Students will be able to read this note."
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setNoteDialogOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={handleAddNote} 
-            variant="contained"
-            disabled={!noteTitle.trim() || !noteContent.trim()}
-          >
-            Add Note
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Add Assignment Dialog */}
-      <Dialog open={assignmentDialogOpen} onClose={() => setAssignmentDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Assignment color="primary" />
-          Create Assignment
-        </DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Assignment Title *"
-            fullWidth
-            variant="outlined"
-            value={assignmentTitle}
-            onChange={(e) => setAssignmentTitle(e.target.value)}
-            sx={{ mb: 2 }}
-            placeholder="e.g., Essay on Climate Change, Math Problem Set 1"
-          />
-          
-          <TextField
-            margin="dense"
-            label="Assignment Description *"
-            fullWidth
-            multiline
-            rows={3}
-            variant="outlined"
-            value={assignmentDescription}
-            onChange={(e) => setAssignmentDescription(e.target.value)}
-            sx={{ mb: 2 }}
-            placeholder="Describe what students need to do for this assignment"
-          />
-          
-          <TextField
-            margin="dense"
-            label="Detailed Instructions"
-            fullWidth
-            multiline
-            rows={2}
-            variant="outlined"
-            value={assignmentInstructions}
-            onChange={(e) => setAssignmentInstructions(e.target.value)}
-            sx={{ mb: 2 }}
-            placeholder="Additional instructions, formatting requirements, submission guidelines, etc."
-          />
-          
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <TextField
-              margin="dense"
-              label="Points"
-              type="number"
-              variant="outlined"
-              value={assignmentPoints}
-              onChange={(e) => setAssignmentPoints(e.target.value)}
-              sx={{ width: '150px' }}
-              inputProps={{ min: 1, max: 1000 }}
-            />
-            
-            <TextField
-              margin="dense"
-              label="Due Date"
-              type="datetime-local"
-              fullWidth
-              variant="outlined"
-              value={assignmentDueDate}
-              onChange={(e) => setAssignmentDueDate(e.target.value)}
-              InputLabelProps={{
-                shrink: true,
-              }}
-            />
+                <Grid container spacing={2}>
+                  {youtubeVideos.slice(0, 2).map((video, index) => (
+                    <Grid item xs={12} md={6} key={video._id || `preview-video-${index}`}>
+                      <Card variant="outlined">
+                        <CardContent>
+                          <img
+                            src={getVideoThumbnail(video.url)}
+                            alt={video.title}
+                            style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '4px', marginBottom: '8px' }}
+                          />
+                          <Typography variant="subtitle1" gutterBottom>
+                            {video.title}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Duration: {formatDuration(video.duration)}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              </CardContent>
+            </Card>
           </Box>
-          
-          {/* Assignment Document Upload Section */}
-          <Paper sx={{ p: 3, border: '2px dashed #e0e0e0', borderRadius: 2, mb: 2 }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Description />
-              Assignment Document (Optional)
+
+          {/* Student Actions */}
+          <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+            <Typography variant="h6" gutterBottom>
+              Student Actions
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Upload a document with assignment details, rubric, or additional materials for students.
-            </Typography>
-            
-            {!assignmentDocument ? (
-              <Box sx={{ textAlign: 'center' }}>
-                <input
-                  accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
-                  style={{ display: 'none' }}
-                  id="assignment-document-upload"
-                  type="file"
-                  onChange={handleAssignmentDocumentUpload}
-                />
-                <label htmlFor="assignment-document-upload">
-                  <Button
-                    variant="outlined"
-                    component="span"
-                    startIcon={<CloudUpload />}
-                    sx={{ mb: 1 }}
-                  >
-                    Choose File
-                  </Button>
-                </label>
-                <Typography variant="caption" display="block" color="text.secondary">
-                  Supported formats: PDF, Word, Text, Images • Max size: 10MB
-                </Typography>
-              </Box>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <Button variant="contained" color="primary">
+                Enroll in Course
+              </Button>
+              <Button variant="outlined">
+                View Classmates
+              </Button>
+              <Button variant="outlined">
+                Join Discussion
+              </Button>
+              <Button variant="outlined">
+                Download Materials
+              </Button>
+            </Box>
+          </Box>
+        </TabPanel>
+      </Paper>
+
+      {/* Add/Edit Material Dialog */}
+      <Dialog open={materialDialogOpen} onClose={() => setMaterialDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {editingMaterial ? 'Edit Material' : 'Add New Material'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <TextField
+              fullWidth
+              label="Title"
+              value={materialForm.title}
+              onChange={(e) => setMaterialForm(prev => ({ ...prev, title: e.target.value }))}
+              margin="normal"
+            />
+            <TextField
+              fullWidth
+              label="Description"
+              value={materialForm.description}
+              onChange={(e) => setMaterialForm(prev => ({ ...prev, description: e.target.value }))}
+              margin="normal"
+              multiline
+              rows={3}
+            />
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Type</InputLabel>
+              <Select
+                value={materialForm.type}
+                onChange={(e) => setMaterialForm(prev => ({ ...prev, type: e.target.value }))}
+              >
+                <MenuItem value="document">Document</MenuItem>
+                <MenuItem value="pdf">PDF</MenuItem>
+                <MenuItem value="video">Video</MenuItem>
+                <MenuItem value="audio">Audio</MenuItem>
+                <MenuItem value="image">Image</MenuItem>
+                <MenuItem value="link">Link</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              fullWidth
+              label="Order"
+              type="number"
+              value={materialForm.order}
+              onChange={(e) => setMaterialForm(prev => ({ ...prev, order: parseInt(e.target.value) }))}
+              margin="normal"
+            />
+            {materialForm.type === 'link' ? (
+              <TextField
+                fullWidth
+                label="URL"
+                value={materialForm.url}
+                onChange={(e) => setMaterialForm(prev => ({ ...prev, url: e.target.value }))}
+                margin="normal"
+              />
             ) : (
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Description color="primary" />
-                  <Box>
-                    <Typography variant="body2" fontWeight="medium">
-                      {assignmentDocument.name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {(assignmentDocument.size / 1024 / 1024).toFixed(2)} MB
-                    </Typography>
-                  </Box>
-                </Box>
-                <Button
-                  size="small"
-                  color="error"
-                  onClick={removeAssignmentDocument}
-                  startIcon={<Delete />}
-                >
-                  Remove
-                </Button>
+              <Box sx={{ mt: 2 }}>
+                <input
+                  type="file"
+                  onChange={(e) => setMaterialForm(prev => ({ ...prev, file: e.target.files?.[0] || null }))}
+                  style={{ width: '100%' }}
+                />
               </Box>
             )}
-          </Paper>
+          </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setAssignmentDialogOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={handleAddAssignment} 
-            variant="contained"
-            disabled={!assignmentTitle.trim() || !assignmentDescription.trim() || contentLoading}
-            startIcon={contentLoading ? <CircularProgress size={16} /> : <Assignment />}
-          >
-            {contentLoading ? 'Creating...' : 'Create Assignment'}
+          <Button onClick={() => setMaterialDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleSaveMaterial} variant="contained">
+            {editingMaterial ? 'Update' : 'Add'} Material
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Upload Assessment Dialog */}
-      <Dialog open={uploadAssessmentDialogOpen} onClose={() => setUploadAssessmentDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <AutoAwesome color="primary" />
-          AI Assessment Upload & Extraction
-        </DialogTitle>
+      {/* Material Deletion Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={cancelDeleteMaterial}>
+        <DialogTitle>Delete Material</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Upload a document containing assessment questions and our AI will automatically extract and format them for you.
+          <Typography>
+            Are you sure you want to delete "{materialToDelete?.title}"? This action cannot be undone.
           </Typography>
-          
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Assessment Title *"
-            fullWidth
-            variant="outlined"
-            value={assessmentTitle}
-            onChange={(e) => setAssessmentTitle(e.target.value)}
-            sx={{ mb: 2 }}
-            placeholder="e.g., Midterm Exam, Chapter 5 Quiz"
-          />
-          
-          <TextField
-            margin="dense"
-            label="Description"
-            fullWidth
-            multiline
-            rows={2}
-            variant="outlined"
-            value={assessmentDescription}
-            onChange={(e) => setAssessmentDescription(e.target.value)}
-            sx={{ mb: 2 }}
-            placeholder="Brief description of what this assessment covers"
-          />
-          
-          <FormControl fullWidth sx={{ mb: 3 }}>
-            <InputLabel>Assessment Type</InputLabel>
-            <Select
-              value={assessmentType}
-              label="Assessment Type"
-              onChange={(e) => setAssessmentType(e.target.value as any)}
-            >
-              <MenuItem value="quiz">Quiz</MenuItem>
-              <MenuItem value="exam">Exam</MenuItem>
-              <MenuItem value="assignment">Assignment</MenuItem>
-              <MenuItem value="project">Project</MenuItem>
-              <MenuItem value="homework">Homework</MenuItem>
-            </Select>
-          </FormControl>
-
-          {/* File Upload Section */}
-          <Paper sx={{ p: 3, border: '2px dashed #e0e0e0', borderRadius: 2, mb: 2 }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Description />
-              Upload Document
-            </Typography>
-            
-            {!uploadedFile ? (
-              <Box sx={{ textAlign: 'center' }}>
-                <input
-                  accept=".pdf,.doc,.docx,.txt"
-                  style={{ display: 'none' }}
-                  id="assessment-document-upload"
-                  type="file"
-                  onChange={handleFileUpload}
-                />
-                <label htmlFor="assessment-document-upload">
-                  <Button
-                    variant="outlined"
-                    component="span"
-                    startIcon={<CloudUpload />}
-                    sx={{ mb: 1 }}
-                  >
-                    Choose File
-                  </Button>
-                </label>
-                <Typography variant="caption" display="block" color="text.secondary">
-                  Supported formats: PDF, Word (.doc, .docx), Text (.txt) • Max size: 10MB
-                </Typography>
-              </Box>
-            ) : (
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Description color="primary" />
-                  <Box>
-                    <Typography variant="body2" fontWeight="medium">
-                      {uploadedFile.name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
-                    </Typography>
-                  </Box>
-                </Box>
-                <Button
-                  size="small"
-                  color="error"
-                  onClick={removeUploadedFile}
-                  startIcon={<Delete />}
-                >
-                  Remove
-                </Button>
-              </Box>
-            )}
-          </Paper>
-          
-          {extractingQuestions && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2, bgcolor: 'primary.50', borderRadius: 1 }}>
-              <CircularProgress size={16} />
-              <Typography variant="body2" color="primary">
-                AI is extracting questions from your document...
+          {materialToDelete && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+              <Typography variant="body2">
+                <strong>Type:</strong> {materialToDelete.type}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Description:</strong> {materialToDelete.description}
               </Typography>
             </Box>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setUploadAssessmentDialogOpen(false)} disabled={extractingQuestions}>
+          <Button 
+            onClick={cancelDeleteMaterial}
+            disabled={deleting}
+          >
             Cancel
           </Button>
           <Button 
-            onClick={handleCreateAssessmentFromDocument} 
+            onClick={confirmDeleteMaterial}
+            color="error"
             variant="contained"
-            disabled={!assessmentTitle.trim() || !uploadedFile || extractingQuestions}
-            startIcon={extractingQuestions ? <CircularProgress size={16} /> : <AutoAwesome />}
-            sx={{ 
-              background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-              '&:hover': {
-                background: 'linear-gradient(45deg, #1976D2 30%, #1CB5E0 90%)',
-              }
-            }}
+            disabled={deleting}
+            startIcon={deleting ? <CircularProgress size={16} /> : <Delete />}
           >
-            {extractingQuestions ? 'Processing...' : 'Create Assessment'}
+            {deleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      {/* Add/Edit Week Dialog */}
+      <Dialog open={weekDialogOpen} onClose={() => setWeekDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {editingWeek ? 'Edit Week' : 'Add New Week'}
+        </DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Week Title"
+                value={weekForm.title}
+                onChange={(e) => setWeekForm({ ...weekForm, title: e.target.value })}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                value={weekForm.description}
+                onChange={(e) => setWeekForm({ ...weekForm, description: e.target.value })}
+                multiline
+                rows={3}
+                required
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Week Number"
+                type="number"
+                value={weekForm.weekNumber}
+                onChange={(e) => setWeekForm({ ...weekForm, weekNumber: parseInt(e.target.value) })}
+                required
+                inputProps={{ min: 1 }}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <FormControl fullWidth>
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={weekForm.isPublished.toString()}
+                  onChange={(e) => setWeekForm({ ...weekForm, isPublished: e.target.value === 'true' })}
+                >
+                  <MenuItem value="false">Draft</MenuItem>
+                  <MenuItem value="true">Published</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Start Date"
+                type="date"
+                value={weekForm.startDate}
+                onChange={(e) => setWeekForm({ ...weekForm, startDate: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                required
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="End Date"
+                type="date"
+                value={weekForm.endDate}
+                onChange={(e) => setWeekForm({ ...weekForm, endDate: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                required
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setWeekDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleSaveWeek} variant="contained">
+            {editingWeek ? 'Update' : 'Create'} Week
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Upload to Existing Assessment Dialog */}
-      <Dialog open={uploadToExistingDialogOpen} onClose={() => setUploadToExistingDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <CloudUpload color="primary" />
-          Add Questions to Assessment
+      {/* Add/Edit Week Material Dialog */}
+      <Dialog open={weekMaterialDialogOpen} onClose={() => setWeekMaterialDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {editingWeekMaterial ? 'Edit Material' : 'Add Material to Week'}
         </DialogTitle>
         <DialogContent>
-          {selectedAssessment && (
-            <>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Upload a document to add more questions to <strong>"{selectedAssessment.title}"</strong>
-              </Typography>
-              
-              <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Current: {selectedAssessment.questions?.length || 0} questions • {selectedAssessment.totalPoints || 0} points
-                </Typography>
-              </Box>
-
-              {/* File Upload Section */}
-              <Paper sx={{ p: 3, border: '2px dashed #e0e0e0', borderRadius: 2, mb: 2 }}>
-                <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Description />
-                  Upload Document
-                </Typography>
-                
-                {!existingUploadFile ? (
-                  <Box sx={{ textAlign: 'center' }}>
-                    <input
-                      accept=".pdf,.doc,.docx,.txt"
-                      style={{ display: 'none' }}
-                      id="existing-assessment-document-upload"
-                      type="file"
-                      onChange={handleExistingFileUpload}
-                    />
-                    <label htmlFor="existing-assessment-document-upload">
-                      <Button
-                        variant="outlined"
-                        component="span"
-                        startIcon={<CloudUpload />}
-                        sx={{ mb: 1 }}
-                      >
-                        Choose File
-                      </Button>
-                    </label>
-                    <Typography variant="caption" display="block" color="text.secondary">
-                      Supported formats: PDF, Word (.doc, .docx), Text (.txt) • Max size: 10MB
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Description color="primary" />
-                      <Box>
-                        <Typography variant="body2" fontWeight="medium">
-                          {existingUploadFile.name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {(existingUploadFile.size / 1024 / 1024).toFixed(2)} MB
-                        </Typography>
-                      </Box>
-                    </Box>
-                    <Button
-                      size="small"
-                      color="error"
-                      onClick={removeExistingUploadFile}
-                      startIcon={<Delete />}
-                    >
-                      Remove
-                    </Button>
-                  </Box>
-                )}
-              </Paper>
-              
-              {addingToExisting && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2, bgcolor: 'primary.50', borderRadius: 1 }}>
-                  <CircularProgress size={16} />
-                  <Typography variant="body2" color="primary">
-                    AI is extracting questions from your document...
-                  </Typography>
-                </Box>
-              )}
-            </>
-          )}
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Material Title"
+                value={weekMaterialForm.title}
+                onChange={(e) => setWeekMaterialForm({ ...weekMaterialForm, title: e.target.value })}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                value={weekMaterialForm.description}
+                onChange={(e) => setWeekMaterialForm({ ...weekMaterialForm, description: e.target.value })}
+                multiline
+                rows={3}
+                required
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <FormControl fullWidth>
+                <InputLabel>Type</InputLabel>
+                <Select
+                  value={weekMaterialForm.type}
+                  onChange={(e) => setWeekMaterialForm({ ...weekMaterialForm, type: e.target.value as any })}
+                >
+                  <MenuItem value="document">Document</MenuItem>
+                  <MenuItem value="video">Video</MenuItem>
+                  <MenuItem value="audio">Audio</MenuItem>
+                  <MenuItem value="link">Link</MenuItem>
+                  <MenuItem value="quiz">Quiz</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Order"
+                type="number"
+                value={weekMaterialForm.order}
+                onChange={(e) => setWeekMaterialForm({ ...weekMaterialForm, order: parseInt(e.target.value) })}
+                required
+                inputProps={{ min: 1 }}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                fullWidth
+                label="Estimated Duration (minutes)"
+                type="number"
+                value={weekMaterialForm.estimatedDuration}
+                onChange={(e) => setWeekMaterialForm({ ...weekMaterialForm, estimatedDuration: parseInt(e.target.value) })}
+                required
+                inputProps={{ min: 1 }}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <FormControl fullWidth>
+                <InputLabel>Required</InputLabel>
+                <Select
+                  value={weekMaterialForm.isRequired.toString()}
+                  onChange={(e) => setWeekMaterialForm({ ...weekMaterialForm, isRequired: e.target.value === 'true' })}
+                >
+                  <MenuItem value="true">Required</MenuItem>
+                  <MenuItem value="false">Optional</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="URL or File Path"
+                value={weekMaterialForm.url}
+                onChange={(e) => setWeekMaterialForm({ ...weekMaterialForm, url: e.target.value })}
+                placeholder="Enter URL for videos/links or file path for documents"
+              />
+            </Grid>
+          </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setUploadToExistingDialogOpen(false)} disabled={addingToExisting}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleAddQuestionsToExisting} 
-            variant="contained"
-            disabled={!existingUploadFile || addingToExisting}
-            startIcon={addingToExisting ? <CircularProgress size={16} /> : <AutoAwesome />}
-            sx={{ 
-              background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-              '&:hover': {
-                background: 'linear-gradient(45deg, #1976D2 30%, #1CB5E0 90%)',
-              }
-            }}
-          >
-            {addingToExisting ? 'Adding Questions...' : 'Add Questions'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Upload Document to Assignment Dialog */}
-      <Dialog open={assignmentUploadDialogOpen} onClose={() => setAssignmentUploadDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Upload color="primary" />
-          Upload Assignment Document
-        </DialogTitle>
-        <DialogContent>
-          {selectedAssignmentForUpload && (
-            <>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Upload a document for <strong>"{selectedAssignmentForUpload.title}"</strong>
-              </Typography>
-              
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                This document will be available for students to download along with the assignment instructions.
-              </Typography>
-
-              {/* File Upload Section */}
-              <Paper sx={{ p: 3, border: '2px dashed #e0e0e0', borderRadius: 2, mb: 2 }}>
-                <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Description />
-                  Select Document
-                </Typography>
-                
-                {!assignmentDocument ? (
-                  <Box sx={{ textAlign: 'center' }}>
-                    <input
-                      accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
-                      style={{ display: 'none' }}
-                      id="assignment-upload-document"
-                      type="file"
-                      onChange={handleAssignmentDocumentUpload}
-                    />
-                    <label htmlFor="assignment-upload-document">
-                      <Button
-                        variant="outlined"
-                        component="span"
-                        startIcon={<CloudUpload />}
-                        sx={{ mb: 1 }}
-                      >
-                        Choose File
-                      </Button>
-                    </label>
-                    <Typography variant="caption" display="block" color="text.secondary">
-                      Supported formats: PDF, Word, Text, Images • Max size: 10MB
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Description color="primary" />
-                      <Box>
-                        <Typography variant="body2" fontWeight="medium">
-                          {assignmentDocument.name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {(assignmentDocument.size / 1024 / 1024).toFixed(2)} MB
-                        </Typography>
-                      </Box>
-                    </Box>
-                    <Button
-                      size="small"
-                      color="error"
-                      onClick={removeAssignmentDocument}
-                      startIcon={<Delete />}
-                    >
-                      Remove
-                    </Button>
-                  </Box>
-                )}
-              </Paper>
-              
-              {uploadingAssignmentDoc && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 2, bgcolor: 'primary.50', borderRadius: 1 }}>
-                  <CircularProgress size={16} />
-                  <Typography variant="body2" color="primary">
-                    Uploading document...
-                  </Typography>
-                </Box>
-              )}
-            </>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAssignmentUploadDialogOpen(false)} disabled={uploadingAssignmentDoc}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleUploadDocumentToAssignment} 
-            variant="contained"
-            disabled={!assignmentDocument || uploadingAssignmentDoc}
-            startIcon={uploadingAssignmentDoc ? <CircularProgress size={16} /> : <Upload />}
-            sx={{ 
-              background: 'linear-gradient(45deg, #4CAF50 30%, #66BB6A 90%)',
-              '&:hover': {
-                background: 'linear-gradient(45deg, #388E3C 30%, #4CAF50 90%)',
-              }
-            }}
-          >
-            {uploadingAssignmentDoc ? 'Uploading...' : 'Upload Document'}
+          <Button onClick={() => setWeekMaterialDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleSaveWeekMaterial} variant="contained">
+            {editingWeekMaterial ? 'Update' : 'Add'} Material
           </Button>
         </DialogActions>
       </Dialog>

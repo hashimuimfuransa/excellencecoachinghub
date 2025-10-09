@@ -1,4 +1,5 @@
 import { io, Socket } from 'socket.io-client';
+import { socketConnectionManager } from '../utils/socketConnectionManager';
 
 interface ChatMessage {
   id: string;
@@ -47,26 +48,47 @@ class SocketService {
 
     this.socket = io(serverUrl, {
       withCredentials: true,
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      timeout: 20000,
+      forceNew: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      maxReconnectionAttempts: 5,
+      autoConnect: true
     });
 
     this.socket.on('connect', () => {
-      console.log('✅ Connected to server:', this.socket?.id);
+      socketConnectionManager.logConnectionEvent('connect', this.socket?.id);
       this.socket?.emit('user:join', userId);
       console.log('📡 Joined user room:', userId);
     });
 
-    this.socket.on('disconnect', () => {
-      console.log('❌ Disconnected from server');
+    this.socket.on('disconnect', (reason) => {
+      socketConnectionManager.logConnectionEvent('disconnect', reason);
     });
 
     this.socket.on('connect_error', (error) => {
-      console.error('🔥 Connection error:', error);
+      socketConnectionManager.logConnectionEvent('connect_error', error);
+      socketConnectionManager.incrementAttempts();
     });
 
-    this.socket.on('reconnect', () => {
-      console.log('🔄 Reconnected to server');
+    this.socket.on('reconnect', (attemptNumber) => {
+      socketConnectionManager.logConnectionEvent('reconnect', attemptNumber);
       this.socket?.emit('user:join', userId);
+    });
+
+    this.socket.on('reconnect_attempt', (attemptNumber) => {
+      socketConnectionManager.logConnectionEvent('reconnect_attempt', attemptNumber);
+    });
+
+    this.socket.on('reconnect_error', (error) => {
+      socketConnectionManager.logConnectionEvent('reconnect_error', error);
+    });
+
+    this.socket.on('reconnect_failed', () => {
+      socketConnectionManager.logConnectionEvent('reconnect_failed');
     });
   }
 

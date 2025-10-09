@@ -1,132 +1,106 @@
 import React, { useState, useEffect } from 'react';
 import {
   Container,
+  Grid,
+  Card,
+  CardContent,
+  CardActions,
   Typography,
   Box,
   Button,
-  Card,
-  CardContent,
-  Grid,
   Chip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
+  CircularProgress,
+  Alert,
+  Avatar,
   IconButton,
   Menu,
   MenuItem,
-  Alert,
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Paper
 } from '@mui/material';
 import {
-  Add,
+  School,
   Edit,
   Visibility,
   MoreVert,
-  Delete,
+  Add,
   People,
-  School,
-  CheckCircle,
-  Pending,
-  Cancel,
+  Schedule,
   TrendingUp,
-  VideoCall
+  Settings,
+  VideoCall,
+  Assignment,
+  Quiz,
+  YouTube
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { courseService, ICourse } from '../../services/courseService';
-import { CourseStatus } from '../../shared/types';
+import { courseService } from '../../services/courseService';
 
 const TeacherCourses: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
-  // State management
+  const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [courses, setCourses] = useState<ICourse[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedCourse, setSelectedCourse] = useState<ICourse | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [selectedCourse, setSelectedCourse] = useState<any>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Load courses
   useEffect(() => {
-    const loadCourses = async () => {
-      if (!user || user.role !== 'teacher') return;
-      
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const response = await courseService.getAllCourses({
-          instructor: user._id,
-          limit: 50
-        });
-        
-        setCourses(response.courses);
-      } catch (err: any) {
-        console.error('Error loading courses:', err);
-        setError(err.message || 'Failed to load courses');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadCourses();
-  }, [user]);
+  }, []);
 
-  // Filter courses based on status
-  const filteredCourses = courses.filter(course => {
-    if (filterStatus === 'all') return true;
-    return course.status === filterStatus;
-  });
-
-  // Helper functions
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved': return 'success';
-      case 'pending': return 'warning';
-      case 'rejected': return 'error';
-      default: return 'default';
+  const loadCourses = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch teacher's courses from the backend
+      const response = await courseService.getTeacherCourses({
+        page: 1,
+        limit: 50,
+        sortBy: 'createdAt',
+        sortOrder: 'desc'
+      });
+      
+      // Transform the courses to include additional counts
+      const transformedCourses = response.courses.map(course => ({
+        ...course,
+        // Calculate additional counts from course content
+        materialsCount: course.content?.filter(item => 
+          item.type === 'document' || item.type === 'video'
+        ).length || 0,
+        liveSessionsCount: 0, // This would need to be fetched separately from live sessions API
+        assignmentsCount: course.content?.filter(item => 
+          item.type === 'assignment'
+        ).length || 0,
+        assessmentsCount: course.content?.filter(item => 
+          item.type === 'quiz'
+        ).length || 0,
+        videosCount: course.content?.filter(item => 
+          item.type === 'video'
+        ).length || 0
+      }));
+      
+      setCourses(transformedCourses);
+    } catch (err: any) {
+      console.error('Error loading courses:', err);
+      setError(err.message || 'Failed to load courses');
+      setRetryCount(prev => prev + 1);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'approved': return <CheckCircle />;
-      case 'pending': return <Pending />;
-      case 'rejected': return <Cancel />;
-      default: return <Pending />;
-    }
+  const handleRetry = () => {
+    setRetryCount(0);
+    loadCourses();
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  // Navigate to create course page
-  const handleCreateCourse = () => {
-    navigate('/dashboard/teacher/courses/create');
-  };
-
-  // Event handlers
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, course: ICourse) => {
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, course: any) => {
     setAnchorEl(event.currentTarget);
     setSelectedCourse(course);
   };
@@ -136,13 +110,6 @@ const TeacherCourses: React.FC = () => {
     setSelectedCourse(null);
   };
 
-  const handleViewCourse = () => {
-    if (selectedCourse) {
-      navigate(`/dashboard/teacher/courses/${selectedCourse._id}/manage`);
-    }
-    handleMenuClose();
-  };
-
   const handleManageCourse = () => {
     if (selectedCourse) {
       navigate(`/dashboard/teacher/courses/${selectedCourse._id}/manage`);
@@ -150,35 +117,19 @@ const TeacherCourses: React.FC = () => {
     handleMenuClose();
   };
 
-  const handleEditCourse = () => {
+  const handleViewCourse = () => {
     if (selectedCourse) {
-      navigate(`/dashboard/teacher/courses/${selectedCourse._id}/edit`);
+      navigate(`/dashboard/teacher/courses/${selectedCourse._id}`);
     }
     handleMenuClose();
   };
 
-  const handleViewSessions = () => {
-    if (selectedCourse) {
-      navigate(`/dashboard/teacher/live-sessions?courseId=${selectedCourse._id}`);
-    }
-    handleMenuClose();
-  };
-
-  const handleDeleteCourse = () => {
-    setDeleteDialogOpen(true);
-    handleMenuClose();
-  };
-
-  const confirmDelete = async () => {
-    if (!selectedCourse) return;
-    
-    try {
-      await courseService.deleteCourse(selectedCourse._id);
-      setCourses(prev => prev.filter(c => c._id !== selectedCourse._id));
-      setDeleteDialogOpen(false);
-      setSelectedCourse(null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to delete course');
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'approved': return 'success';
+      case 'pending': return 'warning';
+      case 'rejected': return 'error';
+      default: return 'default';
     }
   };
 
@@ -192,259 +143,222 @@ const TeacherCourses: React.FC = () => {
     );
   }
 
+  if (error) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Alert 
+          severity="error" 
+          action={
+            <Button color="inherit" size="small" onClick={handleRetry}>
+              Retry
+            </Button>
+          }
+        >
+          {error}
+          {retryCount > 0 && (
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              Retry attempt: {retryCount}
+            </Typography>
+          )}
+        </Alert>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Box>
-          <Typography variant="h4" gutterBottom>
+          <Typography variant="h4" component="h1" gutterBottom>
             My Courses
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Manage your courses and track student progress
+            Manage all your courses, materials, and student interactions.
           </Typography>
         </Box>
-        <Box display="flex" gap={2}>
-          <Button
-            variant="outlined"
-            startIcon={<VideoCall />}
-            onClick={() => navigate('/dashboard/teacher/live-sessions')}
-          >
-            View Sessions
-          </Button>
+        <Button
+          variant="contained"
+          startIcon={<Add />}
+          component={Link}
+          to="/dashboard/teacher/courses/create"
+        >
+          Create New Course
+        </Button>
+        <Button
+          variant="outlined"
+          onClick={loadCourses}
+          disabled={loading}
+          startIcon={loading ? <CircularProgress size={16} /> : undefined}
+          sx={{ ml: 2 }}
+        >
+          {loading ? 'Loading...' : 'Refresh'}
+        </Button>
+      </Box>
+
+      {courses.length === 0 ? (
+        <Card sx={{ p: 4, textAlign: 'center' }}>
+          <School sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+          <Typography variant="h6" color="text.secondary" gutterBottom>
+            No courses yet
+          </Typography>
+          <Typography variant="body2" color="text.secondary" paragraph>
+            Create your first course to start teaching and sharing knowledge.
+          </Typography>
           <Button
             variant="contained"
             startIcon={<Add />}
-            onClick={handleCreateCourse}
+            component={Link}
+            to="/dashboard/teacher/courses/create"
           >
-            Create Course
+            Create Your First Course
           </Button>
-        </Box>
-      </Box>
+        </Card>
+      ) : (
+        <Grid container spacing={3}>
+          {courses.map((course) => (
+            <Grid item xs={12} md={6} lg={4} key={course._id}>
+              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <CardContent sx={{ flexGrow: 1 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                    <Typography variant="h6" component="h2" gutterBottom>
+                      {course.title}
+                    </Typography>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => handleMenuOpen(e, course)}
+                    >
+                      <MoreVert />
+                    </IconButton>
+                  </Box>
 
-      {/* Error Alert */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    {course.description}
+                  </Typography>
+
+                  <Box sx={{ mb: 2 }}>
+                    <Chip
+                      label={course.status}
+                      color={getStatusColor(course.status) as any}
+                      size="small"
+                      sx={{ mb: 1 }}
+                    />
+                  </Box>
+
+                  <Grid container spacing={1} sx={{ mb: 2 }}>
+                    <Grid item xs={6}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                        <People sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
+                        <Typography variant="body2" color="text.secondary">
+                          {course.enrolledStudents?.length || course.enrollmentCount || 0} students
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                        <Schedule sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
+                        <Typography variant="body2" color="text.secondary">
+                          {course.liveSessionsCount} sessions
+                        </Typography>
+                      </Box>
+                    </Grid>
+                  </Grid>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  <Typography variant="subtitle2" gutterBottom>
+                    Course Content:
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                    <Chip
+                      icon={<School />}
+                      label={`${course.materialsCount} materials`}
+                      size="small"
+                      variant="outlined"
+                    />
+                    <Chip
+                      icon={<VideoCall />}
+                      label={`${course.liveSessionsCount} sessions`}
+                      size="small"
+                      variant="outlined"
+                    />
+                    <Chip
+                      icon={<Assignment />}
+                      label={`${course.assignmentsCount} assignments`}
+                      size="small"
+                      variant="outlined"
+                    />
+                    <Chip
+                      icon={<Quiz />}
+                      label={`${course.assessmentsCount} assessments`}
+                      size="small"
+                      variant="outlined"
+                    />
+                    <Chip
+                      icon={<YouTube />}
+                      label={`${course.videosCount} videos`}
+                      size="small"
+                      variant="outlined"
+                    />
+                  </Box>
+                </CardContent>
+
+                <CardActions sx={{ p: 2, pt: 0 }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<Settings />}
+                    onClick={() => navigate(`/dashboard/teacher/courses/${course._id}/manage`)}
+                    sx={{ flex: 1 }}
+                  >
+                    Manage Course
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Visibility />}
+                    onClick={() => navigate(`/dashboard/teacher/courses/${course._id}`)}
+                  >
+                    View
+                  </Button>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
       )}
 
-      {/* Statistics Cards */}
-      <Grid container spacing={3} mb={4}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center">
-                <School color="primary" sx={{ mr: 2 }} />
-                <Box>
-                  <Typography variant="h4">{courses.length}</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Courses
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center">
-                <CheckCircle color="success" sx={{ mr: 2 }} />
-                <Box>
-                  <Typography variant="h4">
-                    {courses.filter(c => c.status === 'approved').length}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Approved
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center">
-                <People color="info" sx={{ mr: 2 }} />
-                <Box>
-                  <Typography variant="h4">
-                    {courses.reduce((sum, course) => sum + (course.enrollmentCount || 0), 0)}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Students
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center">
-                <TrendingUp color="warning" sx={{ mr: 2 }} />
-                <Box>
-                  <Typography variant="h4">
-                    {courses.filter(c => c.status === CourseStatus.PENDING_APPROVAL).length}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Pending Review
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Filter Controls */}
-      <Box mb={3}>
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>Filter by Status</InputLabel>
-          <Select
-            value={filterStatus}
-            label="Filter by Status"
-            onChange={(e) => setFilterStatus(e.target.value)}
-          >
-            <MenuItem value="all">All Courses</MenuItem>
-            <MenuItem value="approved">Approved</MenuItem>
-            <MenuItem value="pending">Pending</MenuItem>
-            <MenuItem value="rejected">Rejected</MenuItem>
-          </Select>
-        </FormControl>
-      </Box>
-
-      {/* Courses Table */}
-      <Card>
-        <CardContent>
-          {filteredCourses.length === 0 ? (
-            <Box textAlign="center" py={4}>
-              <School sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-              <Typography variant="h6" color="text.secondary" gutterBottom>
-                {filterStatus === 'all' ? 'No courses yet' : `No ${filterStatus} courses`}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" mb={2}>
-                {filterStatus === 'all' 
-                  ? 'Create your first course to start teaching!'
-                  : `You don't have any ${filterStatus} courses.`
-                }
-              </Typography>
-              {filterStatus === 'all' && (
-                <Button
-                  variant="contained"
-                  startIcon={<Add />}
-                  onClick={() => navigate('/dashboard/teacher/courses/create')}
-                >
-                  Create Your First Course
-                </Button>
-              )}
-            </Box>
-          ) : (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Course</TableCell>
-                    <TableCell align="center">Students</TableCell>
-                    <TableCell align="center">Status</TableCell>
-                    <TableCell align="center">Category</TableCell>
-                    <TableCell align="center">Created</TableCell>
-                    <TableCell align="center">Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredCourses.map((course) => (
-                    <TableRow key={course._id}>
-                      <TableCell>
-                        <Box>
-                          <Typography variant="subtitle2">{course.title}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {course.level} • ${course.price}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell align="center">
-                        {course.enrollmentCount || 0}
-                      </TableCell>
-                      <TableCell align="center">
-                        <Chip
-                          label={course.status}
-                          color={getStatusColor(course.status) as any}
-                          size="small"
-                          icon={getStatusIcon(course.status)}
-                        />
-                      </TableCell>
-                      <TableCell align="center">
-                        <Chip label={course.category} size="small" variant="outlined" />
-                      </TableCell>
-                      <TableCell align="center">
-                        {formatDate(course.createdAt)}
-                      </TableCell>
-                      <TableCell align="center">
-                        <IconButton
-                          onClick={(e) => handleMenuOpen(e, course)}
-                          size="small"
-                        >
-                          <MoreVert />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Action Menu */}
+      {/* Course Actions Menu */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
       >
         <MenuItem onClick={handleManageCourse}>
-          <School sx={{ mr: 1 }} />
-          Manage Course
+          <ListItemIcon>
+            <Settings fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Manage Course</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleViewCourse}>
-          <Visibility sx={{ mr: 1 }} />
-          Preview Course
+          <ListItemIcon>
+            <Visibility fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>View Course</ListItemText>
         </MenuItem>
-        <MenuItem onClick={handleEditCourse}>
-          <Edit sx={{ mr: 1 }} />
-          Edit Course
-        </MenuItem>
-        <MenuItem onClick={handleViewSessions}>
-          <VideoCall sx={{ mr: 1 }} />
-          View Sessions
-        </MenuItem>
-        <MenuItem onClick={handleDeleteCourse} sx={{ color: 'error.main' }}>
-          <Delete sx={{ mr: 1 }} />
-          Delete Course
+        <Divider />
+        <MenuItem onClick={handleMenuClose}>
+          <ListItemIcon>
+            <Edit fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Edit Details</ListItemText>
         </MenuItem>
       </Menu>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Delete Course</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete "{selectedCourse?.title}"? This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={confirmDelete} color="error" variant="contained">
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Container>
   );
 };

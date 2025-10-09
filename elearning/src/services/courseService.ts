@@ -96,6 +96,28 @@ export interface CourseActionData {
 }
 
 export const courseService = {
+  // Cache for course data
+  _cache: new Map<string, { data: any; timestamp: number }>(),
+  _cacheTimeout: 30000, // 30 seconds cache
+
+  // Helper method to get cached data or fetch new
+  _getCachedOrFetch: async <T>(key: string, fetchFn: () => Promise<T>): Promise<T> => {
+    const cached = courseService._cache.get(key);
+    const now = Date.now();
+    
+    if (cached && (now - cached.timestamp) < courseService._cacheTimeout) {
+      return cached.data;
+    }
+    
+    const data = await fetchFn();
+    courseService._cache.set(key, { data, timestamp: now });
+    return data;
+  },
+
+  // Clear cache
+  clearCache: () => {
+    courseService._cache.clear();
+  },
   // Get public courses (approved courses for students)
   getPublicCourses: async (filters: CourseFilters = {}): Promise<CourseListResponse> => {
     const queryParams = new URLSearchParams();
@@ -133,23 +155,27 @@ export const courseService = {
 
   // Get all courses with filters and pagination
   getAllCourses: async (filters: CourseFilters = {}): Promise<CourseListResponse> => {
-    const queryParams = new URLSearchParams();
+    const cacheKey = `courses-${JSON.stringify(filters)}`;
     
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        queryParams.append(key, value.toString());
-      }
-    });
+    return courseService._getCachedOrFetch(cacheKey, async () => {
+      const queryParams = new URLSearchParams();
+      
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
 
-    const response = await apiService.get<CourseListResponse>(
-      `/courses?${queryParams.toString()}`
-    );
-    
-    if (response.success && response.data) {
-      return response.data;
-    }
-    
-    throw new Error(response.error || 'Failed to fetch courses');
+      const response = await apiService.get<CourseListResponse>(
+        `/courses?${queryParams.toString()}`
+      );
+      
+      if (response.success && response.data) {
+        return response.data;
+      }
+      
+      throw new Error(response.error || 'Failed to fetch courses');
+    });
   },
 
   // Get course by ID
@@ -252,23 +278,27 @@ export const courseService = {
 
   // Get teacher's courses (for authenticated teachers)
   getTeacherCourses: async (filters: CourseFilters = {}): Promise<CourseListResponse> => {
-    const queryParams = new URLSearchParams();
+    const cacheKey = `teacher-courses-${JSON.stringify(filters)}`;
+    
+    return courseService._getCachedOrFetch(cacheKey, async () => {
+      const queryParams = new URLSearchParams();
 
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        queryParams.append(key, value.toString());
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          queryParams.append(key, value.toString());
+        }
+      });
+
+      const response = await apiService.get<CourseListResponse>(
+        `/courses?${queryParams.toString()}`
+      );
+
+      if (response.success && response.data) {
+        return response.data;
       }
+
+      throw new Error(response.error || 'Failed to fetch teacher courses');
     });
-
-    const response = await apiService.get<CourseListResponse>(
-      `/courses?${queryParams.toString()}`
-    );
-
-    if (response.success && response.data) {
-      return response.data;
-    }
-
-    throw new Error(response.error || 'Failed to fetch teacher courses');
   },
 
   // Get enrolled courses for student

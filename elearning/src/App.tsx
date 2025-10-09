@@ -28,6 +28,10 @@ import TeacherProfile from './pages/Teacher/TeacherProfile';
 import TeacherProfileComplete from './pages/Teacher/TeacherProfileComplete';
 import TeacherCourses from './pages/Teacher/TeacherCourses';
 import CourseManagement from './pages/Teacher/CourseManagement';
+import MaterialView from './pages/Student/MaterialView';
+import StudentQuizPage from './pages/Student/QuizPage';
+import CertificatePage from './pages/Student/CertificatePage';
+import StudentCourseView from './pages/Student/StudentCourseView';
 import CourseContent from './pages/Student/CourseContent';
 import TeacherStudents from './pages/Teacher/TeacherStudents';
 import TeacherAnalytics from './pages/Teacher/TeacherAnalytics';
@@ -67,8 +71,6 @@ import CourseMaterialPage from './pages/Student/CourseMaterialPage';
 import EnhancedCourseViewPage from './pages/Student/EnhancedCourseViewPage';
 import EnhancedVideoSessionPage from './pages/Student/EnhancedVideoSessionPage';
 import CourseEnrollmentPage from './pages/Student/CourseEnrollmentPage';
-import EnhancedCourseManagement from './pages/Teacher/EnhancedCourseManagement';
-import CourseManagementSelection from './pages/Teacher/CourseManagementSelection';
 import NotesPreviewPage from './pages/Teacher/NotesPreviewPage';
 import CourseAssignmentsPage from './pages/Student/CourseAssignmentsPage';
 import CourseAssessmentsPage from './pages/Student/CourseAssessmentsPage';
@@ -227,9 +229,9 @@ const App: React.FC = () => {
           <Route path="profile/edit" element={<TeacherProfileComplete />} />
           
           {/* Teacher routes */}
-          <Route path="courses" element={<TeacherCourseDashboard />} />
+          <Route path="courses" element={<TeacherCourses />} />
           <Route path="courses/create" element={<CreateCourse />} />
-          <Route path="courses/:id/manage" element={<CourseManagement />} />
+          <Route path="courses/:courseId/manage" element={<CourseManagement />} />
           <Route path="courses/:id/content" element={<ContentStructureEditor />} />
           <Route path="courses/:courseId/materials" element={<CourseMaterials />} />
           <Route path="live-sessions" element={<LiveSessions />} />
@@ -241,7 +243,6 @@ const App: React.FC = () => {
           <Route path="recorded-session/:sessionId" element={<RecordedSessionDetails />} />
           <Route path="grades" element={<TeacherGradesLeaderboard />} />
           <Route path="grades/:courseId" element={<TeacherGradesLeaderboard />} />
-          <Route path="course-management" element={<CourseManagementSelection />} />
           <Route path="assignments/:assignmentId/grading" element={<AssignmentGradingDashboard />} />
           <Route path="settings" element={<TeacherSettings />} />
           <Route path="test" element={<TestPage />} />
@@ -261,12 +262,17 @@ const App: React.FC = () => {
           <Route path="courses" element={<StudentCourses />} />
           <Route path="course-content" element={<CourseContent />} />
           <Route path="course-content/:id" element={<CourseContent />} />
-          <Route path="course/:id" element={<CourseViewPage />} />
+          {/* Learning Page Route */}
           <Route path="course/:id/learn" element={<UnifiedLearningPage />} />
+          <Route path="course/:id/weeks" element={<StudentCourseView />} />
+          <Route path="course/:courseId/materials/:materialId" element={<MaterialView />} />
           <Route path="course/:id/enroll" element={<CourseEnrollmentSystem courseId="" onEnrollmentComplete={() => {}} />} />
           <Route path="course/:id/material" element={<CourseMaterialPage />} />
           <Route path="course/:id/live-sessions" element={<StudentLiveSessions />} />
           <Route path="course/:id/announcements" element={<CourseAnnouncementsPage />} />
+          <Route path="course/:id" element={<CourseViewPage />} />
+          <Route path="quiz/:quizId" element={<StudentQuizPage />} />
+          <Route path="certificate/:certificateId" element={<CertificatePage />} />
           <Route path="assignment/:assignmentId" element={<TakeExamNew />} />
           <Route path="assignment/:assignmentId/enhanced" element={<TakeExamNew />} />
           <Route path="assignment/:assignmentId/results" element={<AssignmentResults />} />
@@ -374,14 +380,6 @@ const App: React.FC = () => {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/course-management/:courseId"
-        element={
-          <ProtectedRoute requiredRole={UserRole.TEACHER}>
-            <EnhancedCourseManagement />
-          </ProtectedRoute>
-        }
-      />
       
       {/* Standalone Assessment and Assignment Pages */}
       <Route
@@ -485,14 +483,6 @@ const App: React.FC = () => {
         element={
           <ProtectedRoute requiredRole={UserRole.STUDENT}>
             <AssignmentResults />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/dashboard/teacher/course-management"
-        element={
-          <ProtectedRoute requiredRole={UserRole.TEACHER}>
-            <CourseManagementSelection />
           </ProtectedRoute>
         }
       />

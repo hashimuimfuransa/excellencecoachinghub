@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
+import { socketConnectionManager } from '../utils/socketConnectionManager';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -26,24 +27,54 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
         auth: {
           userId: user._id,
         },
+        withCredentials: true,
+        transports: ['websocket', 'polling'],
+        timeout: 20000,
+        forceNew: true,
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        maxReconnectionAttempts: 5,
+        autoConnect: true
       });
 
       // Connection event handlers
       newSocket.on('connect', () => {
-        console.log('Socket connected:', newSocket.id);
+        socketConnectionManager.logConnectionEvent('connect', newSocket.id);
         setIsConnected(true);
         
         // Join user's personal room
         newSocket.emit('user:join', user._id);
       });
 
-      newSocket.on('disconnect', () => {
-        console.log('Socket disconnected');
+      newSocket.on('disconnect', (reason) => {
+        socketConnectionManager.logConnectionEvent('disconnect', reason);
         setIsConnected(false);
       });
 
       newSocket.on('connect_error', (error) => {
-        console.error('Socket connection error:', error);
+        socketConnectionManager.logConnectionEvent('connect_error', error);
+        setIsConnected(false);
+        socketConnectionManager.incrementAttempts();
+      });
+
+      newSocket.on('reconnect', (attemptNumber) => {
+        socketConnectionManager.logConnectionEvent('reconnect', attemptNumber);
+        setIsConnected(true);
+        newSocket.emit('user:join', user._id);
+      });
+
+      newSocket.on('reconnect_attempt', (attemptNumber) => {
+        socketConnectionManager.logConnectionEvent('reconnect_attempt', attemptNumber);
+      });
+
+      newSocket.on('reconnect_error', (error) => {
+        socketConnectionManager.logConnectionEvent('reconnect_error', error);
+      });
+
+      newSocket.on('reconnect_failed', () => {
+        socketConnectionManager.logConnectionEvent('reconnect_failed');
         setIsConnected(false);
       });
 

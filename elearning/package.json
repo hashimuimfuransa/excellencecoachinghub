@@ -7,7 +7,6 @@
   "dependencies": {
     "@100mslive/react-sdk": "^0.10.35",
     "@100mslive/react-ui": "^0.8.9",
-
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
     "@hello-pangea/dnd": "^16.6.0",
@@ -17,6 +16,7 @@
     "@mui/x-charts": "^6.18.3",
     "@mui/x-data-grid": "^6.18.2",
     "@mui/x-date-pickers": "^8.9.2",
+    "@pdftron/webviewer": "^11.8.0",
     "@tensorflow-models/blazeface": "^0.1.0",
     "@tensorflow-models/face-landmarks-detection": "^1.0.6",
     "@tensorflow/tfjs": "^4.22.0",
@@ -29,6 +29,7 @@
     "framer-motion": "^10.16.16",
     "hls.js": "^1.6.9",
     "lodash": "^4.17.21",
+    "pdfjs-dist": "^5.4.296",
     "react": "^18.2.0",
     "react-beautiful-dnd": "^13.1.1",
     "react-bootstrap": "^2.10.10",
@@ -36,6 +37,7 @@
     "react-dropzone": "^14.3.8",
     "react-hook-form": "^7.48.2",
     "react-icons": "^5.5.0",
+    "react-pdf": "^10.1.0",
     "react-player": "^2.13.0",
     "react-query": "^3.39.3",
     "react-router-dom": "^6.20.1",

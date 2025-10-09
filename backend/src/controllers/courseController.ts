@@ -38,7 +38,7 @@ export const getAllCourses = async (req: Request, res: Response, next: NextFunct
         filter.instructor = instructor;
       }
     }
-
+    
     if (search) {
       filter.$or = [
         { title: { $regex: search, $options: 'i' } },
@@ -749,94 +749,93 @@ export const getTeacherDashboardStats = async (req: Request, res: Response, next
   try {
     const teacherId = req.user._id.toString();
 
-    // Get teacher's courses
-    const courses = await Course.find({ instructor: teacherId });
-    const approvedCourses = courses.filter(course => course.status === CourseStatus.APPROVED);
-    
-    // Get total enrolled students across all courses
+    // Get teacher's courses first
+    const courses = await Course.find({ instructor: teacherId }).select('_id title status enrollmentCount createdAt');
     const courseIds = courses.map(course => course._id);
-    const totalEnrollments = await CourseEnrollment.countDocuments({
-      course: { $in: courseIds },
-      isActive: true,
-      paymentStatus: { $in: ['completed', 'pending'] }
-    });
+    const approvedCourses = courses.filter(course => course.status === CourseStatus.APPROVED);
+    const pendingCourses = courses.filter(course => course.status === CourseStatus.PENDING_APPROVAL);
+    const rejectedCourses = courses.filter(course => course.status === CourseStatus.REJECTED);
 
-    // Get unique students (students enrolled in any of teacher's courses)
-    const uniqueStudents = await CourseEnrollment.distinct('student', {
-      course: { $in: courseIds },
-      isActive: true,
-      paymentStatus: { $in: ['completed', 'pending'] }
-    });
+    // Execute all enrollment queries in parallel for better performance
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    
+    const [
+      totalEnrollments,
+      uniqueStudents,
+      enrollmentsWithProgress,
+      recentEnrollments,
+      totalEarnings,
+      recentActivity
+    ] = await Promise.all([
+      // Get total enrollments
+      CourseEnrollment.countDocuments({
+        course: { $in: courseIds },
+        isActive: true,
+        paymentStatus: { $in: ['completed', 'pending'] }
+      }),
+      
+      // Get unique students
+      CourseEnrollment.distinct('student', {
+        course: { $in: courseIds },
+        isActive: true,
+        paymentStatus: { $in: ['completed', 'pending'] }
+      }),
+      
+      // Get enrollments with progress (limit for performance)
+      CourseEnrollment.find({
+        course: { $in: courseIds },
+        isActive: true,
+        paymentStatus: { $in: ['completed', 'pending'] }
+      }).select('progress').limit(100),
+      
+      // Get recent enrollments
+      CourseEnrollment.countDocuments({
+        course: { $in: courseIds },
+        isActive: true,
+        enrolledAt: { $gte: thirtyDaysAgo }
+      }),
+      
+      // Calculate total earnings
+      CourseEnrollment.aggregate([
+        {
+          $match: {
+            course: { $in: courseIds },
+            isActive: true,
+            paymentStatus: 'completed'
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: '$paymentAmount' }
+          }
+        }
+      ]),
+      
+      // Get recent activity
+      CourseEnrollment.find({
+        course: { $in: courseIds },
+        isActive: true,
+        enrolledAt: { $gte: thirtyDaysAgo }
+      })
+        .populate('student', 'firstName lastName email')
+        .populate('course', 'title')
+        .sort({ enrolledAt: -1 })
+        .limit(5)
+    ]);
 
-    // Get live sessions count (you might need to implement this based on your live session model)
-    // For now, we'll estimate based on courses
-    const liveSessionsCount = approvedCourses.length; // Assuming each course has live sessions
-
-    // Calculate average completion rate
-    const enrollmentsWithProgress = await CourseEnrollment.find({
-      course: { $in: courseIds },
-      isActive: true,
-      paymentStatus: { $in: ['completed', 'pending'] }
-    }).select('progress');
-
+    // Process the data
+    const liveSessionsCount = approvedCourses.length;
     const totalProgress = enrollmentsWithProgress.reduce((sum, enrollment) => {
       return sum + (enrollment.progress?.totalProgress || 0);
     }, 0);
-
     const averageCompletionRate = enrollmentsWithProgress.length > 0 
       ? Math.round(totalProgress / enrollmentsWithProgress.length) 
       : 0;
-
-    // Get recent enrollments (last 30 days)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    const recentEnrollments = await CourseEnrollment.countDocuments({
-      course: { $in: courseIds },
-      isActive: true,
-      enrolledAt: { $gte: thirtyDaysAgo }
-    });
-
-    // Get course completion stats
     const completedCourses = enrollmentsWithProgress.filter(
       enrollment => enrollment.progress?.totalProgress >= 100
     ).length;
-
-    // Get pending courses (waiting for approval)
-    const pendingCourses = courses.filter(course => course.status === CourseStatus.PENDING);
-
-    // Get rejected courses
-    const rejectedCourses = courses.filter(course => course.status === CourseStatus.REJECTED);
-
-    // Calculate total earnings (if you have payment tracking)
-    const totalEarnings = await CourseEnrollment.aggregate([
-      {
-        $match: {
-          course: { $in: courseIds },
-          isActive: true,
-          paymentStatus: 'completed'
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: '$paymentAmount' }
-        }
-      }
-    ]);
-
     const earnings = totalEarnings.length > 0 ? totalEarnings[0].total : 0;
-
-    // Get recent activity (recent enrollments with student details)
-    const recentActivity = await CourseEnrollment.find({
-      course: { $in: courseIds },
-      isActive: true,
-      enrolledAt: { $gte: thirtyDaysAgo }
-    })
-      .populate('student', 'firstName lastName email')
-      .populate('course', 'title')
-      .sort({ enrolledAt: -1 })
-      .limit(5);
 
     const formattedRecentActivity = recentActivity.map(enrollment => ({
       type: 'enrollment',

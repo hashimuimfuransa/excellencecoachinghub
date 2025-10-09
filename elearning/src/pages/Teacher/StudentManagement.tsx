@@ -1377,11 +1377,9 @@ const StudentManagement: React.FC = () => {
                           <ListItemText
                             primary={`${studentData.student.firstName} ${studentData.student.lastName}`}
                             secondary={
-                              <Box>
-                                <Typography variant="caption" color="error">
-                                  Score: {(studentData.averageScore || 0).toFixed(1)}% • Progress: {(studentData.averageProgress || 0).toFixed(1)}%
-                                </Typography>
-                              </Box>
+                              <Typography variant="caption" color="error" component="span">
+                                Score: {(studentData.averageScore || 0).toFixed(1)}% • Progress: {(studentData.averageProgress || 0).toFixed(1)}%
+                              </Typography>
                             }
                           />
                         </ListItem>

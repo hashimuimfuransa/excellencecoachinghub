@@ -14,7 +14,7 @@ import {
   getCourseEnrolledStudents,
   getTeacherDashboardStats
 } from '../controllers/courseController';
-import { getCourseMaterials } from '../controllers/courseMaterialsController';
+import { getCourseMaterials, proxyPDF, proxyDocument } from '../controllers/courseMaterialsController';
 import { protect, authorize } from '../middleware/auth';
 import { requireAdmin } from '../middleware/roleAuth';
 import { requireApprovedTeacher } from '../middleware/teacherAuth';
@@ -22,6 +22,34 @@ import { validateRequest } from '../middleware/validateRequest';
 import { UserRole } from '../../../shared/types';
 
 const router = Router();
+
+// Simple rate limiting for course routes
+const requestCounts = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 30; // 30 requests per minute
+
+const rateLimitMiddleware = (req: any, res: any, next: any) => {
+  const clientId = req.user?._id || req.ip;
+  const now = Date.now();
+  
+  const clientData = requestCounts.get(clientId);
+  
+  if (!clientData || now > clientData.resetTime) {
+    requestCounts.set(clientId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return next();
+  }
+  
+  if (clientData.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return res.status(429).json({
+      success: false,
+      error: 'Too many requests. Please try again later.',
+      retryAfter: Math.ceil((clientData.resetTime - now) / 1000)
+    });
+  }
+  
+  clientData.count++;
+  next();
+};
 
 // Public routes (no authentication required) - MUST be defined BEFORE protect middleware
 router.get('/public', getAllCourses);
@@ -177,7 +205,7 @@ const assignModeratorValidation = [
 router.get('/enrolled', authorize(UserRole.STUDENT), getEnrolledCourses);
 
 // Routes accessible by teachers, admins, and super admins
-router.get('/', authorize(UserRole.TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN), getAllCourses);
+router.get('/', rateLimitMiddleware, authorize(UserRole.TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN), getAllCourses);
 
 // Admin-only routes (must be before /:id route to avoid conflicts)
 router.get('/stats', requireAdmin, getCourseStats);
@@ -196,6 +224,12 @@ router.put('/:id/assign-moderator', requireAdmin, assignModeratorValidation, val
 
 // Course materials route
 router.get('/:courseId/materials', getCourseMaterials);
+
+// PDF proxy route for authenticated PDF access
+router.get('/materials/pdf-proxy', protect, proxyPDF);
+
+// Document proxy route for authenticated document access (all document types)
+router.get('/documents/proxy', protect, proxyDocument);
 
 // Get enrolled students for a course (teachers and admins only)
 router.get('/:courseId/enrolled-students', authorize(UserRole.TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN), getCourseEnrolledStudents);

@@ -1060,22 +1060,43 @@ const StudentCourses: React.FC = () => {
                         </CardContent>
                         
                         <Box sx={{ p: { xs: 2, md: 3 }, pt: 0 }}>
-                          <ResponsiveButton
-                            fullWidth
-                            variant="contained"
-                            size={buttonSize}
-                            startIcon={progress >= 100 ? <EmojiEvents /> : <PlayArrow />}
-                            onClick={() => navigate(`/course/${course._id}/learn`)}
-                            sx={{ 
-                              bgcolor: progress >= 100 ? 'success.main' : 'primary.main',
-                              '&:hover': {
-                                bgcolor: progress >= 100 ? 'success.dark' : 'primary.dark',
-                              }
-                            }}
-                          >
-                            {progress >= 100 ? '🏆 View Certificate' : 
-                             progress > 0 ? '📖 Continue Learning' : '🚀 Start Course'}
-                          </ResponsiveButton>
+                          <Stack spacing={1}>
+                            <ResponsiveButton
+                              fullWidth
+                              variant="contained"
+                              size={buttonSize}
+                              startIcon={progress >= 100 ? <EmojiEvents /> : <PlayArrow />}
+                              onClick={() => navigate(`/dashboard/student/course/${course._id}/learn`)}
+                              sx={{ 
+                                bgcolor: progress >= 100 ? 'success.main' : 'primary.main',
+                                '&:hover': {
+                                  bgcolor: progress >= 100 ? 'success.dark' : 'primary.dark',
+                                }
+                              }}
+                            >
+                              {progress >= 100 ? '🏆 View Certificate' : 
+                               progress > 0 ? '📖 Continue Learning' : '🚀 Start Course'}
+                            </ResponsiveButton>
+                            
+                            <ResponsiveButton
+                              fullWidth
+                              variant="outlined"
+                              size={buttonSize}
+                              startIcon={<School />}
+                              onClick={() => navigate(`/dashboard/student/course/${course._id}/weeks`)}
+                              sx={{ 
+                                borderColor: 'primary.main',
+                                color: 'primary.main',
+                                '&:hover': {
+                                  borderColor: 'primary.dark',
+                                  backgroundColor: 'primary.light',
+                                  color: 'primary.dark',
+                                }
+                              }}
+                            >
+                              📚 Week View
+                            </ResponsiveButton>
+                          </Stack>
                         </Box>
                       </StyledCard>
                     </Zoom>
@@ -1422,7 +1443,7 @@ const StudentCourses: React.FC = () => {
                                 variant="contained"
                                 size={buttonSize}
                                 startIcon={enrollmentProgress >= 100 ? <EmojiEvents /> : <PlayArrow />}
-                                onClick={() => navigate(`/course/${course._id}/learn`)}
+                                onClick={() => navigate(`/dashboard/student/course/${course._id}/learn`)}
                                 sx={{ 
                                   bgcolor: enrollmentProgress >= 100 ? 'success.main' : 'primary.main',
                                   '&:hover': {

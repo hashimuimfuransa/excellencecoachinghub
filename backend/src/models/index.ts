@@ -17,6 +17,8 @@ export { Assessment, IAssessmentDocument, IAssessmentModel } from './Assessment'
 export { AssessmentSubmission, IAssessmentSubmissionDocument, IAssessmentSubmissionModel } from './AssessmentSubmission';
 export { CourseNotes, ICourseNotesDocument, ICourseNotesModel } from './CourseNotes';
 export { ReadingProgress, IReadingProgressDocument, IReadingProgressModel } from './ReadingProgress';
+export { Week, IWeekDocument } from './Week';
+export { StudentProgress, WeekProgress, IStudentProgressDocument, IWeekProgressDocument } from './StudentProgress';
 export { VideoProctoringSession, IVideoProctoringSessionDocument, IVideoProctoringSessionModel, IVideoViolation } from './VideoProctoringSession';
 export { default as Feedback, IFeedback } from './Feedback';
 export { default as VideoProvider, IVideoProvider } from './VideoProvider';
@@ -25,6 +27,7 @@ export { default as RecordedSession, IRecordedSession } from './RecordedSession'
 export { Assignment, AssignmentSubmission, IAssignment, IAssignmentSubmission } from './Assignment';
 export { EmailEvent, IEmailEvent } from './EmailEvent';
 export { default as EmailTracker, IEmailTracker, EmailType } from './EmailTracker';
+export { Annotation, IAnnotation } from './Annotation';
 
 // Job Portal Models
 export { Job, IJobDocument, IJobModel } from './Job';

@@ -30,7 +30,9 @@ import {
   CalendarToday,
   AttachMoney,
   School,
-  PendingActions
+  PendingActions,
+  Settings,
+  Visibility
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { courseService } from '../../services/courseService';
@@ -41,6 +43,7 @@ const TeacherDashboardContent: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -49,20 +52,36 @@ const TeacherDashboardContent: React.FC = () => {
         setError(null);
         console.log('🔍 Fetching teacher dashboard statistics...');
         
-        const data = await courseService.getTeacherDashboardStats();
-        console.log('📊 Dashboard data received:', data);
+        // Add timeout to prevent hanging requests
+        const timeoutId = setTimeout(() => {
+          setError('Request timeout - please try again');
+          setLoading(false);
+        }, 10000); // 10 second timeout
         
+        const data = await courseService.getTeacherDashboardStats();
+        clearTimeout(timeoutId);
+        
+        console.log('📊 Dashboard data received:', data);
         setDashboardData(data);
       } catch (err) {
         console.error('❌ Error fetching dashboard data:', err);
         setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
+        
+        // Auto-retry up to 2 times for network errors
+        if (retryCount < 2 && (err instanceof Error && err.message.includes('network'))) {
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+            fetchDashboardData();
+          }, 2000);
+          return;
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchDashboardData();
-  }, []);
+  }, [retryCount]);
 
   if (loading) {
     return (
@@ -80,7 +99,14 @@ const TeacherDashboardContent: React.FC = () => {
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
-        <Button variant="contained" onClick={() => window.location.reload()}>
+        <Button 
+          variant="contained" 
+          onClick={() => {
+            setError(null);
+            setRetryCount(0);
+            setLoading(true);
+          }}
+        >
           Retry
         </Button>
       </Container>
@@ -291,18 +317,18 @@ const TeacherDashboardContent: React.FC = () => {
                   variant="contained" 
                   color="primary"
                   component={Link}
+                  to="/dashboard/teacher/courses"
+                  startIcon={<School />}
+                >
+                  Manage Courses
+                </Button>
+                <Button 
+                  variant="outlined" 
+                  component={Link}
                   to="/dashboard/teacher/courses/create"
                   startIcon={<MenuBook />}
                 >
                   Create Course
-                </Button>
-                <Button 
-                  variant="outlined" 
-                  color="primary"
-                  component={Link}
-                  to="/dashboard/teacher/courses"
-                >
-                  View Courses
                 </Button>
               </Box>
             </CardContent>
@@ -361,16 +387,16 @@ const TeacherDashboardContent: React.FC = () => {
                     <ListItemText
                       primary={activity.message}
                       secondary={
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">
+                        <span>
+                          <Typography variant="caption" color="text.secondary" component="span">
                             {new Date(activity.timestamp).toLocaleDateString()} at{' '}
                             {new Date(activity.timestamp).toLocaleTimeString()}
                           </Typography>
                           <br />
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography variant="caption" color="text.secondary" component="span">
                             Course: {activity.course.title}
                           </Typography>
-                        </Box>
+                        </span>
                       }
                     />
                   </ListItem>
@@ -386,6 +412,65 @@ const TeacherDashboardContent: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Quick Actions */}
+      <Card elevation={2} sx={{ mt: 3 }}>
+        <CardContent sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            🚀 Quick Actions
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6} md={3}>
+              <Button
+                component={Link}
+                to="/dashboard/teacher/courses"
+                variant="outlined"
+                fullWidth
+                startIcon={<School />}
+                sx={{ py: 1.5 }}
+              >
+                Manage Courses
+              </Button>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Button
+                component={Link}
+                to="/dashboard/teacher/courses/create"
+                variant="outlined"
+                fullWidth
+                startIcon={<Edit />}
+                sx={{ py: 1.5 }}
+              >
+                Create New Course
+              </Button>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Button
+                component={Link}
+                to="/dashboard/teacher/live-sessions"
+                variant="outlined"
+                fullWidth
+                startIcon={<Schedule />}
+                sx={{ py: 1.5 }}
+              >
+                Live Sessions
+              </Button>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Button
+                component={Link}
+                to="/dashboard/teacher/student-management"
+                variant="outlined"
+                fullWidth
+                startIcon={<People />}
+                sx={{ py: 1.5 }}
+              >
+                Student Management
+              </Button>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
       {/* Course Overview */}
       {courses.length > 0 && (
         <Card elevation={2} sx={{ mt: 3 }}>
@@ -396,7 +481,7 @@ const TeacherDashboardContent: React.FC = () => {
             <Grid container spacing={2}>
               {courses.map((course) => (
                 <Grid item xs={12} sm={6} md={4} key={course._id}>
-                  <Paper elevation={1} sx={{ p: 2 }}>
+                  <Paper elevation={1} sx={{ p: 2, position: 'relative' }}>
                     <Typography variant="subtitle1" gutterBottom>
                       {course.title}
                     </Typography>
@@ -409,6 +494,20 @@ const TeacherDashboardContent: React.FC = () => {
                     <Typography variant="caption" color="text.secondary">
                       Created: {new Date(course.createdAt).toLocaleDateString()}
                     </Typography>
+                    
+                    {/* Quick Action Buttons */}
+                    <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Button
+                        component={Link}
+                        to={`/dashboard/teacher/courses/${course._id}/manage`}
+                        size="small"
+                        variant="contained"
+                        startIcon={<Settings />}
+                        sx={{ flex: 1, minWidth: 'fit-content' }}
+                      >
+                        Manage Course
+                      </Button>
+                    </Box>
                   </Paper>
                 </Grid>
               ))}

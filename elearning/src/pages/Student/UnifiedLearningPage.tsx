@@ -130,7 +130,7 @@ const UnifiedLearningPage: React.FC = () => {
   };
 
   const handleMaterialClick = (material: WeekMaterial) => {
-    navigate(`/dashboard/student/course/${courseId}/materials/${material._id}`);
+    navigate(`/material/${courseId}/${material._id}`);
   };
 
   const handleMarkComplete = async (weekId: string, materialId: string) => {

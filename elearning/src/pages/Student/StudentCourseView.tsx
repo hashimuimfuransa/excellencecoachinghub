@@ -142,7 +142,7 @@ const StudentCourseView: React.FC = () => {
   };
 
   const handleMaterialClick = (week: Week, material: WeekMaterial) => {
-    navigate(`/dashboard/student/course/${courseId}/materials/${material._id}`);
+    navigate(`/material/${courseId}/${material._id}`);
   };
 
   const handleMarkComplete = async (week: Week, material: WeekMaterial) => {

@@ -55,19 +55,29 @@ import {
   RotateRight,
   Print,
   Search,
-  MenuBook
+  MenuBook,
+  VisibilityOff
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { weekService, Week, WeekMaterial } from '../../services/weekService';
 import { progressService } from '../../services/weekService';
+import { progressTrackingService } from '../../services/progressTrackingService';
 
 // Modern Document Viewer Imports
 import { Document, Page, pdfjs } from 'react-pdf';
 import WebViewer from '@pdftron/webviewer';
 
-// Import Universal Material Viewer
-import { UniversalMaterialViewer } from '../../components/UniversalMaterialViewer';
+// Import Structured Notes Viewer
+import { StructuredNotesViewer } from '../../components/StructuredNotesViewer';
+
+// Import Simple Viewers
+import { 
+  SimplePDFViewer, 
+  SimpleMediaViewer, 
+  SimpleImageViewer, 
+  SimpleOfficeViewer 
+} from '../../components/SimpleViewers';
 
 // Import Cloudinary URL processor
 import { getDocumentViewingUrl, needsCloudinarySpecialHandling } from '../../utils/cloudinaryUrlProcessor';
@@ -88,7 +98,10 @@ const MaterialView: React.FC = () => {
   const [isCompleted, setIsCompleted] = useState(false);
   const [timeSpent, setTimeSpent] = useState(0);
   const [startTime, setStartTime] = useState<Date | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [materialProgress, setMaterialProgress] = useState<any>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showFullscreenPrompt, setShowFullscreenPrompt] = useState(true);
   const [documentError, setDocumentError] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(true);
 
@@ -111,12 +124,38 @@ const MaterialView: React.FC = () => {
   const [documentCache, setDocumentCache] = useState<Map<string, any>>(new Map());
   const [preloadedDocuments, setPreloadedDocuments] = useState<Set<string>>(new Set());
 
-  // Load material data
+  // Load material data and initialize progress tracking
   useEffect(() => {
     if (courseId && materialId) {
       loadMaterialData();
+      initializeProgressTracking();
     }
   }, [courseId, materialId]);
+
+  // Initialize progress tracking
+  const initializeProgressTracking = async () => {
+    if (!courseId || !materialId || !week) return;
+
+    try {
+      // Load progress from server
+      await progressTrackingService.loadFromServer(courseId);
+      
+      // Get existing progress
+      const progress = progressTrackingService.getMaterialProgress(courseId, week._id, materialId);
+      setMaterialProgress(progress);
+      setTimeSpent(progress.timeSpent);
+      setIsCompleted(progress.isCompleted);
+
+      // Start new session
+      const newSessionId = progressTrackingService.startSession(courseId, week._id, materialId);
+      setSessionId(newSessionId);
+
+      // Set start time for time tracking
+      setStartTime(new Date());
+    } catch (error) {
+      console.error('Failed to initialize progress tracking:', error);
+    }
+  };
 
   // Configure PDF worker on component mount
   useEffect(() => {
@@ -276,32 +315,49 @@ const MaterialView: React.FC = () => {
     }
   }, [viewerType, material?.url, user?.name]);
 
-  // Cleanup blob URL on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // Cleanup PDF blob URL
       if (pdfBlobUrl) {
         URL.revokeObjectURL(pdfBlobUrl);
       }
+      
+      // Cleanup WebViewer instance
       if (webViewerInstance) {
         webViewerInstance.UI.dispose();
       }
-    };
-  }, [pdfBlobUrl, webViewerInstance]);
-
-  // Track time spent
-  useEffect(() => {
-    if (material && !isCompleted) {
-      const startTime = new Date();
-      setStartTime(startTime);
       
+      // End progress tracking session
+      if (sessionId) {
+        progressTrackingService.endSession(sessionId);
+      }
+      
+      // Sync progress with server
+      if (courseId) {
+        progressTrackingService.syncWithServer(courseId);
+      }
+    };
+  }, [pdfBlobUrl, webViewerInstance, sessionId, courseId]);
+
+  // Track time spent and update progress
+  useEffect(() => {
+    if (material && !isCompleted && sessionId) {
       const interval = setInterval(() => {
-        const elapsed = Math.floor((new Date().getTime() - startTime.getTime()) / 1000 / 60);
-        setTimeSpent(elapsed);
+        const elapsed = Math.floor((new Date().getTime() - (startTime?.getTime() || Date.now())) / 1000 / 60);
+        const newTimeSpent = (materialProgress?.timeSpent || 0) + elapsed;
+        
+        setTimeSpent(newTimeSpent);
+        
+        // Update progress tracking
+        if (courseId && week && materialId) {
+          progressTrackingService.updateTimeSpent(courseId, week._id, materialId, newTimeSpent);
+        }
       }, 60000); // Update every minute
 
       return () => clearInterval(interval);
     }
-  }, [material, isCompleted]);
+  }, [material, isCompleted, sessionId, startTime, materialProgress, courseId, week, materialId]);
 
   // Handle PDF loading timeout
   useEffect(() => {
@@ -349,6 +405,27 @@ const MaterialView: React.FC = () => {
 
       setWeek(foundWeek);
       setMaterial(foundMaterial);
+      
+      // Debug logging for structured notes
+      if (foundMaterial.type === 'structured_notes') {
+        console.log('📚 MaterialView - Found structured notes material:', {
+          title: foundMaterial.title,
+          type: foundMaterial.type,
+          hasContent: !!foundMaterial.content,
+          contentKeys: foundMaterial.content ? Object.keys(foundMaterial.content) : [],
+          hasStructuredNotes: foundMaterial.content?.structuredNotes ? 'yes' : 'no',
+          structuredNotesKeys: foundMaterial.content?.structuredNotes ? Object.keys(foundMaterial.content.structuredNotes) : [],
+          fullContent: foundMaterial.content,
+          fullMaterial: foundMaterial
+        });
+        
+        // Check if structuredNotes exists and has the expected structure
+        if (foundMaterial.content?.structuredNotes) {
+          console.log('✅ Structured notes found:', foundMaterial.content.structuredNotes);
+        } else {
+          console.log('❌ No structured notes found in content');
+        }
+      }
 
       // Check if material is completed
       const progress = await progressService.getStudentCourseProgress(courseId!);
@@ -369,11 +446,25 @@ const MaterialView: React.FC = () => {
   };
 
   const handleMarkComplete = async () => {
-    if (!week || !material) return;
+    if (!courseId || !week || !materialId || !sessionId) return;
 
     try {
-      await progressService.markMaterialCompleted(week._id, material._id, timeSpent);
+      // Mark as completed in progress tracking
+      await progressTrackingService.markMaterialCompleted(courseId, week._id, materialId, timeSpent);
+      
+      // End session
+      progressTrackingService.endSession(sessionId);
+      
+      // Add completion action
+      progressTrackingService.addAction(sessionId, {
+        type: 'section_read',
+        data: { completed: true, timeSpent }
+      });
+
       setIsCompleted(true);
+      
+      // Sync with server
+      await progressTrackingService.syncWithServer(courseId);
     } catch (err: any) {
       console.error('Error marking material complete:', err);
       setError(err.message || 'Failed to mark material complete');
@@ -381,7 +472,7 @@ const MaterialView: React.FC = () => {
   };
 
   const handleBackToCourse = () => {
-    navigate(`/dashboard/student/course/${courseId}/weeks`);
+    navigate(`/dashboard/student/course/${courseId}/learn`);
   };
 
   // PDF Document Handlers
@@ -495,6 +586,10 @@ const MaterialView: React.FC = () => {
     );
   }
 
+  // Define urlLower for document info display
+  const url = material?.url || '';
+  const urlLower = url.toLowerCase();
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Breadcrumbs */}
@@ -514,7 +609,7 @@ const MaterialView: React.FC = () => {
           href="#" 
           onClick={(e) => {
             e.preventDefault();
-            navigate(`/dashboard/student/course/${courseId}/weeks`);
+            navigate(`/dashboard/student/course/${courseId}/learn`);
           }}
         >
           {week.title}
@@ -577,9 +672,6 @@ const MaterialView: React.FC = () => {
               <IconButton sx={{ color: 'white' }}>
                 <Share />
               </IconButton>
-              <IconButton sx={{ color: 'white' }}>
-                <Download />
-              </IconButton>
             </Box>
           </Box>
 
@@ -614,7 +706,7 @@ const MaterialView: React.FC = () => {
                 Material Content
               </Typography>
               
-              {material.url ? (
+              {(material.url || material.type === 'structured_notes') ? (
                 <Box sx={{ width: '100%' }}>
                       {/* Modern Document Viewer Header */}
                       <Box sx={{ 
@@ -706,24 +798,151 @@ const MaterialView: React.FC = () => {
                             </>
                           )}
                           
-                          <Tooltip title="Download Document">
-                            <IconButton 
-                              onClick={() => window.open(material.url, '_blank')}
-                              color="primary"
-                            >
-                              <Download />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}>
-                            <IconButton 
+                          <Tooltip title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen for Better Viewing"}>
+                            <Button
+                              variant="contained"
                               onClick={() => setIsFullscreen(!isFullscreen)}
-                              color="primary"
+                              startIcon={isFullscreen ? <FullscreenExit /> : <Fullscreen />}
+                              sx={{
+                                backgroundColor: isFullscreen ? 'error.main' : 'primary.main',
+                                color: 'white',
+                                px: 3,
+                                py: 1.5,
+                                borderRadius: 2,
+                                fontWeight: 'bold',
+                                fontSize: '0.9rem',
+                                textTransform: 'none',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                '&:hover': {
+                                  backgroundColor: isFullscreen ? 'error.dark' : 'primary.dark',
+                                  transform: 'translateY(-2px)',
+                                  boxShadow: '0 6px 20px rgba(0,0,0,0.25)',
+                                },
+                                '&:active': {
+                                  transform: 'translateY(0px)',
+                                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                },
+                                animation: !isFullscreen ? 'pulse 2s infinite' : 'none',
+                                '@keyframes pulse': {
+                                  '0%': {
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                  },
+                                  '50%': {
+                                    boxShadow: '0 4px 12px rgba(25, 118, 210, 0.4)',
+                                  },
+                                  '100%': {
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                  },
+                                },
+                              }}
                             >
-                              {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
-                            </IconButton>
+                              {isFullscreen ? 'Exit Fullscreen' : 'View in Fullscreen'}
+                            </Button>
                           </Tooltip>
                         </Box>
                       </Box>
+
+                      {/* Fullscreen Prompt Overlay */}
+                      {!isFullscreen && showFullscreenPrompt && (
+                        <Box sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          zIndex: 1000,
+                          borderRadius: 2,
+                          animation: 'fadeIn 0.5s ease-in-out',
+                          '@keyframes fadeIn': {
+                            '0%': { opacity: 0 },
+                            '100%': { opacity: 1 },
+                          },
+                        }}>
+                          <Box sx={{
+                            textAlign: 'center',
+                            color: 'white',
+                            p: 3,
+                            borderRadius: 2,
+                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                          }}>
+                            <IconButton
+                              onClick={() => setShowFullscreenPrompt(false)}
+                              sx={{
+                                position: 'absolute',
+                                top: 8,
+                                right: 8,
+                                color: 'white',
+                                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                },
+                              }}
+                            >
+                              <VisibilityOff />
+                            </IconButton>
+                            <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+                              📖 Better Reading Experience
+                            </Typography>
+                            <Typography variant="body1" sx={{ mb: 3, opacity: 0.9 }}>
+                              Click "View in Fullscreen" for optimal material viewing
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+                              <Button
+                                variant="contained"
+                                size="large"
+                                onClick={() => setIsFullscreen(true)}
+                                startIcon={<Fullscreen />}
+                                sx={{
+                                  backgroundColor: 'primary.main',
+                                  color: 'white',
+                                  px: 4,
+                                  py: 1.5,
+                                  borderRadius: 2,
+                                  fontWeight: 'bold',
+                                  fontSize: '1rem',
+                                  textTransform: 'none',
+                                  boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                                  '&:hover': {
+                                    backgroundColor: 'primary.dark',
+                                    transform: 'translateY(-2px)',
+                                    boxShadow: '0 6px 20px rgba(0,0,0,0.4)',
+                                  },
+                                }}
+                              >
+                                View in Fullscreen
+                              </Button>
+                              <Button
+                                variant="outlined"
+                                size="large"
+                                onClick={() => setShowFullscreenPrompt(false)}
+                                sx={{
+                                  color: 'white',
+                                  borderColor: 'rgba(255, 255, 255, 0.5)',
+                                  px: 3,
+                                  py: 1.5,
+                                  borderRadius: 2,
+                                  fontWeight: 'bold',
+                                  fontSize: '1rem',
+                                  textTransform: 'none',
+                                  '&:hover': {
+                                    borderColor: 'white',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                  },
+                                }}
+                              >
+                                Continue Reading
+                              </Button>
+                            </Box>
+                          </Box>
+                        </Box>
+                      )}
 
                       {/* Modern Document Viewer */}
                       <Box sx={{ 
@@ -771,21 +990,132 @@ const MaterialView: React.FC = () => {
                             )}
                           </Box>
                         ) : (
-                          // Use Universal Material Viewer for all other formats
-                          <UniversalMaterialViewer
-                            url={material.url || ''}
-                            title={material.title}
-                            type={material.type}
-                            height="100%"
-                            content={material.content}
-                            onTimeSpent={setTimeSpent}
-                            onComplete={() => {
-                              setIsCompleted(true);
-                              handleMarkComplete();
-                            }}
-                            showProgress={true}
-                            userId={user?._id}
-                          />
+                          // Use appropriate viewer based on material type
+                          (() => {
+                            console.log('🎯 MaterialView - Rendering material:', {
+                              title: material.title,
+                              type: material.type,
+                              hasContent: !!material.content,
+                              hasStructuredNotes: !!material.content?.structuredNotes
+                            });
+                            
+                            // Use appropriate viewer based on material type
+                            if (material.type === 'structured_notes') {
+                              return (
+                                <StructuredNotesViewer
+                                  material={material}
+                                  content={material.content}
+                                  title={material.title}
+                                  height="100%"
+                                  onTimeSpent={setTimeSpent}
+                                  onComplete={() => {
+                                    setIsCompleted(true);
+                                    handleMarkComplete();
+                                  }}
+                                  showProgress={true}
+                                  userId={user?._id}
+                                  autoRetry={true}
+                                  maxRetries={3}
+                                  validateContent={true}
+                                  onBack={handleBackToCourse}
+                                  onTimeSpent={(time) => {
+                                    if (courseId && week && materialId) {
+                                      progressTrackingService.updateTimeSpent(courseId, week._id, materialId, time);
+                                    }
+                                  }}
+                                  onComplete={() => {
+                                    if (!isCompleted) {
+                                      handleMarkComplete();
+                                    }
+                                  }}
+                                  userId={user?._id}
+                                  autoRetry={true}
+                                  maxRetries={3}
+                                  validateContent={true}
+                                  progressData={materialProgress}
+                                  onProgressUpdate={(progress) => {
+                                    if (courseId && week && materialId) {
+                                      progressTrackingService.updateMaterialProgress(courseId, week._id, materialId, progress);
+                                    }
+                                  }}
+                                />
+                              );
+                            }
+                            
+                            // For other material types, determine viewer based on URL extension
+                            
+                            if (urlLower.includes('.pdf')) {
+                              return (
+                                <SimplePDFViewer
+                                  url={url}
+                                  title={material.title}
+                                  height="100%"
+                                />
+                              );
+                            } else if (urlLower.match(/\.(doc|docx|ppt|pptx|xls|xlsx)$/)) {
+                              return (
+                                <SimpleOfficeViewer
+                                  url={url}
+                                  title={material.title}
+                                  height="100%"
+                                />
+                              );
+                            } else if (urlLower.match(/\.(mp4|avi|mov|wmv|flv|webm)$/)) {
+                              return (
+                                <SimpleMediaViewer
+                                  url={url}
+                                  title={material.title}
+                                  type="video"
+                                  height="100%"
+                                />
+                              );
+                            } else if (urlLower.match(/\.(mp3|wav|ogg)$/)) {
+                              return (
+                                <SimpleMediaViewer
+                                  url={url}
+                                  title={material.title}
+                                  type="audio"
+                                  height="100%"
+                                />
+                              );
+                            } else if (urlLower.match(/\.(jpg|jpeg|png|gif|bmp|svg|webp)$/)) {
+                              return (
+                                <SimpleImageViewer
+                                  url={url}
+                                  title={material.title}
+                                  height="100%"
+                                />
+                              );
+                            } else {
+                              // Fallback for unsupported formats
+                              return (
+                                <Box 
+                                  display="flex" 
+                                  flexDirection="column" 
+                                  justifyContent="center" 
+                                  alignItems="center" 
+                                  height="100%" 
+                                  p={3}
+                                >
+                                  <Alert severity="info" sx={{ mb: 2 }}>
+                                    <Typography variant="h6" gutterBottom>
+                                      Unsupported File Format
+                                    </Typography>
+                                    <Typography variant="body2">
+                                      This file format is not supported for inline viewing.
+                                    </Typography>
+                                  </Alert>
+                                  <Button 
+                                    variant="contained" 
+                                    onClick={() => window.open(url, '_blank')}
+                                    startIcon={<OpenInNew />}
+                                  >
+                                    Open in New Tab
+                                  </Button>
+                                </Box>
+                              );
+                            }
+                          })()
                         )}
                       </Box>
 
@@ -798,13 +1128,35 @@ const MaterialView: React.FC = () => {
                           <strong>Estimated Duration:</strong> {material.estimatedDuration} minutes
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          <strong>Viewer:</strong> {viewerType === 'webviewer' ? 'Universal Document Viewer' : 
-                                                   viewerType === 'pdf' ? 'PDF Viewer' : 
-                                                   viewerType === 'office' ? 'Office Document' : 'Generic Viewer'}
+                          <strong>Viewer:</strong> {material.type === 'structured_notes' ? 'Structured Notes Viewer' :
+                                                   urlLower.includes('.pdf') ? 'PDF Viewer' :
+                                                   urlLower.match(/\.(doc|docx|ppt|pptx|xls|xlsx)$/) ? 'Office Document Viewer' :
+                                                   urlLower.match(/\.(mp4|avi|mov|wmv|flv|webm|mp3|wav|ogg)$/) ? 'Media Viewer' :
+                                                   urlLower.match(/\.(jpg|jpeg|png|gif|bmp|svg|webp)$/) ? 'Image Viewer' : 'Generic Viewer'}
                         </Typography>
-                        {viewerType === 'webviewer' && (
+                        {material.type === 'structured_notes' && (
                           <Typography variant="body2" color="text.secondary">
-                            <strong>Features:</strong> Annotations, Search, Zoom, Print
+                            <strong>Features:</strong> Search, Bookmarks, Progress Tracking, User Notes
+                          </Typography>
+                        )}
+                        {urlLower.includes('.pdf') && (
+                          <Typography variant="body2" color="text.secondary">
+                            <strong>Features:</strong> Zoom, Fullscreen, Download, Print
+                          </Typography>
+                        )}
+                        {urlLower.match(/\.(doc|docx|ppt|pptx|xls|xlsx)$/) && (
+                          <Typography variant="body2" color="text.secondary">
+                            <strong>Features:</strong> Online Viewing, Download, Fullscreen
+                          </Typography>
+                        )}
+                        {urlLower.match(/\.(mp4|avi|mov|wmv|flv|webm|mp3|wav|ogg)$/) && (
+                          <Typography variant="body2" color="text.secondary">
+                            <strong>Features:</strong> Media Controls, Fullscreen, Download
+                          </Typography>
+                        )}
+                        {urlLower.match(/\.(jpg|jpeg|png|gif|bmp|svg|webp)$/) && (
+                          <Typography variant="body2" color="text.secondary">
+                            <strong>Features:</strong> Zoom, Rotate, Fullscreen, Download
                           </Typography>
                         )}
                         {viewerType === 'pdf' && numPages && (
@@ -914,17 +1266,6 @@ const MaterialView: React.FC = () => {
                     Back to Course
                   </Button>
                   
-                  {material.url && (
-                    <Button 
-                      variant="outlined" 
-                      fullWidth
-                      startIcon={<Download />}
-                      href={material.url}
-                      target="_blank"
-                    >
-                      Download
-                    </Button>
-                  )}
                 </Stack>
               </CardContent>
             </Card>

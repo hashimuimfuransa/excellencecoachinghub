@@ -120,7 +120,7 @@ class DocumentProcessorService {
       });
 
       console.log('✅ Document processed successfully:', response.data);
-      return response.data;
+      return response.data.data; // Return the data object from the response
 
     } catch (error: any) {
       console.error('❌ Document processing error:', {

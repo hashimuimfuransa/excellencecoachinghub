@@ -19,7 +19,7 @@ export interface IWeekMaterial {
   _id: mongoose.Types.ObjectId;
   title: string;
   description: string;
-  type: 'document' | 'video' | 'audio' | 'link' | 'quiz' | 'structured_notes';
+  type: 'document' | 'video' | 'audio' | 'link' | 'quiz' | 'structured_notes' | 'image';
   url?: string;
   filePath?: string;
   order: number;
@@ -58,7 +58,7 @@ const weekMaterialSchema = new Schema<IWeekMaterial>({
   description: { type: String, required: true },
   type: { 
     type: String, 
-    enum: ['document', 'video', 'audio', 'link', 'quiz', 'structured_notes'],
+    enum: ['document', 'video', 'audio', 'link', 'quiz', 'structured_notes', 'image'],
     required: true 
   },
   url: { type: String },

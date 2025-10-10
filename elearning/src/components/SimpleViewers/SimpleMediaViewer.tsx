@@ -1,19 +1,27 @@
 import React, { useState } from 'react';
-import { Box, Button, IconButton, Tooltip, Typography, Alert } from '@mui/material';
-import { Download, OpenInNew, Fullscreen, FullscreenExit, PlayArrow, VolumeUp } from '@mui/icons-material';
+import { Box, Button, IconButton, Tooltip, Typography, Alert, Chip, Paper, Divider } from '@mui/material';
+import { Download, OpenInNew, Fullscreen, FullscreenExit, PlayArrow, VolumeUp, Schedule, Info } from '@mui/icons-material';
 
 interface SimpleMediaViewerProps {
   url: string;
   title: string;
   type: 'video' | 'audio';
   height?: string;
+  description?: string;
+  estimatedDuration?: number;
+  isRequired?: boolean;
+  materialType?: string;
 }
 
 const SimpleMediaViewer: React.FC<SimpleMediaViewerProps> = ({
   url,
   title,
   type,
-  height = '70vh'
+  height = '70vh',
+  description,
+  estimatedDuration,
+  isRequired,
+  materialType
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,46 +56,266 @@ const SimpleMediaViewer: React.FC<SimpleMediaViewerProps> = ({
       position={isFullscreen ? 'fixed' : 'relative'}
       top={isFullscreen ? 0 : 'auto'}
       left={isFullscreen ? 0 : 'auto'}
+      right={isFullscreen ? 0 : 'auto'}
+      bottom={isFullscreen ? 0 : 'auto'}
       zIndex={isFullscreen ? 9999 : 'auto'}
       bgcolor="black"
+      sx={{
+        ...(isFullscreen && {
+          backdropFilter: 'blur(10px)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.8)',
+            zIndex: -1
+          }
+        }),
+        // Mobile optimizations
+        '@media (max-width: 768px)': {
+          height: isFullscreen ? '100vh' : '60vh',
+          '& .MuiIconButton-root': {
+            padding: '8px',
+            minWidth: '44px',
+            minHeight: '44px'
+          }
+        },
+        '@media (max-width: 480px)': {
+          height: isFullscreen ? '100vh' : '50vh',
+          '& .MuiIconButton-root': {
+            padding: '6px',
+            minWidth: '40px',
+            minHeight: '40px'
+          }
+        }
+      }}
     >
       {/* Header */}
       <Box 
         display="flex" 
-        justifyContent="space-between" 
-        alignItems="center" 
-        p={2} 
+        flexDirection="column"
+        p={isFullscreen ? 3 : 2} 
         borderBottom="1px solid #333"
-        bgcolor="rgba(0,0,0,0.8)"
+        bgcolor={isFullscreen ? "rgba(0,0,0,0.95)" : "rgba(0,0,0,0.8)"}
         color="white"
+        sx={{
+          backdropFilter: 'blur(10px)',
+          ...(isFullscreen && {
+            boxShadow: '0 2px 20px rgba(0,0,0,0.5)'
+          }),
+          // Mobile header optimizations
+          '@media (max-width: 768px)': {
+            padding: isFullscreen ? 2 : 1.5,
+            '& .MuiTypography-root': {
+              fontSize: '0.9rem'
+            }
+          },
+          '@media (max-width: 480px)': {
+            padding: isFullscreen ? 1.5 : 1,
+            '& .MuiTypography-root': {
+              fontSize: '0.8rem'
+            }
+          }
+        }}
       >
-        <Box display="flex" alignItems="center" gap={1}>
-          {getFileIcon()}
-          <Typography variant="h6">
-            {title}
-          </Typography>
+        {/* Title and Controls Row */}
+        <Box 
+          display="flex" 
+          justifyContent="space-between" 
+          alignItems="center" 
+          mb={description ? 1 : 0}
+          sx={{
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 1, sm: 0 },
+            alignItems: { xs: 'stretch', sm: 'center' },
+            // Mobile optimizations
+            '@media (max-width: 480px)': {
+              gap: 0.5,
+              '& .MuiBox-root': {
+                gap: 0.5
+              }
+            }
+          }}
+        >
+          <Box display="flex" alignItems="center" gap={1} sx={{ minWidth: 0, flex: 1 }}>
+            {getFileIcon()}
+            <Typography 
+              variant={isFullscreen ? "h5" : "h6"}
+              sx={{ 
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                fontSize: { xs: '1rem', sm: isFullscreen ? '1.5rem' : '1.25rem' }
+              }}
+            >
+              {title}
+            </Typography>
+          </Box>
+          <Box 
+            display="flex" 
+            gap={1}
+            sx={{
+              justifyContent: { xs: 'center', sm: 'flex-end' },
+              flexWrap: 'wrap',
+              // Mobile control optimizations
+              '@media (max-width: 480px)': {
+                gap: 0.5,
+                '& .MuiIconButton-root': {
+                  padding: '4px',
+                  minWidth: '36px',
+                  minHeight: '36px'
+                }
+              }
+            }}
+          >
+            <Tooltip title="Download">
+              <IconButton 
+                onClick={handleDownload} 
+                sx={{ 
+                  color: 'white',
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
+                }}
+              >
+                <Download />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Open in New Tab">
+              <IconButton 
+                onClick={handleOpenInNewTab} 
+                sx={{ 
+                  color: 'white',
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
+                }}
+              >
+                <OpenInNew />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}>
+              <IconButton 
+                onClick={toggleFullscreen} 
+                sx={{ 
+                  color: 'white',
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
+                }}
+              >
+                {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
-        <Box display="flex" gap={1}>
-          <Tooltip title="Download">
-            <IconButton onClick={handleDownload} sx={{ color: 'white' }}>
-              <Download />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Open in New Tab">
-            <IconButton onClick={handleOpenInNewTab} sx={{ color: 'white' }}>
-              <OpenInNew />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}>
-            <IconButton onClick={toggleFullscreen} sx={{ color: 'white' }}>
-              {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
-            </IconButton>
-          </Tooltip>
-        </Box>
+
+        {/* Description and Metadata Row */}
+        {(description || estimatedDuration || isRequired) && (
+          <Box 
+            display="flex" 
+            flexDirection="column" 
+            gap={1}
+            sx={{
+              // Mobile description optimizations
+              '@media (max-width: 480px)': {
+                gap: 0.5,
+                '& .MuiChip-root': {
+                  fontSize: '0.7rem',
+                  height: '24px'
+                }
+              }
+            }}
+          >
+            {description && (
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  opacity: 0.9, 
+                  lineHeight: 1.4,
+                  // Mobile text optimizations
+                  '@media (max-width: 480px)': {
+                    fontSize: '0.75rem',
+                    lineHeight: 1.3
+                  }
+                }}
+              >
+                {description}
+              </Typography>
+            )}
+            <Box 
+              display="flex" 
+              gap={1} 
+              flexWrap="wrap"
+              sx={{
+                // Mobile chip optimizations
+                '@media (max-width: 480px)': {
+                  gap: 0.5,
+                  '& .MuiChip-root': {
+                    fontSize: '0.7rem',
+                    height: '24px',
+                    '& .MuiChip-icon': {
+                      fontSize: '0.8rem'
+                    }
+                  }
+                }
+              }}
+            >
+              {estimatedDuration && (
+                <Chip
+                  icon={<Schedule />}
+                  label={`${estimatedDuration} min`}
+                  size="small"
+                  sx={{ 
+                    backgroundColor: 'rgba(255,255,255,0.1)', 
+                    color: 'white',
+                    '& .MuiChip-icon': { color: 'white' }
+                  }}
+                />
+              )}
+              {isRequired && (
+                <Chip
+                  label="Required"
+                  size="small"
+                  sx={{ 
+                    backgroundColor: 'rgba(244, 67, 54, 0.8)', 
+                    color: 'white'
+                  }}
+                />
+              )}
+              {materialType && (
+                <Chip
+                  icon={<Info />}
+                  label={materialType}
+                  size="small"
+                  sx={{ 
+                    backgroundColor: 'rgba(255,255,255,0.1)', 
+                    color: 'white',
+                    '& .MuiChip-icon': { color: 'white' }
+                  }}
+                />
+              )}
+            </Box>
+          </Box>
+        )}
       </Box>
 
       {/* Media Content */}
-      <Box flex={1} display="flex" justifyContent="center" alignItems="center" position="relative">
+      <Box 
+        flex={1} 
+        display="flex" 
+        justifyContent="center" 
+        alignItems="center" 
+        position="relative"
+        overflow="hidden"
+        bgcolor="black"
+        sx={{
+          // Mobile content optimizations
+          '@media (max-width: 768px)': {
+            minHeight: '200px'
+          },
+          '@media (max-width: 480px)': {
+            minHeight: '150px'
+          }
+        }}
+      >
         {error ? (
           <Box 
             display="flex" 
@@ -95,8 +323,10 @@ const SimpleMediaViewer: React.FC<SimpleMediaViewerProps> = ({
             justifyContent="center" 
             alignItems="center" 
             p={3}
+            bgcolor="rgba(0,0,0,0.8)"
+            borderRadius={2}
           >
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 2, bgcolor: 'transparent', color: 'white' }}>
               {error}
             </Alert>
             <Button variant="contained" onClick={handleOpenInNewTab}>
@@ -111,13 +341,21 @@ const SimpleMediaViewer: React.FC<SimpleMediaViewerProps> = ({
                 style={{ 
                   width: '100%', 
                   height: '100%', 
-                  objectFit: 'contain' 
+                  objectFit: 'contain',
+                  backgroundColor: 'black'
                 }}
                 onError={() => setError('Failed to load video. Please try opening in a new tab.')}
+                onLoadStart={() => setError(null)}
+                preload="metadata"
+                playsInline
+                webkit-playsinline="true"
+                x-webkit-airplay="allow"
               >
                 <source src={url} type="video/mp4" />
                 <source src={url} type="video/webm" />
                 <source src={url} type="video/ogg" />
+                <source src={url} type="video/avi" />
+                <source src={url} type="video/mov" />
                 Your browser does not support the video tag.
               </video>
             ) : (
@@ -129,19 +367,58 @@ const SimpleMediaViewer: React.FC<SimpleMediaViewerProps> = ({
                 width="100%" 
                 height="100%"
                 bgcolor="grey.900"
+                p={4}
+                sx={{
+                  // Mobile audio optimizations
+                  '@media (max-width: 768px)': {
+                    padding: 2
+                  },
+                  '@media (max-width: 480px)': {
+                    padding: 1.5,
+                    '& .MuiSvgIcon-root': {
+                      fontSize: '3rem'
+                    }
+                  }
+                }}
               >
-                <VolumeUp sx={{ fontSize: 80, color: 'white', mb: 2 }} />
+                <VolumeUp 
+                  sx={{ 
+                    fontSize: 80, 
+                    color: 'white', 
+                    mb: 3,
+                    '@media (max-width: 480px)': {
+                      fontSize: '3rem',
+                      mb: 2
+                    }
+                  }} 
+                />
                 <audio
                   controls
-                  style={{ width: '80%', maxWidth: '400px' }}
+                  style={{ 
+                    width: '100%', 
+                    maxWidth: '500px',
+                    marginBottom: '20px'
+                  }}
                   onError={() => setError('Failed to load audio. Please try opening in a new tab.')}
+                  onLoadStart={() => setError(null)}
+                  preload="metadata"
                 >
                   <source src={url} type="audio/mpeg" />
                   <source src={url} type="audio/wav" />
                   <source src={url} type="audio/ogg" />
+                  <source src={url} type="audio/mp3" />
                   Your browser does not support the audio tag.
                 </audio>
-                <Typography variant="h6" color="white" mt={2}>
+                <Typography 
+                  variant="h6" 
+                  color="white" 
+                  textAlign="center"
+                  sx={{
+                    '@media (max-width: 480px)': {
+                      fontSize: '1rem'
+                    }
+                  }}
+                >
                   {title}
                 </Typography>
               </Box>

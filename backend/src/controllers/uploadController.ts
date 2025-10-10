@@ -117,6 +117,145 @@ const uploadWithRetry = async (fileBuffer: Buffer, options: any, maxRetries: num
   throw lastError;
 };
 
+// Upload media file (images and videos)
+export const uploadMedia = asyncHandler(async (req: Request, res: Response) => {
+  const { title, description, type, courseId, weekId } = req.body;
+
+  console.log('📤 Media upload request received:', {
+    user: req.user?.email,
+    role: req.user?.role,
+    fileName: req.file?.originalname,
+    fileSize: req.file?.size,
+    mimeType: req.file?.mimetype,
+    title,
+    description,
+    type,
+    courseId,
+    weekId
+  });
+
+  if (!req.file) {
+    console.error('❌ No file uploaded');
+    return res.status(400).json({
+      success: false,
+      message: 'No file uploaded'
+    });
+  }
+
+  // Validate media file types
+  const allowedMediaTypes = [
+    'video/mp4', 'video/avi', 'video/mov', 'video/wmv', 'video/flv', 'video/webm', 'video/mkv',
+    'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp', 'image/webp', 'image/svg+xml'
+  ];
+
+  if (!allowedMediaTypes.includes(req.file.mimetype)) {
+    return res.status(400).json({
+      success: false,
+      message: `File type ${req.file.mimetype} is not supported. Please upload video or image files.`
+    });
+  }
+
+  // Validate file size (500MB for media)
+  const maxSize = 500 * 1024 * 1024; // 500MB
+  if (req.file.size > maxSize) {
+    return res.status(400).json({
+      success: false,
+      message: `File size exceeds maximum allowed size of 500MB`
+    });
+  }
+
+  try {
+    // If Cloudinary is not available, use mock upload
+    if (!cloudinary || !process.env.CLOUDINARY_CLOUD_NAME) {
+      console.warn('Cloudinary not configured. Using mock upload service.');
+      
+      // Create a mock response
+      const mockResult = {
+        public_id: `mock_media_${Date.now()}_${req.file.originalname}`,
+        secure_url: `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
+        format: req.file.mimetype.split('/')[1] || 'unknown',
+        resource_type: req.file.mimetype.startsWith('video/') ? 'video' : 'image',
+        bytes: req.file.size,
+        width: req.file.mimetype.startsWith('image/') ? 1920 : undefined,
+        height: req.file.mimetype.startsWith('image/') ? 1080 : undefined,
+        duration: req.file.mimetype.startsWith('video/') ? 60 : undefined
+      };
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          url: mockResult.secure_url,
+          publicId: mockResult.public_id,
+          title: title || req.file.originalname,
+          description: description || '',
+          type: req.file.mimetype.startsWith('video/') ? 'video' : 'image',
+          size: req.file.size,
+          format: mockResult.format,
+          metadata: {
+            width: mockResult.width,
+            height: mockResult.height,
+            duration: mockResult.duration
+          }
+        }
+      });
+    }
+
+    // Upload to Cloudinary
+    const folder = `course-media/${courseId || 'general'}`;
+    const options = {
+      folder,
+      resource_type: req.file.mimetype.startsWith('video/') ? 'video' : 'image',
+      use_filename: true,
+      unique_filename: true,
+      overwrite: false,
+      transformation: req.file.mimetype.startsWith('image/') ? [
+        { quality: 'auto:good' },
+        { fetch_format: 'auto' }
+      ] : [
+        { quality: 'auto:good' },
+        { format: 'mp4' }
+      ]
+    };
+
+    console.log('🔄 Uploading to Cloudinary with options:', options);
+
+    const result = await uploadWithRetry(req.file.buffer, options);
+
+    console.log('✅ Media uploaded successfully:', {
+      publicId: result.public_id,
+      url: result.secure_url,
+      format: result.format,
+      size: result.bytes
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        url: result.secure_url,
+        publicId: result.public_id,
+        title: title || req.file.originalname,
+        description: description || '',
+        type: req.file.mimetype.startsWith('video/') ? 'video' : 'image',
+        size: result.bytes,
+        format: result.format,
+        metadata: {
+          width: result.width,
+          height: result.height,
+          duration: result.duration,
+          folder: result.folder
+        }
+      }
+    });
+
+  } catch (error: any) {
+    console.error('❌ Media upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Media upload failed'
+    });
+  }
+});
+
 // Upload material file
 export const uploadMaterial = asyncHandler(async (req: Request, res: Response) => {
   const { folder = 'course-materials' } = req.body;

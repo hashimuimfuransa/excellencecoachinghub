@@ -215,3 +215,73 @@ async function updateWeekProgress(studentId: string, courseId: string, weekId: s
   
   return weekProgress;
 }
+
+// Sync progress data with server
+export const syncProgressWithServer = asyncHandler(async (req: Request, res: Response) => {
+  const { courseId } = req.params;
+  const { progressData } = req.body;
+  const studentId = req.user?.id;
+  
+  if (!studentId) {
+    return res.status(401).json({
+      success: false,
+      message: 'User not authenticated'
+    });
+  }
+  
+  try {
+    // If progressData is provided, update local progress
+    if (progressData && Array.isArray(progressData)) {
+      for (const progress of progressData) {
+        await StudentProgress.findOneAndUpdate(
+          { 
+            studentId, 
+            courseId, 
+            weekId: progress.weekId, 
+            materialId: progress.materialId 
+          },
+          {
+            studentId,
+            courseId,
+            weekId: progress.weekId,
+            materialId: progress.materialId,
+            timeSpent: progress.timeSpent || 0,
+            status: progress.status || 'in_progress',
+            lastAccessed: new Date(),
+            ...(progress.completedAt && { completedAt: progress.completedAt })
+          },
+          { upsert: true, new: true }
+        );
+        
+        // Update week progress if material is completed
+        if (progress.status === 'completed') {
+          await updateWeekProgress(studentId, courseId, progress.weekId);
+        }
+      }
+    }
+    
+    // Return current progress state
+    const weekProgresses = await WeekProgress.find({ studentId, courseId })
+      .populate('weekId', 'title weekNumber startDate endDate')
+      .sort({ 'weekId.weekNumber': 1 });
+    
+    const materialProgresses = await StudentProgress.find({ studentId, courseId })
+      .populate('weekId', 'title weekNumber')
+      .sort({ completedAt: -1 });
+    
+    res.json({
+      success: true,
+      data: {
+        weekProgresses,
+        materialProgresses,
+        syncedAt: new Date()
+      }
+    });
+  } catch (error) {
+    console.error('Error syncing progress:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to sync progress'
+    });
+  }
+});

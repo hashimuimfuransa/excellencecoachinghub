@@ -262,8 +262,6 @@ const App: React.FC = () => {
           <Route path="courses" element={<StudentCourses />} />
           <Route path="course-content" element={<CourseContent />} />
           <Route path="course-content/:id" element={<CourseContent />} />
-          {/* Learning Page Route */}
-          <Route path="course/:id/learn" element={<UnifiedLearningPage />} />
           <Route path="course/:id/weeks" element={<StudentCourseView />} />
           <Route path="course/:id/enroll" element={<CourseEnrollmentSystem courseId="" onEnrollmentComplete={() => {}} />} />
           <Route path="course/:id/material" element={<CourseMaterialPage />} />
@@ -509,6 +507,16 @@ const App: React.FC = () => {
         element={
           <ProtectedRoute requiredRole={UserRole.STUDENT}>
             <StudentCourses />
+          </ProtectedRoute>
+        }
+      />
+      
+      {/* Standalone Learning Page - Outside Dashboard Layout */}
+      <Route
+        path="/course/:id/learn"
+        element={
+          <ProtectedRoute requiredRole={UserRole.STUDENT}>
+            <UnifiedLearningPage />
           </ProtectedRoute>
         }
       />

@@ -60,6 +60,7 @@ import { assignmentService } from '../../services/assignmentService';
 import { assessmentService } from '../../services/assessmentService';
 import { Week, WeekMaterial } from '../../services/weekService';
 import DocumentProcessor from '../../components/CourseMaterials/DocumentProcessor';
+import MediaUploader from '../../components/CourseMaterials/MediaUploader';
 import CourseMaterials from '../../components/CourseMaterials/CourseMaterials';
 
 interface TabPanelProps {
@@ -951,144 +952,451 @@ const CourseManagement: React.FC = () => {
           <Grid container spacing={3}>
             {weeks.map((week, index) => (
               <Grid item xs={12} key={week._id || `week-${index}`}>
-                <Card>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                <Card sx={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 8px 25px rgba(0,0,0,0.15)'
+                  },
+                  // Mobile optimizations
+                  '@media (max-width: 768px)': {
+                    '&:hover': {
+                      transform: 'none'
+                    }
+                  }
+                }}>
+                  <CardContent sx={{
+                    // Mobile padding optimizations
+                    '@media (max-width: 480px)': {
+                      padding: 2
+                    }
+                  }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'flex-start', 
+                      mb: 2,
+                      // Mobile layout optimizations
+                      '@media (max-width: 768px)': {
+                        flexDirection: 'column',
+                        gap: 2,
+                        alignItems: 'stretch'
+                      }
+                    }}>
                       <Box sx={{ flex: 1 }}>
-                        <Typography variant="h6" gutterBottom>
-                          Week {week.weekNumber}: {week.title}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" paragraph>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                          <Box sx={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: '50%',
+                            backgroundColor: 'rgba(255,255,255,0.2)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 'bold',
+                            fontSize: '1.2rem'
+                          }}>
+                            {week.weekNumber}
+                          </Box>
+                          <Typography 
+                            variant="h5" 
+                            gutterBottom
+                            sx={{
+                              fontWeight: 'bold',
+                              // Mobile typography optimizations
+                              '@media (max-width: 480px)': {
+                                fontSize: '1.3rem'
+                              }
+                            }}
+                          >
+                            {week.title}
+                          </Typography>
+                        </Box>
+                        <Typography 
+                          variant="body1" 
+                          sx={{ 
+                            opacity: 0.9, 
+                            mb: 2,
+                            // Mobile typography optimizations
+                            '@media (max-width: 480px)': {
+                              fontSize: '0.9rem'
+                            }
+                          }}
+                        >
                           {week.description}
                         </Typography>
                         
-                        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          gap: 1, 
+                          mb: 2, 
+                          flexWrap: 'wrap',
+                          // Mobile chip optimizations
+                          '@media (max-width: 480px)': {
+                            gap: 0.5,
+                            '& .MuiChip-root': {
+                              fontSize: '0.75rem',
+                              height: '28px'
+                            }
+                          }
+                        }}>
                           <Chip 
                             label={`${week.materials.length} Materials`} 
                             size="small" 
-                            color="primary" 
-                            variant="outlined" 
+                            sx={{ 
+                              backgroundColor: 'rgba(255,255,255,0.2)', 
+                              color: 'white',
+                              border: '1px solid rgba(255,255,255,0.3)'
+                            }}
                           />
                           <Chip 
                             label={`${new Date(week.startDate).toLocaleDateString()} - ${new Date(week.endDate).toLocaleDateString()}`} 
                             size="small" 
-                            variant="outlined" 
+                            sx={{ 
+                              backgroundColor: 'rgba(255,255,255,0.2)', 
+                              color: 'white',
+                              border: '1px solid rgba(255,255,255,0.3)'
+                            }}
                           />
                           <Chip 
                             label={week.isPublished ? 'Published' : 'Draft'} 
                             size="small" 
-                            color={week.isPublished ? 'success' : 'warning'} 
-                            variant="outlined" 
+                            sx={{ 
+                              backgroundColor: week.isPublished ? 'rgba(76, 175, 80, 0.8)' : 'rgba(255, 193, 7, 0.8)', 
+                              color: 'white',
+                              border: '1px solid rgba(255,255,255,0.3)'
+                            }}
                           />
                           {week.assessment && (
                             <Chip 
                               label="Has Assessment" 
                               size="small" 
-                              color="secondary" 
-                              variant="outlined" 
+                              sx={{ 
+                                backgroundColor: 'rgba(156, 39, 176, 0.8)', 
+                                color: 'white',
+                                border: '1px solid rgba(255,255,255,0.3)'
+                              }}
                             />
                           )}
                           {week.assignment && (
                             <Chip 
                               label="Has Assignment" 
                               size="small" 
-                              color="info" 
-                              variant="outlined" 
+                              sx={{ 
+                                backgroundColor: 'rgba(33, 150, 243, 0.8)', 
+                                color: 'white',
+                                border: '1px solid rgba(255,255,255,0.3)'
+                              }}
                             />
                           )}
                         </Box>
 
                         {/* Week Materials */}
-                        <Typography variant="subtitle2" gutterBottom>
-                          Materials ({week.materials.length}):
+                        <Typography 
+                          variant="subtitle1" 
+                          gutterBottom
+                          sx={{ 
+                            fontWeight: 'bold',
+                            mb: 2,
+                            // Mobile typography optimizations
+                            '@media (max-width: 480px)': {
+                              fontSize: '1rem'
+                            }
+                          }}
+                        >
+                          📚 Materials ({week.materials.length})
                         </Typography>
-                        <List dense>
-                          {week.materials.map((material, materialIndex) => (
-                            <ListItem key={material._id || `material-${materialIndex}`} divider>
-                              <Avatar sx={{ mr: 2, width: 32, height: 32 }}>
-                                {getFileIcon(material.type)}
-                              </Avatar>
-                              <ListItemText
-                                primary={material.title}
-                                secondary={
-                                  <Box>
-                                    <Typography variant="caption" display="block">
+                        
+                        {week.materials.length === 0 ? (
+                          <Box sx={{ 
+                            textAlign: 'center', 
+                            py: 3,
+                            backgroundColor: 'rgba(255,255,255,0.1)',
+                            borderRadius: 2,
+                            border: '2px dashed rgba(255,255,255,0.3)'
+                          }}>
+                            <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                              No materials added yet. Click "Add Material" to get started.
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <Box sx={{ 
+                            display: 'grid',
+                            gap: 1.5,
+                            // Mobile grid optimizations
+                            '@media (max-width: 768px)': {
+                              gap: 1
+                            }
+                          }}>
+                            {week.materials.map((material, materialIndex) => (
+                              <Paper 
+                                key={material._id || `material-${materialIndex}`}
+                                sx={{
+                                  backgroundColor: 'rgba(255,255,255,0.1)',
+                                  backdropFilter: 'blur(10px)',
+                                  border: '1px solid rgba(255,255,255,0.2)',
+                                  borderRadius: 2,
+                                  p: 2,
+                                  transition: 'all 0.3s ease',
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(255,255,255,0.15)',
+                                    transform: 'translateX(4px)'
+                                  },
+                                  // Mobile optimizations
+                                  '@media (max-width: 480px)': {
+                                    p: 1.5,
+                                    '&:hover': {
+                                      transform: 'none'
+                                    }
+                                  }
+                                }}
+                              >
+                                <Box sx={{ 
+                                  display: 'flex', 
+                                  alignItems: 'flex-start', 
+                                  gap: 2,
+                                  // Mobile layout optimizations
+                                  '@media (max-width: 480px)': {
+                                    gap: 1.5
+                                  }
+                                }}>
+                                  <Box sx={{
+                                    width: 48,
+                                    height: 48,
+                                    borderRadius: 2,
+                                    backgroundColor: 'rgba(255,255,255,0.2)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0,
+                                    // Mobile icon optimizations
+                                    '@media (max-width: 480px)': {
+                                      width: 40,
+                                      height: 40
+                                    }
+                                  }}>
+                                    {getFileIcon(material.type)}
+                                  </Box>
+                                  
+                                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <Typography 
+                                      variant="subtitle2" 
+                                      sx={{ 
+                                        fontWeight: 'bold',
+                                        mb: 0.5,
+                                        // Mobile typography optimizations
+                                        '@media (max-width: 480px)': {
+                                          fontSize: '0.9rem'
+                                        }
+                                      }}
+                                    >
+                                      {material.title}
+                                    </Typography>
+                                    <Typography 
+                                      variant="caption" 
+                                      sx={{ 
+                                        opacity: 0.8,
+                                        display: 'block',
+                                        mb: 1,
+                                        // Mobile typography optimizations
+                                        '@media (max-width: 480px)': {
+                                          fontSize: '0.75rem'
+                                        }
+                                      }}
+                                    >
                                       {material.description}
                                     </Typography>
-                                    <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5 }}>
+                                    
+                                    <Box sx={{ 
+                                      display: 'flex', 
+                                      gap: 0.5, 
+                                      flexWrap: 'wrap',
+                                      // Mobile chip optimizations
+                                      '@media (max-width: 480px)': {
+                                        gap: 0.25,
+                                        '& .MuiChip-root': {
+                                          fontSize: '0.7rem',
+                                          height: '24px'
+                                        }
+                                      }
+                                    }}>
                                       <Chip 
                                         label={material.type === 'structured_notes' ? 'AI Notes' : material.type} 
                                         size="small" 
-                                        variant="outlined" 
-                                        color={material.type === 'structured_notes' ? 'success' : 'default'}
+                                        sx={{ 
+                                          backgroundColor: material.type === 'structured_notes' ? 'rgba(76, 175, 80, 0.8)' : 'rgba(255,255,255,0.2)', 
+                                          color: 'white',
+                                          border: '1px solid rgba(255,255,255,0.3)'
+                                        }}
                                       />
-                                      <Chip label={`${material.estimatedDuration} min`} size="small" variant="outlined" />
+                                      <Chip 
+                                        label={`${material.estimatedDuration} min`} 
+                                        size="small" 
+                                        sx={{ 
+                                          backgroundColor: 'rgba(255,255,255,0.2)', 
+                                          color: 'white',
+                                          border: '1px solid rgba(255,255,255,0.3)'
+                                        }}
+                                      />
                                       {material.type === 'structured_notes' && material.content?.structuredNotes && (
                                         <Chip 
                                           label={`${material.content.structuredNotes.sections.length} sections`} 
                                           size="small" 
-                                          variant="outlined" 
-                                          color="info"
+                                          sx={{ 
+                                            backgroundColor: 'rgba(33, 150, 243, 0.8)', 
+                                            color: 'white',
+                                            border: '1px solid rgba(255,255,255,0.3)'
+                                          }}
                                         />
                                       )}
                                       {material.isRequired && (
-                                        <Chip label="Required" size="small" color="error" variant="outlined" />
+                                        <Chip 
+                                          label="Required" 
+                                          size="small" 
+                                          sx={{ 
+                                            backgroundColor: 'rgba(244, 67, 54, 0.8)', 
+                                            color: 'white',
+                                            border: '1px solid rgba(255,255,255,0.3)'
+                                          }}
+                                        />
                                       )}
                                     </Box>
                                   </Box>
-                                }
-                              />
-                              <ListItemSecondaryAction>
-                                <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => handleEditWeekMaterial(week, material)}
-                                    title="Edit Material"
-                                  >
-                                    <Edit />
-                                  </IconButton>
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => handleDeleteWeekMaterial(week, material)}
-                                    title="Delete Material"
-                                    color="error"
-                                  >
-                                    <Delete />
-                                  </IconButton>
+                                  
+                                  <Box sx={{ 
+                                    display: 'flex', 
+                                    gap: 0.5,
+                                    flexShrink: 0,
+                                    // Mobile action buttons optimizations
+                                    '@media (max-width: 480px)': {
+                                      flexDirection: 'column',
+                                      gap: 0.25
+                                    }
+                                  }}>
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => handleEditWeekMaterial(week, material)}
+                                      title="Edit Material"
+                                      sx={{
+                                        backgroundColor: 'rgba(255,255,255,0.1)',
+                                        color: 'white',
+                                        '&:hover': {
+                                          backgroundColor: 'rgba(255,255,255,0.2)'
+                                        },
+                                        // Mobile button optimizations
+                                        '@media (max-width: 480px)': {
+                                          padding: '6px'
+                                        }
+                                      }}
+                                    >
+                                      <Edit />
+                                    </IconButton>
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => handleDeleteWeekMaterial(week, material)}
+                                      title="Delete Material"
+                                      sx={{
+                                        backgroundColor: 'rgba(244, 67, 54, 0.2)',
+                                        color: 'white',
+                                        '&:hover': {
+                                          backgroundColor: 'rgba(244, 67, 54, 0.4)'
+                                        },
+                                        // Mobile button optimizations
+                                        '@media (max-width: 480px)': {
+                                          padding: '6px'
+                                        }
+                                      }}
+                                    >
+                                      <Delete />
+                                    </IconButton>
+                                  </Box>
                                 </Box>
-                              </ListItemSecondaryAction>
-                            </ListItem>
-                          ))}
-                        </List>
+                              </Paper>
+                            ))}
+                          </Box>
+                        )}
                       </Box>
                     </Box>
 
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      gap: 1, 
+                      flexWrap: 'wrap',
+                      mt: 2,
+                      pt: 2,
+                      borderTop: '1px solid rgba(255,255,255,0.2)',
+                      // Mobile action buttons optimizations
+                      '@media (max-width: 480px)': {
+                        gap: 0.5,
+                        '& .MuiButton-root': {
+                          fontSize: '0.8rem',
+                          padding: '6px 12px'
+                        }
+                      }
+                    }}>
                       <Button
                         size="small"
-                        variant="outlined"
+                        variant="contained"
                         startIcon={<Add />}
                         onClick={() => handleAddWeekMaterial(week)}
+                        sx={{
+                          backgroundColor: 'rgba(255,255,255,0.2)',
+                          color: 'white',
+                          border: '1px solid rgba(255,255,255,0.3)',
+                          '&:hover': {
+                            backgroundColor: 'rgba(255,255,255,0.3)'
+                          }
+                        }}
                       >
                         Add Material
                       </Button>
                       <Button
                         size="small"
+                        variant="outlined"
                         onClick={() => handleEditWeek(week)}
+                        sx={{
+                          borderColor: 'rgba(255,255,255,0.5)',
+                          color: 'white',
+                          '&:hover': {
+                            backgroundColor: 'rgba(255,255,255,0.1)',
+                            borderColor: 'rgba(255,255,255,0.7)'
+                          }
+                        }}
                       >
                         Edit Week
                       </Button>
                       <Button
                         size="small"
+                        variant="outlined"
                         onClick={() => handleToggleWeekPublish(week)}
-                        color={week.isPublished ? 'warning' : 'success'}
+                        sx={{
+                          borderColor: week.isPublished ? 'rgba(255, 193, 7, 0.8)' : 'rgba(76, 175, 80, 0.8)',
+                          color: week.isPublished ? '#ffc107' : '#4caf50',
+                          backgroundColor: week.isPublished ? 'rgba(255, 193, 7, 0.1)' : 'rgba(76, 175, 80, 0.1)',
+                          '&:hover': {
+                            backgroundColor: week.isPublished ? 'rgba(255, 193, 7, 0.2)' : 'rgba(76, 175, 80, 0.2)'
+                          }
+                        }}
                       >
                         {week.isPublished ? 'Unpublish' : 'Publish'}
                       </Button>
                       <IconButton
                         size="small"
                         onClick={() => handleDeleteWeek(week)}
-                        color="error"
+                        sx={{
+                          backgroundColor: 'rgba(244, 67, 54, 0.2)',
+                          color: 'white',
+                          border: '1px solid rgba(244, 67, 54, 0.5)',
+                          '&:hover': {
+                            backgroundColor: 'rgba(244, 67, 54, 0.4)'
+                          },
+                          // Mobile button optimizations
+                          '@media (max-width: 480px)': {
+                            padding: '6px'
+                          }
+                        }}
                       >
                         <Delete />
                       </IconButton>
@@ -1182,6 +1490,65 @@ const CourseManagement: React.FC = () => {
                           setError(error);
                         }}
                       />
+
+                      <Divider sx={{ my: 2 }} />
+
+                      {/* Media Upload (Images & Videos) */}
+                      <Box>
+                        <Typography variant="subtitle2" gutterBottom>
+                          🎥 Media Upload (Images & Videos)
+                        </Typography>
+                        <MediaUploader
+                          courseId={courseId}
+                          weekId={week._id}
+                          onUploadComplete={async (materialData) => {
+                            try {
+                              console.log('🔄 Media material ready to save to week:', {
+                                weekId: week._id,
+                                materialData: materialData,
+                                materialKeys: Object.keys(materialData || {})
+                              });
+
+                              // Dynamically import weekService
+                              const { weekService } = await import('../../services/weekService');
+                              
+                              console.log('📤 Saving media material data:', {
+                                materialData,
+                                weekId: week._id,
+                                weekMaterialsCount: week.materials.length
+                              });
+                              
+                              // Save media material to the database
+                              const savedMaterial = await weekService.addWeekMaterial(week._id, materialData);
+                              
+                              console.log('✅ Media material saved successfully:', {
+                                materialId: savedMaterial._id,
+                                title: savedMaterial.title,
+                                type: savedMaterial.type
+                              });
+                              
+                              // Update frontend state
+                              setWeeks(prev => prev.map(w => 
+                                w._id === week._id 
+                                  ? { ...w, materials: [...w.materials, savedMaterial] }
+                                  : w
+                              ));
+                            } catch (err: any) {
+                              console.error('❌ Error saving media material to week:', {
+                                error: err,
+                                message: err.message,
+                                response: err.response?.data,
+                                status: err.response?.status,
+                                materialData: materialData
+                              });
+                              setError(err.message || 'Failed to save media material to week');
+                            }
+                          }}
+                          onUploadError={(error) => {
+                            setError(error);
+                          }}
+                        />
+                      </Box>
                     </CardContent>
                   </Card>
                 ))}

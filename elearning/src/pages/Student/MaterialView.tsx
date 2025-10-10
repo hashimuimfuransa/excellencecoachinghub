@@ -433,9 +433,10 @@ const MaterialView: React.FC = () => {
         mp => mp.weekId === foundWeek._id && mp.materialId === materialId
       );
       
-      if (materialProgress && materialProgress.status === 'completed') {
-        setIsCompleted(true);
-        setTimeSpent(materialProgress.timeSpent);
+      if (materialProgress) {
+        setIsCompleted(materialProgress.status === 'completed');
+        setTimeSpent(materialProgress.timeSpent || 0);
+        setMaterialProgress(materialProgress);
       }
     } catch (err: any) {
       console.error('Error loading material data:', err);
@@ -472,7 +473,7 @@ const MaterialView: React.FC = () => {
   };
 
   const handleBackToCourse = () => {
-    navigate(`/dashboard/student/course/${courseId}/learn`);
+    navigate(`/course/${courseId}/learn`);
   };
 
   // PDF Document Handlers
@@ -609,7 +610,7 @@ const MaterialView: React.FC = () => {
           href="#" 
           onClick={(e) => {
             e.preventDefault();
-            navigate(`/dashboard/student/course/${courseId}/learn`);
+            navigate(`/course/${courseId}/learn`);
           }}
         >
           {week.title}
@@ -618,23 +619,107 @@ const MaterialView: React.FC = () => {
       </Breadcrumbs>
 
       {/* Material Header */}
-      <Card sx={{ mb: 4, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
-              <Avatar sx={{ bgcolor: 'white', color: 'primary.main', width: 64, height: 64 }}>
+      <Card sx={{ 
+        mb: 4, 
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+        color: 'white',
+        // Mobile optimizations
+        '@media (max-width: 768px)': {
+          mb: 2
+        }
+      }}>
+        <CardContent sx={{
+          // Mobile padding optimizations
+          '@media (max-width: 480px)': {
+            padding: 2
+          }
+        }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'flex-start', 
+            mb: 2,
+            // Mobile layout optimizations
+            '@media (max-width: 768px)': {
+              flexDirection: 'column',
+              gap: 2,
+              alignItems: 'stretch'
+            }
+          }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 2, 
+              flex: 1,
+              // Mobile layout optimizations
+              '@media (max-width: 480px)': {
+                flexDirection: 'column',
+                textAlign: 'center',
+                gap: 1
+              }
+            }}>
+              <Avatar sx={{ 
+                bgcolor: 'white', 
+                color: 'primary.main', 
+                width: 64, 
+                height: 64,
+                // Mobile avatar optimizations
+                '@media (max-width: 480px)': {
+                  width: 48,
+                  height: 48
+                }
+              }}>
                 {getFileIcon(material.type)}
               </Avatar>
               
               <Box sx={{ flex: 1 }}>
-                <Typography variant="h4" gutterBottom>
+                <Typography 
+                  variant="h4" 
+                  gutterBottom
+                  sx={{
+                    // Mobile typography optimizations
+                    '@media (max-width: 768px)': {
+                      fontSize: '1.75rem'
+                    },
+                    '@media (max-width: 480px)': {
+                      fontSize: '1.5rem'
+                    }
+                  }}
+                >
                   {material.title}
                 </Typography>
-                <Typography variant="h6" sx={{ opacity: 0.9, mb: 2 }}>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    opacity: 0.9, 
+                    mb: 2,
+                    // Mobile typography optimizations
+                    '@media (max-width: 768px)': {
+                      fontSize: '1rem'
+                    },
+                    '@media (max-width: 480px)': {
+                      fontSize: '0.9rem',
+                      mb: 1
+                    }
+                  }}
+                >
                   {material.description}
                 </Typography>
                 
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: 1, 
+                  flexWrap: 'wrap',
+                  // Mobile chip optimizations
+                  '@media (max-width: 480px)': {
+                    justifyContent: 'center',
+                    gap: 0.5,
+                    '& .MuiChip-root': {
+                      fontSize: '0.75rem',
+                      height: '28px'
+                    }
+                  }
+                }}>
                   <Chip 
                     icon={<Timer />} 
                     label={`${material.estimatedDuration} minutes`} 
@@ -665,7 +750,20 @@ const MaterialView: React.FC = () => {
               </Box>
             </Box>
             
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 1,
+              // Mobile action buttons optimizations
+              '@media (max-width: 768px)': {
+                justifyContent: 'center',
+                alignSelf: 'center'
+              },
+              '@media (max-width: 480px)': {
+                '& .MuiIconButton-root': {
+                  padding: '8px'
+                }
+              }
+            }}>
               <IconButton sx={{ color: 'white' }}>
                 <Bookmark />
               </IconButton>
@@ -676,23 +774,56 @@ const MaterialView: React.FC = () => {
           </Box>
 
           {/* Progress */}
-          <Box sx={{ mt: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2">Time Spent</Typography>
-              <Typography variant="body2">{timeSpent} / {material.estimatedDuration} minutes</Typography>
+          <Box sx={{ 
+            mt: 2,
+            // Mobile progress optimizations
+            '@media (max-width: 480px)': {
+              mt: 1
+            }
+          }}>
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              mb: 1,
+              // Mobile progress text optimizations
+              '@media (max-width: 480px)': {
+                '& .MuiTypography-root': {
+                  fontSize: '0.8rem'
+                }
+              }
+            }}>
+              <Typography variant="body2">
+                {isCompleted ? 'Completed' : 'Progress'}
+              </Typography>
+              <Typography variant="body2">
+                {isCompleted ? '100%' : `${Math.round((timeSpent / material.estimatedDuration) * 100)}%`} 
+                ({timeSpent} / {material.estimatedDuration} min)
+              </Typography>
             </Box>
             <LinearProgress 
               variant="determinate" 
-              value={Math.min((timeSpent / material.estimatedDuration) * 100, 100)} 
+              value={isCompleted ? 100 : Math.min((timeSpent / material.estimatedDuration) * 100, 100)} 
               sx={{ 
                 height: 8, 
                 borderRadius: 4,
                 backgroundColor: 'rgba(255,255,255,0.3)',
                 '& .MuiLinearProgress-bar': {
-                  backgroundColor: 'white'
+                  backgroundColor: isCompleted ? '#4caf50' : 'white'
+                },
+                // Mobile progress bar optimizations
+                '@media (max-width: 480px)': {
+                  height: 6
                 }
               }} 
             />
+            {isCompleted && (
+              <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CheckCircle sx={{ fontSize: 16, color: '#4caf50' }} />
+                <Typography variant="caption" sx={{ color: '#4caf50', fontWeight: 'bold' }}>
+                  Material completed successfully!
+                </Typography>
+              </Box>
+            )}
           </Box>
         </CardContent>
       </Card>
@@ -1042,9 +1173,35 @@ const MaterialView: React.FC = () => {
                               );
                             }
                             
-                            // For other material types, determine viewer based on URL extension
+                            // For other material types, determine viewer based on material type or URL extension
                             
-                            if (urlLower.includes('.pdf')) {
+                            // Check material type first
+                            if (material.type === 'video') {
+                              return (
+                                <SimpleMediaViewer
+                                  url={url}
+                                  title={material.title}
+                                  type="video"
+                                  height="100%"
+                                  description={material.description}
+                                  estimatedDuration={material.estimatedDuration}
+                                  isRequired={material.isRequired}
+                                  materialType={material.type}
+                                />
+                              );
+                            } else if (material.type === 'image') {
+                              return (
+                                <SimpleImageViewer
+                                  url={url}
+                                  title={material.title}
+                                  height="100%"
+                                  description={material.description}
+                                  estimatedDuration={material.estimatedDuration}
+                                  isRequired={material.isRequired}
+                                  materialType={material.type}
+                                />
+                              );
+                            } else if (urlLower.includes('.pdf')) {
                               return (
                                 <SimplePDFViewer
                                   url={url}
@@ -1067,6 +1224,10 @@ const MaterialView: React.FC = () => {
                                   title={material.title}
                                   type="video"
                                   height="100%"
+                                  description={material.description}
+                                  estimatedDuration={material.estimatedDuration}
+                                  isRequired={material.isRequired}
+                                  materialType={material.type}
                                 />
                               );
                             } else if (urlLower.match(/\.(mp3|wav|ogg)$/)) {
@@ -1076,6 +1237,10 @@ const MaterialView: React.FC = () => {
                                   title={material.title}
                                   type="audio"
                                   height="100%"
+                                  description={material.description}
+                                  estimatedDuration={material.estimatedDuration}
+                                  isRequired={material.isRequired}
+                                  materialType={material.type}
                                 />
                               );
                             } else if (urlLower.match(/\.(jpg|jpeg|png|gif|bmp|svg|webp)$/)) {
@@ -1084,6 +1249,10 @@ const MaterialView: React.FC = () => {
                                   url={url}
                                   title={material.title}
                                   height="100%"
+                                  description={material.description}
+                                  estimatedDuration={material.estimatedDuration}
+                                  isRequired={material.isRequired}
+                                  materialType={material.type}
                                 />
                               );
                             } else {
@@ -1244,7 +1413,16 @@ const MaterialView: React.FC = () => {
                   Actions
                 </Typography>
                 
-                <Stack spacing={2}>
+                <Stack spacing={2} sx={{
+                  // Mobile button optimizations
+                  '@media (max-width: 480px)': {
+                    spacing: 1.5,
+                    '& .MuiButton-root': {
+                      minHeight: '48px',
+                      fontSize: '0.9rem'
+                    }
+                  }
+                }}>
                   {!isCompleted && (
                     <Button 
                       variant="contained" 
@@ -1252,6 +1430,12 @@ const MaterialView: React.FC = () => {
                       startIcon={<CheckCircle />}
                       onClick={handleMarkComplete}
                       disabled={timeSpent < material.estimatedDuration * 0.5} // Require at least 50% time spent
+                      sx={{
+                        // Mobile button styling
+                        '@media (max-width: 480px)': {
+                          py: 1.5
+                        }
+                      }}
                     >
                       Mark as Complete
                     </Button>
@@ -1262,6 +1446,12 @@ const MaterialView: React.FC = () => {
                     fullWidth
                     startIcon={<ArrowBack />}
                     onClick={handleBackToCourse}
+                    sx={{
+                      // Mobile button styling
+                      '@media (max-width: 480px)': {
+                        py: 1.5
+                      }
+                    }}
                   >
                     Back to Course
                   </Button>

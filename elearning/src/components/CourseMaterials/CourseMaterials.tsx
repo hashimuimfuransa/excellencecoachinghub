@@ -122,14 +122,35 @@ const CourseMaterials: React.FC<CourseMaterialsProps> = ({
     switch (type) {
       case 'video':
         return (
-          <Box sx={{ width: '100%', height: '70vh' }}>
-            <video
-              controls
-              style={{ width: '100%', height: '100%' }}
-              src={url}
-            >
-              Your browser does not support the video tag.
-            </video>
+          <Box sx={{ width: '100%', height: '70vh', display: 'flex', flexDirection: 'column' }}>
+            {/* Video Header with Description */}
+            {(selectedMaterial.description || selectedMaterial.estimatedDuration) && (
+              <Box sx={{ p: 2, bgcolor: 'grey.50', borderBottom: '1px solid', borderColor: 'divider' }}>
+                {selectedMaterial.description && (
+                  <Typography variant="body2" color="text.secondary" paragraph>
+                    {selectedMaterial.description}
+                  </Typography>
+                )}
+                {selectedMaterial.estimatedDuration && (
+                  <Chip 
+                    label={`${selectedMaterial.estimatedDuration} minutes`} 
+                    size="small" 
+                    color="primary" 
+                    variant="outlined" 
+                  />
+                )}
+              </Box>
+            )}
+            {/* Video Player */}
+            <Box sx={{ flex: 1 }}>
+              <video
+                controls
+                style={{ width: '100%', height: '100%' }}
+                src={url}
+              >
+                Your browser does not support the video tag.
+              </video>
+            </Box>
           </Box>
         );
 
@@ -138,8 +159,22 @@ const CourseMaterials: React.FC<CourseMaterialsProps> = ({
           <Box sx={{ p: 4, textAlign: 'center' }}>
             <VolumeUp sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
             <Typography variant="h6" gutterBottom>
-              Audio Content
+              {selectedMaterial.title}
             </Typography>
+            {selectedMaterial.description && (
+              <Typography variant="body2" color="text.secondary" paragraph>
+                {selectedMaterial.description}
+              </Typography>
+            )}
+            {selectedMaterial.estimatedDuration && (
+              <Chip 
+                label={`${selectedMaterial.estimatedDuration} minutes`} 
+                size="small" 
+                color="primary" 
+                variant="outlined" 
+                sx={{ mb: 2 }}
+              />
+            )}
             <audio controls style={{ width: '100%', maxWidth: 400 }}>
               <source src={url} type="audio/mpeg" />
               Your browser does not support the audio element.
@@ -260,11 +295,25 @@ const CourseMaterials: React.FC<CourseMaterialsProps> = ({
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
+      <Typography 
+        variant="h6" 
+        gutterBottom
+        sx={{
+          // Mobile typography optimizations
+          '@media (max-width: 480px)': {
+            fontSize: '1.1rem'
+          }
+        }}
+      >
         Course Materials ({materials.length})
       </Typography>
 
-      <Stack spacing={2}>
+      <Stack spacing={2} sx={{
+        // Mobile spacing optimizations
+        '@media (max-width: 480px)': {
+          spacing: 1.5
+        }
+      }}>
         {materials.map((material, index) => {
           const completed = isCompleted ? isCompleted(material._id) : false;
           
@@ -277,30 +326,105 @@ const CourseMaterials: React.FC<CourseMaterialsProps> = ({
                 '&:hover': {
                   boxShadow: 4,
                   transform: 'translateY(-2px)'
+                },
+                // Mobile card optimizations
+                '@media (max-width: 480px)': {
+                  '&:hover': {
+                    transform: 'none' // Disable hover transform on mobile
+                  }
                 }
               }}
             >
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+              <CardContent sx={{
+                // Mobile padding optimizations
+                '@media (max-width: 480px)': {
+                  padding: 2
+                }
+              }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 2,
+                  // Mobile layout optimizations
+                  '@media (max-width: 768px)': {
+                    flexDirection: 'column',
+                    alignItems: 'stretch',
+                    gap: 1.5
+                  }
+                }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    flex: 1,
+                    // Mobile layout optimizations
+                    '@media (max-width: 768px)': {
+                      width: '100%'
+                    }
+                  }}>
                     <Box sx={{ 
                       p: 1, 
                       borderRadius: 1, 
                       bgcolor: completed ? 'success.light' : 'grey.100',
-                      color: completed ? 'success.main' : 'text.secondary'
+                      color: completed ? 'success.main' : 'text.secondary',
+                      // Mobile icon optimizations
+                      '@media (max-width: 480px)': {
+                        p: 0.5
+                      }
                     }}>
                       {getFileIcon(material.type, material.originalFileName)}
                     </Box>
                     
-                    <Box sx={{ ml: 2, flex: 1 }}>
-                      <Typography variant="subtitle1" gutterBottom>
+                    <Box sx={{ 
+                      ml: 2, 
+                      flex: 1,
+                      // Mobile layout optimizations
+                      '@media (max-width: 768px)': {
+                        ml: 1
+                      }
+                    }}>
+                      <Typography 
+                        variant="subtitle1" 
+                        gutterBottom
+                        sx={{
+                          // Mobile typography optimizations
+                          '@media (max-width: 480px)': {
+                            fontSize: '1rem'
+                          }
+                        }}
+                      >
                         {material.title}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" paragraph>
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary" 
+                        paragraph
+                        sx={{
+                          // Mobile typography optimizations
+                          '@media (max-width: 480px)': {
+                            fontSize: '0.85rem',
+                            mb: 1
+                          }
+                        }}
+                      >
                         {material.description}
                       </Typography>
                       
-                      <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+                      <Stack 
+                        direction="row" 
+                        spacing={1} 
+                        sx={{ 
+                          flexWrap: 'wrap', 
+                          gap: 0.5,
+                          // Mobile chip optimizations
+                          '@media (max-width: 480px)': {
+                            gap: 0.25,
+                            '& .MuiChip-root': {
+                              fontSize: '0.7rem',
+                              height: '24px'
+                            }
+                          }
+                        }}
+                      >
                         <Chip 
                           label={material.type} 
                           color={getFileTypeColor(material.type) as any}
@@ -339,7 +463,22 @@ const CourseMaterials: React.FC<CourseMaterialsProps> = ({
                     </Box>
                   </Box>
 
-                  <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: 1,
+                    // Mobile action buttons optimizations
+                    '@media (max-width: 768px)': {
+                      justifyContent: 'center',
+                      width: '100%'
+                    },
+                    '@media (max-width: 480px)': {
+                      '& .MuiIconButton-root': {
+                        padding: '8px',
+                        minWidth: '40px',
+                        minHeight: '40px'
+                      }
+                    }
+                  }}>
                     <Tooltip title="View Material">
                       <IconButton 
                         onClick={() => handleViewMaterial(material)}

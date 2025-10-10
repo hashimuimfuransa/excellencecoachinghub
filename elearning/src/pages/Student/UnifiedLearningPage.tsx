@@ -19,7 +19,16 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  Divider
+  Divider,
+  AppBar,
+  Toolbar,
+  Drawer,
+  useTheme,
+  useMediaQuery,
+  Fab,
+  Badge,
+  Avatar,
+  Stack
 } from '@mui/material';
 import {
   ArrowBack,
@@ -34,7 +43,16 @@ import {
   School,
   Timer,
   Lock,
-  LockOpen
+  LockOpen,
+  Menu,
+  Notifications,
+  VideoCall,
+  Announcement,
+  Event,
+  Schedule,
+  TrendingUp,
+  Person,
+  Dashboard
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { courseService, ICourse } from '../../services/courseService';
@@ -51,12 +69,17 @@ const UnifiedLearningPage: React.FC = () => {
   const { id: courseId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const [course, setCourse] = useState<ICourse | null>(null);
   const [weeks, setWeeks] = useState<Week[]>([]);
   const [progress, setProgress] = useState<CourseProgressResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
 
   useEffect(() => {
     const loadCourseData = async () => {
@@ -69,19 +92,30 @@ const UnifiedLearningPage: React.FC = () => {
       try {
         setLoading(true);
         
-        // Load course, weeks, and progress in parallel
-        const [courseData, weeksData, progressResponse] = await Promise.all([
+        // Load course, weeks, progress, announcements, and live sessions in parallel
+        const [courseData, weeksData, progressResponse, announcementsResponse, liveSessionsResponse] = await Promise.all([
           courseService.getCourseById(courseId),
           weekService.getCourseWeeks(courseId),
           api.get(`/progress/courses/${courseId}/progress`).catch((error) => {
             console.warn('Progress API failed, using empty progress:', error);
             return { data: { data: { weekProgresses: [], materialProgresses: [] } } };
-          })
+          }),
+          api.get(`/announcements/courses/${courseId}`).catch(() => ({ data: { data: [] } })),
+          api.get(`/live-sessions/courses/${courseId}`).catch(() => ({ data: { data: [] } }))
         ]);
         
         setCourse(courseData);
         setWeeks(weeksData);
         setProgress(progressResponse.data.data || { weekProgresses: [], materialProgresses: [] });
+        setAnnouncements(announcementsResponse.data.data || []);
+        
+        // Process live sessions for upcoming events
+        const sessions = liveSessionsResponse.data.data || [];
+        const upcomingSessions = sessions
+          .filter((session: any) => new Date(session.scheduledTime) > new Date())
+          .sort((a: any, b: any) => new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime())
+          .slice(0, 3); // Show only next 3 upcoming sessions
+        setUpcomingEvents(upcomingSessions);
       } catch (err: any) {
         console.error('Error loading course data:', err);
         setError(err.message || 'Failed to load course data');
@@ -93,8 +127,29 @@ const UnifiedLearningPage: React.FC = () => {
     loadCourseData();
   }, [courseId]);
 
+  // Handle mobile sidebar
+  useEffect(() => {
+    setSidebarOpen(!isMobile);
+  }, [isMobile]);
+
   const handleBack = () => {
     navigate('/dashboard/student/courses');
+  };
+
+  const handleGoToLiveSessions = () => {
+    navigate(`/dashboard/student/course/${courseId}/live-sessions`);
+  };
+
+  const handleGoToDashboard = () => {
+    navigate('/dashboard/student');
+  };
+
+  const handleMaterialClick = (material: WeekMaterial) => {
+    navigate(`/material/${courseId}/${material._id}`);
+  };
+
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
   };
 
   const getMaterialIcon = (type: string) => {
@@ -127,10 +182,6 @@ const UnifiedLearningPage: React.FC = () => {
     const publishedMaterials = week.materials.filter(mat => mat.isPublished);
     const completedMaterials = publishedMaterials.filter(mat => isMaterialCompleted(mat._id));
     return publishedMaterials.length > 0 ? (completedMaterials.length / publishedMaterials.length) * 100 : 0;
-  };
-
-  const handleMaterialClick = (material: WeekMaterial) => {
-    navigate(`/material/${courseId}/${material._id}`);
   };
 
   const handleMarkComplete = async (weekId: string, materialId: string) => {
@@ -190,211 +241,793 @@ const UnifiedLearningPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Box sx={{ mb: 3 }}>
-        <Button startIcon={<ArrowBack />} onClick={handleBack} sx={{ mb: 2 }}>
-          Back to Courses
-        </Button>
-        
-        {/* Course Header */}
-        <Paper elevation={2} sx={{ p: 3, mb: 3, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
-          <Typography variant="h4" gutterBottom>
-                {course.title}
-              </Typography>
-          <Typography variant="body1" sx={{ mb: 2, opacity: 0.9 }}>
-                {course.description}
-              </Typography>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <Chip
-              icon={<School />} 
-              label={`${weeks.length} Weeks`} 
-              sx={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }} 
-                />
-            <Chip 
-              icon={<Timer />} 
-              label={`${weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).reduce((sum, mat) => sum + mat.estimatedDuration, 0), 0)} min total`} 
-              sx={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }} 
-            />
-          </Box>
-        </Paper>
-
-        {/* Course Progress Overview */}
-        {progress && (
-          <Paper elevation={1} sx={{ p: 2, mb: 3 }}>
-            <Typography variant="h6" gutterBottom>
-                    Course Progress
-                  </Typography>
-            <LinearProgress 
-              variant="determinate" 
-              value={progress.materialProgresses?.length > 0 ? 
-                (progress.materialProgresses.filter((mp: any) => mp.status === 'completed').length / 
-                 weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).length, 0)) * 100 : 0} 
-              sx={{ height: 8, borderRadius: 4, mb: 1 }}
-            />
-            <Typography variant="body2" color="text.secondary">
-              {Math.round(progress.materialProgresses?.length > 0 ? 
-                (progress.materialProgresses.filter((mp: any) => mp.status === 'completed').length / 
-                 weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).length, 0)) * 100 : 0)}% Complete
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      {/* Top App Bar */}
+      <AppBar position="static" sx={{ backgroundColor: 'white', color: 'text.primary', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
+        <Toolbar sx={{ 
+          minHeight: { xs: 56, sm: 64 },
+          px: { xs: 1, sm: 2 }
+        }}>
+          <IconButton
+            edge="start"
+            color="inherit"
+            onClick={handleBack}
+            sx={{ 
+              mr: { xs: 1, sm: 2 },
+              p: { xs: 1, sm: 1.5 }
+            }}
+          >
+            <ArrowBack />
+          </IconButton>
+          
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Typography 
+              variant="h6" 
+              noWrap
+              sx={{ 
+                fontSize: { xs: '1rem', sm: '1.25rem' },
+                fontWeight: 'bold'
+              }}
+            >
+              {course?.title || 'Learning'}
             </Typography>
-          </Paper>
-        )}
+          </Box>
+          
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: { xs: 0.5, sm: 1 }
+          }}>
+            <Button
+              variant="contained"
+              startIcon={<VideoCall />}
+              onClick={handleGoToLiveSessions}
+              sx={{
+                backgroundColor: 'primary.main',
+                '&:hover': { backgroundColor: 'primary.dark' },
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                px: { xs: 1, sm: 2 },
+                py: { xs: 0.5, sm: 1 },
+                minWidth: { xs: 'auto', sm: 'auto' },
+                '& .MuiButton-startIcon': {
+                  mr: { xs: 0.5, sm: 1 }
+                }
+              }}
+            >
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                Live Sessions
+              </Box>
+              <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                Live
+              </Box>
+            </Button>
+            
+            <IconButton
+              color="inherit"
+              onClick={handleGoToDashboard}
+              sx={{ 
+                p: { xs: 1, sm: 1.5 },
+                display: { xs: 'none', sm: 'flex' }
+              }}
+            >
+              <Dashboard />
+            </IconButton>
+            
+            <IconButton
+              color="inherit"
+              onClick={toggleSidebar}
+              sx={{ 
+                p: { xs: 1, sm: 1.5 }
+              }}
+            >
+              <Menu />
+            </IconButton>
+          </Box>
+        </Toolbar>
+      </AppBar>
 
-        {/* Weeks and Materials */}
-        {weeks.length === 0 ? (
-          <Paper elevation={1} sx={{ p: 4, textAlign: 'center' }}>
-            <Typography variant="h6" color="text.secondary" gutterBottom>
-              No course content available yet
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-              The instructor hasn't added any materials to this course.
-                  </Typography>
-          </Paper>
-        ) : (
-          <Grid container spacing={3}>
-            {weeks.map((week, index) => (
-              <Grid item xs={12} key={week._id}>
-                <Card elevation={2}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                      <Box>
-                        <Typography variant="h6" gutterBottom>
-                          Week {week.weekNumber}: {week.title}
-                  </Typography>
-                        <Typography variant="body2" color="text.secondary" paragraph>
-                          {week.description}
-                  </Typography>
-                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-                          <Chip 
-                            label={`${week.materials.filter(mat => mat.isPublished).length} Published Materials`} 
-                            size="small" 
-                            color="primary" 
-                            variant="outlined" 
-                          />
-                          <Chip 
-                            label={`${week.materials.filter(mat => mat.isPublished).reduce((sum, mat) => sum + mat.estimatedDuration, 0)} min`} 
-                            size="small" 
-                            color="secondary" 
-                            variant="outlined" 
-                          />
-                          {week.isPublished ? (
-                            <Chip label="Published" size="small" color="success" />
-                          ) : (
-                            <Chip label="Draft" size="small" color="warning" />
-                          )}
-                        </Box>
+      {/* Main Content Area */}
+      <Box sx={{ display: 'flex', flex: 1 }}>
+        {/* Sidebar */}
+        <Drawer
+          variant={isMobile ? "temporary" : "persistent"}
+          open={sidebarOpen}
+          onClose={toggleSidebar}
+          sx={{
+            width: { xs: 280, sm: 320 },
+            flexShrink: 0,
+            '& .MuiDrawer-paper': {
+              width: { xs: 280, sm: 320 },
+              boxSizing: 'border-box',
+              backgroundColor: 'grey.50',
+              borderRight: '1px solid',
+              borderColor: 'divider',
+              // Mobile optimizations
+              '@media (max-width: 600px)': {
+                width: '100vw',
+                maxWidth: '320px'
+              }
+            },
+          }}
+        >
+          <Box sx={{ 
+            p: { xs: 1.5, sm: 2 }, 
+            height: '100%', 
+            overflow: 'auto',
+            // Mobile scroll optimizations
+            '@media (max-width: 600px)': {
+              padding: 1
+            }
+          }}>
+            {/* Course Info */}
+            <Card sx={{ 
+              mb: { xs: 1.5, sm: 2 }, 
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+              color: 'white' 
+            }}>
+              <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                <Typography 
+                  variant="h6" 
+                  gutterBottom
+                  sx={{ 
+                    fontSize: { xs: '1rem', sm: '1.25rem' },
+                    fontWeight: 'bold'
+                  }}
+                >
+                  {course?.title}
+                </Typography>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    opacity: 0.9, 
+                    mb: 2,
+                    fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                    lineHeight: 1.4
+                  }}
+                >
+                  {course?.description}
+                </Typography>
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: { xs: 0.5, sm: 1 }, 
+                  flexWrap: 'wrap' 
+                }}>
+                  <Chip
+                    icon={<School />}
+                    label={`${weeks.length} Weeks`}
+                    size="small"
+                    sx={{ 
+                      backgroundColor: 'rgba(255,255,255,0.2)', 
+                      color: 'white',
+                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                      height: { xs: 24, sm: 28 }
+                    }}
+                  />
+                  <Chip
+                    icon={<Timer />}
+                    label={`${weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).reduce((sum, mat) => sum + mat.estimatedDuration, 0), 0)} min`}
+                    size="small"
+                    sx={{ 
+                      backgroundColor: 'rgba(255,255,255,0.2)', 
+                      color: 'white',
+                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                      height: { xs: 24, sm: 28 }
+                    }}
+                  />
                 </Box>
-                      <Box sx={{ textAlign: 'right' }}>
-                          <Typography variant="body2" color="text.secondary">
-                          Progress
+              </CardContent>
+            </Card>
+
+            {/* Course Progress Overview */}
+            {progress && (
+              <Card sx={{ mb: { xs: 1.5, sm: 2 } }}>
+                <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                  <Typography 
+                    variant="h6" 
+                    gutterBottom 
+                    sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: 1,
+                      fontSize: { xs: '0.9rem', sm: '1.25rem' },
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    <TrendingUp />
+                    Progress
+                  </Typography>
+                  <LinearProgress
+                    variant="determinate"
+                    value={progress.materialProgresses?.length > 0 ?
+                      (progress.materialProgresses.filter((mp: any) => mp.status === 'completed').length /
+                        weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).length, 0)) * 100 : 0}
+                    sx={{ 
+                      height: { xs: 6, sm: 8 }, 
+                      borderRadius: 4, 
+                      mb: 1 
+                    }}
+                  />
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary"
+                    sx={{ 
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                    }}
+                  >
+                    {Math.round(progress.materialProgresses?.length > 0 ?
+                      (progress.materialProgresses.filter((mp: any) => mp.status === 'completed').length /
+                        weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).length, 0)) * 100 : 0)}% Complete
+                  </Typography>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Announcements */}
+            <Card sx={{ mb: { xs: 1.5, sm: 2 } }}>
+              <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                <Typography 
+                  variant="h6" 
+                  gutterBottom 
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1,
+                    fontSize: { xs: '0.9rem', sm: '1.25rem' },
+                    fontWeight: 'bold'
+                  }}
+                >
+                  <Announcement />
+                  Announcements
+                </Typography>
+                {announcements.length === 0 ? (
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary" 
+                    sx={{ 
+                      fontStyle: 'italic',
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                    }}
+                  >
+                    No announcements yet
+                  </Typography>
+                ) : (
+                  <List dense>
+                    {announcements.slice(0, 3).map((announcement, index) => (
+                      <ListItem key={index} sx={{ px: 0, py: { xs: 0.5, sm: 1 } }}>
+                        <ListItemIcon sx={{ minWidth: { xs: 32, sm: 40 } }}>
+                          <Announcement color="primary" sx={{ fontSize: { xs: 18, sm: 24 } }} />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={announcement.title}
+                          secondary={announcement.content}
+                          primaryTypographyProps={{ 
+                            variant: 'body2', 
+                            fontWeight: 'bold',
+                            sx: { fontSize: { xs: '0.75rem', sm: '0.875rem' } }
+                          }}
+                          secondaryTypographyProps={{ 
+                            variant: 'caption',
+                            sx: { fontSize: { xs: '0.7rem', sm: '0.75rem' } }
+                          }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Upcoming Events */}
+            <Card sx={{ mb: { xs: 1.5, sm: 2 } }}>
+              <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                <Typography 
+                  variant="h6" 
+                  gutterBottom 
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1,
+                    fontSize: { xs: '0.9rem', sm: '1.25rem' },
+                    fontWeight: 'bold'
+                  }}
+                >
+                  <Event />
+                  Upcoming Events
+                </Typography>
+                {upcomingEvents.length === 0 ? (
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary" 
+                    sx={{ 
+                      fontStyle: 'italic',
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                    }}
+                  >
+                    No upcoming events
+                  </Typography>
+                ) : (
+                  <List dense>
+                    {upcomingEvents.map((event, index) => (
+                      <ListItem key={index} sx={{ px: 0, py: { xs: 0.5, sm: 1 } }}>
+                        <ListItemIcon sx={{ minWidth: { xs: 32, sm: 40 } }}>
+                          <VideoCall color="secondary" sx={{ fontSize: { xs: 18, sm: 24 } }} />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={event.title}
+                          secondary={
+                            <Box>
+                              <Typography 
+                                variant="caption" 
+                                display="block"
+                                sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                              >
+                                {new Date(event.scheduledTime).toLocaleDateString()}
+                              </Typography>
+                              <Typography 
+                                variant="caption" 
+                                color="text.secondary"
+                                sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                              >
+                                {new Date(event.scheduledTime).toLocaleTimeString()}
+                              </Typography>
+                            </Box>
+                          }
+                          primaryTypographyProps={{ 
+                            variant: 'body2', 
+                            fontWeight: 'bold',
+                            sx: { fontSize: { xs: '0.75rem', sm: '0.875rem' } }
+                          }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card>
+              <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                <Typography 
+                  variant="h6" 
+                  gutterBottom 
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1,
+                    fontSize: { xs: '0.9rem', sm: '1.25rem' },
+                    fontWeight: 'bold'
+                  }}
+                >
+                  <Schedule />
+                  Quick Actions
+                </Typography>
+                <Stack spacing={{ xs: 0.5, sm: 1 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<VideoCall />}
+                    onClick={handleGoToLiveSessions}
+                    fullWidth
+                    size="small"
+                    sx={{
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                      py: { xs: 0.5, sm: 1 },
+                      '& .MuiButton-startIcon': {
+                        mr: { xs: 0.5, sm: 1 }
+                      }
+                    }}
+                  >
+                    Join Live Session
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<Dashboard />}
+                    onClick={handleGoToDashboard}
+                    fullWidth
+                    size="small"
+                    sx={{
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                      py: { xs: 0.5, sm: 1 },
+                      '& .MuiButton-startIcon': {
+                        mr: { xs: 0.5, sm: 1 }
+                      }
+                    }}
+                  >
+                    Go to Dashboard
+                  </Button>
+                </Stack>
+              </CardContent>
+            </Card>
+          </Box>
+        </Drawer>
+
+        {/* Main Content */}
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            p: { xs: 1.5, sm: 3 },
+            backgroundColor: 'grey.50',
+            minHeight: 'calc(100vh - 64px)',
+            // Mobile optimizations
+            '@media (max-width: 600px)': {
+              p: 1
+            }
+          }}
+        >
+          {/* Course Progress Overview */}
+          {progress && (
+            <Card sx={{ mb: { xs: 2, sm: 3 } }}>
+              <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                <Typography 
+                  variant="h6" 
+                  gutterBottom 
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1,
+                    fontSize: { xs: '1rem', sm: '1.25rem' },
+                    fontWeight: 'bold'
+                  }}
+                >
+                  <TrendingUp />
+                  Course Progress
+                </Typography>
+                <LinearProgress
+                  variant="determinate"
+                  value={progress.materialProgresses?.length > 0 ?
+                    (progress.materialProgresses.filter((mp: any) => mp.status === 'completed').length /
+                      weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).length, 0)) * 100 : 0}
+                  sx={{ 
+                    height: { xs: 6, sm: 8 }, 
+                    borderRadius: 4, 
+                    mb: 1 
+                  }}
+                />
+                <Typography 
+                  variant="body2" 
+                  color="text.secondary"
+                  sx={{ 
+                    fontSize: { xs: '0.875rem', sm: '0.875rem' }
+                  }}
+                >
+                  {Math.round(progress.materialProgresses?.length > 0 ?
+                    (progress.materialProgresses.filter((mp: any) => mp.status === 'completed').length /
+                      weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).length, 0)) * 100 : 0)}% Complete
+                </Typography>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Weeks and Materials */}
+          {weeks.length === 0 ? (
+            <Card>
+              <CardContent sx={{ 
+                textAlign: 'center', 
+                py: { xs: 3, sm: 4 },
+                px: { xs: 2, sm: 3 }
+              }}>
+                <Typography 
+                  variant="h6" 
+                  color="text.secondary" 
+                  gutterBottom
+                  sx={{ 
+                    fontSize: { xs: '1rem', sm: '1.25rem' }
+                  }}
+                >
+                  No course content available yet
+                </Typography>
+                <Typography 
+                  variant="body2" 
+                  color="text.secondary"
+                  sx={{ 
+                    fontSize: { xs: '0.875rem', sm: '0.875rem' }
+                  }}
+                >
+                  The instructor hasn't added any materials to this course.
+                </Typography>
+              </CardContent>
+            </Card>
+          ) : (
+            <Grid container spacing={{ xs: 2, sm: 3 }}>
+              {weeks.map((week, index) => (
+                <Grid item xs={12} key={week._id}>
+                  <Card sx={{
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: { xs: 'none', sm: 'translateY(-2px)' },
+                      boxShadow: { xs: 2, sm: 4 }
+                    }
+                  }}>
+                    <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'flex-start', 
+                        mb: 2,
+                        flexDirection: { xs: 'column', sm: 'row' },
+                        gap: { xs: 2, sm: 0 }
+                      }}>
+                        <Box sx={{ flex: 1 }}>
+                          <Typography 
+                            variant="h6" 
+                            gutterBottom
+                            sx={{ 
+                              fontSize: { xs: '1rem', sm: '1.25rem' },
+                              fontWeight: 'bold'
+                            }}
+                          >
+                            Week {week.weekNumber}: {week.title}
                           </Typography>
-                            <LinearProgress
-                              variant="determinate"
-                          value={getWeekProgress(week._id)} 
-                          sx={{ width: 100, height: 6, borderRadius: 3 }}
-                            />
-                            <Typography variant="caption" color="text.secondary">
-                          {Math.round(getWeekProgress(week._id))}%
-                            </Typography>
-                          </Box>
-                    </Box>
-                    
-                    {/* Materials List */}
-                    {week.materials.filter(mat => mat.isPublished).length === 0 ? (
-                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                        {week.materials.length === 0 ? 'No materials added to this week yet.' : 'No published materials available yet.'}
-                      </Typography>
-                    ) : (
-                      <List>
-                        {week.materials.filter(mat => mat.isPublished).map((material, matIndex) => {
-                          const isCompleted = isMaterialCompleted(material._id);
-                          return (
-                            <React.Fragment key={material._id}>
-                            <ListItem
-                              sx={{
-                                  backgroundColor: isCompleted ? 'rgba(76, 175, 80, 0.1)' : 'transparent',
-                                  borderRadius: 1,
-                                  mb: 1,
-                                  border: isCompleted ? '1px solid rgba(76, 175, 80, 0.3)' : '1px solid transparent',
-                                cursor: 'pointer',
-                                '&:hover': {
-                                    backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                                }
+                          <Typography 
+                            variant="body2" 
+                            color="text.secondary" 
+                            paragraph
+                            sx={{ 
+                              fontSize: { xs: '0.875rem', sm: '0.875rem' },
+                              mb: { xs: 1.5, sm: 2 }
+                            }}
+                          >
+                            {week.description}
+                          </Typography>
+                          <Box sx={{ 
+                            display: 'flex', 
+                            gap: { xs: 0.5, sm: 1 }, 
+                            flexWrap: 'wrap', 
+                            mb: 2 
+                          }}>
+                            <Chip
+                              label={`${week.materials.filter(mat => mat.isPublished).length} Materials`}
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                              sx={{ 
+                                fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                                height: { xs: 24, sm: 28 }
                               }}
-                                onClick={() => handleMaterialClick(material)}
-                            >
-                              <ListItemIcon>
-                                  {isCompleted ? (
-                                  <CheckCircle color="success" />
-                                ) : (
-                                    getMaterialIcon(material.type)
-                                )}
-                              </ListItemIcon>
-                              <ListItemText
-                                primary={
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                      <Typography variant="subtitle1">
-                                        {material.title}
-                                    </Typography>
-                                      {material.isRequired && (
-                                        <Chip label="Required" size="small" color="error" />
-                                      )}
-                                      {isCompleted && (
-                                        <Chip label="Completed" size="small" color="success" />
-                                      )}
-                                    </Box>
-                                }
-                                secondary={
-                                    <Box>
-                                      <Typography variant="body2" color="text.secondary">
-                                        {material.description}
-                                    </Typography>
-                                      <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                                        <Chip label={material.type} size="small" variant="outlined" />
-                                    <Chip
-                                          icon={<Timer />} 
-                                          label={`${material.estimatedDuration} min`} 
-                                      size="small"
-                                          variant="outlined" 
-                                        />
-                                      </Box>
-                                    </Box>
-                                  }
-                                />
-                                <Box sx={{ display: 'flex', gap: 1 }}>
-                                  <Tooltip title="View Material">
-                                    <IconButton size="small">
-                                      <PlayArrow />
-                                    </IconButton>
-                                  </Tooltip>
-                                  {!isCompleted && (
-                                    <Tooltip title="Mark as Complete">
-                                <IconButton
-                                  size="small"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                          handleMarkComplete(week._id, material._id);
+                            />
+                            <Chip
+                              label={`${week.materials.filter(mat => mat.isPublished).reduce((sum, mat) => sum + mat.estimatedDuration, 0)} min`}
+                              size="small"
+                              color="secondary"
+                              variant="outlined"
+                              sx={{ 
+                                fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                                height: { xs: 24, sm: 28 }
+                              }}
+                            />
+                            {week.isPublished ? (
+                              <Chip 
+                                label="Published" 
+                                size="small" 
+                                color="success"
+                                sx={{ 
+                                  fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                                  height: { xs: 24, sm: 28 }
+                                }}
+                              />
+                            ) : (
+                              <Chip 
+                                label="Draft" 
+                                size="small" 
+                                color="warning"
+                                sx={{ 
+                                  fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                                  height: { xs: 24, sm: 28 }
+                                }}
+                              />
+                            )}
+                          </Box>
+                        </Box>
+                        <Box sx={{ 
+                          textAlign: { xs: 'left', sm: 'right' },
+                          alignSelf: { xs: 'flex-start', sm: 'auto' }
+                        }}>
+                          <Typography 
+                            variant="body2" 
+                            color="text.secondary"
+                            sx={{ 
+                              fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                            }}
+                          >
+                            Progress
+                          </Typography>
+                          <LinearProgress
+                            variant="determinate"
+                            value={getWeekProgress(week._id)}
+                            sx={{ 
+                              width: { xs: 80, sm: 100 }, 
+                              height: { xs: 4, sm: 6 }, 
+                              borderRadius: 3 
+                            }}
+                          />
+                          <Typography 
+                            variant="caption" 
+                            color="text.secondary"
+                            sx={{ 
+                              fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                            }}
+                          >
+                            {Math.round(getWeekProgress(week._id))}%
+                          </Typography>
+                        </Box>
+                      </Box>
+                      
+                      {/* Materials List */}
+                      {week.materials.filter(mat => mat.isPublished).length === 0 ? (
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary" 
+                          sx={{ 
+                            fontStyle: 'italic',
+                            fontSize: { xs: '0.875rem', sm: '0.875rem' }
+                          }}
+                        >
+                          {week.materials.length === 0 ? 'No materials added to this week yet.' : 'No published materials available yet.'}
+                        </Typography>
+                      ) : (
+                        <List>
+                          {week.materials.filter(mat => mat.isPublished).map((material, matIndex) => {
+                            const isCompleted = isMaterialCompleted(material._id);
+                            return (
+                              <React.Fragment key={material._id}>
+                                <ListItem
+                                  sx={{
+                                    backgroundColor: isCompleted ? 'rgba(76, 175, 80, 0.1)' : 'transparent',
+                                    borderRadius: 1,
+                                    mb: 1,
+                                    border: isCompleted ? '1px solid rgba(76, 175, 80, 0.3)' : '1px solid transparent',
+                                    cursor: 'pointer',
+                                    px: { xs: 1, sm: 2 },
+                                    py: { xs: 1, sm: 1.5 },
+                                    '&:hover': {
+                                      backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                                    }
                                   }}
+                                  onClick={() => handleMaterialClick(material)}
                                 >
-                                        <CheckCircle />
-                                </IconButton>
+                                  <ListItemIcon sx={{ minWidth: { xs: 36, sm: 40 } }}>
+                                    {isCompleted ? (
+                                      <CheckCircle color="success" sx={{ fontSize: { xs: 20, sm: 24 } }} />
+                                    ) : (
+                                      <Box sx={{ fontSize: { xs: 20, sm: 24 } }}>
+                                        {getMaterialIcon(material.type)}
+                                      </Box>
+                                    )}
+                                  </ListItemIcon>
+                                  <ListItemText
+                                    primary={
+                                      <Box sx={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        gap: { xs: 0.5, sm: 1 },
+                                        flexWrap: 'wrap'
+                                      }}>
+                                        <Typography 
+                                          variant="subtitle1"
+                                          sx={{ 
+                                            fontSize: { xs: '0.875rem', sm: '1rem' },
+                                            fontWeight: 'bold'
+                                          }}
+                                        >
+                                          {material.title}
+                                        </Typography>
+                                        {material.isRequired && (
+                                          <Chip 
+                                            label="Required" 
+                                            size="small" 
+                                            color="error"
+                                            sx={{ 
+                                              fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                                              height: { xs: 20, sm: 24 }
+                                            }}
+                                          />
+                                        )}
+                                        {isCompleted && (
+                                          <Chip 
+                                            label="Completed" 
+                                            size="small" 
+                                            color="success"
+                                            sx={{ 
+                                              fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                                              height: { xs: 20, sm: 24 }
+                                            }}
+                                          />
+                                        )}
+                                      </Box>
+                                    }
+                                    secondary={
+                                      <Box>
+                                        <Typography 
+                                          variant="body2" 
+                                          color="text.secondary"
+                                          sx={{ 
+                                            fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                                            mb: { xs: 0.5, sm: 0.5 }
+                                          }}
+                                        >
+                                          {material.description}
+                                        </Typography>
+                                        <Box sx={{ 
+                                          display: 'flex', 
+                                          gap: { xs: 0.5, sm: 1 }, 
+                                          flexWrap: 'wrap'
+                                        }}>
+                                          <Chip 
+                                            label={material.type} 
+                                            size="small" 
+                                            variant="outlined"
+                                            sx={{ 
+                                              fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                                              height: { xs: 20, sm: 24 }
+                                            }}
+                                          />
+                                          <Chip
+                                            icon={<Timer sx={{ fontSize: { xs: 12, sm: 16 } }} />}
+                                            label={`${material.estimatedDuration} min`}
+                                            size="small"
+                                            variant="outlined"
+                                            sx={{ 
+                                              fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                                              height: { xs: 20, sm: 24 }
+                                            }}
+                                          />
+                                        </Box>
+                                      </Box>
+                                    }
+                                  />
+                                  <Box sx={{ 
+                                    display: 'flex', 
+                                    gap: { xs: 0.5, sm: 1 },
+                                    flexDirection: { xs: 'column', sm: 'row' }
+                                  }}>
+                                    <Tooltip title="View Material">
+                                      <IconButton 
+                                        size="small"
+                                        sx={{ 
+                                          p: { xs: 0.5, sm: 1 },
+                                          minWidth: { xs: 32, sm: 40 },
+                                          minHeight: { xs: 32, sm: 40 }
+                                        }}
+                                      >
+                                        <PlayArrow sx={{ fontSize: { xs: 16, sm: 20 } }} />
+                                      </IconButton>
                                     </Tooltip>
-                    )}
-                  </Box>
-                              </ListItem>
-                              {matIndex < week.materials.filter(mat => mat.isPublished).length - 1 && <Divider />}
-                            </React.Fragment>
-                          );
-                        })}
-                      </List>
-                    )}
-                              </CardContent>
-                            </Card>
-                          </Grid>
-                        ))}
-                      </Grid>
-                    )}
-                  </Box>
-      </Container>
+                                    {!isCompleted && (
+                                      <Tooltip title="Mark as Complete">
+                                        <IconButton
+                                          size="small"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleMarkComplete(week._id, material._id);
+                                          }}
+                                          sx={{ 
+                                            p: { xs: 0.5, sm: 1 },
+                                            minWidth: { xs: 32, sm: 40 },
+                                            minHeight: { xs: 32, sm: 40 }
+                                          }}
+                                        >
+                                          <CheckCircle sx={{ fontSize: { xs: 16, sm: 20 } }} />
+                                        </IconButton>
+                                      </Tooltip>
+                                    )}
+                                  </Box>
+                                </ListItem>
+                                {matIndex < week.materials.filter(mat => mat.isPublished).length - 1 && <Divider />}
+                              </React.Fragment>
+                            );
+                          })}
+                        </List>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </Box>
+      </Box>
+    </Box>
   );
 };
 

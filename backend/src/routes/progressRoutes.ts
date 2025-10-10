@@ -4,7 +4,8 @@ import {
   getStudentCourseProgress,
   getStudentWeekProgress,
   markAssessmentCompleted,
-  markAssignmentCompleted
+  markAssignmentCompleted,
+  syncProgressWithServer
 } from '../controllers/progressController';
 import { auth } from '../middleware/auth';
 
@@ -16,5 +17,6 @@ router.get('/courses/:courseId/progress', auth, getStudentCourseProgress);
 router.get('/weeks/:weekId/progress', auth, getStudentWeekProgress);
 router.post('/weeks/:weekId/assessment/complete', auth, markAssessmentCompleted);
 router.post('/weeks/:weekId/assignment/complete', auth, markAssignmentCompleted);
+router.post('/courses/:courseId/sync', auth, syncProgressWithServer);
 
 export default router;

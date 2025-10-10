@@ -499,7 +499,7 @@ const TeacherDashboardContent: React.FC = () => {
                     <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                       <Button
                         component={Link}
-                        to={`/dashboard/teacher/courses/${course._id}/manage`}
+                        to={`/course/${course._id}/manage`}
                         size="small"
                         variant="contained"
                         startIcon={<Settings />}

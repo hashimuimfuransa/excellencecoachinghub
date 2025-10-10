@@ -192,44 +192,22 @@ export const getSessionsByTeacher = async (req: Request, res: Response, next: Ne
   }
 };
 
-// Get sessions by course (Available to enrolled students and teachers)
+// Get sessions by course (Available to anyone who can access the course)
 export const getSessionsByCourse = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { courseId } = req.params;
     const userId = req.user?.id;
     const userRole = req.user?.role;
 
-    // Check if user has access to this course
-    if (userRole === 'student') {
-      // Check if student is enrolled in the course
-      const enrollment = await UserProgress.findOne({
-        user: userId,
-        course: courseId
-      });
+    console.log('🔍 Live session access check:', {
+      userId,
+      courseId,
+      userRole
+    });
 
-      if (!enrollment) {
-        res.status(403).json({
-          success: false,
-          error: 'You are not enrolled in this course'
-        });
-        return;
-      }
-    } else if (userRole === 'teacher') {
-      // Check if teacher is the instructor for any session in this course
-      const teacherSession = await LiveSession.findOne({
-        course: courseId,
-        instructor: userId
-      });
-
-      if (!teacherSession) {
-        res.status(403).json({
-          success: false,
-          error: 'You are not authorized to access sessions for this course'
-        });
-        return;
-      }
-    }
-    // Admin users can access any course sessions (no additional check needed)
+    // Allow anyone who can access the course to see live sessions
+    // No enrollment check needed - if they can access the course, they can see sessions
+    console.log('✅ Access granted - anyone with course access can view live sessions');
 
     // Get all sessions for the course
     const sessions = await LiveSession.find({ course: courseId })
@@ -731,40 +709,29 @@ export const getRecordingById = async (req: Request, res: Response, next: NextFu
   }
 };
 
-// Get available sessions for students (based on their enrolled courses)
+// Get available sessions for students (show all sessions they can access)
 export const getStudentAvailableSessions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const studentId = req.user?.id;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const status = req.query.status as string; // Don't default to 'scheduled', show all sessions
+    const courseId = req.query.courseId as string; // Optional course filter
     const skip = (page - 1) * limit;
 
-    // Get student's enrolled courses
-    const enrollments = await UserProgress.find({ user: studentId }).select('course');
-    const enrolledCourseIds = enrollments.map(enrollment => enrollment.course);
+    console.log('🔍 Student session access check:', {
+      studentId,
+      courseId,
+      status
+    });
 
-    if (enrolledCourseIds.length === 0) {
-      res.status(200).json({
-        success: true,
-        data: {
-          sessions: [],
-          pagination: {
-            currentPage: page,
-            totalPages: 0,
-            totalSessions: 0,
-            hasNextPage: false,
-            hasPrevPage: false
-          }
-        }
-      });
-      return;
+    // Build filter - if courseId is specified, show sessions for that course
+    // Otherwise, show all sessions (no enrollment restriction)
+    const filter: any = {};
+
+    if (courseId) {
+      filter.course = courseId;
     }
-
-    // Build filter for sessions from enrolled courses
-    const filter: any = {
-      course: { $in: enrolledCourseIds }
-    };
 
     if (status && status !== 'all') {
       filter.status = status;
@@ -780,6 +747,11 @@ export const getStudentAvailableSessions = async (req: Request, res: Response, n
 
     const totalSessions = await LiveSession.countDocuments(filter);
     const totalPages = Math.ceil(totalSessions / limit);
+
+    console.log('✅ Student sessions loaded:', {
+      totalSessions,
+      courseId: courseId || 'all courses'
+    });
 
     res.status(200).json({
       success: true,

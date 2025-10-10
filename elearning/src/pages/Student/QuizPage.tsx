@@ -24,6 +24,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import QuizComponent from '../../components/Quiz/QuizComponent';
+import { assessmentService } from '../../services/assessmentService';
 
 interface QuizData {
   _id: string;
@@ -43,6 +44,8 @@ const StudentQuizPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
+  console.log('🔐 Auth status:', { user: user?.role });
+  
   const [quiz, setQuiz] = useState<QuizData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,80 +54,50 @@ const StudentQuizPage: React.FC = () => {
   const [finalScore, setFinalScore] = useState<number | null>(null);
 
   useEffect(() => {
+    console.log('🎯 QuizPage mounted with quizId:', quizId);
     if (quizId) {
       loadQuiz();
+    } else {
+      console.error('❌ No quizId provided');
+      setError('No assessment ID provided');
     }
   }, [quizId]);
 
   const loadQuiz = async () => {
     try {
       setLoading(true);
-      // Mock quiz data - in real implementation, fetch from API
-      const mockQuiz: QuizData = {
-        _id: quizId!,
-        title: "JavaScript Fundamentals Quiz",
-        description: "Test your knowledge of JavaScript basics including variables, functions, and control structures.",
-        questions: [
-          {
-            _id: "q1",
-            question: "What is the correct way to declare a variable in JavaScript?",
-            type: "multiple_choice",
-            options: ["var name = 'John'", "variable name = 'John'", "v name = 'John'", "declare name = 'John'"],
-            correctAnswer: "var name = 'John'",
-            explanation: "The 'var' keyword is used to declare variables in JavaScript.",
-            points: 10,
-            difficulty: "easy"
-          },
-          {
-            _id: "q2",
-            question: "Which of the following is NOT a JavaScript data type?",
-            type: "multiple_choice",
-            options: ["String", "Number", "Boolean", "Float"],
-            correctAnswer: "Float",
-            explanation: "JavaScript has Number type which includes both integers and floating-point numbers.",
-            points: 10,
-            difficulty: "easy"
-          },
-          {
-            _id: "q3",
-            question: "What will the following code output: console.log(typeof null);",
-            type: "multiple_choice",
-            options: ["null", "object", "undefined", "string"],
-            correctAnswer: "object",
-            explanation: "In JavaScript, typeof null returns 'object' due to a historical bug.",
-            points: 15,
-            difficulty: "medium"
-          },
-          {
-            _id: "q4",
-            question: "Which of the following are valid ways to create a function in JavaScript?",
-            type: "multiple_select",
-            options: ["function myFunc() {}", "const myFunc = function() {}", "const myFunc = () => {}", "function = myFunc() {}"],
-            correctAnswer: ["function myFunc() {}", "const myFunc = function() {}", "const myFunc = () => {}"],
-            explanation: "Functions can be declared using function declaration, function expression, or arrow function syntax.",
-            points: 20,
-            difficulty: "medium"
-          },
-          {
-            _id: "q5",
-            question: "What is the purpose of the 'use strict' directive?",
-            type: "short_answer",
-            correctAnswer: "enables strict mode",
-            explanation: "The 'use strict' directive enables strict mode, which helps catch common coding mistakes.",
-            points: 15,
-            difficulty: "hard"
-          }
-        ],
-        timeLimit: 30,
+      console.log('🔍 Loading quiz for assessment ID:', quizId);
+      
+      // Start the assessment to get the quiz data
+      const result = await assessmentService.startAssessment(quizId!);
+      console.log('✅ Assessment started successfully:', result);
+      
+      const quizData: QuizData = {
+        _id: result.assessment._id,
+        title: result.assessment.title,
+        description: result.assessment.description || '',
+        questions: result.assessment.questions.map(q => ({
+          _id: q.id,
+          question: q.question,
+          type: q.type,
+          options: q.options || [],
+          correctAnswer: '', // Not provided to student
+          explanation: '', // Not provided to student
+          points: q.points,
+          difficulty: 'medium' as const
+        })),
+        timeLimit: result.assessment.timeLimit || 60,
         passingScore: 70,
-        attempts: 3,
-        showResultsImmediately: true,
-        courseId: "course123",
-        weekId: "week456"
+        attempts: result.assessment.attempts || 3,
+        showResultsImmediately: result.assessment.showResultsImmediately || true,
+        courseId: typeof result.assessment.course === 'string' ? result.assessment.course : result.assessment.course._id,
+        weekId: ''
       };
       
-      setQuiz(mockQuiz);
+      setQuiz(quizData);
+      setError(null);
     } catch (err: any) {
+      console.error('Error loading quiz:', err);
       setError(err.message || 'Failed to load quiz');
     } finally {
       setLoading(false);
@@ -135,13 +108,29 @@ const StudentQuizPage: React.FC = () => {
     setQuizStarted(true);
   };
 
-  const handleQuizComplete = (score: number, answers: Record<string, any>) => {
-    setFinalScore(score);
-    setQuizCompleted(true);
-    setQuizStarted(false);
-    
-    // In real implementation, save quiz results to backend
-    console.log('Quiz completed:', { score, answers });
+  const handleQuizComplete = async (score: number, answers: Record<string, any>) => {
+    try {
+      // Submit the assessment to the backend
+      await assessmentService.submitAssessment({
+        assessmentId: quizId!,
+        answers: Object.entries(answers).map(([questionId, answer]) => ({
+          questionId,
+          answer: Array.isArray(answer) ? answer : [answer],
+          timeSpent: 0 // Could track time per question
+        })),
+        totalTimeSpent: 0, // Could track total time
+        isAutoSubmitted: false
+      });
+      
+      setFinalScore(score);
+      setQuizCompleted(true);
+      setQuizStarted(false);
+      
+      console.log('Quiz completed and submitted:', { score, answers });
+    } catch (error: any) {
+      console.error('Error submitting quiz:', error);
+      setError('Failed to submit quiz results');
+    }
   };
 
   const handleExitQuiz = () => {
@@ -164,6 +153,9 @@ const StudentQuizPage: React.FC = () => {
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
           <CircularProgress />
         </Box>
+        <Typography variant="body2" textAlign="center" sx={{ mt: 2 }}>
+          Loading assessment: {quizId}
+        </Typography>
       </Container>
     );
   }

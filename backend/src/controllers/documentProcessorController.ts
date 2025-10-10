@@ -32,7 +32,7 @@ const upload = multer({
 });
 
 // Middleware for single document upload
-export const uploadDocument = upload.single('document');
+export const uploadDocument = upload;
 
 // @desc    Process document and create structured notes
 // @route   POST /api/documents/process

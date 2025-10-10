@@ -39,7 +39,7 @@ import {
   AudioFile,
   Image,
   Quiz,
-  Assignment,
+  Assignment as AssignmentIcon,
   School,
   Timer,
   Lock,
@@ -52,11 +52,15 @@ import {
   Schedule,
   TrendingUp,
   Person,
-  Dashboard
+  Dashboard,
+  Refresh,
+  AccessTime
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { courseService, ICourse } from '../../services/courseService';
 import { weekService, Week, WeekMaterial } from '../../services/weekService';
+import { assessmentService, IAssessment } from '../../services/assessmentService';
+import { assignmentService, Assignment as AssignmentType } from '../../services/assignmentService';
 import api from '../../services/api';
 
 // Interface for the actual backend response
@@ -64,6 +68,85 @@ interface CourseProgressResponse {
   weekProgresses: any[];
   materialProgresses: any[];
 }
+
+// Countdown timer component
+interface CountdownTimerProps {
+  dueDate: string;
+  onTimeReached?: () => void;
+}
+
+const CountdownTimer: React.FC<CountdownTimerProps> = ({ dueDate, onTimeReached }) => {
+  const [timeLeft, setTimeLeft] = useState<{
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+  }>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [isExpired, setIsExpired] = useState(false);
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = new Date().getTime();
+      const due = new Date(dueDate).getTime();
+      const difference = due - now;
+
+      if (difference <= 0) {
+        setIsExpired(true);
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        if (onTimeReached) {
+          onTimeReached();
+        }
+        return;
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+      setTimeLeft({ days, hours, minutes, seconds });
+      setIsExpired(false);
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+
+    return () => clearInterval(timer);
+  }, [dueDate, onTimeReached]);
+
+  if (isExpired) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <AccessTime color="error" sx={{ fontSize: { xs: 16, sm: 18 } }} />
+        <Typography 
+          variant="caption" 
+          color="error"
+          sx={{ 
+            fontSize: { xs: '0.7rem', sm: '0.75rem' },
+            fontWeight: 'bold'
+          }}
+        >
+          Assessment Available Now
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <AccessTime color="primary" sx={{ fontSize: { xs: 16, sm: 18 } }} />
+      <Typography 
+        variant="caption" 
+        color="text.secondary"
+        sx={{ 
+          fontSize: { xs: '0.7rem', sm: '0.75rem' }
+        }}
+      >
+        Available in: {timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m {timeLeft.seconds}s
+      </Typography>
+    </Box>
+  );
+};
 
 const UnifiedLearningPage: React.FC = () => {
   const { id: courseId } = useParams<{ id: string }>();
@@ -80,94 +163,88 @@ const UnifiedLearningPage: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
+  const [assessments, setAssessments] = useState<IAssessment[]>([]);
+  const [assignments, setAssignments] = useState<AssignmentType[]>([]);
+  const [availableAssessments, setAvailableAssessments] = useState<Set<string>>(new Set());
+
+  const loadCourseData = async () => {
+    if (!courseId) {
+      setError('No course ID provided');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Load course, weeks, progress, announcements, live sessions, assessments, and assignments in parallel
+      const [courseData, weeksData, progressResponse, announcementsResponse, liveSessionsResponse, assessmentsResponse, assignmentsResponse] = await Promise.all([
+        courseService.getCourseById(courseId),
+        weekService.getCourseWeeks(courseId),
+        api.get(`/progress/courses/${courseId}/progress`).catch((error) => {
+          console.warn('Progress API failed, using empty progress:', error);
+          return { data: { data: { weekProgresses: [], materialProgresses: [] } } };
+        }),
+        // Fetch announcements for the course
+        api.get(`/announcements/course/${courseId}`).catch((error) => {
+          console.warn('Announcements API not available:', error.message);
+          return { data: { data: [] } };
+        }),
+        // Fetch live sessions for the course
+        api.get(`/live-sessions/course/${courseId}`).catch((error) => {
+          console.warn('Live sessions API not available:', error.message);
+          return { data: { data: [] } };
+        }),
+        // Fetch assessments for the course
+        assessmentService.getCourseAssessments(courseId).catch((error) => {
+          console.warn('Assessments API not available:', error.message);
+          return [];
+        }),
+        // Fetch assignments for the course
+        assignmentService.getCourseAssignments(courseId).catch((error) => {
+          console.warn('Assignments API not available:', error.message);
+          return [];
+        })
+      ]);
+      
+      setCourse(courseData);
+      setWeeks(weeksData);
+      setProgress(progressResponse.data.data || { weekProgresses: [], materialProgresses: [] });
+      
+      setAssessments(Array.isArray(assessmentsResponse) ? assessmentsResponse : []);
+      setAssignments(Array.isArray(assignmentsResponse) ? assignmentsResponse : []);
+      
+      console.log('📊 Loaded assessments:', assessmentsResponse);
+      console.log('📊 Loaded assignments:', assignmentsResponse);
+      
+      // Handle announcements - use real API data
+      const announcementsData = announcementsResponse.data?.data || [];
+      console.log('📢 Loaded announcements:', announcementsData.length, announcementsData);
+      setAnnouncements(announcementsData);
+      
+      // Process live sessions for upcoming events - use real API data
+      const sessionsData = liveSessionsResponse.data?.data?.sessions || [];
+      console.log('📅 Loaded live sessions:', sessionsData.length, sessionsData);
+      const upcomingSessions = sessionsData
+        .filter((session: any) => {
+          const sessionDate = new Date(session.scheduledTime);
+          const now = new Date();
+          return sessionDate > now;
+        })
+        .sort((a: any, b: any) => new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime())
+        .slice(0, 3); // Show only next 3 upcoming sessions
+      console.log('⏰ Upcoming sessions:', upcomingSessions.length, upcomingSessions);
+      setUpcomingEvents(upcomingSessions);
+    } catch (err: any) {
+      console.error('Error loading course data:', err);
+      setError(err.message || 'Failed to load course data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadCourseData = async () => {
-      if (!courseId) {
-        setError('No course ID provided');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        
-        // Load course, weeks, progress, announcements, and live sessions in parallel
-        const [courseData, weeksData, progressResponse, announcementsResponse, liveSessionsResponse] = await Promise.all([
-          courseService.getCourseById(courseId),
-          weekService.getCourseWeeks(courseId),
-          api.get(`/progress/courses/${courseId}/progress`).catch((error) => {
-            console.warn('Progress API failed, using empty progress:', error);
-            return { data: { data: { weekProgresses: [], materialProgresses: [] } } };
-          }),
-          // Fetch announcements for the course
-          api.get(`/announcements/course/${courseId}`).catch((error) => {
-            console.warn('Announcements API not available:', error.message);
-            return { data: { data: [] } };
-          }),
-          // Fetch live sessions for the course
-          api.get(`/live-sessions/course/${courseId}`).catch((error) => {
-            console.warn('Live sessions API not available:', error.message);
-            return { data: { data: [] } };
-          })
-        ]);
-        
-        setCourse(courseData);
-        setWeeks(weeksData);
-        setProgress(progressResponse.data.data || { weekProgresses: [], materialProgresses: [] });
-        
-        // Handle announcements - use real API data or fallback to mock data
-        const announcementsData = announcementsResponse.data?.data || [];
-        if (announcementsData.length === 0) {
-          // Mock announcements for demonstration when no real data is available
-          setAnnouncements([
-            {
-              title: "Welcome to the Course!",
-              content: "Welcome to this comprehensive learning journey. Make sure to complete all materials to get the most out of this course.",
-              createdAt: new Date().toISOString()
-            },
-            {
-              title: "Live Session This Week",
-              content: "Join us for a live Q&A session this Friday at 2:00 PM. Bring your questions!",
-              createdAt: new Date(Date.now() - 86400000).toISOString()
-            }
-          ]);
-        } else {
-          setAnnouncements(announcementsData);
-        }
-        
-        // Process live sessions for upcoming events - use real API data or fallback to mock data
-        const sessionsData = liveSessionsResponse.data?.data?.sessions || [];
-        if (sessionsData.length === 0) {
-          // Mock upcoming sessions for demonstration when no real data is available
-          const mockSessions = [
-            {
-              title: "Weekly Q&A Session",
-              scheduledTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days from now
-              description: "Join us for a live Q&A session to discuss course materials and answer your questions."
-            },
-            {
-              title: "Course Review Session",
-              scheduledTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week from now
-              description: "Comprehensive review of all course topics covered so far."
-            }
-          ];
-          setUpcomingEvents(mockSessions);
-        } else {
-          const upcomingSessions = sessionsData
-            .filter((session: any) => new Date(session.scheduledTime) > new Date())
-            .sort((a: any, b: any) => new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime())
-            .slice(0, 3); // Show only next 3 upcoming sessions
-          setUpcomingEvents(upcomingSessions);
-        }
-      } catch (err: any) {
-        console.error('Error loading course data:', err);
-        setError(err.message || 'Failed to load course data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadCourseData();
   }, [courseId]);
 
@@ -207,7 +284,7 @@ const UnifiedLearningPage: React.FC = () => {
       case 'quiz':
         return <Quiz />;
       case 'assignment':
-        return <Assignment />;
+        return <AssignmentIcon />;
       default:
         return <Description />;
     }
@@ -237,6 +314,31 @@ const UnifiedLearningPage: React.FC = () => {
     } catch (err) {
       console.error('Error marking material complete:', err);
     }
+  };
+
+  const isAssessmentAvailable = (assessment: IAssessment) => {
+    if (!assessment.dueDate) return true; // If no due date, always available
+    return new Date(assessment.dueDate).getTime() <= new Date().getTime();
+  };
+
+  const handleAssessmentTimeReached = (assessmentId: string) => {
+    setAvailableAssessments(prev => {
+      const newSet = new Set<string>();
+      prev.forEach(id => newSet.add(id));
+      newSet.add(assessmentId);
+      return newSet;
+    });
+  };
+
+  const handleTakeAssessment = (assessmentId: string) => {
+    const assessment = assessments.find(a => a._id === assessmentId);
+    if (assessment && isAssessmentAvailable(assessment)) {
+      navigate(`/student/quiz/${assessmentId}`);
+    }
+  };
+
+  const handleTakeAssignment = (assignmentId: string) => {
+    navigate(`/student/assignment/${assignmentId}`);
   };
 
   if (!isAuthenticated) {
@@ -355,6 +457,22 @@ const UnifiedLearningPage: React.FC = () => {
               }}
             >
               <Dashboard />
+            </IconButton>
+            
+            <IconButton
+              color="inherit"
+              onClick={() => {
+                // Reload course data
+                if (courseId) {
+                  loadCourseData();
+                }
+              }}
+              sx={{ 
+                p: { xs: 1, sm: 1.5 }
+              }}
+              title="Refresh Data"
+            >
+              <Refresh />
             </IconButton>
             
             <IconButton
@@ -537,22 +655,70 @@ const UnifiedLearningPage: React.FC = () => {
                 ) : (
                   <List dense>
                     {announcements.slice(0, 3).map((announcement, index) => (
-                      <ListItem key={index} sx={{ px: 0, py: { xs: 0.5, sm: 1 } }}>
+                      <ListItem key={announcement._id || index} sx={{ px: 0, py: { xs: 0.5, sm: 1 } }}>
                         <ListItemIcon sx={{ minWidth: { xs: 32, sm: 40 } }}>
-                          <Announcement color="primary" sx={{ fontSize: { xs: 18, sm: 24 } }} />
+                          <Announcement 
+                            color={
+                              announcement.priority === 'urgent' ? 'error' :
+                              announcement.priority === 'high' ? 'error' :
+                              announcement.priority === 'medium' ? 'warning' :
+                              'primary'
+                            } 
+                            sx={{ fontSize: { xs: 18, sm: 24 } }} 
+                          />
                         </ListItemIcon>
                         <ListItemText
-                          primary={announcement.title}
-                          secondary={announcement.content}
-                          primaryTypographyProps={{ 
-                            variant: 'body2', 
-                            fontWeight: 'bold',
-                            sx: { fontSize: { xs: '0.75rem', sm: '0.875rem' } }
-                          }}
-                          secondaryTypographyProps={{ 
-                            variant: 'caption',
-                            sx: { fontSize: { xs: '0.7rem', sm: '0.75rem' } }
-                          }}
+                          primary={
+                            <Box>
+                              <Typography 
+                                variant="body2" 
+                                fontWeight="bold"
+                                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                              >
+                                {announcement.title}
+                              </Typography>
+                              {announcement.priority && (
+                                <Chip
+                                  label={announcement.priority}
+                                  size="small"
+                                  sx={{
+                                    fontSize: { xs: '0.6rem', sm: '0.7rem' },
+                                    height: { xs: 16, sm: 18 },
+                                    mt: 0.5,
+                                    color: announcement.priority === 'urgent' || announcement.priority === 'high' ? 'white' : 'inherit',
+                                    backgroundColor: 
+                                      announcement.priority === 'urgent' ? 'error.main' :
+                                      announcement.priority === 'high' ? 'error.main' :
+                                      announcement.priority === 'medium' ? 'warning.main' :
+                                      'grey.300'
+                                  }}
+                                />
+                              )}
+                            </Box>
+                          }
+                          secondary={
+                            <Box>
+                              <Typography 
+                                variant="caption"
+                                sx={{ 
+                                  fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                                  display: 'block',
+                                  mb: 0.5
+                                }}
+                              >
+                                {announcement.content}
+                              </Typography>
+                              {announcement.createdAt && (
+                                <Typography 
+                                  variant="caption" 
+                                  color="text.secondary"
+                                  sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
+                                >
+                                  {new Date(announcement.createdAt).toLocaleDateString()}
+                                </Typography>
+                              )}
+                            </Box>
+                          }
                         />
                       </ListItem>
                     ))}
@@ -592,12 +758,35 @@ const UnifiedLearningPage: React.FC = () => {
                 ) : (
                   <List dense>
                     {upcomingEvents.map((event, index) => (
-                      <ListItem key={index} sx={{ px: 0, py: { xs: 0.5, sm: 1 } }}>
+                      <ListItem key={event._id || index} sx={{ px: 0, py: { xs: 0.5, sm: 1 } }}>
                         <ListItemIcon sx={{ minWidth: { xs: 32, sm: 40 } }}>
                           <VideoCall color="secondary" sx={{ fontSize: { xs: 18, sm: 24 } }} />
                         </ListItemIcon>
                         <ListItemText
-                          primary={event.title}
+                          primary={
+                            <Box>
+                              <Typography 
+                                variant="body2" 
+                                fontWeight="bold"
+                                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                              >
+                                {event.title}
+                              </Typography>
+                              {event.description && (
+                                <Typography 
+                                  variant="caption"
+                                  sx={{ 
+                                    fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                                    display: 'block',
+                                    mt: 0.5,
+                                    color: 'text.secondary'
+                                  }}
+                                >
+                                  {event.description}
+                                </Typography>
+                              )}
+                            </Box>
+                          }
                           secondary={
                             <Box>
                               <Typography 
@@ -605,22 +794,26 @@ const UnifiedLearningPage: React.FC = () => {
                                 display="block"
                                 sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
                               >
-                                {new Date(event.scheduledTime).toLocaleDateString()}
+                                📅 {new Date(event.scheduledTime).toLocaleDateString()}
                               </Typography>
                               <Typography 
                                 variant="caption" 
                                 color="text.secondary"
                                 sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
                               >
-                                {new Date(event.scheduledTime).toLocaleTimeString()}
+                                🕐 {new Date(event.scheduledTime).toLocaleTimeString()}
                               </Typography>
+                              {event.duration && (
+                                <Typography 
+                                  variant="caption" 
+                                  color="text.secondary"
+                                  sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                                >
+                                  ⏱️ {event.duration} minutes
+                                </Typography>
+                              )}
                             </Box>
                           }
-                          primaryTypographyProps={{ 
-                            variant: 'body2', 
-                            fontWeight: 'bold',
-                            sx: { fontSize: { xs: '0.75rem', sm: '0.875rem' } }
-                          }}
                         />
                       </ListItem>
                     ))}
@@ -739,6 +932,238 @@ const UnifiedLearningPage: React.FC = () => {
                     (progress.materialProgresses.filter((mp: any) => mp.status === 'completed').length /
                       weeks.reduce((total, week) => total + week.materials.filter(mat => mat.isPublished).length, 0)) * 100 : 0)}% Complete
                 </Typography>
+              </CardContent>
+            </Card>
+          )}
+
+
+
+          {/* Assessments Section */}
+          {assessments.length > 0 && (
+            <Card sx={{ mb: { xs: 2, sm: 3 } }}>
+              <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                <Typography 
+                  variant="h6" 
+                  gutterBottom 
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1,
+                    fontSize: { xs: '1rem', sm: '1.25rem' },
+                    fontWeight: 'bold'
+                  }}
+                >
+                  <Quiz />
+                  Assessments
+                </Typography>
+                <Grid container spacing={{ xs: 1, sm: 2 }}>
+                  {assessments.map((assessment) => (
+                    <Grid item xs={12} sm={6} md={4} key={assessment._id}>
+                      <Card 
+                        sx={{ 
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            transform: 'translateY(-2px)',
+                            boxShadow: 4
+                          }
+                        }}
+                        onClick={() => handleTakeAssessment(assessment._id)}
+                      >
+                        <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <Quiz color="primary" sx={{ fontSize: { xs: 20, sm: 24 } }} />
+                            <Typography 
+                              variant="subtitle1" 
+                              fontWeight="bold"
+                              sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+                            >
+                              {assessment.title}
+                            </Typography>
+                          </Box>
+                          <Typography 
+                            variant="body2" 
+                            color="text.secondary"
+                            sx={{ 
+                              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                              mb: 1,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            {assessment.description || 'No description available'}
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            <Chip
+                              label={`${assessment.totalQuestions} Questions`}
+                              size="small"
+                              color="primary"
+                              variant="outlined"
+                              sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                            />
+                            <Chip
+                              label={`${assessment.totalPoints} Points`}
+                              size="small"
+                              color="secondary"
+                              variant="outlined"
+                              sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                            />
+                            {assessment.timeLimit && (
+                              <Chip
+                                label={`${assessment.timeLimit} min`}
+                                size="small"
+                                color="warning"
+                                variant="outlined"
+                                sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                              />
+                            )}
+                          </Box>
+                          {assessment.dueDate && (
+                            <Box sx={{ mt: 1 }}>
+                              <CountdownTimer 
+                                dueDate={assessment.dueDate}
+                                onTimeReached={() => handleAssessmentTimeReached(assessment._id)}
+                              />
+                              <Typography 
+                                variant="caption" 
+                                color="text.secondary"
+                                sx={{ 
+                                  fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                                  display: 'block',
+                                  mt: 0.5
+                                }}
+                              >
+                                Due: {new Date(assessment.dueDate).toLocaleDateString()}
+                              </Typography>
+                            </Box>
+                          )}
+                          <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+                            <Button
+                              variant="contained"
+                              color="primary"
+                              size="small"
+                              startIcon={isAssessmentAvailable(assessment) ? <Quiz /> : <Lock />}
+                              disabled={!isAssessmentAvailable(assessment)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTakeAssessment(assessment._id);
+                              }}
+                              sx={{ 
+                                fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                                px: 2
+                              }}
+                            >
+                              {isAssessmentAvailable(assessment) ? 'Take Assessment' : 'Assessment Locked'}
+                            </Button>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Assignments Section */}
+          {assignments.length > 0 && (
+            <Card sx={{ mb: { xs: 2, sm: 3 } }}>
+              <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                <Typography 
+                  variant="h6" 
+                  gutterBottom 
+                  sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1,
+                    fontSize: { xs: '1rem', sm: '1.25rem' },
+                    fontWeight: 'bold'
+                  }}
+                >
+                  <AssignmentIcon />
+                  Assignments
+                </Typography>
+                <Grid container spacing={{ xs: 1, sm: 2 }}>
+                  {assignments.map((assignment) => (
+                    <Grid item xs={12} sm={6} md={4} key={assignment._id}>
+                      <Card 
+                        sx={{ 
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            transform: 'translateY(-2px)',
+                            boxShadow: 4
+                          }
+                        }}
+                        onClick={() => handleTakeAssignment(assignment._id)}
+                      >
+                        <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <AssignmentIcon color="warning" sx={{ fontSize: { xs: 20, sm: 24 } }} />
+                            <Typography 
+                              variant="subtitle1" 
+                              fontWeight="bold"
+                              sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+                            >
+                              {assignment.title}
+                            </Typography>
+                          </Box>
+                          <Typography 
+                            variant="body2" 
+                            color="text.secondary"
+                            sx={{ 
+                              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                              mb: 1,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            {assignment.description || 'No description available'}
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            <Chip
+                              label={`${assignment.maxPoints} Points`}
+                              size="small"
+                              color="warning"
+                              variant="outlined"
+                              sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                            />
+                            <Chip
+                              label={assignment.submissionType}
+                              size="small"
+                              color="info"
+                              variant="outlined"
+                              sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                            />
+                            <Chip
+                              label={assignment.status}
+                              size="small"
+                              color={assignment.status === 'published' ? 'success' : 'default'}
+                              sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                            />
+                          </Box>
+                          {assignment.dueDate && (
+                            <Typography 
+                              variant="caption" 
+                              color="text.secondary"
+                              sx={{ 
+                                fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                                display: 'block',
+                                mt: 1
+                              }}
+                            >
+                              Due: {new Date(assignment.dueDate).toLocaleDateString()}
+                            </Typography>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
               </CardContent>
             </Card>
           )}

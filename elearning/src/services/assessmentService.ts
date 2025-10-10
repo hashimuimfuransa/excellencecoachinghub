@@ -626,5 +626,46 @@ export const assessmentService = {
       console.error('Failed to fetch assessment:', error);
       throw new Error(error.message || 'Failed to fetch assessment');
     }
+  },
+
+  // Start assessment attempt
+  startAssessment: async (assessmentId: string): Promise<{
+    submission: IAssessmentSubmission;
+    assessment: IAssessment;
+  }> => {
+    const response = await apiService.post<{
+      submission: IAssessmentSubmission;
+      assessment: IAssessment;
+    }>(`/assessments/${assessmentId}/start`);
+    
+    if (response.success && response.data) {
+      return response.data;
+    }
+    
+    throw new Error(response.error || 'Failed to start assessment');
+  },
+
+  // Submit assessment
+  submitAssessment: async (data: {
+    assessmentId: string;
+    answers: any[];
+    totalTimeSpent: number;
+    proctoringData?: any;
+    isAutoSubmitted?: boolean;
+  }): Promise<IAssessmentSubmission & { submissionId: string }> => {
+    const response = await apiService.post<{ submission: IAssessmentSubmission }>(
+      `/assessments/${data.assessmentId}/submit`,
+      data
+    );
+
+    if (response.success && response.data) {
+      const submission = response.data.submission;
+      return {
+        ...submission,
+        submissionId: submission.submissionId || submission._id
+      };
+    }
+
+    throw new Error(response.error || 'Failed to submit assessment');
   }
 };

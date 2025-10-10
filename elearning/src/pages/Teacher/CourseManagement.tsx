@@ -55,7 +55,11 @@ import {
   Schedule,
   AccessTime,
   Person,
-  CalendarToday
+  CalendarToday,
+  Upload,
+  CloudUpload,
+  Publish,
+  Unpublished
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -63,6 +67,7 @@ import { courseService } from '../../services/courseService';
 import { liveSessionService } from '../../services/liveSessionService';
 import { assignmentService } from '../../services/assignmentService';
 import { assessmentService } from '../../services/assessmentService';
+import api from '../../services/api';
 import { Week, WeekMaterial } from '../../services/weekService';
 import DocumentProcessor from '../../components/CourseMaterials/DocumentProcessor';
 import MediaUploader from '../../components/CourseMaterials/MediaUploader';
@@ -113,6 +118,7 @@ const CourseManagement: React.FC = () => {
   const [assignments, setAssignments] = useState<any[]>([]);
   const [assessments, setAssessments] = useState<any[]>([]);
   const [youtubeVideos, setYoutubeVideos] = useState<any[]>([]);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
   
   // Week management state
   const [weeks, setWeeks] = useState<Week[]>([]);
@@ -147,9 +153,18 @@ const CourseManagement: React.FC = () => {
     agenda: '',
     recordingEnabled: true,
     chatEnabled: true,
-    handRaiseEnabled: true,
-    screenShareEnabled: true,
-    attendanceEnabled: true
+  });
+
+  // Announcement dialog state
+  const [announcementDialogOpen, setAnnouncementDialogOpen] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState<any>(null);
+  const [announcementForm, setAnnouncementForm] = useState({
+    title: '',
+    content: '',
+    priority: 'medium',
+    isPublished: true,
+    scheduledDate: '',
+    attachments: [] as File[]
   });
 
   // Assignment dialog state
@@ -183,7 +198,8 @@ const CourseManagement: React.FC = () => {
     attempts: 3,
     randomizeQuestions: false,
     showResultsImmediately: true,
-    requireProctoring: false
+    requireProctoring: false,
+    instructions: ''
   });
 
   // YouTube video dialog state
@@ -198,6 +214,14 @@ const CourseManagement: React.FC = () => {
     order: 0,
     isPublished: false
   });
+
+  // File upload state
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [uploadingItem, setUploadingItem] = useState<any>(null);
+  const [uploadType, setUploadType] = useState<'assignment' | 'assessment'>('assignment');
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploading, setUploading] = useState(false);
 
   // Material deletion state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -232,6 +256,13 @@ const CourseManagement: React.FC = () => {
 
   // Load course data
   useEffect(() => {
+    // Check if user is authenticated
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('You must be logged in to access course management');
+      return;
+    }
+
     if (courseId) {
       loadCourse();
     }
@@ -263,7 +294,33 @@ const CourseManagement: React.FC = () => {
 
       // Load assessments
       const assessmentsData = await assessmentService.getCourseAssessments(courseId!);
+      console.log('📊 Loaded assessments:', assessmentsData);
+      console.log('📊 Assessment details:', assessmentsData.map(a => ({
+        id: a._id,
+        title: a.title,
+        isPublished: a.isPublished,
+        documentUrl: a.documentUrl,
+        attachments: a.attachments,
+        hasFile: a.hasFile
+      })));
       setAssessments(assessmentsData || []);
+      
+      // Load announcements
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const announcementsResponse = await api.get(`/announcements/course/${courseId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          setAnnouncements(announcementsResponse.data.data || []);
+        } else {
+          console.warn('No authentication token found, skipping announcements load');
+          setAnnouncements([]);
+        }
+      } catch (err) {
+        console.warn('Failed to load announcements:', err);
+        setAnnouncements([]);
+      }
       
       // Load weeks
       const weeksData = await weekService.getCourseWeeks(courseId!);
@@ -556,12 +613,9 @@ const CourseManagement: React.FC = () => {
       scheduledTime: '',
       duration: 60,
       maxParticipants: 50,
-      agenda: '',
-      recordingEnabled: true,
-      chatEnabled: true,
-      handRaiseEnabled: true,
-      screenShareEnabled: true,
-      attendanceEnabled: true
+    agenda: '',
+    recordingEnabled: true,
+    chatEnabled: true
     });
     setSessionDialogOpen(true);
   };
@@ -576,10 +630,7 @@ const CourseManagement: React.FC = () => {
       maxParticipants: session.maxParticipants,
       agenda: session.agenda,
       recordingEnabled: session.recordingEnabled,
-      chatEnabled: session.chatEnabled,
-      handRaiseEnabled: session.handRaiseEnabled,
-      screenShareEnabled: session.screenShareEnabled,
-      attendanceEnabled: session.attendanceEnabled
+      chatEnabled: session.chatEnabled
     });
     setSessionDialogOpen(true);
   };
@@ -660,26 +711,47 @@ const CourseManagement: React.FC = () => {
     setAssignmentDialogOpen(true);
   };
 
-  const handleDeleteAssignment = (assignment: any) => {
-    setAssignments(prev => prev.filter(a => a._id !== assignment._id));
+  const handleDeleteAssignment = async (assignment: any) => {
+    try {
+      await assignmentService.deleteAssignment(assignment._id);
+      setAssignments(prev => prev.filter(a => a._id !== assignment._id));
+      console.log('Assignment deleted successfully');
+    } catch (error) {
+      console.error('Error deleting assignment:', error);
+      setError('Failed to delete assignment');
+    }
   };
 
-  const handleSaveAssignment = () => {
-    if (editingAssignment) {
-      setAssignments(prev => prev.map(a => 
-        a._id === editingAssignment._id 
-          ? { ...a, ...assignmentForm, updatedAt: new Date().toISOString() }
-          : a
-      ));
-    } else {
-      const newAssignment = {
-        _id: Date.now().toString(),
-        ...assignmentForm,
-        createdAt: new Date().toISOString()
-      };
-      setAssignments(prev => [...prev, newAssignment]);
+  const handleSaveAssignment = async () => {
+    try {
+      if (editingAssignment) {
+        // Update existing assignment
+        const updatedAssignment = await assignmentService.updateAssignment(editingAssignment._id, assignmentForm);
+        setAssignments(prev => prev.map(a => 
+          a._id === editingAssignment._id ? updatedAssignment : a
+        ));
+      } else {
+        // Create new assignment
+        const newAssignment = await assignmentService.createAssignment({
+          title: assignmentForm.title,
+          description: assignmentForm.description,
+          instructions: assignmentForm.instructions,
+          courseId: courseId!,
+          dueDate: assignmentForm.dueDate,
+          maxPoints: assignmentForm.points,
+          submissionType: 'both' as const,
+          allowedFileTypes: ['pdf', 'doc', 'docx'],
+          maxFileSize: 10 * 1024 * 1024, // 10MB
+          isRequired: true
+        });
+        setAssignments(prev => [...prev, newAssignment]);
+      }
+      setAssignmentDialogOpen(false);
+      setError(null);
+    } catch (error: any) {
+      console.error('Error saving assignment:', error);
+      setError(error.response?.data?.message || 'Failed to save assignment');
     }
-    setAssignmentDialogOpen(false);
   };
 
   const getAssignmentTypeColor = (type: string) => {
@@ -710,7 +782,8 @@ const CourseManagement: React.FC = () => {
       attempts: 3,
       randomizeQuestions: false,
       showResultsImmediately: true,
-      requireProctoring: false
+      requireProctoring: false,
+      instructions: ''
     });
     setAssessmentDialogOpen(true);
   };
@@ -729,31 +802,73 @@ const CourseManagement: React.FC = () => {
       attempts: assessment.attempts,
       randomizeQuestions: assessment.randomizeQuestions,
       showResultsImmediately: assessment.showResultsImmediately,
-      requireProctoring: assessment.requireProctoring
+      requireProctoring: assessment.requireProctoring,
+      instructions: assessment.instructions || ''
     });
     setAssessmentDialogOpen(true);
   };
 
-  const handleDeleteAssessment = (assessment: any) => {
-    setAssessments(prev => prev.filter(a => a._id !== assessment._id));
+  const handleDeleteAssessment = async (assessment: any) => {
+    try {
+      await assessmentService.deleteAssessment(assessment._id);
+      setAssessments(prev => prev.filter(a => a._id !== assessment._id));
+      console.log('Assessment deleted successfully');
+    } catch (error) {
+      console.error('Error deleting assessment:', error);
+      setError('Failed to delete assessment');
+    }
   };
 
-  const handleSaveAssessment = () => {
-    if (editingAssessment) {
-      setAssessments(prev => prev.map(a => 
-        a._id === editingAssessment._id 
-          ? { ...a, ...assessmentForm, updatedAt: new Date().toISOString() }
-          : a
-      ));
-    } else {
-      const newAssessment = {
-        _id: Date.now().toString(),
-        ...assessmentForm,
-        createdAt: new Date().toISOString()
-      };
-      setAssessments(prev => [...prev, newAssessment]);
+  const handleSaveAssessment = async () => {
+    try {
+      if (editingAssessment) {
+        // Update existing assessment
+        const updatedAssessment = await assessmentService.updateAssessment(editingAssessment._id, {
+          title: assessmentForm.title,
+          description: assessmentForm.description,
+          type: assessmentForm.type as 'quiz' | 'assignment' | 'exam' | 'project' | 'homework',
+          timeLimit: assessmentForm.timeLimit,
+          attempts: assessmentForm.attempts,
+          dueDate: assessmentForm.dueDate,
+          instructions: assessmentForm.instructions,
+          isPublished: true,
+          allowLateSubmission: true,
+          randomizeQuestions: assessmentForm.randomizeQuestions,
+          showResultsImmediately: assessmentForm.showResultsImmediately,
+          requireProctoring: assessmentForm.requireProctoring,
+          passingScore: assessmentForm.passingScore,
+          questions: []
+        });
+        setAssessments(prev => prev.map(a => 
+          a._id === editingAssessment._id ? updatedAssessment : a
+        ));
+      } else {
+        // Create new assessment
+        const newAssessment = await assessmentService.createAssessment({
+          title: assessmentForm.title,
+          description: assessmentForm.description,
+          courseId: courseId!,
+          type: assessmentForm.type as 'quiz' | 'assignment' | 'exam' | 'project' | 'homework',
+          timeLimit: assessmentForm.timeLimit,
+          attempts: assessmentForm.attempts,
+          dueDate: assessmentForm.dueDate,
+          instructions: assessmentForm.instructions,
+          isPublished: true,
+          allowLateSubmission: true,
+          randomizeQuestions: assessmentForm.randomizeQuestions,
+          showResultsImmediately: assessmentForm.showResultsImmediately,
+          requireProctoring: assessmentForm.requireProctoring,
+          passingScore: assessmentForm.passingScore,
+          questions: []
+        });
+        setAssessments(prev => [...prev, newAssessment]);
+      }
+      setAssessmentDialogOpen(false);
+      setError(null);
+    } catch (error: any) {
+      console.error('Error saving assessment:', error);
+      setError(error.response?.data?.message || 'Failed to save assessment');
     }
-    setAssessmentDialogOpen(false);
   };
 
   const getAssessmentTypeColor = (type: string) => {
@@ -762,6 +877,158 @@ const CourseManagement: React.FC = () => {
       case 'exam': return 'secondary';
       case 'test': return 'success';
       default: return 'default';
+    }
+  };
+
+  // File upload handlers
+  const handleUploadFile = (item: any, type: 'assignment' | 'assessment') => {
+    setUploadingItem(item);
+    setUploadType(type);
+    setUploadFile(null);
+    setUploadProgress(0);
+    setUploadDialogOpen(true);
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!allowedTypes.includes(file.type)) {
+        setError('Please upload a PDF or Word document');
+        return;
+      }
+      
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setError('File size must be less than 10MB');
+        return;
+      }
+      
+      setUploadFile(file);
+      setError(null);
+    }
+  };
+
+  const handleUploadSubmit = async () => {
+    if (!uploadFile || !uploadingItem || !courseId) {
+      setError('Please select a file to upload');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setUploadProgress(0);
+
+      const formData = new FormData();
+      formData.append('file', uploadFile);
+      formData.append('courseId', courseId);
+      formData.append('itemId', uploadingItem._id);
+      formData.append('type', uploadType);
+
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return prev;
+          }
+          return prev + 10;
+        });
+      }, 200);
+
+      const response = await api.post('/upload/exam', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total!);
+          setUploadProgress(percentCompleted);
+        },
+      });
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
+      if (response.data.success) {
+        // Reload assignments and assessments to get updated data from server
+        try {
+          const [assignmentsData, assessmentsData] = await Promise.all([
+            assignmentService.getCourseAssignments(courseId!),
+            assessmentService.getCourseAssessments(courseId!)
+          ]);
+          
+          setAssignments(assignmentsData || []);
+          setAssessments(assessmentsData || []);
+          
+          console.log('✅ Course data reloaded after exam upload');
+          console.log('📊 Assignment with uploaded file:', assignmentsData.find(a => a.assignmentDocument));
+          console.log('📊 Assessment with uploaded file:', assessmentsData.find(a => a.documentUrl || a.attachments?.length));
+        } catch (reloadError) {
+          console.error('Error reloading course data:', reloadError);
+          // Fallback to local state update
+          if (uploadType === 'assignment') {
+            setAssignments(prev => prev.map(a => 
+              a._id === uploadingItem._id 
+                ? { ...a, uploadedFile: response.data.data, hasFile: true }
+                : a
+            ));
+          } else {
+            setAssessments(prev => prev.map(a => 
+              a._id === uploadingItem._id 
+                ? { ...a, uploadedFile: response.data.data, hasFile: true }
+                : a
+            ));
+          }
+        }
+
+        setUploadDialogOpen(false);
+        setError(null);
+        // Show success message
+        console.log('File uploaded successfully');
+      }
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      setError(error.response?.data?.message || 'Failed to upload file');
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  // Publish/Unpublish handlers
+  const handleToggleAssignmentPublish = async (assignment: any) => {
+    try {
+      const newStatus = assignment.status === 'published' ? 'draft' : 'published';
+      await assignmentService.toggleAssignmentPublish(assignment._id, newStatus);
+      
+      setAssignments(prev => prev.map(a => 
+        a._id === assignment._id 
+          ? { ...a, status: newStatus }
+          : a
+      ));
+      
+      console.log(`Assignment ${newStatus === 'published' ? 'published' : 'unpublished'} successfully`);
+    } catch (error) {
+      console.error('Error toggling assignment publish status:', error);
+      setError('Failed to update assignment status');
+    }
+  };
+
+  const handleToggleAssessmentPublish = async (assessment: any) => {
+    try {
+      const updatedAssessment = await assessmentService.togglePublishAssessment(assessment._id);
+      
+      setAssessments(prev => prev.map(a => 
+        a._id === assessment._id 
+          ? { ...a, isPublished: updatedAssessment.isPublished, status: updatedAssessment.status }
+          : a
+      ));
+      
+      console.log(`Assessment ${updatedAssessment.isPublished ? 'published' : 'unpublished'} successfully`);
+    } catch (error) {
+      console.error('Error toggling assessment publish status:', error);
+      setError('Failed to update assessment status');
     }
   };
 
@@ -830,52 +1097,136 @@ const CourseManagement: React.FC = () => {
     return duration || 'Unknown';
   };
 
+  // Announcement handlers
+  const handleSaveAnnouncement = async () => {
+    try {
+      // Check if user is authenticated
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('You must be logged in to create announcements');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('title', announcementForm.title);
+      formData.append('content', announcementForm.content);
+      formData.append('priority', announcementForm.priority);
+      formData.append('isPublished', announcementForm.isPublished.toString());
+      if (announcementForm.scheduledDate) {
+        formData.append('scheduledDate', announcementForm.scheduledDate);
+      }
+      
+      // Add attachments
+      announcementForm.attachments.forEach((file, index) => {
+        formData.append('attachments', file);
+      });
+
+      let response;
+      if (editingAnnouncement) {
+        response = await api.put(`/announcements/${editingAnnouncement._id}`, formData, {
+          headers: { 
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      } else {
+        formData.append('course', courseId!);
+        response = await api.post('/announcements', formData, {
+          headers: { 
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      }
+
+      // Reload announcements
+      const announcementsResponse = await api.get(`/announcements/course/${courseId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setAnnouncements(announcementsResponse.data.data || []);
+      
+      setAnnouncementDialogOpen(false);
+    } catch (error: any) {
+      console.error('Error saving announcement:', error);
+      if (error.response?.status === 401) {
+        setError('Authentication failed. Please log in again.');
+        // Redirect to login
+        window.location.href = '/login';
+      } else if (error.response?.status === 403) {
+        setError('You do not have permission to create announcements for this course.');
+      } else {
+        setError('Failed to save announcement. Please try again.');
+      }
+    }
+  };
+
+  const handleDeleteAnnouncement = async (announcementId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('You must be logged in to delete announcements');
+        return;
+      }
+
+      await api.delete(`/announcements/${announcementId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      // Reload announcements
+      const announcementsResponse = await api.get(`/announcements/course/${courseId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setAnnouncements(announcementsResponse.data.data || []);
+    } catch (error: any) {
+      console.error('Error deleting announcement:', error);
+      if (error.response?.status === 401) {
+        setError('Authentication failed. Please log in again.');
+        window.location.href = '/login';
+      } else if (error.response?.status === 403) {
+        setError('You do not have permission to delete this announcement.');
+      } else {
+        setError('Failed to delete announcement. Please try again.');
+      }
+    }
+  };
+
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-          <CircularProgress />
-        </Box>
-      </Container>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box>
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
         <Button variant="contained" onClick={loadCourse}>
           Retry
         </Button>
-      </Container>
+      </Box>
     );
   }
 
   if (!courseData) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box>
         <Alert severity="warning">
           Course not found
         </Alert>
-      </Container>
+      </Box>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <Box>
       {/* Header */}
       <Box sx={{ mb: 3 }}>
-        <Breadcrumbs sx={{ mb: 2 }}>
-          <Link color="inherit" href="/dashboard/teacher/courses">
-            My Courses
-          </Link>
-          <Typography color="text.primary">{courseData.title}</Typography>
-        </Breadcrumbs>
-        
         <Typography variant="h4" component="h1" gutterBottom>
-          {courseData.title} - Course Management
+          Course Management
         </Typography>
         <Typography variant="subtitle1" color="text.secondary">
           Manage course materials, live sessions, assignments, and assessments
@@ -929,15 +1280,28 @@ const CourseManagement: React.FC = () => {
       </Card>
 
       {/* Tabs */}
-      <Paper sx={{ width: '100%' }}>
+      <Paper sx={{ width: '100%', mb: 3, elevation: 1 }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+          <Tabs 
+            value={activeTab} 
+            onChange={(e, newValue) => setActiveTab(newValue)}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{ 
+              '& .MuiTab-root': {
+                minWidth: 120,
+                textTransform: 'none',
+                fontWeight: 500
+              }
+            }}
+          >
             <Tab label="Weeks" {...a11yProps(0)} />
-            <Tab label="Live Sessions" {...a11yProps(1)} />
-            <Tab label="Assignments" {...a11yProps(2)} />
-            <Tab label="Assessments" {...a11yProps(3)} />
-            <Tab label="Videos" {...a11yProps(4)} />
-            <Tab label="Preview" {...a11yProps(5)} />
+            <Tab label="Announcements" {...a11yProps(1)} />
+            <Tab label="Live Sessions" {...a11yProps(2)} />
+            <Tab label="Assignments" {...a11yProps(3)} />
+            <Tab label="Assessments" {...a11yProps(4)} />
+            <Tab label="Videos" {...a11yProps(5)} />
+            <Tab label="Preview" {...a11yProps(6)} />
           </Tabs>
         </Box>
 
@@ -1566,8 +1930,117 @@ const CourseManagement: React.FC = () => {
           </Box>
         </TabPanel>
 
-        {/* Live Sessions Tab */}
+        {/* Announcements Tab */}
         <TabPanel value={activeTab} index={1}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">Course Announcements</Typography>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => {
+                setEditingAnnouncement(null);
+                setAnnouncementForm({
+                  title: '',
+                  content: '',
+                  priority: 'medium',
+                  isPublished: true,
+                  scheduledDate: '',
+                  attachments: []
+                });
+                setAnnouncementDialogOpen(true);
+              }}
+            >
+              Add Announcement
+            </Button>
+          </Box>
+
+          {announcements.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Announcement sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                No announcements yet
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Create your first announcement to keep students informed about course updates, deadlines, and important information.
+              </Typography>
+            </Box>
+          ) : (
+            <Grid container spacing={2}>
+              {announcements.map((announcement) => (
+                <Grid item xs={12} md={6} key={announcement._id}>
+                  <Card sx={{ height: '100%' }}>
+                    <CardContent>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="h6" gutterBottom>
+                            {announcement.title}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary" paragraph>
+                            {announcement.content}
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                            <Chip
+                              label={announcement.priority}
+                              size="small"
+                              color={
+                                announcement.priority === 'urgent' ? 'error' :
+                                announcement.priority === 'high' ? 'error' :
+                                announcement.priority === 'medium' ? 'warning' :
+                                'default'
+                              }
+                            />
+                            <Chip
+                              label={announcement.isPublished ? 'Published' : 'Draft'}
+                              size="small"
+                              color={announcement.isPublished ? 'success' : 'warning'}
+                            />
+                            {announcement.scheduledDate && (
+                              <Chip
+                                icon={<CalendarToday />}
+                                label={new Date(announcement.scheduledDate).toLocaleDateString()}
+                                size="small"
+                                variant="outlined"
+                              />
+                            )}
+                          </Box>
+                        </Box>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              setEditingAnnouncement(announcement);
+                              setAnnouncementForm({
+                                title: announcement.title,
+                                content: announcement.content,
+                                priority: announcement.priority,
+                                isPublished: announcement.isPublished,
+                                scheduledDate: announcement.scheduledDate || '',
+                                attachments: []
+                              });
+                              setAnnouncementDialogOpen(true);
+                            }}
+                          >
+                            <Edit />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleDeleteAnnouncement(announcement._id)}
+                          >
+                            <Delete />
+                          </IconButton>
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </TabPanel>
+
+        {/* Live Sessions Tab */}
+        <TabPanel value={activeTab} index={2}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">Live Sessions</Typography>
             <Button
@@ -1638,7 +2111,7 @@ const CourseManagement: React.FC = () => {
         </TabPanel>
 
         {/* Assignments Tab */}
-        <TabPanel value={activeTab} index={2}>
+        <TabPanel value={activeTab} index={3}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">Assignments</Typography>
             <Button
@@ -1655,9 +2128,17 @@ const CourseManagement: React.FC = () => {
               <Grid item xs={12} md={6} lg={4} key={assignment._id || `assignment-${index}`}>
                 <Card>
                   <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                      {assignment.title}
-                    </Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                      <Typography variant="h6" gutterBottom>
+                        {assignment.title}
+                      </Typography>
+                      <Chip
+                        label={assignment.status}
+                        size="small"
+                        color={assignment.status === 'published' ? 'success' : 'default'}
+                        sx={{ ml: 1 }}
+                      />
+                    </Box>
                     <Typography variant="body2" color="text.secondary" paragraph>
                       {assignment.description}
                     </Typography>
@@ -1671,6 +2152,17 @@ const CourseManagement: React.FC = () => {
                       <Typography variant="body2">
                         <strong>Type:</strong> {assignment.type}
                       </Typography>
+                      {assignment.assignmentDocument && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
+                          <Chip
+                            label={`Exam Uploaded: ${assignment.assignmentDocument.originalName}`}
+                            size="small"
+                            color="success"
+                            icon={<CloudUpload />}
+                            sx={{ fontSize: '0.7rem' }}
+                          />
+                        </Box>
+                      )}
                     </Box>
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                       <Button
@@ -1684,6 +2176,31 @@ const CourseManagement: React.FC = () => {
                         onClick={() => {/* View submissions */}}
                       >
                         Submissions
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<CloudUpload />}
+                        onClick={() => handleUploadFile(assignment, 'assignment')}
+                        sx={{ 
+                          borderColor: assignment.assignmentDocument ? 'success.main' : 'primary.main',
+                          color: assignment.assignmentDocument ? 'success.main' : 'primary.main',
+                          '&:hover': {
+                            borderColor: assignment.assignmentDocument ? 'success.dark' : 'primary.dark',
+                            backgroundColor: assignment.assignmentDocument ? 'success.light' : 'primary.light',
+                          }
+                        }}
+                      >
+                        {assignment.assignmentDocument ? 'Re-upload' : 'Upload Exam'}
+                      </Button>
+                      <Button
+                        size="small"
+                        variant={assignment.status === 'published' ? 'outlined' : 'contained'}
+                        color={assignment.status === 'published' ? 'warning' : 'success'}
+                        startIcon={assignment.status === 'published' ? <Unpublished /> : <Publish />}
+                        onClick={() => handleToggleAssignmentPublish(assignment)}
+                      >
+                        {assignment.status === 'published' ? 'Unpublish' : 'Publish'}
                       </Button>
                       <Button
                         size="small"
@@ -1707,7 +2224,7 @@ const CourseManagement: React.FC = () => {
         </TabPanel>
 
         {/* Assessments Tab */}
-        <TabPanel value={activeTab} index={3}>
+        <TabPanel value={activeTab} index={4}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">Assessments</Typography>
             <Button
@@ -1724,9 +2241,17 @@ const CourseManagement: React.FC = () => {
               <Grid item xs={12} md={6} lg={4} key={assessment._id || `assessment-${index}`}>
                 <Card>
                   <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                      {assessment.title}
-                    </Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                      <Typography variant="h6" gutterBottom>
+                        {assessment.title}
+                      </Typography>
+                      <Chip
+                        label={assessment.isPublished ? 'Published' : 'Draft'}
+                        size="small"
+                        color={assessment.isPublished ? 'success' : 'default'}
+                        sx={{ ml: 1 }}
+                      />
+                    </Box>
                     <Typography variant="body2" color="text.secondary" paragraph>
                       {assessment.description}
                     </Typography>
@@ -1743,11 +2268,22 @@ const CourseManagement: React.FC = () => {
                       <Typography variant="body2">
                         <strong>Time Limit:</strong> {assessment.timeLimit} minutes
                       </Typography>
+                      {(assessment.documentUrl || (assessment.attachments && assessment.attachments.length > 0)) && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
+                          <Chip
+                            label={`Exam Uploaded: ${assessment.attachments?.[0]?.originalName || 'Document'}`}
+                            size="small"
+                            color="success"
+                            icon={<CloudUpload />}
+                            sx={{ fontSize: '0.7rem' }}
+                          />
+                        </Box>
+                      )}
                     </Box>
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                       <Button
                         size="small"
-                        onClick={() => {/* View assessment details */}}
+                        onClick={() => window.open(`/student/quiz/${assessment._id}`, '_blank')}
                       >
                         View
                       </Button>
@@ -1756,6 +2292,31 @@ const CourseManagement: React.FC = () => {
                         onClick={() => {/* View submissions */}}
                       >
                         Submissions
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<CloudUpload />}
+                        onClick={() => handleUploadFile(assessment, 'assessment')}
+                        sx={{ 
+                          borderColor: (assessment.documentUrl || assessment.attachments?.length) ? 'success.main' : 'primary.main',
+                          color: (assessment.documentUrl || assessment.attachments?.length) ? 'success.main' : 'primary.main',
+                          '&:hover': {
+                            borderColor: (assessment.documentUrl || assessment.attachments?.length) ? 'success.dark' : 'primary.dark',
+                            backgroundColor: (assessment.documentUrl || assessment.attachments?.length) ? 'success.light' : 'primary.light',
+                          }
+                        }}
+                      >
+                        {(assessment.documentUrl || assessment.attachments?.length) ? 'Re-upload' : 'Upload Exam'}
+                      </Button>
+                      <Button
+                        size="small"
+                        variant={assessment.isPublished ? 'outlined' : 'contained'}
+                        color={assessment.isPublished ? 'warning' : 'success'}
+                        startIcon={assessment.isPublished ? <Unpublished /> : <Publish />}
+                        onClick={() => handleToggleAssessmentPublish(assessment)}
+                      >
+                        {assessment.isPublished ? 'Unpublish' : 'Publish'}
                       </Button>
                       <Button
                         size="small"
@@ -1779,7 +2340,7 @@ const CourseManagement: React.FC = () => {
         </TabPanel>
 
         {/* Videos Tab */}
-        <TabPanel value={activeTab} index={4}>
+        <TabPanel value={activeTab} index={5}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">YouTube Videos</Typography>
             <Button
@@ -1848,7 +2409,7 @@ const CourseManagement: React.FC = () => {
         </TabPanel>
 
         {/* Preview Tab */}
-        <TabPanel value={activeTab} index={5}>
+        <TabPanel value={activeTab} index={6}>
           <Typography variant="h6" gutterBottom>
             Course Preview - Student View
           </Typography>
@@ -1923,12 +2484,59 @@ const CourseManagement: React.FC = () => {
                     <Grid item xs={12} md={6} key={assignment._id || `preview-assignment-${index}`}>
                       <Card variant="outlined">
                         <CardContent>
-                          <Typography variant="subtitle1" gutterBottom>
-                            {assignment.title}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                            <Typography variant="subtitle1" gutterBottom>
+                              {assignment.title}
+                            </Typography>
+                            <Chip
+                              label={assignment.status}
+                              size="small"
+                              color={assignment.status === 'published' ? 'success' : 'default'}
+                              sx={{ ml: 1 }}
+                            />
+                          </Box>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
                             Due: {formatDueDate(assignment.dueDate)}
                           </Typography>
+                          {assignment.assignmentDocument && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                              <CloudUpload color="success" sx={{ fontSize: 16 }} />
+                              <Typography variant="caption" color="success.main">
+                                Exam uploaded: {assignment.assignmentDocument.originalName}
+                              </Typography>
+                            </Box>
+                          )}
+                          <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                            <Button
+                              size="small"
+                              variant={assignment.status === 'published' ? 'outlined' : 'contained'}
+                              color={assignment.status === 'published' ? 'warning' : 'success'}
+                              startIcon={assignment.status === 'published' ? <Unpublished /> : <Publish />}
+                              onClick={() => handleToggleAssignmentPublish(assignment)}
+                            >
+                              {assignment.status === 'published' ? 'Unpublish' : 'Publish'}
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<Edit />}
+                              onClick={() => {
+                                setEditingAssignment(assignment);
+                                setAssignmentDialogOpen(true);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="error"
+                              startIcon={<Delete />}
+                              onClick={() => handleDeleteAssignment(assignment)}
+                            >
+                              Delete
+                            </Button>
+                          </Box>
                         </CardContent>
                       </Card>
                     </Grid>
@@ -1940,20 +2548,82 @@ const CourseManagement: React.FC = () => {
             {/* Assessments Section */}
             <Card sx={{ mb: 3 }}>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Assessments ({assessments.length})
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Assessments ({assessments.length})
+                  </Typography>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<Quiz />}
+                    onClick={handleAddAssessment}
+                  >
+                    Create Assessment
+                  </Button>
+                </Box>
+                {assessments.length === 0 && (
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    No assessments found for this course.
+                  </Typography>
+                )}
                 <Grid container spacing={2}>
                   {assessments.slice(0, 2).map((assessment, index) => (
                     <Grid item xs={12} md={6} key={assessment._id || `preview-assessment-${index}`}>
                       <Card variant="outlined">
                         <CardContent>
-                          <Typography variant="subtitle1" gutterBottom>
-                            {assessment.title}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                            <Typography variant="subtitle1" gutterBottom>
+                              {assessment.title}
+                            </Typography>
+                            <Chip
+                              label={assessment.isPublished ? 'Published' : 'Draft'}
+                              size="small"
+                              color={assessment.isPublished ? 'success' : 'default'}
+                              sx={{ ml: 1 }}
+                            />
+                          </Box>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
                             Due: {formatDueDate(assessment.dueDate)}
                           </Typography>
+                          {(assessment.documentUrl || (assessment.attachments && assessment.attachments.length > 0)) && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                              <CloudUpload color="success" sx={{ fontSize: 16 }} />
+                              <Typography variant="caption" color="success.main">
+                                Exam uploaded: {assessment.attachments?.[0]?.originalName || 'Document'}
+                              </Typography>
+                            </Box>
+                          )}
+                          <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                            <Button
+                              size="small"
+                              variant={assessment.isPublished ? 'outlined' : 'contained'}
+                              color={assessment.isPublished ? 'warning' : 'success'}
+                              startIcon={assessment.isPublished ? <Unpublished /> : <Publish />}
+                              onClick={() => handleToggleAssessmentPublish(assessment)}
+                            >
+                              {assessment.isPublished ? 'Unpublish' : 'Publish'}
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<Edit />}
+                              onClick={() => {
+                                setEditingAssessment(assessment);
+                                setAssessmentDialogOpen(true);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="error"
+                              startIcon={<Delete />}
+                              onClick={() => handleDeleteAssessment(assessment)}
+                            >
+                              Delete
+                            </Button>
+                          </Box>
                         </CardContent>
                       </Card>
                     </Grid>
@@ -2300,7 +2970,460 @@ const CourseManagement: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+
+      {/* Add/Edit Assignment Dialog */}
+      <Dialog open={assignmentDialogOpen} onClose={() => setAssignmentDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {editingAssignment ? 'Edit Assignment' : 'Create New Assignment'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <TextField
+              fullWidth
+              label="Assignment Title"
+              value={assignmentForm.title}
+              onChange={(e) => setAssignmentForm(prev => ({ ...prev, title: e.target.value }))}
+              margin="normal"
+              required
+            />
+            
+            <TextField
+              fullWidth
+              label="Description"
+              value={assignmentForm.description}
+              onChange={(e) => setAssignmentForm(prev => ({ ...prev, description: e.target.value }))}
+              margin="normal"
+              multiline
+              rows={3}
+              required
+            />
+            
+            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+              <TextField
+                fullWidth
+                label="Due Date"
+                type="datetime-local"
+                value={assignmentForm.dueDate}
+                onChange={(e) => setAssignmentForm(prev => ({ ...prev, dueDate: e.target.value }))}
+                InputLabelProps={{ shrink: true }}
+                required
+              />
+              
+              <TextField
+                fullWidth
+                label="Points"
+                type="number"
+                value={assignmentForm.points}
+                onChange={(e) => setAssignmentForm(prev => ({ ...prev, points: parseInt(e.target.value) }))}
+                inputProps={{ min: 1 }}
+                required
+              />
+            </Box>
+            
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Assignment Type</InputLabel>
+              <Select
+                value={assignmentForm.type}
+                onChange={(e) => setAssignmentForm(prev => ({ ...prev, type: e.target.value }))}
+                label="Assignment Type"
+              >
+                <MenuItem value="essay">Essay</MenuItem>
+                <MenuItem value="project">Project</MenuItem>
+                <MenuItem value="presentation">Presentation</MenuItem>
+                <MenuItem value="research">Research Paper</MenuItem>
+                <MenuItem value="portfolio">Portfolio</MenuItem>
+              </Select>
+            </FormControl>
+            
+            <TextField
+              fullWidth
+              label="Instructions"
+              value={assignmentForm.instructions}
+              onChange={(e) => setAssignmentForm(prev => ({ ...prev, instructions: e.target.value }))}
+              margin="normal"
+              multiline
+              rows={4}
+              placeholder="Provide detailed instructions for the assignment..."
+            />
+            
+            <TextField
+              fullWidth
+              label="Rubric"
+              value={assignmentForm.rubric}
+              onChange={(e) => setAssignmentForm(prev => ({ ...prev, rubric: e.target.value }))}
+              margin="normal"
+              multiline
+              rows={3}
+              placeholder="Describe the grading criteria..."
+            />
+            
+            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+              <FormControl fullWidth>
+                <InputLabel>Allow Late Submission</InputLabel>
+                <Select
+                  value={assignmentForm.allowLateSubmission.toString()}
+                  onChange={(e) => setAssignmentForm(prev => ({ ...prev, allowLateSubmission: e.target.value === 'true' }))}
+                  label="Allow Late Submission"
+                >
+                  <MenuItem value="true">Yes</MenuItem>
+                  <MenuItem value="false">No</MenuItem>
+                </Select>
+              </FormControl>
+              
+              {assignmentForm.allowLateSubmission && (
+                <TextField
+                  fullWidth
+                  label="Late Penalty (%)"
+                  type="number"
+                  value={assignmentForm.latePenalty}
+                  onChange={(e) => setAssignmentForm(prev => ({ ...prev, latePenalty: parseInt(e.target.value) }))}
+                  inputProps={{ min: 0, max: 100 }}
+                />
+              )}
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAssignmentDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSaveAssignment} 
+            variant="contained"
+            disabled={!assignmentForm.title || !assignmentForm.description || !assignmentForm.dueDate}
+          >
+            {editingAssignment ? 'Update' : 'Create'} Assignment
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add/Edit Assessment Dialog */}
+      <Dialog open={assessmentDialogOpen} onClose={() => setAssessmentDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {editingAssessment ? 'Edit Assessment' : 'Create New Assessment'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <TextField
+              fullWidth
+              label="Assessment Title"
+              value={assessmentForm.title}
+              onChange={(e) => setAssessmentForm(prev => ({ ...prev, title: e.target.value }))}
+              margin="normal"
+              required
+            />
+            
+            <TextField
+              fullWidth
+              label="Description"
+              value={assessmentForm.description}
+              onChange={(e) => setAssessmentForm(prev => ({ ...prev, description: e.target.value }))}
+              margin="normal"
+              multiline
+              rows={3}
+              required
+            />
+            
+            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+              <TextField
+                fullWidth
+                label="Due Date"
+                type="datetime-local"
+                value={assessmentForm.dueDate}
+                onChange={(e) => setAssessmentForm(prev => ({ ...prev, dueDate: e.target.value }))}
+                InputLabelProps={{ shrink: true }}
+                required
+              />
+              
+              <TextField
+                fullWidth
+                label="Points"
+                type="number"
+                value={assessmentForm.points}
+                onChange={(e) => setAssessmentForm(prev => ({ ...prev, points: parseInt(e.target.value) }))}
+                inputProps={{ min: 1 }}
+                required
+              />
+            </Box>
+            
+            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+              <FormControl fullWidth>
+                <InputLabel>Assessment Type</InputLabel>
+                <Select
+                  value={assessmentForm.type}
+                  onChange={(e) => setAssessmentForm(prev => ({ ...prev, type: e.target.value }))}
+                  label="Assessment Type"
+                >
+                  <MenuItem value="quiz">Quiz</MenuItem>
+                  <MenuItem value="exam">Exam</MenuItem>
+                  <MenuItem value="test">Test</MenuItem>
+                  <MenuItem value="midterm">Midterm</MenuItem>
+                  <MenuItem value="final">Final Exam</MenuItem>
+                </Select>
+              </FormControl>
+              
+              <TextField
+                fullWidth
+                label="Time Limit (minutes)"
+                type="number"
+                value={assessmentForm.timeLimit}
+                onChange={(e) => setAssessmentForm(prev => ({ ...prev, timeLimit: parseInt(e.target.value) }))}
+                inputProps={{ min: 1 }}
+              />
+            </Box>
+            
+            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+              <TextField
+                fullWidth
+                label="Passing Score (%)"
+                type="number"
+                value={assessmentForm.passingScore}
+                onChange={(e) => setAssessmentForm(prev => ({ ...prev, passingScore: parseInt(e.target.value) }))}
+                inputProps={{ min: 0, max: 100 }}
+              />
+              
+              <TextField
+                fullWidth
+                label="Attempts Allowed"
+                type="number"
+                value={assessmentForm.attempts}
+                onChange={(e) => setAssessmentForm(prev => ({ ...prev, attempts: parseInt(e.target.value) }))}
+                inputProps={{ min: 1 }}
+              />
+            </Box>
+            
+            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+              <FormControl fullWidth>
+                <InputLabel>Randomize Questions</InputLabel>
+                <Select
+                  value={assessmentForm.randomizeQuestions.toString()}
+                  onChange={(e) => setAssessmentForm(prev => ({ ...prev, randomizeQuestions: e.target.value === 'true' }))}
+                  label="Randomize Questions"
+                >
+                  <MenuItem value="true">Yes</MenuItem>
+                  <MenuItem value="false">No</MenuItem>
+                </Select>
+              </FormControl>
+              
+              <FormControl fullWidth>
+                <InputLabel>Show Results Immediately</InputLabel>
+                <Select
+                  value={assessmentForm.showResultsImmediately.toString()}
+                  onChange={(e) => setAssessmentForm(prev => ({ ...prev, showResultsImmediately: e.target.value === 'true' }))}
+                  label="Show Results Immediately"
+                >
+                  <MenuItem value="true">Yes</MenuItem>
+                  <MenuItem value="false">No</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+            
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Require Proctoring</InputLabel>
+              <Select
+                value={assessmentForm.requireProctoring.toString()}
+                onChange={(e) => setAssessmentForm(prev => ({ ...prev, requireProctoring: e.target.value === 'true' }))}
+                label="Require Proctoring"
+              >
+                <MenuItem value="true">Yes</MenuItem>
+                <MenuItem value="false">No</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAssessmentDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSaveAssessment} 
+            variant="contained"
+            disabled={!assessmentForm.title || !assessmentForm.description || !assessmentForm.dueDate}
+          >
+            {editingAssessment ? 'Update' : 'Create'} Assessment
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* File Upload Dialog */}
+      <Dialog open={uploadDialogOpen} onClose={() => setUploadDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Upload Exam File - {uploadingItem?.title}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Upload a PDF or Word document containing the exam questions. The system will automatically extract and process the content for students.
+            </Typography>
+            
+            <Box sx={{ mb: 3 }}>
+              <input
+                accept=".pdf,.doc,.docx"
+                style={{ display: 'none' }}
+                id="file-upload"
+                type="file"
+                onChange={handleFileSelect}
+              />
+              <label htmlFor="file-upload">
+                <Button
+                  variant="outlined"
+                  component="span"
+                  startIcon={<Upload />}
+                  fullWidth
+                  sx={{ 
+                    py: 2,
+                    borderStyle: 'dashed',
+                    borderWidth: 2,
+                    '&:hover': {
+                      borderStyle: 'dashed',
+                      borderWidth: 2,
+                    }
+                  }}
+                >
+                  {uploadFile ? uploadFile.name : 'Choose File (PDF, DOC, DOCX)'}
+                </Button>
+              </label>
+            </Box>
+
+            {uploadFile && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Selected file: <strong>{uploadFile.name}</strong>
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Size: {(uploadFile.size / 1024 / 1024).toFixed(2)} MB
+                </Typography>
+              </Box>
+            )}
+
+            {uploading && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  Uploading and processing file...
+                </Typography>
+                <Box sx={{ width: '100%', bgcolor: 'grey.200', borderRadius: 1 }}>
+                  <Box
+                    sx={{
+                      width: `${uploadProgress}%`,
+                      height: 8,
+                      bgcolor: 'primary.main',
+                      borderRadius: 1,
+                      transition: 'width 0.3s ease',
+                    }}
+                  />
+                </Box>
+                <Typography variant="caption" color="text.secondary">
+                  {uploadProgress}% complete
+                </Typography>
+              </Box>
+            )}
+
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                <strong>Supported formats:</strong> PDF, DOC, DOCX<br/>
+                <strong>Max file size:</strong> 10MB<br/>
+                <strong>Processing:</strong> AI will extract questions and create an interactive exam
+              </Typography>
+            </Alert>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUploadDialogOpen(false)} disabled={uploading}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleUploadSubmit} 
+            variant="contained"
+            disabled={!uploadFile || uploading}
+            startIcon={uploading ? <CircularProgress size={16} /> : <CloudUpload />}
+          >
+            {uploading ? 'Uploading...' : 'Upload & Process'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add/Edit Announcement Dialog */}
+      <Dialog open={announcementDialogOpen} onClose={() => setAnnouncementDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {editingAnnouncement ? 'Edit Announcement' : 'Add New Announcement'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <TextField
+              fullWidth
+              label="Title"
+              value={announcementForm.title}
+              onChange={(e) => setAnnouncementForm(prev => ({ ...prev, title: e.target.value }))}
+              margin="normal"
+              required
+            />
+            
+            <TextField
+              fullWidth
+              label="Content"
+              value={announcementForm.content}
+              onChange={(e) => setAnnouncementForm(prev => ({ ...prev, content: e.target.value }))}
+              margin="normal"
+              multiline
+              rows={4}
+              required
+            />
+            
+            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+              <FormControl fullWidth>
+                <InputLabel>Priority</InputLabel>
+                <Select
+                  value={announcementForm.priority}
+                  onChange={(e) => setAnnouncementForm(prev => ({ ...prev, priority: e.target.value }))}
+                  label="Priority"
+                >
+                  <MenuItem value="low">Low</MenuItem>
+                  <MenuItem value="medium">Medium</MenuItem>
+                  <MenuItem value="high">High</MenuItem>
+                  <MenuItem value="urgent">Urgent</MenuItem>
+                </Select>
+              </FormControl>
+              
+              <FormControl fullWidth>
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={announcementForm.isPublished}
+                  onChange={(e) => setAnnouncementForm(prev => ({ ...prev, isPublished: e.target.value === 'true' }))}
+                  label="Status"
+                >
+                  <MenuItem value="true">Published</MenuItem>
+                  <MenuItem value="false">Draft</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+            
+            <TextField
+              fullWidth
+              label="Scheduled Date (Optional)"
+              type="datetime-local"
+              value={announcementForm.scheduledDate}
+              onChange={(e) => setAnnouncementForm(prev => ({ ...prev, scheduledDate: e.target.value }))}
+              margin="normal"
+              InputLabelProps={{
+                shrink: true,
+              }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAnnouncementDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSaveAnnouncement} 
+            variant="contained"
+            disabled={!announcementForm.title || !announcementForm.content}
+          >
+            {editingAnnouncement ? 'Update' : 'Create'} Announcement
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 

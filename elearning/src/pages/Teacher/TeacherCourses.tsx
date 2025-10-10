@@ -112,7 +112,7 @@ const TeacherCourses: React.FC = () => {
 
   const handleManageCourse = () => {
     if (selectedCourse) {
-      navigate(`/dashboard/teacher/courses/${selectedCourse._id}/manage`);
+      navigate(`/course/${selectedCourse._id}/manage`);
     }
     handleMenuClose();
   };
@@ -306,7 +306,7 @@ const TeacherCourses: React.FC = () => {
                   <Button
                     variant="contained"
                     startIcon={<Settings />}
-                    onClick={() => navigate(`/dashboard/teacher/courses/${course._id}/manage`)}
+                    onClick={() => navigate(`/course/${course._id}/manage`)}
                     sx={{ flex: 1 }}
                   >
                     Manage Course

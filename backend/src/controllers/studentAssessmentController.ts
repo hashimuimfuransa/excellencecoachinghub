@@ -138,6 +138,13 @@ export const startAssessment = async (req: Request, res: Response, next: NextFun
       user: studentId,
       course: assessment.course._id
     });
+    
+    console.log('🔍 Enrollment check:', {
+      studentId,
+      courseId: assessment.course._id,
+      enrollment: enrollment ? 'Found' : 'Not found'
+    });
+    
     if (!enrollment) {
       res.status(403).json({
         success: false,
@@ -156,6 +163,16 @@ export const startAssessment = async (req: Request, res: Response, next: NextFun
     }
 
     // Check if assessment is available
+    console.log('🔍 Assessment availability check:', {
+      id: assessment._id,
+      title: assessment.title,
+      isPublished: assessment.isPublished,
+      status: assessment.status,
+      scheduledDate: assessment.scheduledDate,
+      dueDate: assessment.dueDate,
+      isAvailable: assessment.isAvailable()
+    });
+    
     if (!assessment.isAvailable()) {
       res.status(400).json({
         success: false,

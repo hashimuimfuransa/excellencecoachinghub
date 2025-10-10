@@ -1,5 +1,5 @@
 import { v2 as cloudinary } from 'cloudinary';
-import multer from 'multer';
+const multer = require('multer');
 import { Request } from 'express';
 
 // Configure Cloudinary with trimmed values

@@ -13,7 +13,7 @@ const router = express.Router();
 // @desc    Process document and create structured notes
 // @route   POST /api/documents/process
 // @access  Private (Teacher/Admin)
-router.post('/process', auth, requireRole(['teacher', 'admin']), uploadDocument, processDocument);
+router.post('/process', auth, requireRole(['teacher', 'admin']), uploadDocument.single('file'), processDocument);
 
 // @desc    Get processing statistics
 // @route   GET /api/documents/processing-stats
@@ -23,6 +23,6 @@ router.get('/processing-stats', auth, requireRole(['teacher', 'admin']), getProc
 // @desc    Test document processing (for development)
 // @route   POST /api/documents/test-process
 // @access  Private (Admin only)
-router.post('/test-process', auth, requireRole(['admin']), uploadDocument, testDocumentProcessing);
+router.post('/test-process', auth, requireRole(['admin']), uploadDocument.single('file'), testDocumentProcessing);
 
 export default router;

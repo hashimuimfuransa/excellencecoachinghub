@@ -70,6 +70,51 @@ router.get('/admin/all', auth, authorizeRoles(['admin']), asyncHandler(async (re
   }
 }));
 
+// Toggle assignment publish status
+router.patch('/:id/publish', auth, asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    if (!status || !['published', 'draft'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Status must be either "published" or "draft"'
+      });
+    }
+    
+    const assignment = await Assignment.findById(id);
+    if (!assignment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Assignment not found'
+      });
+    }
+    
+    // Check if user owns this assignment
+    if (assignment.instructor.toString() !== req.user?._id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Not authorized to modify this assignment'
+      });
+    }
+    
+    assignment.status = status;
+    await assignment.save();
+    
+    res.json({
+      success: true,
+      data: assignment
+    });
+  } catch (error: any) {
+    console.error('Error toggling assignment publish status:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to update assignment status'
+    });
+  }
+}));
+
 // Course assignments
 router.get('/course/:courseId', auth, asyncHandler(getCourseAssignments));
 router.get('/course/:courseId/submissions', auth, asyncHandler(async (req, res) => {

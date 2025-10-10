@@ -5,6 +5,7 @@ import { Box } from '@mui/material';
 // Import components
 import Layout from './components/Layout/Layout';
 import PublicLayout from './components/Layout/PublicLayout';
+import CourseManagementLayout from './components/Layout/CourseManagementLayout';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import RouteHandler from './components/Router/RouteHandler';
 
@@ -520,6 +521,18 @@ const App: React.FC = () => {
           </ProtectedRoute>
         }
       />
+      
+      {/* Standalone Course Management - Outside Dashboard Layout */}
+      <Route
+        path="/course/:courseId/manage"
+        element={
+          <ProtectedRoute requiredRole={UserRole.TEACHER}>
+            <CourseManagementLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<CourseManagement />} />
+      </Route>
       
       {/* 404 route */}
       <Route path="*" element={<NotFoundPage />} />

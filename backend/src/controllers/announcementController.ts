@@ -24,20 +24,16 @@ export const getCourseAnnouncements = asyncHandler(async (req: Request, res: Res
   const userId = req.user?.id;
   const isInstructor = course.instructor.toString() === userId;
   
-  // Check if student is enrolled in the course
-  let isEnrolled = false;
-  if (!isInstructor) {
-    const { UserProgress } = require('../models/UserProgress');
-    const enrollment = await UserProgress.findOne({
-      user: userId,
-      course: courseId
-    });
-    isEnrolled = !!enrollment;
-  }
-
-  if (!isInstructor && !isEnrolled) {
-    throw new AppError('Access denied to course announcements', 403);
-  }
+  console.log('🔍 Announcement access check:', {
+    userId,
+    courseId,
+    instructorId: course.instructor.toString(),
+    isInstructor
+  });
+  
+  // Allow anyone who can access the course to see announcements
+  // No enrollment check needed - if they can access the course, they can see announcements
+  console.log('✅ Access granted - anyone with course access can view announcements');
 
   // Build query
   let query: any = { course: courseId };
@@ -45,11 +41,16 @@ export const getCourseAnnouncements = asyncHandler(async (req: Request, res: Res
   // Students only see published announcements
   if (!isInstructor) {
     query.isPublished = true;
-    query.$or = [
-      { scheduledDate: { $lte: new Date() } },
-      { scheduledDate: null }
-    ];
+    // Show all published announcements regardless of scheduled date
+    // Remove the scheduled date filter to show all published announcements
+    // query.$or = [
+    //   { scheduledDate: { $lte: new Date() } },
+    //   { scheduledDate: null }
+    // ];
   }
+
+  console.log('🔍 Built query:', JSON.stringify(query, null, 2));
+  console.log('🔍 Current date:', new Date().toISOString());
 
   // Apply filters
   if (type) query.type = type;
@@ -65,6 +66,35 @@ export const getCourseAnnouncements = asyncHandler(async (req: Request, res: Res
   }
 
   const announcements = await announcementsQuery;
+  
+  // Also check total announcements for this course (without filters)
+  const totalAnnouncements = await Announcement.countDocuments({ course: courseId });
+  const allAnnouncements = await Announcement.find({ course: courseId }).select('title isPublished scheduledDate createdAt');
+  
+  console.log('🔍 Announcement query results:', {
+    query,
+    totalFound: announcements.length,
+    totalInCourse: totalAnnouncements,
+    allAnnouncementsInCourse: allAnnouncements.map(a => ({
+      title: a.title,
+      isPublished: a.isPublished,
+      scheduledDate: a.scheduledDate,
+      createdAt: a.createdAt
+    })),
+    filteredAnnouncements: announcements.map(a => ({
+      id: a._id,
+      title: a.title,
+      isPublished: a.isPublished,
+      scheduledDate: a.scheduledDate,
+      createdAt: a.createdAt
+    }))
+  });
+
+  console.log('📤 Sending response:', {
+    success: true,
+    dataCount: announcements.length,
+    responseSize: JSON.stringify(announcements).length
+  });
 
   res.status(200).json({
     success: true,
@@ -96,14 +126,13 @@ export const getAnnouncementById = asyncHandler(async (req: Request, res: Respon
   }
 
   const isInstructor = course.instructor.toString() === userId;
-  const isEnrolled = course.students.includes(userId);
+  
+  // Allow anyone who can access the course to see announcements
+  // No enrollment check needed - if they can access the course, they can see announcements
 
-  if (!isInstructor && !isEnrolled) {
-    throw new AppError('Access denied to this announcement', 403);
-  }
-
-  // Students can only see published announcements
-  if (!isInstructor && (!announcement.isPublished || announcement.isScheduled())) {
+  // Students can only see published announcements that are not scheduled for future
+  if (!isInstructor && (!announcement.isPublished || 
+      (announcement.scheduledDate && new Date() < announcement.scheduledDate))) {
     throw new AppError('Announcement not available', 403);
   }
 
@@ -282,12 +311,10 @@ export const markAsRead = asyncHandler(async (req: Request, res: Response) => {
     throw new AppError('Associated course not found', 404);
   }
 
-  const isEnrolled = course.students.includes(userId);
   const isInstructor = course.instructor.toString() === userId;
-
-  if (!isEnrolled && !isInstructor) {
-    throw new AppError('Access denied to this announcement', 403);
-  }
+  
+  // Allow anyone who can access the course to see announcements
+  // No enrollment check needed - if they can access the course, they can see announcements
 
   await announcement.markAsReadBy(userId);
 
@@ -330,12 +357,11 @@ export const getReadStatus = asyncHandler(async (req: Request, res: Response) =>
     throw new AppError('Course not found', 404);
   }
 
-  const isEnrolled = course.students.includes(userId);
   const isInstructor = course.instructor.toString() === userId;
-
-  if (!isEnrolled && !isInstructor) {
-    throw new AppError('Access denied to course', 403);
-  }
+  
+  // Allow anyone who can access the course to see read status
+  // No enrollment check needed - if they can access the course, they can see read status
+  console.log('✅ Read status access granted - anyone with course access can view read status');
 
   // Get all announcements for the course
   const announcements = await Announcement.find({
@@ -368,12 +394,10 @@ export const getUnreadCount = asyncHandler(async (req: Request, res: Response) =
     throw new AppError('Course not found', 404);
   }
 
-  const isEnrolled = course.students.includes(userId);
   const isInstructor = course.instructor.toString() === userId;
-
-  if (!isEnrolled && !isInstructor) {
-    throw new AppError('Access denied to course', 403);
-  }
+  
+  // Allow anyone who can access the course to see announcements
+  // No enrollment check needed - if they can access the course, they can see announcements
 
   const unreadCount = await Announcement.countDocuments({
     course: courseId,
@@ -410,11 +434,9 @@ export const searchAnnouncements = asyncHandler(async (req: Request, res: Respon
 
   const userId = req.user?.id;
   const isInstructor = course.instructor.toString() === userId;
-  const isEnrolled = course.students.includes(userId);
-
-  if (!isInstructor && !isEnrolled) {
-    throw new AppError('Access denied to course', 403);
-  }
+  
+  // Allow anyone who can access the course to see announcements
+  // No enrollment check needed - if they can access the course, they can see announcements
 
   const announcements = await Announcement.searchAnnouncements(courseId, query as string);
 
@@ -439,11 +461,9 @@ export const getPinnedAnnouncements = asyncHandler(async (req: Request, res: Res
 
   const userId = req.user?.id;
   const isInstructor = course.instructor.toString() === userId;
-  const isEnrolled = course.students.includes(userId);
-
-  if (!isInstructor && !isEnrolled) {
-    throw new AppError('Access denied to course', 403);
-  }
+  
+  // Allow anyone who can access the course to see announcements
+  // No enrollment check needed - if they can access the course, they can see announcements
 
   const announcements = await Announcement.findPinned(courseId);
 

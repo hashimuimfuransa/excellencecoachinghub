@@ -1,7 +1,9 @@
 import express from 'express';
 import { uploadMaterial, uploadMedia, deleteMaterial, uploadSingle } from '../controllers/uploadController';
+import { uploadExam } from '../controllers/uploadExamController';
 import { auth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
+import { uploadDocument } from '../controllers/documentProcessorController';
 
 const router = express.Router();
 
@@ -13,5 +15,8 @@ router.post('/media', uploadSingle, auth, requireRole(['teacher', 'admin']), upl
 
 // Delete material file
 router.delete('/material/:publicId', auth, requireRole(['teacher', 'admin']), deleteMaterial);
+
+// Upload exam file for assignments and assessments
+router.post('/exam', uploadDocument.single('file'), auth, requireRole(['teacher', 'admin']), uploadExam);
 
 export default router;

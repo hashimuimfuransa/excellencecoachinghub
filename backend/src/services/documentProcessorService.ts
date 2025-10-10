@@ -292,7 +292,7 @@ export class DocumentProcessorService {
       /My capabilities are limited to text-based input\./gi,
       /I cannot directly process PDF files\./gi,
       /If you can copy and paste the text content from the PDF into our chat, I would be happy to process it for you\./gi,
-      /Following the statement of limitation, the message outlines the AI's operational scope:.*?user intervention\./gis,
+      /Following the statement of limitation, the message outlines the AI's operational scope:.*?user intervention\./gi,
       /I'm an AI assistant and I don't have the ability to.*?/gi,
       /I cannot.*?PDF.*?directly/gi,
       /Please provide the text content instead/gi,

@@ -156,6 +156,17 @@ class AssignmentService {
     }
   }
 
+  // Toggle assignment publish status
+  async toggleAssignmentPublish(assignmentId: string, status: 'published' | 'draft'): Promise<Assignment> {
+    try {
+      const response = await api.patch(`/assignments/${assignmentId}/publish`, { status });
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Failed to toggle assignment publish status:', error);
+      throw new Error(error.response?.data?.message || 'Failed to update assignment status');
+    }
+  }
+
   // Delete assignment
   async deleteAssignment(assignmentId: string): Promise<void> {
     try {

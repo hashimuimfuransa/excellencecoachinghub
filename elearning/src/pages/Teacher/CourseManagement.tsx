@@ -50,7 +50,12 @@ import {
   AudioFile,
   InsertDriveFile,
   Close,
-  MenuBook
+  MenuBook,
+  Announcement,
+  Schedule,
+  AccessTime,
+  Person,
+  CalendarToday
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';

@@ -162,6 +162,83 @@ router.get('/search', asyncHandler(async (req, res) => {
 // Protected routes - must come BEFORE the /:id route to avoid conflicts
 router.use(auth); // All routes below require authentication
 
+// Super admin route to get all jobs including expired ones
+router.get('/admin/all', asyncHandler(async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      status
+    } = req.query;
+
+    const query: any = {};
+
+    // For super admin, don't filter out expired jobs
+    if (status && status !== 'all') {
+      if (status === 'expired') {
+        // Filter for expired jobs by deadline
+        const now = new Date();
+        query.applicationDeadline = { $exists: true, $lt: now };
+      } else {
+        query.status = status;
+      }
+    }
+
+    // Search functionality
+    if (search) {
+      query.$text = { $search: search };
+    }
+
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
+
+    let jobQuery = Job.find(query)
+      .populate('employer', 'firstName lastName company email phone')
+      .skip(skip)
+      .limit(limitNum);
+
+    // If searching by text, sort by text search score
+    if (search) {
+      jobQuery = jobQuery.sort({ score: { $meta: 'textScore' } });
+    } else {
+      // Default sort by creation date
+      jobQuery = jobQuery.sort({ createdAt: -1 });
+    }
+
+    const jobs = await jobQuery;
+    const total = await Job.countDocuments(query);
+
+    // Mark expired jobs in the response
+    const now = new Date();
+    const jobsWithStatus = jobs.map(job => {
+      const jobObj = job.toObject();
+      if (jobObj.applicationDeadline && new Date(jobObj.applicationDeadline) < now) {
+        jobObj.status = 'expired';
+      }
+      return jobObj;
+    });
+
+    res.status(200).json({
+      success: true,
+      data: jobsWithStatus,
+      pagination: {
+        current: pageNum,
+        pages: Math.ceil(total / limitNum),
+        total
+      }
+    });
+  } catch (error: any) {
+    console.error('Error fetching all jobs for admin:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch jobs',
+      message: error.message
+    });
+  }
+}));
+
 router.get('/student/available', getJobsForStudent);
 router.get('/ai-matched-test', testAIMatchedJobs);  // Test endpoint
 router.get('/ai-matched', getAIMatchedJobsSimple);  // Simple AI-powered job matching endpoint

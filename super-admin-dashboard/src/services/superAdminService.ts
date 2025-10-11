@@ -573,13 +573,25 @@ class SuperAdminService {
       if (params?.limit) queryParams.append('limit', params.limit.toString());
       if (params?.search) queryParams.append('search', params.search);
       if (params?.searchType) queryParams.append('searchType', params.searchType);
-      if (params?.status) queryParams.append('status', params.status);
+      // For super admin, don't filter by status to see all jobs including expired ones
+      // if (params?.status) queryParams.append('status', params.status);
       if (params?.employerId) queryParams.append('employerId', params.employerId);
       if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
       if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder);
 
-      const result = await apiGet(`/admin/jobs?${queryParams.toString()}`);
+      const result = await apiGet(`/jobs/admin/all?${queryParams.toString()}`);
       console.log('✅ SuperAdminService: Successfully loaded jobs from database:', result);
+      
+      // Handle the specific response format from /jobs/admin/all endpoint
+      if (result && result.success && result.data && result.pagination) {
+        return {
+          jobs: result.data,
+          total: result.pagination.total,
+          page: result.pagination.current,
+          totalPages: result.pagination.pages
+        };
+      }
+      
       return this.extractApiData(result);
     } catch (error) {
       console.warn('❌ SuperAdminService: Database API not available for jobs, using fallback data:', error);

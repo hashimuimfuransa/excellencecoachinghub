@@ -53,6 +53,7 @@ export interface IJobModel extends Model<IJobDocument> {
   findCuratedJobs(): Promise<IJobDocument[]>;
   findJobsBySkills(skills: string[]): Promise<IJobDocument[]>;
   findJobsByEducationLevel(educationLevel: EducationLevel): Promise<IJobDocument[]>;
+  deleteExpiredJobs(): Promise<{ deletedCount: number; deletedJobs: IJobDocument[] }>;
 }
 
 const jobSchema = new Schema<IJobDocument>({
@@ -385,6 +386,73 @@ jobSchema.statics.findJobsByEducationLevel = function(educationLevel: EducationL
   }).populate('employer', 'firstName lastName company')
     .populate('relatedCourses', 'title description')
     .sort({ createdAt: -1 });
+};
+
+// Static method to immediately delete expired jobs
+jobSchema.statics.deleteExpiredJobs = async function(): Promise<{ deletedCount: number; deletedJobs: IJobDocument[] }> {
+  const now = new Date();
+  
+  // Find jobs that have passed their application deadline
+  const expiredJobs = await this.find({
+    applicationDeadline: { $exists: true, $lt: now }
+  }).select('_id title company applicationDeadline');
+  
+  if (expiredJobs.length === 0) {
+    console.log('📦 No expired jobs to delete');
+    return { deletedCount: 0, deletedJobs: [] };
+  }
+  
+  const jobIds = expiredJobs.map(job => job._id);
+  
+  // Import JobApplication here to avoid circular dependency
+  const { JobApplication } = await import('./JobApplication');
+  
+  // Delete associated job applications first
+  const applicationDeleteResult = await JobApplication.deleteMany({
+    jobId: { $in: jobIds }
+  });
+  
+  // Delete the expired jobs using deleteMany with explicit filter
+  const jobDeleteResult = await this.deleteMany({
+    _id: { $in: jobIds }
+  });
+  
+  // Verify deletion by checking if jobs still exist
+  const remainingJobs = await this.countDocuments({
+    _id: { $in: jobIds }
+  });
+  
+  if (remainingJobs > 0) {
+    console.error(`❌ WARNING: ${remainingJobs} expired jobs were not deleted properly!`);
+    // Try force deletion
+    await this.deleteMany({
+      _id: { $in: jobIds }
+    }, { force: true });
+  }
+  
+  console.log(`🗑️ Immediately deleted ${jobDeleteResult.deletedCount} expired jobs from database`);
+  console.log(`📝 Deleted ${applicationDeleteResult.deletedCount} associated job applications`);
+  
+  // Log details for audit
+  for (const job of expiredJobs) {
+    console.log(`🗂️ Deleted expired job: "${job.title}" at ${job.company} (deadline: ${job.applicationDeadline})`);
+  }
+  
+  // Final verification
+  const finalCheck = await this.countDocuments({
+    applicationDeadline: { $exists: true, $lt: now }
+  });
+  
+  if (finalCheck === 0) {
+    console.log('✅ SUCCESS: All expired jobs have been completely removed from the database');
+  } else {
+    console.error(`❌ ERROR: ${finalCheck} expired jobs still remain in the database after deletion attempt`);
+  }
+  
+  return { 
+    deletedCount: jobDeleteResult.deletedCount, 
+    deletedJobs: expiredJobs 
+  };
 };
 
 export const Job = mongoose.model<IJobDocument, IJobModel>('Job', jobSchema);

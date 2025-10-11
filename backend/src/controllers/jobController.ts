@@ -7,6 +7,12 @@ import { aiService } from '../services/aiService';
 // Get all jobs with filtering
 export const getJobs = async (req: Request, res: Response) => {
   try {
+    // First, immediately delete any expired jobs
+    const deletionResult = await Job.deleteExpiredJobs();
+    if (deletionResult.deletedCount > 0) {
+      console.log(`🗑️ Cleaned up ${deletionResult.deletedCount} expired jobs before serving job list`);
+    }
+    
     const {
       status,
       jobType,
@@ -25,7 +31,23 @@ export const getJobs = async (req: Request, res: Response) => {
     const query: any = {};
 
     // Build filter query
-    if (status) query.status = status;
+    if (status) {
+      query.status = status;
+    } else {
+      // By default, exclude expired jobs from public listings
+      query.status = { $ne: JobStatus.EXPIRED };
+      
+      // Also exclude jobs with passed application deadlines
+      const now = new Date();
+      query.$and = [
+        {
+          $or: [
+            { applicationDeadline: { $exists: false } }, // Jobs without deadlines
+            { applicationDeadline: { $gte: now } }       // Jobs with future deadlines
+          ]
+        }
+      ];
+    }
     if (jobType) query.jobType = jobType;
     if (category) query.category = category;
     if (experienceLevel) query.experienceLevel = experienceLevel;

@@ -2789,6 +2789,8 @@ export class OptimizedJobScrapingService {
     sourceName: string
   ): Promise<void> {
     try {
+      // First, delete any expired jobs before saving new ones
+      await Job.deleteExpiredJobs();
       // Handle expired deadline validation - if deadline is in the past, set status to EXPIRED
       let jobStatus = JobStatus.ACTIVE;
       let cleanedApplicationDeadline = jobData.applicationDeadline;

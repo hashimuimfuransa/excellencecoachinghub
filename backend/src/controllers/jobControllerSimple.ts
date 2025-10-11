@@ -20,6 +20,9 @@ export const getAIMatchedJobsSimple = async (req: AuthRequest, res: Response) =>
 
     console.log('🤖 Starting enhanced job matching for user:', userId);
     
+    // First, delete any expired jobs
+    await Job.deleteExpiredJobs();
+    
     // Fetch user profile data
     console.log('👤 Fetching user profile...');
     const user = await User.findById(userId).lean();

@@ -25,11 +25,45 @@ router.get('/', getJobs);
 router.get('/categories', getJobCategories);
 router.get('/curated', getCuratedJobs);
 
+// @desc    Delete expired jobs immediately
+// @route   POST /api/jobs/delete-expired
+// @access  Public (for cleanup purposes)
+router.post('/delete-expired', asyncHandler(async (req, res) => {
+  try {
+    console.log('🗑️ Manual expired job deletion triggered');
+    const result = await Job.deleteExpiredJobs();
+    
+    res.json({
+      success: true,
+      message: `Successfully deleted ${result.deletedCount} expired jobs from database`,
+      data: {
+        deletedCount: result.deletedCount,
+        deletedJobs: result.deletedJobs.map(job => ({
+          id: job._id,
+          title: job.title,
+          company: job.company,
+          deadline: job.applicationDeadline
+        }))
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error deleting expired jobs:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete expired jobs',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}));
+
 // @desc    Search jobs
 // @route   GET /api/jobs/search
 // @access  Public
 router.get('/search', asyncHandler(async (req, res) => {
   try {
+    // First, immediately delete any expired jobs
+    await Job.deleteExpiredJobs();
+    
     const { q: query, page = 1, limit = 20 } = req.query;
     
     if (!query || typeof query !== 'string' || query.trim().length === 0) {
@@ -45,15 +79,32 @@ router.get('/search', asyncHandler(async (req, res) => {
     const skip = (pageNum - 1) * limitNum;
 
     // Search jobs by title, company, location, description, skills
+    // Exclude expired jobs and jobs with passed deadlines
+    const now = new Date();
     const jobs = await Job.find({
-      $or: [
-        { title: { $regex: searchQuery, $options: 'i' } },
-        { company: { $regex: searchQuery, $options: 'i' } },
-        { location: { $regex: searchQuery, $options: 'i' } },
-        { description: { $regex: searchQuery, $options: 'i' } },
-        { skills: { $regex: searchQuery, $options: 'i' } },
-        { jobType: { $regex: searchQuery, $options: 'i' } },
-        { industry: { $regex: searchQuery, $options: 'i' } }
+      $and: [
+        {
+          $or: [
+            { title: { $regex: searchQuery, $options: 'i' } },
+            { company: { $regex: searchQuery, $options: 'i' } },
+            { location: { $regex: searchQuery, $options: 'i' } },
+            { description: { $regex: searchQuery, $options: 'i' } },
+            { skills: { $regex: searchQuery, $options: 'i' } },
+            { jobType: { $regex: searchQuery, $options: 'i' } },
+            { industry: { $regex: searchQuery, $options: 'i' } }
+          ]
+        },
+        {
+          // Exclude expired jobs
+          status: { $ne: 'expired' }
+        },
+        {
+          // Exclude jobs with passed deadlines
+          $or: [
+            { applicationDeadline: { $exists: false } },
+            { applicationDeadline: { $gte: now } }
+          ]
+        }
       ]
     })
     .select('title company location description skills jobType industry salary applicationDeadline createdAt')
@@ -63,14 +114,29 @@ router.get('/search', asyncHandler(async (req, res) => {
 
     // Get total count for pagination
     const total = await Job.countDocuments({
-      $or: [
-        { title: { $regex: searchQuery, $options: 'i' } },
-        { company: { $regex: searchQuery, $options: 'i' } },
-        { location: { $regex: searchQuery, $options: 'i' } },
-        { description: { $regex: searchQuery, $options: 'i' } },
-        { skills: { $regex: searchQuery, $options: 'i' } },
-        { jobType: { $regex: searchQuery, $options: 'i' } },
-        { industry: { $regex: searchQuery, $options: 'i' } }
+      $and: [
+        {
+          $or: [
+            { title: { $regex: searchQuery, $options: 'i' } },
+            { company: { $regex: searchQuery, $options: 'i' } },
+            { location: { $regex: searchQuery, $options: 'i' } },
+            { description: { $regex: searchQuery, $options: 'i' } },
+            { skills: { $regex: searchQuery, $options: 'i' } },
+            { jobType: { $regex: searchQuery, $options: 'i' } },
+            { industry: { $regex: searchQuery, $options: 'i' } }
+          ]
+        },
+        {
+          // Exclude expired jobs
+          status: { $ne: 'expired' }
+        },
+        {
+          // Exclude jobs with passed deadlines
+          $or: [
+            { applicationDeadline: { $exists: false } },
+            { applicationDeadline: { $gte: now } }
+          ]
+        }
       ]
     });
 

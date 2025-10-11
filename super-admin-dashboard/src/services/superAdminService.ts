@@ -829,6 +829,27 @@ class SuperAdminService {
     }
   }
 
+  async deleteExpiredJobs(): Promise<{
+    deletedCount: number;
+    deletedJobs: Array<{
+      id: string;
+      title: string;
+      company: string;
+      deadline: string;
+    }>;
+  }> {
+    try {
+      console.log('🔍 SuperAdminService: Deleting expired jobs via API...');
+      const response = await apiPost<any>('/jobs/delete-expired');
+      const result = this.extractApiData(response);
+      console.log('✅ SuperAdminService: Successfully deleted expired jobs:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ SuperAdminService: Failed to delete expired jobs:', error);
+      throw error;
+    }
+  }
+
   async getApplicationStats(): Promise<{
     totalApplications: number;
     pendingApplications: number;

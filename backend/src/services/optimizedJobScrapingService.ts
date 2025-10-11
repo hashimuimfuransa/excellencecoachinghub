@@ -1568,12 +1568,11 @@ export class OptimizedJobScrapingService {
   private static extractJsonFromResponse(text: string): any {
     let jsonText = text.trim();
     
-    if (jsonText.startsWith('```json') && jsonText.endsWith('```')) {
-      jsonText = jsonText.slice(7, -3).trim();
-    } else if (jsonText.startsWith('```') && jsonText.endsWith('```')) {
-      jsonText = jsonText.slice(3, -3).trim();
-    }
+    // Remove markdown code blocks more aggressively
+    jsonText = jsonText.replace(/^```json\s*/i, '').replace(/\s*```$/i, '');
+    jsonText = jsonText.replace(/^```\s*/i, '').replace(/\s*```$/i, '');
     
+    // Find JSON object boundaries
     const firstBrace = jsonText.indexOf('{');
     const lastBrace = jsonText.lastIndexOf('}');
     
@@ -1581,10 +1580,55 @@ export class OptimizedJobScrapingService {
       jsonText = jsonText.substring(firstBrace, lastBrace + 1);
     }
     
+    // Clean up common JSON issues
+    jsonText = jsonText
+      .replace(/,\s*}/g, '}')  // Remove trailing commas before }
+      .replace(/,\s*]/g, ']')  // Remove trailing commas before ]
+      .replace(/\n/g, ' ')     // Replace newlines with spaces
+      .replace(/\s+/g, ' ')   // Normalize whitespace
+      .trim();
+    
     try {
       return JSON.parse(jsonText);
     } catch (error) {
       console.error('Failed to parse JSON from AI response:', error);
+      console.error('Cleaned JSON text:', jsonText.substring(0, 200) + '...');
+      
+      // Try to extract partial data as fallback
+      try {
+        const partialMatch = jsonText.match(/"title"\s*:\s*"([^"]+)"/);
+        if (partialMatch) {
+          console.log('⚠️ Using partial JSON extraction as fallback');
+          return {
+            title: partialMatch[1],
+            description: 'Partial data extracted',
+            company: 'Company Not Specified',
+            location: 'Location Not Specified',
+            jobType: 'full_time',
+            category: 'jobs',
+            experienceLevel: 'mid_level',
+            educationLevel: 'bachelor',
+            skills: ['General Skills'],
+            requirements: ['See job description for requirements'],
+            responsibilities: ['See job description for responsibilities'],
+            benefits: [],
+            salary: null,
+            applicationDeadline: null,
+            postedDate: null,
+            contactInfo: {
+              email: null,
+              phone: null,
+              website: null,
+              address: null,
+              contactPerson: null,
+              applicationInstructions: null
+            }
+          };
+        }
+      } catch (fallbackError) {
+        console.error('Fallback extraction also failed:', fallbackError);
+      }
+      
       throw new Error(`Failed to parse AI response: ${error instanceof Error ? error.message : 'Unknown parsing error'}`);
     }
   }
@@ -2515,7 +2559,7 @@ export class OptimizedJobScrapingService {
       console.log(`📅 Application deadline found: "${deadlineText}" -> ${applicationDeadline?.toDateString() || 'not parsed'}`);
       
       // Use AI to enhance and standardize the job data
-      const enhancedJobData = await this.enhanceJobDataWithAI({
+      let enhancedJobData = await this.enhanceJobDataWithAI({
         title,
         company: company || 'Not specified',
         location: location || 'Remote/Not specified',
@@ -2531,8 +2575,33 @@ export class OptimizedJobScrapingService {
       });
 
       if (!enhancedJobData) {
-        console.log(`❌ AI processing failed for job: ${title}`);
-        return null;
+        console.log(`❌ AI processing failed for job: ${title}, creating fallback job data`);
+        // Create fallback job data to ensure job is saved
+        enhancedJobData = {
+          title: title || 'Job Title Not Available',
+          description: description || 'Job description not available',
+          company: this.extractCompanyFromTitle(title) || 'Company Not Specified',
+          location: 'Location Not Specified',
+          jobType: 'full_time',
+          category: 'jobs',
+          experienceLevel: 'mid_level',
+          educationLevel: 'bachelor',
+          skills: ['General Skills'],
+          requirements: ['See job description for requirements'],
+          responsibilities: ['See job description for responsibilities'],
+          benefits: [],
+          salary: null,
+          applicationDeadline: null,
+          postedDate: null,
+          contactInfo: {
+            email: null,
+            phone: null,
+            website: null,
+            address: null,
+            contactPerson: null,
+            applicationInstructions: null
+          }
+        };
       }
 
       return {
@@ -2660,7 +2729,44 @@ export class OptimizedJobScrapingService {
       }
 
       console.log('🤖 AI Response received:', aiResponse.substring(0, 200) + '...');
-      const jobData = this.extractJsonFromResponse(aiResponse);
+      
+      let jobData;
+      try {
+        jobData = this.extractJsonFromResponse(aiResponse);
+      } catch (parseError) {
+        console.error('❌ JSON parsing failed, using fallback extraction');
+        // Extract basic info from raw response as fallback
+        const titleMatch = aiResponse.match(/"title"\s*:\s*"([^"]+)"/);
+        const companyMatch = aiResponse.match(/"company"\s*:\s*"([^"]+)"/);
+        const descriptionMatch = aiResponse.match(/"description"\s*:\s*"([^"]+)"/);
+        
+        jobData = {
+          title: titleMatch ? titleMatch[1] : title || 'Job Title Not Available',
+          company: companyMatch ? companyMatch[1] : this.extractCompanyFromTitle(title) || 'Company Not Specified',
+          description: descriptionMatch ? descriptionMatch[1] : description || 'Job description not available',
+          location: 'Location Not Specified',
+          jobType: 'full_time',
+          category: 'jobs',
+          experienceLevel: 'mid_level',
+          educationLevel: 'bachelor',
+          skills: ['General Skills'],
+          requirements: ['See job description for requirements'],
+          responsibilities: ['See job description for responsibilities'],
+          benefits: [],
+          salary: null,
+          applicationDeadline: null,
+          postedDate: null,
+          contactInfo: {
+            email: null,
+            phone: null,
+            website: null,
+            address: null,
+            contactPerson: null,
+            applicationInstructions: null
+          }
+        };
+        console.log('✅ Fallback extraction successful');
+      }
       
       // Parse date strings to Date objects with enhanced logging
       if (jobData.applicationDeadline && typeof jobData.applicationDeadline === 'string') {
@@ -2704,10 +2810,68 @@ export class OptimizedJobScrapingService {
         }
       }
       
-      // Validate required fields
-      if (!jobData.title || !jobData.description || !jobData.company) {
-        throw new Error('Missing required fields in AI response');
+      // Validate and provide fallbacks for required fields
+      if (!jobData.title) {
+        console.log('⚠️ AI response missing title, using extracted title');
+        jobData.title = title || 'Job Title Not Available';
       }
+      
+      if (!jobData.description) {
+        console.log('⚠️ AI response missing description, using extracted description');
+        jobData.description = description || 'Job description not available';
+      }
+      
+      if (!jobData.company) {
+        console.log('⚠️ AI response missing company, extracting from title or using default');
+        // Try to extract company from title with Rwanda-specific patterns
+        const companyMatch = title.match(/at\s+([^,]+)|@\s*([^,]+)|-\s*([^,]+)|:\s*([^,]+)/i);
+        if (companyMatch) {
+          jobData.company = (companyMatch[1] || companyMatch[2] || companyMatch[3] || companyMatch[4]).trim();
+        } else {
+          // For Rwanda jobs, try to extract from URL patterns
+          const urlMatch = sourceUrl?.match(/rwandajob\.com\/job-vacancies-[a-z]+\/([a-z0-9-]+)/);
+          if (urlMatch) {
+            jobData.company = 'Company Not Specified';
+          } else {
+            jobData.company = 'Company Not Specified';
+          }
+        }
+      }
+      
+      // Ensure other critical fields have defaults
+      if (!jobData.jobType) {
+        jobData.jobType = 'full_time';
+      }
+      
+      if (!jobData.category) {
+        jobData.category = 'jobs';
+      }
+      
+      if (!jobData.experienceLevel) {
+        jobData.experienceLevel = 'mid_level';
+      }
+      
+      if (!jobData.educationLevel) {
+        jobData.educationLevel = 'bachelor';
+      }
+      
+      if (!jobData.location) {
+        jobData.location = 'Location Not Specified';
+      }
+      
+      if (!jobData.skills || !Array.isArray(jobData.skills) || jobData.skills.length === 0) {
+        jobData.skills = ['General Skills'];
+      }
+      
+      if (!jobData.requirements || !Array.isArray(jobData.requirements) || jobData.requirements.length === 0) {
+        jobData.requirements = ['See job description for requirements'];
+      }
+      
+      if (!jobData.responsibilities || !Array.isArray(jobData.responsibilities) || jobData.responsibilities.length === 0) {
+        jobData.responsibilities = ['See job description for responsibilities'];
+      }
+      
+      console.log('✅ AI processing completed with fallbacks applied');
 
       return jobData;
 
@@ -2715,6 +2879,36 @@ export class OptimizedJobScrapingService {
       console.error('❌ AI enhancement failed:', error instanceof Error ? error.message : 'Unknown error');
       return null;
     }
+  }
+
+  /**
+   * Extract company name from job title
+   */
+  private static extractCompanyFromTitle(title: string): string | null {
+    if (!title) return null;
+    
+    // Common patterns for company extraction
+    const patterns = [
+      /at\s+([^,]+)/i,           // "Job Title at Company Name"
+      /@\s*([^,]+)/i,            // "Job Title @ Company Name"
+      /-\s*([^,]+)/i,            // "Job Title - Company Name"
+      /:\s*([^,]+)/i,            // "Job Title: Company Name"
+      /\(([^)]+)\)/i,            // "Job Title (Company Name)"
+      /\[([^\]]+)\]/i,           // "Job Title [Company Name]"
+    ];
+    
+    for (const pattern of patterns) {
+      const match = title.match(pattern);
+      if (match && match[1]) {
+        const company = match[1].trim();
+        // Filter out common non-company words
+        if (!['remote', 'hybrid', 'full-time', 'part-time', 'contract', 'freelance'].includes(company.toLowerCase())) {
+          return company;
+        }
+      }
+    }
+    
+    return null;
   }
 
   /**

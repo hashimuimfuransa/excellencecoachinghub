@@ -923,7 +923,7 @@ export class OptimizedJobScrapingService {
       priority: 10,
       selectors: {
         jobLink: [
-          // Direct mifotra job links
+          // Direct mifotra job links - more specific patterns
           'a[href*="/recruitment/"]',
           'a[href*="/vacancy/"]',
           'a[href*="/position/"]',
@@ -933,8 +933,14 @@ export class OptimizedJobScrapingService {
           'a[href*="/jobs/"]',
           'a[href*="/positions/"]',
           'a[href*="/announcements/"]',
+          'a[href*="/public-service/"]',
+          'a[href*="/civil-service/"]',
+          'a[href*="/government/"]',
+          'a[href*="/ministry/"]',
+          'a[href*="/department/"]',
+          'a[href*="/agency/"]',
           
-          // External job portal links (AU, ILO, etc.)
+          // External job portal links (AU, ILO, etc.) - keep these
           'a[href*="jobs.au.int"]',
           'a[href*="jobs.ilo.org"]',
           'a[href*="jobs.un.org"]',
@@ -945,12 +951,12 @@ export class OptimizedJobScrapingService {
           'a[href*="jobs.unicef.org"]',
           
           // Generic job portal patterns
-          'a[href*="/jobs/"]',
-          'a[href*="/job/"]',
-          'a[href*="/vacancy/"]',
-          'a[href*="/position/"]',
           'a[href*="/career/"]',
           'a[href*="/employment/"]',
+          'a[href*="recruitment"]',
+          'a[href*="search"]',
+          'a[href*="list"]',
+          'a[href*="view"]',
           
           // Common class-based selectors
           '.recruitment-item a',
@@ -1194,7 +1200,14 @@ export class OptimizedJobScrapingService {
         return matchesPattern && !isExcluded && hasMinLength && hasJobSegment;
       },
       requiresJS: true, // Government sites often use JavaScript
-      rateLimit: { delayMs: 8000, maxConcurrent: 1 } // Respectful rate limiting for government site
+      rateLimit: { delayMs: 8000, maxConcurrent: 1 },
+      // Special configuration for Mifotra
+      puppeteerConfig: {
+        timeout: 60000, // 60 seconds timeout for government sites
+        waitUntil: 'networkidle0', // Wait for network to be idle
+        viewport: { width: 1920, height: 1080 },
+        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      } as any // Respectful rate limiting for government site
     }
   ];
 
@@ -1234,14 +1247,14 @@ export class OptimizedJobScrapingService {
     // Handle "X days ago" or "X day ago"
     const daysMatch = cleanText.match(/(\d+)\s+days?\s+ago/);
     if (daysMatch) {
-      const days = parseInt(daysMatch[1]);
+      const days = parseInt(daysMatch[1] || '0');
       return new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
     }
     
     // Handle "X hours ago" or "X hour ago"
     const hoursMatch = cleanText.match(/(\d+)\s+hours?\s+ago/);
     if (hoursMatch) {
-      const hours = parseInt(hoursMatch[1]);
+      const hours = parseInt(hoursMatch[1] || '0');
       return new Date(now.getTime() - (hours * 60 * 60 * 1000));
     }
     
@@ -1412,20 +1425,20 @@ export class OptimizedJobScrapingService {
             const monthNames = {
               'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
               'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12,
-              'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+              'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'jun': 6,
               'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
             };
             
-            if (match[1] in monthNames) {
+            if (match[1] && match[1] in monthNames) {
               // Month DD, YYYY format
               month = monthNames[match[1]];
-              day = parseInt(match[2]);
-              year = parseInt(match[3]);
-            } else {
+              day = parseInt(match[2] || '1');
+              year = parseInt(match[3] || '2024');
+            } else if (match[2] && match[2] in monthNames) {
               // DD Month YYYY format
-              day = parseInt(match[1]);
+              day = parseInt(match[1] || '1');
               month = monthNames[match[2]];
-              year = parseInt(match[3]);
+              year = parseInt(match[3] || '2024');
             }
           }
           
@@ -1802,13 +1815,20 @@ export class OptimizedJobScrapingService {
         try {
           page = await browser.newPage();
           
+          // Use special configuration for Mifotra
+          const puppeteerConfig = (config as any).puppeteerConfig || {};
+          const timeout = puppeteerConfig.timeout || 60000;
+          const waitUntil = puppeteerConfig.waitUntil || 'networkidle2';
+          const viewport = puppeteerConfig.viewport || { width: 1920, height: 1080 };
+          const userAgent = puppeteerConfig.userAgent || config.headers['User-Agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
+          
           // Increase timeouts for slow-loading sites
-          page.setDefaultNavigationTimeout(60000);
-          page.setDefaultTimeout(60000);
+          page.setDefaultNavigationTimeout(timeout);
+          page.setDefaultTimeout(timeout);
           
           // Set user agent and viewport
-          await page.setUserAgent(config.headers['User-Agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-          await page.setViewport({ width: 1920, height: 1080 });
+          await page.setUserAgent(userAgent);
+          await page.setViewport(viewport);
           
           // Set extra headers
           const headersToSet: Record<string, string> = {};
@@ -1836,23 +1856,25 @@ export class OptimizedJobScrapingService {
           let html = '';
           let navigationSuccess = false;
           
-          // Strategy 1: Try with networkidle2
+          // Strategy 1: Try with configured wait strategy
           try {
             await page.goto(url, { 
-              waitUntil: 'networkidle2',
-              timeout: 45000 
+              waitUntil: waitUntil,
+              timeout: timeout 
             });
             navigationSuccess = true;
+            console.log(`✅ Navigation successful with ${waitUntil} strategy`);
           } catch (navError) {
-            console.log(`⚠️ NetworkIdle2 failed for ${url}, trying domcontentloaded...`);
+            console.log(`⚠️ ${waitUntil} failed for ${url}, trying domcontentloaded...`);
             
             // Strategy 2: Try with domcontentloaded
             try {
               await page.goto(url, { 
                 waitUntil: 'domcontentloaded',
-                timeout: 30000 
+                timeout: timeout 
               });
               navigationSuccess = true;
+              console.log(`✅ Navigation successful with domcontentloaded strategy`);
             } catch (domError) {
               console.log(`⚠️ DOMContentLoaded failed for ${url}, trying load event...`);
               
@@ -1860,11 +1882,25 @@ export class OptimizedJobScrapingService {
               try {
                 await page.goto(url, { 
                   waitUntil: 'load',
-                  timeout: 20000 
+                  timeout: timeout 
                 });
                 navigationSuccess = true;
+                console.log(`✅ Navigation successful with load strategy`);
               } catch (loadError) {
-                throw new Error(`All navigation strategies failed: ${loadError.message}`);
+                console.log(`⚠️ Load event failed for ${url}, trying basic navigation...`);
+                
+                // Strategy 4: Basic navigation without waiting
+                try {
+                  await page.goto(url, { 
+                    waitUntil: 'commit',
+                    timeout: timeout 
+                  });
+                  navigationSuccess = true;
+                  console.log(`✅ Navigation successful with commit strategy`);
+                } catch (commitError) {
+                  console.log(`❌ All navigation strategies failed for ${url}`);
+                  throw new Error(`All navigation strategies failed: ${commitError.message}`);
+                }
               }
             }
           }
@@ -1872,7 +1908,7 @@ export class OptimizedJobScrapingService {
           if (navigationSuccess) {
             // Wait for dynamic content with progressive waiting
             const waitTime = url.includes('unjobs.org') ? 8000 : 
-                             url.includes('mifotra.gov.rw') ? 6000 : 
+                             url.includes('mifotra.gov.rw') ? 10000 : 
                              url.includes('oracle') ? 10000 : 4000;
             
             console.log(`⏳ Waiting ${waitTime}ms for dynamic content on ${url}...`);
@@ -1887,6 +1923,31 @@ export class OptimizedJobScrapingService {
               ]);
             } catch (selectorError) {
               console.log(`⚠️ Selector wait failed for ${url}, proceeding anyway...`);
+            }
+            
+            // Special handling for Mifotra - additional checks
+            if (url.includes('mifotra.gov.rw')) {
+              console.log(`🔍 Performing Mifotra-specific content checks...`);
+              try {
+                // Check if page has any links at all
+                const linkCount = await page.evaluate(() => document.querySelectorAll('a').length);
+                console.log(`🔗 Mifotra page has ${linkCount} links`);
+                
+                if (linkCount === 0) {
+                  console.log(`⚠️ No links found on Mifotra page, trying to trigger content loading...`);
+                  // Try scrolling to trigger lazy loading
+                  await page.evaluate(() => {
+                    window.scrollTo(0, document.body.scrollHeight);
+                  });
+                  await new Promise(resolve => setTimeout(resolve, 3000));
+                  
+                  // Check again
+                  const newLinkCount = await page.evaluate(() => document.querySelectorAll('a').length);
+                  console.log(`🔗 After scroll, Mifotra page has ${newLinkCount} links`);
+                }
+              } catch (evalError) {
+                console.log(`⚠️ Mifotra-specific checks failed: ${evalError.message}`);
+              }
             }
             
             // Check for iframes and extract content from them
@@ -1914,6 +1975,37 @@ export class OptimizedJobScrapingService {
           }
           
           console.error(`❌ Puppeteer error for ${url}:`, error instanceof Error ? error.message : 'Unknown error');
+          
+          // Special fallback for Mifotra
+          if (url.includes('mifotra.gov.rw')) {
+            console.log(`🔧 Attempting Mifotra-specific fallback methods...`);
+            try {
+              // Try alternative Mifotra URLs
+              const alternativeUrls = [
+                'https://mifotra.gov.rw/recruitment',
+                'https://mifotra.gov.rw/vacancies',
+                'https://mifotra.gov.rw/jobs',
+                'https://www.mifotra.gov.rw/recruitment',
+                'https://www.mifotra.gov.rw/vacancies'
+              ];
+              
+              for (const altUrl of alternativeUrls) {
+                try {
+                  console.log(`🔄 Trying alternative Mifotra URL: ${altUrl}`);
+                  const altConfig = { ...config, requiresJS: false };
+                  const altHtml = await this.fetchWebpage(altUrl, altConfig, 0);
+                  if (altHtml && altHtml.length > 1000) {
+                    console.log(`✅ Successfully fetched content from alternative URL: ${altUrl}`);
+                    return altHtml;
+                  }
+                } catch (altError) {
+                  console.log(`❌ Alternative URL failed: ${altUrl}`);
+                }
+              }
+            } catch (fallbackError) {
+              console.log(`❌ Mifotra fallback methods failed: ${fallbackError.message}`);
+            }
+          }
           
           // If Puppeteer fails, try fallback to axios
           if (retryCount < maxRetries) {
@@ -2139,31 +2231,63 @@ export class OptimizedJobScrapingService {
               }
             });
             
-            // Additional debugging for mifotra
-            if (source.name === 'mifotra-recruitment' && pageJobUrls.length === 0) {
-              console.log(`🔍 Debugging mifotra page content...`);
-              console.log(`📄 Page HTML length: ${html.length}`);
-              console.log(`🔍 Contains 'recruitment': ${html.toLowerCase().includes('recruitment')}`);
-              console.log(`🔍 Contains 'vacancy': ${html.toLowerCase().includes('vacancy')}`);
-              console.log(`🔍 Contains 'job': ${html.toLowerCase().includes('job')}`);
-              console.log(`🔍 Contains 'announcement': ${html.toLowerCase().includes('announcement')}`);
+            // Enhanced debugging for mifotra
+            if (source.name === 'mifotra-recruitment') {
+              console.log(`🔍 Enhanced Mifotra debugging for path: ${path}`);
+              console.log(`📄 HTML length: ${html.length}`);
+              console.log(`🔗 Total links found: ${$('a').length}`);
               
-              // Check for any links at all
-              const allLinks = $('a[href]').length;
-              console.log(`🔗 Total links found: ${allLinks}`);
+              // Check for common job-related content
+              const hasJobKeywords = html.toLowerCase().includes('vacancy') || 
+                                   html.toLowerCase().includes('recruitment') || 
+                                   html.toLowerCase().includes('position') ||
+                                   html.toLowerCase().includes('job');
+              console.log(`📋 Contains job keywords: ${hasJobKeywords}`);
               
-              // Show sample links
-              const sampleLinks = $('a[href]').slice(0, 10).map((_, el) => $(el).attr('href')).get();
-              console.log(`🔗 Sample links: ${sampleLinks.join(', ')}`);
+              // Check for specific patterns
+              const recruitmentLinks = $('a[href*="recruitment"]').length;
+              const vacancyLinks = $('a[href*="vacancy"]').length;
+              const jobLinks = $('a[href*="job"]').length;
+              console.log(`🔗 Recruitment links: ${recruitmentLinks}, Vacancy links: ${vacancyLinks}, Job links: ${jobLinks}`);
               
-              // Test URL filtering on sample links
-              console.log(`🔍 Testing URL filtering on sample links:`);
-              sampleLinks.forEach(link => {
-                if (link) {
-                  const filtered = source.urlFilter(link);
-                  console.log(`   ${filtered ? '✅' : '❌'} ${link}`);
+              // Sample links for debugging
+              const sampleLinks = $('a').slice(0, 15).map((i, el) => {
+                const href = $(el).attr('href');
+                const text = $(el).text().trim().substring(0, 50);
+                return `${href} - "${text}"`;
+              }).get();
+              console.log(`📋 Sample links:`, sampleLinks);
+              
+              // Check if page has dynamic content indicators
+              const hasScripts = $('script').length;
+              const hasForms = $('form').length;
+              console.log(`⚙️ Scripts: ${hasScripts}, Forms: ${hasForms}`);
+              
+              if (pageJobUrls.length === 0) {
+                console.log(`❌ No job URLs found for Mifotra path: ${path}`);
+                console.log(`🔍 Trying alternative selectors...`);
+                
+                // Try alternative selectors
+                const altSelectors = [
+                  'a[href*="/"]',
+                  'a[href*="mifotra"]',
+                  'a[href*="gov.rw"]',
+                  '.content a',
+                  'main a',
+                  'article a'
+                ];
+                
+                for (const selector of altSelectors) {
+                  const altLinks = $(selector).length;
+                  if (altLinks > 0) {
+                    console.log(`✅ Found ${altLinks} links with selector: ${selector}`);
+                    const altSample = $(selector).slice(0, 5).map((i, el) => $(el).attr('href')).get();
+                    console.log(`📋 Sample:`, altSample);
+                  }
                 }
-              });
+              } else {
+                console.log(`✅ Found ${pageJobUrls.length} job URLs for Mifotra`);
+              }
             }
           }
           

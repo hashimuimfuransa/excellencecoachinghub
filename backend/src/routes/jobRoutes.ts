@@ -167,9 +167,10 @@ router.get('/admin/all', asyncHandler(async (req, res) => {
   try {
     const {
       page = 1,
-      limit = 10,
+      limit = 50,
       search,
-      status
+      status,
+      showAll = false
     } = req.query;
 
     const query: any = {};
@@ -191,8 +192,8 @@ router.get('/admin/all', asyncHandler(async (req, res) => {
     }
 
     const pageNum = parseInt(page as string);
-    const limitNum = parseInt(limit as string);
-    const skip = (pageNum - 1) * limitNum;
+    const limitNum = showAll === 'true' ? 10000 : parseInt(limit as string); // Show all jobs if requested
+    const skip = pageNum === 1 && showAll === 'true' ? 0 : (pageNum - 1) * limitNum;
 
     let jobQuery = Job.find(query)
       .populate('employer', 'firstName lastName company email phone')

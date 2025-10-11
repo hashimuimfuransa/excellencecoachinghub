@@ -366,8 +366,8 @@ const AllJobsPage: React.FC = () => {
       
       // Fetch jobs and internships in parallel
       const [jobsResponse, internshipsResponse] = await Promise.all([
-        // Fetch jobs (excluding internship category jobs since those are handled by internship service)
-        jobService.getJobs({}, 1, MAX_ITEMS_TO_FETCH).catch(err => {
+        // Fetch jobs (including expired jobs to show all available jobs)
+        jobService.getJobs({}, 1, MAX_ITEMS_TO_FETCH, undefined, true).catch(err => {
           console.warn('Error fetching jobs:', err);
           return { data: [], pagination: { total: 0 } };
         }),

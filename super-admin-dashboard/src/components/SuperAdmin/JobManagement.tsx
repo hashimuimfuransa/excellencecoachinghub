@@ -96,7 +96,7 @@ const JobManagement: React.FC<JobManagementProps> = ({ onJobSelect }) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
   const [totalJobs, setTotalJobs] = useState(0);
 
 
@@ -136,9 +136,11 @@ const JobManagement: React.FC<JobManagementProps> = ({ onJobSelect }) => {
     deletionResult: null as { deletedCount: number; deletedJobs: any[] } | null
   });
 
+  const [showAllJobs, setShowAllJobs] = useState(false);
+
   useEffect(() => {
     loadJobs();
-  }, [page, rowsPerPage, filters]);
+  }, [page, rowsPerPage, filters, showAllJobs]);
 
   const loadJobs = async () => {
     setLoading(true);
@@ -146,9 +148,10 @@ const JobManagement: React.FC<JobManagementProps> = ({ onJobSelect }) => {
       // Build search parameters based on search type
       const searchParams: any = {
         page: page + 1,
-        limit: rowsPerPage,
+        limit: showAllJobs ? 10000 : rowsPerPage,
         sortBy: 'createdAt',
-        sortOrder: 'desc'
+        sortOrder: 'desc',
+        showAll: showAllJobs
       };
 
       // Add search parameter - backend should handle different search types

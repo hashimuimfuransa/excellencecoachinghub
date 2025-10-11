@@ -176,11 +176,12 @@ interface PaginatedResponse<T> {
 
 class JobService {
   // Get all jobs with filtering and pagination
-  async getJobs(filters: JobFilters = {}, page = 1, limit = 10, signal?: AbortSignal): Promise<PaginatedResponse<Job>> {
+  async getJobs(filters: JobFilters = {}, page = 1, limit = 10, signal?: AbortSignal, includeExpired = false): Promise<PaginatedResponse<Job>> {
     const params = {
       ...filters,
       page,
-      limit
+      limit,
+      includeExpired: includeExpired ? 'true' : 'false'
     };
     const response = await apiGet<PaginatedResponse<Job>>('/jobs', params, signal);
     return handlePaginatedResponse(response);

@@ -25,7 +25,8 @@ export const getJobs = async (req: Request, res: Response) => {
       isCurated,
       page = 1,
       limit = 10,
-      search
+      search,
+      includeExpired = false
     } = req.query;
 
     const query: any = {};
@@ -34,19 +35,21 @@ export const getJobs = async (req: Request, res: Response) => {
     if (status) {
       query.status = status;
     } else {
-      // By default, exclude expired jobs from public listings
-      query.status = { $ne: JobStatus.EXPIRED };
-      
-      // Also exclude jobs with passed application deadlines
-      const now = new Date();
-      query.$and = [
-        {
-          $or: [
-            { applicationDeadline: { $exists: false } }, // Jobs without deadlines
-            { applicationDeadline: { $gte: now } }       // Jobs with future deadlines
-          ]
-        }
-      ];
+      // By default, exclude expired jobs from public listings unless includeExpired is true
+      if (includeExpired !== 'true') {
+        query.status = { $ne: JobStatus.EXPIRED };
+        
+        // Also exclude jobs with passed application deadlines
+        const now = new Date();
+        query.$and = [
+          {
+            $or: [
+              { applicationDeadline: { $exists: false } }, // Jobs without deadlines
+              { applicationDeadline: { $gte: now } }       // Jobs with future deadlines
+            ]
+          }
+        ];
+      }
     }
     if (jobType) query.jobType = jobType;
     if (category) query.category = category;

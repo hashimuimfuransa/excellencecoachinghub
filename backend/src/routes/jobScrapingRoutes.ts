@@ -8,6 +8,16 @@ import { authorizeRoles } from '../middleware/roleAuth';
 const router = Router();
 
 /**
+ * @route   GET /api/job-scraping/health
+ * @desc    Get scraping services health status
+ * @access  Public (for monitoring)
+ */
+router.get(
+  '/health',
+  JobScrapingController.getScrapingHealth
+);
+
+/**
  * @route   POST /api/job-scraping/scrape
  * @desc    Manually trigger job scraping (super admin only)
  * @access  Private - Super Admin
@@ -17,6 +27,26 @@ router.post(
   auth,
   authorizeRoles(['super_admin']),
   JobScrapingController.scrapeJobs
+);
+
+/**
+ * @route   POST /api/job-scraping/scrape-optimized
+ * @desc    Manually trigger optimized job scraping (production-safe)
+ * @access  Public (for hosted environments)
+ */
+router.post(
+  '/scrape-optimized',
+  JobScrapingController.scrapeJobsOptimized
+);
+
+/**
+ * @route   POST /api/job-scraping/webhook-trigger
+ * @desc    Webhook endpoint for external systems to trigger scraping
+ * @access  Public (with optional secret verification)
+ */
+router.post(
+  '/webhook-trigger',
+  JobScrapingController.webhookTriggerScraping
 );
 
 /**

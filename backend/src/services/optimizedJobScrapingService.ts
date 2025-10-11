@@ -116,7 +116,31 @@ export class OptimizedJobScrapingService {
         responsibilities: ['.responsibilities', '.duties', '.functions', '.tasks'],
         benefits: ['.benefits', '.compensation', '.package'],
         salary: ['.salary', '.remuneration', '.pay'],
-        deadline: ['.deadline', '.closing-date', '.application-deadline', '.expires'],
+        deadline: [
+          '.deadline', 
+          '.closing-date', 
+          '.application-deadline', 
+          '.expires',
+          '.application-deadline-date',
+          '.deadline-date',
+          '.closing-date-value',
+          '.expiry-date',
+          '.due-date',
+          '.application-due-date',
+          '.submission-deadline',
+          '.last-date',
+          '.final-date',
+          '.cutoff-date',
+          '.end-date',
+          '.application-end-date',
+          '[data-deadline]',
+          '[data-closing-date]',
+          '[data-expiry]',
+          '.job-deadline',
+          '.vacancy-deadline',
+          '.position-deadline',
+          '.posting-deadline'
+        ],
         postedDate: ['.posted-date', '.published', '.date', '.opening-date'],
         applicationInstructions: ['.application-procedure', '.how-to-apply', '.application-instructions', '.apply-process', '.submission-process', '.contact-info'],
         contactInfo: ['.contact-information', '.contact-details', '.employer-contact', '.company-contact', '.hiring-contact']
@@ -174,7 +198,31 @@ export class OptimizedJobScrapingService {
         responsibilities: ['.responsibilities', '.duties', '.job-duties'],
         benefits: ['.benefits', '.perks'],
         salary: ['.salary', '.compensation', '.pay'],
-        deadline: ['.deadline', '.closing-date', '.application-deadline'],
+        deadline: [
+          '.deadline', 
+          '.closing-date', 
+          '.application-deadline',
+          '.expires',
+          '.application-deadline-date',
+          '.deadline-date',
+          '.closing-date-value',
+          '.expiry-date',
+          '.due-date',
+          '.application-due-date',
+          '.submission-deadline',
+          '.last-date',
+          '.final-date',
+          '.cutoff-date',
+          '.end-date',
+          '.application-end-date',
+          '[data-deadline]',
+          '[data-closing-date]',
+          '[data-expiry]',
+          '.job-deadline',
+          '.vacancy-deadline',
+          '.position-deadline',
+          '.posting-deadline'
+        ],
         postedDate: ['.posted-date', '.date-posted', '.publish-date', '.job-date', 'time', '.time-ago'],
         applicationInstructions: ['.application-procedure', '.how-to-apply', '.application-instructions', '.apply-info', '.contact-details', '.hiring-info'],
         contactInfo: ['.contact-information', '.contact-details', '.employer-info', '.hiring-contact', '.company-contact']
@@ -245,7 +293,33 @@ export class OptimizedJobScrapingService {
         responsibilities: ['.field-name-field-duties', '.responsibilities', '.duties'],
         benefits: ['.field-name-field-benefits', '.benefits'],
         salary: ['.field-name-field-salary', '.salary'],
-        deadline: ['.field-name-field-deadline', '.deadline'],
+        deadline: [
+          '.field-name-field-deadline', 
+          '.deadline',
+          '.field-name-field-closing-date',
+          '.closing-date',
+          '.application-deadline',
+          '.expires',
+          '.application-deadline-date',
+          '.deadline-date',
+          '.closing-date-value',
+          '.expiry-date',
+          '.due-date',
+          '.application-due-date',
+          '.submission-deadline',
+          '.last-date',
+          '.final-date',
+          '.cutoff-date',
+          '.end-date',
+          '.application-end-date',
+          '[data-deadline]',
+          '[data-closing-date]',
+          '[data-expiry]',
+          '.job-deadline',
+          '.vacancy-deadline',
+          '.position-deadline',
+          '.posting-deadline'
+        ],
         postedDate: ['.field-name-field-posted-date', '.posted-date', '.date']
       },
       pagination: {
@@ -1204,6 +1278,278 @@ export class OptimizedJobScrapingService {
   }
 
   /**
+   * Enhanced deadline extraction with comprehensive parsing
+   */
+  private static extractDeadline($: any, deadlineText?: string): Date | undefined {
+    // First try the provided deadline text
+    if (deadlineText) {
+      const parsedDate = this.parseDeadlineText(deadlineText);
+      if (parsedDate) {
+        console.log(`✅ Parsed deadline from provided text: ${parsedDate.toISOString()}`);
+        return parsedDate;
+      }
+    }
+
+    // Try comprehensive selectors
+    const selectors = [
+      '.deadline',
+      '.application-deadline',
+      '.closing-date',
+      '.expected-start-date',
+      '.expires',
+      '.application-deadline-date',
+      '.deadline-date',
+      '.closing-date-value',
+      '.expiry-date',
+      '.due-date',
+      '.application-due-date',
+      '.submission-deadline',
+      '.last-date',
+      '.final-date',
+      '.cutoff-date',
+      '.end-date',
+      '.application-end-date',
+      '[data-deadline]',
+      '[data-closing-date]',
+      '[data-expiry]',
+      '.job-deadline',
+      '.vacancy-deadline',
+      '.position-deadline',
+      '.posting-deadline'
+    ];
+
+    for (const selector of selectors) {
+      const element = $(selector).first();
+      if (element.length) {
+        // Try text content first
+        let text = element.text().trim();
+        
+        // If no text, try data attributes
+        if (!text) {
+          text = element.attr('data-deadline') || 
+                 element.attr('data-closing-date') || 
+                 element.attr('data-expiry') || 
+                 element.attr('title') || '';
+        }
+        
+        if (text) {
+          console.log(`🔍 Found deadline text with selector "${selector}": "${text}"`);
+          const parsedDate = this.parseDeadlineText(text);
+          if (parsedDate) {
+            console.log(`✅ Successfully parsed deadline: ${parsedDate.toISOString()}`);
+            return parsedDate;
+          }
+        }
+      }
+    }
+    
+    // Fallback: search in common text patterns throughout the page
+    const fallbackText = this.searchForDeadlineInText($);
+    if (fallbackText) {
+      console.log(`🔍 Found deadline in fallback search: "${fallbackText}"`);
+      const parsedDate = this.parseDeadlineText(fallbackText);
+      if (parsedDate) {
+        console.log(`✅ Successfully parsed deadline from fallback: ${parsedDate.toISOString()}`);
+        return parsedDate;
+      }
+    }
+    
+    return undefined;
+  }
+
+  /**
+   * Enhanced deadline text parsing with support for various formats
+   */
+  private static parseDeadlineText(text: string): Date | null {
+    if (!text || text.trim().length === 0) return null;
+    
+    // Clean the text
+    const cleanText = text.trim().toLowerCase();
+    
+    // Skip if it's clearly not a date
+    if (cleanText.includes('ongoing') || cleanText.includes('continuous') || 
+        cleanText.includes('rolling') || cleanText.includes('until filled')) {
+      return null;
+    }
+    
+    // Common date patterns
+    const datePatterns = [
+      // ISO format: 2025-09-15, 2025/09/15
+      /(\d{4})[-/](\d{1,2})[-/](\d{1,2})/,
+      // DD-MM-YYYY, DD/MM/YYYY
+      /(\d{1,2})[-/](\d{1,2})[-/](\d{4})/,
+      // DD Month YYYY: 15 September 2025, 15 Sep 2025
+      /(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+(\d{4})/i,
+      // Month DD, YYYY: September 15, 2025, Sep 15, 2025
+      /(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+(\d{1,2}),?\s+(\d{4})/i,
+      // DD Month: 15 September (assume current year if not specified)
+      /(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i,
+      // Month DD: September 15 (assume current year if not specified)
+      /(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+(\d{1,2})/i
+    ];
+    
+    for (const pattern of datePatterns) {
+      const match = cleanText.match(pattern);
+      if (match) {
+        try {
+          let year, month, day;
+          
+          if (pattern.source.includes('\\d{4}')) {
+            // Pattern has year
+            if (match[1].length === 4) {
+              // YYYY-MM-DD format
+              year = parseInt(match[1]);
+              month = parseInt(match[2]);
+              day = parseInt(match[3]);
+            } else {
+              // DD-MM-YYYY format
+              day = parseInt(match[1]);
+              month = parseInt(match[2]);
+              year = parseInt(match[3]);
+            }
+          } else {
+            // Month name pattern
+            const monthNames = {
+              'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
+              'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12,
+              'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+              'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+            };
+            
+            if (match[1] in monthNames) {
+              // Month DD, YYYY format
+              month = monthNames[match[1]];
+              day = parseInt(match[2]);
+              year = parseInt(match[3]);
+            } else {
+              // DD Month YYYY format
+              day = parseInt(match[1]);
+              month = monthNames[match[2]];
+              year = parseInt(match[3]);
+            }
+          }
+          
+          // If no year specified, assume next year if month has passed, current year otherwise
+          if (!year) {
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth() + 1;
+            
+            if (month < currentMonth) {
+              year = currentYear + 1;
+            } else {
+              year = currentYear;
+            }
+          }
+          
+          // Validate the date
+          const date = new Date(year, month - 1, day, 23, 59, 59, 999);
+          if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
+            return date;
+          }
+        } catch (error) {
+          console.log(`⚠️ Error parsing date pattern "${pattern.source}":`, error);
+          continue;
+        }
+      }
+    }
+    
+    // Fallback to native Date parsing
+    try {
+      const date = new Date(text);
+      if (!isNaN(date.getTime())) {
+        // If the parsed year is in the past, assume it's next year
+        const now = new Date();
+        if (date.getFullYear() < now.getFullYear()) {
+          date.setFullYear(now.getFullYear() + 1);
+        }
+        return date;
+      }
+    } catch (error) {
+      console.log(`⚠️ Native Date parsing failed for: "${text}"`);
+    }
+    
+    return null;
+  }
+
+  /**
+   * Search for deadline information in page text when selectors fail
+   */
+  private static searchForDeadlineInText($: any): string | null {
+    const deadlineKeywords = [
+      'deadline', 'closing date', 'application deadline', 'due date', 'expires',
+      'last date', 'final date', 'cutoff date', 'end date', 'submission deadline',
+      'application due', 'closing', 'expiry', 'deadline:', 'closes on', 'ends on'
+    ];
+    
+    const textContent = $('body').text().toLowerCase();
+    
+    for (const keyword of deadlineKeywords) {
+      const regex = new RegExp(`${keyword}[\\s:]*([^\\n\\r]{10,50})`, 'gi');
+      const matches = textContent.match(regex);
+      
+      if (matches) {
+        for (const match of matches) {
+          const extracted = match.replace(new RegExp(keyword, 'gi'), '').trim();
+          if (extracted && extracted.length > 5 && extracted.length < 50) {
+            // Check if it contains date-like content
+            if (/\d/.test(extracted) && (/\d{4}/.test(extracted) || /jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i.test(extracted))) {
+              return extracted;
+            }
+          }
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Normalize and validate deadline dates
+   */
+  private static normalizeDeadlineDate(deadline: any): Date | null {
+    if (!deadline) return null;
+    
+    try {
+      let date: Date;
+      
+      if (deadline instanceof Date) {
+        date = deadline;
+      } else if (typeof deadline === 'string') {
+        // Try parsing the string
+        date = new Date(deadline);
+      } else {
+        console.log(`⚠️ Invalid deadline type: ${typeof deadline}`);
+        return null;
+      }
+      
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        console.log(`⚠️ Invalid deadline date: ${deadline}`);
+        return null;
+      }
+      
+      // Check for reasonable date ranges
+      const now = new Date();
+      const minDate = new Date(now.getFullYear() - 1, 0, 1); // 1 year ago
+      const maxDate = new Date(now.getFullYear() + 2, 11, 31); // 2 years from now
+      
+      if (date < minDate || date > maxDate) {
+        console.log(`⚠️ Deadline date out of reasonable range: ${date.toISOString()}`);
+        return null;
+      }
+      
+      // Set time to end of day for deadlines
+      date.setHours(23, 59, 59, 999);
+      
+      return date;
+    } catch (error) {
+      console.log(`⚠️ Error normalizing deadline: ${error}`);
+      return null;
+    }
+  }
+
+  /**
    * Helper function to extract JSON from AI responses
    */
   private static extractJsonFromResponse(text: string): any {
@@ -2017,6 +2363,10 @@ export class OptimizedJobScrapingService {
       const postedDateText = source.selectors.postedDate ? this.extractTextContent($, source.selectors.postedDate) : '';
       const postedDate = this.parseJobDate(postedDateText);
       
+      // Extract application deadline
+      const deadlineText = source.selectors.deadline ? this.extractTextContent($, source.selectors.deadline) : '';
+      const applicationDeadline = this.extractDeadline($, deadlineText);
+      
       if (!title || !description) {
         console.log(`❌ Missing essential data (title: ${!!title}, description: ${!!description})`);
         return null;
@@ -2038,6 +2388,7 @@ export class OptimizedJobScrapingService {
       console.log(`📞 Contact & Application info - Instructions: ${applicationInstructions ? 'Found' : 'None'}, Contact: ${contactInfoText ? 'Found' : 'None'}`);
       
       console.log(`📅 Posted date found: "${postedDateText}" -> ${postedDate?.toDateString() || 'not parsed'}`);
+      console.log(`📅 Application deadline found: "${deadlineText}" -> ${applicationDeadline?.toDateString() || 'not parsed'}`);
       
       // Use AI to enhance and standardize the job data
       const enhancedJobData = await this.enhanceJobDataWithAI({
@@ -2051,7 +2402,8 @@ export class OptimizedJobScrapingService {
         applicationInstructions,
         contactInfoText,
         sourceUrl: jobUrl,
-        postedDate: postedDate
+        postedDate: postedDate,
+        applicationDeadline: applicationDeadline
       });
 
       if (!enhancedJobData) {
@@ -2136,15 +2488,24 @@ export class OptimizedJobScrapingService {
         - For experienceLevel: Use exact values - "entry_level", "mid_level", "senior_level", or "executive" (default: "mid_level")
         - For educationLevel: Use exact values - "high_school", "associate", "bachelor", "master", "doctorate", or "professional" (default: "bachelor")
         - Extract 3-8 relevant skills
-        - IMPORTANT: For applicationDeadline, look for patterns like:
+        - CRITICAL: For applicationDeadline, look for patterns like:
           * "Deadline 8 September 2025" -> convert to "2025-09-08T23:59:59.000Z"
           * "Deadline: 30 September, 2025" -> convert to "2025-09-30T23:59:59.000Z"  
           * "(Deadline 8 September 2025)" -> convert to "2025-09-08T23:59:59.000Z"
           * "Apply before October 5, 2025" -> convert to "2025-10-05T23:59:59.000Z"
-          * Look for date patterns in the title, description, and contact information
+          * "Closing date: 15 Dec 2025" -> convert to "2025-12-15T23:59:59.000Z"
+          * "Application deadline: 2025-11-30" -> convert to "2025-11-30T23:59:59.000Z"
+          * "Due date: 25/12/2025" -> convert to "2025-12-25T23:59:59.000Z"
+          * "Expires on: January 10, 2026" -> convert to "2026-01-10T23:59:59.000Z"
+          * "Last date for application: 2025-10-15" -> convert to "2025-10-15T23:59:59.000Z"
+          * "Submission deadline: 20 November 2025" -> convert to "2025-11-20T23:59:59.000Z"
+          * Look for date patterns in the title, description, contact information, and application instructions
+          * Search for keywords: "deadline", "closing date", "due date", "expires", "last date", "final date", "cutoff date", "end date", "submission deadline"
+          * Handle various date formats: DD Month YYYY, Month DD YYYY, YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY
           * If no clear deadline found, return null
-          * ALWAYS use proper ISO 8601 format with timezone Z (2025 year is in the future)
+          * ALWAYS use proper ISO 8601 format with timezone Z
           * Set time to end of day (23:59:59) for deadlines
+          * CRITICAL: If year is not specified, assume current year or next year based on context
           * CRITICAL: September 8, 2025 should be "2025-09-08T23:59:59.000Z" (year 2025 is future)
         - Include 3-6 key requirements
         - Include 3-6 main responsibilities
@@ -2177,21 +2538,33 @@ export class OptimizedJobScrapingService {
       console.log('🤖 AI Response received:', aiResponse.substring(0, 200) + '...');
       const jobData = this.extractJsonFromResponse(aiResponse);
       
-      // Parse date strings to Date objects
+      // Parse date strings to Date objects with enhanced logging
       if (jobData.applicationDeadline && typeof jobData.applicationDeadline === 'string') {
         try {
-          console.log(`📅 Parsing deadline string: "${jobData.applicationDeadline}"`);
-          jobData.applicationDeadline = new Date(jobData.applicationDeadline);
-          if (isNaN(jobData.applicationDeadline.getTime())) {
-            console.log('⚠️ Invalid application deadline format, setting to null');
-            jobData.applicationDeadline = null;
+          console.log(`📅 AI extracted deadline string: "${jobData.applicationDeadline}"`);
+          const originalDeadline = jobData.applicationDeadline;
+          
+          // Try to parse with our enhanced parser first
+          const parsedDeadline = this.parseDeadlineText(jobData.applicationDeadline);
+          if (parsedDeadline) {
+            jobData.applicationDeadline = parsedDeadline;
+            console.log(`✅ Enhanced parser successfully parsed deadline: ${parsedDeadline.toISOString()}`);
           } else {
-            console.log(`📅 Successfully parsed deadline: ${jobData.applicationDeadline.toISOString()}`);
+            // Fallback to native Date parsing
+            jobData.applicationDeadline = new Date(jobData.applicationDeadline);
+            if (isNaN(jobData.applicationDeadline.getTime())) {
+              console.log(`⚠️ Both enhanced and native parsing failed for deadline: "${originalDeadline}", setting to null`);
+              jobData.applicationDeadline = null;
+            } else {
+              console.log(`📅 Native parser successfully parsed deadline: ${jobData.applicationDeadline.toISOString()}`);
+            }
           }
         } catch (error) {
-          console.log('⚠️ Failed to parse application deadline, setting to null');
+          console.log(`⚠️ Failed to parse application deadline: "${jobData.applicationDeadline}", error: ${error}, setting to null`);
           jobData.applicationDeadline = null;
         }
+      } else if (jobData.applicationDeadline) {
+        console.log(`📅 AI provided deadline as ${typeof jobData.applicationDeadline}: ${jobData.applicationDeadline}`);
       }
       
       if (jobData.postedDate && typeof jobData.postedDate === 'string') {
@@ -2297,19 +2670,29 @@ export class OptimizedJobScrapingService {
       let cleanedApplicationDeadline = jobData.applicationDeadline;
       
       if (jobData.applicationDeadline) {
-        const now = new Date();
-        now.setHours(0, 0, 0, 0); // Set to start of today for fair comparison
+        // Normalize and validate the deadline
+        const normalizedDeadline = this.normalizeDeadlineDate(jobData.applicationDeadline);
         
-        const deadline = new Date(jobData.applicationDeadline);
-        deadline.setHours(23, 59, 59, 999); // Set to end of deadline day
-        
-        console.log(`🔍 Date comparison: Now=${now.toISOString()}, Deadline=${deadline.toISOString()}`);
-        
-        if (deadline < now) {
-          console.log(`⏰ Job has expired deadline (${jobData.applicationDeadline.toDateString()}), marking as EXPIRED`);
-          jobStatus = JobStatus.EXPIRED;
+        if (normalizedDeadline) {
+          cleanedApplicationDeadline = normalizedDeadline;
+          
+          const now = new Date();
+          now.setHours(0, 0, 0, 0); // Set to start of today for fair comparison
+          
+          const deadline = new Date(normalizedDeadline);
+          deadline.setHours(23, 59, 59, 999); // Set to end of deadline day
+          
+          console.log(`🔍 Date comparison: Now=${now.toISOString()}, Deadline=${deadline.toISOString()}`);
+          
+          if (deadline < now) {
+            console.log(`⏰ Job has expired deadline (${normalizedDeadline.toDateString()}), marking as EXPIRED`);
+            jobStatus = JobStatus.EXPIRED;
+          } else {
+            console.log(`📅 Job deadline is valid (${normalizedDeadline.toDateString()}), keeping as ACTIVE`);
+          }
         } else {
-          console.log(`📅 Job deadline is valid (${jobData.applicationDeadline.toDateString()}), keeping as ACTIVE`);
+          console.log(`⚠️ Invalid deadline format, setting to null: ${jobData.applicationDeadline}`);
+          cleanedApplicationDeadline = null;
         }
       }
 

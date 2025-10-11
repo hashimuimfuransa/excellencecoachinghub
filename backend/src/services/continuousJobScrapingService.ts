@@ -15,8 +15,8 @@ export class ContinuousJobScrapingService {
   private static lastSuccessfulScrape: Date | null = null;
   private static consecutiveFailures = 0;
   private static readonly MAX_CONSECUTIVE_FAILURES = 3;
-  private static readonly MIN_JOBS_THRESHOLD = 3; // Trigger scraping if less than this many new jobs today (reduced for hosted)
-  private static readonly CHECK_INTERVAL_MINUTES = 10; // Check every 10 minutes (more frequent for hosted)
+  private static readonly MIN_JOBS_THRESHOLD = process.env.NODE_ENV === 'production' ? 5 : 3; // Higher threshold for production
+  private static readonly CHECK_INTERVAL_MINUTES = process.env.NODE_ENV === 'production' ? 15 : 10; // Less frequent in production
 
   /**
    * Initialize continuous job scraping
@@ -27,7 +27,11 @@ export class ContinuousJobScrapingService {
       return;
     }
 
-    console.log('🚀 Initializing continuous job scraping service...');
+    console.log(`🚀 Initializing continuous job scraping service (${process.env.NODE_ENV || 'development'} mode)...`);
+    
+    // Environment-specific configuration
+    const isProduction = process.env.NODE_ENV === 'production';
+    console.log(`📊 Production mode: ${isProduction}, Threshold: ${this.MIN_JOBS_THRESHOLD}, Interval: ${this.CHECK_INTERVAL_MINUTES}min`);
     
     // Check every 15 minutes for new jobs
     this.startFrequentChecks();
@@ -38,13 +42,14 @@ export class ContinuousJobScrapingService {
     // Daily maintenance and stats
     this.startDailyMaintenance();
 
-    // Initial scraping run after 30 seconds
+    // Initial scraping run - longer delay in production for stability
+    const initialDelay = isProduction ? 60000 : 30000; // 60s in production, 30s in dev
     setTimeout(() => {
       this.performIntelligentScraping('initial');
-    }, 30000);
+    }, initialDelay);
 
     this.isInitialized = true;
-    console.log('✅ Continuous job scraping service initialized');
+    console.log(`✅ Continuous job scraping service initialized (${isProduction ? 'production' : 'development'} mode)`);
   }
 
   /**

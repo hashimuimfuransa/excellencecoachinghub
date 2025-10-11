@@ -11,6 +11,9 @@ export class JobScrapingScheduler {
   private static isRunning = false;
   private static lastRunTime: Date | null = null;
   private static cronJob: cron.ScheduledTask | null = null;
+  private static consecutiveFailures = 0;
+  private static readonly MAX_CONSECUTIVE_FAILURES = 3;
+  private static lastAlertSent: Date | null = null;
 
   /**
    * Start the job scraping scheduler
@@ -43,13 +46,11 @@ export class JobScrapingScheduler {
     console.log('✅ Job scraping scheduler started - will run every hour (Rwanda time)');
     console.log('✅ Internship.rw scraping scheduled every 2 hours at :30 minutes');
     
-    // Also run immediately if it's the first time (for testing)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔄 Running initial job scraping in development mode...');
-      setTimeout(() => {
-        this.runScrapingTask();
-      }, 5000); // Wait 5 seconds after server start
-    }
+    // Run initial scraping in both development and production
+    console.log(`🔄 Running initial job scraping in ${process.env.NODE_ENV || 'development'} mode...`);
+    setTimeout(() => {
+      this.runScrapingTask();
+    }, 10000); // Wait 10 seconds after server start for production stability
   }
 
   /**
@@ -224,12 +225,18 @@ export class JobScrapingScheduler {
       this.lastRunTime = new Date();
       const duration = Date.now() - startTime.getTime();
       
+      // Reset consecutive failures on success
+      this.consecutiveFailures = 0;
+      
       console.log(`✅ Scheduled job scraping rotation completed in ${duration}ms`);
       console.log(`📊 Total Results: ${totalProcessedJobs} jobs processed, ${allErrors.length} errors`);
       
       if (allErrors.length > 0) {
         console.log(`❌ Errors during scraping (${allErrors.length}):`, allErrors.slice(0, 5));
       }
+
+      // Monitor scraping health
+      this.monitorScrapingHealth(totalProcessedJobs, allErrors.length);
 
       return {
         success: true,
@@ -239,6 +246,12 @@ export class JobScrapingScheduler {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('❌ Scheduled job scraping failed:', errorMessage);
+      
+      // Increment consecutive failures
+      this.consecutiveFailures++;
+      
+      // Monitor scraping health on failure
+      this.monitorScrapingHealth(totalProcessedJobs, allErrors.length + 1);
       
       return {
         success: false,
@@ -350,5 +363,79 @@ export class JobScrapingScheduler {
     } catch (error) {
       return false;
     }
+  }
+
+  /**
+   * Monitor scraping health and send alerts if needed
+   */
+  private static monitorScrapingHealth(processedJobs: number, errorCount: number): void {
+    const now = new Date();
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    // Check if we should send an alert (rate limit: max once per hour)
+    const shouldSendAlert = !this.lastAlertSent || 
+      (now.getTime() - this.lastAlertSent.getTime()) > 60 * 60 * 1000;
+    
+    // Alert conditions
+    const lowJobCount = processedJobs < 3;
+    const highErrorRate = errorCount > 5;
+    const consecutiveFailures = this.consecutiveFailures >= this.MAX_CONSECUTIVE_FAILURES;
+    
+    if (shouldSendAlert && (lowJobCount || highErrorRate || consecutiveFailures)) {
+      const alertMessage = this.generateAlertMessage(processedJobs, errorCount);
+      console.log(`🚨 SCRAPING ALERT: ${alertMessage}`);
+      
+      // In production, you could send this to a monitoring service
+      if (isProduction) {
+        console.log(`📧 Production alert would be sent: ${alertMessage}`);
+        // TODO: Integrate with monitoring service (e.g., Slack, email, etc.)
+      }
+      
+      this.lastAlertSent = now;
+    }
+    
+    // Log health status
+    const healthStatus = this.getHealthStatus(processedJobs, errorCount);
+    console.log(`📊 Scraping Health: ${healthStatus.status} - ${healthStatus.message}`);
+  }
+
+  /**
+   * Generate alert message based on scraping conditions
+   */
+  private static generateAlertMessage(processedJobs: number, errorCount: number): string {
+    const conditions = [];
+    
+    if (processedJobs < 3) {
+      conditions.push(`Low job count (${processedJobs})`);
+    }
+    
+    if (errorCount > 5) {
+      conditions.push(`High error count (${errorCount})`);
+    }
+    
+    if (this.consecutiveFailures >= this.MAX_CONSECUTIVE_FAILURES) {
+      conditions.push(`Consecutive failures (${this.consecutiveFailures})`);
+    }
+    
+    return `Job scraping issues detected: ${conditions.join(', ')}`;
+  }
+
+  /**
+   * Get current health status
+   */
+  private static getHealthStatus(processedJobs: number, errorCount: number): {status: string, message: string} {
+    if (this.consecutiveFailures >= this.MAX_CONSECUTIVE_FAILURES) {
+      return { status: 'CRITICAL', message: 'Multiple consecutive failures' };
+    }
+    
+    if (errorCount > 5) {
+      return { status: 'WARNING', message: 'High error rate' };
+    }
+    
+    if (processedJobs < 3) {
+      return { status: 'WARNING', message: 'Low job count' };
+    }
+    
+    return { status: 'HEALTHY', message: 'Normal operation' };
   }
 }

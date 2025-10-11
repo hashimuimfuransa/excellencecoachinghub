@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { JobScrapingService } from '../services/jobScrapingService';
 import { JobScrapingScheduler } from '../services/jobScrapingScheduler';
+import { ContinuousJobScrapingService } from '../services/continuousJobScrapingService';
+import { OptimizedJobScrapingService } from '../services/optimizedJobScrapingService';
 import { Job } from '../models/Job';
 
 /**
@@ -8,6 +10,80 @@ import { Job } from '../models/Job';
  */
 export class JobScrapingController {
   
+  /**
+   * Health check endpoint for scraping services
+   */
+  static async getScrapingHealth(req: Request, res: Response): Promise<void> {
+    try {
+      const now = new Date();
+      
+      // Get recent job counts
+      const todayJobs = await Job.countDocuments({
+        createdAt: { $gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()) }
+      });
+      
+      const last24HoursJobs = await Job.countDocuments({
+        createdAt: { $gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) }
+      });
+      
+      const lastWeekJobs = await Job.countDocuments({
+        createdAt: { $gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) }
+      });
+      
+      // Get scheduler status (using reflection to access private properties)
+      const schedulerStatus = {
+        isRunning: (JobScrapingScheduler as any).isRunning || false,
+        lastRunTime: (JobScrapingScheduler as any).lastRunTime || null,
+        cronJobActive: (JobScrapingScheduler as any).cronJob !== null
+      };
+      
+      // Get continuous scraping status
+      const continuousStatus = {
+        isInitialized: (ContinuousJobScrapingService as any).isInitialized || false,
+        isScrapingInProgress: (ContinuousJobScrapingService as any).isScrapingInProgress || false,
+        lastSuccessfulScrape: (ContinuousJobScrapingService as any).lastSuccessfulScrape || null,
+        consecutiveFailures: (ContinuousJobScrapingService as any).consecutiveFailures || 0
+      };
+      
+      // Environment info
+      const environment = {
+        nodeEnv: process.env.NODE_ENV || 'development',
+        isProduction: process.env.NODE_ENV === 'production',
+        port: process.env.PORT || 5000,
+        mongodbConnected: !!process.env.MONGODB_URI
+      };
+      
+      res.status(200).json({
+        success: true,
+        message: 'Scraping health check completed',
+        data: {
+          timestamp: now.toISOString(),
+          environment,
+          jobCounts: {
+            today: todayJobs,
+            last24Hours: last24HoursJobs,
+            lastWeek: lastWeekJobs
+          },
+          schedulerStatus,
+          continuousScrapingStatus: continuousStatus,
+          health: {
+            overall: schedulerStatus.cronJobActive && continuousStatus.isInitialized ? 'healthy' : 'degraded',
+            scheduler: schedulerStatus.cronJobActive ? 'running' : 'stopped',
+            continuous: continuousStatus.isInitialized ? 'active' : 'inactive',
+            recentActivity: last24HoursJobs > 0 ? 'active' : 'inactive'
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error in scraping health check:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Health check failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
   /**
    * Manually trigger job scraping (admin only)
    */
@@ -32,6 +108,80 @@ export class JobScrapingController {
         success: false,
         message: 'Job scraping failed',
         error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+
+  /**
+   * Webhook endpoint for external systems to trigger scraping
+   */
+  static async webhookTriggerScraping(req: Request, res: Response): Promise<void> {
+    try {
+      // Verify webhook secret if provided
+      const webhookSecret = req.headers['x-webhook-secret'] as string;
+      const expectedSecret = process.env.WEBHOOK_SECRET;
+      
+      if (expectedSecret && webhookSecret !== expectedSecret) {
+        console.log('⚠️ Invalid webhook secret provided');
+        res.status(401).json({
+          success: false,
+          message: 'Invalid webhook secret'
+        });
+        return;
+      }
+      
+      console.log('🔗 Webhook-triggered job scraping');
+      
+      const result = await OptimizedJobScrapingService.scrapeAndProcessJobs();
+      
+      res.status(200).json({
+        success: true,
+        message: `Webhook-triggered scraping completed. Processed ${result.processedJobs} jobs.`,
+        data: {
+          processedJobs: result.processedJobs,
+          errors: result.errors || [],
+          timestamp: new Date().toISOString(),
+          triggeredBy: 'webhook',
+          environment: process.env.NODE_ENV || 'development'
+        }
+      });
+    } catch (error) {
+      console.error('Error in webhook-triggered scraping:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Webhook-triggered scraping failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        environment: process.env.NODE_ENV || 'development'
+      });
+    }
+  }
+
+  /**
+   * Manually trigger optimized job scraping (production-safe)
+   */
+  static async scrapeJobsOptimized(req: Request, res: Response): Promise<void> {
+    try {
+      console.log('Manual optimized job scraping triggered');
+      
+      const result = await OptimizedJobScrapingService.scrapeAndProcessJobs();
+      
+      res.status(200).json({
+        success: true,
+        message: `Optimized job scraping completed. Processed ${result.processedJobs} jobs.`,
+        data: {
+          processedJobs: result.processedJobs,
+          errors: result.errors || [],
+          timestamp: new Date().toISOString(),
+          environment: process.env.NODE_ENV || 'development'
+        }
+      });
+    } catch (error) {
+      console.error('Error in optimized job scraping:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Optimized job scraping failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        environment: process.env.NODE_ENV || 'development'
       });
     }
   }

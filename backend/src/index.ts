@@ -23,6 +23,7 @@ import { setSocketIO } from '@/services/notificationService';
 import { liveSessionScheduler } from '@/services/liveSessionScheduler';
 import { proctoringService } from '@/services/proctoringService';
 import { validateCloudinaryConfig } from '@/config/cloudinary';
+import { getUploadcareClient } from '@/services/uploadcareService';
 import videoProviderService from '@/services/videoProviderService';
 import { JobScrapingScheduler } from '@/services/jobScrapingScheduler';
 import { ContinuousJobScrapingService } from '@/services/continuousJobScrapingService';
@@ -1058,6 +1059,7 @@ const startServer = async () => {
 
     // Validate Cloudinary configuration
     const cloudinaryConfigured = validateCloudinaryConfig();
+    const uploadcareConfigured = !!(process.env.UPLOADCARE_PUBLIC_KEY && process.env.UPLOADCARE_SECRET_KEY);
 
     // Configure server timeouts for slow networks
     server.timeout = 0; // Disable server timeout
@@ -1070,6 +1072,7 @@ const startServer = async () => {
       console.log(`🔗 API URL: http://${HOST}:${PORT}/api`);
       console.log(`💾 Database: ${process.env.MONGODB_URI ? 'Connected' : 'Not configured'}`);
       console.log(`☁️ Cloudinary: ${cloudinaryConfigured ? 'Configured' : 'Not configured (avatar upload disabled)'}`);
+      console.log(`📦 Uploadcare: ${uploadcareConfigured ? 'Configured' : 'Not configured'}`);
       console.log(`⏱️ Server timeouts: Disabled for slow networks`);
       console.log(`🌐 Binding to all interfaces (0.0.0.0) for cloud deployment`);
 

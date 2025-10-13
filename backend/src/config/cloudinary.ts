@@ -97,7 +97,7 @@ const uploadWithRetry = async (
       return await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error('Upload timeout - connection took too long'));
-        }, 60000); // 1 minute timeout per attempt
+        }, 35 * 60 * 1000); // 35 minutes timeout per attempt
 
         cloudinary.uploader.upload_stream(
           options,
@@ -427,53 +427,35 @@ export const uploadVideoToCloudinary = async (
     const publicId = `video_${userId}_${fileName}_${timestamp}`;
 
     console.log('Starting Cloudinary video upload for user:', userId);
-    console.log('Original file name:', originalName);
+
     console.log('Folder:', folder);
     console.log('Public ID:', publicId);
 
-    return new Promise((resolve, reject) => {
-      cloudinary.uploader.upload_stream(
+    const options: any = {
+      public_id: publicId,
+      folder: folder,
+      resource_type: 'video',
+      use_filename: true,
+      unique_filename: true,
+      transformation: [
         {
-          public_id: publicId,
-          folder: folder,
-          resource_type: 'video',
-          // Remove upload_preset to use signed uploads with API credentials
-          use_filename: true,
-          unique_filename: true,
-          transformation: [
-            {
-              quality: 'auto:good',
-              format: 'mp4'
-            }
-          ],
-          allowed_formats: ['mp4', 'mov', 'avi', 'mkv', 'webm'],
-        },
-        (error, result) => {
-          if (error) {
-            console.error('Cloudinary video upload error:', error);
-            console.error('Error details:', {
-              message: error.message,
-              http_code: error.http_code,
-              name: error.name
-            });
-            reject(new Error(`Cloudinary video upload failed: ${error.message}`));
-          } else if (result) {
-            console.log('✅ Cloudinary video upload successful:', result.public_id);
-            console.log('Video URL:', result.secure_url);
-            console.log('Duration:', result.duration);
-            console.log('Size:', result.bytes);
-            resolve({
-              url: result.secure_url,
-              publicId: result.public_id,
-              duration: result.duration || 0,
-              size: result.bytes || 0,
-            });
-          } else {
-            reject(new Error('No result from Cloudinary video upload'));
-          }
+          quality: 'auto:good',
+          format: 'mp4'
         }
-      ).end(fileBuffer);
-    });
+      ],
+      allowed_formats: ['mp4', 'mov', 'avi', 'mkv', 'webm'],
+      chunk_size: 4_000_000, // 4MB chunks to reduce request count
+      timeout: 35 * 60 * 1000 // 35 minutes per attempt
+    };
+
+    const result = await uploadWithRetry(fileBuffer, options, 2);
+
+    return {
+      url: result.secure_url,
+      publicId: result.public_id,
+      duration: result.duration || 0,
+      size: result.bytes || 0,
+    };
   } catch (error) {
     console.error('Error in uploadVideoToCloudinary:', error);
     throw error instanceof Error ? error : new Error('Failed to upload video');

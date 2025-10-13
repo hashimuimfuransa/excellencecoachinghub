@@ -89,6 +89,8 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { liveSessionService, ILiveSession } from '../../services/liveSessionService';
 import { recordedSessionService, IRecordedSession } from '../../services/recordedSessionService';
+import { courseService } from '../../services/courseService';
+import { Widget } from '@uploadcare/react-widget';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -128,6 +130,7 @@ interface RecordedSession {
     title: string;
   };
   videoFile?: File | null;
+  videoUrl?: string;
   uploadProgress?: number;
   isUploading?: boolean;
   duration?: string;
@@ -167,15 +170,24 @@ const LiveSessions: React.FC = () => {
   const [dateFilter, setDateFilter] = useState('all');
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [teacherCourses, setTeacherCourses] = useState<any[]>([]);
   const [newRecording, setNewRecording] = useState<Partial<RecordedSession>>({
     title: '',
     description: '',
     courseId: '',
     courseName: '',
     videoFile: null,
+    videoUrl: '',
     uploadProgress: 0,
     isUploading: false
   });
+  const [ucUploading, setUcUploading] = useState(false);
+  const uploadcarePublicKey = (
+    (typeof process !== 'undefined' && (process as any)?.env?.REACT_APP_UPLOADCARE_PUBLIC_KEY)
+    || ((typeof import.meta !== 'undefined' && (import.meta as any)?.env?.VITE_UPLOADCARE_PUBLIC_KEY))
+    || ((typeof window !== 'undefined' && (window as any)?.UPLOADCARE_PUBLIC_KEY))
+    || ''
+  );
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedSession, setSelectedSession] = useState<ILiveSession | null>(null);
   
@@ -190,6 +202,7 @@ const LiveSessions: React.FC = () => {
   useEffect(() => {
     loadSessions();
     loadRecordedSessions();
+    loadTeacherCourses();
   }, [tabValue, courseIdFilter]);
 
   const loadSessions = async () => {
@@ -214,6 +227,19 @@ const LiveSessions: React.FC = () => {
       setError(err.message || 'Failed to load sessions');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTeacherCourses = async () => {
+    try {
+      if (!user?._id) return;
+      
+      const response = await courseService.getTeacherCourses({
+        instructor: user._id
+      });
+      setTeacherCourses(response.courses || []);
+    } catch (err: any) {
+      console.error('Failed to load teacher courses:', err);
     }
   };
 
@@ -318,8 +344,8 @@ const LiveSessions: React.FC = () => {
 
   // Handle video upload
   const handleVideoUpload = async () => {
-    if (!newRecording.videoFile || !newRecording.title || !newRecording.courseId) {
-      setError('Please fill in all required fields and select a video file');
+    if (!newRecording.videoUrl || !newRecording.title || !newRecording.courseId) {
+      setError('Please fill in all required fields and upload a video');
       return;
     }
 
@@ -334,7 +360,8 @@ const LiveSessions: React.FC = () => {
         description: newRecording.description || '',
         courseId: newRecording.courseId!,
         courseName: newRecording.courseName!,
-        videoFile: newRecording.videoFile,
+        videoFile: null,
+        videoUrl: newRecording.videoUrl!,
         uploadProgress: 0,
         isUploading: true,
         uploadDate: new Date(),
@@ -345,16 +372,16 @@ const LiveSessions: React.FC = () => {
       setRecordedSessions(prev => [...prev, uploadingRecording]);
       setUploadDialogOpen(false);
 
-      // Start upload progress simulation
+      // Start save progress simulation
       const progressInterval = setInterval(() => {
         setRecordedSessions(prev =>
           prev.map(session =>
             session.id === recordingId
-              ? { ...session, uploadProgress: Math.min((session.uploadProgress || 0) + 5, 90) }
+              ? { ...session, uploadProgress: Math.min((session.uploadProgress || 0) + 10, 90) }
               : session
           )
         );
-      }, 200);
+      }, 250);
 
       try {
         // Upload using the real API
@@ -362,7 +389,7 @@ const LiveSessions: React.FC = () => {
           title: newRecording.title!,
           description: newRecording.description,
           courseId: newRecording.courseId!,
-          video: newRecording.videoFile
+          videoUrl: newRecording.videoUrl!
         });
 
         clearInterval(progressInterval);
@@ -392,7 +419,7 @@ const LiveSessions: React.FC = () => {
               : session
           ));
           
-          setSuccess('Video uploaded successfully!');
+          setSuccess('Video saved successfully!');
         }
       } catch (uploadError: any) {
         clearInterval(progressInterval);
@@ -408,12 +435,14 @@ const LiveSessions: React.FC = () => {
         courseId: '',
         courseName: '',
         videoFile: null,
+        videoUrl: '',
         uploadProgress: 0,
         isUploading: false
       });
+      setUcUploading(false);
 
     } catch (err: any) {
-      setError(err.message || 'Failed to upload video');
+      setError(err.message || 'Failed to save video');
     }
   };
 
@@ -1533,7 +1562,7 @@ const LiveSessions: React.FC = () => {
                 label="Course"
                 onChange={(e) => {
                   const courseId = e.target.value;
-                  const course = uniqueCourses.find(c => c.id === courseId);
+                  const course = teacherCourses.find(c => c._id === courseId);
                   setNewRecording(prev => ({ 
                     ...prev, 
                     courseId,
@@ -1541,8 +1570,8 @@ const LiveSessions: React.FC = () => {
                   }));
                 }}
               >
-                {uniqueCourses.map(course => (
-                  <MenuItem key={course.id} value={course.id}>
+                {teacherCourses.map(course => (
+                  <MenuItem key={course._id} value={course._id}>
                     {course.title}
                   </MenuItem>
                 ))}
@@ -1550,56 +1579,50 @@ const LiveSessions: React.FC = () => {
             </FormControl>
 
             <Box>
-              <input
-                accept="video/*"
-                style={{ display: 'none' }}
-                id="video-upload"
-                type="file"
-                onChange={(e) => {
-                  const file = e.target.files?.[0] || null;
-                  setNewRecording(prev => ({ ...prev, videoFile: file }));
+              <Widget
+                publicKey={uploadcarePublicKey}
+                multiple={false}
+                tabs="file url"
+                onFileSelect={(file: any) => {
+                  if (!file) return;
+                  setUcUploading(true);
+                  // Track widget progress
+                  file.progress((info: any) => {
+                    const pct = Math.round((info.progress || 0) * 100);
+                    setNewRecording(prev => ({ ...prev, uploadProgress: pct, isUploading: true }));
+                  });
+                  file.done((fileInfo: any) => {
+                    const cdnUrl = fileInfo?.cdnUrl || (fileInfo?.cdnUrl && fileInfo?.cdnUrlModifiers ? `${fileInfo.cdnUrl}${fileInfo.cdnUrlModifiers}` : '') || fileInfo?.originalUrl;
+                    setNewRecording(prev => ({ 
+                      ...prev, 
+                      videoUrl: cdnUrl || '',
+                      isUploading: false,
+                      uploadProgress: 100
+                    }));
+                    setUcUploading(false);
+                  });
+                  file.fail(() => {
+                    setUcUploading(false);
+                    setNewRecording(prev => ({ ...prev, isUploading: false }));
+                    setError('Upload failed. Please try again.');
+                  });
                 }}
               />
-              <label htmlFor="video-upload">
-                <Button
-                  variant="outlined"
-                  component="span"
-                  startIcon={<FileUpload />}
-                  fullWidth
-                  size={isMobile ? "medium" : "large"}
-                  sx={{ 
-                    height: { xs: 50, sm: 60 },
-                    fontSize: { xs: '0.875rem', sm: '1rem' },
-                    '& .MuiSvgIcon-root': {
-                      fontSize: { xs: 18, sm: 20 }
-                    }
-                  }}
-                >
-                  {newRecording.videoFile 
-                    ? (isMobile && newRecording.videoFile.name.length > 20 
-                       ? `${newRecording.videoFile.name.substring(0, 20)}...`
-                       : newRecording.videoFile.name)
-                    : (isMobile ? 'Choose Video' : 'Select Video File')
-                  }
-                </Button>
-              </label>
-              {newRecording.videoFile && (
+              {(ucUploading || newRecording.isUploading) && (
+                <Box sx={{ mt: 1 }}>
+                  <LinearProgress variant="determinate" value={newRecording.uploadProgress || 0} />
+                  <Typography variant="caption" color="text.secondary">
+                    Uploading to Uploadcare... {newRecording.uploadProgress || 0}%
+                  </Typography>
+                </Box>
+              )}
+              {newRecording.videoUrl && !ucUploading && !newRecording.isUploading && (
                 <Typography 
                   variant="caption" 
                   color="text.secondary" 
-                  sx={{ 
-                    mt: 1, 
-                    display: 'block',
-                    fontSize: { xs: '0.7rem', sm: '0.75rem' }
-                  }}
+                  sx={{ mt: 1, display: 'block' }}
                 >
-                  File size: {(newRecording.videoFile.size / (1024 * 1024)).toFixed(2)} MB
-                  {isMobile && (
-                    <>
-                      <br />
-                      {newRecording.videoFile.name}
-                    </>
-                  )}
+                  Selected: {newRecording.videoUrl}
                 </Typography>
               )}
             </Box>
@@ -1623,12 +1646,12 @@ const LiveSessions: React.FC = () => {
           <Button 
             onClick={handleVideoUpload}
             variant="contained"
-            disabled={!newRecording.title || !newRecording.courseId || !newRecording.videoFile}
+            disabled={!newRecording.title || !newRecording.courseId || !newRecording.videoUrl || ucUploading || newRecording.isUploading}
             size={isMobile ? "medium" : "large"}
             fullWidth={isMobile}
             sx={{ order: { xs: 1, sm: 0 } }}
           >
-            Upload Video
+            Save Video
           </Button>
         </DialogActions>
       </Dialog>

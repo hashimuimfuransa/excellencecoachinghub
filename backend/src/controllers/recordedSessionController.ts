@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import { RecordedSession, Course, UserProgress } from '../models';
 import { AuthRequest } from '../middleware/auth';
 import multer from 'multer';
-import { uploadVideoToCloudinary, deleteVideoFromCloudinary } from '../config/cloudinary';
+import { deleteVideoFromCloudinary } from '../config/cloudinary';
+import { deleteUploadcareFileByCdnUrl, isUploadcareUrl } from '../services/uploadcareService';
 
 // Configure multer for video uploads with memory storage (for Cloudinary)
 const storage = multer.memoryStorage();
@@ -83,7 +84,7 @@ export const uploadRecordedSession = async (req: AuthRequest, res: Response) => 
   try {
     console.log('🎥 uploadRecordedSession function called');
     const teacherId = req.user?._id;
-    const { title, description, courseId } = req.body;
+    const { title, description, courseId, videoUrl } = req.body;
     const videoFile = req.file;
 
     console.log('📋 Request data:', { title, description, courseId, hasFile: !!videoFile });
@@ -93,9 +94,10 @@ export const uploadRecordedSession = async (req: AuthRequest, res: Response) => 
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    if (!videoFile) {
-      console.log('❌ No video file found');
-      return res.status(400).json({ message: 'Video file is required' });
+    // Accept either Uploadcare videoUrl or a direct file (legacy)
+    if (!videoUrl && !videoFile) {
+      console.log('❌ No video provided');
+      return res.status(400).json({ message: 'Video URL is required' });
     }
 
     if (!title || !courseId) {
@@ -105,7 +107,13 @@ export const uploadRecordedSession = async (req: AuthRequest, res: Response) => 
 
     // Verify the course belongs to the teacher
     console.log('🔍 Verifying course ownership...');
-    const course = await Course.findOne({ _id: courseId, teacher: teacherId });
+    const course = await Course.findOne({
+      _id: courseId,
+      $or: [
+        { teacher: teacherId },
+        { instructor: teacherId }
+      ]
+    });
     if (!course) {
       console.log('❌ Course not found or unauthorized');
       return res.status(404).json({ message: 'Course not found or unauthorized' });
@@ -113,15 +121,16 @@ export const uploadRecordedSession = async (req: AuthRequest, res: Response) => 
 
     console.log('✅ Course verified:', course.title);
 
-    // Upload video to Cloudinary
-    console.log('☁️ Uploading video to Cloudinary...');
-    const cloudinaryResult = await uploadVideoToCloudinary(
-      videoFile.buffer,
-      teacherId.toString(),
-      videoFile.originalname
-    );
+    let finalVideoUrl = videoUrl as string;
+    let videoFileName = videoFile?.originalname || 'uploadcare-video';
+    let videoSize = videoFile?.size || 0;
+    let durationSeconds = 0;
 
-    console.log('✅ Video uploaded to Cloudinary:', cloudinaryResult.url);
+    if (!finalVideoUrl && videoFile) {
+      // Legacy path would upload to Cloudinary, but we are moving to Uploadcare-only.
+      // Reject legacy direct uploads to enforce Uploadcare.
+      return res.status(400).json({ success: false, message: 'Direct file uploads are disabled. Please upload via Uploadcare widget.' });
+    }
 
     // Format duration from seconds to MM:SS
     const formatDuration = (seconds: number): string => {
@@ -137,10 +146,10 @@ export const uploadRecordedSession = async (req: AuthRequest, res: Response) => 
       description,
       teacher: teacherId,
       course: courseId,
-      videoUrl: cloudinaryResult.url,
-      videoFileName: videoFile.originalname,
-      videoSize: cloudinaryResult.size,
-      duration: formatDuration(cloudinaryResult.duration),
+      videoUrl: finalVideoUrl,
+      videoFileName,
+      videoSize,
+      duration: formatDuration(durationSeconds),
       uploadDate: new Date()
     });
 
@@ -153,7 +162,7 @@ export const uploadRecordedSession = async (req: AuthRequest, res: Response) => 
     res.status(201).json({
       success: true,
       data: recordedSession,
-      message: 'Video uploaded successfully to Cloudinary'
+      message: 'Video saved successfully'
     });
   } catch (error) {
     console.error('❌ Error uploading recorded session:', error);
@@ -264,8 +273,14 @@ export const deleteRecordedSession = async (req: AuthRequest, res: Response) => 
       return res.status(404).json({ message: 'Recorded session not found' });
     }
 
-    // Delete the video from Cloudinary
-    await deleteVideoFromCloudinary(recordedSession.videoUrl);
+    // Delete the video from storage
+    if (recordedSession.videoUrl) {
+      if (isUploadcareUrl(recordedSession.videoUrl)) {
+        await deleteUploadcareFileByCdnUrl(recordedSession.videoUrl);
+      } else if (recordedSession.videoUrl.includes('cloudinary.com')) {
+        await deleteVideoFromCloudinary(recordedSession.videoUrl);
+      }
+    }
 
     await RecordedSession.findByIdAndDelete(id);
 
@@ -359,7 +374,8 @@ export const getAllRecordedSessionsForStudent = async (req: AuthRequest, res: Re
     }
 
     // Get student's enrolled courses
-    const enrollments = await UserProgress.find({ user: studentId }).select('course');
+    const { CourseEnrollment } = await import('../models/CourseEnrollment');
+    const enrollments = await CourseEnrollment.find({ student: studentId, isActive: true }).select('course');
     const enrolledCourseIds = enrollments.map((enrollment: any) => enrollment.course);
 
     if (enrolledCourseIds.length === 0) {

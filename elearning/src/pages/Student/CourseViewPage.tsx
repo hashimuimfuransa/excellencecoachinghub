@@ -45,7 +45,9 @@ import { enrollmentService } from '../../services/enrollmentService';
 import { assessmentService } from '../../services/assessmentService';
 import { announcementService } from '../../services/announcementService';
 import { liveSessionService, ILiveSession } from '../../services/liveSessionService';
+import { recordedSessionService } from '../../services/recordedSessionService';
 import { progressService } from '../../services/progressService';
+import LiveSessionStatus from '../../components/Student/LiveSessionStatus';
 
 interface CourseStats {
   totalNotes: number;
@@ -83,6 +85,7 @@ const CourseViewPage: React.FC = () => {
   });
   const [recentAnnouncements, setRecentAnnouncements] = useState<any[]>([]);
   const [upcomingSessions, setUpcomingSessions] = useState<ILiveSession[]>([]);
+  const [unseenRecordings, setUnseenRecordings] = useState<number>(0);
 
   // Load course data and stats
   useEffect(() => {
@@ -114,6 +117,7 @@ const CourseViewPage: React.FC = () => {
               await loadCourseStats();
               await loadRecentAnnouncements();
               await loadUpcomingSessions();
+              await loadUnseenRecordings();
             }
           } catch (enrollmentError: any) {
             console.error('Enrollment check failed:', enrollmentError);
@@ -175,6 +179,29 @@ const CourseViewPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to load course stats:', error);
     }
+  };
+
+  // Load unseen recorded sessions using a lightweight client-side tracker
+  const loadUnseenRecordings = async () => {
+    if (!id) return;
+    try {
+      const res = await recordedSessionService.getRecordedSessionsForStudents(id);
+      const recordings = Array.isArray(res.data) ? res.data : res;
+      const lastSeenKey = `course:${id}:recordingsLastSeen`;
+      const lastSeenStr = localStorage.getItem(lastSeenKey);
+      const lastSeen = lastSeenStr ? new Date(lastSeenStr).getTime() : 0;
+      const unseen = (recordings || []).filter((r: any) => new Date(r.uploadDate).getTime() > lastSeen).length;
+      setUnseenRecordings(unseen);
+    } catch (e) {
+      // Ignore errors; keep UI silent
+    }
+  };
+
+  const markRecordingsSeen = () => {
+    if (!id) return;
+    const lastSeenKey = `course:${id}:recordingsLastSeen`;
+    localStorage.setItem(lastSeenKey, new Date().toISOString());
+    setUnseenRecordings(0);
   };
 
   // Load recent announcements
@@ -313,6 +340,9 @@ const CourseViewPage: React.FC = () => {
         >
           Back to My Courses
         </Button>
+
+        {/* Live Session Status */}
+        <LiveSessionStatus courseId={id!} />
 
         <Card sx={{ mb: 3 }}>
           <CardContent>
@@ -495,7 +525,7 @@ const CourseViewPage: React.FC = () => {
                 opacity: 1
               }
             }}
-            onClick={handleLiveSessionsView}
+            onClick={() => { markRecordingsSeen(); handleLiveSessionsView(); }}
           >
             <CardContent sx={{ textAlign: 'center', py: 4, position: 'relative', zIndex: 1 }}>
               <Box sx={{ 
@@ -519,6 +549,20 @@ const CourseViewPage: React.FC = () => {
                   <Chip 
                     label="Live Sessions"
                     icon={<LiveTv />}
+                    sx={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                      color: 'white',
+                      fontWeight: 500,
+                      '& .MuiChip-icon': {
+                        color: 'white'
+                      }
+                    }}
+                  />
+                </Badge>
+                <Badge badgeContent={unseenRecordings} color="error" invisible={unseenRecordings === 0}>
+                  <Chip 
+                    label={unseenRecordings > 0 ? 'New Recordings' : 'Recordings'}
+                    icon={<NotificationsActive />}
                     sx={{
                       backgroundColor: 'rgba(255, 255, 255, 0.2)',
                       color: 'white',

@@ -216,11 +216,25 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
     let isInitializing = false;
     let connectionTimeout: NodeJS.Timeout;
     let hasJoined = false;
+    let retryCount = 0;
+    const maxRetries = 2;
 
     const initializeRoom = async () => {
       // Prevent multiple simultaneous join attempts
       if (isInitializing || isConnected || hasJoinedRef.current) {
         console.log('🔄 Skipping room initialization - already connected or initializing');
+        return;
+      }
+
+      // Additional check for HMS room state
+      if (roomState === 'Connected' || roomState === 'Connecting') {
+        console.log('🔄 Skipping room initialization - HMS room already in state:', roomState);
+        return;
+      }
+
+      // In development, add extra protection against hot module reload
+      if (process.env.NODE_ENV === 'development' && window.location.href.includes('hot-update')) {
+        console.log('🔄 Skipping room initialization - hot module reload detected');
         return;
       }
 
@@ -238,10 +252,11 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
             setError('Connection timeout - please try again');
             setLoading(false);
             isInitializing = false;
+            hasJoinedRef.current = false;
           }
-        }, 15000); // 15 second timeout (reduced from 30)
+        }, 8000); // 8 second timeout (reduced from 15)
 
-        // Get HMS token from backend
+        // Get HMS token from backend with timeout
         console.log('🔑 Requesting video token for:', { 
           role: userRole, 
           userName: user?.firstName + ' ' + user?.lastName || 'Unknown User',
@@ -249,12 +264,19 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
           roomId 
         });
         
-        const response = await apiService.post<VideoTokenResponse>('/video/token', {
+        const tokenPromise = apiService.post<VideoTokenResponse>('/video/token', {
           role: userRole,
           userName: user?.firstName + ' ' + user?.lastName || 'Unknown User',
           sessionId,
           roomId
         });
+
+        // Add timeout to token request
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Token request timeout')), 5000);
+        });
+
+        const response = await Promise.race([tokenPromise, timeoutPromise]);
 
         console.log('🔑 Video token response:', { 
           success: response.success, 
@@ -357,6 +379,18 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
         console.error('❌ Error joining room:', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to join video room';
         
+        // Retry logic for token or connection failures
+        if (retryCount < maxRetries && (errorMessage.includes('timeout') || errorMessage.includes('network') || errorMessage.includes('Token request timeout'))) {
+          retryCount++;
+          console.log(`🔄 Retrying connection (attempt ${retryCount}/${maxRetries})...`);
+          isInitializing = false;
+          hasJoinedRef.current = false;
+          
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          return initializeRoom();
+        }
+        
         // Check if the error is related to room not being active
         if (errorMessage.toLowerCase().includes('room not active') || 
             errorMessage.toLowerCase().includes('room is not active') || 
@@ -440,8 +474,27 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
             setError('This room is not active. Please ask your teacher to start the session.');
           }
         } else {
-          // For other errors, just show the error message
-          setError(errorMessage);
+          // Generic error handling with user-friendly messages
+          let userFriendlyError = 'Failed to join video room';
+          
+          if (errorMessage.includes('timeout') || errorMessage.includes('Token request timeout')) {
+            userFriendlyError = 'Connection timeout - please check your internet connection and try again';
+          } else if (errorMessage.includes('HMS credentials validation failed')) {
+            userFriendlyError = 'Video service configuration error - please contact support';
+          } else if (errorMessage.includes('User not found')) {
+            userFriendlyError = 'Authentication error - please log in again';
+          } else if (errorMessage.includes('Session not found')) {
+            userFriendlyError = 'Session not found - please check the session ID';
+          } else if (errorMessage.includes('network') || errorMessage.includes('Network')) {
+            userFriendlyError = 'Network error - please check your internet connection';
+          } else {
+            userFriendlyError = errorMessage;
+          }
+          
+          setError(userFriendlyError);
+          setLoading(false);
+          isInitializing = false;
+          hasJoinedRef.current = false;
         }
       } finally {
         if (connectionTimeout) {
@@ -455,7 +508,7 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
       }
     };
 
-    if (user && !isConnected) {
+    if (user && !isConnected && roomState !== 'Connected' && roomState !== 'Connecting') {
       initializeRoom();
     }
 
@@ -467,7 +520,7 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
         clearTimeout(connectionTimeout);
       }
     };
-  }, [user, sessionId, userRole]); // Removed dependencies that cause unnecessary re-runs
+  }, [user, sessionId, userRole, roomState]); // Added roomState to prevent multiple joins
 
   // Monitor video track state for debugging
   useEffect(() => {
@@ -477,10 +530,27 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
         hasTrack: !!videoTrack,
         isLocalVideoEnabled,
         peerName: localPeer.name,
-        peerId: localPeer.id
+        peerId: localPeer.id,
+        trackState: videoTrack ? 'active' : 'inactive',
+        trackId: videoTrack?.id || 'none'
       });
+      
+      // If video is enabled but no track, try to enable it again
+      if (isLocalVideoEnabled && !videoTrack) {
+        console.log('⚠️ Video enabled but no track detected, retrying...');
+        setTimeout(async () => {
+          try {
+            await hmsActions.setLocalVideoEnabled(false);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await hmsActions.setLocalVideoEnabled(true);
+            console.log('🔄 Video track retry completed');
+          } catch (error) {
+            console.error('❌ Error retrying video track:', error);
+          }
+        }, 2000);
+      }
     }
-  }, [localPeer, isLocalVideoEnabled, userRole]);
+  }, [localPeer, isLocalVideoEnabled, userRole, hmsActions]);
 
   // Monitor all peers for debugging and track attendance
   useEffect(() => {
@@ -877,10 +947,13 @@ const LiveClassContent: React.FC<LiveClassProps> = ({
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-        <Typography variant="h6" sx={{ ml: 2 }}>
+      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress size={60} thickness={4} />
+        <Typography variant="h6" sx={{ mt: 2, textAlign: 'center' }}>
           Joining video room...
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1, textAlign: 'center', maxWidth: 300 }}>
+          This may take a few moments. Please ensure you have a stable internet connection.
         </Typography>
       </Box>
     );
@@ -1260,6 +1333,7 @@ const VideoTile: React.FC<{ peer: HMSPeer }> = ({ peer }) => {
     if (peer.videoTrack && typeof peer.videoTrack === 'string') {
       const videoElement = document.getElementById(`video-${peer.id}`) as HTMLVideoElement;
       if (videoElement) {
+        console.log('🎥 Attaching video track to element:', peer.id);
         hmsActions.attachVideo(peer.videoTrack as string, videoElement);
       }
     }
@@ -1267,6 +1341,7 @@ const VideoTile: React.FC<{ peer: HMSPeer }> = ({ peer }) => {
       if (peer.videoTrack && typeof peer.videoTrack === 'string') {
         const videoElement = document.getElementById(`video-${peer.id}`) as HTMLVideoElement;
         if (videoElement) {
+          console.log('🎥 Detaching video track from element:', peer.id);
           hmsActions.detachVideo(peer.videoTrack as string, videoElement);
         }
       }

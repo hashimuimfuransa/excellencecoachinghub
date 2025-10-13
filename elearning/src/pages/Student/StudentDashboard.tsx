@@ -42,6 +42,7 @@ import { courseService, ICourse } from '../../services/courseService';
 import { assessmentService, IAssessment } from '../../services/assessmentService';
 import { enhancedAssessmentService, IEnhancedAssessment } from '../../services/enhancedAssessmentService';
 import { liveSessionService, ILiveSession } from '../../services/liveSessionService';
+import { recordedSessionService, IRecordedSession } from '../../services/recordedSessionService';
 import { enrollmentService, IEnrollment } from '../../services/enrollmentService';
 import { getCourseImageUrl } from '../../utils/courseImageGenerator';
 import RecordedSessions from '../../components/Student/RecordedSessions';
@@ -146,6 +147,7 @@ interface StudentDashboardData {
   upcomingAssessments: IAssessment[];
   enhancedAssessments: IEnhancedAssessment[];
   upcomingSessions: ILiveSession[];
+  recordedSessions: IRecordedSession[];
   enrollments: IEnrollment[];
   stats: {
     totalCourses: number;
@@ -153,6 +155,7 @@ interface StudentDashboardData {
     upcomingAssessments: number;
     enhancedAssessments: number;
     upcomingSessions: number;
+    recordedSessions: number;
     averageProgress: number;
     certificatesEarned: number;
   };
@@ -186,13 +189,15 @@ const StudentDashboard: React.FC = () => {
         enrollmentsResult,
         assessmentsResult,
         enhancedAssessmentsResult,
-        sessionsResult
+        sessionsResult,
+        recordedSessionsResult
       ] = await Promise.allSettled([
         courseService.getEnrolledCourses({ limit: 10 }),
         enrollmentService.getMyEnrollments({ limit: 10 }),
         assessmentService.getStudentAssessments({ status: 'available', limit: 5 }),
         enhancedAssessmentService.getStudentAssessments({ status: 'published', limit: 5 }),
-        liveSessionService.getStudentSessions({ limit: 5 })
+        liveSessionService.getStudentSessions({ limit: 5 }),
+        recordedSessionService.getAllRecordedSessionsForStudent() // Get all recorded sessions for enrolled courses
       ]);
 
       // Extract data with fallbacks
@@ -201,6 +206,15 @@ const StudentDashboard: React.FC = () => {
       const assessmentsData = assessmentsResult.status === 'fulfilled' ? assessmentsResult.value : { assessments: [] };
       const enhancedAssessmentsData = enhancedAssessmentsResult.status === 'fulfilled' ? enhancedAssessmentsResult.value : { assessments: [] };
       const sessionsData = sessionsResult.status === 'fulfilled' ? sessionsResult.value : { sessions: [] };
+      const recordedSessionsData = recordedSessionsResult.status === 'fulfilled' ? recordedSessionsResult.value : { data: [] };
+
+      // Debug logging for live sessions
+      console.log('🔍 Live Sessions Debug:', {
+        sessionsResultStatus: sessionsResult.status,
+        sessionsResultValue: sessionsResult.status === 'fulfilled' ? sessionsResult.value : sessionsResult.reason,
+        sessionsData: sessionsData,
+        sessionsCount: sessionsData.sessions?.length || 0
+      });
 
       // Log any failures, but don't show rate limiting errors to users
       if (coursesResult.status === 'rejected') {
@@ -255,6 +269,7 @@ const StudentDashboard: React.FC = () => {
         upcomingAssessments: assessmentsData.assessments?.length || 0,
         enhancedAssessments: enhancedAssessmentsData.assessments?.length || 0,
         upcomingSessions: sessionsData.sessions?.length || 0,
+        recordedSessions: recordedSessionsData.data?.length || 0,
         averageProgress,
         certificatesEarned: completedCourses // Assuming certificates are earned for completed courses
       };
@@ -264,6 +279,7 @@ const StudentDashboard: React.FC = () => {
         upcomingAssessments: assessmentsData.assessments || [],
         enhancedAssessments: enhancedAssessmentsData.assessments || [],
         upcomingSessions: sessionsData.sessions || [],
+        recordedSessions: recordedSessionsData.data || [],
         enrollments: enrollments,
         stats
       });
@@ -280,7 +296,8 @@ const StudentDashboard: React.FC = () => {
         enrollmentsResult,
         assessmentsResult,
         enhancedAssessmentsResult,
-        sessionsResult
+        sessionsResult,
+        recordedSessionsResult
       ].every(result => {
         if (result.status === 'rejected') {
           const error = result.reason;
@@ -1071,7 +1088,7 @@ const StudentDashboard: React.FC = () => {
                           />
                           <IconButton
                             size="small"
-                            onClick={() => navigate(`/video/live-class/${session._id}?role=student`)}
+                            onClick={() => navigate(`/dashboard/student/live-sessions/${session._id}/room`)}
                             title="Join Live Class"
                             sx={{ 
                               alignSelf: { xs: 'center', sm: 'flex-start' }

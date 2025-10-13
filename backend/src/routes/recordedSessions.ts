@@ -28,7 +28,6 @@ router.post(
   '/upload',
   auth,
   requireRole(UserRole.TEACHER, UserRole.ADMIN),
-  upload.single('video'),
   uploadRecordedSession
 );
 

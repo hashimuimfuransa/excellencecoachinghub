@@ -144,6 +144,7 @@ const CourseManagement: React.FC = () => {
   // Live session dialog state
   const [sessionDialogOpen, setSessionDialogOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<any>(null);
+  const [teacherCourses, setTeacherCourses] = useState<any[]>([]);
   const [sessionForm, setSessionForm] = useState({
     title: '',
     description: '',
@@ -153,6 +154,8 @@ const CourseManagement: React.FC = () => {
     agenda: '',
     recordingEnabled: true,
     chatEnabled: true,
+    courseId: courseId || '',
+    zoomFallbackLink: '',
   });
 
   // Announcement dialog state
@@ -279,6 +282,12 @@ const CourseManagement: React.FC = () => {
       // Load main course data
       const course = await courseService.getCourseById(courseId!);
       setCourseData(course);
+
+      // Load teacher's courses for session creation
+      const coursesResponse = await courseService.getTeacherCourses({
+        instructor: user?._id
+      });
+      setTeacherCourses(coursesResponse.courses || []);
 
       // Extract materials and YouTube videos from course content
       const courseMaterials = course.content || [];
@@ -610,12 +619,14 @@ const CourseManagement: React.FC = () => {
     setSessionForm({
       title: '',
       description: '',
-      scheduledTime: '',
+      scheduledTime: new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16), // 1 hour from now
       duration: 60,
       maxParticipants: 50,
-    agenda: '',
-    recordingEnabled: true,
-    chatEnabled: true
+      agenda: '',
+      recordingEnabled: true,
+      chatEnabled: true,
+      courseId: courseId || '',
+      zoomFallbackLink: '',
     });
     setSessionDialogOpen(true);
   };
@@ -628,33 +639,73 @@ const CourseManagement: React.FC = () => {
       scheduledTime: session.scheduledTime,
       duration: session.duration,
       maxParticipants: session.maxParticipants,
-      agenda: session.agenda,
-      recordingEnabled: session.recordingEnabled,
-      chatEnabled: session.chatEnabled
+      agenda: Array.isArray(session.agenda) ? session.agenda.join('\n') : session.agenda || '',
+      recordingEnabled: session.isRecorded || session.recordingEnabled || true,
+      chatEnabled: session.chatEnabled !== false,
+      courseId: session.course?._id || session.courseId || courseId || '',
+      zoomFallbackLink: session.zoomFallbackLink || '',
     });
     setSessionDialogOpen(true);
   };
 
-  const handleDeleteSession = (session: any) => {
-    setLiveSessions(prev => prev.filter(s => s._id !== session._id));
+  const handleDeleteSession = async (session: any) => {
+    try {
+      await liveSessionService.deleteSession(session._id);
+      setLiveSessions(prev => prev.filter(s => s._id !== session._id));
+      setError(null);
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      setError('Failed to delete session. Please try again.');
+    }
   };
 
-  const handleSaveSession = () => {
-    if (editingSession) {
-      setLiveSessions(prev => prev.map(s => 
-        s._id === editingSession._id 
-          ? { ...s, ...sessionForm, updatedAt: new Date().toISOString() }
-          : s
-      ));
-    } else {
-      const newSession = {
-        _id: Date.now().toString(),
-        ...sessionForm,
-        createdAt: new Date().toISOString()
-      };
-      setLiveSessions(prev => [...prev, newSession]);
+  const handleSaveSession = async () => {
+    try {
+      if (editingSession) {
+        // Update existing session
+        const updatedSession = await liveSessionService.updateSession(editingSession._id, {
+          title: sessionForm.title,
+          description: sessionForm.description,
+          scheduledTime: new Date(sessionForm.scheduledTime).toISOString(),
+          duration: sessionForm.duration,
+          maxParticipants: sessionForm.maxParticipants,
+          agenda: sessionForm.agenda ? sessionForm.agenda.split('\n').filter(item => item.trim()) : [],
+          isRecorded: sessionForm.recordingEnabled,
+          chatEnabled: sessionForm.chatEnabled,
+          handRaiseEnabled: true,
+          screenShareEnabled: true,
+          attendanceRequired: false,
+          courseId: sessionForm.courseId,
+          zoomFallbackLink: sessionForm.zoomFallbackLink
+        });
+        setLiveSessions(prev => prev.map(s => 
+          s._id === editingSession._id ? updatedSession : s
+        ));
+      } else {
+        // Create new session
+        const newSession = await liveSessionService.createSession({
+          title: sessionForm.title,
+          description: sessionForm.description,
+          courseId: sessionForm.courseId || courseId!,
+          scheduledTime: new Date(sessionForm.scheduledTime).toISOString(),
+          duration: sessionForm.duration,
+          maxParticipants: sessionForm.maxParticipants,
+          agenda: sessionForm.agenda ? sessionForm.agenda.split('\n').filter(item => item.trim()) : [],
+          isRecorded: sessionForm.recordingEnabled,
+          chatEnabled: sessionForm.chatEnabled,
+          handRaiseEnabled: true,
+          screenShareEnabled: true,
+          attendanceRequired: false,
+          zoomFallbackLink: sessionForm.zoomFallbackLink
+        });
+        setLiveSessions(prev => [...prev, newSession]);
+      }
+      setSessionDialogOpen(false);
+      setError(null);
+    } catch (error) {
+      console.error('Error saving session:', error);
+      setError('Failed to save session. Please try again.');
     }
-    setSessionDialogOpen(false);
   };
 
   const handleStartSession = (sessionId: string) => {
@@ -3420,6 +3471,144 @@ const CourseManagement: React.FC = () => {
             disabled={!announcementForm.title || !announcementForm.content}
           >
             {editingAnnouncement ? 'Update' : 'Create'} Announcement
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add/Edit Live Session Dialog */}
+      <Dialog open={sessionDialogOpen} onClose={() => setSessionDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {editingSession ? 'Edit Live Session' : 'Schedule New Live Session'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            <TextField
+              fullWidth
+              label="Session Title"
+              value={sessionForm.title}
+              onChange={(e) => setSessionForm(prev => ({ ...prev, title: e.target.value }))}
+              margin="normal"
+              required
+            />
+            
+            <TextField
+              fullWidth
+              label="Description"
+              value={sessionForm.description}
+              onChange={(e) => setSessionForm(prev => ({ ...prev, description: e.target.value }))}
+              margin="normal"
+              multiline
+              rows={3}
+              required
+            />
+            
+            <FormControl fullWidth margin="normal" required>
+              <InputLabel>Course</InputLabel>
+              <Select
+                value={sessionForm.courseId}
+                onChange={(e) => setSessionForm(prev => ({ ...prev, courseId: e.target.value }))}
+                label="Course"
+              >
+                {teacherCourses.map((course) => (
+                  <MenuItem key={course._id} value={course._id}>
+                    {course.title}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            
+            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+              <TextField
+                fullWidth
+                label="Scheduled Time"
+                type="datetime-local"
+                value={sessionForm.scheduledTime}
+                onChange={(e) => setSessionForm(prev => ({ ...prev, scheduledTime: e.target.value }))}
+                InputLabelProps={{ shrink: true }}
+                required
+                helperText="⚠️ Please choose a future date and time (not now) to avoid validation errors"
+              />
+              
+              <TextField
+                fullWidth
+                label="Duration (minutes)"
+                type="number"
+                value={sessionForm.duration}
+                onChange={(e) => setSessionForm(prev => ({ ...prev, duration: parseInt(e.target.value) }))}
+                inputProps={{ min: 15, max: 480 }}
+                required
+              />
+            </Box>
+            
+            <TextField
+              fullWidth
+              label="Max Participants"
+              type="number"
+              value={sessionForm.maxParticipants}
+              onChange={(e) => setSessionForm(prev => ({ ...prev, maxParticipants: parseInt(e.target.value) }))}
+              margin="normal"
+              inputProps={{ min: 1, max: 1000 }}
+              required
+            />
+            
+            <TextField
+              fullWidth
+              label="Agenda (one item per line)"
+              value={sessionForm.agenda}
+              onChange={(e) => setSessionForm(prev => ({ ...prev, agenda: e.target.value }))}
+              margin="normal"
+              multiline
+              rows={4}
+              placeholder="Enter agenda items, one per line..."
+            />
+            
+            <TextField
+              fullWidth
+              label="Zoom Fallback Link (Optional)"
+              value={sessionForm.zoomFallbackLink}
+              onChange={(e) => setSessionForm(prev => ({ ...prev, zoomFallbackLink: e.target.value }))}
+              margin="normal"
+              placeholder="https://zoom.us/j/123456789"
+              helperText="Provide a Zoom link as backup if the main live session fails"
+            />
+            
+            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+              <FormControl fullWidth>
+                <InputLabel>Recording Enabled</InputLabel>
+                <Select
+                  value={sessionForm.recordingEnabled.toString()}
+                  onChange={(e) => setSessionForm(prev => ({ ...prev, recordingEnabled: e.target.value === 'true' }))}
+                  label="Recording Enabled"
+                >
+                  <MenuItem value="true">Yes</MenuItem>
+                  <MenuItem value="false">No</MenuItem>
+                </Select>
+              </FormControl>
+              
+              <FormControl fullWidth>
+                <InputLabel>Chat Enabled</InputLabel>
+                <Select
+                  value={sessionForm.chatEnabled.toString()}
+                  onChange={(e) => setSessionForm(prev => ({ ...prev, chatEnabled: e.target.value === 'true' }))}
+                  label="Chat Enabled"
+                >
+                  <MenuItem value="true">Yes</MenuItem>
+                  <MenuItem value="false">No</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSessionDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSaveSession} 
+            variant="contained"
+            disabled={!sessionForm.title || !sessionForm.description || !sessionForm.scheduledTime}
+          >
+            {editingSession ? 'Update' : 'Schedule'} Session
           </Button>
         </DialogActions>
       </Dialog>

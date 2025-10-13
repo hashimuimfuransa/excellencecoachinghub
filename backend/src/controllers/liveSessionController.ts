@@ -709,9 +709,10 @@ export const getRecordingById = async (req: Request, res: Response, next: NextFu
   }
 };
 
-// Get available sessions for students (show all sessions they can access)
+// Get available sessions for students (show only sessions from enrolled courses)
 export const getStudentAvailableSessions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    console.log('🎯 getStudentAvailableSessions called');
     const studentId = req.user?.id;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -722,14 +723,43 @@ export const getStudentAvailableSessions = async (req: Request, res: Response, n
     console.log('🔍 Student session access check:', {
       studentId,
       courseId,
-      status
+      status,
+      page,
+      limit
     });
 
-    // Build filter - if courseId is specified, show sessions for that course
-    // Otherwise, show all sessions (no enrollment restriction)
-    const filter: any = {};
+    // First, get all courses the student is enrolled in
+    const { CourseEnrollment } = await import('../models/CourseEnrollment');
+    const enrollments = await CourseEnrollment.find({ student: studentId, isActive: true })
+      .populate('course', '_id title')
+      .select('course');
 
+    const enrolledCourseIds = enrollments.map(enrollment => enrollment.course._id);
+
+    console.log('📚 Student enrolled courses:', {
+      totalEnrollments: enrollments.length,
+      enrolledCourseIds,
+      enrollmentDetails: enrollments.map(e => ({
+        courseId: e.course._id,
+        courseTitle: e.course.title
+      }))
+    });
+
+    // Build filter - only show sessions from enrolled courses
+    const filter: any = {
+      course: { $in: enrolledCourseIds }
+    };
+
+    // If specific courseId is requested, ensure student is enrolled in that course
     if (courseId) {
+      const isEnrolledInRequestedCourse = Array.isArray(enrolledCourseIds) && enrolledCourseIds.some((id: any) => id?.toString?.() === courseId);
+      if (!isEnrolledInRequestedCourse) {
+        res.status(403).json({
+          success: false,
+          error: 'You are not enrolled in this course'
+        });
+        return;
+      }
       filter.course = courseId;
     }
 
@@ -750,7 +780,17 @@ export const getStudentAvailableSessions = async (req: Request, res: Response, n
 
     console.log('✅ Student sessions loaded:', {
       totalSessions,
-      courseId: courseId || 'all courses'
+      sessionsFound: sessions.length,
+      enrolledCourses: enrolledCourseIds.length,
+      courseId: courseId || 'all enrolled courses',
+      sessions: sessions.map(s => ({
+        id: s._id,
+        title: s.title,
+        courseId: s.course._id,
+        courseTitle: s.course.title,
+        status: s.status,
+        scheduledTime: s.scheduledTime
+      }))
     });
 
     res.status(200).json({

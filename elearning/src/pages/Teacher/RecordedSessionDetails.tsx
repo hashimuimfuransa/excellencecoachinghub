@@ -62,6 +62,7 @@ import {
   BarChart
 } from '@mui/icons-material';
 import { recordedSessionService, IRecordedSession } from '../../services/recordedSessionService';
+import { liveSessionService, ILiveSession } from '../../services/liveSessionService';
 import { courseService, ICourse } from '../../services/courseService';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -83,7 +84,8 @@ const RecordedSessionDetails: React.FC = () => {
   // State management
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [session, setSession] = useState<IRecordedSession | null>(null);
+  const [session, setSession] = useState<IRecordedSession | ILiveSession | null>(null);
+  const [sessionType, setSessionType] = useState<'live' | 'recorded'>('recorded');
   const [courses, setCourses] = useState<ICourse[]>([]);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -106,9 +108,28 @@ const RecordedSessionDetails: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        // Load session details
-        const sessionResponse = await recordedSessionService.getRecordedSession(sessionId);
-        setSession(sessionResponse.data);
+        let sessionData: IRecordedSession | ILiveSession;
+        let isLiveSession = false;
+
+        // Try to load as live session first
+        try {
+          sessionData = await liveSessionService.getTeacherSessionById(sessionId);
+          setSessionType('live');
+          isLiveSession = true;
+          console.log('📹 Loaded as live session:', sessionData);
+        } catch (liveError) {
+          // If live session fails, try as recorded session
+          try {
+            const sessionResponse = await recordedSessionService.getRecordedSession(sessionId);
+            sessionData = sessionResponse.data;
+            setSessionType('recorded');
+            console.log('📼 Loaded as recorded session:', sessionData);
+          } catch (recordedError) {
+            throw new Error('Session not found. It may have been deleted or you may not have permission to view it.');
+          }
+        }
+
+        setSession(sessionData);
 
         // Load teacher's courses for editing
         const coursesResponse = await courseService.getTeacherCourses({
@@ -118,9 +139,9 @@ const RecordedSessionDetails: React.FC = () => {
 
         // Set edit form initial values
         setEditForm({
-          title: sessionResponse.data.title,
-          description: sessionResponse.data.description || '',
-          courseId: sessionResponse.data.course?._id || ''
+          title: sessionData.title,
+          description: sessionData.description || '',
+          courseId: sessionData.course?._id || ''
         });
 
         // Mock viewers data (in real app, this would come from analytics API)
@@ -146,6 +167,7 @@ const RecordedSessionDetails: React.FC = () => {
         ]);
 
       } catch (err: any) {
+        console.error('Error loading session details:', err);
         setError(err.message || 'Failed to load session details');
       } finally {
         setLoading(false);
@@ -160,13 +182,23 @@ const RecordedSessionDetails: React.FC = () => {
     if (!sessionId) return;
 
     try {
-      await recordedSessionService.updateRecordedSession(sessionId, editForm);
-      
-      // Reload session data
-      const sessionResponse = await recordedSessionService.getRecordedSession(sessionId);
-      setSession(sessionResponse.data);
-      
+      if (sessionType === 'live') {
+        await liveSessionService.updateSession(sessionId, {
+          title: editForm.title,
+          description: editForm.description
+        });
+        // Reload session details
+        const sessionData = await liveSessionService.getTeacherSessionById(sessionId);
+        setSession(sessionData);
+      } else {
+        await recordedSessionService.updateRecordedSession(sessionId, editForm);
+        // Reload session details
+        const sessionResponse = await recordedSessionService.getRecordedSession(sessionId);
+        setSession(sessionResponse.data);
+      }
+
       setEditDialogOpen(false);
+      setError(null);
     } catch (err: any) {
       setError(err.message || 'Failed to update session');
     }
@@ -177,8 +209,12 @@ const RecordedSessionDetails: React.FC = () => {
     if (!sessionId) return;
 
     try {
-      await recordedSessionService.deleteRecordedSession(sessionId);
-      navigate('/dashboard/teacher/course-management');
+      if (sessionType === 'live') {
+        await liveSessionService.deleteSession(sessionId);
+      } else {
+        await recordedSessionService.deleteRecordedSession(sessionId);
+      }
+      navigate('/dashboard/teacher/live-sessions');
     } catch (err: any) {
       setError(err.message || 'Failed to delete session');
     }
@@ -267,16 +303,35 @@ const RecordedSessionDetails: React.FC = () => {
                     />
                     <Chip
                       icon={<Schedule />}
-                      label={recordedSessionService.formatDuration(session.duration)}
+                      label={sessionType === 'live' ? 
+                        new Date(session.scheduledTime).toLocaleDateString() : 
+                        new Date(session.createdAt).toLocaleDateString()
+                      }
                       color="info"
                       variant="outlined"
                     />
                     <Chip
-                      icon={<Visibility />}
-                      label={`${session.views || 0} views`}
-                      color="success"
+                      icon={<VideoLibrary />}
+                      label={sessionType === 'live' ? 'Live Session' : 'Recorded Session'}
+                      color={sessionType === 'live' ? 'warning' : 'success'}
                       variant="outlined"
                     />
+                    {sessionType === 'live' && 'status' in session && (
+                      <Chip
+                        icon={<Schedule />}
+                        label={session.status}
+                        color={session.status === 'ended' ? 'error' : session.status === 'live' ? 'success' : 'default'}
+                        variant="outlined"
+                      />
+                    )}
+                    {sessionType === 'recorded' && (
+                      <Chip
+                        icon={<Visibility />}
+                        label={`${session.views || 0} views`}
+                        color="success"
+                        variant="outlined"
+                      />
+                    )}
                   </Box>
                   <Typography variant="body2" color="text.secondary">
                     {session.description || 'No description provided'}
@@ -612,7 +667,7 @@ const RecordedSessionDetails: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Delete Recorded Session</DialogTitle>
+        <DialogTitle>Delete {sessionType === 'live' ? 'Live' : 'Recorded'} Session</DialogTitle>
         <DialogContent>
           <Typography>
             Are you sure you want to delete "{session.title}"? This action cannot be undone.

@@ -238,6 +238,7 @@ const App: React.FC = () => {
           <Route path="live-sessions" element={<LiveSessions />} />
           <Route path="live-sessions/create" element={<CreateLiveSession />} />
           <Route path="live-sessions/:id/room" element={<LiveSessionRoom />} />
+          <Route path="live-sessions/:sessionId" element={<RecordedSessionDetails />} />
           <Route path="students" element={<TeacherStudents />} />
           <Route path="student-management" element={<StudentManagement />} />
           <Route path="analytics" element={<TeacherAnalytics />} />

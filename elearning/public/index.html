@@ -37,6 +37,10 @@
     });
   }
 </script>
+    <script>
+      // Make Uploadcare key available at runtime for the widget
+      window.UPLOADCARE_PUBLIC_KEY = window.UPLOADCARE_PUBLIC_KEY || "%REACT_APP_UPLOADCARE_PUBLIC_KEY%" || "%VITE_UPLOADCARE_PUBLIC_KEY%";
+    </script>
 </head>
 <body>
 <noscript>You need to enable JavaScript to run this app.</noscript>

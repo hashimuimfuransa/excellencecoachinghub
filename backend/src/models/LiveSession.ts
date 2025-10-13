@@ -39,6 +39,7 @@ export interface ILiveSessionDocument extends Document {
   handRaiseEnabled: boolean;
   screenShareEnabled: boolean;
   attendanceRequired: boolean;
+  zoomFallbackLink?: string;
   attendees: {
     user: mongoose.Types.ObjectId;
     joinTime?: Date;
@@ -248,6 +249,17 @@ const liveSessionSchema = new Schema<ILiveSessionDocument>({
   attendanceRequired: {
     type: Boolean,
     default: false
+  },
+  zoomFallbackLink: {
+    type: String,
+    trim: true,
+    validate: {
+      validator: function(v: string) {
+        if (!v) return true; // Optional field
+        return /^https?:\/\/.+/.test(v);
+      },
+      message: 'Zoom fallback link must be a valid URL'
+    }
   },
   attendees: [attendeeSchema]
 }, {

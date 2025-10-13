@@ -14,7 +14,8 @@ import {
   VideoCall,
   ArrowBack,
   PlayArrow,
-  OndemandVideo
+  OndemandVideo,
+  Event
 } from '@mui/icons-material';
 import { useAuth } from '../../store/AuthContext';
 import { liveSessionService, ILiveSession } from '../../services/liveSessionService';
@@ -73,14 +74,30 @@ const StudentLiveSessionRoom: React.FC = () => {
     navigate('/dashboard/student/live-sessions');
   };
 
+  // Helpers to build Google Calendar URL for this session
+  const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+  const toCalendarDateTime = (d: Date) => {
+    const yyyy = d.getUTCFullYear();
+    const MM = pad(d.getUTCMonth() + 1);
+    const dd = pad(d.getUTCDate());
+    const hh = pad(d.getUTCHours());
+    const mm = pad(d.getUTCMinutes());
+    const ss = pad(d.getUTCSeconds());
+    return `${yyyy}${MM}${dd}T${hh}${mm}${ss}Z`;
+  };
 
+  const buildGoogleCalendarUrl = (s: ILiveSession) => {
+    const start = new Date(s.scheduledTime);
+    const durationMinutes = (s as any).duration ? Number((s as any).duration) : 60;
+    const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
 
+    const text = encodeURIComponent(s.title || 'Live Session');
+    const details = encodeURIComponent(`Join your course live session.${s.description ? `\n\nDetails: ${s.description}` : ''}`);
+    const location = encodeURIComponent('Online');
+    const dates = `${toCalendarDateTime(start)}/${toCalendarDateTime(end)}`;
 
-
-
-
-
-
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${dates}&details=${details}&location=${location}&sf=true&output=xml`;
+  };
 
 
   if (loading) {
@@ -171,6 +188,17 @@ const StudentLiveSessionRoom: React.FC = () => {
           <Typography variant="body2" sx={{ mb: 1 }}>
             <strong>Recording:</strong> {session.isRecorded ? 'Enabled' : 'Disabled'}
           </Typography>
+          {/* Add to Google Calendar */}
+          {(session.status === 'scheduled') && (
+            <Button 
+              variant="outlined"
+              startIcon={<Event />}
+              onClick={() => window.open(buildGoogleCalendarUrl(session), '_blank', 'noopener,noreferrer')}
+              sx={{ mt: 1 }}
+            >
+              Add to Google Calendar
+            </Button>
+          )}
         </Box>
 
         {/* Session status and actions */}

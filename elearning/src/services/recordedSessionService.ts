@@ -38,7 +38,7 @@ export interface IUploadRecordedSessionData {
   title: string;
   description?: string;
   courseId: string;
-  video: File;
+  videoUrl: string;
 }
 
 class RecordedSessionService {
@@ -60,18 +60,13 @@ class RecordedSessionService {
     return response.data;
   }
 
-  // Upload a new recorded session
+  // Upload a new recorded session (Uploadcare URL)
   async uploadRecordedSession(data: IUploadRecordedSessionData): Promise<{ success: boolean; data: IRecordedSession; message: string }> {
-    const formData = new FormData();
-    formData.append('title', data.title);
-    if (data.description) formData.append('description', data.description);
-    formData.append('courseId', data.courseId);
-    formData.append('video', data.video);
-
-    const response = await api.post('/recorded-sessions/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    const response = await api.post('/recorded-sessions/upload', {
+      title: data.title,
+      description: data.description,
+      courseId: data.courseId,
+      videoUrl: data.videoUrl
     });
     return response.data;
   }
@@ -106,6 +101,12 @@ class RecordedSessionService {
   // Get recorded sessions for students (by course)
   async getRecordedSessionsForStudents(courseId: string): Promise<{ success: boolean; data: IRecordedSession[] }> {
     const response = await api.get(`/recorded-sessions/course/${courseId}/student`);
+    return response.data;
+  }
+
+  // Get all recorded sessions for a student across all enrolled courses
+  async getAllRecordedSessionsForStudent(): Promise<{ success: boolean; data: IRecordedSession[] }> {
+    const response = await api.get('/recorded-sessions/student');
     return response.data;
   }
 

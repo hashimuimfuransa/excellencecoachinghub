@@ -53,6 +53,7 @@ export interface ILiveSession {
   handRaiseEnabled: boolean;
   screenShareEnabled: boolean;
   attendanceRequired: boolean;
+  zoomFallbackLink?: string;
   attendees: IAttendee[];
   createdAt: string;
   updatedAt: string;
@@ -130,6 +131,7 @@ export interface ICreateLiveSessionData {
   handRaiseEnabled?: boolean;
   screenShareEnabled?: boolean;
   attendanceRequired?: boolean;
+  zoomFallbackLink?: string;
 }
 
 export interface IUpdateLiveSessionData {
@@ -144,6 +146,8 @@ export interface IUpdateLiveSessionData {
   handRaiseEnabled?: boolean;
   screenShareEnabled?: boolean;
   attendanceRequired?: boolean;
+  courseId?: string;
+  zoomFallbackLink?: string;
 }
 
 export const liveSessionService = {
@@ -302,9 +306,16 @@ export const liveSessionService = {
       }
     });
 
-    const response = await apiService.get<ILiveSessionListResponse>(
-      `/student/live-sessions?${queryParams.toString()}`
-    );
+    const url = `/student/live-sessions?${queryParams.toString()}`;
+    console.log('🔍 Live Sessions API Call:', { url, filters });
+
+    const response = await apiService.get<ILiveSessionListResponse>(url);
+
+    console.log('🔍 Live Sessions API Response:', { 
+      success: response.success, 
+      data: response.data,
+      sessionsCount: response.data?.sessions?.length || 0
+    });
 
     if (response.success && response.data) {
       return response.data;

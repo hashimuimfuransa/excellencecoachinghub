@@ -33,7 +33,8 @@ export const createLiveSession = async (req: Request, res: Response, next: NextF
       chatEnabled,
       handRaiseEnabled,
       screenShareEnabled,
-      attendanceRequired
+      attendanceRequired,
+      zoomFallbackLink
     } = req.body;
 
     // Verify teacher profile is approved
@@ -109,6 +110,7 @@ export const createLiveSession = async (req: Request, res: Response, next: NextF
       handRaiseEnabled: handRaiseEnabled !== false,
       screenShareEnabled: screenShareEnabled !== false,
       attendanceRequired: attendanceRequired || false,
+      zoomFallbackLink: zoomFallbackLink || '',
       status: 'scheduled'
     });
 
@@ -366,7 +368,7 @@ export const updateSession = async (req: Request, res: Response, next: NextFunct
     const allowedUpdates = [
       'title', 'description', 'scheduledTime', 'duration', 'maxParticipants',
       'isRecorded', 'agenda', 'chatEnabled', 'handRaiseEnabled', 
-      'screenShareEnabled', 'attendanceRequired'
+      'screenShareEnabled', 'attendanceRequired', 'zoomFallbackLink'
     ];
 
     allowedUpdates.forEach(field => {

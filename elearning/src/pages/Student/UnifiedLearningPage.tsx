@@ -62,6 +62,10 @@ import { weekService, Week, WeekMaterial } from '../../services/weekService';
 import { assessmentService, IAssessment } from '../../services/assessmentService';
 import { assignmentService, Assignment as AssignmentType } from '../../services/assignmentService';
 import api from '../../services/api';
+import LiveSessionStatus from '../../components/Student/LiveSessionStatus';
+import { useLocation } from 'react-router-dom';
+import { liveSessionService } from '../../services/liveSessionService';
+import { recordedSessionService } from '../../services/recordedSessionService';
 
 // Interface for the actual backend response
 interface CourseProgressResponse {
@@ -151,6 +155,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ dueDate, onTimeReached 
 const UnifiedLearningPage: React.FC = () => {
   const { id: courseId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -166,6 +171,8 @@ const UnifiedLearningPage: React.FC = () => {
   const [assessments, setAssessments] = useState<IAssessment[]>([]);
   const [assignments, setAssignments] = useState<AssignmentType[]>([]);
   const [availableAssessments, setAvailableAssessments] = useState<Set<string>>(new Set());
+  const [unseenRecordings, setUnseenRecordings] = useState<number>(0);
+  const liveSectionRef = React.useRef<HTMLDivElement | null>(null);
 
   const loadCourseData = async () => {
     if (!courseId) {
@@ -223,9 +230,27 @@ const UnifiedLearningPage: React.FC = () => {
       console.log('📢 Loaded announcements:', announcementsData.length, announcementsData);
       setAnnouncements(announcementsData);
       
-      // Process live sessions for upcoming events - use real API data
-      const sessionsData = liveSessionsResponse.data?.data?.sessions || [];
-      console.log('📅 Loaded live sessions:', sessionsData.length, sessionsData);
+      // Process live sessions for upcoming events - normalize API shape, with service fallback
+      let sessionsData = liveSessionsResponse?.data?.data?.sessions
+        || liveSessionsResponse?.data?.sessions
+        || liveSessionsResponse?.data
+        || [];
+
+      if (!Array.isArray(sessionsData)) {
+        sessionsData = [];
+      }
+
+      if (sessionsData.length === 0) {
+        try {
+          const serviceSessions = await liveSessionService.getCourseSessions(courseId);
+          if (Array.isArray(serviceSessions)) {
+            sessionsData = serviceSessions;
+          }
+        } catch (e) {
+          console.warn('Fallback to liveSessionService failed:', e);
+        }
+      }
+
       const upcomingSessions = sessionsData
         .filter((session: any) => {
           const sessionDate = new Date(session.scheduledTime);
@@ -233,9 +258,21 @@ const UnifiedLearningPage: React.FC = () => {
           return sessionDate > now;
         })
         .sort((a: any, b: any) => new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime())
-        .slice(0, 3); // Show only next 3 upcoming sessions
-      console.log('⏰ Upcoming sessions:', upcomingSessions.length, upcomingSessions);
+        .slice(0, 5);
       setUpcomingEvents(upcomingSessions);
+
+      // Compute unseen recorded sessions using client-side lastSeen marker
+      try {
+        const recRes = await recordedSessionService.getRecordedSessionsForStudents(courseId);
+        const recordings = Array.isArray(recRes?.data) ? recRes.data : (Array.isArray(recRes) ? recRes : []);
+        const lastSeenKey = `course:${courseId}:recordingsLastSeen`;
+        const lastSeenStr = localStorage.getItem(lastSeenKey);
+        const lastSeen = lastSeenStr ? new Date(lastSeenStr).getTime() : 0;
+        const unseen = (recordings || []).filter((r: any) => new Date(r.uploadDate).getTime() > lastSeen).length;
+        setUnseenRecordings(unseen);
+      } catch (e) {
+        setUnseenRecordings(0);
+      }
     } catch (err: any) {
       console.error('Error loading course data:', err);
       setError(err.message || 'Failed to load course data');
@@ -248,6 +285,17 @@ const UnifiedLearningPage: React.FC = () => {
     loadCourseData();
   }, [courseId]);
 
+  // Scroll to live section when navigated with ?section=live
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const section = params.get('section');
+    if (section === 'live' && liveSectionRef.current) {
+      setTimeout(() => {
+        liveSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+    }
+  }, [location.search, upcomingEvents.length]);
+
   // Handle mobile sidebar
   useEffect(() => {
     setSidebarOpen(!isMobile);
@@ -258,6 +306,10 @@ const UnifiedLearningPage: React.FC = () => {
   };
 
   const handleGoToLiveSessions = () => {
+    if (courseId) {
+      localStorage.setItem(`course:${courseId}:recordingsLastSeen`, new Date().toISOString());
+      setUnseenRecordings(0);
+    }
     navigate(`/dashboard/student/course/${courseId}/live-sessions`);
   };
 
@@ -440,12 +492,14 @@ const UnifiedLearningPage: React.FC = () => {
                 }
               }}
             >
-              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                Live Sessions
-              </Box>
-              <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
-                Live
-              </Box>
+              <Badge badgeContent={unseenRecordings} color="error" overlap="circular" invisible={unseenRecordings === 0}>
+                <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                  Live Sessions
+                </Box>
+                <Box component="span" sx={{ display: { xs: 'inline', sm: 'none' } }}>
+                  Live
+                </Box>
+              </Badge>
             </Button>
             
             <IconButton
@@ -487,6 +541,15 @@ const UnifiedLearningPage: React.FC = () => {
           </Box>
         </Toolbar>
       </AppBar>
+
+      {/* Live Session Status */}
+      <Box sx={{
+        // Keep full width, but offset for persistent sidebar on desktop
+        ml: { xs: 0, sm: 0, md: sidebarOpen ? '320px' : 0 },
+        transition: 'margin-left 200ms ease',
+      }}>
+        <LiveSessionStatus courseId={courseId!} fullWidth />
+      </Box>
 
       {/* Main Content Area */}
       <Box sx={{ display: 'flex', flex: 1 }}>
@@ -728,7 +791,7 @@ const UnifiedLearningPage: React.FC = () => {
             </Card>
 
             {/* Upcoming Events */}
-            <Card sx={{ mb: { xs: 1.5, sm: 2 } }}>
+            <Card ref={liveSectionRef} sx={{ mb: { xs: 1.5, sm: 2 } }}>
               <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
                 <Typography 
                   variant="h6" 
@@ -743,6 +806,11 @@ const UnifiedLearningPage: React.FC = () => {
                 >
                   <Event />
                   Upcoming Events
+                  <Badge badgeContent={unseenRecordings} color="error" sx={{ ml: 1 }} invisible={unseenRecordings === 0}>
+                    <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>
+                      {unseenRecordings > 0 ? 'New recordings' : ''}
+                    </Typography>
+                  </Badge>
                 </Typography>
                 {upcomingEvents.length === 0 ? (
                   <Typography 
@@ -778,8 +846,7 @@ const UnifiedLearningPage: React.FC = () => {
                                   sx={{ 
                                     fontSize: { xs: '0.7rem', sm: '0.75rem' },
                                     display: 'block',
-                                    mt: 0.5,
-                                    color: 'text.secondary'
+                                    opacity: 0.8
                                   }}
                                 >
                                   {event.description}
@@ -787,37 +854,24 @@ const UnifiedLearningPage: React.FC = () => {
                               )}
                             </Box>
                           }
-                          secondary={
-                            <Box>
-                              <Typography 
-                                variant="caption" 
-                                display="block"
-                                sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                              >
-                                📅 {new Date(event.scheduledTime).toLocaleDateString()}
-                              </Typography>
-                              <Typography 
-                                variant="caption" 
-                                color="text.secondary"
-                                sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                              >
-                                🕐 {new Date(event.scheduledTime).toLocaleTimeString()}
-                              </Typography>
-                              {event.duration && (
-                                <Typography 
-                                  variant="caption" 
-                                  color="text.secondary"
-                                  sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
-                                >
-                                  ⏱️ {event.duration} minutes
-                                </Typography>
-                              )}
-                            </Box>
-                          }
+                          secondary={new Date(event.scheduledTime).toLocaleString()}
                         />
                       </ListItem>
                     ))}
                   </List>
+                )}
+                {unseenRecordings > 0 && (
+                  <Box sx={{ mt: 2, p: { xs: 1, sm: 1.5 }, bgcolor: 'rgba(255, 99, 71, 0.06)', borderRadius: 1, border: '1px solid', borderColor: 'error.light' }}>
+                    <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <Badge badgeContent={unseenRecordings} color="error">
+                        <VideoCall color="error" sx={{ mr: 0.5 }} />
+                      </Badge>
+                      New recorded session{unseenRecordings > 1 ? 's' : ''} available
+                    </Typography>
+                    <Button size="small" variant="contained" color="error" onClick={handleGoToLiveSessions}>
+                      View recordings
+                    </Button>
+                  </Box>
                 )}
               </CardContent>
             </Card>

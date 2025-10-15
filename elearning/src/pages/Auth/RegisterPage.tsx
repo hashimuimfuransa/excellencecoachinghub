@@ -230,41 +230,119 @@ const RegisterPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="sm">
+    <>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: `
+          linear-gradient(135deg, #4facfe 0%, #00f2fe 25%, #43e97b 50%, #38f9d7 75%, #667eea 100%),
+          linear-gradient(45deg, rgba(0,0,0,0.7) 0%, transparent 50%, rgba(255,255,255,0.1) 100%)
+        `,
+        backgroundSize: '400% 400%',
+        animation: 'gradientShift 15s ease infinite',
+        '@keyframes gradientShift': {
+          '0%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+          '100%': { backgroundPosition: '0% 50%' }
+        },
+        position: 'relative',
+        overflow: 'hidden',
+        py: 4
+      }}
+    >
+      {/* Glassmorphism Background Elements */}
       <Box
         sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          minHeight: '80vh'
+          position: 'absolute',
+          top: '10%',
+          right: '5%',
+          width: 180,
+          height: 180,
+          borderRadius: '50%',
+          background: 'rgba(255, 255, 255, 0.08)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          animation: 'float 12s ease-in-out infinite',
+          '@keyframes float': {
+            '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+            '50%': { transform: 'translateY(-40px) rotate(180deg)' }
+          }
         }}
-      >
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: '15%',
+          left: '8%',
+          width: 120,
+          height: 120,
+          borderRadius: 3,
+          background: 'rgba(255, 255, 255, 0.06)',
+          backdropFilter: 'blur(15px)',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          animation: 'float 10s ease-in-out infinite reverse',
+          transform: 'rotate(45deg)'
+        }}
+      />
+
+      <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
         <Paper
-          elevation={3}
+          elevation={0}
           sx={{
-            padding: 4,
+            padding: { xs: 4, md: 6 },
             width: '100%',
-            borderRadius: 2,
-            position: 'relative'
+            borderRadius: 4,
+            position: 'relative',
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            boxShadow: '0 30px 80px rgba(0, 0, 0, 0.3)',
+            overflow: 'hidden'
           }}
         >
+          {/* Decorative Gradient Overlay */}
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 6,
+              background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 25%, #43e97b 50%, #38f9d7 75%, #667eea 100%)',
+              borderTopLeftRadius: 4,
+              borderTopRightRadius: 4
+            }}
+          />
+
           {/* Back to Home Button */}
-          <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}>
+          <Box sx={{ position: 'absolute', top: 20, right: 20, zIndex: 10 }}>
             <Button
               component={RouterLink}
               to="/"
               startIcon={<HomeIcon />}
-              variant="text"
+              variant="outlined"
               size="small"
               sx={{
-                borderRadius: 2,
+                borderRadius: 3,
                 textTransform: 'none',
-                fontWeight: 500,
-                color: 'primary.main',
-                fontSize: '0.7rem',
-                minWidth: 'auto',
-                p: 0.5
+                fontWeight: 600,
+                borderColor: 'rgba(79, 172, 254, 0.3)',
+                color: '#4facfe',
+                fontSize: '0.8rem',
+                px: 2,
+                py: 0.8,
+                backdropFilter: 'blur(10px)',
+                bgcolor: 'rgba(79, 172, 254, 0.05)',
+                '&:hover': {
+                  borderColor: '#4facfe',
+                  bgcolor: 'rgba(79, 172, 254, 0.1)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 25px rgba(79, 172, 254, 0.2)'
+                },
+                transition: 'all 0.3s ease'
               }}
             >
               Home
@@ -272,23 +350,50 @@ const RegisterPage: React.FC = () => {
           </Box>
 
           {/* Header */}
-          <Box textAlign="center" mb={3}>
+          <Box textAlign="center" mb={4} sx={{ mt: 2 }}>
+            <Box sx={{ mb: 3 }}>
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  p: 3,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                  mb: 2,
+                  boxShadow: '0 15px 35px rgba(79, 172, 254, 0.3)'
+                }}
+              >
+                <PersonAdd sx={{ fontSize: 32, color: 'white' }} />
+              </Box>
+            </Box>
+            
             <Typography
               component="h1"
-              variant="h4"
+              variant="h3"
               gutterBottom
               sx={{
+                fontWeight: 800,
+                background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 50%, #43e97b 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                mb: 2
+              }}
+            >
+              Join Excellence
+            </Typography>
+            <Typography
+              variant="h6"
+              gutterBottom
+              sx={{
+                color: 'text.primary',
                 fontWeight: 600,
-                color: 'primary.main'
+                mb: 1
               }}
             >
               Excellence Coaching Hub
             </Typography>
-            <Typography variant="h5" gutterBottom>
-              Create Account
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Join our learning community and start your educational journey.
+            <Typography variant="body1" color="text.secondary" sx={{ opacity: 0.8 }}>
+              Create your account and unlock a world of learning opportunities designed to empower your future
             </Typography>
           </Box>
 
@@ -314,10 +419,29 @@ const RegisterPage: React.FC = () => {
                 error={!!errors.firstName}
                 helperText={errors.firstName}
                 disabled={isLoading}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 3,
+                    bgcolor: 'rgba(79, 172, 254, 0.02)',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      bgcolor: 'rgba(79, 172, 254, 0.05)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(79, 172, 254, 0.1)'
+                    },
+                    '&.Mui-focused': {
+                      bgcolor: 'rgba(79, 172, 254, 0.05)',
+                      boxShadow: '0 0 0 3px rgba(79, 172, 254, 0.1)'
+                    }
+                  },
+                  '& .MuiInputLabel-root': {
+                    fontWeight: 500
+                  }
+                }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Person color="action" />
+                      <Person sx={{ color: '#4facfe' }} />
                     </InputAdornment>
                   )
                 }}
@@ -334,10 +458,29 @@ const RegisterPage: React.FC = () => {
                 error={!!errors.lastName}
                 helperText={errors.lastName}
                 disabled={isLoading}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 3,
+                    bgcolor: 'rgba(79, 172, 254, 0.02)',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      bgcolor: 'rgba(79, 172, 254, 0.05)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 25px rgba(79, 172, 254, 0.1)'
+                    },
+                    '&.Mui-focused': {
+                      bgcolor: 'rgba(79, 172, 254, 0.05)',
+                      boxShadow: '0 0 0 3px rgba(79, 172, 254, 0.1)'
+                    }
+                  },
+                  '& .MuiInputLabel-root': {
+                    fontWeight: 500
+                  }
+                }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Person color="action" />
+                      <Person sx={{ color: '#4facfe' }} />
                     </InputAdornment>
                   )
                 }}
@@ -356,10 +499,29 @@ const RegisterPage: React.FC = () => {
               error={!!errors.email}
               helperText={errors.email}
               disabled={isLoading}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 3,
+                  bgcolor: 'rgba(79, 172, 254, 0.02)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    bgcolor: 'rgba(79, 172, 254, 0.05)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 25px rgba(79, 172, 254, 0.1)'
+                  },
+                  '&.Mui-focused': {
+                    bgcolor: 'rgba(79, 172, 254, 0.05)',
+                    boxShadow: '0 0 0 3px rgba(79, 172, 254, 0.1)'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  fontWeight: 500
+                }
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Email color="action" />
+                    <Email sx={{ color: '#4facfe' }} />
                   </InputAdornment>
                 )
               }}
@@ -371,6 +533,25 @@ const RegisterPage: React.FC = () => {
               margin="normal"
               error={!!errors.role}
               disabled={isLoading}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 3,
+                  bgcolor: 'rgba(79, 172, 254, 0.02)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    bgcolor: 'rgba(79, 172, 254, 0.05)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 25px rgba(79, 172, 254, 0.1)'
+                  },
+                  '&.Mui-focused': {
+                    bgcolor: 'rgba(79, 172, 254, 0.05)',
+                    boxShadow: '0 0 0 3px rgba(79, 172, 254, 0.1)'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  fontWeight: 500
+                }
+              }}
             >
               <InputLabel>I am a...</InputLabel>
               <Select
@@ -379,8 +560,8 @@ const RegisterPage: React.FC = () => {
                 onChange={handleSelectChange}
                 label="I am a..."
               >
-                <MenuItem value={UserRole.STUDENT}>Student</MenuItem>
-                <MenuItem value={UserRole.TEACHER}>Teacher</MenuItem>
+                <MenuItem value={UserRole.STUDENT}>🎓 Student / Learner</MenuItem>
+                <MenuItem value={UserRole.TEACHER}>👨‍🏫 Teacher / Instructor</MenuItem>
               </Select>
               {errors.role && (
                 <FormHelperText>{errors.role}</FormHelperText>
@@ -399,10 +580,29 @@ const RegisterPage: React.FC = () => {
               error={!!errors.password}
               helperText={errors.password}
               disabled={isLoading}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 3,
+                  bgcolor: 'rgba(79, 172, 254, 0.02)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    bgcolor: 'rgba(79, 172, 254, 0.05)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 25px rgba(79, 172, 254, 0.1)'
+                  },
+                  '&.Mui-focused': {
+                    bgcolor: 'rgba(79, 172, 254, 0.05)',
+                    boxShadow: '0 0 0 3px rgba(79, 172, 254, 0.1)'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  fontWeight: 500
+                }
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Lock color="action" />
+                    <Lock sx={{ color: '#4facfe' }} />
                   </InputAdornment>
                 ),
                 endAdornment: (
@@ -411,6 +611,12 @@ const RegisterPage: React.FC = () => {
                       onClick={handleTogglePasswordVisibility}
                       edge="end"
                       disabled={isLoading}
+                      sx={{
+                        color: '#4facfe',
+                        '&:hover': {
+                          bgcolor: 'rgba(79, 172, 254, 0.1)'
+                        }
+                      }}
                     >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
@@ -431,10 +637,29 @@ const RegisterPage: React.FC = () => {
               error={!!errors.confirmPassword}
               helperText={errors.confirmPassword}
               disabled={isLoading}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 3,
+                  bgcolor: 'rgba(79, 172, 254, 0.02)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    bgcolor: 'rgba(79, 172, 254, 0.05)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 25px rgba(79, 172, 254, 0.1)'
+                  },
+                  '&.Mui-focused': {
+                    bgcolor: 'rgba(79, 172, 254, 0.05)',
+                    boxShadow: '0 0 0 3px rgba(79, 172, 254, 0.1)'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  fontWeight: 500
+                }
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Lock color="action" />
+                    <Lock sx={{ color: '#4facfe' }} />
                   </InputAdornment>
                 ),
                 endAdornment: (
@@ -443,6 +668,12 @@ const RegisterPage: React.FC = () => {
                       onClick={handleToggleConfirmPasswordVisibility}
                       edge="end"
                       disabled={isLoading}
+                      sx={{
+                        color: '#4facfe',
+                        '&:hover': {
+                          bgcolor: 'rgba(79, 172, 254, 0.1)'
+                        }
+                      }}
                     >
                       {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
@@ -458,11 +689,27 @@ const RegisterPage: React.FC = () => {
               variant="contained"
               size="large"
               disabled={isLoading}
-              startIcon={isLoading ? <CircularProgress size={20} /> : <PersonAdd />}
+              startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <PersonAdd />}
               sx={{
-                mt: 3,
-                mb: 2,
-                py: 1.5
+                mt: 4,
+                mb: 3,
+                py: 2,
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                fontSize: '1.1rem',
+                fontWeight: 700,
+                textTransform: 'none',
+                boxShadow: '0 8px 32px rgba(79, 172, 254, 0.4)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #4287f5 0%, #00d9fe 100%)',
+                  transform: 'translateY(-3px)',
+                  boxShadow: '0 12px 40px rgba(79, 172, 254, 0.6)'
+                },
+                '&:disabled': {
+                  background: 'linear-gradient(135deg, #a0a0a0 0%, #808080 100%)',
+                  color: 'rgba(255, 255, 255, 0.7)'
+                },
+                transition: 'all 0.3s ease'
               }}
             >
               {isLoading ? 'Creating Account...' : 'Create Account'}
@@ -515,13 +762,31 @@ const RegisterPage: React.FC = () => {
               variant="outlined"
               size="large"
               disabled={isLoading}
-              sx={{ py: 1.5 }}
+              sx={{
+                py: 2,
+                borderRadius: 3,
+                borderColor: '#4facfe',
+                color: '#4facfe',
+                fontSize: '1rem',
+                fontWeight: 600,
+                textTransform: 'none',
+                borderWidth: 2,
+                bgcolor: 'rgba(79, 172, 254, 0.05)',
+                '&:hover': {
+                  borderColor: '#4facfe',
+                  bgcolor: 'rgba(79, 172, 254, 0.1)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 25px rgba(79, 172, 254, 0.2)',
+                  borderWidth: 2
+                },
+                transition: 'all 0.3s ease'
+              }}
             >
-              Sign In Instead
+              Sign In to Existing Account
             </Button>
           </Box>
         </Paper>
-      </Box>
+      </Container>
 
       {/* Role Selection Modal for new Google users */}
       {googleUserData && (
@@ -533,7 +798,8 @@ const RegisterPage: React.FC = () => {
           isLoading={isGoogleLoading}
         />
       )}
-    </Container>
+    </Box>
+    </>
   );
 };
 

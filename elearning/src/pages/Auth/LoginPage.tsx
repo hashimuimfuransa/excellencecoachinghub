@@ -198,41 +198,118 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="sm">
+    <>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: `
+          linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%),
+          linear-gradient(45deg, rgba(0,0,0,0.8) 0%, transparent 50%, rgba(255,255,255,0.1) 100%)
+        `,
+        backgroundSize: '400% 400%',
+        animation: 'gradientShift 12s ease infinite',
+        '@keyframes gradientShift': {
+          '0%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+          '100%': { backgroundPosition: '0% 50%' }
+        },
+        position: 'relative',
+        overflow: 'hidden'
+      }}
+    >
+      {/* Glassmorphism Background Elements */}
       <Box
         sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          minHeight: '80vh'
+          position: 'absolute',
+          top: '20%',
+          right: '10%',
+          width: 200,
+          height: 200,
+          borderRadius: '50%',
+          background: 'rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          animation: 'float 8s ease-in-out infinite',
+          '@keyframes float': {
+            '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+            '50%': { transform: 'translateY(-30px) rotate(180deg)' }
+          }
         }}
-      >
+      />
+      <Box
+        sx={{
+          position: 'absolute',
+          bottom: '20%',
+          left: '15%',
+          width: 150,
+          height: 150,
+          borderRadius: 3,
+          background: 'rgba(255, 255, 255, 0.05)',
+          backdropFilter: 'blur(15px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          animation: 'float 10s ease-in-out infinite reverse',
+          transform: 'rotate(45deg)'
+        }}
+      />
+
+      <Container maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
         <Paper
-          elevation={3}
+          elevation={0}
           sx={{
-            padding: 4,
+            padding: { xs: 4, md: 6 },
             width: '100%',
-            borderRadius: 2,
-            position: 'relative'
+            borderRadius: 4,
+            position: 'relative',
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            boxShadow: '0 30px 80px rgba(0, 0, 0, 0.3)',
+            overflow: 'hidden'
           }}
         >
+          {/* Decorative Gradient Overlay */}
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 6,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%)',
+              borderTopLeftRadius: 4,
+              borderTopRightRadius: 4
+            }}
+          />
+
           {/* Back to Home Button */}
-          <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}>
+          <Box sx={{ position: 'absolute', top: 20, right: 20, zIndex: 10 }}>
             <Button
               component={RouterLink}
               to="/"
               startIcon={<HomeIcon />}
-              variant="text"
+              variant="outlined"
               size="small"
               sx={{
-                borderRadius: 2,
+                borderRadius: 3,
                 textTransform: 'none',
-                fontWeight: 500,
-                color: 'primary.main',
-                fontSize: '0.7rem',
-                minWidth: 'auto',
-                p: 0.5
+                fontWeight: 600,
+                borderColor: 'rgba(102, 126, 234, 0.3)',
+                color: '#667eea',
+                fontSize: '0.8rem',
+                px: 2,
+                py: 0.8,
+                backdropFilter: 'blur(10px)',
+                bgcolor: 'rgba(102, 126, 234, 0.05)',
+                '&:hover': {
+                  borderColor: '#667eea',
+                  bgcolor: 'rgba(102, 126, 234, 0.1)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 25px rgba(102, 126, 234, 0.2)'
+                },
+                transition: 'all 0.3s ease'
               }}
             >
               Home
@@ -240,23 +317,50 @@ const LoginPage: React.FC = () => {
           </Box>
 
           {/* Header */}
-          <Box textAlign="center" mb={3}>
+          <Box textAlign="center" mb={4} sx={{ mt: 2 }}>
+            <Box sx={{ mb: 3 }}>
+              <Box
+                sx={{
+                  display: 'inline-flex',
+                  p: 3,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  mb: 2,
+                  boxShadow: '0 15px 35px rgba(102, 126, 234, 0.3)'
+                }}
+              >
+                <LoginIcon sx={{ fontSize: 32, color: 'white' }} />
+              </Box>
+            </Box>
+            
             <Typography
               component="h1"
-              variant="h4"
+              variant="h3"
               gutterBottom
               sx={{
+                fontWeight: 800,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                mb: 2
+              }}
+            >
+              Welcome Back
+            </Typography>
+            <Typography
+              variant="h6"
+              gutterBottom
+              sx={{
+                color: 'text.primary',
                 fontWeight: 600,
-                color: 'primary.main'
+                mb: 1
               }}
             >
               Excellence Coaching Hub
             </Typography>
-            <Typography variant="h5" gutterBottom>
-              Sign In
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Welcome back! Please sign in to your account.
+            <Typography variant="body1" color="text.secondary" sx={{ opacity: 0.8 }}>
+              Sign in to continue your learning journey and unlock your potential
             </Typography>
           </Box>
 
@@ -280,10 +384,29 @@ const LoginPage: React.FC = () => {
               error={!!errors.email}
               helperText={errors.email}
               disabled={isLoading}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 3,
+                  bgcolor: 'rgba(102, 126, 234, 0.02)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    bgcolor: 'rgba(102, 126, 234, 0.05)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 25px rgba(102, 126, 234, 0.1)'
+                  },
+                  '&.Mui-focused': {
+                    bgcolor: 'rgba(102, 126, 234, 0.05)',
+                    boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.1)'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  fontWeight: 500
+                }
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Email color="action" />
+                    <Email sx={{ color: '#667eea' }} />
                   </InputAdornment>
                 )
               }}
@@ -300,10 +423,29 @@ const LoginPage: React.FC = () => {
               error={!!errors.password}
               helperText={errors.password}
               disabled={isLoading}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 3,
+                  bgcolor: 'rgba(102, 126, 234, 0.02)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    bgcolor: 'rgba(102, 126, 234, 0.05)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 25px rgba(102, 126, 234, 0.1)'
+                  },
+                  '&.Mui-focused': {
+                    bgcolor: 'rgba(102, 126, 234, 0.05)',
+                    boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.1)'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  fontWeight: 500
+                }
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Lock color="action" />
+                    <Lock sx={{ color: '#667eea' }} />
                   </InputAdornment>
                 ),
                 endAdornment: (
@@ -312,6 +454,12 @@ const LoginPage: React.FC = () => {
                       onClick={handleTogglePasswordVisibility}
                       edge="end"
                       disabled={isLoading}
+                      sx={{
+                        color: '#667eea',
+                        '&:hover': {
+                          bgcolor: 'rgba(102, 126, 234, 0.1)'
+                        }
+                      }}
                     >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
@@ -339,14 +487,30 @@ const LoginPage: React.FC = () => {
               variant="contained"
               size="large"
               disabled={isLoading}
-              startIcon={isLoading ? <CircularProgress size={20} /> : <LoginIcon />}
+              startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <LoginIcon />}
               sx={{
-                mt: 2,
+                mt: 3,
                 mb: 2,
-                py: 1.5
+                py: 2,
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                fontSize: '1.1rem',
+                fontWeight: 700,
+                textTransform: 'none',
+                boxShadow: '0 8px 32px rgba(102, 126, 234, 0.4)',
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
+                  transform: 'translateY(-3px)',
+                  boxShadow: '0 12px 40px rgba(102, 126, 234, 0.6)'
+                },
+                '&:disabled': {
+                  background: 'linear-gradient(135deg, #a0a0a0 0%, #808080 100%)',
+                  color: 'rgba(255, 255, 255, 0.7)'
+                },
+                transition: 'all 0.3s ease'
               }}
             >
-              {isLoading ? 'Signing In...' : 'Sign In'}
+              {isLoading ? 'Signing In...' : 'Sign In to Your Account'}
             </Button>
 
             {/* Google Sign In */}
@@ -396,13 +560,31 @@ const LoginPage: React.FC = () => {
               variant="outlined"
               size="large"
               disabled={isLoading}
-              sx={{ py: 1.5 }}
+              sx={{
+                py: 2,
+                borderRadius: 3,
+                borderColor: '#667eea',
+                color: '#667eea',
+                fontSize: '1rem',
+                fontWeight: 600,
+                textTransform: 'none',
+                borderWidth: 2,
+                bgcolor: 'rgba(102, 126, 234, 0.05)',
+                '&:hover': {
+                  borderColor: '#667eea',
+                  bgcolor: 'rgba(102, 126, 234, 0.1)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 8px 25px rgba(102, 126, 234, 0.2)',
+                  borderWidth: 2
+                },
+                transition: 'all 0.3s ease'
+              }}
             >
               Create New Account
             </Button>
           </Box>
         </Paper>
-      </Box>
+      </Container>
 
       {/* Role Selection Modal for new Google users */}
       {googleUserData && (
@@ -414,7 +596,8 @@ const LoginPage: React.FC = () => {
           isLoading={isGoogleLoading}
         />
       )}
-    </Container>
+    </Box>
+    </>
   );
 };
 

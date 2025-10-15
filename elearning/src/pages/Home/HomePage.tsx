@@ -232,7 +232,7 @@ const HeroSection: React.FC = () => {
                 fontSize: { xs: '1.3rem', md: '1.6rem' }
               }}
             >
-              Join thousands of learners gaining in-demand skills through expert-led online courses, personalized coaching, and real-world assessments.
+              Join thousands of learners and job seekers gaining in-demand skills through expert-led online courses, personalized coaching, and real-world assessments designed for today's competitive job market.
             </Typography>
             
             {/* Modern Trust Indicators */}
@@ -248,15 +248,15 @@ const HeroSection: React.FC = () => {
               }}
             >
               <Typography variant="body2" sx={{ color: '#e3f2fd', mb: 2, opacity: 0.9, fontWeight: 500 }}>
-                🏆 Excellence Coaching Hub - Your Path to Professional Growth
+                🏆 Excellence Coaching Hub - Empowering Job Seekers & Professionals
               </Typography>
               <Stack direction="row" spacing={2} flexWrap="wrap" sx={{ gap: 1.5 }}>
                 {[
-                  { name: '✅ Expert Instructors', color: '#4CAF50' },
-                  { name: '✅ Live & Recorded Sessions', color: '#2196F3' },
-                  { name: '✅ Weekly Learning Paths', color: '#FF9800' },
-                  { name: '✅ Cloud-Based Materials', color: '#9C27B0' },
-                  { name: '✅ Progress Tracking & Certification', color: '#F44336' }
+                  { name: '✅ In-Demand Job Market Skills', color: '#4CAF50' },
+                  { name: '✅ Career-Focused Training', color: '#2196F3' },
+                  { name: '✅ Industry-Ready Certification', color: '#FF9800' },
+                  { name: '✅ Job Placement Support', color: '#9C27B0' },
+                  { name: '✅ Future Skills Development', color: '#F44336' }
                 ].map((feature, index) => (
                   <Paper
                     key={index}
@@ -581,12 +581,12 @@ const CategoriesSection: React.FC = () => {
       description: 'Goal Setting, Time Management, Mindfulness'
     },
     { 
-      name: 'Tech Skills for Modern Work', 
+      name: 'In-Demand Tech Skills', 
       icon: Code, 
       color: '#43e97b', 
       gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
       count: '30+ courses',
-      description: 'Programming, Data Analysis, Digital Tools'
+      description: 'High-demand skills for tech job market'
     },
     { 
       name: 'Public Speaking & Confidence', 
@@ -605,12 +605,12 @@ const CategoriesSection: React.FC = () => {
       description: 'Study Skills, Research Methods, Exam Prep'
     },
     { 
-      name: 'Professional Development', 
+      name: 'Job-Ready Professional Skills', 
       icon: WorkspacePremium, 
       color: '#fdbb2d', 
       gradient: 'linear-gradient(135deg, #fdbb2d 0%, #22c1c3 100%)',
       count: '60+ courses',
-      description: 'Career Advancement, Networking, Skills'
+      description: 'Future-proof skills for career success'
     },
     { 
       name: 'Business Coaching', 
@@ -692,7 +692,7 @@ const CategoriesSection: React.FC = () => {
               fontWeight: 400
             }}
           >
-            Discover the skills that shape the future — from leadership to technology, academic success to business mastery.
+            Master in-demand skills for today's job market — from leadership to technology, academic success to business mastery. Enhance your employability with future-ready competencies.
           </Typography>
         </Box>
 
@@ -833,6 +833,201 @@ const CategoriesSection: React.FC = () => {
   );
 };
 
+// Job Market Skills Section
+const JobMarketSkillsSection: React.FC = () => {
+  const navigate = useNavigate();
+  
+  const inDemandSkills = [
+    { 
+      skill: 'Digital Marketing',
+      demand: 'High',
+      growth: '+85%',
+      averageSalary: '$45-65K',
+      icon: TrendingUp,
+      color: '#4facfe'
+    },
+    { 
+      skill: 'Data Analysis',
+      demand: 'Very High',
+      growth: '+120%',
+      averageSalary: '$55-75K',
+      icon: Analytics,
+      color: '#f093fb'
+    },
+    { 
+      skill: 'Project Management',
+      demand: 'High',
+      growth: '+70%',
+      averageSalary: '$60-80K',
+      icon: Business,
+      color: '#43e97b'
+    },
+    { 
+      skill: 'Public Speaking',
+      demand: 'Medium',
+      growth: '+45%',
+      averageSalary: '$40-60K',
+      icon: QuestionAnswer,
+      color: '#fa709a'
+    }
+  ];
+
+  return (
+    <Box 
+      sx={{ 
+        py: 12, 
+        background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%)',
+        position: 'relative'
+      }}
+    >
+      <Container maxWidth="lg">
+        {/* Header */}
+        <Box sx={{ textAlign: 'center', mb: 8 }}>
+          <Chip
+            icon={<TrendingUp sx={{ fontSize: 18, color: '#4CAF50 !important' }} />}
+            label="🚀 Job Market Insights"
+            sx={{
+              bgcolor: 'rgba(76, 175, 80, 0.1)',
+              color: '#4CAF50',
+              fontWeight: 600,
+              px: 2,
+              py: 0.5,
+              fontSize: '0.9rem',
+              border: '1px solid rgba(76, 175, 80, 0.3)',
+              mb: 3
+            }}
+          />
+          
+          <Typography
+            variant="h3"
+            component="h2"
+            gutterBottom
+            sx={{
+              fontWeight: 800,
+              color: '#1a202c',
+              mb: 3
+            }}
+          >
+            Master Skills That Employers Want
+          </Typography>
+          
+          <Typography
+            variant="h5"
+            sx={{ 
+              color: 'text.secondary', 
+              maxWidth: 700, 
+              mx: 'auto',
+              lineHeight: 1.6,
+              fontWeight: 400,
+              mb: 6
+            }}
+          >
+            Enhance your job prospects with our carefully curated courses focused on the most in-demand skills in today's competitive job market.
+          </Typography>
+        </Box>
+
+        {/* Skills Grid */}
+        <Grid container spacing={4}>
+          {inDemandSkills.map((skillData, index) => (
+            <Grid item xs={12} sm={6} md={3} key={index}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 3,
+                  height: '100%',
+                  borderRadius: 3,
+                  border: '1px solid rgba(0,0,0,0.08)',
+                  background: 'rgba(255, 255, 255, 0.9)',
+                  backdropFilter: 'blur(10px)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-8px)',
+                    boxShadow: `0 20px 40px ${skillData.color}20`,
+                    borderColor: skillData.color
+                  }
+                }}
+              >
+                <Box sx={{ textAlign: 'center' }}>
+                  <Box
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 56,
+                      height: 56,
+                      borderRadius: 3,
+                      bgcolor: `${skillData.color}15`,
+                      mb: 2,
+                      border: `2px solid ${skillData.color}30`
+                    }}
+                  >
+                    <skillData.icon sx={{ fontSize: 28, color: skillData.color }} />
+                  </Box>
+                  
+                  <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, color: '#1a202c' }}>
+                    {skillData.skill}
+                  </Typography>
+                  
+                  <Chip
+                    label={`${skillData.demand} Demand`}
+                    size="small"
+                    sx={{
+                      bgcolor: `${skillData.color}15`,
+                      color: skillData.color,
+                      fontWeight: 600,
+                      mb: 2
+                    }}
+                  />
+                  
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
+                      <strong>Job Growth:</strong> {skillData.growth}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      <strong>Avg. Salary:</strong> {skillData.averageSalary}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
+
+        {/* CTA */}
+        <Box sx={{ textAlign: 'center', mt: 8 }}>
+          <Typography variant="h6" sx={{ mb: 3, color: 'text.secondary' }}>
+            Ready to build your future career?
+          </Typography>
+          <Button
+            variant="contained"
+            size="large"
+            startIcon={<RocketLaunch />}
+            onClick={() => navigate('/courses')}
+            sx={{
+              background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
+              px: 6,
+              py: 2,
+              fontSize: '1.1rem',
+              fontWeight: 700,
+              borderRadius: 3,
+              textTransform: 'none',
+              boxShadow: '0 8px 32px rgba(76, 175, 80, 0.3)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #45a049 0%, #388e3c 100%)',
+                transform: 'translateY(-3px)',
+                boxShadow: '0 12px 40px rgba(76, 175, 80, 0.4)'
+              },
+              transition: 'all 0.3s ease'
+            }}
+          >
+            Start Building Job-Ready Skills
+          </Button>
+        </Box>
+      </Container>
+    </Box>
+  );
+};
+
 // Next-Gen Features Section with Advanced Design
 const FeaturesSection: React.FC = () => {
   const features = [
@@ -877,12 +1072,12 @@ const FeaturesSection: React.FC = () => {
       badge: 'Measurable Results'
     },
     {
-      icon: Psychology,
-      title: 'Personalized Coaching',
-      description: 'Receive individual coaching sessions tailored to your goals, challenges, and learning preferences.',
+      icon: WorkspacePremium,
+      title: 'Job Market Readiness',
+      description: 'Build job-ready skills with industry-focused curriculum designed to enhance your employability and career prospects.',
       color: '#a8edea',
       gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-      badge: 'Individual Focus'
+      badge: 'Career Ready'
     }
   ];
 
@@ -966,7 +1161,7 @@ const FeaturesSection: React.FC = () => {
               fontSize: { xs: '1.2rem', md: '1.5rem' }
             }}
           >
-            Excellence Coaching Hub is a modern eLearning platform built to empower students, professionals, and organizations with practical, high-quality learning experiences.
+            Excellence Coaching Hub is a modern eLearning platform built to empower students, professionals, job seekers, and organizations with practical, high-quality learning experiences that drive career success.
           </Typography>
         </Box>
 
@@ -1830,7 +2025,7 @@ const TestimonialsSection: React.FC = () => {
                       fontSize: '1rem',
                       position: 'relative',
                       '&:before': {
-                        content: '"',
+                        content: '""',
                         position: 'absolute',
                         top: -20,
                         left: -10,
@@ -2315,7 +2510,7 @@ const CTASection: React.FC = () => {
               fontWeight: 400
             }}
           >
-            Join thousands of learners gaining in-demand skills through expert-led courses, personalized coaching, and comprehensive learning experiences.
+            Join thousands of learners and job seekers gaining in-demand skills through expert-led courses, personalized coaching, and career-focused learning experiences.
           </Typography>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} justifyContent="center" sx={{ mb: 8 }}>
@@ -2782,6 +2977,7 @@ const HomePage: React.FC = () => {
     <Box>
       <HeroSection />
       <CategoriesSection />
+      <JobMarketSkillsSection />
       <FeaturesSection />
       <FeaturedCoursesSection />
       <StatisticsSection />
